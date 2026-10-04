@@ -1,0 +1,2 @@
+import SwiftUI
+struct SettingsView: View { var body: some View { Form { Section("Runtime"){LabeledContent("Scanner mode",value:"Control + shadow challenger");LabeledContent("Execution",value:"Disabled");LabeledContent("Secrets on device",value:"None")} Section("Data policy"){Text("Actionable promotion requires two independent fresh Kraken confirmations. Stale or one-sided data fails closed.")} }.navigationTitle("Settings") } }
