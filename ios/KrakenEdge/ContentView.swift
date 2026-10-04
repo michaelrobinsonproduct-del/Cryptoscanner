@@ -32,6 +32,7 @@ struct ContentView: View {
             NavigationStack { AlertsView(candidates: api.dashboard?.last_result?.candidates ?? []) }.tabItem { Label("Alerts",systemImage:"bell") }
             NavigationStack { ExperimentsView() }.tabItem { Label("Experiments",systemImage:"flask") }
             NavigationStack { SystemHealthView(dashboard: api.dashboard) }.tabItem { Label("Health",systemImage:"heart.text.square") }
+            NavigationStack { SettingsView() }.tabItem { Label("Settings",systemImage:"gearshape") }
         }
     }
 }
