@@ -14,5 +14,12 @@ jobs:
           python-version: '3.12'
       - name: Show revision
         run: git rev-parse HEAD
-      - name: Run historical backfill
+      - name: Run historical reconstruction
         run: python historical/backfill.py
+      - name: Upload compact historical dataset
+        uses: actions/upload-artifact@v4
+        with:
+          name: kraken-historical-derived
+          path: historical/output/
+          retention-days: 7
+          compression-level: 9
