@@ -2,7 +2,7 @@ import os,zipfile,json,urllib.request,tempfile,shutil
 BASE="https://assets.kraken.com/marketing/institutions/Kraken_OHLCVT_Full_2026Q2.zip.part{}"
 work=tempfile.mkdtemp(); parts=[]
 for i in range(5):
-    url=BASE.format(i); p=os.path.join(work,f"part{i:02d}")
+    url=BASE.format(f"{i:02d}"); p=os.path.join(work,f"part{i:02d}")
     req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0"})
     try:
         with urllib.request.urlopen(req,timeout=120) as src, open(p,"wb") as dst:
