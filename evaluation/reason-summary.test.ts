@@ -1,0 +1,1 @@
+import{expect,test}from'bun:test';import{reasonSummary}from'./reason-summary';test('aggregates watch reasons',()=>expect(reasonSummary([{reason:'stale'},{reason:'stale'},{reason:'spread'}])).toEqual({stale:2,spread:1}));
