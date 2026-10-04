@@ -1,0 +1,2 @@
+import SwiftUI
+struct SystemHealthView: View { let dashboard: Dashboard?; var body: some View { List { LabeledContent("Engine",value:dashboard?.service ?? "—");LabeledContent("Version",value:dashboard?.version ?? "—");LabeledContent("Mode",value:dashboard?.mode ?? "—");LabeledContent("Cycles",value:String(dashboard?.cycles ?? 0));LabeledContent("Runtime",value:dashboard?.running == true ? "Running":"Idle");if let e=dashboard?.last_error,!e.isEmpty{Section("Last error"){Text(e)}} } .navigationTitle("System Health") } }
