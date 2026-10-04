@@ -1,0 +1,1 @@
+import{expect,test}from'bun:test';import{newerRefresh,refreshExtensionPct}from'../src/refresh-baseline';test('measures only independent refresh extension',()=>expect(refreshExtensionPct(100,101)).toBeCloseTo(1));test('requires newer second refresh',()=>expect(newerRefresh('2026-10-04T00:00:01Z','2026-10-04T00:00:00Z')).toBe(false));
