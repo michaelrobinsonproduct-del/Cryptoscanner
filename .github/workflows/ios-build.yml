@@ -1,7 +1,5 @@
 name: iOS Build
 on:
-  push:
-    paths: ["ios/**",".github/workflows/ios-build.yml"]
   pull_request:
     paths: ["ios/**",".github/workflows/ios-build.yml"]
   workflow_dispatch:
