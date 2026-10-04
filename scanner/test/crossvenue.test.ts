@@ -1,0 +1,1 @@
+import{expect,test}from"bun:test";import{compareVenues}from"../src/crossvenue";test("rejects stale cross-venue comparisons",()=>{const x=compareVenues({source:"kraken",price:100,observedAt:"2026-10-03T00:00:00Z"},[{source:"other",price:110,observedAt:"2026-10-03T00:01:00Z"}]);expect(x[0].comparable).toBe(false);expect(x[0].deviationPct).toBe(null)})
