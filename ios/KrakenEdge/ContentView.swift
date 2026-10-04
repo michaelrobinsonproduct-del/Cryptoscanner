@@ -29,6 +29,8 @@ struct ContentView: View {
                 .task { await api.refresh() }
                 .toolbar { Button("Refresh") { Task { await api.refresh() } } }
             }.tabItem { Label("Scanner", systemImage:"waveform.path.ecg") }
+            NavigationStack { AlertsView(candidates: api.dashboard?.last_result?.candidates ?? []) }.tabItem { Label("Alerts",systemImage:"bell") }
+            NavigationStack { ExperimentsView() }.tabItem { Label("Experiments",systemImage:"flask") }
             NavigationStack { SystemHealthView(dashboard: api.dashboard) }.tabItem { Label("Health",systemImage:"heart.text.square") }
         }
     }
