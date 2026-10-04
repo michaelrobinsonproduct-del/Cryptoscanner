@@ -1,1 +1,2 @@
 import{expect,test}from'bun:test';import{audit}from'./cycle-audit';test('detects on-time cycle',()=>expect(audit(['2026-10-04T01:22:00Z'],['2026-10-04T01:23:00Z'])[0].status).toBe('OK'));test('detects late cycle',()=>expect(audit(['2026-10-04T01:22:00Z'],['2026-10-04T01:40:00Z'])[0].status).toBe('LATE'));
+test('detects missing when no executions exist',()=>expect(audit(['2026-10-04T01:22:00Z'],[])[0]).toEqual({scheduledAt:'2026-10-04T01:22:00Z',observedAt:null,status:'MISSING'}));
