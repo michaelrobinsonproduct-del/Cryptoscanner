@@ -1,0 +1,2 @@
+import SwiftUI
+struct AboutView: View { var body: some View { List { Section("Kraken Edge") { LabeledContent("Release",value:"0.1.0 (1)"); LabeledContent("Trading",value:"Not enabled"); LabeledContent("Architecture",value:"Control + challenger") } Section("Purpose") { Text("Surfaces prospective scanner candidates and validation evidence. It does not guarantee future price movement.") } }.navigationTitle("About") } }
