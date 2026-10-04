@@ -1,0 +1,1 @@
+export interface Prediction{confidence:number;hit:boolean}export function brier(xs:Prediction[]){if(!xs.length)return null;return xs.reduce((s,x)=>s+(Math.max(0,Math.min(1,x.confidence))-(x.hit?1:0))**2,0)/xs.length}export function hitRate(xs:Prediction[]){return xs.length?xs.filter(x=>x.hit).length/xs.length:null}
