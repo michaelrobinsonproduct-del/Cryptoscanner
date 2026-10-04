@@ -1,0 +1,2 @@
+import SwiftUI
+struct ChangeLogView: View { var body: some View { List { Section("Challenger"){Text("Freshness and asynchronous-quote rejection");Text("Stateful L2/trade trajectory features");Text("Prospective miss census and lead-time scoring");Text("Independent second-refresh promotion gate");Text("Control-vs-challenger release policy")} Section("Safety"){Text("Production control remains unchanged");Text("Rollback baseline retained");Text("No trading or withdrawal credentials in app")} }.navigationTitle("Change Log") } }
