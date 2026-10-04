@@ -1,1 +1,15 @@
-{"name":"cryptoscanner","version":"0.1.0","private":true,"type":"module","scripts":{"test":"bun test","start":"bun run scanner/src/server.ts","check":"bun test"},"engines":{"node":">=20"}}
+{
+  "name": "cryptoscanner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "start": "bun run scanner/src/server.ts",
+    "check": "bun test",
+    "shadow": "bun run evaluation/shadow-cycle.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
