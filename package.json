@@ -7,7 +7,9 @@
     "test": "bun test",
     "start": "bun run scanner/src/server.ts",
     "check": "bun test",
-    "shadow": "bun run evaluation/shadow-cycle.ts"
+    "shadow": "bun run evaluation/shadow-cycle.ts",
+    "validate": "bun run scripts/validate.ts",
+    "live-smoke": "bun run scripts/live-smoke.ts"
   },
   "engines": {
     "node": ">=20"
