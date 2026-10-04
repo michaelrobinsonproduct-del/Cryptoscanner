@@ -6,3 +6,4 @@ test("rejects stale trade",()=>expect(evaluatePromotion(c,{...ok(101),newestTrad
 test("rejects extension beyond independent refresh gate",()=>expect(evaluatePromotion(c,ok(101),ok(104,1000)).decision).toBe("WATCH"));
 test("rejects already displaced discovery",()=>expect(evaluatePromotion({...c,displacementPct:4},ok(101),ok(102,1000)).decision).toBe("WATCH"));
 test("rejects non-newer second refresh",()=>{const a=ok(101),b={...ok(101.5),fetchedAt:a.fetchedAt};expect(evaluatePromotion(c,a,b).reason).toBe("second_refresh_not_newer")});
+test("stale discovery price cannot distort independent refresh extension",()=>expect(evaluatePromotion({...c,discoveryPrice:50},ok(101),ok(102,1000)).decision).toBe("PROMOTION_ELIGIBLE"));
