@@ -1,0 +1,1 @@
+import{expect,test}from'bun:test';import{availability,maxGapMinutes}from'./operational-slo';test('availability',()=>expect(availability([{at:'2026-10-04T00:00:00Z',ok:true},{at:'2026-10-04T00:15:00Z',ok:false}])).toBe(.5));test('gap',()=>expect(maxGapMinutes([{at:'2026-10-04T00:00:00Z',ok:true},{at:'2026-10-04T00:15:00Z',ok:true}])).toBe(15));
