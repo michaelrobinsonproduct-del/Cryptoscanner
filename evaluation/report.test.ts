@@ -1,0 +1,1 @@
+import{expect,test}from"bun:test";import{report}from"./report";test("requires prospective sample",()=>expect(report({windowStart:"a",windowEnd:"b",control:{availability:1,coverage:1,wins20:0,wins50:0,wins100:0},challenger:{availability:1,coverage:1,wins20:1,wins50:0,wins100:0},prospectiveSample:2,notes:[]}).verdict).toBe("COLLECT_MORE_PROSPECTIVE_DATA"));
