@@ -1,0 +1,1 @@
+import{expect,test}from'bun:test';import{healthyCycle}from'./persistence-contract';test('explicit empty cycle is healthy execution evidence',()=>expect(healthyCycle([{created_at:'x',cycle_id:'1',mode:'shadow',pair:'__CYCLE__',decision:'NO_CANDIDATE',reason:'none',score:null,displacement_pct:null,extension_pct:null}])).toBe(true));
