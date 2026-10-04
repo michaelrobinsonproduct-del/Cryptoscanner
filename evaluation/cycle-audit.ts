@@ -1,1 +1,7 @@
-export interface CycleAudit{scheduledAt:string;observedAt:string|null;status:'OK'|'MISSING'|'LATE'}export function audit(scheduled:string[],observed:string[],toleranceMinutes=5):CycleAudit[]{const o=observed.map(Date.parse).filter(Number.isFinite);return scheduled.map(s=>{const t=Date.parse(s),nearest=o.length?Math.min(...o.map(x=>Math.abs(x-t))):Infinity;return{scheduledAt:s,observedAt:Number.isFinite(nearest)?new Date(o.reduce((a,b)=>Math.abs(b-t)<Math.abs(a-t)?b:a)).toISOString():null,status:nearest<=toleranceMinutes*60000?'OK':nearest<Infinity?'LATE':'MISSING'}})}
+export interface CycleAudit{scheduledAt:string;observedAt:string|null;status:"OK"|"MISSING"|"LATE"}
+export function audit(scheduled:string[],observed:string[],toleranceMinutes=5):CycleAudit[]{
+ const parsed=observed.map(x=>({raw:x,ms:Date.parse(x)})).filter(x=>Number.isFinite(x.ms));
+ return scheduled.map(s=>{const t=Date.parse(s);if(!Number.isFinite(t)||!parsed.length)return{scheduledAt:s,observedAt:null,status:"MISSING"};
+ const nearest=parsed.reduce((a,b)=>Math.abs(b.ms-t)<Math.abs(a.ms-t)?b:a);const delta=Math.abs(nearest.ms-t);
+ return{scheduledAt:s,observedAt:nearest.raw,status:delta<=toleranceMinutes*60000?"OK":"LATE"}});
+}
