@@ -1,0 +1,2 @@
+export interface Scorecard{windowStart:string;windowEnd:string;control:{availability:number;coverage:number;wins20:number;wins50:number;wins100:number};challenger:{availability:number;coverage:number;wins20:number;wins50:number;wins100:number};prospectiveSample:number;notes:string[]}
+export function delta(s:Scorecard){return{availability:s.challenger.availability-s.control.availability,coverage:s.challenger.coverage-s.control.coverage,wins20:s.challenger.wins20-s.control.wins20,wins50:s.challenger.wins50-s.control.wins50,wins100:s.challenger.wins100-s.control.wins100}}
