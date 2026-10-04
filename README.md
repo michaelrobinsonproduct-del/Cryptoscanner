@@ -14,3 +14,17 @@ Autonomous Kraken pre-surge research and execution-validation platform.
 - AI/model providers are adapters above the scanner, not hard dependencies.
 - No exchange withdrawal credentials belong in this repository or the iOS client.
 - Production changes require tests, shadow evaluation, promotion criteria, and rollback support.
+
+## Current challenger capabilities
+
+- Independent Kraken execution confirmation with second refresh.
+- Discovery-baseline extension gate and stale/asynchronous quote rejection.
+- Stateful microstructure and trajectory feature library.
+- Prospective mover/miss accounting, lead-time and early-displacement metrics.
+- Control-vs-challenger scorecards with deterministic promotion/rejection gates.
+- Scheduled zero-incremental-cost shadow evaluation.
+- Native SwiftUI Kraken Edge cockpit with scanner, alerts, experiments, health and settings.
+
+## Validation
+
+`bun test`, `bun run validate`, `bun run live-smoke`, and `bun run shadow` are wired into the repository. CI never mutates the production control.
