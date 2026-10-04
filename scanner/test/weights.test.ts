@@ -1,0 +1,1 @@
+import{expect,test}from"bun:test";import{scoreSignals}from"../src/weights";test("bounded weighted score",()=>expect(scoreSignals({activity:1,arrival:1,spread:1,imbalance:1,trajectory:1,outer:1})).toBeCloseTo(100));
