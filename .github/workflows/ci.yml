@@ -16,7 +16,7 @@ jobs:
       - run: bun run validate
       - run: bun run live-smoke
   shadow:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
