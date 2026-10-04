@@ -1,0 +1,18 @@
+name: iOS Build
+on:
+  push:
+    paths: ["ios/**",".github/workflows/ios-build.yml"]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        working-directory: ios
+        run: xcodegen generate
+      - name: Compile simulator build
+        working-directory: ios
+        run: xcodebuild -project KrakenEdge.xcodeproj -scheme KrakenEdge -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
