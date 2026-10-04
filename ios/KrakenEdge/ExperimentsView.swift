@@ -1,0 +1,2 @@
+import SwiftUI
+struct ExperimentsView: View { var body: some View { List { Section("Operating model"){LabeledContent("Production",value:"Control · unchanged");LabeledContent("New engine",value:"Challenger · shadow");LabeledContent("Promotion",value:"Evidence gated")} Section("Required evidence"){Text("Prospective recall of +20%, +50% and +100% movers");Text("Lead time and early-displacement buckets");Text("False-positive rate and reliability");Text("Automatic rollback remains available")} } .navigationTitle("Experiments") } }
