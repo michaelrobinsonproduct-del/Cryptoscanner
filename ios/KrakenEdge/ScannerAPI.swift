@@ -5,6 +5,7 @@ final class ScannerAPI: ObservableObject {
     @Published var dashboard: Dashboard?
     @Published var errorMessage: String?
     @Published var loading = false
+    @Published var lastUpdated: Date?
 
     // Production control is read-only in the first release.
     // Challenger runtime can be selected later without shipping secrets in the client.
@@ -23,6 +24,7 @@ final class ScannerAPI: ObservableObject {
             }
             dashboard = try JSONDecoder().decode(Dashboard.self, from: data)
             errorMessage = nil
+            lastUpdated = Date()
         } catch {
             errorMessage = error.localizedDescription
         }
