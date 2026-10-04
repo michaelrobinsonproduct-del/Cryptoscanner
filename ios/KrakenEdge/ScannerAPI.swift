@@ -5,15 +5,26 @@ final class ScannerAPI: ObservableObject {
     @Published var dashboard: Dashboard?
     @Published var errorMessage: String?
     @Published var loading = false
-    private let baseURL = URL(string: "https://kraken-autonomous-controller-production.up.railway.app")!
+
+    // Production control is read-only in the first release.
+    // Challenger runtime can be selected later without shipping secrets in the client.
+    private let controlURL = URL(string: "https://kraken-autonomous-controller-production.up.railway.app")!
 
     func refresh() async {
-        loading = true; defer { loading = false }
+        loading = true
+        defer { loading = false }
         do {
-            let (data, response) = try await URLSession.shared.data(from: baseURL.appending(path: "dashboard"))
-            guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else { throw URLError(.badServerResponse) }
+            var request = URLRequest(url: controlURL.appending(path: "dashboard"))
+            request.cachePolicy = .reloadIgnoringLocalCacheData
+            request.timeoutInterval = 15
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else {
+                throw URLError(.badServerResponse)
+            }
             dashboard = try JSONDecoder().decode(Dashboard.self, from: data)
             errorMessage = nil
-        } catch { errorMessage = error.localizedDescription }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
