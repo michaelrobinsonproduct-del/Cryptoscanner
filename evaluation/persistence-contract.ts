@@ -1,0 +1,2 @@
+export interface PersistedDecision { created_at:string; cycle_id:string; mode:'shadow'; pair:string; decision:'WATCH'|'PROMOTION_ELIGIBLE'|'NO_CANDIDATE'; reason:string|null; score:number|null; displacement_pct:number|null; extension_pct:number|null }
+export function healthyCycle(rows:PersistedDecision[]){return rows.some(x=>x.pair==='__CYCLE__'||x.decision==='WATCH'||x.decision==='PROMOTION_ELIGIBLE')}
