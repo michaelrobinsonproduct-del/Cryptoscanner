@@ -28,3 +28,8 @@ Autonomous Kraken pre-surge research and execution-validation platform.
 ## Validation
 
 `bun test`, `bun run validate`, `bun run live-smoke`, and `bun run shadow` are wired into the repository. CI never mutates the production control.
+
+
+## Current operating state
+
+Production remains the unchanged control. The replacement engine runs as a shadow challenger on a free scheduled runtime and persists explicit cycle evidence. Promotion is fail-closed and requires independent fresh executable Kraken confirmation plus sufficient prospective evidence; historical backtests alone cannot authorize a production change.
