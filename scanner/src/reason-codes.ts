@@ -1,0 +1,1 @@
+export const Reason={ScoreBelow:'score_below_gate',Displacement:'displacement_not_early',Execution:'execution_confirmation_failed',MissingAsk:'missing_executable_ask',RefreshOrder:'second_refresh_not_newer',Extension:'no_longer_early_between_independent_refreshes',Pass:'all_independent_gates_passed'} as const;export type ReasonCode=typeof Reason[keyof typeof Reason];
