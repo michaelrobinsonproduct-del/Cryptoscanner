@@ -12,3 +12,6 @@ Required gates:
 7. Release is immutable and previous production remains immediately rollbackable.
 
 No claim of predictive success is made from historical backtests alone.
+
+8. Scheduled-cycle evidence must show >=99% operational availability over the evaluation window; explicit NO_CANDIDATE cycles count as healthy executions, missing cycles do not.
+9. No automated release may occur from a single candidate or a historical-only result.
