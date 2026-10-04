@@ -1,0 +1,1 @@
+export interface CyclePoint{at:string;ok:boolean}export function availability(xs:CyclePoint[]){return xs.length?xs.filter(x=>x.ok).length/xs.length:0}export function maxGapMinutes(xs:CyclePoint[]){const t=xs.map(x=>Date.parse(x.at)).filter(Number.isFinite).sort((a,b)=>a-b);let m=0;for(let i=1;i<t.length;i++)m=Math.max(m,(t[i]-t[i-1])/60000);return m}
