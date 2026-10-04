@@ -1,0 +1,1 @@
+import{expect,test}from'bun:test';import{brier,hitRate}from'./calibration';test('perfect calibration sample',()=>expect(brier([{confidence:1,hit:true},{confidence:0,hit:false}])).toBe(0));test('hit rate',()=>expect(hitRate([{confidence:.8,hit:true},{confidence:.8,hit:false}])).toBe(.5));
