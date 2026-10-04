@@ -1,0 +1,3 @@
+-- Optional persistence schema for a provider-independent deployment.
+create table if not exists challenger_cycles(id bigint generated always as identity primary key,created_at timestamptz not null default now(),source_commit text not null,mode text not null default 'shadow',control_untouched boolean not null default true,payload jsonb not null);
+create table if not exists challenger_labels(id bigint generated always as identity primary key,created_at timestamptz not null default now(),pair text not null,discovered_at timestamptz,alerted_at timestamptz,threshold_20_at timestamptz,threshold_50_at timestamptz,threshold_100_at timestamptz,max_return_24h numeric,alert_displacement_pct numeric,payload jsonb not null default '{}'::jsonb);
