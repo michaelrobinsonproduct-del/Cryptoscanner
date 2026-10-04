@@ -1,0 +1,1 @@
+import{expect,test}from"bun:test";import{formatDecision}from"../src/decision";test("keeps output concise and actionable",()=>{const x=formatDecision("X/USD",90,"all_independent_gates_passed",2);expect(x.identified).toBe("X/USD");expect(x.actionToConsider).toContain("promotion");expect(x.confidence).toBe(.9)})
