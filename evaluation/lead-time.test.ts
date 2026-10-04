@@ -1,0 +1,1 @@
+import{expect,test}from"bun:test";import{leadTimeMinutes,bucket}from"./lead-time";test("positive lead means pre-threshold",()=>expect(leadTimeMinutes({pair:"X",alertAt:"2026-10-03T00:30:00Z",thresholdAt:"2026-10-03T01:00:00Z",alertDisplacementPct:2})).toBe(30));test("buckets early displacement",()=>expect(bucket(2.5)).toBe("0-3"));
