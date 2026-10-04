@@ -16,7 +16,7 @@ jobs:
         run: git rev-parse HEAD
       - name: Run historical reconstruction
         run: python historical/backfill.py
-      - name: Upload compact historical dataset
+      - name: Build compact training dataset\n        run: python historical/compact.py\n      - name: Upload compact historical dataset
         uses: actions/upload-artifact@v4
         with:
           name: kraken-historical-derived
