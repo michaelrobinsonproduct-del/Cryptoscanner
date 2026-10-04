@@ -10,6 +10,9 @@ struct ContentView: View {
                         LabeledContent("Mode", value: api.dashboard?.mode ?? "—")
                         LabeledContent("Version", value: api.dashboard?.version ?? "—")
                         LabeledContent("Cycles", value: String(api.dashboard?.cycles ?? 0))
+                        if let updated = api.lastUpdated { LabeledContent("Last refresh", value: updated.formatted(date: .omitted, time: .standard)) }
+                        if api.loading { ProgressView("Refreshing…") }
+                        if let message = api.errorMessage { Text(message).foregroundStyle(.red) }
                         if let e = api.dashboard?.last_error, !e.isEmpty { Text(e).foregroundStyle(.red) }
                     }
                     Section("Candidates") {
