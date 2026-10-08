@@ -1,6 +1,6 @@
 """Persistent SQLite scan history and prospective outcome labels.
 SQLite is per-run on GitHub Actions unless database file is restored externally.
-Optional Supabase REST persistence uses secret env vars and is fail-closed.
+The GitHub Actions workflow restores and saves this database on a dedicated branch.
 """
 import datetime as dt
 import json
@@ -50,3 +50,13 @@ def outcome_summary():
     with connect() as con:
         rows=con.execute("SELECT horizon_hours, COUNT(*), AVG(return_pct) FROM outcomes GROUP BY horizon_hours").fetchall()
     return [{"horizon_hours":h,"observations":n,"mean_return_pct":avg} for h,n,avg in rows]
+
+def learning_report():
+    """Observed prospective results only. No auto-tuning until sample size supports it."""
+    with connect() as con:
+        rows=con.execute("""SELECT o.horizon_hours, COUNT(*), AVG(CASE WHEN o.return_pct >= 5 THEN 1.0 ELSE 0 END),
+                         AVG(CASE WHEN o.return_pct <= -5 THEN 1.0 ELSE 0 END)
+                         FROM outcomes o GROUP BY o.horizon_hours ORDER BY o.horizon_hours""").fetchall()
+    return [{"horizon_hours":h,"sample_size":n,"gain_5pct_rate":round(g,4),
+             "loss_5pct_rate":round(l,4),"model_tuning_allowed":n>=100}
+            for h,n,g,l in rows]
