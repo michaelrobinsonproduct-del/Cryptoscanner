@@ -51,7 +51,7 @@ def confirm_watch(pair, snapshot, fetch=api):
     if not bids or not asks:
         raise ValueError("empty order book")
     bid, ask = float(bids[0][0]), float(asks[0][0])
-    trade_time = float(t[-1][2])
+    trade_time = max(float(row[2]) for row in t if isinstance(row, list) and len(row) > 2)
     age = time.time() - trade_time
     if not (0 <= age <= 120 and 0 < bid <= ask):
         raise ValueError("stale trade or invalid book")
@@ -94,7 +94,7 @@ def scan():
         except Exception as exc:
             confirmations.append({"pair": candidate["pair"], "status": "CONFIRMATION_FAILED", "error": str(exc), "entry_approved": False})
     finished = dt.datetime.now(dt.timezone.utc)
-    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-0.5", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Single-snapshot discovery; no execution confirmation or learning yet"}
+    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-0.6", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Single-snapshot discovery; no execution confirmation or learning yet"}
 
 def main():
     try:
@@ -103,6 +103,17 @@ def main():
         result = {"completed_at": dt.datetime.now(dt.timezone.utc).isoformat(), "engine": "rebuild-shadow-0.5", "health": "FAILED", "error": str(exc), "recommendation": "NO VERIFIED BUYS"}
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(result, indent=2) + "\n")
+    try:
+        from history import store_run, outcome_summary
+        store_run(result)
+        result["historical_outcomes"] = outcome_summary()
+        OUTPUT.write_text(json.dumps(result, indent=2) + "\n")
+    except Exception as exc:
+        result["persistence_health"] = "FAILED"
+        result["persistence_error"] = str(exc)
+        OUTPUT.write_text(json.dumps(result, indent=2) + "\n")
+        print("PERSISTENCE_FAILED:", str(exc))
+        raise SystemExit(1)
     print(json.dumps(result))
     if result["health"] == "FAILED":
         raise SystemExit(1)
