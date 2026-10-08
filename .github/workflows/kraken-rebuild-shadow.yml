@@ -23,8 +23,8 @@ jobs:
       - name: Restore persistent history from dedicated branch
         run: |
           mkdir -p rebuild_v2/output
-          if git fetch origin rebuild-history:refs/remotes/origin/rebuild-history; then
-            git show origin/rebuild-history:history.sqlite3 > rebuild_v2/output/history.sqlite3 || true
+          if git fetch origin refs/heads/rebuild-history:refs/remotes/origin/rebuild-history; then
+            git show origin/rebuild-history:history.sqlite3 > rebuild_v2/output/history.sqlite3 || rm -f rebuild_v2/output/history.sqlite3
           fi
       - name: Unit tests
         run: python -m unittest discover -s rebuild_v2 -p 'test_*.py'
