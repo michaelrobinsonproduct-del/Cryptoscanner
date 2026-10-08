@@ -24,18 +24,8 @@ def store_run(result):
         con.execute("INSERT OR IGNORE INTO runs VALUES (?,?,?,?)",(rid,result["completed_at"],result["health"],json.dumps(result)))
         for c in result.get("watch",[]):
             con.execute("INSERT OR IGNORE INTO observations VALUES (?,?,?,?,?)",(rid,c["pair"],c.get("price"),c["score"],c["status"]))
-    url=os.getenv("SUPABASE_URL")
-    key=os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-    if not url or not key:
-        raise RuntimeError("Durable Supabase persistence is required; GitHub runner SQLite is ephemeral")
-    if bool(url)!=bool(key):
-        raise RuntimeError("Supabase URL/key incomplete")
-    if url and key:
-        payload=json.dumps({"run_id":rid,"recorded_at":result["completed_at"],"payload":result}).encode()
-        req=urllib.request.Request(url.rstrip("/")+"/rest/v1/kraken_rebuild_runs",data=payload,headers={"apikey":key,"Authorization":"Bearer "+key,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates"},method="POST")
-        with urllib.request.urlopen(req,timeout=20) as response:
-            if response.status not in (200,201,204):
-                raise RuntimeError("Supabase write status "+str(response.status))
+    # Durable history is restored and committed by the GitHub workflow.
+    # No external secrets or Supabase API are needed.
 def outcome_summary():
     with connect() as con:
         rows=con.execute("SELECT horizon_hours, COUNT(*), AVG(return_pct) FROM outcomes GROUP BY horizon_hours").fetchall()
