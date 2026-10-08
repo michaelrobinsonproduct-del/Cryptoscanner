@@ -1,0 +1,11 @@
+# Rebuild verification notes
+- Shadow discovery: Kraken AssetPairs/Ticker.
+- Confirmation: two sequential Depth/Trades checks for five watch candidates.
+- Safety: no BUY status emitted.
+- GitHub Actions scheduled execution is configured, but successful execution is NOT confirmed.
+- SQLite history on GitHub hosted runners is ephemeral.
+- Supabase REST persistence requires both repository secrets and a protected table.
+- Database verification attempted October 8, 2026; connector operation blocked by safety checks.
+- Production scanner remains untouched.
+- Historical learning, cross-venue confirmation, and notifications are not complete.
+- Do not switch production until a hosted scan, durable write, and result retrieval all succeed.
