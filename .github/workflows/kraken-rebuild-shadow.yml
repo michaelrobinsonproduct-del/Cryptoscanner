@@ -4,27 +4,51 @@ on:
   schedule:
     - cron: '*/15 * * * *'
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: kraken-rebuild-shadow
   cancel-in-progress: false
 jobs:
   shadow-scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 1
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Restore persistent history from dedicated branch
+        run: |
+          mkdir -p rebuild_v2/output
+          if git fetch origin rebuild-history:refs/remotes/origin/rebuild-history; then
+            git show origin/rebuild-history:history.sqlite3 > rebuild_v2/output/history.sqlite3 || true
+          fi
       - name: Unit tests
         run: python -m unittest discover -s rebuild_v2 -p 'test_*.py'
-      - name: Validate durable storage credentials\n        env:\n          SUPABASE_URL: ${{ secrets.KRAKEN_REBUILD_SUPABASE_URL }}\n          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.KRAKEN_REBUILD_SUPABASE_SERVICE_ROLE_KEY }}\n        run: |\n          test -n "$SUPABASE_URL" && test -n "$SUPABASE_SERVICE_ROLE_KEY" || { echo "Missing durable storage configuration"; exit 1; }\n      - name: Run independent shadow scanner
-        env:
-          SUPABASE_URL: ${{ secrets.KRAKEN_REBUILD_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.KRAKEN_REBUILD_SUPABASE_SERVICE_ROLE_KEY }}
+      - name: Run independent shadow scanner
         run: python rebuild_v2/scanner.py
-      - name: Retain scan report and local history
+      - name: Save history and report to dedicated branch
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp rebuild_v2/output/history.sqlite3 /tmp/kraken-history.sqlite3
+          cp rebuild_v2/output/latest.json /tmp/kraken-latest.json
+          if git show-ref --verify --quiet refs/remotes/origin/rebuild-history; then
+            git checkout -B rebuild-history origin/rebuild-history
+          else
+            git checkout --orphan rebuild-history
+            git rm -rf --ignore-unmatch . >/dev/null || true
+          fi
+          cp /tmp/kraken-history.sqlite3 history.sqlite3
+          cp /tmp/kraken-latest.json latest.json
+          git add history.sqlite3 latest.json
+          git -c user.name='kraken-rebuild-bot' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Shadow scan history ${GITHUB_RUN_ID}" || true
+          git push origin HEAD:refs/heads/rebuild-history
+      - name: Retain independent recovery artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
