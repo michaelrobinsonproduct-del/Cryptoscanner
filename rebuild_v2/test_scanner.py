@@ -1,5 +1,6 @@
 import unittest
-from scanner import rank
+from scanner import rank, confirm_watch
+import time
 
 class ShadowScannerTests(unittest.TestCase):
     def test_valid_quote(self):
@@ -13,5 +14,22 @@ class ShadowScannerTests(unittest.TestCase):
         t={"c":["10"],"o":"0","v":["0","10000"],"t":[0,500],"b":["9.99"],"a":["10.01"]}
         with self.assertRaises(ValueError):
             rank(t)
+
+    def test_confirmation_stays_watch_only(self):
+        now=time.time()
+        def fake(endpoint):
+            if endpoint.startswith("Depth?"):
+                return {"XXBTZUSD":{"bids":[["100","1","1"]],"asks":[["100.1","1","1"]]}}
+            return {"XXBTZUSD":[["100","1",now-10,"b","l",""]]}
+        result=confirm_watch("XXBTZUSD",{},fake)
+        self.assertFalse(result["entry_approved"])
+        self.assertEqual(result["status"],"WATCH_CONFIRMED")
+    def test_stale_trade_rejected(self):
+        def fake(endpoint):
+            if endpoint.startswith("Depth?"):
+                return {"XXBTZUSD":{"bids":[["100","1","1"]],"asks":[["100.1","1","1"]]}}
+            return {"XXBTZUSD":[["100","1",time.time()-600,"b","l",""]]}
+        with self.assertRaises(ValueError):
+            confirm_watch("XXBTZUSD",{},fake)
 
 if __name__=="__main__": unittest.main()
