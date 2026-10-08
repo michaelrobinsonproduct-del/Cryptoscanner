@@ -74,13 +74,14 @@ def scan():
     started = dt.datetime.now(dt.timezone.utc)
     pairs = {k: v for k, v in api("AssetPairs").items() if v.get("status") == "online" and v.get("quote") in ("ZUSD", "USD") and not k.endswith(".d")}
     tickers = api("Ticker")
-    watches, failed = [], []
+    watches, failed, market_quotes = [], [], []
     for pair, meta in pairs.items():
         try:
             ticker = tickers.get(pair) or tickers.get(meta.get("altname", ""))
             if ticker is None:
                 raise ValueError("missing ticker")
             metrics = rank(ticker)
+            market_quotes.append({"pair":pair,"bid":float(ticker["b"][0])})
             if metrics["score"] >= 60:
                 watches.append({"pair": pair, **metrics, "status": "WATCH"})
         except (KeyError, ValueError, TypeError, ZeroDivisionError) as exc:
@@ -94,7 +95,7 @@ def scan():
         except Exception as exc:
             confirmations.append({"pair": candidate["pair"], "status": "CONFIRMATION_FAILED", "error": str(exc), "entry_approved": False})
     finished = dt.datetime.now(dt.timezone.utc)
-    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-0.7", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
+    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-0.8", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "market_quotes": market_quotes, "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
 
 def main():
     try:
@@ -104,7 +105,8 @@ def main():
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(result, indent=2) + "\n")
     try:
-        from history import store_run, outcome_summary
+        from history import store_run, outcome_summary, evaluate_outcomes
+        evaluate_outcomes(result) if result["health"] != "FAILED" else None
         store_run(result)
         result["historical_outcomes"] = outcome_summary()
         OUTPUT.write_text(json.dumps(result, indent=2) + "\n")
