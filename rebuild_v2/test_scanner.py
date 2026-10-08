@@ -3,6 +3,7 @@ import os
 import tempfile
 import pathlib
 import history
+import datetime as dt
 from scanner import rank, confirm_watch, confirm_twice
 import time
 
@@ -41,4 +42,21 @@ class ScannerTests(unittest.TestCase):
                     self.assertEqual(db.execute("SELECT count(*) FROM runs").fetchone()[0],1)
                     self.assertEqual(db.execute("SELECT count(*) FROM observations").fetchone()[0],1)
             finally: history.DB=original
+    def test_prospective_outcome_uses_bid(self):
+        with tempfile.TemporaryDirectory() as folder:
+            original=history.DB
+            history.DB=pathlib.Path(folder)/"history.db"
+            try:
+                t0=dt.datetime.now(dt.timezone.utc)-dt.timedelta(hours=1,minutes=5)
+                run={"started_at":t0.isoformat(),"completed_at":t0.isoformat(),"health":"COMPLETE","watch":[{"pair":"ABCUSD","price":100,"score":80,"status":"WATCH"}]}
+                history.store_run(run)
+                current={"completed_at":dt.datetime.now(dt.timezone.utc).isoformat(),"market_quotes":[{"pair":"ABCUSD","bid":110}]}
+                history.evaluate_outcomes(current)
+                with history.connect() as db:
+                    row=db.execute("SELECT horizon_hours,return_pct FROM outcomes").fetchone()
+                    self.assertEqual(row[0],1)
+                    self.assertAlmostEqual(row[1],10)
+            finally:
+                history.DB=original
+
 if __name__=="__main__": unittest.main()
