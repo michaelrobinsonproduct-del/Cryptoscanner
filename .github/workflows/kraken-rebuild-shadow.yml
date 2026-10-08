@@ -19,7 +19,7 @@ jobs:
           python-version: '3.12'
       - name: Unit tests
         run: python -m unittest discover -s rebuild_v2 -p 'test_*.py'
-      - name: Run independent shadow scanner
+      - name: Validate durable storage credentials\n        env:\n          SUPABASE_URL: ${{ secrets.KRAKEN_REBUILD_SUPABASE_URL }}\n          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.KRAKEN_REBUILD_SUPABASE_SERVICE_ROLE_KEY }}\n        run: |\n          test -n "$SUPABASE_URL" && test -n "$SUPABASE_SERVICE_ROLE_KEY" || { echo "Missing durable storage configuration"; exit 1; }\n      - name: Run independent shadow scanner
         env:
           SUPABASE_URL: ${{ secrets.KRAKEN_REBUILD_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.KRAKEN_REBUILD_SUPABASE_SERVICE_ROLE_KEY }}
