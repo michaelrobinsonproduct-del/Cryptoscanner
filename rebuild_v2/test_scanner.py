@@ -1,5 +1,5 @@
 import unittest
-from scanner import rank, confirm_watch
+from scanner import rank, confirm_watch, confirm_twice
 import time
 
 class ShadowScannerTests(unittest.TestCase):
@@ -31,5 +31,15 @@ class ShadowScannerTests(unittest.TestCase):
             return {"XXBTZUSD":[["100","1",time.time()-600,"b","l",""]]}
         with self.assertRaises(ValueError):
             confirm_watch("XXBTZUSD",{},fake)
+
+    def test_double_confirmation_never_authorizes_entry(self):
+        def fake(endpoint):
+            if endpoint.startswith("Depth?"):
+                return {"XXBTZUSD":{"bids":[["100","1","1"]],"asks":[["100.1","1","1"]]}}
+            return {"XXBTZUSD":[["100","1",time.time()-5,"b","l",""]]}
+        # A deterministic time advance is needed for strictly ordered timestamps.
+        result=confirm_twice("XXBTZUSD",{},fake,lambda _: time.sleep(0.01))
+        self.assertEqual(result["status"],"DOUBLE_CONFIRMED_WATCH")
+        self.assertFalse(result["entry_approved"])
 
 if __name__=="__main__": unittest.main()
