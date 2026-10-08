@@ -5,6 +5,9 @@ on:
     - cron: '*/15 * * * *'
 permissions:
   contents: read
+concurrency:
+  group: kraken-rebuild-shadow
+  cancel-in-progress: false
 jobs:
   shadow-scan:
     runs-on: ubuntu-latest
@@ -14,5 +17,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Unit tests
+        run: python -m unittest discover -s rebuild_v2 -p 'test_*.py'
       - name: Run independent shadow scanner
         run: python rebuild_v2/scanner.py
+      - name: Persist scan report for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kraken-shadow-${{ github.run_id }}
+          path: rebuild_v2/output/latest.json
+          if-no-files-found: warn
+          retention-days: 30
