@@ -43,7 +43,7 @@ def confirm_watch(pair, snapshot, fetch=api):
     encoded = urllib.parse.quote(pair, safe="")
     depth = fetch("Depth?pair=" + encoded + "&count=10")
     trades = fetch("Trades?pair=" + encoded)
-    d = next(iter(depth.values()))
+    d = next(value for value in depth.values() if isinstance(value,dict) and "bids" in value)
     t = next(value for value in trades.values() if isinstance(value,list))
     if not isinstance(t, list) or not t or not isinstance(t[0], list):
         raise ValueError("no recent trade")
@@ -87,6 +87,8 @@ def scan():
         except (KeyError, ValueError, TypeError, ZeroDivisionError) as exc:
             failed.append({"pair": pair, "error": str(exc)})
     watches.sort(key=lambda x: -x["score"])
+    # Avoid treating coins already extended >15% in 24h as early discoveries.
+    watches = [c for c in watches if -10 <= c["move24_pct"] <= 15]
     confirmations = []
     for candidate in watches[:5]:
         try:
@@ -95,7 +97,7 @@ def scan():
         except Exception as exc:
             confirmations.append({"pair": candidate["pair"], "status": "CONFIRMATION_FAILED", "error": str(exc), "entry_approved": False})
     finished = dt.datetime.now(dt.timezone.utc)
-    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-0.8", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "market_quotes": market_quotes, "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
+    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-0.9", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "market_quotes": market_quotes, "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
 
 def main():
     try:
@@ -109,6 +111,8 @@ def main():
         evaluate_outcomes(result) if result["health"] != "FAILED" else None
         store_run(result)
         result["historical_outcomes"] = outcome_summary()
+        from history import learning_report
+        result["learning_report"] = learning_report()
         OUTPUT.write_text(json.dumps(result, indent=2) + "\n")
     except Exception as exc:
         result["persistence_health"] = "FAILED"
