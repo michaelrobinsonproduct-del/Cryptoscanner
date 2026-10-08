@@ -26,6 +26,8 @@ def store_run(result):
             con.execute("INSERT OR IGNORE INTO observations VALUES (?,?,?,?,?)",(rid,c["pair"],c.get("price"),c["score"],c["status"]))
     url=os.getenv("SUPABASE_URL")
     key=os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    if not url or not key:
+        raise RuntimeError("Durable Supabase persistence is required; GitHub runner SQLite is ephemeral")
     if bool(url)!=bool(key):
         raise RuntimeError("Supabase URL/key incomplete")
     if url and key:
