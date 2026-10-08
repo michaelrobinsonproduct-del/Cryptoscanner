@@ -60,6 +60,16 @@ def confirm_watch(pair, snapshot, fetch=api):
         raise ValueError("spread too wide")
     return {"confirmed_at": dt.datetime.now(dt.timezone.utc).isoformat(), "trade_age_seconds": round(age, 2), "spread_bps": round(spread, 2), "status": "WATCH_CONFIRMED", "entry_approved": False}
 
+def confirm_twice(pair, snapshot, fetch=api, wait=lambda seconds: time.sleep(seconds)):
+    first = confirm_watch(pair, snapshot, fetch)
+    wait(2)
+    second = confirm_watch(pair, snapshot, fetch)
+    first_time = dt.datetime.fromisoformat(first["confirmed_at"])
+    second_time = dt.datetime.fromisoformat(second["confirmed_at"])
+    if second_time <= first_time:
+        raise ValueError("confirmation timestamps not ordered")
+    return {"pair": pair, "first": first, "second": second, "status": "DOUBLE_CONFIRMED_WATCH", "entry_approved": False}
+
 def scan():
     started = dt.datetime.now(dt.timezone.utc)
     pairs = {k: v for k, v in api("AssetPairs").items() if v.get("status") == "online" and v.get("quote") in ("ZUSD", "USD") and not k.endswith(".d")}
@@ -79,18 +89,18 @@ def scan():
     confirmations = []
     for candidate in watches[:5]:
         try:
-            check = confirm_watch(candidate["pair"], candidate)
+            check = confirm_twice(candidate["pair"], candidate)
             confirmations.append({"pair": candidate["pair"], **check})
         except Exception as exc:
             confirmations.append({"pair": candidate["pair"], "status": "CONFIRMATION_FAILED", "error": str(exc), "entry_approved": False})
     finished = dt.datetime.now(dt.timezone.utc)
-    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-0.4", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Single-snapshot discovery; no execution confirmation or learning yet"}
+    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-0.5", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Single-snapshot discovery; no execution confirmation or learning yet"}
 
 def main():
     try:
         result = scan()
     except Exception as exc:
-        result = {"completed_at": dt.datetime.now(dt.timezone.utc).isoformat(), "engine": "rebuild-shadow-0.3", "health": "FAILED", "error": str(exc), "recommendation": "NO VERIFIED BUYS"}
+        result = {"completed_at": dt.datetime.now(dt.timezone.utc).isoformat(), "engine": "rebuild-shadow-0.5", "health": "FAILED", "error": str(exc), "recommendation": "NO VERIFIED BUYS"}
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result))
