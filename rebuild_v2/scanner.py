@@ -37,6 +37,29 @@ def rank(t):
     score = min(35, trades / 35) + min(30, vol * price / 100000) + max(0, 20 - spread * 2) + max(0, 15 - abs(move) * 2)
     return {"score": round(score, 2), "move24_pct": round(move, 2), "spread_bps": round(spread, 2)}
 
+def confirm_watch(pair, snapshot, fetch=api):
+    """Independent REST depth/trades checks. No entry approval from one confirmation."""
+    import urllib.parse
+    encoded = urllib.parse.quote(pair, safe="")
+    depth = fetch("Depth?pair=" + encoded + "&count=10")
+    trades = fetch("Trades?pair=" + encoded)
+    d = next(iter(depth.values()))
+    t = next(iter(trades.values()))
+    if not isinstance(t, list) or not t or not isinstance(t[0], list):
+        raise ValueError("no recent trade")
+    bids, asks = d.get("bids", []), d.get("asks", [])
+    if not bids or not asks:
+        raise ValueError("empty order book")
+    bid, ask = float(bids[0][0]), float(asks[0][0])
+    trade_time = float(t[-1][2])
+    age = time.time() - trade_time
+    if not (0 <= age <= 120 and 0 < bid <= ask):
+        raise ValueError("stale trade or invalid book")
+    spread = (ask / bid - 1) * 10000
+    if spread > 100:
+        raise ValueError("spread too wide")
+    return {"confirmed_at": dt.datetime.now(dt.timezone.utc).isoformat(), "trade_age_seconds": round(age, 2), "spread_bps": round(spread, 2), "status": "WATCH_CONFIRMED", "entry_approved": False}
+
 def scan():
     started = dt.datetime.now(dt.timezone.utc)
     pairs = {k: v for k, v in api("AssetPairs").items() if v.get("status") == "online" and v.get("quote") in ("ZUSD", "USD") and not k.endswith(".d")}
@@ -53,8 +76,15 @@ def scan():
         except (KeyError, ValueError, TypeError, ZeroDivisionError) as exc:
             failed.append({"pair": pair, "error": str(exc)})
     watches.sort(key=lambda x: -x["score"])
+    confirmations = []
+    for candidate in watches[:5]:
+        try:
+            check = confirm_watch(candidate["pair"], candidate)
+            confirmations.append({"pair": candidate["pair"], **check})
+        except Exception as exc:
+            confirmations.append({"pair": candidate["pair"], "status": "CONFIRMATION_FAILED", "error": str(exc), "entry_approved": False})
     finished = dt.datetime.now(dt.timezone.utc)
-    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-0.3", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "recommendation": "NO VERIFIED BUYS", "note": "Single-snapshot discovery; no execution confirmation or learning yet"}
+    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-0.4", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Single-snapshot discovery; no execution confirmation or learning yet"}
 
 def main():
     try:
