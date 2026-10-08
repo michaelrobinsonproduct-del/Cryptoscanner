@@ -35,7 +35,7 @@ def rank(t):
     move = (price / open24 - 1) * 100
     spread = (ask - bid) / bid * 10000
     score = min(35, trades / 35) + min(30, vol * price / 100000) + max(0, 20 - spread * 2) + max(0, 15 - abs(move) * 2)
-    return {"score": round(score, 2), "move24_pct": round(move, 2), "spread_bps": round(spread, 2)}
+    return {"price": price, "score": round(score, 2), "move24_pct": round(move, 2), "spread_bps": round(spread, 2)}
 
 def confirm_watch(pair, snapshot, fetch=api):
     """Independent REST depth/trades checks. No entry approval from one confirmation."""
@@ -44,7 +44,7 @@ def confirm_watch(pair, snapshot, fetch=api):
     depth = fetch("Depth?pair=" + encoded + "&count=10")
     trades = fetch("Trades?pair=" + encoded)
     d = next(iter(depth.values()))
-    t = next(iter(trades.values()))
+    t = next(value for value in trades.values() if isinstance(value,list))
     if not isinstance(t, list) or not t or not isinstance(t[0], list):
         raise ValueError("no recent trade")
     bids, asks = d.get("bids", []), d.get("asks", [])
@@ -94,13 +94,13 @@ def scan():
         except Exception as exc:
             confirmations.append({"pair": candidate["pair"], "status": "CONFIRMATION_FAILED", "error": str(exc), "entry_approved": False})
     finished = dt.datetime.now(dt.timezone.utc)
-    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-0.6", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Single-snapshot discovery; no execution confirmation or learning yet"}
+    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-0.7", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
 
 def main():
     try:
         result = scan()
     except Exception as exc:
-        result = {"completed_at": dt.datetime.now(dt.timezone.utc).isoformat(), "engine": "rebuild-shadow-0.5", "health": "FAILED", "error": str(exc), "recommendation": "NO VERIFIED BUYS"}
+        result = {"completed_at": dt.datetime.now(dt.timezone.utc).isoformat(), "engine": "rebuild-shadow-0.7", "health": "FAILED", "error": str(exc), "recommendation": "NO VERIFIED BUYS"}
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(result, indent=2) + "\n")
     try:
