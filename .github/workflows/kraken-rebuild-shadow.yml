@@ -202,7 +202,32 @@ jobs:
           receipt={"checked_at":dt.datetime.now(dt.timezone.utc).isoformat(),"checks":checks,"verified":all(x["passed"] for x in checks.values())}
           Path("rebuild_v2/output/controller_http_receipt.json").write_text(json.dumps(receipt,indent=2)+"\n")
           print("CONTROLLER_HTTP_RECEIPT",json.dumps(receipt))
-          assert receipt["verified"],"controller HTTP read-back failed"
+          PY
+      - name: Persist controller HTTP receipt
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f rebuild_v2/output/controller_http_receipt.json ]; then
+            cp rebuild_v2/output/controller_http_receipt.json /tmp/controller-http-receipt.json
+            git fetch origin refs/heads/rebuild-history:refs/remotes/origin/rebuild-history
+            git checkout -B rebuild-history origin/rebuild-history
+            cp /tmp/controller-http-receipt.json controller_http_receipt.json
+            git add controller_http_receipt.json
+            git -c user.name='kraken-rebuild-bot' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Controller HTTP receipt ${GITHUB_RUN_ID}" || true
+            git push origin HEAD:refs/heads/rebuild-history
+          fi
+      - name: Require controller HTTP verification
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("rebuild_v2/output/controller_http_receipt.json")
+          assert p.exists(),"controller receipt missing"
+          r=json.loads(p.read_text())
+          assert r["verified"],"controller HTTP read-back failed"
           PY
       - name: Retain independent recovery artifact
         if: always()
