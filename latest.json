@@ -1,6 +1,6 @@
 {
-  "started_at": "2026-10-09T04:58:06.638232+00:00",
-  "completed_at": "2026-10-09T04:58:20.802097+00:00",
+  "started_at": "2026-10-09T05:15:13.144471+00:00",
+  "completed_at": "2026-10-09T05:15:29.680395+00:00",
   "engine": "rebuild-shadow-1.0",
   "health": "COMPLETE",
   "universe": 619,
@@ -10,197 +10,317 @@
   "watch": [
     {
       "pair": "DOTUSD",
-      "price": 1.1599,
-      "score": 98.28,
-      "move24_pct": 6.48,
-      "spread_bps": 0.86,
-      "status": "WATCH"
+      "price": 1.1537,
+      "score": 93.05,
+      "move24_pct": 5.91,
+      "spread_bps": 3.47,
+      "status": "WATCH",
+      "historical_features": {
+        "pre_return_5m_pct": 0.1301066874837442,
+        "pre_return_15m_pct": -0.4484304932735328,
+        "pre_return_60m_pct": 0.22573363431153126,
+        "volume_accel": 0.9152667204952745,
+        "trade_accel": 0.982089552238806,
+        "volatility_pct": 0.1774179398342396
+      },
+      "historical_rules_matched": [],
+      "historical_bonus": 0
     },
     {
       "pair": "NEARUSD",
-      "price": 4.7171,
-      "score": 92.78,
-      "move24_pct": 5.76,
-      "spread_bps": 3.61,
-      "status": "WATCH"
+      "price": 4.7785,
+      "score": 92.88,
+      "move24_pct": 7.14,
+      "spread_bps": 3.56,
+      "status": "WATCH",
+      "historical_features": {
+        "pre_return_5m_pct": 0.7264687302590112,
+        "pre_return_15m_pct": 1.4786371929229158,
+        "pre_return_60m_pct": -0.13569937369519725,
+        "volume_accel": 0.6733472627913675,
+        "trade_accel": 0.8202531645569621,
+        "volatility_pct": 0.42075897219135616
+      },
+      "historical_rules_matched": [],
+      "historical_bonus": 0
     },
     {
       "pair": "TIAUSD",
-      "price": 0.5245,
-      "score": 87.82,
-      "move24_pct": 4.65,
-      "spread_bps": 5.71,
-      "status": "WATCH"
-    },
-    {
-      "pair": "DRVUSD",
-      "price": 0.46788,
-      "score": 85,
-      "move24_pct": 6.92,
-      "spread_bps": 25.72,
-      "status": "WATCH"
-    },
-    {
-      "pair": "JUPUSD",
-      "price": 0.35274,
-      "score": 85,
-      "move24_pct": 5.01,
-      "spread_bps": 15.62,
-      "status": "WATCH"
-    },
-    {
-      "pair": "ZROUSD",
-      "price": 2.062,
-      "score": 85,
-      "move24_pct": 5.15,
-      "spread_bps": 9.74,
-      "status": "WATCH"
-    },
-    {
-      "pair": "XZECZUSD",
-      "price": 1217.61,
-      "score": 82.53,
-      "move24_pct": 2.75,
-      "spread_bps": 1.23,
-      "status": "WATCH"
+      "price": 0.5249,
+      "score": 91.57,
+      "move24_pct": 4.73,
+      "spread_bps": 3.81,
+      "status": "WATCH",
+      "historical_features": {
+        "pre_return_5m_pct": -0.24705435195742087,
+        "pre_return_15m_pct": -0.019047619047618536,
+        "pre_return_60m_pct": 1.8234723569350297,
+        "volume_accel": 1.964013429241572,
+        "trade_accel": 3.111111111111111,
+        "volatility_pct": 0.296527144589933
+      },
+      "historical_rules_matched": [],
+      "historical_bonus": 0
     },
     {
       "pair": "UNIUSD",
-      "price": 7.3329,
-      "score": 82.5,
-      "move24_pct": 3.07,
-      "spread_bps": 3.14,
-      "status": "WATCH"
+      "price": 7.3611,
+      "score": 88.11,
+      "move24_pct": 3.46,
+      "spread_bps": 2.72,
+      "status": "WATCH",
+      "historical_features": {
+        "pre_return_5m_pct": 0.17555319670123914,
+        "pre_return_15m_pct": 0.5230239798984071,
+        "pre_return_60m_pct": -0.11804933648130733,
+        "volume_accel": 1.1785033225692818,
+        "trade_accel": 0.8244274809160306,
+        "volatility_pct": 0.18095340261858606
+      },
+      "historical_rules_matched": [],
+      "historical_bonus": 0
+    },
+    {
+      "pair": "JUPUSD",
+      "price": 0.35647,
+      "score": 85,
+      "move24_pct": 6.12,
+      "spread_bps": 17.98,
+      "status": "WATCH",
+      "historical_features": {
+        "pre_return_5m_pct": 0.16860089358472496,
+        "pre_return_15m_pct": 1.0574360718943243,
+        "pre_return_60m_pct": 1.9417753374513902,
+        "volume_accel": 1.1043121858958378,
+        "trade_accel": 1.605263157894737,
+        "volatility_pct": 0.3057947811605891
+      },
+      "historical_rules_matched": [],
+      "historical_bonus": 0
+    },
+    {
+      "pair": "ZROUSD",
+      "price": 2.064,
+      "score": 85,
+      "move24_pct": 5.25,
+      "spread_bps": 9.69,
+      "status": "WATCH",
+      "historical_features": {
+        "pre_return_5m_pct": -0.28985507246376274,
+        "pre_return_15m_pct": 0.8797653958944496,
+        "pre_return_60m_pct": 0.535801266439373,
+        "volume_accel": 3.4124983929149098,
+        "trade_accel": 1.9565217391304348,
+        "volatility_pct": 0.4471263615006003
+      },
+      "historical_rules_matched": [],
+      "historical_bonus": 0
     },
     {
       "pair": "BCHUSD",
-      "price": 279.65,
-      "score": 82.06,
-      "move24_pct": 3.25,
-      "spread_bps": 2.15,
-      "status": "WATCH"
+      "price": 280.31,
+      "score": 84.3,
+      "move24_pct": 3.49,
+      "spread_bps": 2.5,
+      "status": "WATCH",
+      "historical_features": {
+        "pre_return_5m_pct": 0.14648088603073095,
+        "pre_return_15m_pct": 0.375993697629462,
+        "pre_return_60m_pct": 0.5488198579525205,
+        "volume_accel": 0.87394493431349,
+        "trade_accel": 0.7692307692307693,
+        "volatility_pct": 0.1546755759487543
+      },
+      "historical_rules_matched": [],
+      "historical_bonus": 0
     },
     {
-      "pair": "RAYUSD",
-      "price": 2.461,
-      "score": 79.54,
-      "move24_pct": 5.94,
-      "spread_bps": 8.15,
-      "status": "WATCH"
-    },
-    {
-      "pair": "APTUSD",
-      "price": 0.774,
-      "score": 78.12,
-      "move24_pct": 5.16,
-      "spread_bps": 5.17,
-      "status": "WATCH"
+      "pair": "XZECZUSD",
+      "price": 1219.73,
+      "score": 83.53,
+      "move24_pct": 2.93,
+      "spread_bps": 1.8,
+      "status": "WATCH",
+      "historical_features": {
+        "pre_return_5m_pct": 0.19626682433706577,
+        "pre_return_15m_pct": 0.2003810524932481,
+        "pre_return_60m_pct": 0.08448925017841002,
+        "volume_accel": 0.20052259535503103,
+        "trade_accel": 0.403030303030303,
+        "volatility_pct": 0.2725810375925437
+      },
+      "historical_rules_matched": [],
+      "historical_bonus": 0
     },
     {
       "pair": "ICPUSD",
-      "price": 3.023,
-      "score": 77.56,
-      "move24_pct": 3.81,
-      "spread_bps": 6.62,
+      "price": 3.029,
+      "score": 79.99,
+      "move24_pct": 4.02,
+      "spread_bps": 6.61,
+      "status": "WATCH",
+      "historical_features": {
+        "pre_return_5m_pct": 0.033025099075301156,
+        "pre_return_15m_pct": 0.16534391534390736,
+        "pre_return_60m_pct": -0.09894459102902653,
+        "volume_accel": 5.848505452322776,
+        "trade_accel": 2.9615384615384617,
+        "volatility_pct": 0.1453763431884904
+      },
+      "historical_rules_matched": [],
+      "historical_bonus": 0
+    },
+    {
+      "pair": "RAYUSD",
+      "price": 2.467,
+      "score": 79.6,
+      "move24_pct": 6.2,
+      "spread_bps": 12.16,
+      "status": "WATCH",
+      "historical_features": {
+        "pre_return_5m_pct": 0.16240357287859997,
+        "pre_return_15m_pct": 0.24380333197888682,
+        "pre_return_60m_pct": -1.2014417300760805,
+        "volume_accel": 0.39072153051976805,
+        "trade_accel": 0.2783171521035599,
+        "volatility_pct": 0.48501555891186937
+      },
+      "historical_rules_matched": [],
+      "historical_bonus": 0
+    },
+    {
+      "pair": "ENAUSD",
+      "price": 0.2127,
+      "score": 78.63,
+      "move24_pct": 3.0,
+      "spread_bps": 4.7,
+      "status": "WATCH",
+      "historical_features": {
+        "pre_return_5m_pct": 0.32972209138013575,
+        "pre_return_15m_pct": 0.9478672985782088,
+        "pre_return_60m_pct": 0.09398496240602405,
+        "volume_accel": 3.2534654806878196,
+        "trade_accel": 1.7391304347826086,
+        "volatility_pct": 0.20671903247700113
+      },
+      "historical_rules_matched": [],
+      "historical_bonus": 0
+    },
+    {
+      "pair": "RENDERUSD",
+      "price": 1.9,
+      "score": 78.14,
+      "move24_pct": 3.94,
+      "spread_bps": 10.54,
+      "status": "WATCH",
+      "historical_features": {
+        "pre_return_5m_pct": 0.4759386567953383,
+        "pre_return_15m_pct": 1.1714589989350488,
+        "pre_return_60m_pct": 0.21097046413502962,
+        "volume_accel": 0.13294375881983928,
+        "trade_accel": 0.4067796610169492,
+        "volatility_pct": 0.3356799993296976
+      },
+      "historical_rules_matched": [],
+      "historical_bonus": 0
+    },
+    {
+      "pair": "AKEUSD",
+      "price": 0.02772524,
+      "score": 77.92,
+      "move24_pct": 4.63,
+      "spread_bps": 16.6,
       "status": "WATCH"
     },
     {
       "pair": "WUSD",
-      "price": 0.01635,
+      "price": 0.01667,
       "score": 77.12,
-      "move24_pct": 7.57,
-      "spread_bps": 12.22,
+      "move24_pct": 9.67,
+      "spread_bps": 12.01,
       "status": "WATCH"
     },
     {
-      "pair": "AKEUSD",
-      "price": 0.027526,
-      "score": 76.32,
-      "move24_pct": 3.88,
-      "spread_bps": 16.2,
+      "pair": "FARTCOINUSD",
+      "price": 0.1635,
+      "score": 76.23,
+      "move24_pct": 3.61,
+      "spread_bps": 6.12,
+      "status": "WATCH"
+    },
+    {
+      "pair": "ONDOUSD",
+      "price": 0.4799,
+      "score": 75.76,
+      "move24_pct": 2.08,
+      "spread_bps": 0.63,
+      "status": "WATCH"
+    },
+    {
+      "pair": "TAOUSD",
+      "price": 274.1925,
+      "score": 75.37,
+      "move24_pct": 1.99,
+      "spread_bps": 0.24,
       "status": "WATCH"
     },
     {
       "pair": "ATOMUSD",
-      "price": 1.8576,
-      "score": 75.06,
-      "move24_pct": 5.25,
-      "spread_bps": 12.38,
+      "price": 1.8751,
+      "score": 75.11,
+      "move24_pct": 6.24,
+      "spread_bps": 11.73,
       "status": "WATCH"
     },
     {
-      "pair": "RLCUSD",
-      "price": 0.9176,
-      "score": 74.7,
-      "move24_pct": 4.17,
-      "spread_bps": 33.88,
+      "pair": "JTOUSD",
+      "price": 0.52609,
+      "score": 74.73,
+      "move24_pct": 4.42,
+      "spread_bps": 6.65,
       "status": "WATCH"
     },
     {
       "pair": "SANDUSD",
-      "price": 0.0707,
-      "score": 74.58,
-      "move24_pct": 6.32,
-      "spread_bps": 14.16,
-      "status": "WATCH"
-    },
-    {
-      "pair": "BATUSD",
-      "price": 0.10596,
-      "score": 73.05,
-      "move24_pct": 3.32,
-      "spread_bps": 2.83,
-      "status": "WATCH"
-    },
-    {
-      "pair": "ORCAUSD",
-      "price": 2.451,
-      "score": 70.91,
-      "move24_pct": 4.43,
-      "spread_bps": 24.49,
-      "status": "WATCH"
-    },
-    {
-      "pair": "PEPEUSD",
-      "price": 3.912e-06,
-      "score": 70.15,
-      "move24_pct": 2.35,
-      "spread_bps": 2.56,
+      "price": 0.0714,
+      "score": 74.65,
+      "move24_pct": 7.37,
+      "spread_bps": 28.05,
       "status": "WATCH"
     }
   ],
   "market_quotes": [
     {
       "pair": "0GUSD",
-      "bid": 0.289,
+      "bid": 0.288,
       "price": 0.289,
-      "score": 16.59,
+      "score": 16.53,
       "move24_pct": 1.05,
-      "spread_bps": 34.6
+      "spread_bps": 34.72
     },
     {
       "pair": "1INCHUSD",
       "bid": 0.096,
-      "price": 0.0965,
-      "score": 29.37,
-      "move24_pct": 2.33,
-      "spread_bps": 10.42
+      "price": 0.0961,
+      "score": 24.27,
+      "move24_pct": 1.91,
+      "spread_bps": 20.83
     },
     {
       "pair": "2ZUSD",
-      "bid": 0.03616,
-      "price": 0.03616,
-      "score": 17.54,
-      "move24_pct": 1.01,
-      "spread_bps": 27.65
+      "bid": 0.03622,
+      "price": 0.03624,
+      "score": 20.27,
+      "move24_pct": 1.23,
+      "spread_bps": 35.89
     },
     {
       "pair": "AAVEUSD",
-      "bid": 165.08,
-      "price": 165.27,
-      "score": 47.15,
-      "move24_pct": -0.49,
-      "spread_bps": 2.42
+      "bid": 166.09,
+      "price": 166.23,
+      "score": 51.81,
+      "move24_pct": 0.08,
+      "spread_bps": 0.6
     },
     {
       "pair": "ABUSD",
@@ -212,211 +332,211 @@
     },
     {
       "pair": "ACHUSD",
-      "bid": 0.00555,
+      "bid": 0.00557,
       "price": 0.00551,
       "score": 10.89,
       "move24_pct": 0.73,
-      "spread_bps": 54.05
+      "spread_bps": 53.86
     },
     {
       "pair": "ACTUSD",
-      "bid": 0.00984,
+      "bid": 0.00985,
       "price": 0.00989,
       "score": 10.48,
       "move24_pct": 0.82,
-      "spread_bps": 20.33
+      "spread_bps": 20.3
     },
     {
       "pair": "ACUUSD",
       "bid": 0.1121,
       "price": 0.1121,
-      "score": 32.71,
+      "score": 32.57,
       "move24_pct": 1.91,
       "spread_bps": 8.92
     },
     {
       "pair": "ADAUSD",
-      "bid": 0.234522,
-      "price": 0.234801,
-      "score": 61.74,
-      "move24_pct": 1.17,
-      "spread_bps": 2.17
+      "bid": 0.235583,
+      "price": 0.235671,
+      "score": 67.78,
+      "move24_pct": 1.55,
+      "spread_bps": 1.4
     },
     {
       "pair": "ADIUSD",
-      "bid": 8.1819,
-      "price": 8.1801,
-      "score": 1.96,
-      "move24_pct": -0.23,
-      "spread_bps": 23.71
+      "bid": 8.185,
+      "price": 8.1998,
+      "score": 2.08,
+      "move24_pct": 0.01,
+      "spread_bps": 19.06
     },
     {
       "pair": "ADXUSD",
-      "bid": 0.07054,
+      "bid": 0.07079,
       "price": 0.0707,
       "score": 40.93,
       "move24_pct": 3.17,
-      "spread_bps": 598.24
+      "spread_bps": 322.08
     },
     {
       "pair": "AEROUSD",
-      "bid": 0.8398,
-      "price": 0.8418,
-      "score": 40.58,
-      "move24_pct": 1.0,
-      "spread_bps": 19.05
+      "bid": 0.8334,
+      "price": 0.8345,
+      "score": 30.03,
+      "move24_pct": 0.12,
+      "spread_bps": 9.6
     },
     {
       "pair": "AEVOUSD",
-      "bid": 0.02603,
-      "price": 0.02611,
-      "score": 3.24,
-      "move24_pct": -3.94,
-      "spread_bps": 15.37
+      "bid": 0.02611,
+      "price": 0.02612,
+      "score": 3.25,
+      "move24_pct": -3.9,
+      "spread_bps": 15.32
     },
     {
       "pair": "AINUSD",
-      "bid": 0.04417,
-      "price": 0.0439,
-      "score": 27.35,
-      "move24_pct": 0.32,
-      "spread_bps": 92.82
+      "bid": 0.04639,
+      "price": 0.04614,
+      "score": 71.57,
+      "move24_pct": 5.44,
+      "spread_bps": 241.43
     },
     {
       "pair": "AIOUSD",
-      "bid": 0.04264,
+      "bid": 0.04301,
       "price": 0.04298,
       "score": 3.5,
       "move24_pct": 0.23,
-      "spread_bps": 37.52
+      "spread_bps": 41.85
     },
     {
       "pair": "AIOZUSD",
-      "bid": 0.1067,
-      "price": 0.1069,
-      "score": 23.2,
-      "move24_pct": -2.37,
-      "spread_bps": 9.37
+      "bid": 0.1073,
+      "price": 0.1075,
+      "score": 23.21,
+      "move24_pct": -1.83,
+      "spread_bps": 9.32
     },
     {
       "pair": "AIUSD",
-      "bid": 0.01971,
-      "price": 0.0197,
-      "score": 23.43,
-      "move24_pct": 0.31,
-      "spread_bps": 5.07
+      "bid": 0.01975,
+      "price": 0.01971,
+      "score": 24.02,
+      "move24_pct": 0.36,
+      "spread_bps": 5.06
     },
     {
       "pair": "AIXBTUSD",
-      "bid": 0.02066,
+      "bid": 0.02072,
       "price": 0.02065,
       "score": 11.81,
       "move24_pct": 0.93,
-      "spread_bps": 96.81
+      "spread_bps": 111.0
     },
     {
       "pair": "AKEUSD",
-      "bid": 0.02740266,
-      "price": 0.027526,
-      "score": 76.32,
-      "move24_pct": 3.88,
-      "spread_bps": 16.2
+      "bid": 0.02767623,
+      "price": 0.02772524,
+      "score": 77.92,
+      "move24_pct": 4.63,
+      "spread_bps": 16.6
     },
     {
       "pair": "AKTUSD",
-      "bid": 0.73,
-      "price": 0.7313,
-      "score": 33.72,
-      "move24_pct": 0.65,
-      "spread_bps": 13.7
+      "bid": 0.7343,
+      "price": 0.7341,
+      "score": 39.74,
+      "move24_pct": 1.03,
+      "spread_bps": 6.81
     },
     {
       "pair": "ALCHUSD",
-      "bid": 0.04216,
+      "bid": 0.04256,
       "price": 0.04348,
       "score": 0.26,
       "move24_pct": -2.55,
-      "spread_bps": 391.37
+      "spread_bps": 291.35
     },
     {
       "pair": "ALCXUSD",
       "bid": 2.51,
-      "price": 2.52,
-      "score": 6.34,
-      "move24_pct": 0.4,
+      "price": 2.53,
+      "score": 11.08,
+      "move24_pct": 0.8,
       "spread_bps": 39.84
     },
     {
       "pair": "ALEOUSD",
-      "bid": 0.0301,
-      "price": 0.03009,
-      "score": 3.01,
-      "move24_pct": -0.46,
-      "spread_bps": 36.54
+      "bid": 0.03004,
+      "price": 0.0301,
+      "score": 2.98,
+      "move24_pct": -0.43,
+      "spread_bps": 13.32
     },
     {
       "pair": "ALGOUSD",
-      "bid": 0.11889,
-      "price": 0.11904,
-      "score": 54.9,
-      "move24_pct": 1.49,
-      "spread_bps": 9.25
+      "bid": 0.11946,
+      "price": 0.11946,
+      "score": 59.2,
+      "move24_pct": 1.85,
+      "spread_bps": 8.37
     },
     {
       "pair": "ALICEUSD",
-      "bid": 0.1698,
-      "price": 0.1685,
-      "score": 1.05,
-      "move24_pct": 0.0,
-      "spread_bps": 58.89
+      "bid": 0.1701,
+      "price": 0.1708,
+      "score": 17.44,
+      "move24_pct": 1.36,
+      "spread_bps": 41.15
     },
     {
       "pair": "ALIGNUSD",
       "bid": 0.00521,
-      "price": 0.00521,
+      "price": 0.00518,
       "score": 22.35,
-      "move24_pct": -0.95,
+      "move24_pct": -1.52,
       "spread_bps": 19.19
     },
     {
       "pair": "ALKIMIUSD",
-      "bid": 0.00064,
-      "price": 0.00065,
-      "score": 50.24,
-      "move24_pct": 16.07,
-      "spread_bps": 312.5
+      "bid": 0.00063,
+      "price": 0.00063,
+      "score": 50.27,
+      "move24_pct": 12.5,
+      "spread_bps": 158.73
     },
     {
       "pair": "ALLOUSD",
-      "bid": 0.2439,
+      "bid": 0.245,
       "price": 0.2459,
       "score": 0.53,
       "move24_pct": 0.0,
-      "spread_bps": 45.1
+      "spread_bps": 40.82
     },
     {
       "pair": "ALPHAUSD",
       "bid": 0.000499,
       "price": 0.000499,
-      "score": 0.47,
+      "score": 0.49,
       "move24_pct": -0.99,
       "spread_bps": 100.2
     },
     {
       "pair": "ALTHEAUSD",
-      "bid": 0.019,
-      "price": 0.0225,
-      "score": 2.84,
-      "move24_pct": -12.79,
-      "spread_bps": 1789.47
+      "bid": 0.0138,
+      "price": 0.0155,
+      "score": 2.91,
+      "move24_pct": -39.92,
+      "spread_bps": 1231.88
     },
     {
       "pair": "ALTUSD",
-      "bid": 0.00739,
+      "bid": 0.00738,
       "price": 0.00744,
       "score": 20.13,
       "move24_pct": 1.64,
-      "spread_bps": 27.06
+      "spread_bps": 27.1
     },
     {
       "pair": "AMIUSD",
@@ -424,135 +544,135 @@
       "price": 0.000904,
       "score": 0.49,
       "move24_pct": -8.32,
-      "spread_bps": 1006.64
+      "spread_bps": 984.51
     },
     {
       "pair": "ANIMEUSD",
-      "bid": 0.003069,
+      "bid": 0.00307,
       "price": 0.003084,
       "score": 9.88,
       "move24_pct": 0.78,
-      "spread_bps": 39.1
+      "spread_bps": 35.83
     },
     {
       "pair": "ANKRUSD",
-      "bid": 0.00459,
+      "bid": 0.0046,
       "price": 0.00462,
-      "score": 17.05,
+      "score": 17.03,
       "move24_pct": 1.32,
-      "spread_bps": 43.57
+      "spread_bps": 43.48
     },
     {
       "pair": "ANONUSD",
-      "bid": 0.345,
+      "bid": 0.346,
       "price": 0.345,
-      "score": 4.64,
+      "score": 4.46,
       "move24_pct": 0.29,
-      "spread_bps": 260.87
+      "spread_bps": 231.21
     },
     {
       "pair": "APENFTUSD",
-      "bid": 2.353e-07,
+      "bid": 2.347e-07,
       "price": 2.342e-07,
       "score": 0.37,
       "move24_pct": -0.34,
-      "spread_bps": 131.75
+      "spread_bps": 119.3
     },
     {
       "pair": "APEUSD",
-      "bid": 0.1425,
-      "price": 0.1434,
-      "score": 42.2,
-      "move24_pct": 2.14,
-      "spread_bps": 7.02
+      "bid": 0.1429,
+      "price": 0.1429,
+      "score": 37.98,
+      "move24_pct": 1.78,
+      "spread_bps": 7.0
     },
     {
       "pair": "API3USD",
-      "bid": 0.3016,
+      "bid": 0.2994,
       "price": 0.3011,
-      "score": 38.5,
+      "score": 38.48,
       "move24_pct": 3.01,
-      "spread_bps": 43.1
+      "spread_bps": 50.1
     },
     {
       "pair": "APRUSD",
-      "bid": 0.11062,
-      "price": 0.11073,
-      "score": 11.09,
-      "move24_pct": 0.45,
-      "spread_bps": 21.7
+      "bid": 0.10961,
+      "price": 0.10949,
+      "score": 5.94,
+      "move24_pct": -0.67,
+      "spread_bps": 33.76
     },
     {
       "pair": "APTUSD",
-      "bid": 0.7738,
-      "price": 0.774,
-      "score": 78.12,
-      "move24_pct": 5.16,
-      "spread_bps": 5.17
+      "bid": 0.7827,
+      "price": 0.7822,
+      "score": 73.5,
+      "move24_pct": 6.28,
+      "spread_bps": 7.67
     },
     {
       "pair": "APUUSD",
-      "bid": 1.412e-05,
-      "price": 1.483e-05,
-      "score": 50.11,
-      "move24_pct": 7.23,
-      "spread_bps": 502.83
+      "bid": 1.399e-05,
+      "price": 1.535e-05,
+      "score": 50.13,
+      "move24_pct": 10.99,
+      "spread_bps": 907.79
     },
     {
       "pair": "APXUSDUSD",
-      "bid": 0.65079,
+      "bid": 0.65093,
       "price": 1.0,
       "score": 0.32,
       "move24_pct": 0.0,
-      "spread_bps": 5365.79
+      "spread_bps": 5362.48
     },
     {
       "pair": "ARBUSD",
-      "bid": 0.1767,
-      "price": 0.1769,
-      "score": 69.23,
-      "move24_pct": 2.49,
-      "spread_bps": 5.66
+      "bid": 0.1777,
+      "price": 0.1779,
+      "score": 72.82,
+      "move24_pct": 3.07,
+      "spread_bps": 11.25
     },
     {
       "pair": "ARCUSD",
-      "bid": 0.06173,
+      "bid": 0.06199,
       "price": 0.06089,
-      "score": 0.56,
+      "score": 0.55,
       "move24_pct": 0.0,
-      "spread_bps": 50.22
+      "spread_bps": 46.78
     },
     {
       "pair": "ARKMUSD",
-      "bid": 0.1263,
-      "price": 0.1264,
-      "score": 39.84,
-      "move24_pct": 3.1,
-      "spread_bps": 15.84
+      "bid": 0.1262,
+      "price": 0.1267,
+      "score": 42.76,
+      "move24_pct": 3.34,
+      "spread_bps": 15.85
     },
     {
       "pair": "ARPAUSD",
-      "bid": 0.01113,
+      "bid": 0.01112,
       "price": 0.01118,
       "score": 6.96,
       "move24_pct": 0.45,
-      "spread_bps": 35.94
+      "spread_bps": 107.91
     },
     {
       "pair": "ARUSD",
-      "bid": 4.078,
-      "price": 4.088,
-      "score": 49.57,
-      "move24_pct": 3.39,
-      "spread_bps": 34.33
+      "bid": 4.087,
+      "price": 4.091,
+      "score": 50.58,
+      "move24_pct": 3.46,
+      "spread_bps": 61.17
     },
     {
       "pair": "ARXUSD",
-      "bid": 0.26875,
-      "price": 0.26965,
-      "score": 32.43,
-      "move24_pct": 2.39,
-      "spread_bps": 34.6
+      "bid": 0.26953,
+      "price": 0.27024,
+      "score": 35.11,
+      "move24_pct": 2.61,
+      "spread_bps": 29.68
     },
     {
       "pair": "ASSETUSD",
@@ -564,11 +684,11 @@
     },
     {
       "pair": "ASTERUSD",
-      "bid": 0.69849,
-      "price": 0.69903,
-      "score": 30.24,
-      "move24_pct": -0.14,
-      "spread_bps": 3.58
+      "bid": 0.69969,
+      "price": 0.69993,
+      "score": 32.63,
+      "move24_pct": -0.01,
+      "spread_bps": 2.29
     },
     {
       "pair": "ASTRUSD",
@@ -580,51 +700,51 @@
     },
     {
       "pair": "ATHUSD",
-      "bid": 0.0066,
-      "price": 0.00661,
-      "score": 59.48,
-      "move24_pct": 4.26,
-      "spread_bps": 15.15
+      "bid": 0.00662,
+      "price": 0.00662,
+      "score": 59.5,
+      "move24_pct": 4.42,
+      "spread_bps": 15.11
     },
     {
       "pair": "ATLASUSD",
-      "bid": 0.0001444,
-      "price": 0.000149,
+      "bid": 0.0001443,
+      "price": 0.0001451,
       "score": 0.3,
-      "move24_pct": -0.67,
-      "spread_bps": 325.48
+      "move24_pct": -3.27,
+      "spread_bps": 332.64
     },
     {
       "pair": "ATOMUSD",
-      "bid": 1.8577,
-      "price": 1.8576,
-      "score": 75.06,
-      "move24_pct": 5.25,
-      "spread_bps": 12.38
+      "bid": 1.8755,
+      "price": 1.8751,
+      "score": 75.11,
+      "move24_pct": 6.24,
+      "spread_bps": 11.73
     },
     {
       "pair": "AUCTIONUSD",
-      "bid": 3.653,
+      "bid": 3.651,
       "price": 3.657,
       "score": 17.92,
       "move24_pct": 1.47,
-      "spread_bps": 43.8
+      "spread_bps": 46.56
     },
     {
       "pair": "AUDIOUSD",
-      "bid": 0.01652,
+      "bid": 0.01654,
       "price": 0.01658,
-      "score": 3.58,
+      "score": 3.56,
       "move24_pct": -2.18,
-      "spread_bps": 96.85
+      "spread_bps": 78.6
     },
     {
       "pair": "AUDXUSD",
-      "bid": 0.69701,
+      "bid": 0.69731,
       "price": 0.69643,
       "score": 0.6,
       "move24_pct": 0.01,
-      "spread_bps": 9.61
+      "spread_bps": 9.46
     },
     {
       "pair": "AUGURUSD",
@@ -632,95 +752,95 @@
       "price": 0.8797,
       "score": 0.15,
       "move24_pct": -0.01,
-      "spread_bps": 468.88
+      "spread_bps": 470.07
     },
     {
       "pair": "AUSD",
       "bid": 0.0982,
       "price": 0.0981,
-      "score": 19.9,
+      "score": 19.89,
       "move24_pct": 1.34,
       "spread_bps": 20.37
     },
     {
       "pair": "AUSDUSD",
-      "bid": 0.99988,
+      "bid": 0.99989,
       "price": 0.9999,
-      "score": 15.62,
+      "score": 15.22,
       "move24_pct": -0.0,
-      "spread_bps": 0.2
+      "spread_bps": 0.4
     },
     {
       "pair": "AVAAIUSD",
       "bid": 0.00921,
       "price": 0.00936,
-      "score": 0.42,
+      "score": 0.41,
       "move24_pct": 0.0,
-      "spread_bps": 76.0
+      "spread_bps": 54.29
     },
     {
       "pair": "AVAUSD",
-      "bid": 0.2311,
+      "bid": 0.2321,
       "price": 0.2331,
-      "score": 9.35,
+      "score": 9.33,
       "move24_pct": 0.56,
-      "spread_bps": 34.62
+      "spread_bps": 34.47
     },
     {
       "pair": "AVAXUSD",
-      "bid": 10.2,
-      "price": 10.214,
-      "score": 68.05,
-      "move24_pct": 1.5,
+      "bid": 10.245,
+      "price": 10.247,
+      "score": 71.99,
+      "move24_pct": 1.83,
       "spread_bps": 0.98
     },
     {
       "pair": "AVLUSD",
-      "bid": 0.020008,
-      "price": 0.020008,
-      "score": 8.88,
-      "move24_pct": 0.6,
-      "spread_bps": 34.49
+      "bid": 0.019957,
+      "price": 0.020003,
+      "score": 8.43,
+      "move24_pct": 0.58,
+      "spread_bps": 28.06
     },
     {
       "pair": "AVNTUSD",
-      "bid": 0.13212,
-      "price": 0.13275,
-      "score": 16.66,
-      "move24_pct": -0.2,
-      "spread_bps": 12.11
+      "bid": 0.13116,
+      "price": 0.1312,
+      "score": 16.71,
+      "move24_pct": -1.37,
+      "spread_bps": 16.77
     },
     {
       "pair": "AXSUSD",
-      "bid": 1.18,
-      "price": 1.181,
-      "score": 47.46,
-      "move24_pct": 2.07,
-      "spread_bps": 8.47
+      "bid": 1.174,
+      "price": 1.175,
+      "score": 41.23,
+      "move24_pct": 1.56,
+      "spread_bps": 8.52
     },
     {
       "pair": "AZTECUSD",
-      "bid": 0.01474,
-      "price": 0.01477,
-      "score": 30.85,
-      "move24_pct": 2.29,
-      "spread_bps": 20.35
+      "bid": 0.01471,
+      "price": 0.01476,
+      "score": 30.04,
+      "move24_pct": 2.22,
+      "spread_bps": 20.39
     },
     {
       "pair": "B2USD",
-      "bid": 0.4433,
+      "bid": 0.4444,
       "price": 0.4452,
       "score": 0.65,
       "move24_pct": 0.02,
-      "spread_bps": 92.49
+      "spread_bps": 49.5
     },
     {
       "pair": "B3USD",
       "bid": 0.000694,
       "price": 0.000692,
-      "score": 0.91,
+      "score": 0.9,
       "move24_pct": -1.14,
-      "spread_bps": 86.46
+      "spread_bps": 100.86
     },
     {
       "pair": "BABYSHARKUSD",
@@ -732,11 +852,11 @@
     },
     {
       "pair": "BABYUSD",
-      "bid": 0.01313,
-      "price": 0.01314,
-      "score": 41.24,
-      "move24_pct": 1.55,
-      "spread_bps": 7.62
+      "bid": 0.01314,
+      "price": 0.01315,
+      "score": 42.21,
+      "move24_pct": 1.62,
+      "spread_bps": 7.61
     },
     {
       "pair": "BADGERUSD",
@@ -748,51 +868,51 @@
     },
     {
       "pair": "BALUSD",
-      "bid": 0.1258,
+      "bid": 0.1256,
       "price": 0.1256,
-      "score": 1.36,
+      "score": 1.35,
       "move24_pct": -1.72,
-      "spread_bps": 23.85
+      "spread_bps": 39.81
     },
     {
       "pair": "BANANAS31USD",
-      "bid": 0.006743,
+      "bid": 0.006749,
       "price": 0.006757,
       "score": 7.58,
       "move24_pct": 0.61,
-      "spread_bps": 38.56
+      "spread_bps": 50.38
     },
     {
       "pair": "BANDUSD",
-      "bid": 0.2301,
+      "bid": 0.2295,
       "price": 0.2267,
       "score": 9.76,
       "move24_pct": 0.76,
-      "spread_bps": 60.84
+      "spread_bps": 47.93
     },
     {
       "pair": "BASEDUSD",
-      "bid": 0.06645,
+      "bid": 0.06693,
       "price": 0.06588,
-      "score": 3.26,
+      "score": 3.18,
       "move24_pct": -0.09,
-      "spread_bps": 19.56
+      "spread_bps": 17.93
     },
     {
       "pair": "BATUSD",
-      "bid": 0.10585,
-      "price": 0.10596,
-      "score": 73.05,
-      "move24_pct": 3.32,
-      "spread_bps": 2.83
+      "bid": 0.10601,
+      "price": 0.10612,
+      "score": 73.03,
+      "move24_pct": 3.47,
+      "spread_bps": 3.77
     },
     {
       "pair": "BCHUSD",
-      "bid": 279.42,
-      "price": 279.65,
-      "score": 82.06,
-      "move24_pct": 3.25,
-      "spread_bps": 2.15
+      "bid": 280.02,
+      "price": 280.31,
+      "score": 84.3,
+      "move24_pct": 3.49,
+      "spread_bps": 2.5
     },
     {
       "pair": "BDXNUSD",
@@ -804,59 +924,59 @@
     },
     {
       "pair": "BEAMUSD",
-      "bid": 0.002651,
+      "bid": 0.002662,
       "price": 0.002663,
-      "score": 27.76,
+      "score": 27.71,
       "move24_pct": 1.76,
-      "spread_bps": 37.72
+      "spread_bps": 33.81
     },
     {
       "pair": "BERAUSD",
-      "bid": 0.2117,
+      "bid": 0.2122,
       "price": 0.2122,
-      "score": 17.22,
+      "score": 17.18,
       "move24_pct": 1.24,
-      "spread_bps": 37.79
+      "spread_bps": 61.26
     },
     {
       "pair": "BERTUSD",
-      "bid": 0.015403,
-      "price": 0.015447,
-      "score": 51.55,
-      "move24_pct": 10.79,
-      "spread_bps": 31.16
+      "bid": 0.015379,
+      "price": 0.015397,
+      "score": 51.49,
+      "move24_pct": 10.44,
+      "spread_bps": 30.56
     },
     {
       "pair": "BGBUSD",
-      "bid": 1.934,
+      "bid": 1.935,
       "price": 1.935,
-      "score": 5.27,
+      "score": 9.88,
       "move24_pct": 0.1,
-      "spread_bps": 10.34
+      "spread_bps": 5.17
     },
     {
       "pair": "BICOUSD",
-      "bid": 0.01986,
-      "price": 0.01984,
-      "score": 9.67,
-      "move24_pct": -0.35,
-      "spread_bps": 5.04
+      "bid": 0.01988,
+      "price": 0.01991,
+      "score": 4.74,
+      "move24_pct": 0.0,
+      "spread_bps": 10.06
     },
     {
       "pair": "BIGTIMEUSD",
-      "bid": 0.008116,
+      "bid": 0.008122,
       "price": 0.008159,
       "score": 22.94,
       "move24_pct": 1.87,
-      "spread_bps": 28.34
+      "spread_bps": 20.93
     },
     {
       "pair": "BILLUSD",
-      "bid": 0.00979,
-      "price": 0.00978,
-      "score": 40.43,
-      "move24_pct": 1.45,
-      "spread_bps": 10.21
+      "bid": 0.0098,
+      "price": 0.00981,
+      "score": 44.16,
+      "move24_pct": 1.76,
+      "spread_bps": 20.41
     },
     {
       "pair": "BILLYUSD",
@@ -864,199 +984,199 @@
       "price": 0.002046,
       "score": 0.57,
       "move24_pct": -0.44,
-      "spread_bps": 337.74
+      "spread_bps": 308.37
     },
     {
       "pair": "BIOUSD",
-      "bid": 0.02824,
-      "price": 0.02834,
-      "score": 28.82,
-      "move24_pct": 1.65,
-      "spread_bps": 17.71
+      "bid": 0.02828,
+      "price": 0.02831,
+      "score": 27.5,
+      "move24_pct": 1.54,
+      "spread_bps": 14.14
     },
     {
       "pair": "BLENDUSD",
-      "bid": 0.06507,
+      "bid": 0.06517,
       "price": 0.06514,
       "score": 1.67,
       "move24_pct": -1.0,
-      "spread_bps": 18.44
+      "spread_bps": 24.55
     },
     {
       "pair": "BLESSUSD",
-      "bid": 0.007759,
-      "price": 0.007802,
-      "score": 26.89,
-      "move24_pct": 2.09,
-      "spread_bps": 55.42
+      "bid": 0.007754,
+      "price": 0.00779,
+      "score": 25.01,
+      "move24_pct": 1.94,
+      "spread_bps": 56.74
     },
     {
       "pair": "BLUAIUSD",
-      "bid": 0.008258,
-      "price": 0.008264,
-      "score": 33.11,
-      "move24_pct": 2.7,
-      "spread_bps": 48.44
+      "bid": 0.008277,
+      "price": 0.008291,
+      "score": 37.15,
+      "move24_pct": 3.03,
+      "spread_bps": 44.7
     },
     {
       "pair": "BLUEUSD",
-      "bid": 0.008876,
-      "price": 0.009176,
-      "score": 7.76,
-      "move24_pct": 0.4,
-      "spread_bps": 332.36
+      "bid": 0.00883,
+      "price": 0.00917,
+      "score": 6.96,
+      "move24_pct": 0.34,
+      "spread_bps": 383.92
     },
     {
       "pair": "BLURUSD",
-      "bid": 0.01877,
+      "bid": 0.01882,
       "price": 0.01872,
       "score": 3.2,
       "move24_pct": 0.21,
-      "spread_bps": 53.28
+      "spread_bps": 21.25
     },
     {
       "pair": "BLZUSD",
-      "bid": 0.00992,
-      "price": 0.00993,
-      "score": 6.11,
-      "move24_pct": 0.4,
-      "spread_bps": 10.08
+      "bid": 0.00993,
+      "price": 0.00994,
+      "score": 7.31,
+      "move24_pct": 0.51,
+      "spread_bps": 20.14
     },
     {
       "pair": "BMBUSD",
       "bid": 0.00121,
       "price": 0.00121,
-      "score": 1.21,
+      "score": 1.2,
       "move24_pct": -6.85,
-      "spread_bps": 958.68
+      "spread_bps": 859.5
     },
     {
       "pair": "BMTUSD",
-      "bid": 0.01917,
-      "price": 0.01918,
-      "score": 12.25,
-      "move24_pct": 0.79,
-      "spread_bps": 20.87
+      "bid": 0.01911,
+      "price": 0.01912,
+      "score": 8.45,
+      "move24_pct": 0.47,
+      "spread_bps": 15.7
     },
     {
       "pair": "BNBUSD",
-      "bid": 739.87,
-      "price": 740.0,
-      "score": 50.23,
-      "move24_pct": 0.63,
-      "spread_bps": 1.76
+      "bid": 740.98,
+      "price": 741.09,
+      "score": 55.25,
+      "move24_pct": 0.78,
+      "spread_bps": 0.13
     },
     {
       "pair": "BNKRUSD",
-      "bid": 0.000336,
-      "price": 0.0003413,
-      "score": 2.45,
-      "move24_pct": 0.09,
-      "spread_bps": 41.67
+      "bid": 0.0003361,
+      "price": 0.0003369,
+      "score": 1.41,
+      "move24_pct": -1.2,
+      "spread_bps": 23.8
     },
     {
       "pair": "BNTUSD",
       "bid": 0.3156,
       "price": 0.3128,
-      "score": 0.59,
+      "score": 0.58,
       "move24_pct": -1.04,
-      "spread_bps": 126.74
+      "spread_bps": 142.59
     },
     {
       "pair": "BOBAUSD",
-      "bid": 0.0203,
+      "bid": 0.02038,
       "price": 0.02018,
-      "score": 1.59,
+      "score": 1.58,
       "move24_pct": 0.0,
-      "spread_bps": 118.23
+      "spread_bps": 98.14
     },
     {
       "pair": "BOBUSD",
-      "bid": 0.00451,
+      "bid": 0.00449,
       "price": 0.00452,
-      "score": 10.14,
+      "score": 10.15,
       "move24_pct": 0.67,
-      "spread_bps": 44.35
+      "spread_bps": 89.09
     },
     {
       "pair": "BODENUSD",
-      "bid": 0.001219,
+      "bid": 0.001178,
       "price": 0.001272,
       "score": 0.52,
       "move24_pct": -6.68,
-      "spread_bps": 639.87
+      "spread_bps": 1010.19
     },
     {
       "pair": "BONKUSD",
-      "bid": 3.333e-06,
-      "price": 3.333e-06,
-      "score": 61.45,
-      "move24_pct": 2.3,
-      "spread_bps": 3.0
+      "bid": 3.345e-06,
+      "price": 3.346e-06,
+      "score": 66.23,
+      "move24_pct": 2.7,
+      "spread_bps": 2.99
     },
     {
       "pair": "BONZOUSD",
-      "bid": 0.00605,
+      "bid": 0.00609,
       "price": 0.0061,
-      "score": 0.36,
+      "score": 0.34,
       "move24_pct": -1.13,
-      "spread_bps": 99.17
+      "spread_bps": 32.84
     },
     {
       "pair": "BOSUSD",
-      "bid": 1.9e-05,
+      "bid": 1.8e-05,
       "price": 1.9e-05,
-      "score": 50.32,
+      "score": 50.34,
       "move24_pct": 5.56,
-      "spread_bps": 526.32
+      "spread_bps": 1111.11
     },
     {
       "pair": "BREVUSD",
-      "bid": 0.0842,
+      "bid": 0.0843,
       "price": 0.0835,
       "score": 0.31,
       "move24_pct": -3.47,
-      "spread_bps": 83.14
+      "spread_bps": 71.17
     },
     {
       "pair": "BRL1USD",
-      "bid": 0.19828,
+      "bid": 0.1983,
       "price": 0.19823,
-      "score": 5.72,
+      "score": 5.7,
       "move24_pct": 0.03,
-      "spread_bps": 14.12
+      "spread_bps": 12.1
     },
     {
       "pair": "BTRUSD",
-      "bid": 0.05088,
-      "price": 0.05091,
-      "score": 37.71,
-      "move24_pct": 2.15,
-      "spread_bps": 21.62
+      "bid": 0.05029,
+      "price": 0.05033,
+      "score": 23.83,
+      "move24_pct": 0.98,
+      "spread_bps": 57.67
     },
     {
       "pair": "BTTUSD",
-      "bid": 3.59e-07,
+      "bid": 3.599e-07,
       "price": 3.617e-07,
       "score": 8.22,
       "move24_pct": 0.19,
-      "spread_bps": 91.92
+      "spread_bps": 63.91
     },
     {
       "pair": "C98USD",
-      "bid": 0.015396,
+      "bid": 0.015551,
       "price": 0.015747,
       "score": 34.89,
       "move24_pct": 2.86,
-      "spread_bps": 168.88
+      "spread_bps": 93.24
     },
     {
       "pair": "CAKEUSD",
-      "bid": 2.163,
-      "price": 2.166,
-      "score": 30.86,
-      "move24_pct": 0.74,
-      "spread_bps": 4.62
+      "bid": 2.168,
+      "price": 2.169,
+      "score": 32.66,
+      "move24_pct": 0.88,
+      "spread_bps": 4.61
     },
     {
       "pair": "CAMPUSD",
@@ -1068,153 +1188,153 @@
     },
     {
       "pair": "CAPUSD",
-      "bid": 0.072782,
-      "price": 0.072838,
-      "score": 33.65,
-      "move24_pct": -0.53,
-      "spread_bps": 2.89
+      "bid": 0.072925,
+      "price": 0.07295,
+      "score": 32.81,
+      "move24_pct": -0.38,
+      "spread_bps": 3.29
     },
     {
       "pair": "CARVUSD",
       "bid": 0.04304,
       "price": 0.04316,
-      "score": 2.23,
+      "score": 2.21,
       "move24_pct": -2.57,
       "spread_bps": 23.23
     },
     {
       "pair": "CASHUSD",
       "bid": 0.9997,
-      "price": 1.0,
-      "score": 9.55,
-      "move24_pct": 0.03,
+      "price": 0.9997,
+      "score": 9.21,
+      "move24_pct": 0.0,
       "spread_bps": 3.0
     },
     {
       "pair": "CATUSD",
-      "bid": 2.0176e-06,
+      "bid": 2.0177e-06,
       "price": 2.0052e-06,
       "score": 0.26,
       "move24_pct": -1.01,
-      "spread_bps": 192.8
+      "spread_bps": 113.5
     },
     {
       "pair": "CCDUSD",
-      "bid": 0.003295,
-      "price": 0.0033,
+      "bid": 0.003297,
+      "price": 0.003305,
       "score": 22.22,
-      "move24_pct": -5.66,
-      "spread_bps": 18.21
+      "move24_pct": -5.52,
+      "spread_bps": 27.3
     },
     {
       "pair": "CCUSD",
-      "bid": 0.11804,
-      "price": 0.1183,
-      "score": 35.02,
-      "move24_pct": -0.41,
-      "spread_bps": 4.24
+      "bid": 0.11819,
+      "price": 0.11817,
+      "score": 35.01,
+      "move24_pct": -0.52,
+      "spread_bps": 4.23
     },
     {
       "pair": "CELOUSD",
       "bid": 0.0932,
-      "price": 0.0932,
-      "score": 12.56,
-      "move24_pct": 0.98,
-      "spread_bps": 10.73
+      "price": 0.0933,
+      "score": 13.86,
+      "move24_pct": 1.08,
+      "spread_bps": 21.46
     },
     {
       "pair": "CELRUSD",
-      "bid": 0.002973,
+      "bid": 0.002963,
       "price": 0.0029838,
-      "score": 16.36,
+      "score": 16.35,
       "move24_pct": 1.23,
-      "spread_bps": 30.27
+      "spread_bps": 33.07
     },
     {
       "pair": "CFGUSD",
-      "bid": 0.1346,
-      "price": 0.1345,
-      "score": 31.68,
-      "move24_pct": 1.43,
-      "spread_bps": 29.72
+      "bid": 0.1353,
+      "price": 0.1353,
+      "score": 39.28,
+      "move24_pct": 2.04,
+      "spread_bps": 29.56
     },
     {
       "pair": "CFXUSD",
-      "bid": 0.05012,
+      "bid": 0.05017,
       "price": 0.05026,
-      "score": 14.64,
+      "score": 14.61,
       "move24_pct": 0.9,
-      "spread_bps": 9.98
+      "spread_bps": 7.97
     },
     {
       "pair": "CHECKUSD",
-      "bid": 0.011661,
+      "bid": 0.011666,
       "price": 0.011573,
       "score": 0.13,
       "move24_pct": -0.31,
-      "spread_bps": 25.73
+      "spread_bps": 24.0
     },
     {
       "pair": "CHEEMSUSD",
-      "bid": 4.942e-07,
+      "bid": 4.941e-07,
       "price": 5.06e-07,
       "score": 14.66,
       "move24_pct": 1.2,
-      "spread_bps": 299.47
+      "spread_bps": 301.56
     },
     {
       "pair": "CHEXUSD",
       "bid": 0.01161,
-      "price": 0.01159,
-      "score": 18.05,
-      "move24_pct": -0.52,
+      "price": 0.0117,
+      "score": 23.02,
+      "move24_pct": 0.43,
       "spread_bps": 77.52
     },
     {
       "pair": "CHILLHOUSEUSD",
-      "bid": 0.00118,
-      "price": 0.00123,
-      "score": 22.78,
-      "move24_pct": 1.65,
-      "spread_bps": 423.73
+      "bid": 0.00119,
+      "price": 0.00124,
+      "score": 32.72,
+      "move24_pct": 2.48,
+      "spread_bps": 504.2
     },
     {
       "pair": "CHIPUSD",
-      "bid": 0.04975,
-      "price": 0.05,
-      "score": 65.52,
-      "move24_pct": 3.54,
-      "spread_bps": 28.14
+      "bid": 0.0499,
+      "price": 0.05016,
+      "score": 69.49,
+      "move24_pct": 3.87,
+      "spread_bps": 26.05
     },
     {
       "pair": "CHRUSD",
-      "bid": 0.02123,
-      "price": 0.02136,
-      "score": 48.66,
-      "move24_pct": 4.4,
-      "spread_bps": 75.37
+      "bid": 0.02121,
+      "price": 0.02131,
+      "score": 48.67,
+      "move24_pct": 4.15,
+      "spread_bps": 108.44
     },
     {
       "pair": "CHZUSD",
-      "bid": 0.01513,
-      "price": 0.01513,
-      "score": 25.76,
-      "move24_pct": 1.82,
-      "spread_bps": 13.22
+      "bid": 0.01514,
+      "price": 0.01517,
+      "score": 30.78,
+      "move24_pct": 2.09,
+      "spread_bps": 6.61
     },
     {
       "pair": "CLANKERUSD",
-      "bid": 13.11,
+      "bid": 13.15,
       "price": 13.15,
-      "score": 22.19,
+      "score": 22.16,
       "move24_pct": 1.78,
-      "spread_bps": 53.39
+      "spread_bps": 114.07
     },
     {
       "pair": "CLOUDUSD",
       "bid": 0.0598,
       "price": 0.0606,
-      "score": 1.2,
+      "score": 1.18,
       "move24_pct": -1.78,
       "spread_bps": 133.78
     },
@@ -1224,15 +1344,15 @@
       "price": 2405.1,
       "score": 0.4,
       "move24_pct": -19.3,
-      "spread_bps": 2014.19
+      "spread_bps": 1995.1
     },
     {
       "pair": "COMPUSD",
-      "bid": 23.37,
-      "price": 23.38,
-      "score": 18.24,
-      "move24_pct": 0.6,
-      "spread_bps": 8.56
+      "bid": 23.39,
+      "price": 23.37,
+      "score": 17.75,
+      "move24_pct": 0.56,
+      "spread_bps": 8.55
     },
     {
       "pair": "COOKIEUSD",
@@ -1240,7 +1360,7 @@
       "price": 0.01166,
       "score": 22.47,
       "move24_pct": 1.83,
-      "spread_bps": 17.21
+      "spread_bps": 25.82
     },
     {
       "pair": "COPMUSD",
@@ -1252,66 +1372,66 @@
     },
     {
       "pair": "COQUSD",
-      "bid": 1.295e-07,
+      "bid": 1.299e-07,
       "price": 1.311e-07,
-      "score": 3.01,
+      "score": 3.0,
       "move24_pct": -2.38,
-      "spread_bps": 108.11
+      "spread_bps": 76.98
     },
     {
       "pair": "CORNUSD",
-      "bid": 0.02525,
+      "bid": 0.02529,
       "price": 0.02556,
       "score": 0.01,
       "move24_pct": 0.0,
-      "spread_bps": 67.33
+      "spread_bps": 67.22
     },
     {
       "pair": "COTIUSD",
-      "bid": 0.01306,
-      "price": 0.01307,
-      "score": 27.94,
-      "move24_pct": 1.48,
-      "spread_bps": 15.31
+      "bid": 0.01302,
+      "price": 0.01303,
+      "score": 24.18,
+      "move24_pct": 1.16,
+      "spread_bps": 15.36
     },
     {
       "pair": "COWUSD",
-      "bid": 0.1434,
+      "bid": 0.1435,
       "price": 0.1429,
       "score": 0.35,
       "move24_pct": 0.0,
-      "spread_bps": 55.79
+      "spread_bps": 55.75
     },
     {
       "pair": "CPOOLUSD",
       "bid": 0.02921,
-      "price": 0.02934,
-      "score": 38.43,
-      "move24_pct": 1.98,
-      "spread_bps": 27.39
+      "price": 0.02921,
+      "score": 32.84,
+      "move24_pct": 1.53,
+      "spread_bps": 20.54
     },
     {
       "pair": "CROUSD",
-      "bid": 0.06069,
-      "price": 0.06066,
-      "score": 27.09,
-      "move24_pct": 0.48,
-      "spread_bps": 9.89
+      "bid": 0.06103,
+      "price": 0.06109,
+      "score": 35.55,
+      "move24_pct": 1.19,
+      "spread_bps": 11.47
     },
     {
       "pair": "CRVUSD",
-      "bid": 0.34368,
-      "price": 0.3445,
-      "score": 67.1,
-      "move24_pct": 2.51,
-      "spread_bps": 9.02
+      "bid": 0.34539,
+      "price": 0.34557,
+      "score": 73.18,
+      "move24_pct": 2.83,
+      "spread_bps": 6.37
     },
     {
       "pair": "CSPRUSD",
-      "bid": 0.002482,
-      "price": 0.0024859,
-      "score": 69.13,
-      "move24_pct": 5.94,
+      "bid": 0.002475,
+      "price": 0.002475,
+      "score": 69.73,
+      "move24_pct": 5.47,
       "spread_bps": 0.4
     },
     {
@@ -1324,67 +1444,67 @@
     },
     {
       "pair": "CTRUSD",
-      "bid": 0.01286,
+      "bid": 0.01289,
       "price": 0.01275,
-      "score": 15.79,
+      "score": 15.74,
       "move24_pct": 1.27,
-      "spread_bps": 38.88
+      "spread_bps": 31.03
     },
     {
       "pair": "CTSIUSD",
-      "bid": 0.03348,
-      "price": 0.03348,
-      "score": 44.0,
-      "move24_pct": 1.73,
-      "spread_bps": 38.83
+      "bid": 0.0338,
+      "price": 0.03354,
+      "score": 46.19,
+      "move24_pct": 1.91,
+      "spread_bps": 44.38
     },
     {
       "pair": "CTUSD",
-      "bid": 0.3158,
-      "price": 0.3166,
-      "score": 13.51,
-      "move24_pct": -0.22,
-      "spread_bps": 19.0
+      "bid": 0.3149,
+      "price": 0.3151,
+      "score": 13.28,
+      "move24_pct": -0.69,
+      "spread_bps": 12.7
     },
     {
       "pair": "CVCUSD",
-      "bid": 0.02571,
+      "bid": 0.02579,
       "price": 0.02597,
       "score": 4.58,
       "move24_pct": 0.35,
-      "spread_bps": 66.12
+      "spread_bps": 62.04
     },
     {
       "pair": "CVXUSD",
-      "bid": 2.016,
-      "price": 2.018,
-      "score": 19.17,
-      "move24_pct": 0.15,
-      "spread_bps": 14.88
+      "bid": 2.02,
+      "price": 2.024,
+      "score": 22.5,
+      "move24_pct": 0.45,
+      "spread_bps": 9.9
     },
     {
       "pair": "CYBERUSD",
-      "bid": 0.324,
+      "bid": 0.325,
       "price": 0.326,
       "score": 1.01,
       "move24_pct": -0.61,
-      "spread_bps": 246.91
+      "spread_bps": 153.85
     },
     {
       "pair": "DAGUSD",
-      "bid": 0.007604,
-      "price": 0.007662,
-      "score": 6.35,
-      "move24_pct": -0.09,
-      "spread_bps": 280.12
+      "bid": 0.00758,
+      "price": 0.007567,
+      "score": 6.37,
+      "move24_pct": -1.33,
+      "spread_bps": 335.09
     },
     {
       "pair": "DASHUSD",
-      "bid": 51.061,
-      "price": 51.153,
-      "score": 51.68,
-      "move24_pct": 1.18,
-      "spread_bps": 3.13
+      "bid": 51.151,
+      "price": 51.107,
+      "score": 48.6,
+      "move24_pct": 1.09,
+      "spread_bps": 4.11
     },
     {
       "pair": "DBRUSD",
@@ -1396,99 +1516,99 @@
     },
     {
       "pair": "DCRUSD",
-      "bid": 17.378,
-      "price": 17.408,
-      "score": 9.18,
-      "move24_pct": 0.28,
-      "spread_bps": 17.84
+      "bid": 17.386,
+      "price": 17.417,
+      "score": 9.8,
+      "move24_pct": 0.33,
+      "spread_bps": 17.26
     },
     {
       "pair": "DEBITUSD",
-      "bid": 1.796,
+      "bid": 1.707,
       "price": 1.799,
       "score": 9.91,
       "move24_pct": 0.78,
-      "spread_bps": 44.54
+      "spread_bps": 779.14
     },
     {
       "pair": "DEEPUSD",
-      "bid": 0.02037,
+      "bid": 0.02055,
       "price": 0.02042,
-      "score": 19.76,
+      "score": 19.74,
       "move24_pct": 0.89,
-      "spread_bps": 19.64
+      "spread_bps": 19.46
     },
     {
       "pair": "DEGENUSD",
-      "bid": 0.000976,
+      "bid": 0.000974,
       "price": 0.000986,
       "score": 0.38,
       "move24_pct": 0.0,
-      "spread_bps": 61.48
+      "spread_bps": 92.4
     },
     {
       "pair": "DENTUSD",
-      "bid": 6.12e-05,
-      "price": 6.15e-05,
-      "score": 2.34,
-      "move24_pct": -0.32,
-      "spread_bps": 49.02
+      "bid": 6.08e-05,
+      "price": 6.12e-05,
+      "score": 2.35,
+      "move24_pct": -0.81,
+      "spread_bps": 164.47
     },
     {
       "pair": "DGAIUSD",
-      "bid": 0.96974,
+      "bid": 0.96806,
       "price": 0.97066,
-      "score": 8.86,
+      "score": 8.83,
       "move24_pct": 0.35,
-      "spread_bps": 30.73
+      "spread_bps": 35.33
     },
     {
       "pair": "DMCUSD",
-      "bid": 0.000334,
+      "bid": 0.000333,
       "price": 0.000349,
-      "score": 25.02,
+      "score": 24.98,
       "move24_pct": 2.05,
-      "spread_bps": 149.7
+      "spread_bps": 180.18
     },
     {
       "pair": "DOGSUSD",
-      "bid": 4.269e-05,
+      "bid": 4.275e-05,
       "price": 4.265e-05,
       "score": 13.53,
       "move24_pct": 1.09,
-      "spread_bps": 23.42
+      "spread_bps": 14.04
     },
     {
       "pair": "DOGUSD",
       "bid": 0.000966,
       "price": 0.000972,
-      "score": 32.03,
+      "score": 31.87,
       "move24_pct": 1.99,
       "spread_bps": 62.11
     },
     {
       "pair": "DOLOUSD",
-      "bid": 0.02636,
+      "bid": 0.02637,
       "price": 0.0276,
       "score": 18.43,
       "move24_pct": 1.51,
-      "spread_bps": 470.41
+      "spread_bps": 466.44
     },
     {
       "pair": "DOSUSD",
-      "bid": 0.2328,
-      "price": 0.2334,
-      "score": 65.45,
-      "move24_pct": 5.71,
-      "spread_bps": 21.48
+      "bid": 0.2331,
+      "price": 0.233,
+      "score": 65.32,
+      "move24_pct": 5.53,
+      "spread_bps": 21.45
     },
     {
       "pair": "DOTUSD",
-      "bid": 1.1597,
-      "price": 1.1599,
-      "score": 98.28,
-      "move24_pct": 6.48,
-      "spread_bps": 0.86
+      "bid": 1.1532,
+      "price": 1.1537,
+      "score": 93.05,
+      "move24_pct": 5.91,
+      "spread_bps": 3.47
     },
     {
       "pair": "DOVUUSD",
@@ -1500,51 +1620,51 @@
     },
     {
       "pair": "DRIFTUSD",
-      "bid": 0.01948,
-      "price": 0.01943,
-      "score": 5.9,
-      "move24_pct": -1.27,
-      "spread_bps": 10.27
+      "bid": 0.01949,
+      "price": 0.01949,
+      "score": 5.89,
+      "move24_pct": -0.97,
+      "spread_bps": 35.92
     },
     {
       "pair": "DRVUSD",
-      "bid": 0.46658,
-      "price": 0.46788,
+      "bid": 0.45483,
+      "price": 0.4569,
       "score": 85,
-      "move24_pct": 6.92,
-      "spread_bps": 25.72
+      "move24_pct": 4.41,
+      "spread_bps": 52.33
     },
     {
       "pair": "DUALUSD",
-      "bid": 0.002661,
+      "bid": 0.002663,
       "price": 0.002713,
       "score": 2.45,
       "move24_pct": 0.15,
-      "spread_bps": 233.0
+      "spread_bps": 232.82
     },
     {
       "pair": "DUCKUSD",
       "bid": 1.63e-05,
       "price": 1.66e-05,
-      "score": 15.45,
+      "score": 15.43,
       "move24_pct": 1.22,
       "spread_bps": 245.4
     },
     {
       "pair": "DYDXUSD",
-      "bid": 0.13621,
+      "bid": 0.13601,
       "price": 0.13725,
-      "score": 50.45,
+      "score": 50.43,
       "move24_pct": 4.33,
-      "spread_bps": 8.81
+      "spread_bps": 8.82
     },
     {
       "pair": "DYMUSD",
       "bid": 0.01743,
       "price": 0.01743,
-      "score": 21.62,
+      "score": 21.6,
       "move24_pct": 1.69,
-      "spread_bps": 17.21
+      "spread_bps": 11.47
     },
     {
       "pair": "EATUSD",
@@ -1556,107 +1676,107 @@
     },
     {
       "pair": "EDGEUSD",
-      "bid": 0.11645,
-      "price": 0.11669,
-      "score": 43.95,
-      "move24_pct": 3.23,
-      "spread_bps": 57.54
+      "bid": 0.11593,
+      "price": 0.1166,
+      "score": 42.96,
+      "move24_pct": 3.15,
+      "spread_bps": 42.27
     },
     {
       "pair": "EDGEXUSD",
-      "bid": 0.36612,
-      "price": 0.36501,
-      "score": 2.08,
-      "move24_pct": -1.4,
-      "spread_bps": 17.48
+      "bid": 0.36377,
+      "price": 0.36428,
+      "score": 2.09,
+      "move24_pct": -1.6,
+      "spread_bps": 17.87
     },
     {
       "pair": "EDUUSD",
-      "bid": 0.06565,
-      "price": 0.06641,
-      "score": 1.18,
-      "move24_pct": 0.02,
-      "spread_bps": 236.1
+      "bid": 0.06685,
+      "price": 0.06716,
+      "score": 14.74,
+      "move24_pct": 1.14,
+      "spread_bps": 347.05
     },
     {
       "pair": "EGLDUSD",
-      "bid": 4.0,
+      "bid": 4.01,
       "price": 4.03,
-      "score": 27.67,
+      "score": 27.72,
       "move24_pct": 2.03,
-      "spread_bps": 75.0
+      "spread_bps": 49.88
     },
     {
       "pair": "EIGENUSD",
-      "bid": 0.2267,
-      "price": 0.227,
-      "score": 69.11,
-      "move24_pct": 3.18,
-      "spread_bps": 4.41
+      "bid": 0.2283,
+      "price": 0.2282,
+      "score": 69.48,
+      "move24_pct": 3.73,
+      "spread_bps": 8.76
     },
     {
       "pair": "ELIZAOSUSD",
-      "bid": 0.000605,
-      "price": 0.000601,
-      "score": 63.21,
-      "move24_pct": 4.52,
-      "spread_bps": 132.23
+      "bid": 0.000532,
+      "price": 0.000543,
+      "score": 15.55,
+      "move24_pct": -5.57,
+      "spread_bps": 225.56
     },
     {
       "pair": "ELXUSD",
-      "bid": 0.0011,
-      "price": 0.001101,
-      "score": 0.94,
-      "move24_pct": 0.0,
-      "spread_bps": 172.73
+      "bid": 0.001101,
+      "price": 0.001134,
+      "score": 36.92,
+      "move24_pct": 3.0,
+      "spread_bps": 299.73
     },
     {
       "pair": "ENAUSD",
-      "bid": 0.2108,
-      "price": 0.211,
-      "score": 68.66,
-      "move24_pct": 2.18,
-      "spread_bps": 4.74
+      "bid": 0.2127,
+      "price": 0.2127,
+      "score": 78.63,
+      "move24_pct": 3.0,
+      "spread_bps": 4.7
     },
     {
       "pair": "ENJUSD",
-      "bid": 0.03078,
-      "price": 0.03091,
-      "score": 41.6,
-      "move24_pct": 3.03,
-      "spread_bps": 25.99
+      "bid": 0.03079,
+      "price": 0.03087,
+      "score": 40.04,
+      "move24_pct": 2.9,
+      "spread_bps": 38.97
     },
     {
       "pair": "ENSOUSD",
-      "bid": 0.985,
-      "price": 0.988,
-      "score": 52.82,
-      "move24_pct": 11.14,
-      "spread_bps": 40.61
+      "bid": 0.956,
+      "price": 0.955,
+      "score": 53.07,
+      "move24_pct": 7.42,
+      "spread_bps": 31.38
     },
     {
       "pair": "ENSUSD",
-      "bid": 6.2,
+      "bid": 6.21,
       "price": 6.25,
-      "score": 37.15,
+      "score": 36.66,
       "move24_pct": 1.79,
-      "spread_bps": 32.26
+      "spread_bps": 16.1
     },
     {
       "pair": "ESPORTSUSD",
-      "bid": 0.01023,
+      "bid": 0.01025,
       "price": 0.01025,
-      "score": 19.5,
+      "score": 19.44,
       "move24_pct": 0.99,
-      "spread_bps": 39.1
+      "spread_bps": 39.02
     },
     {
       "pair": "ESPUSD",
-      "bid": 0.11056,
+      "bid": 0.11067,
       "price": 0.11118,
       "score": 2.97,
       "move24_pct": 0.19,
-      "spread_bps": 18.09
+      "spread_bps": 28.01
     },
     {
       "pair": "ESUSD",
@@ -1668,23 +1788,23 @@
     },
     {
       "pair": "ETHFIUSD",
-      "bid": 0.6917,
-      "price": 0.6904,
-      "score": 43.55,
-      "move24_pct": 1.56,
-      "spread_bps": 31.81
+      "bid": 0.7008,
+      "price": 0.6997,
+      "score": 60.0,
+      "move24_pct": 2.93,
+      "spread_bps": 15.7
     },
     {
       "pair": "EULUSD",
-      "bid": 1.377,
-      "price": 1.376,
-      "score": 63.25,
-      "move24_pct": 6.17,
-      "spread_bps": 14.52
+      "bid": 1.374,
+      "price": 1.38,
+      "score": 63.76,
+      "move24_pct": 6.48,
+      "spread_bps": 7.28
     },
     {
       "pair": "EUROPUSD",
-      "bid": 1.1211,
+      "bid": 1.1212,
       "price": 1.1195,
       "score": 0.13,
       "move24_pct": -0.04,
@@ -1696,7 +1816,7 @@
       "price": 1.0901,
       "score": 0.06,
       "move24_pct": 0.0,
-      "spread_bps": 364.19
+      "spread_bps": 362.35
     },
     {
       "pair": "EVAAUSD",
@@ -1704,15 +1824,15 @@
       "price": 0.658,
       "score": 0.43,
       "move24_pct": -0.11,
-      "spread_bps": 30.03
+      "spread_bps": 24.03
     },
     {
       "pair": "EVUSD",
-      "bid": 0.000263,
+      "bid": 0.0002632,
       "price": 0.0002628,
       "score": 13.51,
       "move24_pct": 1.12,
-      "spread_bps": 76.05
+      "spread_bps": 68.39
     },
     {
       "pair": "EWTUSD",
@@ -1724,43 +1844,43 @@
     },
     {
       "pair": "FARTCOINUSD",
-      "bid": 0.1619,
-      "price": 0.1622,
-      "score": 66.18,
-      "move24_pct": 2.79,
-      "spread_bps": 6.18
+      "bid": 0.1634,
+      "price": 0.1635,
+      "score": 76.23,
+      "move24_pct": 3.61,
+      "spread_bps": 6.12
     },
     {
       "pair": "FETUSD",
-      "bid": 0.2202,
-      "price": 0.221,
-      "score": 61.38,
-      "move24_pct": 2.22,
-      "spread_bps": 9.08
+      "bid": 0.2218,
+      "price": 0.2218,
+      "score": 65.85,
+      "move24_pct": 2.59,
+      "spread_bps": 13.53
     },
     {
       "pair": "FFUSD",
-      "bid": 0.10585,
+      "bid": 0.10599,
       "price": 0.10851,
-      "score": 0.46,
+      "score": 0.45,
       "move24_pct": 0.0,
-      "spread_bps": 290.98
+      "spread_bps": 164.17
     },
     {
       "pair": "FHEUSD",
-      "bid": 0.02002,
-      "price": 0.02007,
-      "score": 25.46,
-      "move24_pct": 1.93,
-      "spread_bps": 39.96
+      "bid": 0.02019,
+      "price": 0.02013,
+      "score": 29.19,
+      "move24_pct": 2.23,
+      "spread_bps": 34.67
     },
     {
       "pair": "FIDAUSD",
-      "bid": 0.02072,
+      "bid": 0.02074,
       "price": 0.02073,
-      "score": 27.08,
+      "score": 27.06,
       "move24_pct": 2.12,
-      "spread_bps": 43.44
+      "spread_bps": 139.83
     },
     {
       "pair": "FIDDUSD",
@@ -1780,67 +1900,67 @@
     },
     {
       "pair": "FILUSD",
-      "bid": 1.076,
-      "price": 1.077,
-      "score": 43.52,
-      "move24_pct": 0.84,
-      "spread_bps": 9.29
+      "bid": 1.074,
+      "price": 1.075,
+      "score": 41.22,
+      "move24_pct": 0.66,
+      "spread_bps": 9.31
     },
     {
       "pair": "FISUSD",
-      "bid": 0.001603,
-      "price": 0.001786,
-      "score": 2.36,
-      "move24_pct": -3.67,
-      "spread_bps": 1341.24
+      "bid": 0.001602,
+      "price": 0.001602,
+      "score": 2.4,
+      "move24_pct": -13.59,
+      "spread_bps": 518.1
     },
     {
       "pair": "FLOCKUSD",
-      "bid": 0.05593,
+      "bid": 0.05612,
       "price": 0.05619,
-      "score": 27.9,
+      "score": 27.87,
       "move24_pct": 1.66,
-      "spread_bps": 59.0
+      "spread_bps": 60.58
     },
     {
       "pair": "FLOKIUSD",
-      "bid": 2.645e-05,
-      "price": 2.644e-05,
-      "score": 17.83,
-      "move24_pct": 1.26,
-      "spread_bps": 15.12
+      "bid": 2.653e-05,
+      "price": 2.656e-05,
+      "score": 23.32,
+      "move24_pct": 1.72,
+      "spread_bps": 15.08
     },
     {
       "pair": "FLOWUSD",
       "bid": 0.0303,
       "price": 0.0304,
-      "score": 38.51,
+      "score": 38.56,
       "move24_pct": 2.36,
       "spread_bps": 33.0
     },
     {
       "pair": "FLRUSD",
-      "bid": 0.00685,
-      "price": 0.00686,
-      "score": 25.22,
-      "move24_pct": 0.59,
-      "spread_bps": 14.6
+      "bid": 0.00686,
+      "price": 0.00687,
+      "score": 27.02,
+      "move24_pct": 0.73,
+      "spread_bps": 14.58
     },
     {
       "pair": "FLUXUSD",
-      "bid": 0.07678,
+      "bid": 0.07699,
       "price": 0.07711,
-      "score": 41.43,
+      "score": 41.42,
       "move24_pct": 3.01,
-      "spread_bps": 22.14
+      "spread_bps": 22.08
     },
     {
       "pair": "FOLDUSD",
-      "bid": 0.0629,
+      "bid": 0.06294,
       "price": 0.06302,
-      "score": 4.87,
+      "score": 4.85,
       "move24_pct": 0.11,
-      "spread_bps": 17.49
+      "spread_bps": 17.48
     },
     {
       "pair": "FOLKSUSD",
@@ -1848,23 +1968,23 @@
       "price": 2.2801,
       "score": 1.48,
       "move24_pct": -0.51,
-      "spread_bps": 49.17
+      "spread_bps": 49.6
     },
     {
       "pair": "FORESTUSD",
-      "bid": 0.02007,
+      "bid": 0.02012,
       "price": 0.02007,
       "score": 0.28,
       "move24_pct": 0.0,
-      "spread_bps": 139.51
+      "spread_bps": 129.22
     },
     {
       "pair": "FORTHUSD",
-      "bid": 0.262,
+      "bid": 0.261,
       "price": 0.267,
-      "score": 5.17,
+      "score": 5.0,
       "move24_pct": 0.38,
-      "spread_bps": 76.34
+      "spread_bps": 114.94
     },
     {
       "pair": "FRNTUSD",
@@ -1876,75 +1996,75 @@
     },
     {
       "pair": "FUNUSD",
-      "bid": 0.02141,
-      "price": 0.0214,
-      "score": 39.81,
-      "move24_pct": 1.57,
-      "spread_bps": 4.67
+      "bid": 0.02148,
+      "price": 0.02141,
+      "score": 34.59,
+      "move24_pct": 1.61,
+      "spread_bps": 9.31
     },
     {
       "pair": "FWOGUSD",
-      "bid": 0.00499,
-      "price": 0.00505,
-      "score": 22.21,
-      "move24_pct": 1.61,
-      "spread_bps": 80.16
+      "bid": 0.00498,
+      "price": 0.00504,
+      "score": 19.81,
+      "move24_pct": 1.41,
+      "spread_bps": 100.4
     },
     {
       "pair": "FXSUSD",
-      "bid": 0.286,
+      "bid": 0.285,
       "price": 0.287,
       "score": 1.23,
       "move24_pct": 0.0,
-      "spread_bps": 524.48
+      "spread_bps": 526.32
     },
     {
       "pair": "GAIBUSD",
-      "bid": 0.0253,
+      "bid": 0.02527,
       "price": 0.0253,
-      "score": 7.82,
+      "score": 7.81,
       "move24_pct": -0.75,
-      "spread_bps": 3.95
+      "spread_bps": 3.96
     },
     {
       "pair": "GALAUSD",
-      "bid": 0.002241,
-      "price": 0.002243,
-      "score": 61.73,
-      "move24_pct": 2.65,
-      "spread_bps": 4.46
+      "bid": 0.002248,
+      "price": 0.002249,
+      "score": 65.05,
+      "move24_pct": 2.93,
+      "spread_bps": 4.45
     },
     {
       "pair": "GAME2USD",
-      "bid": 0.0009275,
+      "bid": 0.0009278,
       "price": 0.0009296,
       "score": 6.25,
       "move24_pct": 0.49,
-      "spread_bps": 24.8
+      "spread_bps": 23.71
     },
     {
       "pair": "GASUSD",
-      "bid": 1.2625,
+      "bid": 1.2662,
       "price": 1.2364,
       "score": 0.08,
       "move24_pct": -6.26,
-      "spread_bps": 525.15
+      "spread_bps": 494.39
     },
     {
       "pair": "GENIUSUSD",
-      "bid": 0.3261,
+      "bid": 0.326,
       "price": 0.3256,
       "score": 12.41,
       "move24_pct": 0.9,
-      "spread_bps": 21.47
+      "spread_bps": 18.4
     },
     {
       "pair": "GFIUSD",
-      "bid": 0.0374,
-      "price": 0.0376,
-      "score": 49.74,
-      "move24_pct": 4.44,
-      "spread_bps": 160.43
+      "bid": 0.0379,
+      "price": 0.0379,
+      "score": 50.07,
+      "move24_pct": 5.28,
+      "spread_bps": 79.16
     },
     {
       "pair": "GHSTUSD",
@@ -1964,43 +2084,43 @@
     },
     {
       "pair": "GIGAUSD",
-      "bid": 0.002012,
-      "price": 0.002022,
-      "score": 12.1,
-      "move24_pct": 0.55,
-      "spread_bps": 9.94
+      "bid": 0.002005,
+      "price": 0.002031,
+      "score": 17.53,
+      "move24_pct": 0.99,
+      "spread_bps": 89.78
     },
     {
       "pair": "GLMRUSD",
-      "bid": 0.01105,
-      "price": 0.01106,
-      "score": 28.4,
-      "move24_pct": 0.91,
-      "spread_bps": 36.2
+      "bid": 0.01099,
+      "price": 0.01107,
+      "score": 29.45,
+      "move24_pct": 1.0,
+      "spread_bps": 27.3
     },
     {
       "pair": "GMTUSD",
-      "bid": 0.00798,
-      "price": 0.00803,
-      "score": 27.66,
-      "move24_pct": 2.03,
-      "spread_bps": 50.13
+      "bid": 0.008,
+      "price": 0.00801,
+      "score": 24.62,
+      "move24_pct": 1.78,
+      "spread_bps": 50.0
     },
     {
       "pair": "GMXUSD",
-      "bid": 8.24,
+      "bid": 8.27,
       "price": 8.1,
       "score": 0.32,
       "move24_pct": 0.0,
-      "spread_bps": 48.54
+      "spread_bps": 48.37
     },
     {
       "pair": "GNOTUSD",
-      "bid": 0.06977,
-      "price": 0.06977,
-      "score": 48.22,
-      "move24_pct": 0.93,
-      "spread_bps": 1.43
+      "bid": 0.06997,
+      "price": 0.06997,
+      "score": 39.58,
+      "move24_pct": 1.22,
+      "spread_bps": 10.0
     },
     {
       "pair": "GNOUSD",
@@ -2008,47 +2128,47 @@
       "price": 115.39,
       "score": 1.36,
       "move24_pct": -0.03,
-      "spread_bps": 37.26
+      "spread_bps": 33.8
     },
     {
       "pair": "GOATUSD",
-      "bid": 0.01612,
+      "bid": 0.01614,
       "price": 0.01605,
       "score": 18.77,
       "move24_pct": 1.33,
-      "spread_bps": 74.44
+      "spread_bps": 43.37
     },
     {
       "pair": "GOMININGUSD",
-      "bid": 0.3844,
+      "bid": 0.3845,
       "price": 0.385,
       "score": 3.45,
       "move24_pct": -0.36,
-      "spread_bps": 15.61
+      "spread_bps": 13.0
     },
     {
       "pair": "GRASSUSD",
-      "bid": 0.6232,
-      "price": 0.6222,
-      "score": 54.46,
-      "move24_pct": 2.3,
-      "spread_bps": 16.05
+      "bid": 0.6252,
+      "price": 0.6265,
+      "score": 62.96,
+      "move24_pct": 3.01,
+      "spread_bps": 19.19
     },
     {
       "pair": "GRIFFAINUSD",
-      "bid": 0.01765,
-      "price": 0.01769,
-      "score": 6.26,
-      "move24_pct": 0.0,
-      "spread_bps": 33.99
+      "bid": 0.01753,
+      "price": 0.01758,
+      "score": 6.23,
+      "move24_pct": -0.62,
+      "spread_bps": 45.64
     },
     {
       "pair": "GRTUSD",
-      "bid": 0.02655,
-      "price": 0.02658,
-      "score": 56.75,
-      "move24_pct": 2.63,
-      "spread_bps": 3.77
+      "bid": 0.02666,
+      "price": 0.02669,
+      "score": 54.35,
+      "move24_pct": 3.05,
+      "spread_bps": 7.5
     },
     {
       "pair": "GSTUSD",
@@ -2060,106 +2180,106 @@
     },
     {
       "pair": "GTCUSD",
-      "bid": 0.1935,
-      "price": 0.194,
+      "bid": 0.1913,
+      "price": 0.1911,
       "score": 19.28,
-      "move24_pct": -6.95,
-      "spread_bps": 20.67
+      "move24_pct": -8.35,
+      "spread_bps": 20.91
     },
     {
       "pair": "GUNUSD",
       "bid": 0.00279,
       "price": 0.00279,
-      "score": 11.7,
+      "score": 11.67,
       "move24_pct": 0.72,
       "spread_bps": 35.84
     },
     {
       "pair": "GUSD",
-      "bid": 0.004214,
-      "price": 0.004219,
-      "score": 30.3,
-      "move24_pct": 2.48,
-      "spread_bps": 35.6
+      "bid": 0.004228,
+      "price": 0.004243,
+      "score": 37.3,
+      "move24_pct": 3.06,
+      "spread_bps": 26.02
     },
     {
       "pair": "GWEIUSD",
-      "bid": 0.018381,
-      "price": 0.018398,
-      "score": 13.54,
-      "move24_pct": 0.67,
-      "spread_bps": 17.41
+      "bid": 0.018457,
+      "price": 0.018428,
+      "score": 15.57,
+      "move24_pct": 0.84,
+      "spread_bps": 14.09
     },
     {
       "pair": "HBARUSD",
-      "bid": 0.09147,
-      "price": 0.0915,
-      "score": 63.98,
-      "move24_pct": 1.36,
-      "spread_bps": 2.19
+      "bid": 0.09226,
+      "price": 0.0923,
+      "score": 72.48,
+      "move24_pct": 2.25,
+      "spread_bps": 3.25
     },
     {
       "pair": "HFTUSD",
       "bid": 0.00671,
       "price": 0.00672,
-      "score": 43.81,
+      "score": 43.75,
       "move24_pct": 2.91,
-      "spread_bps": 29.81
+      "spread_bps": 44.71
     },
     {
       "pair": "HMSTRUSD",
-      "bid": 0.0001599,
+      "bid": 0.00016,
       "price": 0.0001604,
-      "score": 6.22,
+      "score": 6.19,
       "move24_pct": 0.5,
-      "spread_bps": 225.14
+      "spread_bps": 256.25
     },
     {
       "pair": "HNTUSD",
-      "bid": 0.5138,
-      "price": 0.5159,
-      "score": 28.99,
-      "move24_pct": 0.45,
-      "spread_bps": 21.41
+      "bid": 0.5163,
+      "price": 0.517,
+      "score": 31.56,
+      "move24_pct": 0.66,
+      "spread_bps": 11.62
     },
     {
       "pair": "HOLOUSD",
-      "bid": 0.0597,
+      "bid": 0.0598,
       "price": 0.0589,
       "score": 0.2,
       "move24_pct": -3.6,
-      "spread_bps": 50.25
+      "spread_bps": 33.44
     },
     {
       "pair": "HONEYUSD",
-      "bid": 0.003449,
-      "price": 0.003439,
-      "score": 71.34,
-      "move24_pct": 6.57,
-      "spread_bps": 60.89
+      "bid": 0.003505,
+      "price": 0.0035,
+      "score": 71.39,
+      "move24_pct": 8.46,
+      "spread_bps": 42.8
     },
     {
       "pair": "HPOS10IUSD",
-      "bid": 0.01422,
-      "price": 0.01422,
-      "score": 2.4,
-      "move24_pct": 0.0,
-      "spread_bps": 35.16
+      "bid": 0.01423,
+      "price": 0.01433,
+      "score": 11.63,
+      "move24_pct": 0.77,
+      "spread_bps": 35.14
     },
     {
       "pair": "HSKUSD",
-      "bid": 0.09529,
+      "bid": 0.0955,
       "price": 0.09573,
       "score": 9.13,
       "move24_pct": 0.73,
-      "spread_bps": 89.2
+      "spread_bps": 33.51
     },
     {
       "pair": "HYPEUSD",
-      "bid": 85.16,
-      "price": 85.19,
-      "score": 64.05,
-      "move24_pct": 1.2,
+      "bid": 85.43,
+      "price": 85.47,
+      "score": 68.05,
+      "move24_pct": 1.53,
       "spread_bps": 1.17
     },
     {
@@ -2168,31 +2288,31 @@
       "price": 0.0222,
       "score": 1.4,
       "move24_pct": -0.27,
-      "spread_bps": 113.64
+      "spread_bps": 95.45
     },
     {
       "pair": "ICNTUSD",
-      "bid": 0.0911,
+      "bid": 0.0914,
       "price": 0.0913,
-      "score": 16.15,
+      "score": 16.17,
       "move24_pct": 1.22,
-      "spread_bps": 21.95
+      "spread_bps": 10.94
     },
     {
       "pair": "ICPUSD",
-      "bid": 3.021,
-      "price": 3.023,
-      "score": 77.56,
-      "move24_pct": 3.81,
-      "spread_bps": 6.62
+      "bid": 3.027,
+      "price": 3.029,
+      "score": 79.99,
+      "move24_pct": 4.02,
+      "spread_bps": 6.61
     },
     {
       "pair": "IDEXUSD",
-      "bid": 0.000791,
-      "price": 0.000803,
-      "score": 3.35,
-      "move24_pct": -18.14,
-      "spread_bps": 278.13
+      "bid": 0.000792,
+      "price": 0.000793,
+      "score": 3.37,
+      "move24_pct": -19.16,
+      "spread_bps": 303.03
     },
     {
       "pair": "IDOSUSD",
@@ -2204,171 +2324,171 @@
     },
     {
       "pair": "IMXUSD",
-      "bid": 0.1857,
-      "price": 0.1861,
-      "score": 38.3,
-      "move24_pct": 1.58,
-      "spread_bps": 16.16
+      "bid": 0.1849,
+      "price": 0.1853,
+      "score": 33.25,
+      "move24_pct": 1.15,
+      "spread_bps": 16.22
     },
     {
       "pair": "INITUSD",
-      "bid": 0.1112,
+      "bid": 0.1116,
       "price": 0.1117,
-      "score": 3.44,
+      "score": 3.46,
       "move24_pct": -2.36,
-      "spread_bps": 17.99
+      "spread_bps": 17.92
     },
     {
       "pair": "INJUSD",
-      "bid": 6.944,
-      "price": 6.945,
-      "score": 62.84,
-      "move24_pct": 2.71,
-      "spread_bps": 10.08
+      "bid": 6.971,
+      "price": 6.97,
+      "score": 67.37,
+      "move24_pct": 3.08,
+      "spread_bps": 8.61
     },
     {
       "pair": "INUSD",
-      "bid": 0.03289,
+      "bid": 0.03291,
       "price": 0.03251,
       "score": 0.19,
       "move24_pct": -3.93,
-      "spread_bps": 307.08
+      "spread_bps": 33.42
     },
     {
       "pair": "INXUSD",
-      "bid": 0.004736,
+      "bid": 0.004746,
       "price": 0.004719,
-      "score": 22.75,
+      "score": 22.74,
       "move24_pct": 1.66,
-      "spread_bps": 31.67
+      "spread_bps": 27.39
     },
     {
       "pair": "IPUSD",
-      "bid": 0.1947,
-      "price": 0.1954,
-      "score": 7.78,
-      "move24_pct": 0.15,
-      "spread_bps": 10.27
+      "bid": 0.1948,
+      "price": 0.195,
+      "score": 10.7,
+      "move24_pct": -0.05,
+      "spread_bps": 5.13
     },
     {
       "pair": "JAILSTOOLUSD",
-      "bid": 0.001155,
+      "bid": 0.001158,
       "price": 0.001204,
       "score": 0.25,
       "move24_pct": 0.0,
-      "spread_bps": 458.87
+      "spread_bps": 440.41
     },
     {
       "pair": "JASMYUSD",
-      "bid": 0.00476,
+      "bid": 0.00477,
       "price": 0.00477,
-      "score": 36.25,
+      "score": 36.18,
       "move24_pct": 2.14,
-      "spread_bps": 21.01
+      "spread_bps": 20.96
     },
     {
       "pair": "JITOSOLUSD",
-      "bid": 143.26,
+      "bid": 143.76,
       "price": 144.11,
       "score": 1.03,
       "move24_pct": 0.0,
-      "spread_bps": 11.87
+      "spread_bps": 11.13
     },
     {
       "pair": "JOEUSD",
-      "bid": 0.0372,
+      "bid": 0.0373,
       "price": 0.0373,
-      "score": 10.26,
+      "score": 10.24,
       "move24_pct": 0.81,
-      "spread_bps": 80.65
+      "spread_bps": 53.62
     },
     {
       "pair": "JSTUSD",
-      "bid": 0.14195,
+      "bid": 0.14171,
       "price": 0.14234,
-      "score": 17.46,
+      "score": 17.45,
       "move24_pct": 1.39,
-      "spread_bps": 61.29
+      "spread_bps": 67.04
     },
     {
       "pair": "JTOUSD",
-      "bid": 0.52074,
-      "price": 0.52061,
-      "score": 68.45,
-      "move24_pct": 3.33,
-      "spread_bps": 5.76
+      "bid": 0.52659,
+      "price": 0.52609,
+      "score": 74.73,
+      "move24_pct": 4.42,
+      "spread_bps": 6.65
     },
     {
       "pair": "JUPUSD",
-      "bid": 0.35211,
-      "price": 0.35274,
+      "bid": 0.35605,
+      "price": 0.35647,
       "score": 85,
-      "move24_pct": 5.01,
-      "spread_bps": 15.62
+      "move24_pct": 6.12,
+      "spread_bps": 17.98
     },
     {
       "pair": "KAITOUSD",
-      "bid": 0.3088,
-      "price": 0.3083,
-      "score": 8.24,
-      "move24_pct": 0.42,
-      "spread_bps": 25.91
+      "bid": 0.3092,
+      "price": 0.3097,
+      "score": 13.72,
+      "move24_pct": 0.88,
+      "spread_bps": 22.64
     },
     {
       "pair": "KASUSD",
-      "bid": 0.03959,
-      "price": 0.03964,
-      "score": 42.34,
-      "move24_pct": 1.25,
-      "spread_bps": 10.1
+      "bid": 0.03979,
+      "price": 0.0398,
+      "score": 47.26,
+      "move24_pct": 1.66,
+      "spread_bps": 7.54
     },
     {
       "pair": "KATUSD",
       "bid": 0.0045,
-      "price": 0.00451,
-      "score": 23.81,
-      "move24_pct": 1.81,
+      "price": 0.00452,
+      "score": 26.55,
+      "move24_pct": 2.03,
       "spread_bps": 22.22
     },
     {
       "pair": "KAVAUSD",
-      "bid": 0.0685,
-      "price": 0.0686,
-      "score": 1.14,
-      "move24_pct": -0.15,
-      "spread_bps": 14.6
+      "bid": 0.0684,
+      "price": 0.0685,
+      "score": 1.18,
+      "move24_pct": -0.29,
+      "spread_bps": 14.62
     },
     {
       "pair": "KEEPUSD",
-      "bid": 0.02469,
+      "bid": 0.02458,
       "price": 0.02511,
       "score": 35.2,
       "move24_pct": 2.91,
-      "spread_bps": 198.46
+      "spread_bps": 244.1
     },
     {
       "pair": "KERNELUSD",
-      "bid": 0.04992,
+      "bid": 0.04993,
       "price": 0.04962,
       "score": 5.06,
       "move24_pct": 0.4,
-      "spread_bps": 54.09
+      "spread_bps": 50.07
     },
     {
       "pair": "KGENUSD",
-      "bid": 0.1409,
+      "bid": 0.1404,
       "price": 0.1361,
       "score": 20.25,
       "move24_pct": 1.64,
-      "spread_bps": 85.17
+      "spread_bps": 49.86
     },
     {
       "pair": "KIIUSD",
-      "bid": 0.08624,
+      "bid": 0.08652,
       "price": 0.08656,
       "score": 0.76,
       "move24_pct": -0.18,
-      "spread_bps": 68.41
+      "spread_bps": 27.74
     },
     {
       "pair": "KMNOUSD",
@@ -2376,31 +2496,31 @@
       "price": 0.03643,
       "score": 7.13,
       "move24_pct": 0.44,
-      "spread_bps": 8.2
+      "spread_bps": 35.53
     },
     {
       "pair": "KNCUSD",
-      "bid": 0.134,
-      "price": 0.1344,
-      "score": 21.26,
-      "move24_pct": 1.66,
-      "spread_bps": 14.93
+      "bid": 0.1337,
+      "price": 0.1341,
+      "score": 18.53,
+      "move24_pct": 1.44,
+      "spread_bps": 29.92
     },
     {
       "pair": "KNTQUSD",
-      "bid": 0.28979,
+      "bid": 0.29034,
       "price": 0.28979,
-      "score": 35.91,
+      "score": 35.99,
       "move24_pct": 1.21,
-      "spread_bps": 0.35
+      "spread_bps": 0.34
     },
     {
       "pair": "KSMUSD",
-      "bid": 4.81,
-      "price": 4.81,
+      "bid": 4.78,
+      "price": 4.82,
       "score": 59.93,
-      "move24_pct": 4.34,
-      "spread_bps": 20.79
+      "move24_pct": 4.56,
+      "spread_bps": 20.92
     },
     {
       "pair": "KTAUSD",
@@ -2408,7 +2528,7 @@
       "price": 0.0661,
       "score": 8.29,
       "move24_pct": 0.15,
-      "spread_bps": 45.39
+      "spread_bps": 30.26
     },
     {
       "pair": "KULAUSD",
@@ -2420,187 +2540,187 @@
     },
     {
       "pair": "L3USD",
-      "bid": 0.002717,
+      "bid": 0.002716,
       "price": 0.002751,
       "score": 26.76,
       "move24_pct": 2.04,
-      "spread_bps": 84.65
+      "spread_bps": 224.59
     },
     {
       "pair": "LAPTOPUSD",
-      "bid": 0.0748,
-      "price": 0.075,
-      "score": 19.12,
-      "move24_pct": -0.66,
-      "spread_bps": 26.74
+      "bid": 0.0747,
+      "price": 0.0743,
+      "score": 18.93,
+      "move24_pct": -1.59,
+      "spread_bps": 26.77
     },
     {
       "pair": "LAVAUSD",
-      "bid": 0.01239,
+      "bid": 0.0124,
       "price": 0.01234,
       "score": 0.28,
       "move24_pct": -0.48,
-      "spread_bps": 32.28
+      "spread_bps": 32.26
     },
     {
       "pair": "LAYERUSD",
-      "bid": 0.0721,
+      "bid": 0.0722,
       "price": 0.0725,
       "score": 13.75,
       "move24_pct": 1.12,
-      "spread_bps": 110.96
+      "spread_bps": 55.4
     },
     {
       "pair": "LCAPUSD",
-      "bid": 6.978,
+      "bid": 6.99,
       "price": 6.99,
       "score": 0.03,
       "move24_pct": -2.98,
-      "spread_bps": 64.49
+      "spread_bps": 60.09
     },
     {
       "pair": "LCXUSD",
-      "bid": 0.057,
-      "price": 0.057,
-      "score": 29.53,
-      "move24_pct": -10.17,
-      "spread_bps": 1.75
+      "bid": 0.05964,
+      "price": 0.06016,
+      "score": 18.33,
+      "move24_pct": -5.19,
+      "spread_bps": 26.83
     },
     {
       "pair": "LDOUSD",
-      "bid": 0.418,
-      "price": 0.418,
-      "score": 63.1,
-      "move24_pct": 3.21,
-      "spread_bps": 23.92
+      "bid": 0.422,
+      "price": 0.422,
+      "score": 72.57,
+      "move24_pct": 4.2,
+      "spread_bps": 23.7
     },
     {
       "pair": "LIGHTERUSD",
-      "bid": 3.687,
-      "price": 3.691,
-      "score": 57.53,
-      "move24_pct": 2.24,
-      "spread_bps": 8.14
+      "bid": 3.737,
+      "price": 3.732,
+      "score": 71.28,
+      "move24_pct": 3.38,
+      "spread_bps": 10.7
     },
     {
       "pair": "LINEAUSD",
-      "bid": 0.00268,
+      "bid": 0.00267,
       "price": 0.00269,
-      "score": 10.81,
+      "score": 10.78,
       "move24_pct": 0.75,
-      "spread_bps": 37.31
+      "spread_bps": 74.91
     },
     {
       "pair": "LINKUSD",
-      "bid": 12.81994,
-      "price": 12.8354,
-      "score": 63.37,
-      "move24_pct": 1.06,
-      "spread_bps": 0.69
+      "bid": 12.86826,
+      "price": 12.86777,
+      "score": 67.48,
+      "move24_pct": 1.32,
+      "spread_bps": 0.16
     },
     {
       "pair": "LIONUSD",
-      "bid": 0.001376,
+      "bid": 0.001381,
       "price": 0.001372,
       "score": 1.63,
       "move24_pct": -1.44,
-      "spread_bps": 276.16
+      "spread_bps": 123.1
     },
     {
       "pair": "LITUSD",
-      "bid": 0.1216,
+      "bid": 0.1215,
       "price": 0.1217,
-      "score": 11.98,
+      "score": 11.97,
       "move24_pct": 0.75,
-      "spread_bps": 32.89
+      "spread_bps": 57.61
     },
     {
       "pair": "LMWRUSD",
-      "bid": 0.01001,
+      "bid": 0.01003,
       "price": 0.01005,
-      "score": 2.01,
+      "score": 1.95,
       "move24_pct": -0.1,
-      "spread_bps": 279.72
+      "spread_bps": 229.31
     },
     {
       "pair": "LOFIUSD",
-      "bid": 0.01041,
-      "price": 0.01037,
-      "score": 57.53,
-      "move24_pct": 9.5,
-      "spread_bps": 240.15
+      "bid": 0.01052,
+      "price": 0.01063,
+      "score": 57.5,
+      "move24_pct": 12.25,
+      "spread_bps": 209.13
     },
     {
       "pair": "LPTUSD",
-      "bid": 1.743,
-      "price": 1.745,
-      "score": 10.34,
-      "move24_pct": -1.25,
-      "spread_bps": 22.95
+      "bid": 1.734,
+      "price": 1.75,
+      "score": 10.24,
+      "move24_pct": -0.96,
+      "spread_bps": 17.3
     },
     {
       "pair": "LQTYUSD",
-      "bid": 0.2249,
+      "bid": 0.2246,
       "price": 0.2212,
       "score": 0.42,
       "move24_pct": 0.0,
-      "spread_bps": 22.23
+      "spread_bps": 26.71
     },
     {
       "pair": "LRCUSD",
-      "bid": 0.009646,
-      "price": 0.009676,
+      "bid": 0.009669,
+      "price": 0.009622,
       "score": 4.84,
-      "move24_pct": -0.14,
-      "spread_bps": 38.36
+      "move24_pct": -0.7,
+      "spread_bps": 41.37
     },
     {
       "pair": "LSETHUSD",
-      "bid": 2689.2,
+      "bid": 2686.7,
       "price": 2898.3,
-      "score": 0.62,
+      "score": 0.6,
       "move24_pct": 0.0,
-      "spread_bps": 764.17
+      "spread_bps": 774.18
     },
     {
       "pair": "LSKUSD",
-      "bid": 0.236594,
+      "bid": 0.2373,
       "price": 0.237094,
       "score": 4.47,
       "move24_pct": -1.19,
-      "spread_bps": 18.47
+      "spread_bps": 21.11
     },
     {
       "pair": "LSSOLUSD",
-      "bid": 117.65,
+      "bid": 118.05,
       "price": 116.36,
       "score": 0.1,
       "move24_pct": -5.99,
-      "spread_bps": 32.3
+      "spread_bps": 33.04
     },
     {
       "pair": "LUNAUSD",
-      "bid": 5.212e-05,
-      "price": 5.224e-05,
-      "score": 29.68,
-      "move24_pct": 0.93,
-      "spread_bps": 3.84
+      "bid": 5.191e-05,
+      "price": 5.191e-05,
+      "score": 14.73,
+      "move24_pct": 0.29,
+      "spread_bps": 32.75
     },
     {
       "pair": "MANAUSD",
-      "bid": 0.09443,
-      "price": 0.09454,
-      "score": 54.26,
-      "move24_pct": 1.98,
-      "spread_bps": 4.24
+      "bid": 0.0948,
+      "price": 0.09484,
+      "score": 58.16,
+      "move24_pct": 2.31,
+      "spread_bps": 4.22
     },
     {
       "pair": "MANTRAUSD",
-      "bid": 0.004346,
-      "price": 0.004353,
-      "score": 12.67,
-      "move24_pct": 0.95,
-      "spread_bps": 13.81
+      "bid": 0.00435,
+      "price": 0.004351,
+      "score": 12.13,
+      "move24_pct": 0.9,
+      "spread_bps": 16.09
     },
     {
       "pair": "MASKUSD",
@@ -2612,19 +2732,19 @@
     },
     {
       "pair": "MEGAUSD",
-      "bid": 0.04189,
-      "price": 0.0419,
-      "score": 59.53,
-      "move24_pct": 2.2,
-      "spread_bps": 2.39
+      "bid": 0.04193,
+      "price": 0.04195,
+      "score": 60.99,
+      "move24_pct": 2.32,
+      "spread_bps": 2.38
     },
     {
       "pair": "MELANIAUSD",
-      "bid": 0.0908,
+      "bid": 0.0911,
       "price": 0.091,
-      "score": 14.13,
+      "score": 14.12,
       "move24_pct": 0.89,
-      "spread_bps": 22.03
+      "spread_bps": 21.95
     },
     {
       "pair": "MEMEUSD",
@@ -2632,55 +2752,55 @@
       "price": 0.000546,
       "score": 16.26,
       "move24_pct": 1.3,
-      "spread_bps": 36.63
+      "spread_bps": 18.32
     },
     {
       "pair": "MERLUSD",
-      "bid": 0.03105,
-      "price": 0.03113,
-      "score": 36.04,
-      "move24_pct": 2.88,
-      "spread_bps": 48.31
+      "bid": 0.03083,
+      "price": 0.03101,
+      "score": 31.29,
+      "move24_pct": 2.48,
+      "spread_bps": 32.44
     },
     {
       "pair": "METHUSD",
-      "bid": 2729.9,
+      "bid": 2734.5,
       "price": 2735.4,
       "score": 0.3,
       "move24_pct": 0.0,
-      "spread_bps": 35.17
+      "spread_bps": 35.47
     },
     {
       "pair": "METISUSD",
-      "bid": 3.338,
+      "bid": 3.336,
       "price": 3.365,
       "score": 32.53,
       "move24_pct": 2.65,
-      "spread_bps": 26.96
+      "spread_bps": 32.97
     },
     {
       "pair": "METUSD",
-      "bid": 0.4325,
-      "price": 0.4351,
-      "score": 27.03,
-      "move24_pct": -1.47,
-      "spread_bps": 11.56
+      "bid": 0.4341,
+      "price": 0.4355,
+      "score": 27.02,
+      "move24_pct": -1.38,
+      "spread_bps": 18.43
     },
     {
       "pair": "MEUSD",
-      "bid": 0.0695,
+      "bid": 0.0697,
       "price": 0.0696,
       "score": 14.49,
       "move24_pct": 1.16,
-      "spread_bps": 28.78
+      "spread_bps": 28.69
     },
     {
       "pair": "MEWUSD",
-      "bid": 0.000469,
+      "bid": 0.00047,
       "price": 0.000471,
       "score": 19.32,
       "move24_pct": 1.51,
-      "spread_bps": 21.32
+      "spread_bps": 21.28
     },
     {
       "pair": "MEZOUSD",
@@ -2692,107 +2812,107 @@
     },
     {
       "pair": "MFUSD",
-      "bid": 0.00368,
+      "bid": 0.0037,
       "price": 0.00388,
-      "score": 7.69,
+      "score": 7.68,
       "move24_pct": -2.51,
-      "spread_bps": 543.48
+      "spread_bps": 378.38
     },
     {
       "pair": "MIMUSD",
-      "bid": 0.00046,
+      "bid": 0.000458,
       "price": 0.0004729,
       "score": 48.93,
       "move24_pct": 4.67,
-      "spread_bps": 286.96
+      "spread_bps": 331.88
     },
     {
       "pair": "MINAUSD",
-      "bid": 0.07741,
-      "price": 0.07738,
-      "score": 50.49,
-      "move24_pct": 1.12,
-      "spread_bps": 12.92
+      "bid": 0.07638,
+      "price": 0.07647,
+      "score": 37,
+      "move24_pct": -0.07,
+      "spread_bps": 14.4
     },
     {
       "pair": "MIRAUSD",
       "bid": 0.048,
       "price": 0.0484,
-      "score": 31.23,
+      "score": 31.22,
       "move24_pct": 2.54,
       "spread_bps": 41.67
     },
     {
       "pair": "MNTUSD",
       "bid": 0.5548,
-      "price": 0.5551,
-      "score": 12.78,
-      "move24_pct": 0.18,
-      "spread_bps": 12.62
+      "price": 0.5558,
+      "score": 14.29,
+      "move24_pct": 0.31,
+      "spread_bps": 10.81
     },
     {
       "pair": "MOCAUSD",
-      "bid": 0.009433,
+      "bid": 0.009439,
       "price": 0.009491,
       "score": 15.88,
       "move24_pct": 1.3,
-      "spread_bps": 61.49
+      "spread_bps": 65.68
     },
     {
       "pair": "MOGUSD",
-      "bid": 1.098e-07,
+      "bid": 1.099e-07,
       "price": 1.1e-07,
-      "score": 19.51,
+      "score": 19.5,
       "move24_pct": 1.29,
-      "spread_bps": 18.21
+      "spread_bps": 18.2
     },
     {
       "pair": "MONUSD",
-      "bid": 0.02427,
-      "price": 0.0243,
-      "score": 47.68,
-      "move24_pct": 1.21,
-      "spread_bps": 4.12
+      "bid": 0.0244,
+      "price": 0.02438,
+      "score": 51.62,
+      "move24_pct": 1.54,
+      "spread_bps": 4.1
     },
     {
       "pair": "MOODENGUSD",
-      "bid": 0.04109,
+      "bid": 0.04119,
       "price": 0.04099,
       "score": 24.09,
       "move24_pct": 1.16,
-      "spread_bps": 9.73
+      "spread_bps": 9.71
     },
     {
       "pair": "MORPHOUSD",
-      "bid": 2.38032,
-      "price": 2.38385,
-      "score": 39.93,
-      "move24_pct": 1.22,
-      "spread_bps": 12.6
+      "bid": 2.38935,
+      "price": 2.392,
+      "score": 44.07,
+      "move24_pct": 1.56,
+      "spread_bps": 16.49
     },
     {
       "pair": "MOVRUSD",
-      "bid": 1.8619,
-      "price": 1.8602,
-      "score": 7.12,
-      "move24_pct": -1.32,
-      "spread_bps": 11.82
+      "bid": 1.8508,
+      "price": 1.8538,
+      "score": 7.04,
+      "move24_pct": -1.66,
+      "spread_bps": 16.75
     },
     {
       "pair": "MSOLUSD",
-      "bid": 153.9,
+      "bid": 154.37,
       "price": 153.99,
       "score": 6.1,
       "move24_pct": 0.36,
-      "spread_bps": 41.59
+      "spread_bps": 36.92
     },
     {
       "pair": "MUBARAKUSD",
-      "bid": 0.07515,
-      "price": 0.07503,
-      "score": 4.6,
-      "move24_pct": -1.07,
-      "spread_bps": 18.63
+      "bid": 0.07535,
+      "price": 0.07539,
+      "score": 4.56,
+      "move24_pct": -0.59,
+      "spread_bps": 23.89
     },
     {
       "pair": "MXNBUSD",
@@ -2800,14 +2920,14 @@
       "price": 0.05513,
       "score": 0.47,
       "move24_pct": -0.22,
-      "spread_bps": 12.72
+      "spread_bps": 14.54
     },
     {
       "pair": "MYXUSD",
       "bid": 0.0642,
-      "price": 0.0646,
-      "score": 12.75,
-      "move24_pct": 0.94,
+      "price": 0.0642,
+      "score": 5.28,
+      "move24_pct": 0.31,
       "spread_bps": 31.15
     },
     {
@@ -2820,27 +2940,27 @@
     },
     {
       "pair": "NEARUSD",
-      "bid": 4.7113,
-      "price": 4.7171,
-      "score": 92.78,
-      "move24_pct": 5.76,
-      "spread_bps": 3.61
+      "bid": 4.7759,
+      "price": 4.7785,
+      "score": 92.88,
+      "move24_pct": 7.14,
+      "spread_bps": 3.56
     },
     {
       "pair": "NEIROUSD",
       "bid": 8.249e-05,
-      "price": 8.261e-05,
-      "score": 34.6,
-      "move24_pct": 2.72,
-      "spread_bps": 12.12
+      "price": 8.264e-05,
+      "score": 35.19,
+      "move24_pct": 2.76,
+      "spread_bps": 164.87
     },
     {
       "pair": "NEOUSD",
-      "bid": 2.394,
+      "bid": 2.393,
       "price": 2.385,
-      "score": 16.12,
+      "score": 16.11,
       "move24_pct": 1.19,
-      "spread_bps": 87.72
+      "spread_bps": 66.86
     },
     {
       "pair": "NESUSD",
@@ -2852,51 +2972,51 @@
     },
     {
       "pair": "NEXUSD",
-      "bid": 7.93e-07,
-      "price": 7.97e-07,
-      "score": 0.92,
-      "move24_pct": -0.5,
-      "spread_bps": 50.44
+      "bid": 7.85e-07,
+      "price": 7.83e-07,
+      "score": 0.95,
+      "move24_pct": -2.25,
+      "spread_bps": 38.22
     },
     {
       "pair": "NIGHTUSD",
-      "bid": 0.04522,
-      "price": 0.04522,
-      "score": 51.78,
-      "move24_pct": 1.23,
-      "spread_bps": 8.85
+      "bid": 0.04543,
+      "price": 0.04551,
+      "score": 65.76,
+      "move24_pct": 1.88,
+      "spread_bps": 4.4
     },
     {
       "pair": "NILUSD",
-      "bid": 0.0876,
-      "price": 0.0876,
-      "score": 66.56,
-      "move24_pct": 3.55,
-      "spread_bps": 11.42
+      "bid": 0.0877,
+      "price": 0.0878,
+      "score": 69.43,
+      "move24_pct": 3.78,
+      "spread_bps": 11.4
     },
     {
       "pair": "NMRUSD",
-      "bid": 13.92,
-      "price": 13.92,
-      "score": 18.7,
-      "move24_pct": 0.87,
-      "spread_bps": 21.55
+      "bid": 14.01,
+      "price": 14.1,
+      "score": 34.05,
+      "move24_pct": 2.17,
+      "spread_bps": 14.28
     },
     {
       "pair": "NOBODYUSD",
-      "bid": 0.000464,
-      "price": 0.000475,
-      "score": 31.67,
-      "move24_pct": 2.59,
-      "spread_bps": 258.62
+      "bid": 0.000465,
+      "price": 0.000476,
+      "score": 34.27,
+      "move24_pct": 2.81,
+      "spread_bps": 258.06
     },
     {
       "pair": "NOCKUSD",
       "bid": 0.01992,
       "price": 0.01992,
-      "score": 3.61,
+      "score": 3.6,
       "move24_pct": -1.48,
-      "spread_bps": 45.18
+      "spread_bps": 10.04
     },
     {
       "pair": "NODEUSD",
@@ -2908,43 +3028,43 @@
     },
     {
       "pair": "NOSUSD",
-      "bid": 0.563,
-      "price": 0.5666,
-      "score": 64.53,
-      "move24_pct": 3.58,
-      "spread_bps": 63.94
+      "bid": 0.587,
+      "price": 0.5829,
+      "score": 71.04,
+      "move24_pct": 6.56,
+      "spread_bps": 97.1
     },
     {
       "pair": "NOTUSD",
-      "bid": 0.000439,
+      "bid": 0.00044,
       "price": 0.000439,
       "score": 15.13,
       "move24_pct": 1.15,
-      "spread_bps": 22.78
+      "spread_bps": 22.73
     },
     {
       "pair": "NPCUSD",
-      "bid": 0.021582,
-      "price": 0.021762,
-      "score": 59.14,
-      "move24_pct": 2.72,
-      "spread_bps": 0.46
+      "bid": 0.021612,
+      "price": 0.021672,
+      "score": 40.06,
+      "move24_pct": 2.29,
+      "spread_bps": 34.7
     },
     {
       "pair": "OBOLUSD",
       "bid": 0.002163,
       "price": 0.00246,
-      "score": 0.25,
+      "score": 0.21,
       "move24_pct": -1.05,
       "spread_bps": 3559.87
     },
     {
       "pair": "OCEANUSD",
-      "bid": 0.1436,
+      "bid": 0.1433,
       "price": 0.1443,
       "score": 9.5,
       "move24_pct": 0.63,
-      "spread_bps": 125.35
+      "spread_bps": 174.46
     },
     {
       "pair": "ODOSUSD",
@@ -2956,107 +3076,107 @@
     },
     {
       "pair": "OGNUSD",
-      "bid": 0.04428,
-      "price": 0.04426,
-      "score": 26.01,
-      "move24_pct": -3.17,
-      "spread_bps": 70.01
+      "bid": 0.04399,
+      "price": 0.04395,
+      "score": 26.0,
+      "move24_pct": -3.85,
+      "spread_bps": 79.56
     },
     {
       "pair": "OKBUSD",
-      "bid": 125.27,
+      "bid": 125.4,
       "price": 125.69,
       "score": 1.36,
       "move24_pct": -0.51,
-      "spread_bps": 118.14
+      "spread_bps": 133.17
     },
     {
       "pair": "OMGUSD",
-      "bid": 0.04784,
+      "bid": 0.047824,
       "price": 0.047824,
-      "score": 0.33,
+      "score": 0.31,
       "move24_pct": -1.98,
-      "spread_bps": 382.73
+      "spread_bps": 387.88
     },
     {
       "pair": "OMIUSD",
-      "bid": 0.0002736,
+      "bid": 0.0002735,
       "price": 0.0002735,
-      "score": 8.69,
+      "score": 8.66,
       "move24_pct": 0.33,
-      "spread_bps": 36.55
+      "spread_bps": 40.22
     },
     {
       "pair": "ONDOUSD",
-      "bid": 0.47574,
-      "price": 0.47599,
-      "score": 64.51,
-      "move24_pct": 1.25,
-      "spread_bps": 1.26
+      "bid": 0.47955,
+      "price": 0.4799,
+      "score": 75.76,
+      "move24_pct": 2.08,
+      "spread_bps": 0.63
     },
     {
       "pair": "ONEUSD",
-      "bid": 0.13266,
+      "bid": 0.13337,
       "price": 0.13212,
-      "score": 2.19,
+      "score": 2.18,
       "move24_pct": 0.05,
-      "spread_bps": 15.83
+      "spread_bps": 13.5
     },
     {
       "pair": "OOBUSD",
       "bid": 0.00812,
-      "price": 0.00817,
+      "price": 0.00816,
       "score": 22.6,
-      "move24_pct": -1.57,
+      "move24_pct": -1.69,
       "spread_bps": 49.26
     },
     {
       "pair": "OPENUSD",
-      "bid": 0.107,
+      "bid": 0.1072,
       "price": 0.1075,
       "score": 41.29,
       "move24_pct": 3.07,
-      "spread_bps": 28.04
+      "spread_bps": 18.66
     },
     {
       "pair": "OPNUSD",
-      "bid": 0.0602,
+      "bid": 0.0603,
       "price": 0.0601,
       "score": 0.5,
       "move24_pct": 0.0,
-      "spread_bps": 33.22
+      "spread_bps": 33.17
     },
     {
       "pair": "OPUSD",
-      "bid": 0.1221,
-      "price": 0.1224,
-      "score": 59.26,
-      "move24_pct": 2.86,
-      "spread_bps": 8.19
+      "bid": 0.1222,
+      "price": 0.1225,
+      "score": 60.27,
+      "move24_pct": 2.94,
+      "spread_bps": 8.18
     },
     {
       "pair": "ORCAUSD",
-      "bid": 2.45,
-      "price": 2.451,
-      "score": 70.91,
-      "move24_pct": 4.43,
-      "spread_bps": 24.49
+      "bid": 2.436,
+      "price": 2.436,
+      "score": 68.39,
+      "move24_pct": 3.79,
+      "spread_bps": 24.63
     },
     {
       "pair": "ORDERUSD",
-      "bid": 0.03536,
+      "bid": 0.03457,
       "price": 0.03796,
       "score": 10.24,
       "move24_pct": 0.85,
-      "spread_bps": 1504.52
+      "spread_bps": 841.77
     },
     {
       "pair": "OSMOUSD",
-      "bid": 0.03373,
+      "bid": 0.03361,
       "price": 0.03282,
       "score": 0.78,
       "move24_pct": -1.23,
-      "spread_bps": 127.48
+      "spread_bps": 110.09
     },
     {
       "pair": "OUSDUSD",
@@ -3068,83 +3188,83 @@
     },
     {
       "pair": "OXTUSD",
-      "bid": 0.01009,
-      "price": 0.0102,
-      "score": 7.4,
-      "move24_pct": 0.1,
-      "spread_bps": 128.84
+      "bid": 0.01008,
+      "price": 0.0101,
+      "score": 6.17,
+      "move24_pct": -0.88,
+      "spread_bps": 138.89
     },
     {
       "pair": "PACKUSD",
-      "bid": 0.006504,
-      "price": 0.00654,
-      "score": 21.59,
-      "move24_pct": 1.71,
-      "spread_bps": 55.35
+      "bid": 0.006526,
+      "price": 0.006526,
+      "score": 19.19,
+      "move24_pct": 1.49,
+      "spread_bps": 50.57
     },
     {
       "pair": "PACTUSD",
-      "bid": 0.000159,
+      "bid": 0.0001593,
       "price": 0.0001589,
       "score": 16.17,
       "move24_pct": 1.27,
-      "spread_bps": 18.87
+      "spread_bps": 12.55
     },
     {
       "pair": "PARTIUSD",
-      "bid": 0.03494,
+      "bid": 0.03455,
       "price": 0.03499,
-      "score": 14.96,
+      "score": 14.93,
       "move24_pct": 1.19,
-      "spread_bps": 60.1
+      "spread_bps": 54.99
     },
     {
       "pair": "PAXGUSD",
-      "bid": 4177.46,
-      "price": 4175.27,
-      "score": 51.45,
-      "move24_pct": 0.72,
+      "bid": 4184.07,
+      "price": 4183.87,
+      "score": 54.03,
+      "move24_pct": 0.93,
       "spread_bps": 0.02
     },
     {
       "pair": "PEAQUSD",
-      "bid": 0.03932,
-      "price": 0.03928,
-      "score": 45.52,
-      "move24_pct": 1.05,
-      "spread_bps": 2.54
+      "bid": 0.0407,
+      "price": 0.04065,
+      "score": 70.99,
+      "move24_pct": 4.58,
+      "spread_bps": 9.83
     },
     {
       "pair": "PENDLEUSD",
-      "bid": 2.105,
-      "price": 2.107,
-      "score": 44.09,
-      "move24_pct": 1.06,
-      "spread_bps": 4.75
+      "bid": 2.108,
+      "price": 2.109,
+      "score": 45.6,
+      "move24_pct": 1.15,
+      "spread_bps": 4.74
     },
     {
       "pair": "PENGUUSD",
-      "bid": 0.008059,
-      "price": 0.008064,
-      "score": 64.83,
-      "move24_pct": 1.69,
-      "spread_bps": 3.72
+      "bid": 0.008112,
+      "price": 0.008118,
+      "score": 73.05,
+      "move24_pct": 2.37,
+      "spread_bps": 3.7
     },
     {
       "pair": "PEPECOINUSD",
-      "bid": 0.14409,
+      "bid": 0.14441,
       "price": 0.14773,
       "score": 37.28,
       "move24_pct": 2.94,
-      "spread_bps": 288.01
+      "spread_bps": 265.22
     },
     {
       "pair": "PEPEUSD",
-      "bid": 3.909e-06,
-      "price": 3.912e-06,
-      "score": 70.15,
-      "move24_pct": 2.35,
-      "spread_bps": 2.56
+      "bid": 3.918e-06,
+      "price": 3.921e-06,
+      "score": 72.97,
+      "move24_pct": 2.59,
+      "spread_bps": 2.55
     },
     {
       "pair": "PEPUSD",
@@ -3156,59 +3276,59 @@
     },
     {
       "pair": "PERPUSD",
-      "bid": 0.0205,
+      "bid": 0.0206,
       "price": 0.0207,
-      "score": 3.6,
+      "score": 3.51,
       "move24_pct": -3.27,
-      "spread_bps": 195.12
+      "spread_bps": 194.17
     },
     {
       "pair": "PHAUSD",
-      "bid": 0.0609,
-      "price": 0.0609,
-      "score": 7.28,
-      "move24_pct": -1.04,
-      "spread_bps": 59.11
+      "bid": 0.06085,
+      "price": 0.06091,
+      "score": 7.41,
+      "move24_pct": -1.02,
+      "spread_bps": 41.08
     },
     {
       "pair": "PIEVERSEUSD",
-      "bid": 1.3029,
+      "bid": 1.3038,
       "price": 1.3037,
-      "score": 2.7,
+      "score": 2.65,
       "move24_pct": -1.39,
-      "spread_bps": 32.24
+      "spread_bps": 39.12
     },
     {
       "pair": "PIPEUSD",
-      "bid": 0.01627,
-      "price": 0.03316,
-      "score": 0.45,
-      "move24_pct": -0.03,
-      "spread_bps": 11548.86
+      "bid": 0.02232,
+      "price": 0.01587,
+      "score": 0.53,
+      "move24_pct": -52.16,
+      "spread_bps": 5685.48
     },
     {
       "pair": "PIUSD",
-      "bid": 0.08166,
-      "price": 0.08125,
-      "score": 10.94,
-      "move24_pct": 0.51,
-      "spread_bps": 11.02
+      "bid": 0.08147,
+      "price": 0.08155,
+      "score": 15.35,
+      "move24_pct": 0.88,
+      "spread_bps": 11.05
     },
     {
       "pair": "PLAYUSD",
-      "bid": 0.023644,
+      "bid": 0.023596,
       "price": 0.023894,
-      "score": 15.25,
+      "score": 15.23,
       "move24_pct": -0.33,
-      "spread_bps": 60.06
+      "spread_bps": 98.32
     },
     {
       "pair": "PLUMEUSD",
-      "bid": 0.01831,
-      "price": 0.01842,
-      "score": 57.46,
-      "move24_pct": 2.5,
-      "spread_bps": 5.46
+      "bid": 0.01834,
+      "price": 0.01832,
+      "score": 50.79,
+      "move24_pct": 1.95,
+      "spread_bps": 5.45
     },
     {
       "pair": "PNTUSD",
@@ -3222,89 +3342,89 @@
       "pair": "PNUTUSD",
       "bid": 0.0487,
       "price": 0.0488,
-      "score": 7.29,
+      "score": 7.3,
       "move24_pct": 0.0,
       "spread_bps": 20.53
     },
     {
       "pair": "POLISUSD",
-      "bid": 0.01141,
+      "bid": 0.01143,
       "price": 0.01156,
       "score": 27.02,
       "move24_pct": 2.21,
-      "spread_bps": 184.05
+      "spread_bps": 166.23
     },
     {
       "pair": "POLSUSD",
-      "bid": 0.0568,
-      "price": 0.0585,
-      "score": 47.1,
-      "move24_pct": 3.91,
-      "spread_bps": 299.3
+      "bid": 0.0573,
+      "price": 0.0588,
+      "score": 48.23,
+      "move24_pct": 4.44,
+      "spread_bps": 279.23
     },
     {
       "pair": "POLUSD",
-      "bid": 0.10015,
-      "price": 0.10021,
-      "score": 48.87,
-      "move24_pct": 1.82,
-      "spread_bps": 6.99
+      "bid": 0.10037,
+      "price": 0.1004,
+      "score": 53.22,
+      "move24_pct": 2.01,
+      "spread_bps": 5.98
     },
     {
       "pair": "PONDUSD",
-      "bid": 0.001718,
-      "price": 0.001731,
-      "score": 39.98,
-      "move24_pct": 2.61,
-      "spread_bps": 69.85
+      "bid": 0.001724,
+      "price": 0.001712,
+      "score": 25.69,
+      "move24_pct": 1.48,
+      "spread_bps": 81.21
     },
     {
       "pair": "PONKEUSD",
-      "bid": 0.02146,
+      "bid": 0.02152,
       "price": 0.02181,
       "score": 13.35,
       "move24_pct": 0.93,
-      "spread_bps": 51.26
+      "spread_bps": 125.46
     },
     {
       "pair": "PONSUSD",
-      "bid": 0.3609,
-      "price": 0.3615,
-      "score": 56.85,
-      "move24_pct": 2.79,
-      "spread_bps": 8.31
+      "bid": 0.3633,
+      "price": 0.3631,
+      "score": 62.29,
+      "move24_pct": 3.24,
+      "spread_bps": 8.26
     },
     {
       "pair": "POPCATUSD",
-      "bid": 0.0469,
+      "bid": 0.0471,
       "price": 0.0471,
-      "score": 42.38,
+      "score": 42.33,
       "move24_pct": 2.61,
-      "spread_bps": 21.32
+      "spread_bps": 21.23
     },
     {
       "pair": "PORTALUSD",
-      "bid": 0.0167,
-      "price": 0.01653,
-      "score": 1.05,
-      "move24_pct": 0.06,
-      "spread_bps": 29.94
+      "bid": 0.01673,
+      "price": 0.01674,
+      "score": 16.32,
+      "move24_pct": 1.33,
+      "spread_bps": 17.93
     },
     {
       "pair": "POWRUSD",
-      "bid": 0.062,
+      "bid": 0.0621,
       "price": 0.0623,
       "score": 8.15,
       "move24_pct": 0.65,
-      "spread_bps": 48.39
+      "spread_bps": 48.31
     },
     {
       "pair": "PRCLUSD",
-      "bid": 0.00593,
+      "bid": 0.00594,
       "price": 0.00592,
-      "score": 2.06,
+      "score": 2.05,
       "move24_pct": -1.5,
-      "spread_bps": 50.59
+      "spread_bps": 50.51
     },
     {
       "pair": "PRIMEUSD",
@@ -3320,63 +3440,63 @@
       "price": 0.01858,
       "score": 22.12,
       "move24_pct": 1.2,
-      "spread_bps": 27.04
+      "spread_bps": 21.63
     },
     {
       "pair": "PROSUSD",
-      "bid": 0.6459,
-      "price": 0.6459,
-      "score": 31.59,
-      "move24_pct": 0.58,
-      "spread_bps": 9.29
+      "bid": 0.6437,
+      "price": 0.6438,
+      "score": 27.6,
+      "move24_pct": 0.25,
+      "spread_bps": 12.43
     },
     {
       "pair": "PROUSD",
-      "bid": 0.3417,
-      "price": 0.3438,
+      "bid": 0.3418,
+      "price": 0.3429,
       "score": 2.22,
-      "move24_pct": -0.92,
-      "spread_bps": 35.12
+      "move24_pct": -1.18,
+      "spread_bps": 35.11
     },
     {
       "pair": "PROVEUSD",
-      "bid": 0.1992,
+      "bid": 0.1995,
       "price": 0.1993,
       "score": 3.06,
       "move24_pct": 0.0,
-      "spread_bps": 40.16
+      "spread_bps": 35.09
     },
     {
       "pair": "PTBUSD",
-      "bid": 0.000863,
+      "bid": 0.000862,
       "price": 0.000861,
-      "score": 16.0,
+      "score": 15.98,
       "move24_pct": 1.06,
-      "spread_bps": 34.76
+      "spread_bps": 23.2
     },
     {
       "pair": "PUFFERUSD",
-      "bid": 0.021703,
+      "bid": 0.021699,
       "price": 0.0215,
       "score": 0.18,
       "move24_pct": -3.87,
-      "spread_bps": 31.33
+      "spread_bps": 31.34
     },
     {
       "pair": "PUMPUSD",
-      "bid": 0.005571,
-      "price": 0.005567,
-      "score": 50.67,
-      "move24_pct": 0.49,
-      "spread_bps": 3.59
+      "bid": 0.005612,
+      "price": 0.005608,
+      "score": 56.04,
+      "move24_pct": 1.23,
+      "spread_bps": 5.35
     },
     {
       "pair": "PUPSUSD",
-      "bid": 0.004195,
+      "bid": 0.004216,
       "price": 0.004345,
-      "score": 48.94,
+      "score": 48.87,
       "move24_pct": 5.08,
-      "spread_bps": 367.1
+      "spread_bps": 315.46
     },
     {
       "pair": "PWTUSD",
@@ -3384,79 +3504,79 @@
       "price": 0.54074,
       "score": 0.15,
       "move24_pct": 0.0,
-      "spread_bps": 847.4
+      "spread_bps": 847.2
     },
     {
       "pair": "PYTHUSD",
-      "bid": 0.08264,
-      "price": 0.08273,
-      "score": 51.67,
-      "move24_pct": 1.83,
-      "spread_bps": 9.68
+      "bid": 0.0823,
+      "price": 0.08206,
+      "score": 41.72,
+      "move24_pct": 1.01,
+      "spread_bps": 13.37
     },
     {
       "pair": "QCADUSD",
-      "bid": 0.7033,
+      "bid": 0.7035,
       "price": 0.7008,
-      "score": 3.63,
+      "score": 6.48,
       "move24_pct": 0.0,
-      "spread_bps": 5.69
+      "spread_bps": 4.26
     },
     {
       "pair": "QIUSD",
-      "bid": 0.002709,
-      "price": 0.002691,
-      "score": 16.62,
-      "move24_pct": 1.2,
-      "spread_bps": 29.53
+      "bid": 0.002733,
+      "price": 0.002749,
+      "score": 42.83,
+      "move24_pct": 3.38,
+      "spread_bps": 230.52
     },
     {
       "pair": "QNTUSD",
-      "bid": 235.35,
-      "price": 235.42,
-      "score": 37,
-      "move24_pct": -0.36,
-      "spread_bps": 7.65
+      "bid": 236.06,
+      "price": 236.07,
+      "score": 44.37,
+      "move24_pct": -0.08,
+      "spread_bps": 3.81
     },
     {
       "pair": "QTUMUSD",
-      "bid": 0.94086,
+      "bid": 0.93886,
       "price": 0.94267,
       "score": 18.05,
       "move24_pct": 1.47,
-      "spread_bps": 32.52
+      "spread_bps": 31.85
     },
     {
       "pair": "QUAIUSD",
       "bid": 0.0093,
-      "price": 0.00934,
+      "price": 0.00929,
       "score": 5.4,
-      "move24_pct": -0.95,
-      "spread_bps": 21.51
+      "move24_pct": -1.48,
+      "spread_bps": 32.26
     },
     {
       "pair": "QUIDUSD",
-      "bid": 0.06765,
-      "price": 0.06775,
-      "score": 47.02,
-      "move24_pct": 2.5,
+      "bid": 0.06764,
+      "price": 0.06757,
+      "score": 43.54,
+      "move24_pct": 2.22,
       "spread_bps": 44.35
     },
     {
       "pair": "QUSD",
-      "bid": 0.026453,
-      "price": 0.026534,
-      "score": 22.71,
-      "move24_pct": -1.37,
-      "spread_bps": 43.85
+      "bid": 0.026724,
+      "price": 0.026807,
+      "score": 22.74,
+      "move24_pct": -0.35,
+      "spread_bps": 57.25
     },
     {
       "pair": "RADUSD",
-      "bid": 0.2947,
+      "bid": 0.2953,
       "price": 0.2951,
       "score": 31.37,
       "move24_pct": 2.57,
-      "spread_bps": 217.17
+      "spread_bps": 203.18
     },
     {
       "pair": "RAILSUSD",
@@ -3464,111 +3584,111 @@
       "price": 0.03441,
       "score": 35.71,
       "move24_pct": 2.96,
-      "spread_bps": 258.18
+      "spread_bps": 267.19
     },
     {
       "pair": "RAREUSD",
-      "bid": 0.01652,
-      "price": 0.01659,
-      "score": 29.1,
-      "move24_pct": 2.16,
-      "spread_bps": 24.21
+      "bid": 0.01664,
+      "price": 0.01663,
+      "score": 32.03,
+      "move24_pct": 2.4,
+      "spread_bps": 18.03
     },
     {
       "pair": "RARIUSD",
-      "bid": 0.1444,
-      "price": 0.148,
-      "score": 9.29,
-      "move24_pct": -4.15,
-      "spread_bps": 83.1
+      "bid": 0.1429,
+      "price": 0.1466,
+      "score": 9.35,
+      "move24_pct": -5.05,
+      "spread_bps": 223.93
     },
     {
       "pair": "RAYUSD",
-      "bid": 2.454,
-      "price": 2.461,
-      "score": 79.54,
-      "move24_pct": 5.94,
-      "spread_bps": 8.15
+      "bid": 2.467,
+      "price": 2.467,
+      "score": 79.6,
+      "move24_pct": 6.2,
+      "spread_bps": 12.16
     },
     {
       "pair": "REDUSD",
-      "bid": 0.147,
-      "price": 0.1475,
-      "score": 30.49,
-      "move24_pct": 2.36,
-      "spread_bps": 27.21
+      "bid": 0.1481,
+      "price": 0.1484,
+      "score": 38.05,
+      "move24_pct": 2.98,
+      "spread_bps": 20.26
     },
     {
       "pair": "REKTUSD",
-      "bid": 8.49e-08,
-      "price": 8.52e-08,
-      "score": 1.97,
-      "move24_pct": -0.23,
-      "spread_bps": 23.56
+      "bid": 8.51e-08,
+      "price": 8.51e-08,
+      "score": 1.95,
+      "move24_pct": -0.35,
+      "spread_bps": 11.75
     },
     {
       "pair": "RENDERUSD",
-      "bid": 1.876,
-      "price": 1.878,
-      "score": 63.62,
-      "move24_pct": 2.74,
-      "spread_bps": 10.66
+      "bid": 1.898,
+      "price": 1.9,
+      "score": 78.14,
+      "move24_pct": 3.94,
+      "spread_bps": 10.54
     },
     {
       "pair": "RENUSD",
-      "bid": 0.00255,
+      "bid": 0.0026,
       "price": 0.00262,
       "score": 1.48,
       "move24_pct": -7.09,
-      "spread_bps": 509.8
+      "spread_bps": 192.31
     },
     {
       "pair": "REPPOUSD",
-      "bid": 0.009477,
+      "bid": 0.00971,
       "price": 0.009647,
-      "score": 3.65,
+      "score": 3.38,
       "move24_pct": -0.65,
-      "spread_bps": 176.22
+      "spread_bps": 125.64
     },
     {
       "pair": "REQUSD",
-      "bid": 0.0532,
-      "price": 0.0531,
-      "score": 7.64,
-      "move24_pct": 0.57,
-      "spread_bps": 35.71
+      "bid": 0.0533,
+      "price": 0.0534,
+      "score": 14.45,
+      "move24_pct": 1.14,
+      "spread_bps": 18.76
     },
     {
       "pair": "REUSD",
-      "bid": 0.44636,
-      "price": 0.44856,
-      "score": 43.55,
-      "move24_pct": 2.79,
-      "spread_bps": 14.56
+      "bid": 0.448,
+      "price": 0.44705,
+      "score": 39.46,
+      "move24_pct": 2.44,
+      "spread_bps": 16.07
     },
     {
       "pair": "REZUSD",
-      "bid": 0.003773,
-      "price": 0.003774,
-      "score": 24.45,
-      "move24_pct": 1.86,
-      "spread_bps": 23.85
+      "bid": 0.003792,
+      "price": 0.00378,
+      "score": 26.39,
+      "move24_pct": 2.02,
+      "spread_bps": 15.82
     },
     {
       "pair": "RIVERUSD",
-      "bid": 1.162,
-      "price": 1.152,
-      "score": 16.75,
-      "move24_pct": 0.61,
-      "spread_bps": 8.61
+      "bid": 1.163,
+      "price": 1.163,
+      "score": 28.31,
+      "move24_pct": 1.57,
+      "spread_bps": 8.6
     },
     {
       "pair": "RLCUSD",
-      "bid": 0.9149,
-      "price": 0.9176,
-      "score": 74.7,
-      "move24_pct": 4.17,
-      "spread_bps": 33.88
+      "bid": 0.8936,
+      "price": 0.8914,
+      "score": 40.89,
+      "move24_pct": 1.19,
+      "spread_bps": 40.29
     },
     {
       "pair": "RLSUSD",
@@ -3580,35 +3700,35 @@
     },
     {
       "pair": "RNBWUSD",
-      "bid": 0.0236,
+      "bid": 0.02361,
       "price": 0.02364,
       "score": 0.11,
       "move24_pct": -0.17,
-      "spread_bps": 25.42
+      "spread_bps": 21.18
     },
     {
       "pair": "ROBOUSD",
-      "bid": 0.00771,
+      "bid": 0.00769,
       "price": 0.00772,
       "score": 13.61,
       "move24_pct": 0.78,
-      "spread_bps": 38.91
+      "spread_bps": 26.01
     },
     {
       "pair": "ROLLUSD",
       "bid": 0.08759,
       "price": 0.08764,
-      "score": 2.86,
+      "score": 2.85,
       "move24_pct": 0.18,
-      "spread_bps": 27.4
+      "spread_bps": 20.55
     },
     {
       "pair": "RPLUSD",
-      "bid": 1.764,
-      "price": 1.768,
-      "score": 5.36,
-      "move24_pct": 0.4,
-      "spread_bps": 102.04
+      "bid": 1.766,
+      "price": 1.776,
+      "score": 10.82,
+      "move24_pct": 0.85,
+      "spread_bps": 67.95
     },
     {
       "pair": "RSCUSD",
@@ -3620,27 +3740,27 @@
     },
     {
       "pair": "RSRUSD",
-      "bid": 0.001555,
+      "bid": 0.001557,
       "price": 0.001561,
       "score": 19.06,
       "move24_pct": 1.36,
-      "spread_bps": 25.72
+      "spread_bps": 19.27
     },
     {
       "pair": "RUJIUSD",
-      "bid": 0.1887,
+      "bid": 0.1892,
       "price": 0.1908,
       "score": 2.06,
       "move24_pct": 0.16,
-      "spread_bps": 111.29
+      "spread_bps": 84.57
     },
     {
       "pair": "RUNEUSD",
-      "bid": 0.681,
-      "price": 0.683,
-      "score": 19.44,
-      "move24_pct": 1.04,
-      "spread_bps": 14.68
+      "bid": 0.685,
+      "price": 0.686,
+      "score": 24.71,
+      "move24_pct": 1.48,
+      "spread_bps": 14.6
     },
     {
       "pair": "RVVUSD",
@@ -3652,27 +3772,27 @@
     },
     {
       "pair": "SAFEUSD",
-      "bid": 0.1086,
+      "bid": 0.1085,
       "price": 0.1086,
       "score": 28.94,
       "move24_pct": 2.36,
-      "spread_bps": 18.42
+      "spread_bps": 27.65
     },
     {
       "pair": "SAGAUSD",
-      "bid": 0.02212,
-      "price": 0.02209,
-      "score": 4.81,
-      "move24_pct": -0.85,
-      "spread_bps": 27.12
+      "bid": 0.02219,
+      "price": 0.02218,
+      "score": 4.82,
+      "move24_pct": -0.45,
+      "spread_bps": 27.04
     },
     {
       "pair": "SAHARAUSD",
-      "bid": 0.00861,
+      "bid": 0.00862,
       "price": 0.00866,
       "score": 14.73,
       "move24_pct": 1.17,
-      "spread_bps": 58.07
+      "spread_bps": 58.0
     },
     {
       "pair": "SAMOUSD",
@@ -3684,19 +3804,19 @@
     },
     {
       "pair": "SANDUSD",
-      "bid": 0.0706,
-      "price": 0.0707,
-      "score": 74.58,
-      "move24_pct": 6.32,
-      "spread_bps": 14.16
+      "bid": 0.0713,
+      "price": 0.0714,
+      "score": 74.65,
+      "move24_pct": 7.37,
+      "spread_bps": 28.05
     },
     {
       "pair": "SAPIENUSD",
-      "bid": 0.07107,
+      "bid": 0.0711,
       "price": 0.07104,
-      "score": 20.63,
+      "score": 20.62,
       "move24_pct": 1.56,
-      "spread_bps": 29.55
+      "spread_bps": 21.1
     },
     {
       "pair": "SAUCEUSD",
@@ -3716,41 +3836,41 @@
     },
     {
       "pair": "SCRTUSD",
-      "bid": 0.0082,
-      "price": 0.00815,
-      "score": 47.22,
-      "move24_pct": 3.16,
-      "spread_bps": 182.93
+      "bid": 0.00834,
+      "price": 0.00834,
+      "score": 57.46,
+      "move24_pct": 5.57,
+      "spread_bps": 47.96
     },
     {
       "pair": "SCUSD",
-      "bid": 0.000945,
-      "price": 0.000944,
+      "bid": 0.000947,
+      "price": 0.000947,
       "score": 5.41,
-      "move24_pct": -2.28,
-      "spread_bps": 21.16
+      "move24_pct": -1.97,
+      "spread_bps": 31.68
     },
     {
       "pair": "SEIUSD",
-      "bid": 0.06644,
-      "price": 0.06647,
-      "score": 37.94,
-      "move24_pct": 0.59,
-      "spread_bps": 4.52
+      "bid": 0.06689,
+      "price": 0.06689,
+      "score": 48.63,
+      "move24_pct": 1.23,
+      "spread_bps": 2.99
     },
     {
       "pair": "SENTUSD",
-      "bid": 0.024761,
-      "price": 0.02478,
-      "score": 35.96,
-      "move24_pct": 0.69,
-      "spread_bps": 5.25
+      "bid": 0.024664,
+      "price": 0.024674,
+      "score": 26.7,
+      "move24_pct": 0.26,
+      "spread_bps": 7.3
     },
     {
       "pair": "SGBUSD",
       "bid": 0.000919,
       "price": 0.00092,
-      "score": 3.63,
+      "score": 3.61,
       "move24_pct": 0.11,
       "spread_bps": 10.88
     },
@@ -3764,59 +3884,59 @@
     },
     {
       "pair": "SHIBUSD",
-      "bid": 5.358e-06,
-      "price": 5.358e-06,
-      "score": 50.52,
-      "move24_pct": 1.19,
+      "bid": 5.36e-06,
+      "price": 5.366e-06,
+      "score": 52.37,
+      "move24_pct": 1.34,
       "spread_bps": 1.87
     },
     {
       "pair": "SHXUSD",
-      "bid": 0.006399,
-      "price": 0.006406,
-      "score": 29.51,
-      "move24_pct": -0.03,
+      "bid": 0.006398,
+      "price": 0.006399,
+      "score": 29.53,
+      "move24_pct": -0.14,
       "spread_bps": 1.56
     },
     {
       "pair": "SIGMAUSD",
-      "bid": 0.001199,
+      "bid": 0.001202,
       "price": 0.00125,
       "score": 42.29,
       "move24_pct": 3.48,
-      "spread_bps": 458.72
+      "spread_bps": 432.61
     },
     {
       "pair": "SIGNUSD",
-      "bid": 0.01219,
+      "bid": 0.01246,
       "price": 0.01203,
-      "score": 0.29,
+      "score": 0.28,
       "move24_pct": -2.67,
-      "spread_bps": 328.14
+      "spread_bps": 32.1
     },
     {
       "pair": "SKRUSD",
-      "bid": 0.016224,
-      "price": 0.016235,
-      "score": 21.3,
-      "move24_pct": -1.64,
-      "spread_bps": 6.78
+      "bid": 0.016254,
+      "price": 0.016273,
+      "score": 21.41,
+      "move24_pct": -1.41,
+      "spread_bps": 6.77
     },
     {
       "pair": "SKYUSD",
-      "bid": 0.07707,
-      "price": 0.07717,
-      "score": 38.03,
-      "move24_pct": 1.14,
-      "spread_bps": 6.49
+      "bid": 0.07713,
+      "price": 0.07716,
+      "score": 35.83,
+      "move24_pct": 1.13,
+      "spread_bps": 7.78
     },
     {
       "pair": "SLXUSD",
-      "bid": 0.05885,
+      "bid": 0.05894,
       "price": 0.05922,
       "score": 27.68,
       "move24_pct": 1.82,
-      "spread_bps": 32.29
+      "spread_bps": 25.45
     },
     {
       "pair": "SN44USD",
@@ -3830,7 +3950,7 @@
       "pair": "SN51USD",
       "bid": 27.532,
       "price": 27.704,
-      "score": 28.92,
+      "score": 28.89,
       "move24_pct": 2.19,
       "spread_bps": 62.47
     },
@@ -3844,19 +3964,19 @@
     },
     {
       "pair": "SN64USD",
-      "bid": 18.846,
+      "bid": 18.855,
       "price": 18.949,
       "score": 13.02,
       "move24_pct": 0.86,
-      "spread_bps": 54.65
+      "spread_bps": 49.85
     },
     {
       "pair": "SN75USD",
       "bid": 4.35,
-      "price": 4.35,
-      "score": 39.47,
-      "move24_pct": 0.55,
-      "spread_bps": 2.3
+      "price": 4.34,
+      "score": 26.3,
+      "move24_pct": 0.32,
+      "spread_bps": 29.89
     },
     {
       "pair": "SN8USD",
@@ -3868,42 +3988,42 @@
     },
     {
       "pair": "SNEKUSD",
-      "bid": 0.000739,
-      "price": 0.000745,
-      "score": 41.22,
-      "move24_pct": 2.76,
-      "spread_bps": 81.19
+      "bid": 0.000743,
+      "price": 0.000746,
+      "score": 42.86,
+      "move24_pct": 2.9,
+      "spread_bps": 40.38
     },
     {
       "pair": "SNXUSD",
-      "bid": 0.2323,
-      "price": 0.2335,
-      "score": 27.14,
-      "move24_pct": 0.99,
-      "spread_bps": 4.3
+      "bid": 0.2324,
+      "price": 0.2324,
+      "score": 15.02,
+      "move24_pct": 0.52,
+      "spread_bps": 17.21
     },
     {
       "pair": "SODAUSD",
-      "bid": 0.00932,
+      "bid": 0.0092,
       "price": 0.00917,
-      "score": 11.52,
+      "score": 11.43,
       "move24_pct": 0.77,
-      "spread_bps": 32.19
+      "spread_bps": 32.61
     },
     {
       "pair": "SOFIDUSD",
       "bid": 0.99979,
       "price": 0.99982,
-      "score": 16.12,
+      "score": 16.1,
       "move24_pct": 0.0,
       "spread_bps": 0.3
     },
     {
       "pair": "SOLUSD",
-      "bid": 109.87,
-      "price": 109.89,
-      "score": 54.23,
-      "move24_pct": 0.34,
+      "bid": 110.25,
+      "price": 110.26,
+      "score": 58.29,
+      "move24_pct": 0.68,
       "spread_bps": 0.91
     },
     {
@@ -3912,47 +4032,47 @@
       "price": 0.00382,
       "score": 9.86,
       "move24_pct": 0.79,
-      "spread_bps": 52.63
+      "spread_bps": 78.95
     },
     {
       "pair": "SOMIUSD",
-      "bid": 0.2086,
-      "price": 0.2093,
-      "score": 48.4,
-      "move24_pct": 3.46,
-      "spread_bps": 4.79
+      "bid": 0.2097,
+      "price": 0.2096,
+      "score": 44.78,
+      "move24_pct": 3.61,
+      "spread_bps": 9.54
     },
     {
       "pair": "SONICUSD",
-      "bid": 0.02437,
+      "bid": 0.02436,
       "price": 0.02479,
       "score": 0.14,
       "move24_pct": -6.35,
-      "spread_bps": 882.23
+      "spread_bps": 533.66
     },
     {
       "pair": "SOONUSD",
-      "bid": 0.3223,
-      "price": 0.325,
-      "score": 0.39,
-      "move24_pct": -1.99,
-      "spread_bps": 55.85
+      "bid": 0.3227,
+      "price": 0.3226,
+      "score": 0.4,
+      "move24_pct": -2.71,
+      "spread_bps": 18.59
     },
     {
       "pair": "SOSOUSD",
-      "bid": 0.3676,
-      "price": 0.3668,
-      "score": 24.57,
-      "move24_pct": 0.33,
-      "spread_bps": 2.72
+      "bid": 0.3679,
+      "price": 0.3678,
+      "score": 22.43,
+      "move24_pct": 0.6,
+      "spread_bps": 5.44
     },
     {
       "pair": "SPACEUSD",
-      "bid": 0.00445,
+      "bid": 0.004441,
       "price": 0.004456,
-      "score": 20.35,
+      "score": 20.3,
       "move24_pct": 1.3,
-      "spread_bps": 6.74
+      "spread_bps": 6.76
     },
     {
       "pair": "SPELLUSD",
@@ -3960,23 +4080,23 @@
       "price": 9.28e-05,
       "score": 12.77,
       "move24_pct": 0.87,
-      "spread_bps": 32.19
+      "spread_bps": 96.57
     },
     {
       "pair": "SPKUSD",
-      "bid": 0.021817,
+      "bid": 0.021806,
       "price": 0.021829,
-      "score": 19.32,
+      "score": 19.31,
       "move24_pct": 1.18,
-      "spread_bps": 17.42
+      "spread_bps": 12.38
     },
     {
       "pair": "SPXUSD",
-      "bid": 0.3693,
-      "price": 0.3691,
-      "score": 35.19,
-      "move24_pct": 0.71,
-      "spread_bps": 8.12
+      "bid": 0.371,
+      "price": 0.3717,
+      "score": 43.72,
+      "move24_pct": 1.42,
+      "spread_bps": 16.17
     },
     {
       "pair": "SRMUSD",
@@ -3988,81 +4108,81 @@
     },
     {
       "pair": "SSVUSD",
-      "bid": 2.83,
+      "bid": 2.834,
       "price": 2.816,
       "score": 0.16,
       "move24_pct": -0.32,
-      "spread_bps": 53.0
+      "spread_bps": 49.4
     },
     {
       "pair": "STABLEUSD",
-      "bid": 0.02589,
+      "bid": 0.02588,
       "price": 0.02594,
       "score": 3.71,
       "move24_pct": -0.35,
-      "spread_bps": 30.9
+      "spread_bps": 15.46
     },
     {
       "pair": "STBLUSD",
-      "bid": 0.02341,
-      "price": 0.023415,
-      "score": 36.85,
-      "move24_pct": 1.68,
-      "spread_bps": 2.14
+      "bid": 0.023398,
+      "price": 0.023427,
+      "score": 32.36,
+      "move24_pct": 1.73,
+      "spread_bps": 4.7
     },
     {
       "pair": "STGUSD",
-      "bid": 0.1828,
-      "price": 0.1837,
-      "score": 61.35,
-      "move24_pct": 9.41,
-      "spread_bps": 60.18
+      "bid": 0.181,
+      "price": 0.1819,
+      "score": 61.67,
+      "move24_pct": 8.34,
+      "spread_bps": 49.72
     },
     {
       "pair": "STORJUSD",
-      "bid": 0.02877,
+      "bid": 0.02892,
       "price": 0.02887,
-      "score": 19.26,
+      "score": 19.14,
       "move24_pct": 0.84,
-      "spread_bps": 128.61
+      "spread_bps": 62.24
     },
     {
       "pair": "STRKUSD",
-      "bid": 0.06893,
-      "price": 0.069,
+      "bid": 0.0691,
+      "price": 0.06919,
       "score": 85,
-      "move24_pct": 24.19,
-      "spread_bps": 29.01
+      "move24_pct": 24.53,
+      "spread_bps": 15.92
     },
     {
       "pair": "STUSD",
-      "bid": 0.011287,
+      "bid": 0.011244,
       "price": 0.010716,
       "score": 24.15,
       "move24_pct": 1.98,
-      "spread_bps": 30.12
+      "spread_bps": 29.35
     },
     {
       "pair": "STXUSD",
-      "bid": 0.3927,
-      "price": 0.3932,
-      "score": 64.28,
-      "move24_pct": 3.15,
-      "spread_bps": 7.64
+      "bid": 0.3901,
+      "price": 0.3905,
+      "score": 60.51,
+      "move24_pct": 2.44,
+      "spread_bps": 5.13
     },
     {
       "pair": "SUIUSD",
-      "bid": 1.0508,
-      "price": 1.051,
-      "score": 62.56,
-      "move24_pct": 1.04,
-      "spread_bps": 0.95
+      "bid": 1.0604,
+      "price": 1.0605,
+      "score": 73.53,
+      "move24_pct": 1.95,
+      "spread_bps": 0.94
     },
     {
       "pair": "SUKUUSD",
       "bid": 0.0052,
       "price": 0.0052,
-      "score": 0.51,
+      "score": 0.5,
       "move24_pct": -0.57,
       "spread_bps": 19.23
     },
@@ -4080,15 +4200,15 @@
       "price": 0.01675,
       "score": 0.13,
       "move24_pct": 0.0,
-      "spread_bps": 77.57
+      "spread_bps": 71.6
     },
     {
       "pair": "SUPERUSD",
-      "bid": 0.2261,
-      "price": 0.2266,
-      "score": 47.27,
-      "move24_pct": 2.16,
-      "spread_bps": 8.85
+      "bid": 0.2273,
+      "price": 0.2279,
+      "score": 54.31,
+      "move24_pct": 2.75,
+      "spread_bps": 8.8
     },
     {
       "pair": "SUPUSD",
@@ -4096,55 +4216,55 @@
       "price": 0.000588,
       "score": 2.88,
       "move24_pct": -3.13,
-      "spread_bps": 306.12
+      "spread_bps": 136.05
     },
     {
       "pair": "SUSD",
       "bid": 0.042,
-      "price": 0.0419,
-      "score": 60.27,
-      "move24_pct": 8.55,
+      "price": 0.042,
+      "score": 60.39,
+      "move24_pct": 8.81,
       "spread_bps": 23.81
     },
     {
       "pair": "SUSHIUSD",
-      "bid": 0.2307,
-      "price": 0.231,
-      "score": 51.79,
-      "move24_pct": 2.9,
-      "spread_bps": 4.33
+      "bid": 0.2293,
+      "price": 0.2295,
+      "score": 43.84,
+      "move24_pct": 2.23,
+      "spread_bps": 4.36
     },
     {
       "pair": "SWARMSUSD",
-      "bid": 0.00799,
+      "bid": 0.00796,
       "price": 0.008,
       "score": 16.81,
       "move24_pct": 1.39,
-      "spread_bps": 62.58
+      "spread_bps": 75.38
     },
     {
       "pair": "SWEATUSD",
-      "bid": 0.000175,
-      "price": 0.000175,
-      "score": 8.24,
-      "move24_pct": -4.37,
-      "spread_bps": 228.57
+      "bid": 0.000177,
+      "price": 0.000186,
+      "score": 27.91,
+      "move24_pct": 1.64,
+      "spread_bps": 282.49
     },
     {
       "pair": "SWELLUSD",
-      "bid": 0.000792,
-      "price": 0.000794,
-      "score": 55.57,
-      "move24_pct": 4.06,
-      "spread_bps": 75.76
+      "bid": 0.000791,
+      "price": 0.000793,
+      "score": 54.75,
+      "move24_pct": 3.93,
+      "spread_bps": 75.85
     },
     {
       "pair": "SXTUSD",
-      "bid": 0.009,
+      "bid": 0.00898,
       "price": 0.00902,
-      "score": 8.8,
+      "score": 8.79,
       "move24_pct": 0.22,
-      "spread_bps": 33.33
+      "spread_bps": 33.41
     },
     {
       "pair": "SYNDUSD",
@@ -4152,55 +4272,55 @@
       "price": 0.00716,
       "score": 3.51,
       "move24_pct": 0.28,
-      "spread_bps": 294.53
+      "spread_bps": 210.38
     },
     {
       "pair": "SYNUSD",
-      "bid": 0.1858,
-      "price": 0.1861,
-      "score": 22.96,
-      "move24_pct": 0.0,
-      "spread_bps": 16.15
+      "bid": 0.1871,
+      "price": 0.1882,
+      "score": 36.51,
+      "move24_pct": 1.13,
+      "spread_bps": 21.38
     },
     {
       "pair": "SYRUPUSD",
-      "bid": 0.23273,
+      "bid": 0.2327,
       "price": 0.23321,
-      "score": 24.62,
+      "score": 24.49,
       "move24_pct": 0.6,
-      "spread_bps": 16.76
+      "spread_bps": 19.77
     },
     {
       "pair": "TACUSD",
       "bid": 0.001459,
       "price": 0.001466,
-      "score": 2.61,
+      "score": 2.58,
       "move24_pct": -0.27,
-      "spread_bps": 54.83
+      "spread_bps": 61.69
     },
     {
       "pair": "TAKEUSD",
-      "bid": 0.06511,
+      "bid": 0.06494,
       "price": 0.06323,
       "score": 0.2,
       "move24_pct": -6.51,
-      "spread_bps": 26.11
+      "spread_bps": 29.26
     },
     {
       "pair": "TAOUSD",
-      "bid": 273.0997,
-      "price": 273.0984,
-      "score": 63.57,
-      "move24_pct": 1.58,
-      "spread_bps": 3.69
+      "bid": 274.19,
+      "price": 274.1925,
+      "score": 75.37,
+      "move24_pct": 1.99,
+      "spread_bps": 0.24
     },
     {
       "pair": "TBTCUSD",
-      "bid": 78716.7,
+      "bid": 78720.8,
       "price": 81576.6,
       "score": 0.25,
       "move24_pct": -4.98,
-      "spread_bps": 734.69
+      "spread_bps": 438.36
     },
     {
       "pair": "TCSUSD",
@@ -4212,99 +4332,99 @@
     },
     {
       "pair": "TELUSD",
-      "bid": 0.001847,
-      "price": 0.001846,
-      "score": 14.35,
-      "move24_pct": -0.11,
-      "spread_bps": 43.31
+      "bid": 0.001851,
+      "price": 0.001857,
+      "score": 20.06,
+      "move24_pct": 0.49,
+      "spread_bps": 43.22
     },
     {
       "pair": "TGBPUSD",
-      "bid": 1.3244,
+      "bid": 1.32445,
       "price": 1.3241,
-      "score": 15.79,
+      "score": 15.03,
       "move24_pct": 0.04,
-      "spread_bps": 0.53
+      "spread_bps": 0.91
     },
     {
       "pair": "THQUSD",
-      "bid": 0.01062,
-      "price": 0.01062,
-      "score": 0.1,
-      "move24_pct": 0.0,
-      "spread_bps": 677.97
+      "bid": 0.0105,
+      "price": 0.01056,
+      "score": 0.14,
+      "move24_pct": -0.56,
+      "spread_bps": 47.62
     },
     {
       "pair": "TIAUSD",
-      "bid": 0.5257,
-      "price": 0.5245,
-      "score": 87.82,
-      "move24_pct": 4.65,
-      "spread_bps": 5.71
+      "bid": 0.5246,
+      "price": 0.5249,
+      "score": 91.57,
+      "move24_pct": 4.73,
+      "spread_bps": 3.81
     },
     {
       "pair": "TLMUSD",
-      "bid": 0.001404,
+      "bid": 0.001403,
       "price": 0.001404,
       "score": 3.12,
       "move24_pct": 0.21,
-      "spread_bps": 35.61
+      "spread_bps": 28.51
     },
     {
       "pair": "TMXUSD",
-      "bid": 0.01082,
+      "bid": 0.01075,
       "price": 0.01077,
-      "score": 37.44,
+      "score": 37.42,
       "move24_pct": 2.96,
-      "spread_bps": 110.91
+      "spread_bps": 74.42
     },
     {
       "pair": "TNSRUSD",
-      "bid": 0.0367,
-      "price": 0.0369,
-      "score": 31.92,
-      "move24_pct": 2.22,
-      "spread_bps": 54.5
+      "bid": 0.0366,
+      "price": 0.0366,
+      "score": 22.0,
+      "move24_pct": 1.39,
+      "spread_bps": 27.32
     },
     {
       "pair": "TOKENUSD",
-      "bid": 0.002027,
+      "bid": 0.002018,
       "price": 0.002035,
       "score": 0.33,
       "move24_pct": -1.5,
-      "spread_bps": 236.8
+      "spread_bps": 193.26
     },
     {
       "pair": "TONUSD",
       "bid": 1.395,
-      "price": 1.397,
-      "score": 40.27,
-      "move24_pct": 1.23,
+      "price": 1.398,
+      "score": 41.13,
+      "move24_pct": 1.3,
       "spread_bps": 7.17
     },
     {
       "pair": "TOSHIUSD",
-      "bid": 0.0001118,
+      "bid": 0.0001119,
       "price": 0.0001119,
       "score": 13.79,
       "move24_pct": 0.9,
-      "spread_bps": 17.89
+      "spread_bps": 26.81
     },
     {
       "pair": "TRACUSD",
-      "bid": 0.3997,
-      "price": 0.4007,
-      "score": 31.58,
-      "move24_pct": 1.44,
-      "spread_bps": 50.04
+      "bid": 0.4005,
+      "price": 0.401,
+      "score": 32.46,
+      "move24_pct": 1.52,
+      "spread_bps": 59.93
     },
     {
       "pair": "TREADUSD",
-      "bid": 1.054,
+      "bid": 1.0556,
       "price": 1.0585,
-      "score": 35.48,
+      "score": 35.61,
       "move24_pct": 1.48,
-      "spread_bps": 40.8
+      "spread_bps": 27.47
     },
     {
       "pair": "TREEUSD",
@@ -4312,93 +4432,93 @@
       "price": 0.044,
       "score": 50.1,
       "move24_pct": 4.02,
-      "spread_bps": 45.56
+      "spread_bps": 22.78
     },
     {
       "pair": "TRIAUSD",
-      "bid": 0.00334,
-      "price": 0.00335,
-      "score": 32.91,
-      "move24_pct": 2.13,
-      "spread_bps": 29.94
+      "bid": 0.00333,
+      "price": 0.00334,
+      "score": 29.27,
+      "move24_pct": 1.83,
+      "spread_bps": 30.03
     },
     {
       "pair": "TRUMPUSD",
-      "bid": 1.844,
-      "price": 1.845,
-      "score": 51.34,
-      "move24_pct": 1.37,
-      "spread_bps": 5.42
+      "bid": 1.849,
+      "price": 1.851,
+      "score": 55.34,
+      "move24_pct": 1.7,
+      "spread_bps": 5.41
     },
     {
       "pair": "TRUSTUSD",
-      "bid": 0.05492,
-      "price": 0.0551,
-      "score": 13.61,
-      "move24_pct": 0.95,
-      "spread_bps": 18.21
+      "bid": 0.05498,
+      "price": 0.05515,
+      "score": 14.73,
+      "move24_pct": 1.04,
+      "spread_bps": 18.19
     },
     {
       "pair": "TRUUSD",
       "bid": 0.00091,
       "price": 0.00091,
-      "score": 0.83,
+      "score": 0.81,
       "move24_pct": 0.0,
       "spread_bps": 109.89
     },
     {
       "pair": "TRXUSD",
-      "bid": 0.331635,
-      "price": 0.331635,
-      "score": 43.86,
-      "move24_pct": -0.25,
+      "bid": 0.331848,
+      "price": 0.331877,
+      "score": 43.84,
+      "move24_pct": -0.17,
       "spread_bps": 0.03
     },
     {
       "pair": "TURBOUSD",
-      "bid": 0.00095,
-      "price": 0.000949,
-      "score": 22.45,
-      "move24_pct": 1.61,
-      "spread_bps": 10.53
+      "bid": 0.000951,
+      "price": 0.00095,
+      "score": 23.75,
+      "move24_pct": 1.71,
+      "spread_bps": 10.52
     },
     {
       "pair": "TUSD",
-      "bid": 0.00523,
+      "bid": 0.00524,
       "price": 0.00526,
-      "score": 24.67,
+      "score": 24.65,
       "move24_pct": 1.54,
-      "spread_bps": 19.12
+      "spread_bps": 19.08
     },
     {
       "pair": "TXUSD",
-      "bid": 0.001487,
-      "price": 0.001491,
-      "score": 17.5,
-      "move24_pct": 0.81,
-      "spread_bps": 13.45
+      "bid": 0.001482,
+      "price": 0.001483,
+      "score": 12.64,
+      "move24_pct": 0.27,
+      "spread_bps": 6.75
     },
     {
       "pair": "UAIUSD",
-      "bid": 0.3281,
-      "price": 0.32835,
-      "score": 25.45,
-      "move24_pct": -0.22,
-      "spread_bps": 7.92
+      "bid": 0.32704,
+      "price": 0.32696,
+      "score": 25.46,
+      "move24_pct": -0.64,
+      "spread_bps": 11.01
     },
     {
       "pair": "UFDUSD",
-      "bid": 0.00692,
+      "bid": 0.00682,
       "price": 0.00693,
       "score": 1.93,
       "move24_pct": -0.72,
-      "spread_bps": 130.06
+      "spread_bps": 278.59
     },
     {
       "pair": "UMAUSD",
       "bid": 0.399,
       "price": 0.402,
-      "score": 22.66,
+      "score": 22.43,
       "move24_pct": 1.77,
       "spread_bps": 50.13
     },
@@ -4408,39 +4528,39 @@
       "price": 0.0608,
       "score": 0.08,
       "move24_pct": -0.98,
-      "spread_bps": 213.82
+      "spread_bps": 65.79
     },
     {
       "pair": "UNFIUSD",
-      "bid": 0.0347,
+      "bid": 0.0348,
       "price": 0.0348,
       "score": 0.25,
       "move24_pct": 0.0,
-      "spread_bps": 144.09
+      "spread_bps": 114.94
     },
     {
       "pair": "UNITASUSD",
-      "bid": 0.18717,
+      "bid": 0.18731,
       "price": 0.1864,
       "score": 16.16,
       "move24_pct": 1.25,
-      "spread_bps": 167.23
+      "spread_bps": 185.79
     },
     {
       "pair": "UNIUSD",
-      "bid": 7.322,
-      "price": 7.3329,
-      "score": 82.5,
-      "move24_pct": 3.07,
-      "spread_bps": 3.14
+      "bid": 7.3614,
+      "price": 7.3611,
+      "score": 88.11,
+      "move24_pct": 3.46,
+      "spread_bps": 2.72
     },
     {
       "pair": "UPUSD",
-      "bid": 0.07016,
+      "bid": 0.07002,
       "price": 0.07024,
       "score": 11.68,
       "move24_pct": 0.93,
-      "spread_bps": 122.58
+      "spread_bps": 112.82
     },
     {
       "pair": "USATUSD",
@@ -4500,27 +4620,27 @@
     },
     {
       "pair": "USDUCUSD",
-      "bid": 0.00249,
-      "price": 0.002504,
-      "score": 8.21,
-      "move24_pct": -0.04,
-      "spread_bps": 56.22
+      "bid": 0.002491,
+      "price": 0.002506,
+      "score": 8.68,
+      "move24_pct": 0.04,
+      "spread_bps": 64.23
     },
     {
       "pair": "USELESSUSD",
-      "bid": 0.19324,
-      "price": 0.19355,
-      "score": 61.3,
-      "move24_pct": 2.49,
-      "spread_bps": 9.83
+      "bid": 0.19486,
+      "price": 0.19547,
+      "score": 73.56,
+      "move24_pct": 3.51,
+      "spread_bps": 22.58
     },
     {
       "pair": "USTABLESUSD",
-      "bid": 0.99953,
+      "bid": 0.99969,
       "price": 0.99972,
-      "score": 11.45,
+      "score": 12.85,
       "move24_pct": 0.0,
-      "spread_bps": 1.8
+      "spread_bps": 1.1
     },
     {
       "pair": "USUALUSD",
@@ -4532,83 +4652,83 @@
     },
     {
       "pair": "USUSD",
-      "bid": 0.01669,
-      "price": 0.01661,
-      "score": 56.69,
-      "move24_pct": 3.42,
-      "spread_bps": 23.97
+      "bid": 0.01744,
+      "price": 0.0175,
+      "score": 64.35,
+      "move24_pct": 8.97,
+      "spread_bps": 28.67
     },
     {
       "pair": "UUSD",
-      "bid": 0.00024,
+      "bid": 0.000243,
       "price": 0.000242,
       "score": 1.34,
       "move24_pct": -1.63,
-      "spread_bps": 291.67
+      "spread_bps": 164.61
     },
     {
       "pair": "UXLINKUSD",
       "bid": 0.00076,
       "price": 0.00077,
-      "score": 48.85,
+      "score": 48.82,
       "move24_pct": 6.94,
       "spread_bps": 394.74
     },
     {
       "pair": "VELODROMEUSD",
-      "bid": 0.03634,
+      "bid": 0.03615,
       "price": 0.03642,
       "score": 30.0,
       "move24_pct": 2.48,
-      "spread_bps": 44.03
+      "spread_bps": 66.39
     },
     {
       "pair": "VELOUSD",
-      "bid": 0.005048,
-      "price": 0.005118,
-      "score": 34.59,
-      "move24_pct": 2.3,
-      "spread_bps": 124.8
+      "bid": 0.005055,
+      "price": 0.005116,
+      "score": 34.08,
+      "move24_pct": 2.26,
+      "spread_bps": 172.11
     },
     {
       "pair": "VELVETUSD",
-      "bid": 0.0737,
-      "price": 0.0742,
-      "score": 3.85,
-      "move24_pct": 0.0,
-      "spread_bps": 40.71
+      "bid": 0.0735,
+      "price": 0.0737,
+      "score": 3.86,
+      "move24_pct": -0.67,
+      "spread_bps": 27.21
     },
     {
       "pair": "VETUSD",
-      "bid": 0.007728,
-      "price": 0.007742,
-      "score": 55.7,
-      "move24_pct": 2.49,
-      "spread_bps": 10.35
+      "bid": 0.007741,
+      "price": 0.007751,
+      "score": 57.13,
+      "move24_pct": 2.61,
+      "spread_bps": 14.21
     },
     {
       "pair": "VFYUSD",
       "bid": 0.0065,
       "price": 0.00653,
-      "score": 24.16,
+      "score": 24.12,
       "move24_pct": 1.56,
       "spread_bps": 46.15
     },
     {
       "pair": "VINEUSD",
       "bid": 0.00736,
-      "price": 0.00736,
-      "score": 2.3,
-      "move24_pct": -1.87,
+      "price": 0.00744,
+      "score": 2.24,
+      "move24_pct": -0.8,
       "spread_bps": 122.28
     },
     {
       "pair": "VIRTUALUSD",
-      "bid": 0.7121,
-      "price": 0.7128,
-      "score": 40.19,
-      "move24_pct": 0.59,
-      "spread_bps": 4.21
+      "bid": 0.716,
+      "price": 0.7165,
+      "score": 49.37,
+      "move24_pct": 1.11,
+      "spread_bps": 2.79
     },
     {
       "pair": "VOOIUSD",
@@ -4620,35 +4740,35 @@
     },
     {
       "pair": "VSNUSD",
-      "bid": 0.04295,
+      "bid": 0.04301,
       "price": 0.04293,
-      "score": 8.55,
+      "score": 7.52,
       "move24_pct": 0.02,
-      "spread_bps": 6.98
+      "spread_bps": 9.3
     },
     {
       "pair": "VTHOUSD",
-      "bid": 0.000666,
+      "bid": 0.0006651,
       "price": 0.000664,
       "score": 3.81,
       "move24_pct": 0.15,
-      "spread_bps": 24.02
+      "spread_bps": 27.06
     },
     {
       "pair": "VVVUSD",
-      "bid": 22.98,
-      "price": 23.003,
-      "score": 58.13,
-      "move24_pct": 1.02,
-      "spread_bps": 3.05
+      "bid": 23.015,
+      "price": 23.027,
+      "score": 58.54,
+      "move24_pct": 1.12,
+      "spread_bps": 3.48
     },
     {
       "pair": "WALUSD",
-      "bid": 0.03391,
+      "bid": 0.03425,
       "price": 0.03393,
-      "score": 48.54,
+      "score": 48.41,
       "move24_pct": 3.32,
-      "spread_bps": 8.85
+      "spread_bps": 8.76
     },
     {
       "pair": "WARDUSD",
@@ -4668,50 +4788,50 @@
     },
     {
       "pair": "WAXLUSD",
-      "bid": 0.0506,
+      "bid": 0.0505,
       "price": 0.0512,
-      "score": 1.35,
+      "score": 1.33,
       "move24_pct": 0.0,
-      "spread_bps": 59.29
+      "spread_bps": 59.41
     },
     {
       "pair": "WBTCUSD",
-      "bid": 82085.9,
-      "price": 82318.0,
-      "score": 11.21,
-      "move24_pct": 0.77,
-      "spread_bps": 18.33
+      "bid": 82122.9,
+      "price": 82977.5,
+      "score": 20.98,
+      "move24_pct": 1.58,
+      "spread_bps": 22.43
     },
     {
       "pair": "WBTUSD",
-      "bid": 81.11,
+      "bid": 81.06,
       "price": 81.11,
-      "score": 17.18,
+      "score": 17.2,
       "move24_pct": 0.92,
-      "spread_bps": 8.63
+      "spread_bps": 14.8
     },
     {
       "pair": "WCTUSD",
-      "bid": 0.04022,
-      "price": 0.04034,
-      "score": 37.85,
-      "move24_pct": 2.86,
-      "spread_bps": 17.4
+      "bid": 0.04021,
+      "price": 0.04028,
+      "score": 36.02,
+      "move24_pct": 2.7,
+      "spread_bps": 19.9
     },
     {
       "pair": "WELLUSD",
       "bid": 0.00223,
       "price": 0.00223,
-      "score": 11.96,
+      "score": 11.92,
       "move24_pct": 0.9,
       "spread_bps": 44.84
     },
     {
       "pair": "WEMIXUSD",
       "bid": 0.1905,
-      "price": 0.1907,
-      "score": 4.9,
-      "move24_pct": -1.4,
+      "price": 0.229,
+      "score": 52.91,
+      "move24_pct": 18.41,
       "spread_bps": 15.75
     },
     {
@@ -4724,11 +4844,11 @@
     },
     {
       "pair": "WIFUSD",
-      "bid": 0.2125,
-      "price": 0.2123,
-      "score": 57.87,
-      "move24_pct": 2.41,
-      "spread_bps": 4.71
+      "bid": 0.2134,
+      "price": 0.2137,
+      "score": 66.02,
+      "move24_pct": 3.09,
+      "spread_bps": 4.69
     },
     {
       "pair": "WINGSUSD",
@@ -4740,122 +4860,122 @@
     },
     {
       "pair": "WINUSD",
-      "bid": 5.2812e-05,
-      "price": 5.2812e-05,
-      "score": 7.12,
-      "move24_pct": -2.86,
-      "spread_bps": 69.3
+      "bid": 5.2894e-05,
+      "price": 5.325e-05,
+      "score": 7.13,
+      "move24_pct": -2.06,
+      "spread_bps": 193.97
     },
     {
       "pair": "WLDUSD",
-      "bid": 0.4905,
-      "price": 0.4911,
-      "score": 65.29,
-      "move24_pct": 2.4,
-      "spread_bps": 8.15
+      "bid": 0.4938,
+      "price": 0.4944,
+      "score": 73.64,
+      "move24_pct": 3.09,
+      "spread_bps": 10.13
     },
     {
       "pair": "WLFIUSD",
-      "bid": 0.0548,
-      "price": 0.0549,
-      "score": 15.56,
-      "move24_pct": 0.37,
-      "spread_bps": 18.25
+      "bid": 0.0547,
+      "price": 0.0547,
+      "score": 11.18,
+      "move24_pct": 0.0,
+      "spread_bps": 18.28
     },
     {
       "pair": "WMTXUSD",
       "bid": 0.02379,
-      "price": 0.0238,
-      "score": 0.68,
-      "move24_pct": -1.12,
-      "spread_bps": 155.53
+      "price": 0.02379,
+      "score": 0.7,
+      "move24_pct": -1.16,
+      "spread_bps": 142.92
     },
     {
       "pair": "WOJAKUSD",
       "bid": 5.4e-08,
-      "price": 5.43e-08,
-      "score": 29.67,
-      "move24_pct": 2.07,
+      "price": 5.4e-08,
+      "score": 22.91,
+      "move24_pct": 1.5,
       "spread_bps": 74.07
     },
     {
       "pair": "WOOUSD",
-      "bid": 0.01229,
-      "price": 0.0123,
-      "score": 15.12,
-      "move24_pct": 1.15,
-      "spread_bps": 16.27
+      "bid": 0.01228,
+      "price": 0.01229,
+      "score": 14.14,
+      "move24_pct": 1.07,
+      "spread_bps": 16.29
     },
     {
       "pair": "WUSD",
-      "bid": 0.01636,
-      "price": 0.01635,
+      "bid": 0.01665,
+      "price": 0.01667,
       "score": 77.12,
-      "move24_pct": 7.57,
-      "spread_bps": 12.22
+      "move24_pct": 9.67,
+      "spread_bps": 12.01
     },
     {
       "pair": "XANUSD",
-      "bid": 0.01069,
-      "price": 0.01072,
-      "score": 39.83,
-      "move24_pct": 3.18,
-      "spread_bps": 18.71
+      "bid": 0.0107,
+      "price": 0.01075,
+      "score": 43.34,
+      "move24_pct": 3.46,
+      "spread_bps": 37.38
     },
     {
       "pair": "XAUTUSD",
-      "bid": 4169.9,
-      "price": 4168.7,
-      "score": 33.47,
-      "move24_pct": 0.69,
-      "spread_bps": 0.72
+      "bid": 4175.7,
+      "price": 4175.9,
+      "score": 36.74,
+      "move24_pct": 0.87,
+      "spread_bps": 0.24
     },
     {
       "pair": "XCNUSD",
       "bid": 0.00419,
       "price": 0.0042,
-      "score": 47.44,
+      "score": 47.48,
       "move24_pct": 1.94,
       "spread_bps": 23.87
     },
     {
       "pair": "XDCUSD",
-      "bid": 0.03284,
-      "price": 0.03284,
-      "score": 57.91,
-      "move24_pct": 2.66,
-      "spread_bps": 9.14
+      "bid": 0.03316,
+      "price": 0.03322,
+      "score": 72.32,
+      "move24_pct": 3.84,
+      "spread_bps": 18.09
     },
     {
       "pair": "XDGUSD",
-      "bid": 0.0848254,
-      "price": 0.084856,
-      "score": 64.42,
-      "move24_pct": 1.04,
+      "bid": 0.0849939,
+      "price": 0.0850031,
+      "score": 66.52,
+      "move24_pct": 1.21,
       "spread_bps": 0.01
     },
     {
       "pair": "XDPUSD",
-      "bid": 0.019503,
-      "price": 0.019513,
-      "score": 40.53,
-      "move24_pct": 2.53,
-      "spread_bps": 20.51
+      "bid": 0.019542,
+      "price": 0.019543,
+      "score": 42.39,
+      "move24_pct": 2.68,
+      "spread_bps": 19.96
     },
     {
       "pair": "XETCZUSD",
-      "bid": 8.244,
-      "price": 8.249,
-      "score": 47.35,
-      "move24_pct": 2.45,
-      "spread_bps": 6.07
+      "bid": 8.27,
+      "price": 8.266,
+      "score": 50.14,
+      "move24_pct": 2.66,
+      "spread_bps": 6.05
     },
     {
       "pair": "XETHZUSD",
-      "bid": 2485.29,
-      "price": 2485.3,
-      "score": 57.94,
-      "move24_pct": 0.5,
+      "bid": 2489.59,
+      "price": 2489.58,
+      "score": 60.01,
+      "move24_pct": 0.67,
       "spread_bps": 0.04
     },
     {
@@ -4868,59 +4988,59 @@
     },
     {
       "pair": "XL1USD",
-      "bid": 0.0002004,
+      "bid": 0.0002008,
       "price": 0.0002004,
-      "score": 1.0,
+      "score": 0.99,
       "move24_pct": 0.05,
-      "spread_bps": 79.84
+      "spread_bps": 79.68
     },
     {
       "pair": "XLTCZUSD",
-      "bid": 63.91,
-      "price": 63.93,
-      "score": 60.76,
-      "move24_pct": 1.25,
-      "spread_bps": 3.13
+      "bid": 64.0,
+      "price": 63.99,
+      "score": 65.03,
+      "move24_pct": 1.35,
+      "spread_bps": 1.56
     },
     {
       "pair": "XMLNZUSD",
-      "bid": 1.4042,
+      "bid": 1.4043,
       "price": 1.4088,
       "score": 11.87,
       "move24_pct": 0.61,
-      "spread_bps": 27.77
+      "spread_bps": 32.04
     },
     {
       "pair": "XMNUSD",
-      "bid": 0.000452,
-      "price": 0.000452,
-      "score": 3.23,
-      "move24_pct": -0.22,
-      "spread_bps": 88.5
+      "bid": 0.000453,
+      "price": 0.000463,
+      "score": 29.72,
+      "move24_pct": 2.21,
+      "spread_bps": 220.75
     },
     {
       "pair": "XNYUSD",
-      "bid": 0.005923,
-      "price": 0.005942,
-      "score": 13.47,
-      "move24_pct": 0.81,
-      "spread_bps": 32.08
+      "bid": 0.005956,
+      "price": 0.005963,
+      "score": 17.66,
+      "move24_pct": 1.17,
+      "spread_bps": 10.07
     },
     {
       "pair": "XPLUSD",
-      "bid": 0.0848,
-      "price": 0.085,
-      "score": 42.01,
-      "move24_pct": 1.43,
-      "spread_bps": 11.79
+      "bid": 0.0851,
+      "price": 0.0853,
+      "score": 46.31,
+      "move24_pct": 1.79,
+      "spread_bps": 11.75
     },
     {
       "pair": "XTZUSD",
-      "bid": 0.29543,
-      "price": 0.29582,
-      "score": 46.96,
-      "move24_pct": 2.29,
-      "spread_bps": 6.77
+      "bid": 0.29624,
+      "price": 0.29593,
+      "score": 60.2,
+      "move24_pct": 2.32,
+      "spread_bps": 0.34
     },
     {
       "pair": "XU3O8USD",
@@ -4932,67 +5052,67 @@
     },
     {
       "pair": "XXBTZUSD",
-      "bid": 82195.2,
-      "price": 82192.6,
-      "score": 59.45,
-      "move24_pct": 0.62,
+      "bid": 82299.9,
+      "price": 82300.0,
+      "score": 61.03,
+      "move24_pct": 0.75,
       "spread_bps": 0.01
     },
     {
       "pair": "XXLMZUSD",
-      "bid": 0.194227,
-      "price": 0.194247,
-      "score": 64.37,
-      "move24_pct": 1.23,
-      "spread_bps": 1.18
+      "bid": 0.19464,
+      "price": 0.194676,
+      "score": 66.24,
+      "move24_pct": 1.45,
+      "spread_bps": 1.59
     },
     {
       "pair": "XXMRZUSD",
-      "bid": 536.41,
-      "price": 537.56,
-      "score": 40.44,
-      "move24_pct": -0.32,
-      "spread_bps": 5.78
+      "bid": 535.38,
+      "price": 535.65,
+      "score": 37,
+      "move24_pct": -0.68,
+      "spread_bps": 9.53
     },
     {
       "pair": "XXRPZUSD",
-      "bid": 1.39137,
-      "price": 1.39171,
-      "score": 61.64,
-      "move24_pct": 0.87,
-      "spread_bps": 0.43
+      "bid": 1.39391,
+      "price": 1.39395,
+      "score": 64.02,
+      "move24_pct": 1.04,
+      "spread_bps": 0.22
     },
     {
       "pair": "XYOUSD",
-      "bid": 0.003578,
+      "bid": 0.003585,
       "price": 0.003565,
       "score": 1.86,
       "move24_pct": -0.64,
-      "spread_bps": 58.69
+      "spread_bps": 39.05
     },
     {
       "pair": "XZECZUSD",
-      "bid": 1217.97,
-      "price": 1217.61,
-      "score": 82.53,
-      "move24_pct": 2.75,
-      "spread_bps": 1.23
+      "bid": 1219.08,
+      "price": 1219.73,
+      "score": 83.53,
+      "move24_pct": 2.93,
+      "spread_bps": 1.8
     },
     {
       "pair": "YBUSD",
-      "bid": 0.0785,
+      "bid": 0.07845,
       "price": 0.07813,
       "score": 0.69,
       "move24_pct": 0.01,
-      "spread_bps": 66.24
+      "spread_bps": 72.66
     },
     {
       "pair": "YFIUSD",
-      "bid": 2312.5,
+      "bid": 2312.6,
       "price": 2292.3,
       "score": 1.51,
       "move24_pct": -0.13,
-      "spread_bps": 16.43
+      "spread_bps": 16.86
     },
     {
       "pair": "YGGUSD",
@@ -5000,75 +5120,75 @@
       "price": 0.026,
       "score": 8.54,
       "move24_pct": 0.39,
-      "spread_bps": 77.22
+      "spread_bps": 38.61
     },
     {
       "pair": "YOMUSD",
       "bid": 0.01698,
       "price": 0.01703,
-      "score": 1.68,
+      "score": 1.67,
       "move24_pct": -0.35,
-      "spread_bps": 29.45
+      "spread_bps": 64.78
     },
     {
       "pair": "ZAMAUSD",
-      "bid": 0.07536,
-      "price": 0.07546,
-      "score": 42.48,
-      "move24_pct": 1.9,
-      "spread_bps": 7.96
+      "bid": 0.07514,
+      "price": 0.07525,
+      "score": 39.16,
+      "move24_pct": 1.62,
+      "spread_bps": 18.63
     },
     {
       "pair": "ZBCNUSD",
-      "bid": 0.002391,
-      "price": 0.002395,
-      "score": 44.8,
-      "move24_pct": 1.78,
-      "spread_bps": 8.36
+      "bid": 0.002402,
+      "price": 0.002405,
+      "score": 56.59,
+      "move24_pct": 2.21,
+      "spread_bps": 4.16
     },
     {
       "pair": "ZBTUSD",
-      "bid": 0.07986,
+      "bid": 0.07991,
       "price": 0.07959,
       "score": 2.19,
       "move24_pct": -0.11,
-      "spread_bps": 18.78
+      "spread_bps": 12.51
     },
     {
       "pair": "ZEREBROUSD",
-      "bid": 0.0289,
+      "bid": 0.02886,
       "price": 0.02897,
       "score": 21.53,
       "move24_pct": 1.61,
-      "spread_bps": 27.68
+      "spread_bps": 31.19
     },
     {
       "pair": "ZETAUSD",
-      "bid": 0.0463,
+      "bid": 0.0464,
       "price": 0.0461,
       "score": 0.89,
       "move24_pct": 0.0,
-      "spread_bps": 21.6
+      "spread_bps": 43.1
     },
     {
       "pair": "ZEUSUSD",
-      "bid": 0.01013,
-      "price": 0.01026,
-      "score": 77.1,
-      "move24_pct": 4.91,
-      "spread_bps": 128.33
+      "bid": 0.00994,
+      "price": 0.00984,
+      "score": 36.17,
+      "move24_pct": 0.61,
+      "spread_bps": 70.42
     },
     {
       "pair": "ZEXUSD",
-      "bid": 0.00086,
+      "bid": 0.00085,
       "price": 0.00086,
       "score": 0.2,
       "move24_pct": -2.27,
-      "spread_bps": 697.67
+      "spread_bps": 588.24
     },
     {
       "pair": "ZIGUSD",
-      "bid": 0.05867,
+      "bid": 0.05866,
       "price": 0.05887,
       "score": 15.42,
       "move24_pct": 0.75,
@@ -5076,51 +5196,51 @@
     },
     {
       "pair": "ZKPUSD",
-      "bid": 0.04688,
+      "bid": 0.0468,
       "price": 0.04654,
-      "score": 7.55,
+      "score": 7.54,
       "move24_pct": 0.54,
-      "spread_bps": 14.93
+      "spread_bps": 14.96
     },
     {
       "pair": "ZKUSD",
-      "bid": 0.0119,
-      "price": 0.01189,
-      "score": 53.01,
-      "move24_pct": 4.12,
-      "spread_bps": 16.81
+      "bid": 0.01195,
+      "price": 0.01198,
+      "score": 53.03,
+      "move24_pct": 4.9,
+      "spread_bps": 25.1
     },
     {
       "pair": "ZORAUSD",
-      "bid": 0.007025,
-      "price": 0.007033,
-      "score": 18.01,
-      "move24_pct": 0.47,
-      "spread_bps": 5.69
+      "bid": 0.007053,
+      "price": 0.007053,
+      "score": 24.34,
+      "move24_pct": 0.76,
+      "spread_bps": 4.25
     },
     {
       "pair": "ZRCUSD",
-      "bid": 0.001205,
-      "price": 0.001218,
-      "score": 19.25,
-      "move24_pct": -21.42,
-      "spread_bps": 58.09
+      "bid": 0.001265,
+      "price": 0.001283,
+      "score": 19.73,
+      "move24_pct": -17.23,
+      "spread_bps": 300.4
     },
     {
       "pair": "ZROUSD",
-      "bid": 2.054,
-      "price": 2.062,
+      "bid": 2.064,
+      "price": 2.064,
       "score": 85,
-      "move24_pct": 5.15,
-      "spread_bps": 9.74
+      "move24_pct": 5.25,
+      "spread_bps": 9.69
     },
     {
       "pair": "ZRXUSD",
-      "bid": 0.1172,
+      "bid": 0.1174,
       "price": 0.1175,
       "score": 14.29,
       "move24_pct": 1.12,
-      "spread_bps": 25.6
+      "spread_bps": 25.55
     }
   ],
   "prospective_learning": {
@@ -5132,12 +5252,70 @@
     "score_threshold": 60
   },
   "historical_research": {
-    "status": "INTERACTION_MODEL_NOT_RESTORED",
-    "approved_rules": [],
-    "candidates_enriched": 0,
+    "status": "VALIDATED_INTERACTIONS",
+    "approved_rules": [
+      [
+        "quiet_15m",
+        "rising_15m",
+        "volatility_expansion"
+      ],
+      [
+        "trades_accel_2x",
+        "volatility_expansion",
+        "controlled_breakout"
+      ],
+      [
+        "quiet_15m",
+        "volume_accel_2x",
+        "volatility_expansion"
+      ],
+      [
+        "volume_accel_2x",
+        "trades_accel_2x",
+        "volatility_expansion"
+      ],
+      [
+        "trades_accel_1_5x",
+        "volatility_expansion",
+        "controlled_breakout"
+      ],
+      [
+        "volume_accel_2x",
+        "trades_accel_1_5x",
+        "volatility_expansion"
+      ],
+      [
+        "volume_accel_1_5x",
+        "trades_accel_2x",
+        "volatility_expansion"
+      ],
+      [
+        "volume_accel_1_5x",
+        "volatility_expansion"
+      ],
+      [
+        "trades_accel_2x",
+        "volatility_expansion",
+        "not_extended"
+      ],
+      [
+        "quiet_15m",
+        "volume_accel_1_5x",
+        "volatility_expansion"
+      ],
+      [
+        "rising_15m",
+        "volatility_expansion"
+      ],
+      [
+        "volume_leads_trades",
+        "volatility_expansion"
+      ]
+    ],
+    "candidates_enriched": 12,
     "feature_failures": 0,
     "ranking_changes_possible": false,
-    "interaction_model_loaded": false,
+    "interaction_model_loaded": true,
     "feature_parity": "IMPLEMENTED",
     "legacy_bias_guard": "ENFORCED"
   },
@@ -5145,16 +5323,16 @@
     {
       "pair": "DOTUSD",
       "first": {
-        "confirmed_at": "2026-10-09T04:58:07.350186+00:00",
-        "trade_age_seconds": 6.08,
-        "spread_bps": 0.86,
+        "confirmed_at": "2026-10-09T05:15:15.699837+00:00",
+        "trade_age_seconds": 8.74,
+        "spread_bps": 4.34,
         "status": "WATCH_CONFIRMED",
         "entry_approved": false
       },
       "second": {
-        "confirmed_at": "2026-10-09T04:58:09.749208+00:00",
-        "trade_age_seconds": 8.48,
-        "spread_bps": 0.86,
+        "confirmed_at": "2026-10-09T05:15:18.078145+00:00",
+        "trade_age_seconds": 11.11,
+        "spread_bps": 0.87,
         "status": "WATCH_CONFIRMED",
         "entry_approved": false
       },
@@ -5164,16 +5342,16 @@
     {
       "pair": "NEARUSD",
       "first": {
-        "confirmed_at": "2026-10-09T04:58:10.113412+00:00",
-        "trade_age_seconds": 24.72,
-        "spread_bps": 2.12,
+        "confirmed_at": "2026-10-09T05:15:18.464312+00:00",
+        "trade_age_seconds": 13.54,
+        "spread_bps": 2.93,
         "status": "WATCH_CONFIRMED",
         "entry_approved": false
       },
       "second": {
-        "confirmed_at": "2026-10-09T04:58:12.504755+00:00",
-        "trade_age_seconds": 1.93,
-        "spread_bps": 2.76,
+        "confirmed_at": "2026-10-09T05:15:20.833382+00:00",
+        "trade_age_seconds": 15.91,
+        "spread_bps": 3.14,
         "status": "WATCH_CONFIRMED",
         "entry_approved": false
       },
@@ -5183,16 +5361,16 @@
     {
       "pair": "TIAUSD",
       "first": {
-        "confirmed_at": "2026-10-09T04:58:12.809292+00:00",
-        "trade_age_seconds": 5.97,
-        "spread_bps": 7.6,
+        "confirmed_at": "2026-10-09T05:15:21.224408+00:00",
+        "trade_age_seconds": 9.86,
+        "spread_bps": 5.72,
         "status": "WATCH_CONFIRMED",
         "entry_approved": false
       },
       "second": {
-        "confirmed_at": "2026-10-09T04:58:15.245008+00:00",
-        "trade_age_seconds": 8.41,
-        "spread_bps": 5.69,
+        "confirmed_at": "2026-10-09T05:15:23.929809+00:00",
+        "trade_age_seconds": 12.57,
+        "spread_bps": 5.72,
         "status": "WATCH_CONFIRMED",
         "entry_approved": false
       },
@@ -5200,18 +5378,18 @@
       "entry_approved": false
     },
     {
-      "pair": "DRVUSD",
+      "pair": "UNIUSD",
       "first": {
-        "confirmed_at": "2026-10-09T04:58:15.639377+00:00",
-        "trade_age_seconds": 64.27,
-        "spread_bps": 25.5,
+        "confirmed_at": "2026-10-09T05:15:24.302477+00:00",
+        "trade_age_seconds": 115.9,
+        "spread_bps": 3.67,
         "status": "WATCH_CONFIRMED",
         "entry_approved": false
       },
       "second": {
-        "confirmed_at": "2026-10-09T04:58:18.028025+00:00",
-        "trade_age_seconds": 66.66,
-        "spread_bps": 25.5,
+        "confirmed_at": "2026-10-09T05:15:26.926890+00:00",
+        "trade_age_seconds": 118.52,
+        "spread_bps": 3.67,
         "status": "WATCH_CONFIRMED",
         "entry_approved": false
       },
@@ -5221,16 +5399,16 @@
     {
       "pair": "JUPUSD",
       "first": {
-        "confirmed_at": "2026-10-09T04:58:18.447358+00:00",
-        "trade_age_seconds": 101.26,
-        "spread_bps": 15.34,
+        "confirmed_at": "2026-10-09T05:15:27.311198+00:00",
+        "trade_age_seconds": 46.76,
+        "spread_bps": 15.44,
         "status": "WATCH_CONFIRMED",
         "entry_approved": false
       },
       "second": {
-        "confirmed_at": "2026-10-09T04:58:20.802030+00:00",
-        "trade_age_seconds": 103.61,
-        "spread_bps": 15.34,
+        "confirmed_at": "2026-10-09T05:15:29.680299+00:00",
+        "trade_age_seconds": 49.13,
+        "spread_bps": 15.44,
         "status": "WATCH_CONFIRMED",
         "entry_approved": false
       },
@@ -5248,8 +5426,8 @@
     },
     {
       "horizon_hours": 4,
-      "observations": 295,
-      "mean_return_pct": 1.2576776697589018
+      "observations": 315,
+      "mean_return_pct": 1.2799766460522803
     }
   ],
   "learning_report": [
@@ -5262,8 +5440,8 @@
     },
     {
       "horizon_hours": 4,
-      "sample_size": 295,
-      "gain_5pct_rate": 0.0203,
+      "sample_size": 315,
+      "gain_5pct_rate": 0.0222,
       "loss_5pct_rate": 0.0,
       "model_tuning_allowed": true
     }
@@ -5295,31 +5473,31 @@
     "ready": false,
     "groups": {
       "WATCH": {
-        "samples": 295,
-        "hit_rate": 0.0203
+        "samples": 315,
+        "hit_rate": 0.0222
       }
     },
     "watch_score_adjustment": 0
   },
   "history_diagnostics": {
-    "runs": 47,
-    "observations": 14717,
-    "outcomes": 10674,
-    "unlabeled_observations": 4338,
+    "runs": 48,
+    "observations": 15336,
+    "outcomes": 10694,
+    "unlabeled_observations": 4957,
     "oldest_run_at": "2026-10-08T23:56:01.225859+00:00",
-    "newest_run_at": "2026-10-09T04:58:20.802097+00:00",
+    "newest_run_at": "2026-10-09T05:15:29.680395+00:00",
     "learning_status": "OUTCOMES_AVAILABLE",
     "history_available": true
   },
   "reliability_scorecard": {
     "24h": {
-      "observed_completed": 47,
+      "observed_completed": 48,
       "expected_scheduled": null,
       "coverage_pct": null,
       "status": "INSUFFICIENT_HISTORY"
     },
     "168h": {
-      "observed_completed": 47,
+      "observed_completed": 48,
       "expected_scheduled": null,
       "coverage_pct": null,
       "status": "INSUFFICIENT_HISTORY"
