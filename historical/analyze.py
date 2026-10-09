@@ -1,48 +1,49 @@
-"""Historical Kraken archive analysis; retrospective, selection-biased research only."""
-import collections,datetime as dt,json,math,pathlib,statistics,sys
+"""Stream historical Kraken archive research with chronological holdout.
+Backfill oversampled future movers: no calibrated probabilities or trading claims.
+"""
+import datetime as dt,json,math,pathlib,sys
 source=pathlib.Path(sys.argv[1] if len(sys.argv)>1 else "historical/output/research_training.ndjson")
 out=pathlib.Path(sys.argv[2] if len(sys.argv)>2 else "historical/output/model.json")
-# Backfill sampled all >=10% future movers but only sparse nonmovers.
-# Consequently: NO calibrated probabilities, and NO absolute hit-rate claims.
-rows=[]
-for line in source.open():
-    x=json.loads(line)
-    if not all(x.get(k) is not None for k in ("pre_return_60m_pct","volume_accel","trade_accel","volatility_pct","max_forward_return_pct")):continue
-    if not math.isfinite(float(x["volume_accel"])) or not math.isfinite(float(x["trade_accel"])):continue
-    rows.append(x)
-if len(rows)<1000:raise SystemExit("Insufficient historical rows")
-rows.sort(key=lambda x:x["anchor_at"])
-cut=rows[int(len(rows)*.8)]["anchor_at"]
-train=[r for r in rows if r["anchor_at"]<cut]
-test=[r for r in rows if r["anchor_at"]>=cut]
-if len(train)<500 or len(test)<100:raise SystemExit("Insufficient chronological holdout")
+cut="2026-05-01"
 rules={
- "early_1h":lambda r: abs(r["pre_return_60m_pct"])<=3,
+ "early_1h":lambda r:abs(r["pre_return_60m_pct"])<=3,
  "volume_2x":lambda r:r["volume_accel"]>=2,
  "trades_2x":lambda r:r["trade_accel"]>=2,
  "early_volume":lambda r:abs(r["pre_return_60m_pct"])<=3 and r["volume_accel"]>=2,
  "early_trades":lambda r:abs(r["pre_return_60m_pct"])<=3 and r["trade_accel"]>=2,
  "volume_trades":lambda r:r["volume_accel"]>=2 and r["trade_accel"]>=2,
 }
-def stats(data,pred):
-    subset=[r for r in data if pred(r)]
-    positives=sum(r["max_forward_return_pct"]>=20 for r in subset)
-    return {"rows":len(subset),"major_movers":positives,"sampled_positive_rate":round(positives/len(subset),5) if subset else None}
-base_train=stats(train,lambda r:True);base_test=stats(test,lambda r:True)
+counts={split:{name:{"rows":0,"major_movers":0} for name in ["baseline",*rules]} for split in ("train","holdout")}
+for line in source.open():
+    r=json.loads(line)
+    keys=("pre_return_60m_pct","volume_accel","trade_accel","max_forward_return_pct")
+    if any(r.get(k) is None for k in keys):continue
+    if not all(math.isfinite(float(r[k])) for k in keys):continue
+    split="train" if r["anchor_at"][:10]<cut else "holdout"
+    selected=["baseline"]+[name for name,pred in rules.items() if pred(r)]
+    for name in selected:
+        counts[split][name]["rows"]+=1
+        counts[split][name]["major_movers"]+=int(r["max_forward_return_pct"]>=20)
+def summary(split,name):
+    v=counts[split][name];n=v["rows"]
+    return {**v,"sampled_positive_rate":round(v["major_movers"]/n,5) if n else None}
+train=summary("train","baseline");holdout=summary("holdout","baseline")
+if train["rows"]<500 or holdout["rows"]<100:raise SystemExit("Insufficient historical train or holdout data")
 results={}
-for name,rule in rules.items():
-    a,b=stats(train,rule),stats(test,rule)
-    lift=(b["sampled_positive_rate"]/base_test["sampled_positive_rate"] if b["sampled_positive_rate"] is not None and base_test["sampled_positive_rate"] else 0)
-    # A conservative fixed bonus only for patterns with positive out-of-time evidence.
-    eligible=a["rows"]>=100 and b["rows"]>=50 and lift>=1.15 and a["sampled_positive_rate"]>base_train["sampled_positive_rate"]
+for name in rules:
+    a,b=summary("train",name),summary("holdout",name)
+    lift=b["sampled_positive_rate"]/holdout["sampled_positive_rate"] if b["sampled_positive_rate"] is not None and holdout["sampled_positive_rate"] else 0
+    eligible=a["rows"]>=100 and b["rows"]>=50 and lift>=1.15 and a["sampled_positive_rate"]>train["sampled_positive_rate"]
     results[name]={"train":a,"holdout":b,"holdout_relative_lift":round(lift,3),"eligible":eligible}
-model={"schema_version":1,"source":"Kraken 2026Q2 5m archive; historical/backfill.py","trained_at":dt.datetime.now(dt.timezone.utc).isoformat(),
-"train_rows":len(train),"holdout_rows":len(test),"holdout_start":cut,"baseline_train":base_train,"baseline_holdout":base_test,
+model={"schema_version":1,"source":"Kraken 2026Q2 5m archive; historical/backfill.py",
+"trained_at":dt.datetime.now(dt.timezone.utc).isoformat(),"train_rows":train["rows"],
+"holdout_rows":holdout["rows"],"holdout_start":cut,"baseline_train":train,"baseline_holdout":holdout,
 "rules":results,"approved_rules":[k for k,v in results.items() if v["eligible"]],
-"limitations":["Backfill oversamples future >=10% movers: positive rates are NOT market probabilities",
+"limitations":["Backfill oversamples future >=10% movers; sampled positive rates are NOT market probabilities",
 "Overlapping anchors are correlated; holdout is chronological, not independent episodes",
 "Archive ends June 2026; regime shift possible","No historical order-book or executable entry evidence",
 "Research bonuses are bounded and never authorize buys"]}
 out.parent.mkdir(parents=True,exist_ok=True)
 out.write_text(json.dumps(model,indent=2)+"\n")
-print(json.dumps({"rows":len(rows),"holdout":len(test),"approved_rules":model["approved_rules"],"out":str(out)}))
+print(json.dumps({"train_rows":train["rows"],"holdout_rows":holdout["rows"],
+"approved_rules":model["approved_rules"],"out":str(out)}))
