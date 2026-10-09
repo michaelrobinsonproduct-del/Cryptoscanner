@@ -4,7 +4,7 @@ import tempfile
 import pathlib
 import history
 import datetime as dt
-from scanner import rank, confirm_watch, confirm_twice, eligible_crypto_pair
+from scanner import rank, confirm_watch, confirm_twice, eligible_crypto_pair, eligible_watch
 import time
 
 class ScannerTests(unittest.TestCase):
@@ -13,6 +13,11 @@ class ScannerTests(unittest.TestCase):
             self.assertFalse(eligible_crypto_pair({"base":base}))
         for base in ("XXBT", "XETH", "SOL", "AKE", "HYPE"):
             self.assertTrue(eligible_crypto_pair({"base":base}))
+    def test_positive_momentum_gate(self):
+        self.assertFalse(eligible_watch({"score":99,"move24_pct":-0.01}))
+        self.assertFalse(eligible_watch({"score":99,"move24_pct":0}))
+        self.assertFalse(eligible_watch({"score":59,"move24_pct":2}))
+        self.assertTrue(eligible_watch({"score":60,"move24_pct":0.01}))
     def test_quote(self):
         t={"c":["10"],"o":"10","v":["0","10000"],"t":[0,500],"b":["9.99"],"a":["10.01"]}
         self.assertGreater(rank(t)["score"],0)
