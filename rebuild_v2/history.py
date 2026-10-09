@@ -93,30 +93,33 @@ def pair_signal_adjustment(pair, min_samples=3):
     return 0
 
 def prospective_learning(min_days=10, min_pairs=8):
-    """Validate a candidate adjustment on later, distinct pair-days."""
+    """Chronological validation of high-score vs lower-score 4h hit rates.
+    One record per pair-day; no unvalidated score adjustments.
+    """
     with connect() as con:
-        rows=con.execute("""SELECT substr(r.created_at,1,10),o.pair,o.status,
-             MAX(CASE WHEN x.return_pct>=5 THEN 1 ELSE 0 END)
-             FROM outcomes x JOIN observations o ON o.run_id=x.run_id AND o.pair=x.pair
-             JOIN runs r ON r.id=o.run_id WHERE x.horizon_hours=4
-             GROUP BY substr(r.created_at,1,10),o.pair,o.status
-             ORDER BY substr(r.created_at,1,10),o.pair""").fetchall()
+        rows=con.execute("""SELECT substr(r.created_at,1,10),o.pair,
+              MAX(o.score),MAX(CASE WHEN x.return_pct>=5 THEN 1 ELSE 0 END)
+              FROM outcomes x JOIN observations o ON o.run_id=x.run_id AND o.pair=x.pair
+              JOIN runs r ON r.id=o.run_id WHERE x.horizon_hours=4
+              GROUP BY substr(r.created_at,1,10),o.pair
+              ORDER BY substr(r.created_at,1,10),o.pair""").fetchall()
     days=sorted({x[0] for x in rows})
     result={"status":"INSUFFICIENT_DATA","pair_days":len(rows),
-            "days":len(days),"validated":False,"adjustment":0}
+            "days":len(days),"validated":False,"adjustment":0,"score_threshold":60}
     if len(days)<min_days or len({x[1] for x in rows})<min_pairs:return result
     cutoff=days[int(len(days)*0.7)]
     def stats(before):
-        groups={"WATCH":[],"NOT_SELECTED":[]}
-        for day,pair,status,hit in rows:
-            if (day<cutoff)==before and status in groups:groups[status].append(hit)
+        groups={"HIGH":[],"LOW":[]}
+        for day,pair,score,hit in rows:
+            if (day<cutoff)==before:
+                groups["HIGH" if score>=60 else "LOW"].append(hit)
         if min(map(len,groups.values()))<20:return None
         return {k:sum(v)/len(v) for k,v in groups.items()}
     train=stats(True);test=stats(False)
     result.update(train=train,test=test)
     if train is None or test is None:return result
-    delta=train["WATCH"]-train["NOT_SELECTED"]
-    verified=delta>=0.05 and test["WATCH"]-test["NOT_SELECTED"]>=0.03
+    delta=train["HIGH"]-train["LOW"]
+    verified=delta>=0.05 and test["HIGH"]-test["LOW"]>=0.03
     result.update(status="VALIDATED" if verified else "NO_VALIDATED_IMPROVEMENT",
                   validated=verified,adjustment=round(min(4,delta*20),2) if verified else 0)
     return result
