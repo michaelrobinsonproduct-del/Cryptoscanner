@@ -1,6 +1,12 @@
 name: Kraken Historical Backfill
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'historical/backfill.py'
+      - 'historical/compact.py'
+      - '.github/workflows/kraken-historical-backfill.yml'
 jobs:
   backfill:
     runs-on: ubuntu-latest
@@ -23,5 +29,5 @@ jobs:
         with:
           name: kraken-historical-derived
           path: historical/output/
-          retention-days: 7
+          retention-days: 30
           compression-level: 9
