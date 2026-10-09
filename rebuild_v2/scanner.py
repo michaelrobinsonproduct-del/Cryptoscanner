@@ -94,6 +94,12 @@ def scan():
                 watches.append({"pair": pair, **metrics, "status": "WATCH"})
         except (KeyError, ValueError, TypeError, ZeroDivisionError) as exc:
             failed.append({"pair": pair, "error": str(exc)})
+    # Calibrate conservatively from prospectively observed hits and misses.
+    from history import historical_signal_adjustments
+    calibration = historical_signal_adjustments()
+    if calibration["ready"]:
+        for candidate in watches:
+            candidate["score"] = round(candidate["score"] + calibration["watch_score_adjustment"],2)
     watches.sort(key=lambda x: -x["score"])
     # Avoid treating coins already extended >15% in 24h as early discoveries.
     watches = [c for c in watches if -10 <= c["move24_pct"] <= 15]
@@ -119,8 +125,10 @@ def main():
         evaluate_outcomes(result) if result["health"] != "FAILED" else None
         store_run(result)
         result["historical_outcomes"] = outcome_summary()
-        from history import learning_report, history_diagnostics, reliability_scorecard
+        from history import learning_report, history_diagnostics, reliability_scorecard, miss_report, historical_signal_adjustments
         result["learning_report"] = learning_report()
+        result["missed_breakouts"] = miss_report()
+        result["historical_calibration"] = historical_signal_adjustments()
         result["history_diagnostics"] = history_diagnostics()
         result["reliability_scorecard"] = reliability_scorecard()
         result["persistence_health"] = "COMPLETE"
