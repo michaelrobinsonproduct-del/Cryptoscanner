@@ -54,6 +54,36 @@ jobs:
               assert candidate["move24_pct"] > 0, f"non-positive momentum: {pair}"
           print(f"ACCEPTED engine={report['engine']} scanned={report['scanned']} watches={len(report['watch'])} age_seconds={age:.0f}")
           PY
+      - name: Write consolidated acceptance report
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import datetime as dt, json
+          from pathlib import Path
+          p=Path("rebuild_v2/output/latest.json")
+          status={"generated_at":dt.datetime.now(dt.timezone.utc).isoformat(),"source":"kraken-rebuild-shadow","acceptance":"FAILED","checks":{}}
+          if p.exists():
+              try:
+                  r=json.loads(p.read_text())
+                  h=r.get("history_diagnostics") or {}
+                  checks={
+                      "engine_v1":r.get("engine")=="rebuild-shadow-1.0",
+                      "market_scan_complete":r.get("health")=="COMPLETE" and r.get("scanned")==r.get("universe") and r.get("failures")==0,
+                      "history_persisted":r.get("persistence_health")=="COMPLETE" and h.get("history_available") is True and h.get("runs",0)>0,
+                      "current_observations_saved":h.get("observations",0)>=len(r.get("watch",[])),
+                      "outcome_diagnostics_present":isinstance(h.get("outcomes"),int),
+                      "non_actionable_shadow":r.get("recommendation")=="NO VERIFIED BUYS",
+                  }
+                  status.update(checks=checks,engine=r.get("engine"),completed_at=r.get("completed_at"),history=h)
+                  status["acceptance"]="PASSED" if all(checks.values()) else "FAILED"
+              except Exception as e:
+                  status["error"]=str(e)
+          else:
+              status["error"]="latest.json missing"
+          Path("rebuild_v2/output/acceptance.json").write_text(json.dumps(status,indent=2)+"\\n")
+          print(json.dumps(status))
+          PY
       - name: Save history and report to dedicated branch
         if: success()
         shell: bash
@@ -61,6 +91,7 @@ jobs:
           set -euo pipefail
           cp rebuild_v2/output/history.sqlite3 /tmp/kraken-history.sqlite3
           cp rebuild_v2/output/latest.json /tmp/kraken-latest.json
+          cp rebuild_v2/output/acceptance.json /tmp/kraken-acceptance.json
           if git show-ref --verify --quiet refs/remotes/origin/rebuild-history; then
             git checkout -B rebuild-history origin/rebuild-history
           else
@@ -69,7 +100,8 @@ jobs:
           fi
           cp /tmp/kraken-history.sqlite3 history.sqlite3
           cp /tmp/kraken-latest.json latest.json
-          git add history.sqlite3 latest.json
+          cp /tmp/kraken-acceptance.json acceptance.json
+          git add history.sqlite3 latest.json acceptance.json
           git -c user.name='kraken-rebuild-bot' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Shadow scan history ${GITHUB_RUN_ID}" || true
           git push origin HEAD:refs/heads/rebuild-history
       - name: Retain independent recovery artifact
@@ -79,6 +111,7 @@ jobs:
           name: kraken-shadow-${{ github.run_id }}
           path: |
             rebuild_v2/output/latest.json
+            rebuild_v2/output/acceptance.json
             rebuild_v2/output/history.sqlite3
           if-no-files-found: warn
           retention-days: 30
