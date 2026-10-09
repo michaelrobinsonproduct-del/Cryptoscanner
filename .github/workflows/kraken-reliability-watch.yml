@@ -15,7 +15,7 @@ jobs:
           RUNNER_URL: https://kraken-autonomous-runner-production.up.railway.app
         run: |
           python - <<'PY'
-          import json, os, time, urllib.request, urllib.error
+          import json, os, math, time, urllib.request, urllib.error
           base = os.environ["RUNNER_URL"].rstrip("/")
           def read(path):
               req = urllib.request.Request(base + path, headers={"Accept":"application/json","Cache-Control":"no-cache"})
@@ -37,7 +37,16 @@ jobs:
               raise SystemExit("FAIL: scan persistence unverified")
           if not result.get("run_id"):
               raise SystemExit("FAIL: missing durable run identifier")
-          if (result.get("report_age_seconds") or 999999) > 900:
-              raise SystemExit("FAIL: latest scan exceeds 15-minute freshness SLA")
+          age = result.get("report_age_seconds")
+          if isinstance(age, bool) or not isinstance(age, (int, float)) or not math.isfinite(age) or age < 0 or age > 900:
+              raise SystemExit("FAIL: invalid or stale scan age")
+          if not result.get("generated_at") or not result.get("checked_at"):
+              raise SystemExit("FAIL: missing scan timestamps")
+          # In-memory health may reset on restart; durable verified results are authoritative.
+          health_run_id = health.get("last_run_id")
+          if health_run_id and health_run_id != result["run_id"]:
+              print("NOTICE: health run ID differs from durable verified run")
+          elif not health_run_id:
+              print("NOTICE: health run ID empty; durable verification passed")
           print("PASS: fresh completed scan, verified persistence, valid run identifier")
           PY
