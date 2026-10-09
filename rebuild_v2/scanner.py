@@ -78,6 +78,35 @@ def eligible_crypto_pair(meta):
 def eligible_watch(metrics):
     return metrics["score"] >= 35 and 0.5 <= metrics["move24_pct"] <= 12 and metrics["spread_bps"] <= 40
 
+def historical_live_features(pair, fetch=api):
+    """Match historical 5m anchor features using only completed OHLC candles."""
+    import urllib.parse
+    data=fetch("OHLC?pair="+urllib.parse.quote(pair,safe="")+"&interval=5")
+    candles=next(v for k,v in data.items() if k!="last" and isinstance(v,list))
+    bars=candles[:-1]
+    if len(bars)<13:
+        raise ValueError("insufficient completed 5m bars")
+    b=bars[-13:]
+    closes=[float(x[4]) for x in b]
+    volumes=[float(x[6]) for x in b]
+    trades=[float(x[7]) for x in b]
+    pv=sum(volumes[-13:-7]); cv=sum(volumes[-7:-1])
+    pt=sum(trades[-13:-7]); ct=sum(trades[-7:-1])
+    return {"pre_return_60m_pct":round(100*(closes[-1]/closes[0]-1),3),
+            "volume_accel":round(cv/pv,3) if pv>0 else None,
+            "trade_accel":round(ct/pt,3) if pt>0 else None}
+
+def historical_rule_bonus(features,model):
+    if features.get("volume_accel") is None or features.get("trade_accel") is None:return 0,[]
+    early=abs(features["pre_return_60m_pct"])<=3
+    vol=features["volume_accel"]>=2
+    trades=features["trade_accel"]>=2
+    matched={"early_1h":early,"volume_2x":vol,"trades_2x":trades,
+             "early_volume":early and vol,"early_trades":early and trades,
+             "volume_trades":vol and trades}
+    approved=[name for name in model.get("approved_rules",[]) if matched.get(name,False)]
+    return min(8,2*len(approved)),approved
+
 def scan():
     started = dt.datetime.now(dt.timezone.utc)
     pairs = {k: v for k, v in api("AssetPairs").items() if v.get("status") == "online" and v.get("quote") in ("ZUSD", "USD") and not k.endswith(".d") and eligible_crypto_pair(v)}
@@ -99,6 +128,32 @@ def scan():
     calibration = historical_signal_adjustments()
     for candidate in watches:
         candidate["score"] = round(candidate["score"] + pair_signal_adjustment(candidate["pair"]) + (calibration["watch_score_adjustment"] if calibration["ready"] else 0),2)
+    model_path=pathlib.Path("rebuild_v2/output/historical_model.json")
+    model=None
+    if model_path.exists():
+        try:
+            candidate_model=json.loads(model_path.read_text())
+            if candidate_model.get("schema_version")==1 and candidate_model.get("holdout_rows",0)>=100:
+                model=candidate_model
+        except (ValueError,OSError):
+            pass
+    research={"status":"ACTIVE" if model else "MODEL_NOT_RESTORED",
+              "approved_rules":model.get("approved_rules",[]) if model else [],
+              "candidates_enriched":0,"feature_failures":0,"ranking_changes_possible":False}
+    if model and model.get("approved_rules"):
+        for candidate in sorted(watches,key=lambda x:-x["score"])[:12]:
+            try:
+                features=historical_live_features(candidate["pair"])
+                bonus,matched=historical_rule_bonus(features,model)
+                candidate["historical_features"]=features
+                candidate["historical_rules_matched"]=matched
+                candidate["historical_bonus"]=bonus
+                candidate["score"]=round(candidate["score"]+bonus,2)
+                research["candidates_enriched"]+=1
+                research["ranking_changes_possible"] |= bonus>0
+            except Exception as exc:
+                candidate["historical_feature_error"]=str(exc)
+                research["feature_failures"]+=1
     watches.sort(key=lambda x: -x["score"])
     # Avoid treating coins already extended >15% in 24h as early discoveries.
     watches = [c for c in watches if -10 <= c["move24_pct"] <= 15]
@@ -110,7 +165,7 @@ def scan():
         except Exception as exc:
             confirmations.append({"pair": candidate["pair"], "status": "CONFIRMATION_FAILED", "error": str(exc), "entry_approved": False})
     finished = dt.datetime.now(dt.timezone.utc)
-    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-1.0", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "market_quotes": market_quotes, "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
+    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-1.0", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "market_quotes": market_quotes, "historical_research": research, "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
 
 def main():
     try:
