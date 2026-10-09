@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-09T18:23:02.122543+00:00",
+  "generated_at": "2026-10-09T18:50:12.790959+00:00",
   "source": "kraken-rebuild-shadow",
   "acceptance": "PASSED",
   "checks": {
@@ -14,39 +14,39 @@
     "new_run_recorded": true
   },
   "engine": "rebuild-shadow-1.0",
-  "completed_at": "2026-10-09T18:23:01.705237+00:00",
+  "completed_at": "2026-10-09T18:50:12.372028+00:00",
   "history": {
-    "runs": 75,
-    "observations": 32049,
-    "outcomes": 51049,
+    "runs": 76,
+    "observations": 32668,
+    "outcomes": 52287,
     "unlabeled_observations": 1862,
     "oldest_run_at": "2026-10-08T23:56:01.225859+00:00",
-    "newest_run_at": "2026-10-09T18:23:01.705237+00:00",
+    "newest_run_at": "2026-10-09T18:50:12.372028+00:00",
     "learning_status": "OUTCOMES_AVAILABLE",
     "history_available": true
   },
   "history_baseline": {
-    "runs": 74,
-    "observations": 31430,
-    "outcomes": 49811
+    "runs": 75,
+    "observations": 32049,
+    "outcomes": 51049
   },
   "schedule_health": {
-    "previous_scan_age_seconds": 1477,
+    "previous_scan_age_seconds": 1615,
     "missed_15m_intervals": 0,
     "schedule_warning": false
   },
   "reliability": {
-    "last_gap_seconds": 1477,
+    "last_gap_seconds": 1615,
     "missed_15m_intervals": 0,
     "schedule_warning": false,
     "rolling_24h": {
-      "observed_completed": 75,
+      "observed_completed": 76,
       "expected_scheduled": null,
       "coverage_pct": null,
       "status": "INSUFFICIENT_HISTORY"
     },
     "rolling_7d": {
-      "observed_completed": 75,
+      "observed_completed": 76,
       "expected_scheduled": null,
       "coverage_pct": null,
       "status": "INSUFFICIENT_HISTORY"
