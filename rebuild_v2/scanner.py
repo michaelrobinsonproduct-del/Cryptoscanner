@@ -89,7 +89,7 @@ def scan():
             if ticker is None:
                 raise ValueError("missing ticker")
             metrics = rank(ticker)
-            market_quotes.append({"pair":pair,"bid":float(ticker["b"][0])})
+            market_quotes.append({"pair":pair,"bid":float(ticker["b"][0]),"price":metrics["price"],"score":metrics["score"],"move24_pct":metrics["move24_pct"],"spread_bps":metrics["spread_bps"]})
             if eligible_watch(metrics):
                 watches.append({"pair": pair, **metrics, "status": "WATCH"})
         except (KeyError, ValueError, TypeError, ZeroDivisionError) as exc:
