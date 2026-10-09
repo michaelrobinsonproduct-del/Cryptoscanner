@@ -119,8 +119,10 @@ def main():
         evaluate_outcomes(result) if result["health"] != "FAILED" else None
         store_run(result)
         result["historical_outcomes"] = outcome_summary()
-        from history import learning_report
+        from history import learning_report, history_diagnostics
         result["learning_report"] = learning_report()
+        result["history_diagnostics"] = history_diagnostics()
+        result["persistence_health"] = "COMPLETE"
         OUTPUT.write_text(json.dumps(result, indent=2) + "\n")
     except Exception as exc:
         result["persistence_health"] = "FAILED"
