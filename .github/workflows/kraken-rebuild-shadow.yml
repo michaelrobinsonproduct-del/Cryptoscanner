@@ -64,6 +64,15 @@ jobs:
             rm -f rebuild_v2/output/historical_model.json
             echo "HISTORICAL_MODEL_PENDING: scans continue but historical bonuses disabled"
           fi
+      - name: Restore validated interaction model
+        shell: bash
+        run: |
+          if git show origin/rebuild-history:interaction_model.json > rebuild_v2/output/interaction_model.json 2>/dev/null; then
+            python -c 'import json; m=json.load(open("rebuild_v2/output/interaction_model.json")); assert m["schema_version"]==2; print("INTERACTION_MODEL_LOADED",len(m["approved_rules"]))'
+          else
+            rm -f rebuild_v2/output/interaction_model.json
+            echo "INTERACTION_MODEL_PENDING: historical bonuses disabled"
+          fi
       - name: Check schedule continuity
         shell: bash
         run: |
