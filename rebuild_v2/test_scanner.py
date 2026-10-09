@@ -54,6 +54,18 @@ class ScannerTests(unittest.TestCase):
                     self.assertEqual(db.execute("SELECT count(*) FROM runs").fetchone()[0],1)
                     self.assertEqual(db.execute("SELECT count(*) FROM observations").fetchone()[0],1)
             finally: history.DB=original
+    def test_full_market_history_includes_unselected_pairs(self):
+        with tempfile.TemporaryDirectory() as folder:
+            original=history.DB
+            history.DB=pathlib.Path(folder)/"history.db"
+            try:
+                run={"started_at":"2026-10-08T00:00:00+00:00","completed_at":"2026-10-08T00:00:01+00:00","health":"COMPLETE","watch":[{"pair":"AAAUSD","price":1,"score":60,"status":"WATCH"}],"market_quotes":[{"pair":"AAAUSD","price":1,"score":60},{"pair":"BBBUSD","price":2,"score":30}]}
+                history.store_run(run)
+                with history.connect() as db:
+                    rows=db.execute("SELECT pair,status FROM observations ORDER BY pair").fetchall()
+                self.assertEqual(rows,[("AAAUSD","WATCH"),("BBBUSD","NOT_SELECTED")])
+            finally:
+                history.DB=original
     def test_reliability_scorecard_requires_full_window(self):
         with tempfile.TemporaryDirectory() as folder:
             original=history.DB
