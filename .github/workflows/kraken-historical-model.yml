@@ -1,0 +1,59 @@
+name: Kraken Historical Model Recovery
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'historical/analyze.py'
+      - '.github/workflows/kraken-historical-model.yml'
+permissions:
+  contents: write
+concurrency:
+  group: kraken-historical-model
+  cancel-in-progress: false
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Restore successful historical archive research artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p historical/output
+          gh run download 37181233660 -R "${{ github.repository }}" -n kraken-historical-derived -D historical/output
+          test -s historical/output/research_training.ndjson
+      - name: Analyze historical patterns using out-of-time holdout
+        run: |
+          python historical/analyze.py historical/output/research_training.ndjson historical/output/model.json
+          python - <<'PY'
+          import json
+          m=json.load(open('historical/output/model.json'))
+          assert m['train_rows']>500 and m['holdout_rows']>100
+          assert isinstance(m['approved_rules'],list)
+          print('HISTORICAL_MODEL_VALIDATED',m['approved_rules'])
+          PY
+      - name: Publish verified model for scanner
+        shell: bash
+        run: |
+          cp historical/output/model.json /tmp/kraken-historical-model.json
+          for attempt in 1 2 3 4 5; do
+            git fetch origin rebuild-history
+            git checkout -B rebuild-history origin/rebuild-history
+            cp /tmp/kraken-historical-model.json historical_model.json
+            git add historical_model.json
+            git -c user.name=kraken-rebuild-bot -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Historical archive model with chronological holdout' || true
+            if git push origin HEAD:rebuild-history; then exit 0; fi
+            sleep 4
+          done
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kraken-historical-model
+          path: historical/output/model.json
+          retention-days: 30
