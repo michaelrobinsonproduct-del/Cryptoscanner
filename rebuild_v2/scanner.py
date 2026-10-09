@@ -34,7 +34,7 @@ def rank(t):
         raise ValueError("invalid executable quote")
     move = (price / open24 - 1) * 100
     spread = (ask - bid) / bid * 10000
-    score = min(35, trades / 35) + min(30, vol * price / 100000) + max(0, 20 - spread * 2) + max(0, 15 - abs(move) * 2)
+    score = min(48, max(0, move) * 12) + min(22, trades / 120) + min(15, vol * price / 250000) + max(0, 15 - spread * 2)
     return {"price": price, "score": round(score, 2), "move24_pct": round(move, 2), "spread_bps": round(spread, 2)}
 
 def confirm_watch(pair, snapshot, fetch=api):
