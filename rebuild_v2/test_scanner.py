@@ -40,6 +40,19 @@ class ScannerTests(unittest.TestCase):
         self.assertLess(features["pre_return_60m_pct"],20)
         self.assertAlmostEqual(features["volume_accel"],1.0)
         self.assertAlmostEqual(features["trade_accel"],1.0)
+    def test_prospective_learning_fails_closed_without_history(self):
+        with tempfile.TemporaryDirectory() as folder:
+            original=history.DB
+            history.DB=pathlib.Path(folder)/"history.db"
+            try:
+                result=history.prospective_learning()
+                self.assertFalse(result["validated"])
+                self.assertEqual(result["adjustment"],0)
+                self.assertEqual(result["status"],"INSUFFICIENT_DATA")
+                self.assertEqual(history.pair_signal_adjustment("ABCUSD"),0)
+            finally:
+                history.DB=original
+
     def test_quote(self):
         t={"c":["10"],"o":"10","v":["0","10000"],"t":[0,500],"b":["9.99"],"a":["10.01"]}
         self.assertGreater(rank(t)["score"],0)
