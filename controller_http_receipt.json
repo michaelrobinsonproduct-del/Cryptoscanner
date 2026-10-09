@@ -1,13 +1,13 @@
 {
-  "checked_at": "2026-10-09T00:49:51.189863+00:00",
+  "checked_at": "2026-10-09T00:51:43.004451+00:00",
   "checks": {
     "/shadow/acceptance": {
       "passed": false,
-      "error": "HTTP Error 503: Service Unavailable"
+      "error": "HTTP 503 {\"verified\":false,\"actionable\":false,\"status\":\"ACCEPTANCE_SOURCE_UNAVAILABLE\",\"error\":\"Error: acceptance_storage_http_404\"}"
     },
     "/shadow/results": {
       "passed": false,
-      "error": "HTTP Error 503: Service Unavailable"
+      "error": "HTTP 503 {\"verified\":false,\"actionable\":false,\"status\":\"SOURCE_UNAVAILABLE\",\"error\":\"Error: storage_http_404\"}"
     }
   },
   "verified": false
