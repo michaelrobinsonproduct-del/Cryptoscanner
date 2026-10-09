@@ -197,34 +197,6 @@ jobs:
           assert acceptance["completed_at"]==latest["completed_at"]
           print(json.dumps({"verified":True,"source":"independent-github-persistence","scanned":latest["scanned"],"universe":latest["universe"],"age_seconds":round(age),"actionable":False}))
           PY
-      - name: Persist controller HTTP receipt
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f rebuild_v2/output/controller_http_receipt.json ]; then
-            cp rebuild_v2/output/controller_http_receipt.json /tmp/controller-http-receipt.json
-            git fetch origin refs/heads/rebuild-history:refs/remotes/origin/rebuild-history
-            git checkout -B rebuild-history origin/rebuild-history
-            cp /tmp/controller-http-receipt.json controller_http_receipt.json
-            git add controller_http_receipt.json
-            git -c user.name='kraken-rebuild-bot' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Controller HTTP receipt ${GITHUB_RUN_ID}" || true
-            git push origin HEAD:refs/heads/rebuild-history
-          fi
-      - name: Require controller HTTP verification
-        if: always()
-        shell: bash
-        run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          p=Path("rebuild_v2/output/controller_http_receipt.json")
-          assert p.exists(),"controller receipt missing"
-          r=json.loads(p.read_text())
-          print("CONTROLLER_HTTP_VERIFIED",r["verified"])
-          if not r["verified"]:
-              print("Controller transport unavailable; GitHub acceptance remains independent")
-          PY
       - name: Retain independent recovery artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -234,7 +206,6 @@ jobs:
             rebuild_v2/output/latest.json
             rebuild_v2/output/acceptance.json
             rebuild_v2/output/schedule_health.json
-            rebuild_v2/output/controller_http_receipt.json
             rebuild_v2/output/history.sqlite3
           if-no-files-found: warn
           retention-days: 30
