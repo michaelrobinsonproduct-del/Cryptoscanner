@@ -178,6 +178,25 @@ jobs:
           git add history.sqlite3 latest.json acceptance.json schedule_health.json
           git -c user.name='kraken-rebuild-bot' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Shadow scan history ${GITHUB_RUN_ID}" || true
           git push origin HEAD:refs/heads/rebuild-history
+      - name: Verify authoritative persisted scan independently
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,datetime as dt
+          from pathlib import Path
+          latest=json.loads(Path("rebuild_v2/output/latest.json").read_text())
+          acceptance=json.loads(Path("rebuild_v2/output/acceptance.json").read_text())
+          completed=dt.datetime.fromisoformat(latest["completed_at"].replace("Z","+00:00"))
+          age=(dt.datetime.now(dt.timezone.utc)-completed).total_seconds()
+          assert 0<=age<900,"scan report stale"
+          assert latest["health"]=="COMPLETE" and latest["failures"]==0
+          assert latest["scanned"]==latest["universe"]
+          assert acceptance["acceptance"]=="PASSED" and all(acceptance["checks"].values())
+          assert acceptance["completed_at"]==latest["completed_at"]
+          print(json.dumps({"verified":True,"source":"independent-github-persistence","scanned":latest["scanned"],"universe":latest["universe"],"age_seconds":round(age),"actionable":False}))
+          PY
       - name: Verify live controller HTTP read-back
         if: success()
         shell: bash
