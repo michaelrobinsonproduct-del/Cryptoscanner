@@ -30,6 +30,25 @@ jobs:
         run: python -m unittest discover -s rebuild_v2 -p 'test_*.py'
       - name: Run independent shadow scanner
         run: python rebuild_v2/scanner.py
+      - name: Validate persisted report before publication
+        run: |
+          python - <<'PY'
+          import datetime as dt
+          import json
+          from pathlib import Path
+          from rebuild_v2.scanner import NON_TARGET_BASES
+          report = json.loads(Path("rebuild_v2/output/latest.json").read_text())
+          assert report["engine"] == "rebuild-shadow-1.0", "outdated scanner engine"
+          assert report["health"] == "COMPLETE", "incomplete scan"
+          assert report["scanned"] == report["universe"] and report["failures"] == 0, "missing market coverage"
+          age = (dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(report["completed_at"])).total_seconds()
+          assert 0 <= age < 900, "stale report"
+          for candidate in report["watch"]:
+              pair = candidate["pair"]
+              assert not any(pair.startswith(base + "ZUSD") or pair == base + "USD" for base in NON_TARGET_BASES), f"non-target market: {pair}"
+              assert candidate["move24_pct"] > 0, f"non-positive momentum: {pair}"
+          print(f"ACCEPTED engine={report['engine']} scanned={report['scanned']} watches={len(report['watch'])} age_seconds={age:.0f}")
+          PY
       - name: Save history and report to dedicated branch
         if: success()
         shell: bash
