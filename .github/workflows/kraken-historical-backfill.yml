@@ -7,6 +7,12 @@ on:
       - 'historical/backfill.py'
       - 'historical/compact.py'
       - '.github/workflows/kraken-historical-backfill.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'historical/backfill.py'
+      - 'historical/compact.py'
+      - '.github/workflows/kraken-historical-backfill.yml'
 jobs:
   backfill:
     runs-on: ubuntu-latest
