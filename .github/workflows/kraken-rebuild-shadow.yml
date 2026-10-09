@@ -81,7 +81,7 @@ jobs:
                   status["error"]=str(e)
           else:
               status["error"]="latest.json missing"
-          Path("rebuild_v2/output/acceptance.json").write_text(json.dumps(status,indent=2)+"\\n")
+          Path("rebuild_v2/output/acceptance.json").write_text(json.dumps(status,indent=2)+"\n")
           print(json.dumps(status))
           PY
       - name: Save history and report to dedicated branch
