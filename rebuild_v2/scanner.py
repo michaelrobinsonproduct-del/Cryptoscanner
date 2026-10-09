@@ -75,6 +75,9 @@ NON_TARGET_BASES = {"USD", "ZUSD", "EUR", "ZEUR", "GBP", "ZGBP", "AUD", "ZAUD", 
 def eligible_crypto_pair(meta):
     return meta.get("base", "").upper() not in NON_TARGET_BASES
 
+def eligible_watch(metrics):
+    return metrics["score"] >= 60 and metrics["move24_pct"] > 0
+
 def scan():
     started = dt.datetime.now(dt.timezone.utc)
     pairs = {k: v for k, v in api("AssetPairs").items() if v.get("status") == "online" and v.get("quote") in ("ZUSD", "USD") and not k.endswith(".d") and eligible_crypto_pair(v)}
@@ -87,7 +90,7 @@ def scan():
                 raise ValueError("missing ticker")
             metrics = rank(ticker)
             market_quotes.append({"pair":pair,"bid":float(ticker["b"][0])})
-            if metrics["score"] >= 60 and metrics["move24_pct"] > 0:
+            if eligible_watch(metrics):
                 watches.append({"pair": pair, **metrics, "status": "WATCH"})
         except (KeyError, ValueError, TypeError, ZeroDivisionError) as exc:
             failed.append({"pair": pair, "error": str(exc)})
