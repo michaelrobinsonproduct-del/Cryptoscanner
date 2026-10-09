@@ -32,13 +32,13 @@ jobs:
         run: |
           mkdir -p historical/output
           gh run download "${{ github.event.workflow_run.id || 37181233660 }}" -R "${{ github.repository }}" -n kraken-historical-derived -D historical/output
-          test -s historical/output/research_training.ndjson
+          test -s historical/output/research.ndjson
       - name: Mine multi-indicator patterns with independent chronological test
         run: |
-          python historical/analyze_interactions.py historical/output/research_training.ndjson historical/output/interaction_model.json
+          python historical/analyze_interactions.py historical/output/research.ndjson historical/output/interaction_model.json
       - name: Analyze historical patterns using out-of-time holdout
         run: |
-          python historical/analyze.py historical/output/research_training.ndjson historical/output/model.json
+          python historical/analyze.py historical/output/research.ndjson historical/output/model.json
           python - <<'PY'
           import json
           m=json.load(open('historical/output/model.json'))
