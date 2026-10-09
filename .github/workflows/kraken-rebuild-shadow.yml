@@ -9,11 +9,16 @@ on:
       - '.github/workflows/kraken-rebuild-shadow.yml'
   schedule:
     - cron: '*/15 * * * *'
-  permissions:
-  contents: write
-  permissions:
+  
+  schedule:
+    - cron: '*/15 * * * *'
+
+permissions:
   contents: write
   id-token: write
+
+concurrency:
+
 concurrency:
   group: kraken-rebuild-shadow
   cancel-in-progress: false
