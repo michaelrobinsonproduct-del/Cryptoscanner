@@ -27,6 +27,9 @@ jobs:
           mkdir -p historical/output
           gh run download "${{ github.event.workflow_run.id || 37181233660 }}" -R "${{ github.repository }}" -n kraken-historical-derived -D historical/output
           test -s historical/output/research_training.ndjson
+      - name: Mine multi-indicator patterns with independent chronological test
+        run: |
+          python historical/analyze_interactions.py historical/output/research_training.ndjson historical/output/interaction_model.json
       - name: Analyze historical patterns using out-of-time holdout
         run: |
           python historical/analyze.py historical/output/research_training.ndjson historical/output/model.json
@@ -41,11 +44,13 @@ jobs:
         shell: bash
         run: |
           cp historical/output/model.json /tmp/kraken-historical-model.json
+          cp historical/output/interaction_model.json /tmp/kraken-interaction-model.json
           for attempt in 1 2 3 4 5; do
             git fetch origin rebuild-history
             git checkout -B rebuild-history origin/rebuild-history
             cp /tmp/kraken-historical-model.json historical_model.json
-            git add historical_model.json
+            cp /tmp/kraken-interaction-model.json interaction_model.json
+            git add historical_model.json interaction_model.json
             git -c user.name=kraken-rebuild-bot -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Historical archive model with chronological holdout' || true
             if git push origin HEAD:rebuild-history; then exit 0; fi
             sleep 4
@@ -55,5 +60,7 @@ jobs:
         if: always()
         with:
           name: kraken-historical-model
-          path: historical/output/model.json
+          path: |
+            historical/output/model.json
+            historical/output/interaction_model.json
           retention-days: 30
