@@ -11,7 +11,9 @@ on:
     - cron: '*/15 * * * *'
   permissions:
   contents: write
+  permissions:
   contents: write
+  id-token: write
 concurrency:
   group: kraken-rebuild-shadow
   cancel-in-progress: false
