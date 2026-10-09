@@ -139,7 +139,7 @@ jobs:
           else:
               status["error"]="latest.json missing"
           if schedule:
-              status["reliability"]={"last_gap_seconds":schedule.get("previous_scan_age_seconds"),"missed_15m_intervals":schedule.get("missed_15m_intervals"),"schedule_warning":schedule.get("schedule_warning"),"rolling_24h":"INSUFFICIENT_EXECUTION_RECEIPTS","rolling_7d":"INSUFFICIENT_EXECUTION_RECEIPTS"}
+              status["reliability"]={"last_gap_seconds":schedule.get("previous_scan_age_seconds"),"missed_15m_intervals":schedule.get("missed_15m_intervals"),"schedule_warning":schedule.get("schedule_warning"),"rolling_24h":r.get("reliability_scorecard",{}).get("24h"),"rolling_7d":r.get("reliability_scorecard",{}).get("168h")}
           status["delivery"]={"shadow_notifications":"NOT_CONFIGURED","production_push_email":"NOT_VERIFIED_BY_THIS_WORKFLOW"}
           Path("rebuild_v2/output/acceptance.json").write_text(json.dumps(status,indent=2)+"\n")
           print(json.dumps(status))
