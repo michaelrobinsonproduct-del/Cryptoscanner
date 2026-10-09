@@ -41,6 +41,22 @@ jobs:
           Path("rebuild_v2/output/history_baseline.json").write_text(json.dumps(counts))
           print("RESTORED_HISTORY",counts)
           PY
+      - name: Check schedule continuity
+        shell: bash
+        run: |
+          python - <<'PY'
+          import datetime as dt,json
+          from pathlib import Path
+          p=Path("rebuild_v2/output/history_baseline.json")
+          baseline=json.loads(p.read_text())
+          import sqlite3
+          db=sqlite3.connect("rebuild_v2/output/history.sqlite3")
+          latest=db.execute("SELECT MAX(created_at) FROM runs").fetchone()[0]
+          age=(dt.datetime.now(dt.timezone.utc)-dt.datetime.fromisoformat(latest)).total_seconds() if latest else None
+          status={"previous_scan_age_seconds":round(age) if age is not None else None,"missed_15m_intervals":max(0,int(age//900)-1) if age is not None else None,"schedule_warning":age is None or age>2100}
+          Path("rebuild_v2/output/schedule_health.json").write_text(json.dumps(status))
+          print("SCHEDULE_HEALTH",json.dumps(status))
+          PY
       - name: Unit tests
         run: python -m unittest discover -s rebuild_v2 -p 'test_*.py'
       - name: Run independent shadow scanner with bounded retry
@@ -98,6 +114,8 @@ jobs:
                   h=r.get("history_diagnostics") or {}
                   baseline_path=Path("rebuild_v2/output/history_baseline.json")
                   baseline=json.loads(baseline_path.read_text()) if baseline_path.exists() else None
+                  schedule_path=Path("rebuild_v2/output/schedule_health.json")
+                  schedule=json.loads(schedule_path.read_text()) if schedule_path.exists() else None
                   checks={
                       "engine_v1":r.get("engine")=="rebuild-shadow-1.0",
                       "market_scan_complete":r.get("health")=="COMPLETE" and r.get("scanned")==r.get("universe") and r.get("failures")==0,
@@ -108,7 +126,7 @@ jobs:
                       "history_continuity":baseline is not None and all(h.get(k,0)>=baseline[k] for k in ("runs","observations","outcomes")),
                       "new_run_recorded":baseline is not None and h.get("runs",0)>baseline["runs"],
                   }
-                  status.update(checks=checks,engine=r.get("engine"),completed_at=r.get("completed_at"),history=h,history_baseline=baseline)
+                  status.update(checks=checks,engine=r.get("engine"),completed_at=r.get("completed_at"),history=h,history_baseline=baseline,schedule_health=schedule)
                   status["acceptance"]="PASSED" if all(checks.values()) else "FAILED"
               except Exception as e:
                   status["error"]=str(e)
