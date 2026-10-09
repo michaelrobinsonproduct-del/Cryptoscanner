@@ -96,6 +96,19 @@ def pair_signal_adjustment(pair, min_samples=3):
         return 0
     return round(max(-6,min(6,(rate-0.10)*12*n/(n+20))),2)
 
+def historical_cohort_analysis(horizon=1):
+    """Analyze existing labeled observations without assuming independent samples."""
+    with connect() as con:
+        rows=con.execute("""SELECT o.status,COUNT(*),COUNT(DISTINCT o.pair),
+          AVG(x.return_pct),AVG(CASE WHEN x.return_pct>=2 THEN 1.0 ELSE 0 END),
+          AVG(CASE WHEN x.return_pct>=5 THEN 1.0 ELSE 0 END)
+          FROM outcomes x JOIN observations o ON o.run_id=x.run_id AND o.pair=x.pair
+          WHERE x.horizon_hours=? GROUP BY o.status""",(horizon,)).fetchall()
+    return {"horizon_hours":horizon,"cohorts":[{"status":s,"observations":n,"unique_pairs":pairs,
+        "mean_return_pct":round(avg,3),"gain_2pct_rate":round(hit2,4),
+        "gain_5pct_rate":round(hit5,4)} for s,n,pairs,avg,hit2,hit5 in rows],
+        "interpretation":"Diagnostic only; overlapping scan observations are correlated. No automated score tuning."}
+
 def history_diagnostics():
     """Expose actual durable history and prospective labeling readiness."""
     with connect() as con:
