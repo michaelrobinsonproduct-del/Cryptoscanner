@@ -24,7 +24,7 @@ def store_run(result):
     with connect() as con:
         con.execute("INSERT OR IGNORE INTO runs VALUES (?,?,?,?)",(rid,result["completed_at"],result["health"],json.dumps(result)))
         watched={c["pair"] for c in result.get("watch",[])}
-        for c in result.get("market_quotes",[]):
+        for c in (result.get("market_quotes") or result.get("watch",[])):
             if c.get("price",0)>0:
                 con.execute("INSERT OR IGNORE INTO observations VALUES (?,?,?,?,?)",(rid,c["pair"],c["price"],c.get("score",0),"WATCH" if c["pair"] in watched else "NOT_SELECTED"))
     # Durable history is restored and committed by the GitHub workflow.
