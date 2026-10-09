@@ -4,7 +4,7 @@ import tempfile
 import pathlib
 import history
 import datetime as dt
-from scanner import rank, confirm_watch, confirm_twice, eligible_crypto_pair, eligible_watch, historical_rule_bonus, historical_live_features
+from scanner import rank, confirm_watch, confirm_twice, eligible_crypto_pair, eligible_watch, historical_rule_bonus, historical_live_features, historical_rule_bonus, historical_live_features
 import time
 
 class ScannerTests(unittest.TestCase):
@@ -36,6 +36,26 @@ class ScannerTests(unittest.TestCase):
         self.assertAlmostEqual(f["pre_return_60m_pct"],12)
         self.assertAlmostEqual(f["volume_accel"],1)
         self.assertAlmostEqual(f["trade_accel"],1)
+    def test_historical_interaction_bonus_only_when_approved(self):
+        features={"pre_return_5m_pct":0.4,"pre_return_15m_pct":0.7,
+                  "pre_return_60m_pct":1.1,"volume_accel":2.3,
+                  "trade_accel":2.5,"volatility_pct":0.3}
+        model={"approved_rules":[["early","volume_accel_2x","trades_accel_2x"]]}
+        bonus,matched=historical_rule_bonus(features,model)
+        self.assertEqual(bonus,2)
+        self.assertEqual(len(matched),1)
+        self.assertEqual(historical_rule_bonus(features,{"approved_rules":[]})[0],0)
+        self.assertEqual(historical_rule_bonus({**features,"trade_accel":0.5},model)[0],0)
+    def test_historical_features_exclude_incomplete_candle(self):
+        candles=[]
+        for i in range(14):
+            candles.append([i*300,"1","1","1",str(100+i), "0","10",10])
+        candles[-1][4]="999999"
+        def fake(endpoint):return {"PAIR":candles,"last":0}
+        features=historical_live_features("PAIR",fake)
+        self.assertLess(features["pre_return_60m_pct"],20)
+        self.assertAlmostEqual(features["volume_accel"],1.0)
+        self.assertAlmostEqual(features["trade_accel"],1.0)
     def test_quote(self):
         t={"c":["10"],"o":"10","v":["0","10000"],"t":[0,500],"b":["9.99"],"a":["10.01"]}
         self.assertGreater(rank(t)["score"],0)
