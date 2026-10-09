@@ -76,7 +76,7 @@ def eligible_crypto_pair(meta):
     return meta.get("base", "").upper() not in NON_TARGET_BASES
 
 def eligible_watch(metrics):
-    return metrics["score"] >= 60 and metrics["move24_pct"] > 0
+    return metrics["score"] >= 35 and 0.5 <= metrics["move24_pct"] <= 12 and metrics["spread_bps"] <= 40
 
 def scan():
     started = dt.datetime.now(dt.timezone.utc)
