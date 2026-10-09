@@ -195,6 +195,9 @@ jobs:
                           assert body.get("actionable") is False, "shadow route marked actionable"
                           checks[endpoint]={"passed":True,"status_code":response.status}
                           break
+                  except urllib.error.HTTPError as exc:
+                      error="HTTP "+str(exc.code)+" "+exc.read(600).decode("utf-8","replace")
+                      if attempt<2: time.sleep(5)
                   except Exception as exc:
                       error=str(exc)
                       if attempt<2: time.sleep(5)
