@@ -60,3 +60,14 @@ def learning_report():
     return [{"horizon_hours":h,"sample_size":n,"gain_5pct_rate":round(g,4),
              "loss_5pct_rate":round(l,4),"model_tuning_allowed":n>=100}
             for h,n,g,l in rows]
+
+def history_diagnostics():
+    """Expose actual durable history and prospective labeling readiness."""
+    with connect() as con:
+        runs=con.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
+        observations=con.execute("SELECT COUNT(*) FROM observations").fetchone()[0]
+        outcomes=con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
+        oldest=con.execute("SELECT MIN(created_at) FROM runs").fetchone()[0]
+        newest=con.execute("SELECT MAX(created_at) FROM runs").fetchone()[0]
+        unlabeled=con.execute("SELECT COUNT(*) FROM observations o WHERE NOT EXISTS (SELECT 1 FROM outcomes x WHERE x.run_id=o.run_id AND x.pair=o.pair)").fetchone()[0]
+    return {"runs":runs,"observations":observations,"outcomes":outcomes,"unlabeled_observations":unlabeled,"oldest_run_at":oldest,"newest_run_at":newest,"learning_status":"OUTCOMES_AVAILABLE" if outcomes else "AWAITING_PROSPECTIVE_OUTCOMES","history_available":runs>0}
