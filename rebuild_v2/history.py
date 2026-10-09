@@ -71,3 +71,19 @@ def history_diagnostics():
         newest=con.execute("SELECT MAX(created_at) FROM runs").fetchone()[0]
         unlabeled=con.execute("SELECT COUNT(*) FROM observations o WHERE NOT EXISTS (SELECT 1 FROM outcomes x WHERE x.run_id=o.run_id AND x.pair=o.pair)").fetchone()[0]
     return {"runs":runs,"observations":observations,"outcomes":outcomes,"unlabeled_observations":unlabeled,"oldest_run_at":oldest,"newest_run_at":newest,"learning_status":"OUTCOMES_AVAILABLE" if outcomes else "AWAITING_PROSPECTIVE_OUTCOMES","history_available":runs>0}
+
+def reliability_scorecard(now=None):
+    """Observed scan completion coverage, not an estimate from individual successes."""
+    now=now or dt.datetime.now(dt.timezone.utc)
+    with connect() as con:
+        stamps=[dt.datetime.fromisoformat(row[0]) for row in con.execute("SELECT created_at FROM runs WHERE health='COMPLETE' ORDER BY created_at")]
+    result={}
+    for hours in (24,168):
+        start=now-dt.timedelta(hours=hours)
+        observed=sum(start<=stamp<=now for stamp in stamps)
+        # Do not infer past scheduled attempts from a database younger than the window.
+        span=(now-min(stamps)).total_seconds()/3600 if stamps else 0
+        sufficient=span>=hours
+        expected=hours*4
+        result[f"{hours}h"]={"observed_completed":observed,"expected_scheduled":expected if sufficient else None,"coverage_pct":round(100*min(observed,expected)/expected,2) if sufficient else None,"status":"MEASURED" if sufficient else "INSUFFICIENT_HISTORY"}
+    return result
