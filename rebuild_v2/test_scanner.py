@@ -4,10 +4,15 @@ import tempfile
 import pathlib
 import history
 import datetime as dt
-from scanner import rank, confirm_watch, confirm_twice
+from scanner import rank, confirm_watch, confirm_twice, eligible_crypto_pair
 import time
 
 class ScannerTests(unittest.TestCase):
+    def test_exclude_fiat_and_stablecoins(self):
+        for base in ("ZEUR", "ZGBP", "USD", "USDT", "USDC", "DAI", "PYUSD"):
+            self.assertFalse(eligible_crypto_pair({"base":base}))
+        for base in ("XXBT", "XETH", "SOL", "AKE", "HYPE"):
+            self.assertTrue(eligible_crypto_pair({"base":base}))
     def test_quote(self):
         t={"c":["10"],"o":"10","v":["0","10000"],"t":[0,500],"b":["9.99"],"a":["10.01"]}
         self.assertGreater(rank(t)["score"],0)
