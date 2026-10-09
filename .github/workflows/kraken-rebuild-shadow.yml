@@ -41,6 +41,11 @@ jobs:
           assert report["engine"] == "rebuild-shadow-1.0", "outdated scanner engine"
           assert report["health"] == "COMPLETE", "incomplete scan"
           assert report["scanned"] == report["universe"] and report["failures"] == 0, "missing market coverage"
+          assert report.get("persistence_health") == "COMPLETE", "persistence failed"
+          hist = report.get("history_diagnostics") or {}
+          assert hist.get("history_available") is True, "history unavailable"
+          assert hist.get("runs",0) >= 1 and hist.get("observations",0) >= len(report["watch"]), "missing history observations"
+          assert isinstance(hist.get("outcomes"),int) and hist["outcomes"] >= 0, "outcome diagnostics missing"
           age = (dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(report["completed_at"])).total_seconds()
           assert 0 <= age < 900, "stale report"
           for candidate in report["watch"]:
