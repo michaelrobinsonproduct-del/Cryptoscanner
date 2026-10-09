@@ -1,18 +1,18 @@
 name: Kraken Historical Model Recovery
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'historical/analyze.py'
-      - '.github/workflows/kraken-historical-model.yml'
+  workflow_run:
+    workflows: ['Kraken Historical Backfill']
+    types: [completed]
 permissions:
   contents: write
+  actions: read
 concurrency:
   group: kraken-historical-model
   cancel-in-progress: false
 jobs:
   analyze:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -25,7 +25,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p historical/output
-          gh run download 37181233660 -R "${{ github.repository }}" -n kraken-historical-derived -D historical/output
+          gh run download "${{ github.event.workflow_run.id || 37181233660 }}" -R "${{ github.repository }}" -n kraken-historical-derived -D historical/output
           test -s historical/output/research_training.ndjson
       - name: Analyze historical patterns using out-of-time holdout
         run: |
