@@ -38,7 +38,7 @@ jobs:
           test -s historical/output/research_training.ndjson
       - name: Mine multi-indicator patterns with independent chronological test
         run: |
-          python historical/analyze_interactions.py historical/output/research.ndjson historical/output/interaction_model.json
+          python historical/analyze_interactions.py historical/output/research_training.ndjson historical/output/interaction_model.json
       - name: Analyze historical patterns using out-of-time holdout
         run: |
           python historical/analyze.py historical/output/research.ndjson historical/output/model.json
@@ -50,7 +50,7 @@ jobs:
           x=json.load(open('historical/output/interaction_model.json'))
           assert x['schema_version']==2 and x['unique_pair_days']>=1000
           assert x['tested_combinations']>=100
-          assert len(x['splits']['test']['baseline'])>0
+          assert x['splits']['test']['baseline']['n']>0
           print('INTERACTION_MODEL_VALIDATED',x['unique_pair_days'],x['tested_combinations'],len(x['approved_rules']))
           print('HISTORICAL_MODEL_VALIDATED',m['approved_rules'])
           PY
