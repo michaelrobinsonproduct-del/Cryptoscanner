@@ -108,6 +108,7 @@ jobs:
           from pathlib import Path
           p=Path("rebuild_v2/output/latest.json")
           status={"generated_at":dt.datetime.now(dt.timezone.utc).isoformat(),"source":"kraken-rebuild-shadow","acceptance":"FAILED","checks":{}}
+          schedule=None
           if p.exists():
               try:
                   r=json.loads(p.read_text())
