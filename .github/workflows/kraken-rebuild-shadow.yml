@@ -23,9 +23,24 @@ jobs:
       - name: Restore persistent history from dedicated branch
         run: |
           mkdir -p rebuild_v2/output
+          set -euo pipefail
           if git fetch origin refs/heads/rebuild-history:refs/remotes/origin/rebuild-history; then
-            git show origin/rebuild-history:history.sqlite3 > rebuild_v2/output/history.sqlite3 || rm -f rebuild_v2/output/history.sqlite3
+            git show origin/rebuild-history:history.sqlite3 > rebuild_v2/output/history.sqlite3
+            test -s rebuild_v2/output/history.sqlite3
+          else
+            echo "HISTORY_BRANCH_MISSING: refusing to initialize empty history" >&2
+            exit 1
           fi
+          python - <<'PY'
+          import json,sqlite3
+          from pathlib import Path
+          db=sqlite3.connect("rebuild_v2/output/history.sqlite3")
+          result=db.execute("PRAGMA integrity_check").fetchone()[0]
+          assert result=="ok",f"history database corrupt: {result}"
+          counts={t:db.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("runs","observations","outcomes")}
+          Path("rebuild_v2/output/history_baseline.json").write_text(json.dumps(counts))
+          print("RESTORED_HISTORY",counts)
+          PY
       - name: Unit tests
         run: python -m unittest discover -s rebuild_v2 -p 'test_*.py'
       - name: Run independent shadow scanner
@@ -46,6 +61,10 @@ jobs:
           assert hist.get("history_available") is True, "history unavailable"
           assert hist.get("runs",0) >= 1 and hist.get("observations",0) >= len(report["watch"]), "missing history observations"
           assert isinstance(hist.get("outcomes"),int) and hist["outcomes"] >= 0, "outcome diagnostics missing"
+          baseline = json.loads(Path("rebuild_v2/output/history_baseline.json").read_text())
+          for field in ("runs","observations","outcomes"):
+              assert hist[field] >= baseline[field], f"history regression: {field}"
+          assert hist["runs"] >= baseline["runs"] + 1, "new scan not recorded"
           age = (dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(report["completed_at"])).total_seconds()
           assert 0 <= age < 900, "stale report"
           for candidate in report["watch"]:
@@ -67,6 +86,8 @@ jobs:
               try:
                   r=json.loads(p.read_text())
                   h=r.get("history_diagnostics") or {}
+                  baseline_path=Path("rebuild_v2/output/history_baseline.json")
+                  baseline=json.loads(baseline_path.read_text()) if baseline_path.exists() else None
                   checks={
                       "engine_v1":r.get("engine")=="rebuild-shadow-1.0",
                       "market_scan_complete":r.get("health")=="COMPLETE" and r.get("scanned")==r.get("universe") and r.get("failures")==0,
@@ -74,8 +95,10 @@ jobs:
                       "current_observations_saved":h.get("observations",0)>=len(r.get("watch",[])),
                       "outcome_diagnostics_present":isinstance(h.get("outcomes"),int),
                       "non_actionable_shadow":r.get("recommendation")=="NO VERIFIED BUYS",
+                      "history_continuity":baseline is not None and all(h.get(k,0)>=baseline[k] for k in ("runs","observations","outcomes")),
+                      "new_run_recorded":baseline is not None and h.get("runs",0)>baseline["runs"],
                   }
-                  status.update(checks=checks,engine=r.get("engine"),completed_at=r.get("completed_at"),history=h)
+                  status.update(checks=checks,engine=r.get("engine"),completed_at=r.get("completed_at"),history=h,history_baseline=baseline)
                   status["acceptance"]="PASSED" if all(checks.values()) else "FAILED"
               except Exception as e:
                   status["error"]=str(e)
