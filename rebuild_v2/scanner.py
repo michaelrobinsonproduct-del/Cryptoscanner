@@ -95,11 +95,10 @@ def scan():
         except (KeyError, ValueError, TypeError, ZeroDivisionError) as exc:
             failed.append({"pair": pair, "error": str(exc)})
     # Calibrate conservatively from prospectively observed hits and misses.
-    from history import historical_signal_adjustments
+    from history import historical_signal_adjustments, pair_signal_adjustment
     calibration = historical_signal_adjustments()
-    if calibration["ready"]:
-        for candidate in watches:
-            candidate["score"] = round(candidate["score"] + calibration["watch_score_adjustment"],2)
+    for candidate in watches:
+        candidate["score"] = round(candidate["score"] + pair_signal_adjustment(candidate["pair"]) + (calibration["watch_score_adjustment"] if calibration["ready"] else 0),2)
     watches.sort(key=lambda x: -x["score"])
     # Avoid treating coins already extended >15% in 24h as early discoveries.
     watches = [c for c in watches if -10 <= c["move24_pct"] <= 15]
