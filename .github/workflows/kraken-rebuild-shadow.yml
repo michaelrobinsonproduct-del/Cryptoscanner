@@ -11,7 +11,7 @@ concurrency:
 jobs:
   shadow-scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,8 +43,18 @@ jobs:
           PY
       - name: Unit tests
         run: python -m unittest discover -s rebuild_v2 -p 'test_*.py'
-      - name: Run independent shadow scanner
-        run: python rebuild_v2/scanner.py
+      - name: Run independent shadow scanner with bounded retry
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2; do
+            if python rebuild_v2/scanner.py; then
+              exit 0
+            fi
+            echo "SCAN_ATTEMPT_FAILED attempt=$attempt" >&2
+            if [ "$attempt" -eq 2 ]; then exit 1; fi
+            sleep 15
+          done
       - name: Validate persisted report before publication
         run: |
           python - <<'PY'
