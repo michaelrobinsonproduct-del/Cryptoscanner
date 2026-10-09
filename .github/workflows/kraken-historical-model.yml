@@ -33,6 +33,7 @@ jobs:
           mkdir -p historical/output
           gh run download "${{ github.event.workflow_run.id || 37181233660 }}" -R "${{ github.repository }}" -n kraken-historical-derived -D historical/output
           test -s historical/output/research.ndjson
+          echo 'Starting complete historical interaction analysis'
           wc -lc historical/output/research.ndjson
           test -s historical/output/research_training.ndjson
       - name: Mine multi-indicator patterns with independent chronological test
