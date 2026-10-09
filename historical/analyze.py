@@ -16,6 +16,8 @@ rules={
 counts={split:{name:{"rows":0,"major_movers":0} for name in ["baseline",*rules]} for split in ("train","holdout")}
 for line in source.open():
     r=json.loads(line)
+    # Only systematic controls provide an unbiased market-wide denominator.
+    if not r.get("control_sampled",False):continue
     keys=("pre_return_60m_pct","volume_accel","trade_accel","max_forward_return_pct")
     if any(r.get(k) is None for k in keys):continue
     if not all(math.isfinite(float(r[k])) for k in keys):continue
@@ -39,7 +41,7 @@ model={"schema_version":1,"source":"Kraken 2026Q2 5m archive; historical/backfil
 "trained_at":dt.datetime.now(dt.timezone.utc).isoformat(),"train_rows":train["rows"],
 "holdout_rows":holdout["rows"],"holdout_start":cut,"baseline_train":train,"baseline_holdout":holdout,
 "rules":results,"approved_rules":[k for k,v in results.items() if v["eligible"]],
-"limitations":["Backfill oversamples future >=10% movers; sampled positive rates are NOT market probabilities",
+"limitations":["Only systematic weekly/hourly controls used; temporal overlap and sampling variance remain",
 "Overlapping anchors are correlated; holdout is chronological, not independent episodes",
 "Archive ends June 2026; regime shift possible","No historical order-book or executable entry evidence",
 "Research bonuses are bounded and never authorize buys"]}
