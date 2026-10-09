@@ -138,7 +138,7 @@ def scan():
     from history import prospective_learning
     calibration = prospective_learning()
     for candidate in watches:
-        candidate["score"] = round(candidate["score"] + (calibration["adjustment"] if calibration["validated"] else 0),2)
+        candidate["score"] = round(candidate["score"] + (calibration["adjustment"] if calibration["validated"] and candidate["score"] >= calibration["score_threshold"] else 0),2)
     interaction_path=pathlib.Path("rebuild_v2/output/interaction_model.json")
     interaction=None
     if interaction_path.exists():
