@@ -137,9 +137,21 @@ def scan():
                 model=candidate_model
         except (ValueError,OSError):
             pass
+    # The previous archive model used an outcome-selected sample. Do not score from it.
+    # Require a representative-control interaction model and live feature parity.
+    interaction_path=pathlib.Path("rebuild_v2/output/interaction_model.json")
+    interaction=None
+    if interaction_path.exists():
+        try:
+            candidate_interaction=json.loads(interaction_path.read_text())
+            if candidate_interaction.get("schema_version")==2 and candidate_interaction.get("unique_pair_days",0)>=1000:
+                interaction=candidate_interaction
+        except (ValueError,OSError):
+            pass
+    model=None  # legacy single-factor boosts disabled pending unbiased interaction parity
     research={"status":("ACTIVE_BONUSES" if model.get("approved_rules") else "VALIDATED_NO_APPROVED_RULES") if model else "MODEL_NOT_RESTORED",
               "approved_rules":model.get("approved_rules",[]) if model else [],
-              "candidates_enriched":0,"feature_failures":0,"ranking_changes_possible":False}
+              "candidates_enriched":0,"feature_failures":0,"ranking_changes_possible":False,"interaction_model_loaded":bool(interaction),"feature_parity":"NOT_IMPLEMENTED","legacy_bias_guard":"ENFORCED"}
     if model and model.get("approved_rules"):
         for candidate in sorted(watches,key=lambda x:-x["score"])[:12]:
             try:
