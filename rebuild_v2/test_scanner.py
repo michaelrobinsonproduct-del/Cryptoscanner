@@ -52,6 +52,27 @@ class ScannerTests(unittest.TestCase):
                     self.assertEqual(db.execute("SELECT count(*) FROM runs").fetchone()[0],1)
                     self.assertEqual(db.execute("SELECT count(*) FROM observations").fetchone()[0],1)
             finally: history.DB=original
+    def test_history_diagnostics_before_and_after_outcome(self):
+        with tempfile.TemporaryDirectory() as folder:
+            original=history.DB
+            history.DB=pathlib.Path(folder)/"history.db"
+            try:
+                first=history.history_diagnostics()
+                self.assertEqual(first["runs"],0)
+                self.assertFalse(first["history_available"])
+                t0=dt.datetime.now(dt.timezone.utc)-dt.timedelta(hours=1,minutes=5)
+                run={"started_at":t0.isoformat(),"completed_at":t0.isoformat(),"health":"COMPLETE","watch":[{"pair":"ABCUSD","price":100,"score":80,"status":"WATCH"}]}
+                history.store_run(run)
+                before=history.history_diagnostics()
+                self.assertEqual(before["observations"],1)
+                self.assertEqual(before["outcomes"],0)
+                history.evaluate_outcomes({"completed_at":dt.datetime.now(dt.timezone.utc).isoformat(),"market_quotes":[{"pair":"ABCUSD","bid":110}]})
+                after=history.history_diagnostics()
+                self.assertEqual(after["outcomes"],1)
+                self.assertEqual(after["unlabeled_observations"],0)
+                self.assertEqual(after["learning_status"],"OUTCOMES_AVAILABLE")
+            finally:
+                history.DB=original
     def test_prospective_outcome_uses_bid(self):
         with tempfile.TemporaryDirectory() as folder:
             original=history.DB
