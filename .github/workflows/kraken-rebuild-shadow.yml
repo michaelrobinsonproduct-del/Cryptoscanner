@@ -151,6 +151,7 @@ jobs:
           cp rebuild_v2/output/history.sqlite3 /tmp/kraken-history.sqlite3
           cp rebuild_v2/output/latest.json /tmp/kraken-latest.json
           cp rebuild_v2/output/acceptance.json /tmp/kraken-acceptance.json
+          cp rebuild_v2/output/schedule_health.json /tmp/kraken-schedule-health.json
           if git show-ref --verify --quiet refs/remotes/origin/rebuild-history; then
             git checkout -B rebuild-history origin/rebuild-history
           else
@@ -160,7 +161,8 @@ jobs:
           cp /tmp/kraken-history.sqlite3 history.sqlite3
           cp /tmp/kraken-latest.json latest.json
           cp /tmp/kraken-acceptance.json acceptance.json
-          git add history.sqlite3 latest.json acceptance.json
+          cp /tmp/kraken-schedule-health.json schedule_health.json
+          git add history.sqlite3 latest.json acceptance.json schedule_health.json
           git -c user.name='kraken-rebuild-bot' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Shadow scan history ${GITHUB_RUN_ID}" || true
           git push origin HEAD:refs/heads/rebuild-history
       - name: Retain independent recovery artifact
@@ -171,6 +173,7 @@ jobs:
           path: |
             rebuild_v2/output/latest.json
             rebuild_v2/output/acceptance.json
+            rebuild_v2/output/schedule_health.json
             rebuild_v2/output/history.sqlite3
           if-no-files-found: warn
           retention-days: 30
