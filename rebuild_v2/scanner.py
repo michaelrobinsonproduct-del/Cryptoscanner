@@ -70,9 +70,14 @@ def confirm_twice(pair, snapshot, fetch=api, wait=lambda seconds: time.sleep(sec
         raise ValueError("confirmation timestamps not ordered")
     return {"pair": pair, "first": first, "second": second, "status": "DOUBLE_CONFIRMED_WATCH", "entry_approved": False}
 
+NON_TARGET_BASES = {"USD", "ZUSD", "EUR", "ZEUR", "GBP", "ZGBP", "AUD", "ZAUD", "CAD", "ZCAD", "CHF", "ZCHF", "JPY", "ZJPY", "USDT", "USDC", "DAI", "PYUSD", "TUSD", "EURC", "RLUSD", "FDUSD", "USDG", "USDD", "USDE", "USDS", "UST", "USTC"}
+
+def eligible_crypto_pair(meta):
+    return meta.get("base", "").upper() not in NON_TARGET_BASES
+
 def scan():
     started = dt.datetime.now(dt.timezone.utc)
-    pairs = {k: v for k, v in api("AssetPairs").items() if v.get("status") == "online" and v.get("quote") in ("ZUSD", "USD") and not k.endswith(".d")}
+    pairs = {k: v for k, v in api("AssetPairs").items() if v.get("status") == "online" and v.get("quote") in ("ZUSD", "USD") and not k.endswith(".d") and eligible_crypto_pair(v)}
     tickers = api("Ticker")
     watches, failed, market_quotes = [], [], []
     for pair, meta in pairs.items():
@@ -82,7 +87,7 @@ def scan():
                 raise ValueError("missing ticker")
             metrics = rank(ticker)
             market_quotes.append({"pair":pair,"bid":float(ticker["b"][0])})
-            if metrics["score"] >= 60:
+            if metrics["score"] >= 60 and metrics["move24_pct"] > 0:
                 watches.append({"pair": pair, **metrics, "status": "WATCH"})
         except (KeyError, ValueError, TypeError, ZeroDivisionError) as exc:
             failed.append({"pair": pair, "error": str(exc)})
@@ -97,7 +102,7 @@ def scan():
         except Exception as exc:
             confirmations.append({"pair": candidate["pair"], "status": "CONFIRMATION_FAILED", "error": str(exc), "entry_approved": False})
     finished = dt.datetime.now(dt.timezone.utc)
-    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-0.9", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "market_quotes": market_quotes, "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
+    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-1.0", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "market_quotes": market_quotes, "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
 
 def main():
     try:
