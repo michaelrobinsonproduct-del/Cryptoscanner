@@ -112,6 +112,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python - <<'PY'
+          import json,sqlite3
+          from pathlib import Path
+          status=json.loads(Path("rebuild_v2/output/acceptance.json").read_text())
+          assert status["acceptance"]=="PASSED","acceptance report did not pass"
+          db=sqlite3.connect("rebuild_v2/output/history.sqlite3")
+          assert db.execute("PRAGMA integrity_check").fetchone()[0]=="ok","history integrity failure before publish"
+          PY
           cp rebuild_v2/output/history.sqlite3 /tmp/kraken-history.sqlite3
           cp rebuild_v2/output/latest.json /tmp/kraken-latest.json
           cp rebuild_v2/output/acceptance.json /tmp/kraken-acceptance.json
