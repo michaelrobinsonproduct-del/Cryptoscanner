@@ -137,7 +137,7 @@ def scan():
                 model=candidate_model
         except (ValueError,OSError):
             pass
-    research={"status":"ACTIVE" if model else "MODEL_NOT_RESTORED",
+    research={"status":("ACTIVE_BONUSES" if model.get("approved_rules") else "VALIDATED_NO_APPROVED_RULES") if model else "MODEL_NOT_RESTORED",
               "approved_rules":model.get("approved_rules",[]) if model else [],
               "candidates_enriched":0,"feature_failures":0,"ranking_changes_possible":False}
     if model and model.get("approved_rules"):
