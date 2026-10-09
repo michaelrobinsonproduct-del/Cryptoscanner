@@ -52,6 +52,20 @@ class ScannerTests(unittest.TestCase):
                     self.assertEqual(db.execute("SELECT count(*) FROM runs").fetchone()[0],1)
                     self.assertEqual(db.execute("SELECT count(*) FROM observations").fetchone()[0],1)
             finally: history.DB=original
+    def test_reliability_scorecard_requires_full_window(self):
+        with tempfile.TemporaryDirectory() as folder:
+            original=history.DB
+            history.DB=pathlib.Path(folder)/"history.db"
+            try:
+                now=dt.datetime.now(dt.timezone.utc)
+                run={"started_at":now.isoformat(),"completed_at":now.isoformat(),"health":"COMPLETE","watch":[]}
+                history.store_run(run)
+                score=history.reliability_scorecard(now=now)
+                self.assertEqual(score["24h"]["status"],"INSUFFICIENT_HISTORY")
+                self.assertIsNone(score["24h"]["coverage_pct"])
+                self.assertEqual(score["168h"]["status"],"INSUFFICIENT_HISTORY")
+            finally:
+                history.DB=original
     def test_history_diagnostics_before_and_after_outcome(self):
         with tempfile.TemporaryDirectory() as folder:
             original=history.DB
