@@ -88,6 +88,14 @@ def historical_signal_adjustments(min_samples=30):
     delta=(a["hit_rate"]-b["hit_rate"]) if ready else 0
     return {"ready":ready,"groups":stats,"watch_score_adjustment":round(max(-8,min(8,delta*40)),2) if ready else 0}
 
+def pair_signal_adjustment(pair, min_samples=3):
+    with connect() as con:
+        row=con.execute("SELECT COUNT(*), AVG(CASE WHEN x.return_pct>=5 THEN 1.0 ELSE 0 END) FROM outcomes x JOIN observations o ON o.run_id=x.run_id AND o.pair=x.pair WHERE x.horizon_hours=4 AND o.pair=?",(pair,)).fetchone()
+    n,rate=row
+    if n<min_samples:
+        return 0
+    return round(max(-6,min(6,(rate-0.10)*12*n/(n+20))),2)
+
 def history_diagnostics():
     """Expose actual durable history and prospective labeling readiness."""
     with connect() as con:
