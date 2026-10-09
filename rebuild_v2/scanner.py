@@ -135,10 +135,10 @@ def scan():
         except (KeyError, ValueError, TypeError, ZeroDivisionError) as exc:
             failed.append({"pair": pair, "error": str(exc)})
     # Calibrate conservatively from prospectively observed hits and misses.
-    from history import historical_signal_adjustments, pair_signal_adjustment
-    calibration = historical_signal_adjustments()
+    from history import prospective_learning
+    calibration = prospective_learning()
     for candidate in watches:
-        candidate["score"] = round(candidate["score"] + pair_signal_adjustment(candidate["pair"]) + (calibration["watch_score_adjustment"] if calibration["ready"] else 0),2)
+        candidate["score"] = round(candidate["score"] + (calibration["adjustment"] if calibration["validated"] else 0),2)
     interaction_path=pathlib.Path("rebuild_v2/output/interaction_model.json")
     interaction=None
     if interaction_path.exists():
@@ -178,7 +178,7 @@ def scan():
         except Exception as exc:
             confirmations.append({"pair": candidate["pair"], "status": "CONFIRMATION_FAILED", "error": str(exc), "entry_approved": False})
     finished = dt.datetime.now(dt.timezone.utc)
-    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-1.0", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "market_quotes": market_quotes, "historical_research": research, "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
+    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-1.0", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "market_quotes": market_quotes, "prospective_learning": calibration, "historical_research": research, "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
 
 def main():
     try:
