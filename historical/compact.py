@@ -8,7 +8,8 @@ with open(src) as r, open(dst,"w") as w:
         day=x["anchor_at"][:10]
         key=(x["pair"],day)
         keep=False
-        if x.get("major_mover") and x.get("still_early"): keep=True
+        if x.get("control_sampled"): keep=True
+        elif x.get("major_mover") and x.get("still_early"): keep=True
         elif key not in seen:
             seen.add(key); keep=True
         if keep:
