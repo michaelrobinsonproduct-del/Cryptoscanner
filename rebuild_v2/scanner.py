@@ -90,8 +90,8 @@ def historical_live_features(pair, fetch=api):
     volumes=[float(x[6]) for x in b]
     trades=[float(x[7]) for x in b]
     if any(p<=0 for p in closes):raise ValueError("invalid OHLC price")
-    prevv=sum(volumes[:6]);curv=sum(volumes[6:12])
-    prevt=sum(trades[:6]);curt=sum(trades[6:12])
+    prevv=sum(volumes[1:7]);curv=sum(volumes[7:13])
+    prevt=sum(trades[1:7]);curt=sum(trades[7:13])
     returns=[100*(closes[j]/closes[j-1]-1) for j in range(1,13)]
     return {"pre_return_5m_pct":100*(closes[-1]/closes[-2]-1),
             "pre_return_15m_pct":100*(closes[-1]/closes[-4]-1),
