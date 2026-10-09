@@ -14,10 +14,12 @@ class ScannerTests(unittest.TestCase):
         for base in ("XXBT", "XETH", "SOL", "AKE", "HYPE"):
             self.assertTrue(eligible_crypto_pair({"base":base}))
     def test_positive_momentum_gate(self):
-        self.assertFalse(eligible_watch({"score":99,"move24_pct":-0.01}))
-        self.assertFalse(eligible_watch({"score":99,"move24_pct":0}))
-        self.assertFalse(eligible_watch({"score":59,"move24_pct":2}))
-        self.assertTrue(eligible_watch({"score":60,"move24_pct":0.01}))
+        base={"score":60,"move24_pct":2,"spread_bps":5}
+        self.assertTrue(eligible_watch(base))
+        self.assertFalse(eligible_watch({**base,"move24_pct":0.1}))
+        self.assertFalse(eligible_watch({**base,"move24_pct":15}))
+        self.assertFalse(eligible_watch({**base,"spread_bps":45}))
+        self.assertFalse(eligible_watch({**base,"score":30}))
     def test_quote(self):
         t={"c":["10"],"o":"10","v":["0","10000"],"t":[0,500],"b":["9.99"],"a":["10.01"]}
         self.assertGreater(rank(t)["score"],0)
