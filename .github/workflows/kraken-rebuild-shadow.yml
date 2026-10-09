@@ -200,7 +200,7 @@ jobs:
               else:
                   checks[endpoint]={"passed":False,"error":error}
           receipt={"checked_at":dt.datetime.now(dt.timezone.utc).isoformat(),"checks":checks,"verified":all(x["passed"] for x in checks.values())}
-          Path("rebuild_v2/output/controller_http_receipt.json").write_text(json.dumps(receipt,indent=2)+"\\n")
+          Path("rebuild_v2/output/controller_http_receipt.json").write_text(json.dumps(receipt,indent=2)+"\n")
           print("CONTROLLER_HTTP_RECEIPT",json.dumps(receipt))
           assert receipt["verified"],"controller HTTP read-back failed"
           PY
