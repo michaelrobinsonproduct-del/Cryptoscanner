@@ -174,6 +174,36 @@ jobs:
           git add history.sqlite3 latest.json acceptance.json schedule_health.json
           git -c user.name='kraken-rebuild-bot' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Shadow scan history ${GITHUB_RUN_ID}" || true
           git push origin HEAD:refs/heads/rebuild-history
+      - name: Verify live controller HTTP read-back
+        if: success()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import datetime as dt,json,time,urllib.request,urllib.error
+          from pathlib import Path
+          base="https://kraken-autonomous-controller-production.up.railway.app"
+          checks={}
+          for endpoint in ("/shadow/acceptance","/shadow/results"):
+              error=None
+              for attempt in range(3):
+                  try:
+                      req=urllib.request.Request(base+endpoint,headers={"Cache-Control":"no-cache","User-Agent":"kraken-shadow-acceptance/1.0"})
+                      with urllib.request.urlopen(req,timeout=12) as response:
+                          body=json.load(response)
+                          assert response.status==200 and body.get("verified") is True, "unverified response"
+                          assert body.get("actionable") is False, "shadow route marked actionable"
+                          checks[endpoint]={"passed":True,"status_code":response.status}
+                          break
+                  except Exception as exc:
+                      error=str(exc)
+                      if attempt<2: time.sleep(5)
+              else:
+                  checks[endpoint]={"passed":False,"error":error}
+          receipt={"checked_at":dt.datetime.now(dt.timezone.utc).isoformat(),"checks":checks,"verified":all(x["passed"] for x in checks.values())}
+          Path("rebuild_v2/output/controller_http_receipt.json").write_text(json.dumps(receipt,indent=2)+"\\n")
+          print("CONTROLLER_HTTP_RECEIPT",json.dumps(receipt))
+          assert receipt["verified"],"controller HTTP read-back failed"
+          PY
       - name: Retain independent recovery artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -183,6 +213,7 @@ jobs:
             rebuild_v2/output/latest.json
             rebuild_v2/output/acceptance.json
             rebuild_v2/output/schedule_health.json
+            rebuild_v2/output/controller_http_receipt.json
             rebuild_v2/output/history.sqlite3
           if-no-files-found: warn
           retention-days: 30
