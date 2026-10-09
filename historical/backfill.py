@@ -53,10 +53,11 @@ with zipfile.ZipFile(zp) as z:
    fwd=close[i+1:min(len(close),i+289)]
    mx=max((pct(c,x) or -999 for x in fwd),default=None)
    if mx is None:continue
-   keep=mx>=10 or (t//86400)%7==0 and (i%12==0)
+   control_sampled=(t//86400)%7==0 and (i%12==0)
+   keep=mx>=10 or control_sampled
    if not keep:continue
    early=abs(p60 or 999)<=3
-   rec={"pair":pair,"anchor_at":datetime.fromtimestamp(t,timezone.utc).isoformat(),"anchor_price":c,"pre_return_5m_pct":p5,"pre_return_15m_pct":p15,"pre_return_60m_pct":p60,"volume_accel":vacc,"trade_accel":tacc,"volatility_pct":vola,"max_forward_return_pct":mx,"still_early":early,"major_mover":mx>=20,"source":"kraken_archive_5m_2026q2","features":{"interval":"5m","no_lookahead":True}}
+   rec={"pair":pair,"anchor_at":datetime.fromtimestamp(t,timezone.utc).isoformat(),"anchor_price":c,"pre_return_5m_pct":p5,"pre_return_15m_pct":p15,"pre_return_60m_pct":p60,"volume_accel":vacc,"trade_accel":tacc,"volatility_pct":vola,"max_forward_return_pct":mx,"still_early":early,"major_mover":mx>=20,"control_sampled":control_sampled,"source":"kraken_archive_5m_2026q2","features":{"interval":"5m","no_lookahead":True}}
    pairrows.append(rec); rows.append(rec)
   # episode-dedupe major windows: new episode after >24h gap
   majors=[r for r in pairrows if r["major_mover"]]
