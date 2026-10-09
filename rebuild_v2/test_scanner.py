@@ -4,7 +4,7 @@ import tempfile
 import pathlib
 import history
 import datetime as dt
-from scanner import rank, confirm_watch, confirm_twice, eligible_crypto_pair, eligible_watch
+from scanner import rank, confirm_watch, confirm_twice, eligible_crypto_pair, eligible_watch, historical_rule_bonus, historical_live_features
 import time
 
 class ScannerTests(unittest.TestCase):
@@ -20,6 +20,22 @@ class ScannerTests(unittest.TestCase):
         self.assertFalse(eligible_watch({**base,"move24_pct":15}))
         self.assertFalse(eligible_watch({**base,"spread_bps":45}))
         self.assertFalse(eligible_watch({**base,"score":30}))
+    def test_historical_bonus_requires_approved_rules(self):
+        f={"pre_return_60m_pct":1.0,"volume_accel":3,"trade_accel":2.5}
+        self.assertEqual(historical_rule_bonus(f,{"approved_rules":[]}), (0,[]))
+        bonus,rules=historical_rule_bonus(f,{"approved_rules":["early_volume","volume_trades"]})
+        self.assertEqual(bonus,4)
+        self.assertEqual(rules,["early_volume","volume_trades"])
+        self.assertEqual(historical_rule_bonus({**f,"volume_accel":None},{"approved_rules":["early_volume"]}),(0,[]))
+    def test_historical_features_exclude_partial_bar(self):
+        bars=[]
+        for i in range(14):
+            bars.append([i,"1","1","1",str(100+i),"1","10","20"])
+        bars[-1][4]="999999" # incomplete candle must not contaminate features
+        f=historical_live_features("ABCUSD",lambda endpoint:{"ABCUSD":bars,"last":13})
+        self.assertAlmostEqual(f["pre_return_60m_pct"],12)
+        self.assertAlmostEqual(f["volume_accel"],1)
+        self.assertAlmostEqual(f["trade_accel"],1)
     def test_quote(self):
         t={"c":["10"],"o":"10","v":["0","10000"],"t":[0,500],"b":["9.99"],"a":["10.01"]}
         self.assertGreater(rank(t)["score"],0)
