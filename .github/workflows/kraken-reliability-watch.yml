@@ -1,0 +1,43 @@
+name: Kraken Reliability Watch
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify production scanner and durable scan acceptance
+        env:
+          RUNNER_URL: https://kraken-autonomous-runner-production.up.railway.app
+        run: |
+          python - <<'PY'
+          import json, os, time, urllib.request, urllib.error
+          base = os.environ["RUNNER_URL"].rstrip("/")
+          def read(path):
+              req = urllib.request.Request(base + path, headers={"Accept":"application/json","Cache-Control":"no-cache"})
+              with urllib.request.urlopen(req, timeout=18) as response:
+                  return json.load(response)
+          health = read("/health")
+          print("health", json.dumps(health, default=str)[:1500])
+          if health.get("last_error"):
+              raise SystemExit("FAIL: scanner reported a run error")
+          try:
+              result = read("/verified-results")
+          except urllib.error.HTTPError as exc:
+              body = exc.read().decode("utf-8", errors="replace")[:1000]
+              raise SystemExit(f"FAIL: verified-results HTTP {exc.code}: {body}")
+          print("verification", json.dumps(result, default=str)[:2000])
+          if result.get("status") != "VERIFIED_FRESH":
+              raise SystemExit("FAIL: no verified fresh completed scan")
+          if result.get("persistence_verified") is not True:
+              raise SystemExit("FAIL: scan persistence unverified")
+          if not result.get("run_id"):
+              raise SystemExit("FAIL: missing durable run identifier")
+          if (result.get("report_age_seconds") or 999999) > 900:
+              raise SystemExit("FAIL: latest scan exceeds 15-minute freshness SLA")
+          print("PASS: fresh completed scan, verified persistence, valid run identifier")
+          PY
