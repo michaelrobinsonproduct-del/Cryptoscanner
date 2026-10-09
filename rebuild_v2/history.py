@@ -36,7 +36,7 @@ def evaluate_outcomes(result, horizons=(1, 4, 24, 72)):
     now=dt.datetime.fromisoformat(result["completed_at"])
     prices={c["pair"]: c["bid"] for c in result.get("market_quotes",[]) if c.get("bid",0)>0}
     with connect() as con:
-        rows=con.execute("SELECT o.run_id,o.pair,o.price,r.created_at FROM observations o JOIN runs r ON r.id=o.run_id WHERE o.price > 0").fetchall()
+        rows=con.execute("SELECT o.run_id,o.pair,o.price,r.created_at FROM observations o JOIN runs r ON r.id=o.run_id WHERE o.price > 0 AND r.created_at >= ?", ((now-dt.timedelta(hours=73)).isoformat(),)).fetchall()
         for run_id,pair,entry,created in rows:
             bid=prices.get(pair)
             if bid is None:
