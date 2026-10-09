@@ -1,6 +1,11 @@
 name: Kraken Rebuild Shadow Scan
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'rebuild_v2/**'
+      - '.github/workflows/kraken-rebuild-shadow.yml'
   schedule:
     - cron: '*/15 * * * *'
 permissions:
