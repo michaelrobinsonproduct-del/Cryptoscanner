@@ -124,8 +124,9 @@ def main():
         evaluate_outcomes(result) if result["health"] != "FAILED" else None
         store_run(result)
         result["historical_outcomes"] = outcome_summary()
-        from history import learning_report, history_diagnostics, reliability_scorecard, miss_report, historical_signal_adjustments
+        from history import learning_report, history_diagnostics, reliability_scorecard, miss_report, historical_signal_adjustments, historical_cohort_analysis
         result["learning_report"] = learning_report()
+        result["historical_cohort_analysis"] = historical_cohort_analysis(1)
         result["missed_breakouts"] = miss_report()
         result["historical_calibration"] = historical_signal_adjustments()
         result["history_diagnostics"] = history_diagnostics()
