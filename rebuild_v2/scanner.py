@@ -79,33 +79,44 @@ def eligible_watch(metrics):
     return metrics["score"] >= 35 and 0.5 <= metrics["move24_pct"] <= 12 and metrics["spread_bps"] <= 40
 
 def historical_live_features(pair, fetch=api):
-    """Match historical 5m anchor features using only completed OHLC candles."""
-    import urllib.parse
+    """Reproduce archive features from completed 5-minute Kraken candles only."""
+    import urllib.parse,statistics
     data=fetch("OHLC?pair="+urllib.parse.quote(pair,safe="")+"&interval=5")
     candles=next(v for k,v in data.items() if k!="last" and isinstance(v,list))
-    bars=candles[:-1]
-    if len(bars)<13:
-        raise ValueError("insufficient completed 5m bars")
+    bars=candles[:-1]  # Kraken includes current incomplete candle
+    if len(bars)<13:raise ValueError("insufficient completed 5m bars")
     b=bars[-13:]
     closes=[float(x[4]) for x in b]
     volumes=[float(x[6]) for x in b]
     trades=[float(x[7]) for x in b]
-    pv=sum(volumes[-13:-7]); cv=sum(volumes[-7:-1])
-    pt=sum(trades[-13:-7]); ct=sum(trades[-7:-1])
-    return {"pre_return_60m_pct":round(100*(closes[-1]/closes[0]-1),3),
-            "volume_accel":round(cv/pv,3) if pv>0 else None,
-            "trade_accel":round(ct/pt,3) if pt>0 else None}
+    if any(p<=0 for p in closes):raise ValueError("invalid OHLC price")
+    prevv=sum(volumes[:6]);curv=sum(volumes[6:12])
+    prevt=sum(trades[:6]);curt=sum(trades[6:12])
+    returns=[100*(closes[j]/closes[j-1]-1) for j in range(1,13)]
+    return {"pre_return_5m_pct":100*(closes[-1]/closes[-2]-1),
+            "pre_return_15m_pct":100*(closes[-1]/closes[-4]-1),
+            "pre_return_60m_pct":100*(closes[-1]/closes[0]-1),
+            "volume_accel":curv/prevv if prevv>0 else None,
+            "trade_accel":curt/prevt if prevt>0 else None,
+            "volatility_pct":statistics.pstdev(returns)}
 
 def historical_rule_bonus(features,model):
-    if features.get("volume_accel") is None or features.get("trade_accel") is None:return 0,[]
-    early=abs(features["pre_return_60m_pct"])<=3
-    vol=features["volume_accel"]>=2
-    trades=features["trade_accel"]>=2
-    matched={"early_1h":early,"volume_2x":vol,"trades_2x":trades,
-             "early_volume":early and vol,"early_trades":early and trades,
-             "volume_trades":vol and trades}
-    approved=[name for name in model.get("approved_rules",[]) if matched.get(name,False)]
-    return min(8,2*len(approved)),approved
+    """Bounded bonus for rules that passed chronological out-of-sample evaluation."""
+    p5=features["pre_return_5m_pct"];p15=features["pre_return_15m_pct"]
+    p60=features["pre_return_60m_pct"];v=features["volume_accel"]
+    t=features["trade_accel"];z=features["volatility_pct"]
+    if v is None or t is None:return 0,[]
+    predicates={"early":abs(p60)<=3,"quiet_15m":abs(p15)<=1.5,
+      "rising_15m":0.1<=p15<=2,"positive_5m":0<p5<=1.5,
+      "volume_accel_1_5x":v>=1.5,"volume_accel_2x":v>=2,
+      "trades_accel_1_5x":t>=1.5,"trades_accel_2x":t>=2,
+      "trade_leads_volume":t>=1.5 and t>v*1.25,
+      "volume_leads_trades":v>=1.5 and v>t*1.25,
+      "compression":z<=0.6,"volatility_expansion":z>=1.5,
+      "controlled_breakout":0.3<=p60<=3,"not_extended":abs(p60)<=5}
+    matched=[rule for rule in model.get("approved_rules",[])
+             if isinstance(rule,list) and len(rule)>=2 and all(predicates.get(name,False) for name in rule)]
+    return min(8,2*len(matched)),matched
 
 def scan():
     started = dt.datetime.now(dt.timezone.utc)
@@ -128,35 +139,25 @@ def scan():
     calibration = historical_signal_adjustments()
     for candidate in watches:
         candidate["score"] = round(candidate["score"] + pair_signal_adjustment(candidate["pair"]) + (calibration["watch_score_adjustment"] if calibration["ready"] else 0),2)
-    model_path=pathlib.Path("rebuild_v2/output/historical_model.json")
-    model=None
-    if model_path.exists():
-        try:
-            candidate_model=json.loads(model_path.read_text())
-            if candidate_model.get("schema_version")==1 and candidate_model.get("holdout_rows",0)>=100:
-                model=candidate_model
-        except (ValueError,OSError):
-            pass
-    # The previous archive model used an outcome-selected sample. Do not score from it.
-    # Require a representative-control interaction model and live feature parity.
     interaction_path=pathlib.Path("rebuild_v2/output/interaction_model.json")
     interaction=None
     if interaction_path.exists():
         try:
-            candidate_interaction=json.loads(interaction_path.read_text())
-            if candidate_interaction.get("schema_version")==2 and candidate_interaction.get("unique_pair_days",0)>=1000:
-                interaction=candidate_interaction
+            candidate=json.loads(interaction_path.read_text())
+            if candidate.get("schema_version")==2 and candidate.get("unique_pair_days",0)>=1000:
+                interaction=candidate
         except (ValueError,OSError):
             pass
-    model=None  # legacy single-factor boosts disabled pending unbiased interaction parity
-    research={"status":("ACTIVE_BONUSES" if model.get("approved_rules") else "VALIDATED_NO_APPROVED_RULES") if model else "MODEL_NOT_RESTORED",
-              "approved_rules":model.get("approved_rules",[]) if model else [],
-              "candidates_enriched":0,"feature_failures":0,"ranking_changes_possible":False,"interaction_model_loaded":bool(interaction),"feature_parity":"NOT_IMPLEMENTED","legacy_bias_guard":"ENFORCED"}
-    if model and model.get("approved_rules"):
+    research={"status":"VALIDATED_INTERACTIONS" if interaction else "INTERACTION_MODEL_NOT_RESTORED",
+              "approved_rules":interaction.get("approved_rules",[]) if interaction else [],
+              "candidates_enriched":0,"feature_failures":0,
+              "ranking_changes_possible":False,"interaction_model_loaded":bool(interaction),
+              "feature_parity":"IMPLEMENTED","legacy_bias_guard":"ENFORCED"}
+    if interaction and interaction.get("approved_rules"):
         for candidate in sorted(watches,key=lambda x:-x["score"])[:12]:
             try:
                 features=historical_live_features(candidate["pair"])
-                bonus,matched=historical_rule_bonus(features,model)
+                bonus,matched=historical_rule_bonus(features,interaction)
                 candidate["historical_features"]=features
                 candidate["historical_rules_matched"]=matched
                 candidate["historical_bonus"]=bonus
