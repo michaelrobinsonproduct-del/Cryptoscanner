@@ -63,6 +63,31 @@ def learning_report():
              "loss_5pct_rate":round(l,4),"model_tuning_allowed":n>=100}
             for h,n,g,l in rows]
 
+def miss_report(horizon=4, threshold=5):
+    """Find historical breakouts that were never selected for the watchlist."""
+    with connect() as con:
+        rows=con.execute("""SELECT o.pair, COUNT(*), MAX(x.return_pct)
+          FROM outcomes x JOIN observations o ON o.run_id=x.run_id AND o.pair=x.pair
+          WHERE x.horizon_hours=? AND x.return_pct>=? AND o.status='NOT_SELECTED'
+          GROUP BY o.pair ORDER BY COUNT(*) DESC, MAX(x.return_pct) DESC LIMIT 20""",
+          (horizon,threshold)).fetchall()
+    return [{"pair":p,"missed_breakouts":n,"best_return_pct":round(ret,2)} for p,n,ret in rows]
+
+def historical_signal_adjustments(min_samples=30):
+    """Conservative, bounded score adjustment from observed 4h outcomes.
+    Adjust watch and non-watch populations only when both have enough samples.
+    """
+    with connect() as con:
+        rows=con.execute("""SELECT o.status, COUNT(*),
+          AVG(CASE WHEN x.return_pct>=5 THEN 1.0 ELSE 0 END)
+          FROM outcomes x JOIN observations o ON o.run_id=x.run_id AND o.pair=x.pair
+          WHERE x.horizon_hours=4 GROUP BY o.status""").fetchall()
+    stats={s:{"samples":n,"hit_rate":round(rate,4)} for s,n,rate in rows}
+    a=stats.get("WATCH",{}); b=stats.get("NOT_SELECTED",{})
+    ready=a.get("samples",0)>=min_samples and b.get("samples",0)>=min_samples
+    delta=(a["hit_rate"]-b["hit_rate"]) if ready else 0
+    return {"ready":ready,"groups":stats,"watch_score_adjustment":round(max(-8,min(8,delta*40)),2) if ready else 0}
+
 def history_diagnostics():
     """Expose actual durable history and prospective labeling readiness."""
     with connect() as con:
