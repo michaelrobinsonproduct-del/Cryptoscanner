@@ -20,6 +20,8 @@ jobs:
           python-version: '3.12'
       - name: Show revision
         run: git rev-parse HEAD
+      - name: Compile historical Python scripts
+        run: python -m py_compile historical/backfill.py historical/compact.py
       - name: Run historical reconstruction
         run: python historical/backfill.py
       - name: Build compact training dataset
