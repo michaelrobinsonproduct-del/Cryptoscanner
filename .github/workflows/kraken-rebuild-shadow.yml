@@ -50,6 +50,15 @@ jobs:
           Path("rebuild_v2/output/history_baseline.json").write_text(json.dumps(counts))
           print("RESTORED_HISTORY",counts)
           PY
+      - name: Restore previous authoritative scan for deterioration checks
+        shell: bash
+        run: |
+          if git show origin/rebuild-history:latest.json > rebuild_v2/output/previous.json 2>/dev/null; then
+            python -c 'import json; r=json.load(open("rebuild_v2/output/previous.json")); assert isinstance(r.get("watch"),list) and r.get("completed_at"); print("PREVIOUS_WATCH_RESTORED",len(r["watch"]))'
+          else
+            rm -f rebuild_v2/output/previous.json
+            echo "NO_PREVIOUS_WATCH: all candidates remain unverified"
+          fi
       - name: Restore validated historical research model
         shell: bash
         run: |
@@ -119,6 +128,11 @@ jobs:
           assert research.get("interaction_model_loaded") is True, "validated interaction model not loaded"
           assert research.get("status") == "VALIDATED_INTERACTIONS", "historical interaction model invalid"
           assert isinstance(research.get("approved_rules"),list), "historical rules missing"
+          continuity = report.get("continuity_research") or {}
+          assert isinstance(continuity.get("compared"),int) and isinstance(continuity.get("downgraded"),int)
+          assert 0 <= continuity["downgraded"] <= continuity["compared"] <= len(report["watch"])
+          assert all(c.get("entry_approved") is False and c.get("requires_fresh_revalidation") is True for c in report["watch"])
+          assert all(c.get("continuity_state") in ("NEW_OR_UNVERIFIED","MONITOR_ONLY","DOWNGRADED_PRICE_OR_LIQUIDITY") for c in report["watch"])
           prospective = research.get("prospective_trade_research") or {}
           assert prospective.get("mode") == "OBSERVE_ONLY", "trade research not shadow-only"
           assert prospective.get("model_loaded") is True, "historical simple model missing"
