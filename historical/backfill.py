@@ -59,10 +59,10 @@ with zipfile.ZipFile(zp) as z:
    if mx is None:continue
    control_sampled=(t//86400)%7==0 and (t%3600==0)
    keep=mx>=10 or control_sampled
-   if not keep:continue
    early=p60 is not None and abs(p60)<=3
    rec={"pair":pair,"anchor_at":datetime.fromtimestamp(t,timezone.utc).isoformat(),"anchor_price":c,"pre_return_5m_pct":p5,"pre_return_15m_pct":p15,"pre_return_60m_pct":p60,"volume_accel":vacc,"trade_accel":tacc,"volatility_pct":vola,"max_forward_return_pct":mx,"still_early":early,"major_mover":mx>=20,"control_sampled":control_sampled,"source":"kraken_archive_5m_2026q2","features":{"interval":"5m","no_lookahead":True}}
-   pairrows.append(rec); rows.append(rec)
+   rows.append(rec)
+   if keep:pairrows.append(rec)
   # episode-dedupe major windows: new episode after >24h gap
   majors=[r for r in pairrows if r["major_mover"]]
   grp=[]
