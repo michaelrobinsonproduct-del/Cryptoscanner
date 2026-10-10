@@ -1,5 +1,5 @@
 {
-  "completed_at": "2026-10-10T17:24:15.344478+00:00",
+  "completed_at": "2026-10-10T17:25:00.903881+00:00",
   "health": "COMPLETE",
   "scanned": 619,
   "universe": 619,
@@ -9,33 +9,33 @@
   "watch_count": 20,
   "top_research_watches": [
     {
+      "pair": "ADAUSD",
+      "score": 99.13,
+      "move24_pct": 4.53,
+      "signal_state": "DOUBLE_CONFIRMED_RESEARCH_WATCH"
+    },
+    {
       "pair": "SUIUSD",
       "score": 98.21,
-      "move24_pct": 4.8,
+      "move24_pct": 4.79,
       "signal_state": "DOUBLE_CONFIRMED_RESEARCH_WATCH"
     },
     {
       "pair": "NEARUSD",
-      "score": 96.29,
-      "move24_pct": 10.31,
+      "score": 95.17,
+      "move24_pct": 10.39,
       "signal_state": "DOUBLE_CONFIRMED_RESEARCH_WATCH"
     },
     {
-      "pair": "ADAUSD",
-      "score": 95.98,
-      "move24_pct": 4.45,
-      "signal_state": "DOUBLE_CONFIRMED_RESEARCH_WATCH"
-    },
-    {
-      "pair": "NIGHTUSD",
-      "score": 86.2,
-      "move24_pct": 7.78,
+      "pair": "ICPUSD",
+      "score": 85.19,
+      "move24_pct": 4.19,
       "signal_state": "DOUBLE_CONFIRMED_RESEARCH_WATCH"
     },
     {
       "pair": "WLDUSD",
-      "score": 85.23,
-      "move24_pct": 9.89,
+      "score": 84.61,
+      "move24_pct": 9.91,
       "signal_state": "DOUBLE_CONFIRMED_RESEARCH_WATCH"
     }
   ],
@@ -50,10 +50,12 @@
   "historical_scoring_mode": "OBSERVE_ONLY",
   "historical_score_adjustment_applied": 0,
   "reliability_24h": {
-    "observed_completed": 86,
-    "expected_scheduled": 96,
-    "coverage_pct": 89.58,
-    "status": "MEASURED"
+    "observed_completed": 3,
+    "expected_scheduled": null,
+    "coverage_pct": null,
+    "status": "INSUFFICIENT_HISTORY",
+    "measurement": "UNIQUE_15M_CYCLE_LEDGER",
+    "grace_minutes": 7
   },
   "delivery_status": "PUBLISHED_TO_GITHUB_ONLY"
 }

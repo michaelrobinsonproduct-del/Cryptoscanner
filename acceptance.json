@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-10T17:24:16.839053+00:00",
+  "generated_at": "2026-10-10T17:25:01.833728+00:00",
   "source": "kraken-rebuild-shadow",
   "acceptance": "PASSED",
   "checks": {
@@ -15,7 +15,7 @@
     "cycle_persisted_or_retry": true
   },
   "engine": "rebuild-shadow-1.0",
-  "completed_at": "2026-10-10T17:24:15.344478+00:00",
+  "completed_at": "2026-10-10T17:25:00.903881+00:00",
   "history": {
     "runs": 158,
     "observations": 83426,
@@ -32,25 +32,29 @@
     "outcomes": 167277
   },
   "schedule_health": {
-    "previous_scan_age_seconds": 501,
+    "previous_scan_age_seconds": 548,
     "missed_15m_intervals": 0,
     "schedule_warning": false
   },
   "reliability": {
-    "last_gap_seconds": 501,
+    "last_gap_seconds": 548,
     "missed_15m_intervals": 0,
     "schedule_warning": false,
     "rolling_24h": {
-      "observed_completed": 86,
-      "expected_scheduled": 96,
-      "coverage_pct": 89.58,
-      "status": "MEASURED"
-    },
-    "rolling_7d": {
-      "observed_completed": 158,
+      "observed_completed": 3,
       "expected_scheduled": null,
       "coverage_pct": null,
-      "status": "INSUFFICIENT_HISTORY"
+      "status": "INSUFFICIENT_HISTORY",
+      "measurement": "UNIQUE_15M_CYCLE_LEDGER",
+      "grace_minutes": 7
+    },
+    "rolling_7d": {
+      "observed_completed": 3,
+      "expected_scheduled": null,
+      "coverage_pct": null,
+      "status": "INSUFFICIENT_HISTORY",
+      "measurement": "UNIQUE_15M_CYCLE_LEDGER",
+      "grace_minutes": 7
     }
   },
   "delivery": {
@@ -58,5 +62,5 @@
     "production_push_email": "NOT_VERIFIED_BY_THIS_WORKFLOW"
   },
   "scan_cycle_id": "2026-10-10T17:15:00Z",
-  "github_run_id": "38071543012"
+  "github_run_id": "38071599809"
 }
