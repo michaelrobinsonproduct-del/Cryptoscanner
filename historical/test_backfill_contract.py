@@ -109,6 +109,8 @@ for case in range(100):
              for j in range(1 + case % 9)]
     namespace["emit_episode"](group)
     emitted = json.loads(namespace["moves_out"].getvalue().splitlines()[-1])
+    namespace["moves_out"].seek(0)
+    namespace["moves_out"].truncate(0)
     best = max(group, key=lambda r: r["max_forward_return_pct"])
     check("episode_max_anchor_"+str(case), emitted["evidence"]["max_return_anchor"] == best["anchor_at"])
     check("episode_max_baseline_"+str(case), emitted["evidence"]["max_return_baseline_price"] == best["anchor_price"])
