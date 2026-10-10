@@ -25,6 +25,8 @@ jobs:
       - name: Verify historical labeling contracts
         run: python historical/test_backfill_contract.py
       - name: Verify optimized gap logic against original on 100 sequences
-        run: python historical/test_gap_equivalence.py
+        run: |
+          python historical/test_gap_equivalence.py
+          python -O historical/test_gap_equivalence.py
       - name: Exercise synthetic historical compaction and integrity checks
         run: python historical/test_compact_integration.py
