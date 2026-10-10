@@ -86,6 +86,12 @@ def historical_live_features(pair, fetch=api):
     bars=candles[:-1]  # Kraken includes current incomplete candle
     if len(bars)<13:raise ValueError("insufficient completed 5m bars")
     b=bars[-13:]
+    # The Kraken endpoint may return cached candles during an outage. Never
+    # evaluate historical research rules on an old completed bar.
+    last_open=dt.datetime.fromtimestamp(float(b[-1][0]),dt.timezone.utc)
+    age=(dt.datetime.now(dt.timezone.utc)-last_open).total_seconds()
+    if not 300 <= age <= 900:
+        raise ValueError("stale or incomplete historical OHLC candle")
     closes=[float(x[4]) for x in b]
     volumes=[float(x[6]) for x in b]
     trades=[float(x[7]) for x in b]
