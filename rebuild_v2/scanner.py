@@ -272,6 +272,17 @@ def main():
     except Exception as exc:
         result = {"completed_at": dt.datetime.now(dt.timezone.utc).isoformat(), "engine": "rebuild-shadow-0.7", "health": "FAILED", "error": str(exc), "recommendation": "NO VERIFIED BUYS"}
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    # DEX is a separate research stream; its outages cannot break Kraken scanning.
+    if result.get("health") != "FAILED":
+        from dex_discovery import discover as discover_dex
+        dex=discover_dex()
+        result["dex_discovery"]=dex
+        coverage=result.get("source_coverage",{})
+        coverage["dex"]={"enabled":True,"status":dex["status"],
+                         "coverage":dex["coverage"],"profiles_checked":dex["profiles_checked"],
+                         "pairs_evaluated":dex["pairs_evaluated"],"eligible_pairs":dex["eligible_pairs"],
+                         "entry_approved":False}
+        result["source_coverage"]=coverage
     OUTPUT.write_text(json.dumps(result, indent=2) + "\n")
     try:
         from history import store_run, outcome_summary, evaluate_outcomes
