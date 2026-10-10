@@ -210,6 +210,13 @@ def scan():
             confirmations.append({"pair": candidate["pair"], **check})
         except Exception as exc:
             confirmations.append({"pair": candidate["pair"], "status": "CONFIRMATION_FAILED", "error": str(exc), "entry_approved": False})
+    # Never imply that an unconfirmed research watch is an actionable entry.
+    confirmed_pairs={c["pair"] for c in confirmations if c.get("status")=="DOUBLE_CONFIRMED_WATCH"}
+    for candidate in watches:
+        candidate["entry_approved"]=False
+        candidate["signal_state"]="DOUBLE_CONFIRMED_RESEARCH_WATCH" if candidate["pair"] in confirmed_pairs else "UNCONFIRMED_RESEARCH_WATCH"
+        candidate["requires_fresh_revalidation"]=True
+        candidate["signal_observed_at"]=started.isoformat()
     finished = dt.datetime.now(dt.timezone.utc)
     return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-1.0", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "market_quotes": market_quotes, "prospective_learning": calibration, "historical_research": research, "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
 
