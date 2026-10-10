@@ -44,7 +44,7 @@ for price, future, expected in [
 for label, times, expected in [
     ("complete", [300 * i for i in range(301)], True),
     ("missing_internal", [300 * i + (300 if i >= 150 else 0) for i in range(301)], False),
-    ("missing_at_start", [300 * i + (300 if i >= 1 else 0) for i in range(301)], False),
+    ("missing_before_window", [300 * i + (300 if i >= 1 else 0) for i in range(301)], True),
 ]:
     gaps = [0] * len(times)
     for j in range(1, len(times)):
