@@ -33,7 +33,7 @@ with zipfile.ZipFile(zp) as z:
     if not r: continue
     try:t=int(float(r[0]))
     except:continue
-    if t<START-3600 or t>END+86400: continue
+    if t<START-3600 or t>END+86400 or t%300!=0: continue
     if len(r)<7: continue
     o,hg,lo,c,v,tr=map(num,r[1:7])
     if None in (o,hg,lo,c,v) or not all(math.isfinite(q) for q in (o,hg,lo,c,v)) or min(o,hg,lo,c)<=0 or v<0 or lo>hg or not lo<=o<=hg or not lo<=c<=hg or tr is None or not math.isfinite(tr) or tr<0:continue
