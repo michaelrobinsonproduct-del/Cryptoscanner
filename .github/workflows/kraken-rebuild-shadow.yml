@@ -316,6 +316,10 @@ jobs:
               "research_only":True,
               "watch_count":len(watches),
               "top_research_watches":[{"pair":w["pair"],"score":w.get("score"),"move24_pct":w.get("move24_pct"),"signal_state":w.get("signal_state")} for w in watches[:5]],
+              "learning_validation":report.get("prospective_learning"),
+              "historical_scoring_mode":report.get("historical_research",{}).get("prospective_trade_research",{}).get("mode"),
+              "historical_score_adjustment_applied":report.get("historical_research",{}).get("prospective_trade_research",{}).get("score_adjustment_applied"),
+              "reliability_24h":report.get("reliability_scorecard",{}).get("24h"),
               "delivery_status":"PUBLISHED_TO_GITHUB_ONLY"
           }
           assert summary["recommendation"]=="NO VERIFIED BUYS"
@@ -355,6 +359,11 @@ jobs:
           assert summary["health"]==latest["health"]=="COMPLETE", "summary health mismatch"
           assert summary["scanned"]==latest["scanned"] and summary["universe"]==latest["universe"], "summary coverage mismatch"
           assert summary["watch_count"]==len(latest["watch"]), "summary watch count mismatch"
+          assert summary["learning_validation"]==latest.get("prospective_learning"), "learning diagnostics mismatch"
+          assert summary["historical_scoring_mode"]==latest.get("historical_research",{}).get("prospective_trade_research",{}).get("mode"), "learning mode mismatch"
+          assert summary["historical_score_adjustment_applied"]==latest.get("historical_research",{}).get("prospective_trade_research",{}).get("score_adjustment_applied"), "learning adjustment mismatch"
+          assert summary["reliability_24h"]==latest.get("reliability_scorecard",{}).get("24h"), "reliability diagnostics mismatch"
+          assert summary["research_only"] is True and summary["approved_buys"]==[], "research safety mismatch"
           assert summary["delivery_status"]=="PUBLISHED_TO_GITHUB_ONLY", "summary overstates delivery"
           acceptance=remote("acceptance.json")
           assert acceptance["acceptance"]=="PASSED", "remote acceptance not passed"
