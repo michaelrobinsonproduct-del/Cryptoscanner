@@ -220,7 +220,7 @@ def scan():
             except Exception as exc:
                 candidate["prospective_trade_research_error"]=str(exc)
                 trade_research["feature_failures"]+=1
-    research={"status":"VALIDATED_INTERACTIONS" if interaction else "INTERACTION_MODEL_NOT_RESTORED",
+    research={"status":("APPROVED_INTERACTION_RULES" if interaction.get("approved_rules") else "INTERACTION_MODEL_NO_APPROVED_RULES") if interaction else "INTERACTION_MODEL_NOT_RESTORED",
               "approved_rules":interaction.get("approved_rules",[]) if interaction else [],
               "candidates_enriched":0,"feature_failures":0,
               "ranking_changes_possible":False,"interaction_model_loaded":bool(interaction),
