@@ -11,6 +11,8 @@ on:
       - 'historical/test_dedupe_equivalence.py'
       - 'historical/verify_manifest.py'
       - 'historical/test_compact_integration.py'
+      - 'historical/verify_moves.py'
+      - 'historical/test_verify_moves.py'
       - '.github/workflows/kraken-historical-contracts.yml'
 jobs:
   fast-contracts:
