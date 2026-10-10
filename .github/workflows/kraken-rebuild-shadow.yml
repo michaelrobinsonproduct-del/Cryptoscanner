@@ -319,7 +319,7 @@ jobs:
               "delivery_status":"PUBLISHED_TO_GITHUB_ONLY"
           }
           assert summary["recommendation"]=="NO VERIFIED BUYS"
-          Path("summary.json").write_text(json.dumps(summary,indent=2)+"\\n")
+          Path("summary.json").write_text(json.dumps(summary,indent=2)+"\n")
           PY
           cp /tmp/kraken-acceptance.json acceptance.json
           python - <<'PY'
