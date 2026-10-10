@@ -95,4 +95,26 @@ check("date_boundary_closes_episode", "if not START<=t<END: \n    if grp:emit_ep
 check("archive_has_checksum", "checksum mismatch" in source)
 check("five_minute_source", "Kraken_OHLCVT_Full_2026Q2" in source)
 check("historical_not_current", "2026,7,1" in source)
+# Execute the actual production episode emitter on 100 deterministic groups.
+import io, json
+from datetime import datetime, timezone, timedelta
+emitters = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "emit_episode"]
+check("single_production_episode_emitter", len(emitters) == 1)
+namespace = {"moves_out": io.StringIO(), "episodes_written": 0, "json": json}
+exec(compile(ast.Module(body=[emitters[0]], type_ignores=[]), "<episode-emitter>", "exec"), namespace)
+for case in range(100):
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    group = [{"pair": "TESTUSD", "anchor_at": (start + timedelta(minutes=15*j)).isoformat(),
+              "anchor_price": 10 + j, "max_forward_return_pct": 20 + ((j * 13 + case) % 37)}
+             for j in range(1 + case % 9)]
+    namespace["emit_episode"](group)
+    emitted = json.loads(namespace["moves_out"].getvalue().splitlines()[-1])
+    best = max(group, key=lambda r: r["max_forward_return_pct"])
+    assert emitted["evidence"]["max_return_anchor"] == best["anchor_at"]
+    assert emitted["evidence"]["max_return_baseline_price"] == best["anchor_price"]
+    assert emitted["max_return_pct"] == best["max_forward_return_pct"]
+    assert emitted["move_start"] == group[0]["anchor_at"]
+    assert emitted["caught_early"] is False
+    assert emitted["evidence"]["live_alert_verified"] is False
+check("production_episode_emitter_100_groups", namespace["episodes_written"] == 100)
 print("historical_contracts_passed")
