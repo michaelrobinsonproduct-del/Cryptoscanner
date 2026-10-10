@@ -16,15 +16,19 @@ class CandleFreshnessTests(unittest.TestCase):
         return {"PAIR":bars,"last":last_open}
 
     def test_stale_completed_candle_rejected(self):
-        with self.assertRaisesRegex(ValueError,"stale or incomplete"):
+        with self.assertRaisesRegex(ValueError,"stale or future"):
             historical_live_features("PAIR",fetch=lambda _:self.candles(1800))
 
     def test_current_completed_candle_accepted(self):
         features=historical_live_features("PAIR",fetch=lambda _:self.candles(360))
         self.assertEqual(features["pre_return_60m_pct"],0)
 
+    def test_just_closed_bar_accepted(self):
+        features=historical_live_features("PAIR",fetch=lambda _:self.candles(60))
+        self.assertEqual(features["pre_return_60m_pct"],0)
+
     def test_future_candle_rejected(self):
-        with self.assertRaisesRegex(ValueError,"stale or incomplete"):
+        with self.assertRaisesRegex(ValueError,"stale or future"):
             historical_live_features("PAIR",fetch=lambda _:self.candles(-1200))
 
 
