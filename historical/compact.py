@@ -61,7 +61,7 @@ manifest = {
     "generated_at_utc": datetime.now(timezone.utc).isoformat(),
     "production_ingested": False,
     "sampling_policy": "outcome_independent_hourly_utc",
-    "selection_bias_warning": "Historical research rows are outcome-enriched; train only on this time-sampled subset, with temporal holdout.",
+    "selection_bias_warning": "Rebuild from the revised full-population research output; pre-change outcome-enriched archives are incompatible.",
 }
 with open(manifest_path, "w", encoding="utf-8") as out:
     json.dump(manifest, out, indent=2)
