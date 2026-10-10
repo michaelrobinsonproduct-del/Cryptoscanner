@@ -1,13 +1,6 @@
 name: Kraken Historical Backfill
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'historical/backfill.py'
-      - 'historical/compact.py'
-      - 'historical/test_backfill_contract.py'
-      - '.github/workflows/kraken-historical-backfill.yml'
 jobs:
   backfill:
     runs-on: ubuntu-latest
