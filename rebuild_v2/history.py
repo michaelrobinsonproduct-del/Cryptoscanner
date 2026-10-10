@@ -75,18 +75,17 @@ def miss_report(horizon=4, threshold=5):
     """Count missed pair-days from earliest non-selected observations only.\n    Avoid hindsight-selected winners and repeated overlapping scans."""
     with connect() as con:
         rows=con.execute("""WITH earliest AS (
-            SELECT o.pair, x.return_pct,
+            SELECT o.pair, o.status, x.return_pct,
                    ROW_NUMBER() OVER (
                      PARTITION BY substr(r.created_at,1,10),o.pair
                      ORDER BY r.created_at ASC,r.id ASC
                    ) AS rn
-            FROM outcomes x
-            JOIN observations o ON o.run_id=x.run_id AND o.pair=x.pair
+            FROM observations o
             JOIN runs r ON r.id=o.run_id
-            WHERE x.horizon_hours=? AND o.status='NOT_SELECTED'
+            LEFT JOIN outcomes x ON x.run_id=o.run_id AND x.pair=o.pair AND x.horizon_hours=?
           )
           SELECT pair,COUNT(*),MAX(return_pct) FROM earliest
-          WHERE rn=1 AND return_pct>=?
+          WHERE rn=1 AND status='NOT_SELECTED' AND return_pct>=?
           GROUP BY pair ORDER BY COUNT(*) DESC,MAX(return_pct) DESC LIMIT 20""",
           (horizon,threshold)).fetchall()
     return [{"pair":p,"missed_breakouts":n,"best_return_pct":round(ret,2)} for p,n,ret in rows]
