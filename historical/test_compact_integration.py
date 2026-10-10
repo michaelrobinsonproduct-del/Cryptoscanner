@@ -84,6 +84,12 @@ with tempfile.TemporaryDirectory() as temp:
         print("PASS reject_forged_" + field)
     manifest_path.write_text(json.dumps(valid_manifest), encoding="utf-8")
     assert run(VERIFY, temp).returncode == 0
+    # Integrity rejection must remain active with Python assertions disabled.
+    manifest_path.write_text(json.dumps({**valid_manifest, "training_rows": 999}), encoding="utf-8")
+    optimized = subprocess.run([sys.executable, "-O", str(VERIFY)], cwd=temp, text=True, capture_output=True)
+    assert optimized.returncode != 0, "optimized Python bypassed integrity validation"
+    manifest_path.write_text(json.dumps(valid_manifest), encoding="utf-8")
+    print("PASS optimized_mode_integrity_enforced")
     print("PASS restore_valid_manifest")
 
 
