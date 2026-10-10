@@ -41,6 +41,7 @@ for price, future, expected in [
     check(f"forward_max_{price}_{future}", actual == expected)
 
 check("complete_24h_required", "bars[i+288][0]-t!=86400" in source)
+check("all_forward_candles_contiguous", "bars[j][0]-bars[j-1][0]!=300" in source)
 check("contiguous_1h_required", "t-bars[i-12][0]!=3600" in source)
 check("dedupe_candle_timestamps", "bar[0]:bar" in source)
 check("reject_invalid_candles", "math.isfinite" in source)
