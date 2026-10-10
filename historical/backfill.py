@@ -58,7 +58,7 @@ with open(outdir+"/research.ndjson","w",encoding="utf-8") as research_out, open(
    global episodes_written
    best=max(group,key=lambda r:r["max_forward_return_pct"]);first=group[0]
    # Future-labeled early windows are not verified real-time scanner alerts.
-   ep={"pair":first["pair"],"move_start":first["anchor_at"],"peak_at":None,"baseline_price":first["anchor_price"],"peak_price":None,"max_return_pct":best["max_forward_return_pct"],"earliest_signal_at":None,"extension_at_signal_pct":None,"caught_early":False,"source":"kraken_archive_5m_2026q2","evidence":{"windows":len(group),"max_anchor_gap_minutes":15,"retrospective_label_only":True,"live_alert_verified":False}}
+   ep={"pair":first["pair"],"move_start":first["anchor_at"],"peak_at":None,"baseline_price":first["anchor_price"],"peak_price":None,"max_return_pct":best["max_forward_return_pct"],"earliest_signal_at":None,"extension_at_signal_pct":None,"caught_early":False,"source":"kraken_archive_5m_2026q2","evidence":{"windows":len(group),"max_anchor_gap_minutes":15,"retrospective_label_only":True,"live_alert_verified":False,"max_return_anchor":best["anchor_at"],"max_return_baseline_price":best["anchor_price"]}}
    moves_out.write(json.dumps(ep,separators=(",",":"))+"\n")
    episodes_written+=1
   grp=[]
