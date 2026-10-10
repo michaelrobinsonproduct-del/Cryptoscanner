@@ -29,6 +29,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Establish scan cycle identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import datetime as dt, os
+          now=dt.datetime.now(dt.timezone.utc)
+          epoch=int(now.timestamp())
+          boundary=epoch-(epoch%900)
+          cycle=dt.datetime.fromtimestamp(boundary,dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+          with open(os.environ["GITHUB_ENV"],"a") as env:
+              env.write(f"SCAN_CYCLE_ID={cycle}\\n".replace("\\\\n","\\n"))
+          print("SCAN_CYCLE_ID",cycle)
+          PY
       - name: Restore persistent history from dedicated branch
         run: |
           mkdir -p rebuild_v2/output
@@ -254,6 +268,16 @@ jobs:
           cp /tmp/kraken-history.sqlite3 history.sqlite3
           cp /tmp/kraken-latest.json latest.json
           cp /tmp/kraken-acceptance.json acceptance.json
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          for filename in ("latest.json","acceptance.json"):
+              p=Path(filename)
+              data=json.loads(p.read_text())
+              data["scan_cycle_id"]=os.environ["SCAN_CYCLE_ID"]
+              data["github_run_id"]=os.environ["GITHUB_RUN_ID"]
+              p.write_text(json.dumps(data,indent=2)+"\\n")
+          PY
           cp /tmp/kraken-schedule-health.json schedule_health.json
           cp /tmp/kraken-paper-validation.json paper_validation.json
           cp /tmp/kraken-data-audit.json data_audit.json
