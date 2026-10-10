@@ -29,7 +29,23 @@ class ProspectiveNoLeakageTests(unittest.TestCase):
                 self.assertFalse(result["validated"])
                 self.assertEqual(result["adjustment"],0)
                 # Old MAX(score)/MAX(hit) logic would select 99 and a win.
+                # A low-only cohort must not be promoted by later same-day gains.
                 self.assertEqual(result["status"],"INSUFFICIENT_DATA")
+                with history.connect() as con:
+                    selected=con.execute("""WITH ranked AS (
+                        SELECT substr(r.created_at,1,10) AS day,o.pair,o.score,
+                               x.return_pct,
+                               ROW_NUMBER() OVER (
+                                   PARTITION BY substr(r.created_at,1,10),o.pair
+                                   ORDER BY r.created_at ASC,r.id ASC
+                               ) AS rn
+                        FROM outcomes x
+                        JOIN observations o ON o.run_id=x.run_id AND o.pair=x.pair
+                        JOIN runs r ON r.id=o.run_id
+                        WHERE x.horizon_hours=4
+                    ) SELECT score,return_pct FROM ranked WHERE rn=1""").fetchall()
+                self.assertEqual(len(selected),20)
+                self.assertTrue(all(score==10 and ret==0 for score,ret in selected))
 
 
 if __name__=="__main__":
