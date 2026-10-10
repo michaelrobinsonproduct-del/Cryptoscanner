@@ -47,6 +47,7 @@ check("all_lookback_candles_contiguous", "range(i-11,i+1)" in source and "bars[j
 check("dedupe_candle_timestamps", "bar[0]:bar" in source)
 check("reject_invalid_candles", "math.isfinite" in source)
 check("forward_clock_bounded", "bar[0]-t<=86400" in source)
+check("wall_clock_quarter_hour", "t%900!=0" in source)
 check("archive_has_checksum", "checksum mismatch" in source)
 check("five_minute_source", "Kraken_OHLCVT_Full_2026Q2" in source)
 check("historical_not_current", "2026,7,1" in source)
