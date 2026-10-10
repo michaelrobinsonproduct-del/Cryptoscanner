@@ -33,9 +33,12 @@ with open(src, encoding="utf-8") as source, open(dst, "w", encoding="utf-8") as 
         earliest = min(earliest, anchor_utc) if earliest else anchor_utc
         latest = max(latest, anchor_utc) if latest else anchor_utc
         processed += 1
-        key = (pair, anchor_utc.date().isoformat())
-        keep = bool(x.get("control_sampled")) or (bool(x.get("major_mover")) and bool(x.get("still_early"))) or key not in seen
+        key = (pair, anchor_utc.isoformat())
+        if key in seen:
+            raise ValueError(f"duplicate pair/anchor at line {line_number}")
         seen.add(key)
+        # Outcome-independent hourly sampling avoids selecting training rows by future returns.
+        keep = anchor_utc.minute == 0
         if keep:
             serialized = json.dumps(x, separators=(",", ":")) + "\n"
             target.write(serialized)
@@ -55,6 +58,8 @@ manifest = {
     "training_sha256": digest.hexdigest(),
     "generated_at_utc": datetime.now(timezone.utc).isoformat(),
     "production_ingested": False,
+    "sampling_policy": "outcome_independent_hourly_utc",
+    "selection_bias_warning": "Historical research rows are outcome-enriched; train only on this time-sampled subset, with temporal holdout.",
 }
 with open(manifest_path, "w", encoding="utf-8") as out:
     json.dump(manifest, out, indent=2)
