@@ -175,17 +175,47 @@ def history_diagnostics():
     return {"runs":runs,"observations":observations,"outcomes":outcomes,"unlabeled_observations":unlabeled,"oldest_run_at":oldest,"newest_run_at":newest,"learning_status":"OUTCOMES_AVAILABLE" if outcomes else "AWAITING_PROSPECTIVE_OUTCOMES","history_available":runs>0}
 
 def reliability_scorecard(now=None):
-    """Observed scan completion coverage, not an estimate from individual successes."""
+    """Unique successful scheduled cycles, not retry/run counts.
+
+    A recovered or retried cycle counts once. Do not claim measured coverage
+    unless the cycle ledger spans the entire observation window.
+    """
     now=now or dt.datetime.now(dt.timezone.utc)
     with connect() as con:
-        stamps=[dt.datetime.fromisoformat(row[0]) for row in con.execute("SELECT created_at FROM runs WHERE health='COMPLETE' ORDER BY created_at")]
+        rows=con.execute("""SELECT c.cycle_id FROM scan_cycles c
+            JOIN runs r ON r.id=c.run_id
+            WHERE r.health='COMPLETE' ORDER BY c.cycle_id""").fetchall()
+    cycles=set()
+    for (value,) in rows:
+        try:
+            stamp=dt.datetime.fromisoformat(value.replace("Z","+00:00"))
+            if stamp.tzinfo is not None:
+                cycles.add(stamp.astimezone(dt.timezone.utc))
+        except (ValueError,TypeError):
+            continue
     result={}
     for hours in (24,168):
         start=now-dt.timedelta(hours=hours)
-        observed=sum(start<=stamp<=now for stamp in stamps)
-        # Do not infer past scheduled attempts from a database younger than the window.
-        span=(now-min(stamps)).total_seconds()/3600 if stamps else 0
-        sufficient=span>=hours
-        expected=hours*4
-        result[f"{hours}h"]={"observed_completed":observed,"expected_scheduled":expected if sufficient else None,"coverage_pct":round(100*min(observed,expected)/expected,2) if sufficient else None,"status":"MEASURED" if sufficient else "INSUFFICIENT_HISTORY"}
+        # Aligned 15-minute slots in (start, now], including a short
+        # processing grace: the current slot may still be executing.
+        grace=dt.timedelta(minutes=7)
+        end=now-grace
+        expected_slots=[]
+        slot=start.replace(minute=(start.minute//15)*15,second=0,microsecond=0)
+        if slot<=start:
+            slot+=dt.timedelta(minutes=15)
+        while slot<=end:
+            expected_slots.append(slot)
+            slot+=dt.timedelta(minutes=15)
+        observed=sum(slot in cycles for slot in expected_slots)
+        sufficient=bool(cycles) and min(cycles)<=start
+        expected=len(expected_slots)
+        result[f"{hours}h"]={
+            "observed_completed":observed,
+            "expected_scheduled":expected if sufficient else None,
+            "coverage_pct":round(100*observed/expected,2) if sufficient and expected else None,
+            "status":"MEASURED" if sufficient else "INSUFFICIENT_HISTORY",
+            "measurement":"UNIQUE_15M_CYCLE_LEDGER",
+            "grace_minutes":7
+        }
     return result
