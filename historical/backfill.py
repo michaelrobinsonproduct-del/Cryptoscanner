@@ -73,7 +73,9 @@ with open(outdir+"/research.ndjson","w",encoding="utf-8") as research_out, open(
    vacc=curv/prevv if prevv>0 else None; tacc=cura/preva if preva>0 else None
    rets=[pct(close[j-1],close[j]) if pct(close[j-1],close[j]) is not None else 0 for j in range(i-11,i+1)]
    vola=statistics.pstdev(rets) if len(rets)>1 else 0
-   if i+288>=len(bars) or bars[i+288][0]-t!=86400 or gaps[i+288]!=gaps[i]:continue
+   if i+288>=len(bars) or bars[i+288][0]-t!=86400 or gaps[i+288]!=gaps[i]:
+    if grp:emit_episode(grp);grp=[]
+    continue
    fwd=[bar[4] for bar in bars[i+1:i+289]]
    mx=max((v for x in fwd if (v:=pct(c,x)) is not None),default=None)
    if mx is None:continue
