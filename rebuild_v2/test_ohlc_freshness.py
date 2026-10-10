@@ -8,7 +8,10 @@ from scanner import historical_live_features
 class CandleFreshnessTests(unittest.TestCase):
     def candles(self, age):
         now=dt.datetime.now(dt.timezone.utc).timestamp()
-        last_open=int((now-age)//300)*300
+        # Keep the fixture on a valid five-minute boundary. An age of 360
+        # means the last completed candle opened 360s ago; the incomplete
+        # candle opens 300s later. Avoid clock-phase-dependent test failures.
+        last_open=int(now//300)*300 + 300 - (int(age//300)*300)
         bars=[]
         for i in range(14):
             ts=last_open-(13-i)*300
@@ -20,7 +23,7 @@ class CandleFreshnessTests(unittest.TestCase):
             historical_live_features("PAIR",fetch=lambda _:self.candles(1800))
 
     def test_current_completed_candle_accepted(self):
-        features=historical_live_features("PAIR",fetch=lambda _:self.candles(360))
+        features=historical_live_features("PAIR",fetch=lambda _:self.candles(300))
         self.assertEqual(features["pre_return_60m_pct"],0)
 
     def test_just_closed_bar_accepted(self):
