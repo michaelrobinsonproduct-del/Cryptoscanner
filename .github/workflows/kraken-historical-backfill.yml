@@ -15,7 +15,9 @@ jobs:
       - name: Compile historical Python scripts
         run: python -m py_compile historical/backfill.py historical/compact.py historical/verify_manifest.py historical/test_backfill_contract.py historical/test_gap_equivalence.py historical/test_dedupe_equivalence.py historical/test_compact_integration.py
       - name: Test historical signal contract
-        run: python historical/test_backfill_contract.py
+        run: |
+          python historical/test_backfill_contract.py
+          python -O historical/test_backfill_contract.py
       - name: Test optimized historical continuity in normal and optimized modes
         run: |
           python historical/test_gap_equivalence.py
