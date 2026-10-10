@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
   actions: write
+concurrency:
+  group: kraken-reliability-watch
+  cancel-in-progress: false
 jobs:
   verify:
     runs-on: ubuntu-latest
