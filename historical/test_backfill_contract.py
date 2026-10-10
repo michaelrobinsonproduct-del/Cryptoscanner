@@ -85,6 +85,7 @@ check("historical_alert_timestamp_not_invented", '"earliest_signal_at":None' in 
 check("episode_split_at_quarter_hour_gap", 'timestamp()>900' in source)
 check("episode_gap_metadata_matches_rule", '"max_anchor_gap_minutes":15' in source)
 check("no_24h_episode_merge", '"dedupe_gap_hours":24' not in source)
+check("episode_closes_on_non_major_anchor", "elif grp:\n    emit_episode(grp);grp=[]" in source)
 check("archive_has_checksum", "checksum mismatch" in source)
 check("five_minute_source", "Kraken_OHLCVT_Full_2026Q2" in source)
 check("historical_not_current", "2026,7,1" in source)
