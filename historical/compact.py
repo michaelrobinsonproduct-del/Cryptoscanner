@@ -26,6 +26,8 @@ with open(src, encoding="utf-8") as source, open(dst, "w", encoding="utf-8") as 
         if timestamp.tzinfo is None:
             raise ValueError(f"historical row has no timezone at line {line_number}")
         anchor_utc = timestamp.astimezone(timezone.utc)
+        if anchor_utc.minute % 15 != 0 or anchor_utc.second != 0 or anchor_utc.microsecond != 0:
+            raise ValueError(f"historical anchor is not on a 15-minute boundary at line {line_number}")
         if anchor_utc > datetime.now(timezone.utc):
             raise ValueError(f"future historical anchor at line {line_number}")
         earliest = min(earliest, anchor_utc) if earliest else anchor_utc
