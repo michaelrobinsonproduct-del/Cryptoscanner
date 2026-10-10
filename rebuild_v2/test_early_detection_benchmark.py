@@ -33,5 +33,22 @@ class EarlyDetectionBenchmarkTests(unittest.TestCase):
                 self.assertFalse(result["ranking_adjustment_allowed"])
 
 
+    def test_missing_earliest_label_cannot_select_later_winner(self):
+        import history
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.object(history,"DB",Path(folder)/"history.sqlite3"):
+                with history.connect() as con:
+                    for hour in (0,1):
+                        stamp=f"2026-09-01T{hour:02d}:00:00+00:00"
+                        con.execute("INSERT INTO runs VALUES (?,?,?,?)",(stamp,stamp,"COMPLETE","{}"))
+                        con.execute("INSERT INTO observations VALUES (?,?,?,?,?)",(stamp,"GAPUSD",1.0,90.0,"WATCH"))
+                        if hour:
+                            con.execute("INSERT INTO outcomes VALUES (?,?,?,?,?)",(stamp,"GAPUSD",4,40.0,stamp))
+                report=history.early_detection_benchmark()
+                self.assertEqual(report["pair_days"],0)
+                self.assertEqual(report["watch"]["n"],0)
+                self.assertEqual(report["status"],"INSUFFICIENT_DATA")
+
+
 if __name__=="__main__":
     unittest.main()
