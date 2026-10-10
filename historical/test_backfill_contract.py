@@ -21,6 +21,25 @@ for value, expected in [(None, False), (-4, False), (-3, True), (-0.1, True), (0
     actual = bool(eval(early_code, {"__builtins__": {}}, {"p60": value}))
     check(f"early_return_{value}", actual is expected)
 
+forward_assignments = [
+    node for node in ast.walk(tree)
+    if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "mx" for t in node.targets)
+]
+check("single_forward_max_assignment", len(forward_assignments) == 1)
+forward_code = compile(ast.Expression(forward_assignments[0].value), "<forward-contract>", "eval")
+def pct(a, b):
+    return (b / a - 1) * 100 if a and b else None
+for price, future, expected in [
+    (100, [100, 100], 0),
+    (100, [99, 100], 0),
+    (100, [98, 99], -1),
+    (100, [100, 120], 20),
+    (100, [100, 0], 0),
+    (0, [100], None),
+]:
+    actual = eval(forward_code, {"__builtins__": {}, "max": max, "pct": pct}, {"c": price, "fwd": future})
+    check(f"forward_max_{price}_{future}", actual == expected)
+
 check("archive_has_checksum", "checksum mismatch" in source)
 check("five_minute_source", "Kraken_OHLCVT_Full_2026Q2" in source)
 check("historical_not_current", "2026,7,1" in source)
