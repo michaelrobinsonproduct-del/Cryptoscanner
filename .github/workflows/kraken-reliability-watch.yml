@@ -1,6 +1,10 @@
 name: Kraken Reliability Watch
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/kraken-reliability-watch.yml'
   schedule:
     - cron: '*/5 * * * *'
 permissions:
