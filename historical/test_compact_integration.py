@@ -58,3 +58,30 @@ with tempfile.TemporaryDirectory() as temp:
     result = run(COMPACT, temp)
     assert result.returncode != 0, "duplicate source observation was accepted"
     print("PASS reject_duplicate_source_anchor")
+
+    # Rebuild clean input and exercise the verifier against forged provenance.
+    (output / "research.ndjson").write_text(
+        "".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8"
+    )
+    result = run(COMPACT, temp)
+    assert result.returncode == 0, result.stderr
+    manifest_path = output / "research_training_manifest.json"
+    valid_manifest = json.loads(manifest_path.read_text())
+    for field, forged in [
+        ("research_population_schema_version", 1),
+        ("research_population_policy", "winner_only"),
+        ("sampling_policy", "outcome_conditioned"),
+        ("production_ingested", True),
+        ("training_rows", 999),
+        ("training_sha256", "0" * 64),
+    ]:
+        changed = dict(valid_manifest)
+        changed[field] = forged
+        manifest_path.write_text(json.dumps(changed), encoding="utf-8")
+        result = run(VERIFY, temp)
+        assert result.returncode != 0, f"forged manifest field accepted: {field}"
+        print("PASS reject_forged_" + field)
+    manifest_path.write_text(json.dumps(valid_manifest), encoding="utf-8")
+    assert run(VERIFY, temp).returncode == 0
+    print("PASS restore_valid_manifest")
+
