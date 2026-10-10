@@ -48,7 +48,15 @@ with open(outdir+"/research.ndjson","w",encoding="utf-8") as research_out, open(
   for j in range(1,len(bars)):
    gaps[j]=gaps[j-1]+(bars[j][0]-bars[j-1][0]!=300)
   close=[x[4] for x in bars]; vol=[x[5] for x in bars]; trades=[x[6] for x in bars]
-  pairrows=[]
+  # Emit completed episodes immediately rather than accumulating every market in memory.
+  def emit_episode(group):
+   global episodes_written
+   best=max(group,key=lambda r:r["max_forward_return_pct"]);first=group[0]
+   early_row=next((r for r in group if r["still_early"]),None)
+   ep={"pair":first["pair"],"move_start":first["anchor_at"],"peak_at":None,"baseline_price":first["anchor_price"],"peak_price":None,"max_return_pct":best["max_forward_return_pct"],"earliest_signal_at":early_row["anchor_at"] if early_row else None,"extension_at_signal_pct":early_row["pre_return_60m_pct"] if early_row else None,"caught_early":early_row is not None,"source":"kraken_archive_5m_2026q2","evidence":{"windows":len(group),"dedupe_gap_hours":24}}
+   moves_out.write(json.dumps(ep,separators=(",",":"))+"\n")
+   episodes_written+=1
+  grp=[]
   for i in range(12,len(bars)-288): # inspect every 5m candle; select wall-clock quarter-hour anchors
    t=bars[i][0]
    if not START<=t<END or t%900!=0:continue
@@ -67,7 +75,10 @@ with open(outdir+"/research.ndjson","w",encoding="utf-8") as research_out, open(
    rec={"pair":pair,"anchor_at":datetime.fromtimestamp(t,timezone.utc).isoformat(),"anchor_price":c,"pre_return_5m_pct":p5,"pre_return_15m_pct":p15,"pre_return_60m_pct":p60,"volume_accel":vacc,"trade_accel":tacc,"volatility_pct":vola,"max_forward_return_pct":mx,"still_early":early,"major_mover":mx>=20,"control_sampled":control_sampled,"source":"kraken_archive_5m_2026q2","features":{"interval":"5m","no_lookahead":True}}
    research_out.write(json.dumps(rec,separators=(",",":"))+"\n")
    rows_written+=1
-   if rec["major_mover"]:pairrows.append(rec)
+   if rec["major_mover"]:
+    if grp and t-datetime.fromisoformat(grp[-1]["anchor_at"]).timestamp()>86400:
+     emit_episode(grp);grp=[]
+    grp.append(rec)
   # Emit completed episodes immediately rather than accumulating every market in memory.
   grp=[]
   def emit_episode(group):
@@ -77,11 +88,6 @@ with open(outdir+"/research.ndjson","w",encoding="utf-8") as research_out, open(
    ep={"pair":first["pair"],"move_start":first["anchor_at"],"peak_at":None,"baseline_price":first["anchor_price"],"peak_price":None,"max_return_pct":best["max_forward_return_pct"],"earliest_signal_at":early_row["anchor_at"] if early_row else None,"extension_at_signal_pct":early_row["pre_return_60m_pct"] if early_row else None,"caught_early":early_row is not None,"source":"kraken_archive_5m_2026q2","evidence":{"windows":len(group),"dedupe_gap_hours":24}}
    moves_out.write(json.dumps(ep,separators=(",",":"))+"\n")
    episodes_written+=1
-  for r in pairrows:
-   ts=datetime.fromisoformat(r["anchor_at"]).timestamp()
-   if grp and ts-datetime.fromisoformat(grp[-1]["anchor_at"]).timestamp()>86400:
-    emit_episode(grp);grp=[]
-   grp.append(r)
   if grp:emit_episode(grp)
   if ni%50==0:print("processed",ni,"research",rows_written,flush=True)
 with open(outdir+"/summary.json","w") as f:json.dump({"research_rows":rows_written,"move_episodes":episodes_written,"start":"2025-10-04","archive_end":"2026-06-30","source":"Kraken OHLCVT 5m","note":"historical L2 unavailable; not fabricated"},f)
