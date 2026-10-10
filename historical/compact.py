@@ -20,7 +20,7 @@ with open(src, encoding="utf-8") as source, open(dst, "w", encoding="utf-8") as 
         x = json.loads(line)
         pair = x.get("pair")
         anchor = x.get("anchor_at")
-        if not isinstance(pair, str) or not pair or not isinstance(anchor, str):
+        if not isinstance(pair, str) or not pair.strip() or not isinstance(anchor, str):
             raise ValueError(f"invalid historical row at line {line_number}")
         timestamp = datetime.fromisoformat(anchor.replace("Z", "+00:00"))
         if timestamp.tzinfo is None:
