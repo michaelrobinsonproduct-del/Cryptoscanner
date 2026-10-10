@@ -325,6 +325,21 @@ jobs:
           acceptance=remote("acceptance.json")
           assert acceptance["acceptance"]=="PASSED", "remote acceptance not passed"
           assert latest["completed_at"]==acceptance["completed_at"], "remote result/acceptance mismatch"
+          assert latest["scan_cycle_id"]==acceptance["scan_cycle_id"]==os.environ["SCAN_CYCLE_ID"], "remote cycle mismatch"
+          assert latest["github_run_id"]==acceptance["github_run_id"]==os.environ["GITHUB_RUN_ID"], "remote run mismatch"
+          assert all(acceptance.get("checks",{}).values()) and acceptance.get("checks"), "remote acceptance checks incomplete"
+          db_bytes=subprocess.check_output(["git","show","origin/rebuild-history:history.sqlite3"])
+          import sqlite3,tempfile
+          with tempfile.NamedTemporaryFile(suffix=".sqlite3") as temp:
+              temp.write(db_bytes)
+              temp.flush()
+              with sqlite3.connect(temp.name) as db:
+                  assert db.execute("PRAGMA integrity_check").fetchone()[0]=="ok", "remote SQLite corrupt"
+                  cycle=db.execute("SELECT run_id FROM scan_cycles WHERE cycle_id=?",(os.environ["SCAN_CYCLE_ID"],)).fetchone()
+                  assert cycle is not None, "remote cycle ledger missing"
+                  assert db.execute("SELECT COUNT(*) FROM runs WHERE id=?",(cycle[0],)).fetchone()[0]==1, "remote ledger run missing"
+                  assert db.execute("SELECT COUNT(*) FROM runs").fetchone()[0]==acceptance["history"]["runs"], "remote historical run count mismatch"
+          print("REMOTE_SQLITE_CYCLE_LEDGER_VERIFIED",os.environ["SCAN_CYCLE_ID"])
           assert latest["health"]=="COMPLETE" and latest["failures"]==0, "remote result incomplete"
           assert latest["historical_research"]["prospective_trade_research"]["score_adjustment_applied"]==0
           print("REMOTE_RESULT_RETRIEVAL_VERIFIED",json.dumps({"run_id":os.environ["GITHUB_RUN_ID"],"completed_at":latest["completed_at"],"scanned":latest["scanned"],"watch_count":len(latest["watch"]),"acceptance":acceptance["acceptance"]}))
