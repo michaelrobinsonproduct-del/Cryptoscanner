@@ -148,11 +148,44 @@ def scan():
                 interaction=candidate
         except (ValueError,OSError):
             pass
+    # Prospective-only diagnostics: observe historically supported trade acceleration,
+    # but do not adjust ranking or claim execution readiness.
+    simple_path=pathlib.Path("rebuild_v2/output/historical_model.json")
+    simple=None
+    if simple_path.exists():
+        try:
+            m=json.loads(simple_path.read_text())
+            if m.get("schema_version")==1 and m.get("holdout_rows",0)>=1000:
+                simple=m
+        except (ValueError,OSError):
+            pass
+    trade_research={"mode":"OBSERVE_ONLY","model_loaded":bool(simple),
+                    "approved_historical_rules":simple.get("approved_rules",[]) if simple else [],
+                    "candidates_evaluated":0,"trade_accel_2x_count":0,
+                    "volume_and_trade_2x_count":0,"feature_failures":0,
+                    "score_adjustment_applied":0}
+    if simple:
+        for candidate in watches[:12]:
+            try:
+                features=historical_live_features(candidate["pair"])
+                t=features.get("trade_accel");v=features.get("volume_accel")
+                candidate["prospective_trade_research"]={
+                    "trade_accel":t,"volume_accel":v,
+                    "trades_2x":t is not None and t>=2,
+                    "volume_trades":t is not None and t>=2 and v is not None and v>=2,
+                    "score_adjustment":0}
+                trade_research["candidates_evaluated"]+=1
+                trade_research["trade_accel_2x_count"]+=int(t is not None and t>=2)
+                trade_research["volume_and_trade_2x_count"]+=int(t is not None and t>=2 and v is not None and v>=2)
+            except Exception as exc:
+                candidate["prospective_trade_research_error"]=str(exc)
+                trade_research["feature_failures"]+=1
     research={"status":"VALIDATED_INTERACTIONS" if interaction else "INTERACTION_MODEL_NOT_RESTORED",
               "approved_rules":interaction.get("approved_rules",[]) if interaction else [],
               "candidates_enriched":0,"feature_failures":0,
               "ranking_changes_possible":False,"interaction_model_loaded":bool(interaction),
-              "feature_parity":"IMPLEMENTED","legacy_bias_guard":"ENFORCED"}
+              "feature_parity":"IMPLEMENTED","legacy_bias_guard":"ENFORCED",
+              "prospective_trade_research":trade_research}
     if interaction and interaction.get("approved_rules"):
         for candidate in sorted(watches,key=lambda x:-x["score"])[:12]:
             try:
