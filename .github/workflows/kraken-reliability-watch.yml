@@ -25,11 +25,18 @@ jobs:
           print("health", json.dumps(health, default=str)[:1500])
           if health.get("last_error"):
               raise SystemExit("FAIL: scanner reported a run error")
-          try:
-              result = read("/verified-results")
-          except urllib.error.HTTPError as exc:
-              body = exc.read().decode("utf-8", errors="replace")[:1000]
-              raise SystemExit(f"FAIL: verified-results HTTP {exc.code}: {body}")
+          result = None
+          for attempt in range(3):
+              try:
+                  result = read("/verified-results")
+                  break
+              except urllib.error.HTTPError as exc:
+                  body = exc.read().decode("utf-8", errors="replace")[:1000]
+                  if exc.code == 503 and '"status":"RUNNING"' in body and attempt < 2:
+                      print(f"NOTICE: active scan; retrying verified results ({attempt+1}/2)")
+                      time.sleep(15)
+                      continue
+                  raise SystemExit(f"FAIL: verified-results HTTP {exc.code}: {body}")
           print("verification", json.dumps(result, default=str)[:2000])
           if result.get("status") != "VERIFIED_FRESH":
               raise SystemExit("FAIL: no verified fresh completed scan")
