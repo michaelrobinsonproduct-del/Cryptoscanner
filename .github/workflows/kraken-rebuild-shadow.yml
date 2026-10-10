@@ -212,6 +212,20 @@ jobs:
           git add history.sqlite3 latest.json acceptance.json schedule_health.json
           git -c user.name='kraken-rebuild-bot' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Shadow scan history ${GITHUB_RUN_ID}" || true
           git push origin HEAD:refs/heads/rebuild-history
+          # Verify the exact consumer-facing paths after the remote branch updates.
+          git fetch origin +refs/heads/rebuild-history:refs/remotes/origin/rebuild-history
+          python - <<'PY'
+          import json,subprocess,os
+          def remote(name):
+              return json.loads(subprocess.check_output(["git","show","origin/rebuild-history:"+name],text=True))
+          latest=remote("latest.json")
+          acceptance=remote("acceptance.json")
+          assert acceptance["acceptance"]=="PASSED", "remote acceptance not passed"
+          assert latest["completed_at"]==acceptance["completed_at"], "remote result/acceptance mismatch"
+          assert latest["health"]=="COMPLETE" and latest["failures"]==0, "remote result incomplete"
+          assert latest["historical_research"]["prospective_trade_research"]["score_adjustment_applied"]==0
+          print("REMOTE_RESULT_RETRIEVAL_VERIFIED",json.dumps({"run_id":os.environ["GITHUB_RUN_ID"],"completed_at":latest["completed_at"],"scanned":latest["scanned"],"watch_count":len(latest["watch"]),"acceptance":acceptance["acceptance"]}))
+          PY
       - name: Verify authoritative persisted scan independently
         if: success()
         shell: bash
