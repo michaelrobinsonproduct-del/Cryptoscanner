@@ -1,4 +1,5 @@
 name: Kraken Rebuild Shadow Scan
+run-name: Shadow ${{ github.event_name }} ${{ inputs.cycle_id }}
 # GitHub-only scan verification run — regression verification
 on:
   workflow_dispatch:
