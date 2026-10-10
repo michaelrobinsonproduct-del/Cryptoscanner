@@ -44,9 +44,9 @@ with zipfile.ZipFile(zp) as z:
   if len(bars)<300:continue
   close=[x[4] for x in bars]; vol=[x[5] for x in bars]; trades=[x[6] for x in bars]
   pairrows=[]
-  for i in range(12,len(bars)-288,3): # 15m anchors
+  for i in range(12,len(bars)-288): # inspect every 5m candle; select wall-clock quarter-hour anchors
    t=bars[i][0]
-   if not START<=t<END:continue
+   if not START<=t<END or t%900!=0:continue
    if t-bars[i-12][0]!=3600 or any(bars[j][0]-bars[j-1][0]!=300 for j in range(i-11,i+1)):continue
    c=close[i]; p5=pct(close[i-1],c); p15=pct(close[i-3],c); p60=pct(close[i-12],c)
    prevv=sum(vol[i-12:i-6]); curv=sum(vol[i-6:i]); preva=sum(trades[i-12:i-6]); cura=sum(trades[i-6:i])
