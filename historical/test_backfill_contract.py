@@ -110,11 +110,11 @@ for case in range(100):
     namespace["emit_episode"](group)
     emitted = json.loads(namespace["moves_out"].getvalue().splitlines()[-1])
     best = max(group, key=lambda r: r["max_forward_return_pct"])
-    assert emitted["evidence"]["max_return_anchor"] == best["anchor_at"]
-    assert emitted["evidence"]["max_return_baseline_price"] == best["anchor_price"]
-    assert emitted["max_return_pct"] == best["max_forward_return_pct"]
-    assert emitted["move_start"] == group[0]["anchor_at"]
-    assert emitted["caught_early"] is False
-    assert emitted["evidence"]["live_alert_verified"] is False
+    check("episode_max_anchor_"+str(case), emitted["evidence"]["max_return_anchor"] == best["anchor_at"])
+    check("episode_max_baseline_"+str(case), emitted["evidence"]["max_return_baseline_price"] == best["anchor_price"])
+    check("episode_max_return_"+str(case), emitted["max_return_pct"] == best["max_forward_return_pct"])
+    check("episode_start_"+str(case), emitted["move_start"] == group[0]["anchor_at"])
+    check("episode_not_live_catch_"+str(case), emitted["caught_early"] is False)
+    check("episode_live_verification_"+str(case), emitted["evidence"]["live_alert_verified"] is False)
 check("production_episode_emitter_100_groups", namespace["episodes_written"] == 100)
 print("historical_contracts_passed")
