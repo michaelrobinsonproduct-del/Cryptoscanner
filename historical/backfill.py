@@ -57,7 +57,7 @@ with zipfile.ZipFile(zp) as z:
    if not fwd or i+288>=len(bars) or bars[i+288][0]-t!=86400 or any(bars[j][0]-bars[j-1][0]!=300 for j in range(i+1,i+289)):continue
    mx=max((v for x in fwd if (v:=pct(c,x)) is not None),default=None)
    if mx is None:continue
-   control_sampled=(t//86400)%7==0 and (i%12==0)
+   control_sampled=(t//86400)%7==0 and (t%3600==0)
    keep=mx>=10 or control_sampled
    if not keep:continue
    early=p60 is not None and abs(p60)<=3
