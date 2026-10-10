@@ -23,7 +23,8 @@ with tempfile.TemporaryDirectory() as temp:
             ts = datetime(2026, 1, 2, hour, minute, tzinfo=timezone.utc)
             rows.append({
                 "pair": "XBTUSD", "anchor_at": ts.isoformat(),
-                "major_mover": minute == 15, "still_early": minute == 15,
+                "major_mover": (minute == 15 or (minute == 0 and hour % 2 == 0)),
+                "still_early": minute == 15,
                 "control_sampled": minute == 45, "max_forward_return_pct": 40 if minute == 15 else 0,
             })
     (output / "research.ndjson").write_text(
@@ -34,7 +35,7 @@ with tempfile.TemporaryDirectory() as temp:
     training = [json.loads(line) for line in (output / "research_training.ndjson").read_text().splitlines()]
     assert len(training) == 4
     assert all(datetime.fromisoformat(row["anchor_at"]).minute == 0 for row in training)
-    assert all(not row["major_mover"] for row in training), "outcome-dependent rows leaked into sample"
+    assert sum(bool(row["major_mover"]) for row in training) == 2, "hourly sampling excluded winners"
     result = run(VERIFY, temp)
     assert result.returncode == 0, result.stderr
     manifest = json.loads((output / "research_training_manifest.json").read_text())
