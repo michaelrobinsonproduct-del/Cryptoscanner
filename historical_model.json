@@ -1,107 +1,110 @@
 {
   "schema_version": 1,
   "source": "Kraken 2026Q2 5m archive; historical/backfill.py",
-  "trained_at": "2026-10-10T04:41:44.012329+00:00",
-  "train_rows": 246838,
-  "holdout_rows": 69865,
+  "trained_at": "2026-10-10T06:23:17.328246+00:00",
+  "train_rows": 17523,
+  "holdout_rows": 4995,
   "holdout_start": "2026-05-01",
   "baseline_train": {
-    "rows": 246838,
-    "major_movers": 23500,
-    "sampled_positive_rate": 0.0952
+    "rows": 17523,
+    "major_movers": 513,
+    "sampled_positive_rate": 0.02928
   },
   "baseline_holdout": {
-    "rows": 69865,
-    "major_movers": 5843,
-    "sampled_positive_rate": 0.08363
+    "rows": 4995,
+    "major_movers": 182,
+    "sampled_positive_rate": 0.03644
   },
   "rules": {
     "early_1h": {
       "train": {
-        "rows": 214284,
-        "major_movers": 14727,
-        "sampled_positive_rate": 0.06873
+        "rows": 17028,
+        "major_movers": 334,
+        "sampled_positive_rate": 0.01961
       },
       "holdout": {
-        "rows": 60329,
-        "major_movers": 3546,
-        "sampled_positive_rate": 0.05878
+        "rows": 4697,
+        "major_movers": 99,
+        "sampled_positive_rate": 0.02108
       },
-      "holdout_relative_lift": 0.703,
+      "holdout_relative_lift": 0.578,
       "eligible": false
     },
     "volume_2x": {
       "train": {
-        "rows": 69661,
-        "major_movers": 6258,
-        "sampled_positive_rate": 0.08984
+        "rows": 3846,
+        "major_movers": 104,
+        "sampled_positive_rate": 0.02704
       },
       "holdout": {
-        "rows": 18744,
-        "major_movers": 1577,
-        "sampled_positive_rate": 0.08413
+        "rows": 1024,
+        "major_movers": 36,
+        "sampled_positive_rate": 0.03516
       },
-      "holdout_relative_lift": 1.006,
+      "holdout_relative_lift": 0.965,
       "eligible": false
     },
     "trades_2x": {
       "train": {
-        "rows": 36802,
-        "major_movers": 3694,
-        "sampled_positive_rate": 0.10037
+        "rows": 1150,
+        "major_movers": 64,
+        "sampled_positive_rate": 0.05565
       },
       "holdout": {
-        "rows": 10239,
-        "major_movers": 948,
-        "sampled_positive_rate": 0.09259
+        "rows": 327,
+        "major_movers": 21,
+        "sampled_positive_rate": 0.06422
       },
-      "holdout_relative_lift": 1.107,
-      "eligible": false
+      "holdout_relative_lift": 1.762,
+      "eligible": true
     },
     "early_volume": {
       "train": {
-        "rows": 59550,
-        "major_movers": 3741,
-        "sampled_positive_rate": 0.06282
+        "rows": 3722,
+        "major_movers": 68,
+        "sampled_positive_rate": 0.01827
       },
       "holdout": {
-        "rows": 15846,
-        "major_movers": 892,
-        "sampled_positive_rate": 0.05629
+        "rows": 953,
+        "major_movers": 18,
+        "sampled_positive_rate": 0.01889
       },
-      "holdout_relative_lift": 0.673,
+      "holdout_relative_lift": 0.518,
       "eligible": false
     },
     "early_trades": {
       "train": {
-        "rows": 29948,
-        "major_movers": 2093,
-        "sampled_positive_rate": 0.06989
+        "rows": 1061,
+        "major_movers": 34,
+        "sampled_positive_rate": 0.03205
       },
       "holdout": {
-        "rows": 8199,
-        "major_movers": 501,
-        "sampled_positive_rate": 0.06111
+        "rows": 272,
+        "major_movers": 6,
+        "sampled_positive_rate": 0.02206
       },
-      "holdout_relative_lift": 0.731,
+      "holdout_relative_lift": 0.605,
       "eligible": false
     },
     "volume_trades": {
       "train": {
-        "rows": 29539,
-        "major_movers": 2852,
-        "sampled_positive_rate": 0.09655
+        "rows": 933,
+        "major_movers": 49,
+        "sampled_positive_rate": 0.05252
       },
       "holdout": {
-        "rows": 8213,
-        "major_movers": 765,
-        "sampled_positive_rate": 0.09315
+        "rows": 277,
+        "major_movers": 17,
+        "sampled_positive_rate": 0.06137
       },
-      "holdout_relative_lift": 1.114,
-      "eligible": false
+      "holdout_relative_lift": 1.684,
+      "eligible": true
     }
   },
-  "approved_rules": [],
+  "approved_rules": [
+    "trades_2x",
+    "volume_trades"
+  ],
   "limitations": [
     "Only systematic weekly/hourly controls used; temporal overlap and sampling variance remain",
     "Overlapping anchors are correlated; holdout is chronological, not independent episodes",
