@@ -83,5 +83,22 @@ class ProspectiveNoLeakageTests(unittest.TestCase):
                 self.assertEqual(result["test"]["LOW"],1)
 
 
+    def test_unlabeled_earliest_signal_not_replaced_by_later_win(self):
+        import history
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.object(history,"DB",Path(folder)/"history.sqlite3"):
+                with history.connect() as con:
+                    for hour in (0,1):
+                        stamp=f"2026-09-01T{hour:02d}:00:00+00:00"
+                        con.execute("INSERT INTO runs VALUES (?,?,?,?)",(stamp,stamp,"COMPLETE","{}"))
+                        con.execute("INSERT INTO observations VALUES (?,?,?,?,?)",(stamp,"GAPUSD",1.0,99.0,"WATCH"))
+                        if hour:
+                            con.execute("INSERT INTO outcomes VALUES (?,?,?,?,?)",(stamp,"GAPUSD",4,30.0,stamp))
+                result=history.prospective_learning()
+                self.assertEqual(result["pair_days"],0)
+                self.assertFalse(result["validated"])
+                self.assertEqual(result["adjustment"],0)
+
+
 if __name__=="__main__":
     unittest.main()
