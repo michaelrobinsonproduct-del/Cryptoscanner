@@ -28,6 +28,8 @@ with open(src, encoding="utf-8") as source, open(dst, "w", encoding="utf-8") as 
         anchor_utc = timestamp.astimezone(timezone.utc)
         if anchor_utc.minute % 15 != 0 or anchor_utc.second != 0 or anchor_utc.microsecond != 0:
             raise ValueError(f"historical anchor is not on a 15-minute boundary at line {line_number}")
+        if anchor_utc < datetime(2025, 10, 4, tzinfo=timezone.utc) or anchor_utc >= datetime(2026, 7, 1, tzinfo=timezone.utc):
+            raise ValueError(f"historical anchor outside source coverage at line {line_number}")
         if anchor_utc > datetime.now(timezone.utc):
             raise ValueError(f"future historical anchor at line {line_number}")
         earliest = min(earliest, anchor_utc) if earliest else anchor_utc
