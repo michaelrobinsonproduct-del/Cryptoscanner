@@ -2,6 +2,11 @@ name: Kraken Rebuild Shadow Scan
 # GitHub-only scan verification run — regression verification
 on:
   workflow_dispatch:
+    inputs:
+      cycle_id:
+        description: 'UTC 15-minute cycle being recovered (YYYY-MM-DDTHH:MM:SSZ)'
+        required: false
+        type: string
   push:
     branches: [main]
     paths:
@@ -30,15 +35,24 @@ jobs:
         with:
           python-version: '3.12'
       - name: Establish scan cycle identity
+        env:
+          REQUESTED_CYCLE_ID: ${{ inputs.cycle_id }}
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           import datetime as dt, os
           now=dt.datetime.now(dt.timezone.utc)
-          epoch=int(now.timestamp())
-          boundary=epoch-(epoch%900)
-          cycle=dt.datetime.fromtimestamp(boundary,dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+          supplied=os.environ.get("REQUESTED_CYCLE_ID","").strip()
+          if supplied:
+              parsed=dt.datetime.strptime(supplied,"%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=dt.timezone.utc)
+              if int(parsed.timestamp())%900 or parsed>now or (now-parsed).total_seconds()>3600:
+                  raise ValueError("Recovery cycle must be aligned, not future, and at most 60 minutes old")
+              cycle=supplied
+          else:
+              epoch=int(now.timestamp())
+              boundary=epoch-(epoch%900)
+              cycle=dt.datetime.fromtimestamp(boundary,dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
           with open(os.environ["GITHUB_ENV"],"a") as env:
               env.write(f"SCAN_CYCLE_ID={cycle}\n")
           print("SCAN_CYCLE_ID",cycle)
