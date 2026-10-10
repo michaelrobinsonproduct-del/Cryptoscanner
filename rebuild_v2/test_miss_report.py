@@ -26,5 +26,18 @@ class MissReportTests(unittest.TestCase):
                 self.assertEqual(misses,[{"pair":"TESTUSD","missed_breakouts":1,"best_return_pct":8.0}])
 
 
+    def test_later_not_selected_winner_not_missed_if_first_was_watch(self):
+        import history
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.object(history,"DB",Path(folder)/"history.sqlite3"):
+                with history.connect() as con:
+                    for hour,status,ret in ((0,"WATCH",0.0),(1,"NOT_SELECTED",30.0)):
+                        stamp=f"2026-09-01T{hour:02d}:00:00+00:00"
+                        con.execute("INSERT INTO runs VALUES (?,?,?,?)",(stamp,stamp,"COMPLETE","{}"))
+                        con.execute("INSERT INTO observations VALUES (?,?,?,?,?)",(stamp,"TESTUSD",1.0,80.0,status))
+                        con.execute("INSERT INTO outcomes VALUES (?,?,?,?,?)",(stamp,"TESTUSD",4,ret,stamp))
+                self.assertEqual(history.miss_report(),[])
+
+
 if __name__=="__main__":
     unittest.main()
