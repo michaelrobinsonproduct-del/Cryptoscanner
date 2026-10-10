@@ -1,0 +1,18 @@
+name: Production Recovery Contract Tests
+on:
+  push:
+    branches:
+      - production-source-recovery-20261010
+    paths:
+      - 'production-recovery/**'
+      - '.github/workflows/production-recovery-tests.yml'
+  workflow_dispatch:
+jobs:
+  contract-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Run isolated fail-closed contract tests
+        run: bun test production-recovery/market-evidence.test.ts production-recovery/promotion-gate.test.ts
