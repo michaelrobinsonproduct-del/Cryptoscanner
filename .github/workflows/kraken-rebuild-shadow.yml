@@ -112,6 +112,20 @@ jobs:
             if [ "$attempt" -eq 2 ]; then exit 1; fi
             sleep 15
           done
+      - name: Evaluate paper-only entry hypotheses
+        run: python rebuild_v2/paper_entries.py
+      - name: Validate paper-only boundaries
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path("rebuild_v2/output/paper_entries.json").read_text())
+          r=json.loads(Path("rebuild_v2/output/latest.json").read_text())
+          assert p["mode"]=="PAPER_ONLY" and p["real_trade_approvals"]==0
+          assert p["scan_completed_at"]==r["completed_at"]
+          assert all(c["entry_approved"] is False and c["real_trade_approved"] is False for c in p["candidates"])
+          print("PAPER_BOUNDARY_VERIFIED")
+          PY
       - name: Validate persisted report before publication
         run: |
           python - <<'PY'
@@ -266,6 +280,7 @@ jobs:
           name: kraken-shadow-${{ github.run_id }}
           path: |
             rebuild_v2/output/latest.json
+            rebuild_v2/output/paper_entries.json
             rebuild_v2/output/acceptance.json
             rebuild_v2/output/schedule_health.json
             rebuild_v2/output/history.sqlite3
