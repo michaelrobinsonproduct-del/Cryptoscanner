@@ -5,7 +5,7 @@
  */
 export function evaluateEarlyMoverSignals(signals, observations, { horizonsHours = [24, 48, 72], thresholdsPct = [20, 50, 100, 500] } = {}) {
   const parse = value => {
-    if (typeof value !== "string" || !/(Z|[+-]\\d\\d:\\d\\d)$/.test(value)) throw new Error("Timestamp must include timezone");
+    if (typeof value !== "string" || !/(Z|[+-]\d\d:\d\d)$/.test(value)) throw new Error("Timestamp must include timezone");
     const time = Date.parse(value);
     if (!Number.isFinite(time)) throw new Error("Invalid timestamp");
     return time;
