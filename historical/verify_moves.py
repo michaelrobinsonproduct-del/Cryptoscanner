@@ -41,6 +41,10 @@ for line_number, line in enumerate(path.open(encoding="utf-8"), 1):
         raise ValueError(f"invalid major mover return at {line_number}")
     if not isinstance(evidence.get("windows"), int) or evidence["windows"] < 1:
         raise ValueError(f"invalid episode window count at {line_number}")
+    if row.get("source") != "kraken_archive_5m_2026q2":
+        raise ValueError(f"unexpected episode provenance at {line_number}")
+    if row.get("peak_at") is not None or row.get("peak_price") is not None or row.get("extension_at_signal_pct") is not None:
+        raise ValueError(f"fabricated peak or alert extension at {line_number}")
     key = (row["pair"], start)
     if key in seen:
         raise ValueError(f"duplicate episode key at {line_number}")
