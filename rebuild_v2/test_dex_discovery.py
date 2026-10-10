@@ -17,7 +17,9 @@ class DexDiscoveryTests(unittest.TestCase):
             return [self.profile] if path=="/token-profiles/latest/v1" else [self.pair]
         r=discover(fetch=fetch,now=self.now)
         self.assertEqual(r["status"],"COMPLETE")
-        self.assertEqual(r["eligible_pairs"],1)\n        self.assertEqual(r["candidate_count_total"],1)\n        self.assertEqual(r["rejection_counts"],{})
+        self.assertEqual(r["eligible_pairs"],1)
+        self.assertEqual(r["candidate_count_total"],1)
+        self.assertEqual(r["rejection_counts"],{})
         self.assertEqual(r["profiles_checked"],1)
         self.assertFalse(r["entry_approved"])
         self.assertFalse(r["candidates"][0]["entry_approved"])
@@ -29,7 +31,9 @@ class DexDiscoveryTests(unittest.TestCase):
             pair={**self.pair,**changes}
             def fetch(path):
                 return [self.profile] if path=="/token-profiles/latest/v1" else [pair]
-            result=discover(fetch=fetch,now=self.now)\n            self.assertEqual(result["eligible_pairs"],0)\n            self.assertEqual(sum(result["rejection_counts"].values()),1)
+            result=discover(fetch=fetch,now=self.now)
+            self.assertEqual(result["eligible_pairs"],0)
+            self.assertEqual(sum(result["rejection_counts"].values()),1)
     def test_source_failure_is_visible_and_isolated(self):
         def broken(path):raise RuntimeError("provider offline")
         r=discover(fetch=broken,now=self.now)
