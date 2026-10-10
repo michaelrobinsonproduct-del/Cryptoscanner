@@ -110,6 +110,16 @@ jobs:
               if cycle:
                   return "FAILED"
               return "MISSING"
+          # Deterministic regression checks: pushes must never satisfy a missing schedule.
+          synthetic_time=boundary.isoformat().replace("+00:00","Z")
+          def sample(event,status,conclusion):
+              return {"event":event,"status":status,"conclusion":conclusion,"created_at":synthetic_time}
+          assert classify([sample("push","completed","success")])=="MISSING"
+          assert classify([sample("schedule","completed","success")])=="PRESENT"
+          assert classify([sample("schedule","completed","failure")])=="FAILED"
+          assert classify([sample("workflow_dispatch","completed","success")])=="PRESENT"
+          assert classify([sample("push","completed","success"),sample("schedule","completed","failure")])=="FAILED"
+          print("PASS: watchdog classification regression cases")
           state = classify(runs)
           if state == "PRESENT":
               print("PRESENT: scheduled/recovered shadow cycle exists", boundary.isoformat())
