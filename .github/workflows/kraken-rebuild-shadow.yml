@@ -119,6 +119,11 @@ jobs:
           assert research.get("interaction_model_loaded") is True, "validated interaction model not loaded"
           assert research.get("status") == "VALIDATED_INTERACTIONS", "historical interaction model invalid"
           assert isinstance(research.get("approved_rules"),list), "historical rules missing"
+          prospective = research.get("prospective_trade_research") or {}
+          assert prospective.get("mode") == "OBSERVE_ONLY", "trade research not shadow-only"
+          assert prospective.get("model_loaded") is True, "historical simple model missing"
+          assert prospective.get("score_adjustment_applied") == 0, "unapproved trade research changed scores"
+          assert prospective.get("candidates_evaluated",0) + prospective.get("feature_failures",0) <= 12, "invalid research evaluation count"
           hist = report.get("history_diagnostics") or {}
           assert hist.get("history_available") is True, "history unavailable"
           assert hist.get("runs",0) >= 1 and hist.get("observations",0) >= len(report["watch"]), "missing history observations"
