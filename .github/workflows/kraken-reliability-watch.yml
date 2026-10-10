@@ -129,6 +129,11 @@ jobs:
           assert classify([sample("schedule","completed","failure")])=="FAILED"
           assert classify([sample("workflow_dispatch","completed","success")])=="PRESENT"
           assert classify([sample("push","completed","success"),sample("schedule","completed","failure")])=="FAILED"
+          assert classify([sample("schedule","in_progress",None)])=="PRESENT"
+          assert classify([sample("schedule","completed","cancelled")])=="FAILED"
+          assert classify([sample("workflow_dispatch","completed","failure")])=="FAILED"
+          assert classify([sample("workflow_dispatch","in_progress",None)])=="PRESENT"
+          assert classify([sample("push","completed","success"),sample("workflow_dispatch","completed","failure")])=="FAILED"
           # Exercise the recovery decision and exact dispatch payload without
           # creating a real GitHub run or interfering with the live schedule.
           def recovery_payload(items):
@@ -138,6 +143,9 @@ jobs:
           assert recovery_payload([sample("push","completed","success")]) == {"ref":"main","inputs":{"cycle_id":boundary.strftime("%Y-%m-%dT%H:%M:%SZ")}}
           assert recovery_payload([sample("schedule","completed","failure")]) is not None
           assert recovery_payload([sample("schedule","completed","success")]) is None
+          assert recovery_payload([sample("schedule","completed","cancelled")]) is not None
+          assert recovery_payload([sample("workflow_dispatch","completed","failure")]) is not None
+          assert recovery_payload([sample("workflow_dispatch","in_progress",None)]) is None
           print("PASS: watchdog classification and simulated recovery dispatch payload")
           # Selected boundary is always beyond the seven-minute grace period.
           state = classify(runs)
