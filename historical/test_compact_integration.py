@@ -40,6 +40,8 @@ with tempfile.TemporaryDirectory() as temp:
     manifest = json.loads((output / "research_training_manifest.json").read_text())
     assert manifest["source_rows"] == 16 and manifest["training_rows"] == 4
     assert manifest["production_ingested"] is False
+    assert manifest.get("research_population_schema_version") == 2
+    assert manifest.get("research_population_policy") == "all_eligible_15m_anchors"
     print("PASS unbiased_hourly_compaction_and_manifest")
 
     # Verify that a corrupted dataset is rejected by checksum.
