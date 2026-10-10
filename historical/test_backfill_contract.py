@@ -40,6 +40,11 @@ for price, future, expected in [
     actual = eval(forward_code, {"__builtins__": {}, "max": max, "pct": pct}, {"c": price, "fwd": future})
     check(f"forward_max_{price}_{future}", actual == expected)
 
+check("complete_24h_required", "bars[i+288][0]-t!=86400" in source)
+check("contiguous_1h_required", "t-bars[i-12][0]!=3600" in source)
+check("dedupe_candle_timestamps", "bar[0]:bar" in source)
+check("reject_invalid_candles", "math.isfinite" in source)
+check("forward_clock_bounded", "bar[0]-t<=86400" in source)
 check("archive_has_checksum", "checksum mismatch" in source)
 check("five_minute_source", "Kraken_OHLCVT_Full_2026Q2" in source)
 check("historical_not_current", "2026,7,1" in source)
