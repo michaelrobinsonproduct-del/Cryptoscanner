@@ -115,8 +115,10 @@ jobs:
                   if run.get("event") == "schedule" and boundary <= created < boundary + dt.timedelta(minutes=15):
                       cycle.append(run)
                   elif run.get("event") == "workflow_dispatch" and boundary <= created < boundary + dt.timedelta(minutes=15):
-                      # Dispatches are potential recovery runs, not proof of schedule health.
-                      cycle.append(run)
+                      # Only dispatches explicitly named for this cycle qualify as recovery.
+                      cycle_id=boundary.strftime("%Y-%m-%dT%H:%M:%SZ")
+                      if run.get("display_title","") == f"Shadow workflow_dispatch {cycle_id}":
+                          cycle.append(run)
               if any(r["status"] != "completed" or r.get("conclusion") == "success" for r in cycle):
                   return "PRESENT"
               if cycle:
@@ -125,11 +127,14 @@ jobs:
           # Deterministic regression checks: pushes must never satisfy a missing schedule.
           synthetic_time=boundary.isoformat().replace("+00:00","Z")
           def sample(event,status,conclusion):
-              return {"event":event,"status":status,"conclusion":conclusion,"created_at":synthetic_time}
+              return {"event":event,"status":status,"conclusion":conclusion,"created_at":synthetic_time,"display_title":f"Shadow workflow_dispatch {boundary.strftime('%Y-%m-%dT%H:%M:%SZ')}" if event=="workflow_dispatch" else "Shadow schedule "}
           assert classify([sample("push","completed","success")])=="MISSING"
           assert classify([sample("schedule","completed","success")])=="PRESENT"
           assert classify([sample("schedule","completed","failure")])=="FAILED"
           assert classify([sample("workflow_dispatch","completed","success")])=="PRESENT"
+          unrelated=sample("workflow_dispatch","completed","success")
+          unrelated["display_title"]="Shadow workflow_dispatch 2020-01-01T00:00:00Z"
+          assert classify([unrelated])=="MISSING"
           assert classify([sample("push","completed","success"),sample("schedule","completed","failure")])=="FAILED"
           assert classify([sample("schedule","in_progress",None)])=="PRESENT"
           assert classify([sample("schedule","completed","cancelled")])=="FAILED"
@@ -144,6 +149,7 @@ jobs:
               return {"ref":"main","inputs":{"cycle_id":boundary.strftime("%Y-%m-%dT%H:%M:%SZ")}}
           assert recovery_payload([sample("push","completed","success")]) == {"ref":"main","inputs":{"cycle_id":boundary.strftime("%Y-%m-%dT%H:%M:%SZ")}}
           assert recovery_payload([sample("schedule","completed","failure")]) is not None
+          assert recovery_payload([unrelated]) is not None
           assert recovery_payload([sample("schedule","completed","success")]) is None
           assert recovery_payload([sample("schedule","completed","cancelled")]) is not None
           assert recovery_payload([sample("workflow_dispatch","completed","failure")]) is not None
