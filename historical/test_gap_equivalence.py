@@ -26,4 +26,9 @@ for trial in range(100):
         checked += 1
 
 assert checked > 40000
+# Boundary contract: final eligible anchor must leave 288 future bars in bounds.
+for n in range(301, 401):
+    indices = list(range(12, n - 288))
+    assert all(i + 288 < n for i in indices), n
+    assert indices[-1] == n - 289, n
 print(f"PASS 100 synthetic candle sequences, {checked} anchors")
