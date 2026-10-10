@@ -117,17 +117,17 @@ def prospective_learning(min_days=10, min_pairs=8):
     with connect() as con:
         rows=con.execute("""WITH ranked AS (
               SELECT substr(r.created_at,1,10) AS day, o.pair,
-                     o.score, CASE WHEN x.return_pct>=5 THEN 1 ELSE 0 END AS hit,
+                     o.score, CASE WHEN x.return_pct>=5 THEN 1 ELSE 0 END AS hit,\n                     CASE WHEN x.return_pct IS NOT NULL THEN 1 ELSE 0 END AS labeled,
                      ROW_NUMBER() OVER (
                        PARTITION BY substr(r.created_at,1,10),o.pair
                        ORDER BY r.created_at ASC,r.id ASC
                      ) AS rn
-              FROM outcomes x
-              JOIN observations o ON o.run_id=x.run_id AND o.pair=x.pair
+              FROM observations o
               JOIN runs r ON r.id=o.run_id
-              WHERE x.horizon_hours=4
+              LEFT JOIN outcomes x ON x.run_id=o.run_id AND x.pair=o.pair
+                   AND x.horizon_hours=4
             )
-            SELECT day,pair,score,hit FROM ranked WHERE rn=1
+            SELECT day,pair,score,hit FROM ranked WHERE rn=1 AND labeled=1
             ORDER BY day,pair""").fetchall()
     days=sorted({x[0] for x in rows})
     result={"status":"INSUFFICIENT_DATA","pair_days":len(rows),
