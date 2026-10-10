@@ -12,7 +12,7 @@ for body in ast.walk(tree):
         chunk = body.body[i:i+3]
         if not all(isinstance(n, (ast.Expr, ast.Assign)) for n in chunk):
             continue
-        code = ast.unparse(chunk)
+        code = "\n".join(ast.unparse(n) for n in chunk)
         if "reversed(bars)" in code and "bars.sort" in code:
             matches.append(chunk)
 if len(matches) != 1:
