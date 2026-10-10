@@ -48,5 +48,40 @@ class ProspectiveNoLeakageTests(unittest.TestCase):
                 self.assertTrue(all(score==10 and ret==0 for score,ret in selected))
 
 
+    def test_late_winners_cannot_create_false_validation(self):
+        import history
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.object(history, "DB", Path(folder) / "history.sqlite3"):
+                with history.connect() as con:
+                    for day in range(1, 11):
+                        date=f"2026-09-{day:02d}"
+                        for idx in range(20):
+                            pair=f"COIN{idx:02d}USD"
+                            high=idx<10
+                            # Earliest high-score entries lose, low-score entries win.
+                            # Later high-score entries win; selecting daily maxima
+                            # would fabricate high-score predictive success.
+                            for hour, score, hit in (
+                                (0, 90 if high else 10, 0 if high else 1),
+                                (1, 99 if high else 10, 1 if high else 0),
+                            ):
+                                rid=f"{date}T{hour:02d}:00:00+00:00-{pair}"
+                                con.execute("INSERT INTO runs VALUES (?,?,?,?)",
+                                            (rid,f"{date}T{hour:02d}:00:00+00:00","COMPLETE","{}"))
+                                con.execute("INSERT INTO observations VALUES (?,?,?,?,?)",
+                                            (rid,pair,1.0,score,"WATCH"))
+                                con.execute("INSERT INTO outcomes VALUES (?,?,?,?,?)",
+                                            (rid,pair,4,6.0 if hit else 0.0,rid))
+                result=history.prospective_learning(min_days=10,min_pairs=8)
+                self.assertEqual(result["pair_days"],200)
+                self.assertEqual(result["status"],"NO_VALIDATED_IMPROVEMENT")
+                self.assertFalse(result["validated"])
+                self.assertEqual(result["adjustment"],0)
+                self.assertEqual(result["train"]["HIGH"],0)
+                self.assertEqual(result["train"]["LOW"],1)
+                self.assertEqual(result["test"]["HIGH"],0)
+                self.assertEqual(result["test"]["LOW"],1)
+
+
 if __name__=="__main__":
     unittest.main()
