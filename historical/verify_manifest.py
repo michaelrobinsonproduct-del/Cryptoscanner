@@ -32,6 +32,7 @@ with training.open("rb") as handle:
         assert key not in seen_anchors, f"duplicate training observation at {number}"
         seen_anchors.add(key)
         assert ts.minute == 0 and ts.second == 0 and ts.microsecond == 0, f"training sample not hourly at {number}"
+        assert datetime(2025, 10, 4, tzinfo=timezone.utc) <= ts < datetime(2026, 7, 1, tzinfo=timezone.utc), f"training sample outside archive at {number}"
         earliest = min(earliest, ts) if earliest else ts
         latest = max(latest, ts) if latest else ts
         count += 1
