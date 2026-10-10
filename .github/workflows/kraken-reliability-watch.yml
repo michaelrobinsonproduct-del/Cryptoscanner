@@ -91,21 +91,30 @@ jobs:
           if (now-boundary).total_seconds() < 420:
               print("PENDING: grace period for scheduled trigger")
               raise SystemExit(0)
-          runs = api("/actions/workflows/kraken-rebuild-shadow.yml/runs?per_page=20")["workflow_runs"]
-          matching = []
-          for run in runs:
-              started = dt.datetime.fromisoformat(run["created_at"].replace("Z","+00:00"))
-              if started >= boundary:
-                  matching.append(run)
-          if matching:
-              print("PRESENT: shadow workflow triggered for cycle", boundary.isoformat(), [(r["id"],r["status"],r.get("conclusion")) for r in matching])
+          runs = api("/actions/workflows/kraken-rebuild-shadow.yml/runs?per_page=40")["workflow_runs"]
+          def classify(items):
+              # Recovery must not treat failed/cancelled runs as healthy.
+              cycle = []
+              for run in items:
+                  created = dt.datetime.fromisoformat(run["created_at"].replace("Z","+00:00"))
+                  if boundary <= created < boundary + dt.timedelta(minutes=15):
+                      cycle.append(run)
+              if any(r["status"] != "completed" or r.get("conclusion") == "success" for r in cycle):
+                  return "PRESENT"
+              if cycle:
+                  return "FAILED"
+              return "MISSING"
+          state = classify(runs)
+          if state == "PRESENT":
+              print("PRESENT: scheduled/recovered shadow cycle exists", boundary.isoformat())
               raise SystemExit(0)
-          # Cross-check a second time to reduce race with a delayed scheduled trigger.
-          runs = api("/actions/workflows/kraken-rebuild-shadow.yml/runs?per_page=20")["workflow_runs"]
-          if any(dt.datetime.fromisoformat(r["created_at"].replace("Z","+00:00")) >= boundary for r in runs):
-              print("PRESENT: shadow workflow appeared on recheck")
+          # Recheck for races and late arrivals before requesting a replacement.
+          runs = api("/actions/workflows/kraken-rebuild-shadow.yml/runs?per_page=40")["workflow_runs"]
+          state = classify(runs)
+          if state == "PRESENT":
+              print("PRESENT: cycle appeared on recheck")
               raise SystemExit(0)
-          print("MISSING: dispatching shadow recovery for",boundary.isoformat())
+          print(state + ": dispatching shadow recovery for",boundary.isoformat())
           api("/actions/workflows/kraken-rebuild-shadow.yml/dispatches", json.dumps({"ref":"main"}).encode())
-          print("RECOVERY_DISPATCH_ACCEPTED: completion and acceptance still require independent verification")
+          print("RECOVERY_DISPATCH_ACCEPTED: acceptance still requires independent verification")
           PY
