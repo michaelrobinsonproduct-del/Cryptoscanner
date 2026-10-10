@@ -102,6 +102,7 @@ jobs:
                   assert 420 <= (sample_time-selected).total_seconds() < 1320
           boundary = eligible_boundary(now)
           print("ELIGIBLE_CYCLE",boundary.isoformat())
+          print("WATCHDOG_COMMIT",os.environ.get("GITHUB_SHA","unknown"))
           runs = api("/actions/workflows/kraken-rebuild-shadow.yml/runs?per_page=40")["workflow_runs"]
           def classify(items):
               # Recovery must not treat failed/cancelled runs as healthy.
