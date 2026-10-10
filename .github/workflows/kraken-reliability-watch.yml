@@ -114,8 +114,9 @@ jobs:
                   # without a cycle ID are not proof that the scheduler ran.
                   if run.get("event") == "schedule" and boundary <= created < boundary + dt.timedelta(minutes=15):
                       cycle.append(run)
-                  elif run.get("event") == "workflow_dispatch" and boundary <= created < boundary + dt.timedelta(minutes=15):
-                      # Only dispatches explicitly named for this cycle qualify as recovery.
+                  elif run.get("event") == "workflow_dispatch":
+                      # Match the requested cycle, not the dispatch creation window:
+                      # delayed recovery may start in the following quarter-hour.
                       cycle_id=boundary.strftime("%Y-%m-%dT%H:%M:%SZ")
                       if run.get("display_title","") == f"Shadow workflow_dispatch {cycle_id}":
                           cycle.append(run)
@@ -135,6 +136,10 @@ jobs:
           unrelated=sample("workflow_dispatch","completed","success")
           unrelated["display_title"]="Shadow workflow_dispatch 2020-01-01T00:00:00Z"
           assert classify([unrelated])=="MISSING"
+          late_recovery=sample("workflow_dispatch","completed","success")
+          late_recovery["created_at"]=(boundary+dt.timedelta(minutes=16)).isoformat().replace("+00:00","Z")
+          assert classify([late_recovery])=="PRESENT"
+          assert classify([unrelated,late_recovery])=="PRESENT"
           assert classify([sample("push","completed","success"),sample("schedule","completed","failure")])=="FAILED"
           assert classify([sample("schedule","in_progress",None)])=="PRESENT"
           assert classify([sample("schedule","completed","cancelled")])=="FAILED"
@@ -150,6 +155,7 @@ jobs:
           assert recovery_payload([sample("push","completed","success")]) == {"ref":"main","inputs":{"cycle_id":boundary.strftime("%Y-%m-%dT%H:%M:%SZ")}}
           assert recovery_payload([sample("schedule","completed","failure")]) is not None
           assert recovery_payload([unrelated]) is not None
+          assert recovery_payload([late_recovery]) is None
           assert recovery_payload([sample("schedule","completed","success")]) is None
           assert recovery_payload([sample("schedule","completed","cancelled")]) is not None
           assert recovery_payload([sample("workflow_dispatch","completed","failure")]) is not None
