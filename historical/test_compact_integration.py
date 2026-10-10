@@ -86,3 +86,16 @@ with tempfile.TemporaryDirectory() as temp:
     assert run(VERIFY, temp).returncode == 0
     print("PASS restore_valid_manifest")
 
+
+    # Reject invalid source records, not just corrupt derived artifacts.
+    for label, invalid in [
+        ("blank_pair", {**rows[0], "pair": "   "}),
+        ("naive_anchor", {**rows[0], "anchor_at": "2026-01-02T00:00:00"}),
+        ("off_grid_anchor", {**rows[0], "anchor_at": "2026-01-02T00:01:00+00:00"}),
+        ("before_archive", {**rows[0], "anchor_at": "2025-10-03T00:00:00+00:00"}),
+        ("after_archive", {**rows[0], "anchor_at": "2026-07-01T00:00:00+00:00"}),
+    ]:
+        (output / "research.ndjson").write_text(json.dumps(invalid) + "\n", encoding="utf-8")
+        result = run(COMPACT, temp)
+        assert result.returncode != 0, f"invalid source accepted: {label}"
+        print("PASS reject_source_" + label)
