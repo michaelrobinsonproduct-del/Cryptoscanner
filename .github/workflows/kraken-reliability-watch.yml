@@ -86,6 +86,7 @@ jobs:
                   body=response.read()
                   return json.loads(body) if body else None
           # Wait at least seven minutes after a nominal 15-minute boundary for GitHub schedule latency.
+          # Audit marker: watchdog regression and recovery tests are triggered by this workflow-file push.
           minute = now.minute
           def eligible_boundary(timestamp):
               boundary = timestamp.replace(minute=(timestamp.minute//15)*15, second=0, microsecond=0)
