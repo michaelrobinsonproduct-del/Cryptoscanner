@@ -1,0 +1,23 @@
+name: Kraken Historical Fast Contracts
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'historical/backfill.py'
+      - 'historical/compact.py'
+      - 'historical/test_backfill_contract.py'
+      - '.github/workflows/kraken-historical-contracts.yml'
+jobs:
+  fast-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Compile historical scripts
+        run: python -m py_compile historical/backfill.py historical/compact.py historical/test_backfill_contract.py
+      - name: Verify historical labeling contracts
+        run: python historical/test_backfill_contract.py
