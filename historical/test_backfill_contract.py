@@ -52,6 +52,7 @@ for label, times, expected in [
     actual = gaps[300] == gaps[12] and times[300] - times[12] == 86400
     check("prefix_gap_" + label, actual is expected)
 
+check("include_last_complete_24h_anchor", "range(12,len(bars)-287)" in source)
 check("complete_24h_required", "bars[i+288][0]-t!=86400" in source)
 check("all_forward_candles_contiguous", "gaps[i+288]!=gaps[i]" in source)
 check("contiguous_1h_required", "t-bars[i-12][0]!=3600" in source)
