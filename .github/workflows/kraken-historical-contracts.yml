@@ -33,5 +33,7 @@ jobs:
           python -O historical/test_gap_equivalence.py
       - name: Verify production deduplication against first-observation reference
         run: python historical/test_dedupe_equivalence.py
+      - name: Test 100 valid and 100 corrupted move artifacts
+        run: python historical/test_verify_moves.py
       - name: Exercise synthetic historical compaction and integrity checks
         run: python historical/test_compact_integration.py
