@@ -15,6 +15,7 @@ assert training.is_file(), "missing training dataset"
 
 sha = hashlib.sha256()
 count = 0
+seen_anchors = set()
 earliest = None
 latest = None
 with training.open("rb") as handle:
@@ -27,6 +28,9 @@ with training.open("rb") as handle:
         ts = datetime.fromisoformat(row["anchor_at"].replace("Z", "+00:00"))
         assert ts.tzinfo is not None, f"naive timestamp at {number}"
         ts = ts.astimezone(timezone.utc)
+        key = (row["pair"], ts.isoformat())
+        assert key not in seen_anchors, f"duplicate training observation at {number}"
+        seen_anchors.add(key)
         assert ts.minute == 0 and ts.second == 0 and ts.microsecond == 0, f"training sample not hourly at {number}"
         earliest = min(earliest, ts) if earliest else ts
         latest = max(latest, ts) if latest else ts
