@@ -47,6 +47,7 @@ with zipfile.ZipFile(zp) as z:
   for i in range(12,len(bars)-288,3): # 15m anchors
    t=bars[i][0]
    if not START<=t<END:continue
+   if t-bars[i-12][0]!=3600:continue
    c=close[i]; p5=pct(close[i-1],c); p15=pct(close[i-3],c); p60=pct(close[i-12],c)
    prevv=sum(vol[i-12:i-6]); curv=sum(vol[i-6:i]); preva=sum(trades[i-12:i-6]); cura=sum(trades[i-6:i])
    vacc=curv/prevv if prevv>0 else None; tacc=cura/preva if preva>0 else None
