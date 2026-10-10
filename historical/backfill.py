@@ -20,9 +20,9 @@ def num(x):
  try:return float(x)
  except:return None
 def pct(a,b): return (b/a-1)*100 if a and b else None
-rows_written=0; moves=[]
+rows_written=0; episodes_written=0
 outdir="historical/output";os.makedirs(outdir,exist_ok=True)
-with open(outdir+"/research.ndjson","w",encoding="utf-8") as research_out, zipfile.ZipFile(zp) as z:
+with open(outdir+"/research.ndjson","w",encoding="utf-8") as research_out, open(outdir+"/moves.ndjson","w",encoding="utf-8") as moves_out, zipfile.ZipFile(zp) as z:
  names=[n for n in z.namelist() if n.endswith("_5.csv")]
  print("5m files",len(names),flush=True)
  for ni,n in enumerate(names):
@@ -68,24 +68,21 @@ with open(outdir+"/research.ndjson","w",encoding="utf-8") as research_out, zipfi
    research_out.write(json.dumps(rec,separators=(",",":"))+"\n")
    rows_written+=1
    if rec["major_mover"]:pairrows.append(rec)
-  # episode-dedupe major windows: new episode after >24h gap
-  majors=pairrows
+  # Emit completed episodes immediately rather than accumulating every market in memory.
   grp=[]
-  for r in majors:
+  def emit_episode(group):
+   global episodes_written
+   best=max(group,key=lambda r:r["max_forward_return_pct"]);first=group[0]
+   early_row=next((r for r in group if r["still_early"]),None)
+   ep={"pair":first["pair"],"move_start":first["anchor_at"],"peak_at":None,"baseline_price":first["anchor_price"],"peak_price":None,"max_return_pct":best["max_forward_return_pct"],"earliest_signal_at":early_row["anchor_at"] if early_row else None,"extension_at_signal_pct":early_row["pre_return_60m_pct"] if early_row else None,"caught_early":early_row is not None,"source":"kraken_archive_5m_2026q2","evidence":{"windows":len(group),"dedupe_gap_hours":24}}
+   moves_out.write(json.dumps(ep,separators=(",",":"))+"\\n")
+   episodes_written+=1
+  for r in pairrows:
    ts=datetime.fromisoformat(r["anchor_at"]).timestamp()
-   if not grp or ts-datetime.fromisoformat(grp[-1]["anchor_at"]).timestamp()<=86400: grp.append(r)
-   else:
-    moves.append(grp);grp=[r]
-  if grp:moves.append(grp)
+   if grp and ts-datetime.fromisoformat(grp[-1]["anchor_at"]).timestamp()>86400:
+    emit_episode(grp);grp=[]
+   grp.append(r)
+  if grp:emit_episode(grp)
   if ni%50==0:print("processed",ni,"research",rows_written,flush=True)
-outdir="historical/output";os.makedirs(outdir,exist_ok=True)
-def dump(path,data):
- with open(path,"w") as f:
-  for x in data:f.write(json.dumps(x,separators=(",",":"))+"\n")
-eps=[]
-for g in moves:
- best=max(g,key=lambda r:r["max_forward_return_pct"]); first=g[0]
- eps.append({"pair":first["pair"],"move_start":first["anchor_at"],"peak_at":None,"baseline_price":first["anchor_price"],"peak_price":None,"max_return_pct":best["max_forward_return_pct"],"earliest_signal_at":next((r["anchor_at"] for r in g if r["still_early"]),None),"extension_at_signal_pct":next((r["pre_return_60m_pct"] for r in g if r["still_early"]),None),"caught_early":any(r["still_early"] for r in g),"source":"kraken_archive_5m_2026q2","evidence":{"windows":len(g),"dedupe_gap_hours":24}})
-dump(outdir+"/moves.ndjson",eps)
-with open(outdir+"/summary.json","w") as f:json.dump({"research_rows":rows_written,"move_episodes":len(eps),"start":"2025-10-04","archive_end":"2026-06-30","source":"Kraken OHLCVT 5m","note":"historical L2 unavailable; not fabricated"},f)
-print(json.dumps({"ok":True,"research_rows":rows_written,"move_episodes":len(eps)}))
+with open(outdir+"/summary.json","w") as f:json.dump({"research_rows":rows_written,"move_episodes":episodes_written,"start":"2025-10-04","archive_end":"2026-06-30","source":"Kraken OHLCVT 5m","note":"historical L2 unavailable; not fabricated"},f)
+print(json.dumps({"ok":True,"research_rows":rows_written,"move_episodes":episodes_written}))
