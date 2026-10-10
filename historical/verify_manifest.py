@@ -8,6 +8,7 @@ root = Path("historical/output")
 manifest = json.loads((root / "research_training_manifest.json").read_text())
 training = root / "research_training.ndjson"
 assert manifest["production_ingested"] is False, "artifact must not claim ingestion"
+assert manifest["sampling_policy"] == "outcome_independent_hourly_utc", "unexpected training sampling policy"
 assert manifest["source_rows"] >= manifest["training_rows"] > 0, "invalid row counts"
 assert manifest["training_file"] == str(training), "training path mismatch"
 assert training.is_file(), "missing training dataset"
@@ -26,7 +27,7 @@ with training.open("rb") as handle:
         ts = datetime.fromisoformat(row["anchor_at"].replace("Z", "+00:00"))
         assert ts.tzinfo is not None, f"naive timestamp at {number}"
         ts = ts.astimezone(timezone.utc)
-        assert ts.minute % 15 == 0 and ts.second == 0 and ts.microsecond == 0, f"off-grid timestamp at {number}"
+        assert ts.minute == 0 and ts.second == 0 and ts.microsecond == 0, f"training sample not hourly at {number}"
         earliest = min(earliest, ts) if earliest else ts
         latest = max(latest, ts) if latest else ts
         count += 1
