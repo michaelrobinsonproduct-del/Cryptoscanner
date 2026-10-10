@@ -10,6 +10,8 @@ training = root / "research_training.ndjson"
 assert manifest["production_ingested"] is False, "artifact must not claim ingestion"
 assert manifest["sampling_policy"] == "outcome_independent_hourly_utc", "unexpected training sampling policy"
 assert manifest["source_rows"] >= manifest["training_rows"] > 0, "invalid row counts"
+assert manifest.get("research_population_schema_version") == 2
+assert manifest.get("research_population_policy") == "all_eligible_15m_anchors"
 assert manifest["training_file"] == str(training), "training path mismatch"
 assert training.is_file(), "missing training dataset"
 
