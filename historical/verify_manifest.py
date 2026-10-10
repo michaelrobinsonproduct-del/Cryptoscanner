@@ -7,13 +7,13 @@ from pathlib import Path
 root = Path("historical/output")
 manifest = json.loads((root / "research_training_manifest.json").read_text())
 training = root / "research_training.ndjson"
-assert manifest["production_ingested"] is False, "artifact must not claim ingestion"
-assert manifest["sampling_policy"] == "outcome_independent_hourly_utc", "unexpected training sampling policy"
-assert manifest["source_rows"] >= manifest["training_rows"] > 0, "invalid row counts"
-assert manifest.get("research_population_schema_version") == 2
-assert manifest.get("research_population_policy") == "all_eligible_15m_anchors"
-assert manifest["training_file"] == str(training), "training path mismatch"
-assert training.is_file(), "missing training dataset"
+if not (manifest["production_ingested"] is False): raise ValueError("artifact must not claim ingestion")
+if not (manifest["sampling_policy"] == "outcome_independent_hourly_utc"): raise ValueError("unexpected training sampling policy")
+if not (manifest["source_rows"] >= manifest["training_rows"] > 0): raise ValueError("invalid row counts")
+if not (manifest.get("research_population_schema_version") == 2): raise ValueError("historical manifest integrity failure")
+if not (manifest.get("research_population_policy") == "all_eligible_15m_anchors"): raise ValueError("historical manifest integrity failure")
+if not (manifest["training_file"] == str(training)): raise ValueError("training path mismatch")
+if not (training.is_file()): raise ValueError("missing training dataset")
 
 sha = hashlib.sha256()
 count = 0
@@ -39,8 +39,8 @@ with training.open("rb") as handle:
         latest = max(latest, ts) if latest else ts
         count += 1
 
-assert count == manifest["training_rows"], "training row count mismatch"
-assert sha.hexdigest() == manifest["training_sha256"], "training checksum mismatch"
-assert earliest.isoformat() >= manifest["earliest_anchor_utc"], "earliest timestamp outside source"
-assert latest.isoformat() <= manifest["latest_anchor_utc"], "latest timestamp outside source"
+if not (count == manifest["training_rows"]): raise ValueError("training row count mismatch")
+if not (sha.hexdigest() == manifest["training_sha256"]): raise ValueError("training checksum mismatch")
+if not (earliest.isoformat() >= manifest["earliest_anchor_utc"]): raise ValueError("earliest timestamp outside source")
+if not (latest.isoformat() <= manifest["latest_anchor_utc"]): raise ValueError("latest timestamp outside source")
 print(json.dumps({"verified": True, "rows": count, "sha256": sha.hexdigest()}))
