@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/kraken-historical-backfill.yml'
+      - 'historical/backfill.py'
+      - 'historical/test_backfill_contract.py'
 jobs:
   backfill:
     runs-on: ubuntu-latest
