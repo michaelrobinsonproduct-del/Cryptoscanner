@@ -64,7 +64,10 @@ with open(outdir+"/research.ndjson","w",encoding="utf-8") as research_out, open(
   grp=[]
   for i in range(12,len(bars)-288): # inspect every 5m candle; select wall-clock quarter-hour anchors
    t=bars[i][0]
-   if not START<=t<END or t%900!=0:continue
+   if not START<=t<END: 
+    if grp:emit_episode(grp);grp=[]
+    continue
+   if t%900!=0:continue
    if t-bars[i-12][0]!=3600 or gaps[i]!=gaps[i-12]:
     if grp:emit_episode(grp);grp=[]
     continue
