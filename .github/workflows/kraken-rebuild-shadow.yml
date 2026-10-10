@@ -188,7 +188,7 @@ jobs:
           assert report.get("persistence_health") == "COMPLETE", "persistence failed"
           research = report.get("historical_research") or {}
           assert research.get("interaction_model_loaded") is True, "validated interaction model not loaded"
-          assert research.get("status") == "VALIDATED_INTERACTIONS", "historical interaction model invalid"
+          assert research.get("status") in ("APPROVED_INTERACTION_RULES","INTERACTION_MODEL_NO_APPROVED_RULES"), "historical interaction model invalid"
           assert isinstance(research.get("approved_rules"),list), "historical rules missing"
           continuity = report.get("continuity_research") or {}
           assert isinstance(continuity.get("compared"),int) and isinstance(continuity.get("downgraded"),int)
@@ -252,7 +252,7 @@ jobs:
                       "current_observations_saved":h.get("observations",0)>=len(r.get("watch",[])),
                       "outcome_diagnostics_present":isinstance(h.get("outcomes"),int),
                       "historical_research_status_present":isinstance(r.get("historical_research"),dict),
-                      "historical_interaction_model_loaded":r.get("historical_research",{}).get("interaction_model_loaded") is True and r.get("historical_research",{}).get("status")=="VALIDATED_INTERACTIONS",
+                      "historical_interaction_model_loaded":r.get("historical_research",{}).get("interaction_model_loaded") is True and r.get("historical_research",{}).get("status")in ("APPROVED_INTERACTION_RULES","INTERACTION_MODEL_NO_APPROVED_RULES"),
                       "non_actionable_shadow":r.get("recommendation")=="NO VERIFIED BUYS",
                       "history_continuity":baseline is not None and all(h.get(k,0)>=baseline[k] for k in ("runs","observations","outcomes")),
                       "cycle_persisted_or_retry":baseline is not None and cycle_valid and h.get("runs",0)>=baseline["runs"],
