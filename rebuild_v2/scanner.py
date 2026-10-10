@@ -90,8 +90,11 @@ def historical_live_features(pair, fetch=api):
     # evaluate historical research rules on an old completed bar.
     last_open=dt.datetime.fromtimestamp(float(b[-1][0]),dt.timezone.utc)
     age=(dt.datetime.now(dt.timezone.utc)-last_open).total_seconds()
-    if not 300 <= age <= 900:
-        raise ValueError("stale or incomplete historical OHLC candle")
+    # The last completed bar opened in the previous five-minute slot;
+    # its opening timestamp is normally 0-600 seconds old, not 300-900.
+    # Allow one delayed slot, but reject future or substantially stale bars.
+    if not 0 <= age <= 900:
+        raise ValueError("stale or future historical OHLC candle")
     closes=[float(x[4]) for x in b]
     volumes=[float(x[6]) for x in b]
     trades=[float(x[7]) for x in b]
