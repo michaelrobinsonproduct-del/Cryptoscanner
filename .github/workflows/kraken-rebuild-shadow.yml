@@ -126,6 +126,19 @@ jobs:
           assert all(c["entry_approved"] is False and c["real_trade_approved"] is False for c in p["candidates"])
           print("PAPER_BOUNDARY_VERIFIED")
           PY
+      - name: Evaluate prospective paper-entry outcomes
+        run: python rebuild_v2/paper_validation.py
+      - name: Check paper validation report
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("rebuild_v2/output/paper_validation.json").read_text())
+          assert r["mode"]=="PAPER_ONLY" and r["validated"] is False
+          assert r["status"]=="INSUFFICIENT_FORWARD_DATA"
+          assert all(v["pair_days"]>=0 for v in r["metrics"].values())
+          print("PROSPECTIVE_VALIDATION_GUARD_PASSED")
+          PY
       - name: Validate persisted report before publication
         run: |
           python - <<'PY'
@@ -281,6 +294,7 @@ jobs:
           path: |
             rebuild_v2/output/latest.json
             rebuild_v2/output/paper_entries.json
+            rebuild_v2/output/paper_validation.json
             rebuild_v2/output/acceptance.json
             rebuild_v2/output/schedule_health.json
             rebuild_v2/output/history.sqlite3
