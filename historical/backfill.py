@@ -42,19 +42,23 @@ with zipfile.ZipFile(zp) as z:
   bars.sort()
   bars=list({bar[0]:bar for bar in bars}.values())
   if len(bars)<300:continue
+  # Prefix gap counts allow constant-time validation of each 1h/24h window.
+  gaps=[0]*len(bars)
+  for j in range(1,len(bars)):
+   gaps[j]=gaps[j-1]+(bars[j][0]-bars[j-1][0]!=300)
   close=[x[4] for x in bars]; vol=[x[5] for x in bars]; trades=[x[6] for x in bars]
   pairrows=[]
   for i in range(12,len(bars)-288): # inspect every 5m candle; select wall-clock quarter-hour anchors
    t=bars[i][0]
    if not START<=t<END or t%900!=0:continue
-   if t-bars[i-12][0]!=3600 or any(bars[j][0]-bars[j-1][0]!=300 for j in range(i-11,i+1)):continue
+   if t-bars[i-12][0]!=3600 or gaps[i]!=gaps[i-12]:continue
    c=close[i]; p5=pct(close[i-1],c); p15=pct(close[i-3],c); p60=pct(close[i-12],c)
    prevv=sum(vol[i-12:i-6]); curv=sum(vol[i-6:i]); preva=sum(trades[i-12:i-6]); cura=sum(trades[i-6:i])
    vacc=curv/prevv if prevv>0 else None; tacc=cura/preva if preva>0 else None
    rets=[pct(close[j-1],close[j]) if pct(close[j-1],close[j]) is not None else 0 for j in range(i-11,i+1)]
    vola=statistics.pstdev(rets) if len(rets)>1 else 0
-   fwd=[bar[4] for bar in bars[i+1:min(len(bars),i+289)] if 0<bar[0]-t<=86400]
-   if not fwd or i+288>=len(bars) or bars[i+288][0]-t!=86400 or any(bars[j][0]-bars[j-1][0]!=300 for j in range(i+1,i+289)):continue
+   if i+288>=len(bars) or bars[i+288][0]-t!=86400 or gaps[i+288]!=gaps[i]:continue
+   fwd=[bar[4] for bar in bars[i+1:i+289]]
    mx=max((v for x in fwd if (v:=pct(c,x)) is not None),default=None)
    if mx is None:continue
    control_sampled=(t//86400)%7==0 and (t%3600==0)
