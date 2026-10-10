@@ -119,4 +119,5 @@ for case in range(100):
     check("episode_not_live_catch_"+str(case), emitted["caught_early"] is False)
     check("episode_live_verification_"+str(case), emitted["evidence"]["live_alert_verified"] is False)
 check("production_episode_emitter_100_groups", namespace["episodes_written"] == 100)
+check("episode_emitter_buffer_bounded", namespace["moves_out"].getvalue() == "")
 print("historical_contracts_passed")
