@@ -40,6 +40,18 @@ for price, future, expected in [
     actual = eval(forward_code, {"__builtins__": {}, "max": max, "pct": pct}, {"c": price, "fwd": future})
     check(f"forward_max_{price}_{future}", actual == expected)
 
+# Exercise prefix-gap window checks with missing and complete 5-minute bars.
+for label, times, expected in [
+    ("complete", [300 * i for i in range(301)], True),
+    ("missing_internal", [300 * i + (300 if i >= 150 else 0) for i in range(301)], False),
+    ("missing_at_start", [300 * i + (300 if i >= 1 else 0) for i in range(301)], False),
+]:
+    gaps = [0] * len(times)
+    for j in range(1, len(times)):
+        gaps[j] = gaps[j-1] + (times[j] - times[j-1] != 300)
+    actual = gaps[300] == gaps[12] and times[300] - times[12] == 86400
+    check("prefix_gap_" + label, actual is expected)
+
 check("complete_24h_required", "bars[i+288][0]-t!=86400" in source)
 check("all_forward_candles_contiguous", "gaps[i+288]!=gaps[i]" in source)
 check("contiguous_1h_required", "t-bars[i-12][0]!=3600" in source)
