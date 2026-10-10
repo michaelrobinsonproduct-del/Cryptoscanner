@@ -88,9 +88,6 @@ jobs:
           # Wait at least seven minutes after a nominal 15-minute boundary for GitHub schedule latency.
           minute = now.minute
           boundary = now.replace(minute=(minute//15)*15, second=0, microsecond=0)
-          if (now-boundary).total_seconds() < 420:
-              print("PENDING: grace period for scheduled trigger")
-              raise SystemExit(0)
           runs = api("/actions/workflows/kraken-rebuild-shadow.yml/runs?per_page=40")["workflow_runs"]
           def classify(items):
               # Recovery must not treat failed/cancelled runs as healthy.
@@ -120,6 +117,9 @@ jobs:
           assert classify([sample("workflow_dispatch","completed","success")])=="PRESENT"
           assert classify([sample("push","completed","success"),sample("schedule","completed","failure")])=="FAILED"
           print("PASS: watchdog classification regression cases")
+          if (now-boundary).total_seconds() < 420:
+              print("PENDING: grace period for scheduled trigger")
+              raise SystemExit(0)
           state = classify(runs)
           if state == "PRESENT":
               print("PRESENT: scheduled/recovered shadow cycle exists", boundary.isoformat())
