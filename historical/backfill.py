@@ -36,7 +36,7 @@ with zipfile.ZipFile(zp) as z:
     if t<START-3600 or t>END+86400: continue
     if len(r)<7: continue
     o,hg,lo,c,v,tr=map(num,r[1:7])
-    if None in (o,hg,lo,c,v):continue
+    if None in (o,hg,lo,c,v) or not all(math.isfinite(q) for q in (o,hg,lo,c,v)) or min(o,hg,lo,c)<=0 or v<0 or lo>hg or not lo<=o<=hg or not lo<=c<=hg:continue
     bars.append((t,o,hg,lo,c,v,tr or 0))
   if len(bars)<300:continue
   bars.sort()
