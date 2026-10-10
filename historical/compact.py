@@ -61,6 +61,8 @@ manifest = {
     "generated_at_utc": datetime.now(timezone.utc).isoformat(),
     "production_ingested": False,
     "sampling_policy": "outcome_independent_hourly_utc",
+    "research_population_policy": "all_eligible_15m_anchors",
+    "research_population_schema_version": 2,
     "selection_bias_warning": "Rebuild from the revised full-population research output; pre-change outcome-enriched archives are incompatible.",
 }
 with open(manifest_path, "w", encoding="utf-8") as out:
