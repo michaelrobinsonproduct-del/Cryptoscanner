@@ -219,3 +219,44 @@ def reliability_scorecard(now=None):
             "grace_minutes":7
         }
     return result
+
+
+def early_detection_benchmark(horizon=4, gain_pct=5, min_pair_days=100):
+    """Compare earliest watched vs non-watched pair-days at a fixed horizon.
+
+    This is a descriptive prospective hit-rate benchmark, not a causal
+    performance estimate. Only pairs with actual matured outcome labels enter.
+    One observation per pair-day prevents repeated scans inflating evidence.
+    """
+    with connect() as con:
+        rows=con.execute("""WITH ranked AS (
+            SELECT substr(r.created_at,1,10) AS day,o.pair,o.status,
+                   x.return_pct,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY substr(r.created_at,1,10),o.pair
+                       ORDER BY r.created_at ASC,r.id ASC
+                   ) AS rn
+            FROM outcomes x
+            JOIN observations o ON o.run_id=x.run_id AND o.pair=x.pair
+            JOIN runs r ON r.id=o.run_id
+            WHERE x.horizon_hours=? AND o.status IN ('WATCH','NOT_SELECTED')
+        ) SELECT day,pair,status,return_pct FROM ranked WHERE rn=1""",
+            (horizon,)).fetchall()
+    groups={"WATCH":[],"NOT_SELECTED":[]}
+    for day,pair,status,ret in rows:
+        groups[status].append(float(ret))
+    def stats(values):
+        n=len(values)
+        return {"n":n,"hits":sum(v>=gain_pct for v in values),
+                "hit_rate":round(sum(v>=gain_pct for v in values)/n,5) if n else None,
+                "mean_return_pct":round(sum(values)/n,4) if n else None}
+    a=stats(groups["WATCH"]);b=stats(groups["NOT_SELECTED"])
+    days=len({day for day,_,_,_ in rows})
+    ready=len(rows)>=min_pair_days and min(a["n"],b["n"])>=20 and days>=10
+    return {"status":"DESCRIPTIVE_ONLY" if ready else "INSUFFICIENT_DATA",
+            "horizon_hours":horizon,"gain_threshold_pct":gain_pct,
+            "pair_days":len(rows),"days":days,"watch":a,"baseline":b,
+            "lift":round(a["hit_rate"]/b["hit_rate"],3) if ready and b["hit_rate"] else None,
+            "ranking_adjustment_allowed":False,
+            "limitations":["Only matured prospective labels","Earliest labeled pair-day only",
+                           "Selection and liquidity bias remain","Not an executable entry backtest"]}
