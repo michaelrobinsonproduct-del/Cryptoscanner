@@ -97,7 +97,13 @@ jobs:
               cycle = []
               for run in items:
                   created = dt.datetime.fromisoformat(run["created_at"].replace("Z","+00:00"))
-                  if boundary <= created < boundary + dt.timedelta(minutes=15):
+                  # Push-triggered development scans must not mask a missing scheduled cycle.
+                  # A recovered dispatch is tied to its explicit cycle ID; dispatches
+                  # without a cycle ID are not proof that the scheduler ran.
+                  if run.get("event") == "schedule" and boundary <= created < boundary + dt.timedelta(minutes=15):
+                      cycle.append(run)
+                  elif run.get("event") == "workflow_dispatch" and boundary <= created < boundary + dt.timedelta(minutes=15):
+                      # Dispatches are potential recovery runs, not proof of schedule health.
                       cycle.append(run)
               if any(r["status"] != "completed" or r.get("conclusion") == "success" for r in cycle):
                   return "PRESENT"
