@@ -54,4 +54,16 @@ with tempfile.TemporaryDirectory() as folder:
         result = run([corrupt], optimized=i%2==0)
         if result.returncode == 0:
             raise AssertionError(f"corrupt case {i} accepted")
-    print("PASS 100 valid artifacts and 100 corrupted artifacts across normal/optimized modes")
+    # Additional 100 negative cases exercise provenance and non-fabrication guarantees.
+    for i in range(100):
+        corrupt = episode(i)
+        mode = i % 5
+        if mode == 0: corrupt["source"] = "unknown"
+        elif mode == 1: corrupt["peak_at"] = corrupt["move_start"]
+        elif mode == 2: corrupt["peak_price"] = 12.0
+        elif mode == 3: corrupt["extension_at_signal_pct"] = 1.0
+        else: corrupt["evidence"]["max_return_anchor"] = "2026-01-01T00:00:00+00:00"
+        result = run([corrupt], optimized=i%2==0)
+        if result.returncode == 0:
+            raise AssertionError(f"provenance corruption {i} accepted")
+    print("PASS 100 valid artifacts and 200 corrupted artifacts across normal/optimized modes")
