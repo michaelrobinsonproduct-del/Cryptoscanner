@@ -79,15 +79,6 @@ with open(outdir+"/research.ndjson","w",encoding="utf-8") as research_out, open(
     if grp and t-datetime.fromisoformat(grp[-1]["anchor_at"]).timestamp()>86400:
      emit_episode(grp);grp=[]
     grp.append(rec)
-  # Emit completed episodes immediately rather than accumulating every market in memory.
-  grp=[]
-  def emit_episode(group):
-   global episodes_written
-   best=max(group,key=lambda r:r["max_forward_return_pct"]);first=group[0]
-   early_row=next((r for r in group if r["still_early"]),None)
-   ep={"pair":first["pair"],"move_start":first["anchor_at"],"peak_at":None,"baseline_price":first["anchor_price"],"peak_price":None,"max_return_pct":best["max_forward_return_pct"],"earliest_signal_at":early_row["anchor_at"] if early_row else None,"extension_at_signal_pct":early_row["pre_return_60m_pct"] if early_row else None,"caught_early":early_row is not None,"source":"kraken_archive_5m_2026q2","evidence":{"windows":len(group),"dedupe_gap_hours":24}}
-   moves_out.write(json.dumps(ep,separators=(",",":"))+"\n")
-   episodes_written+=1
   if grp:emit_episode(grp)
   if ni%50==0:print("processed",ni,"research",rows_written,flush=True)
 with open(outdir+"/summary.json","w") as f:json.dump({"research_rows":rows_written,"move_episodes":episodes_written,"start":"2025-10-04","archive_end":"2026-06-30","source":"Kraken OHLCVT 5m","note":"historical L2 unavailable; not fabricated"},f)
