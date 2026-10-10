@@ -7,6 +7,7 @@ on:
       - 'historical/backfill.py'
       - 'historical/compact.py'
       - 'historical/test_backfill_contract.py'
+      - 'historical/test_gap_equivalence.py'
       - 'historical/verify_manifest.py'
       - 'historical/test_compact_integration.py'
       - '.github/workflows/kraken-historical-contracts.yml'
@@ -20,8 +21,10 @@ jobs:
         with:
           python-version: '3.12'
       - name: Compile historical scripts
-        run: python -m py_compile historical/backfill.py historical/compact.py historical/test_backfill_contract.py historical/verify_manifest.py historical/test_compact_integration.py
+        run: python -m py_compile historical/backfill.py historical/compact.py historical/test_backfill_contract.py historical/test_gap_equivalence.py historical/verify_manifest.py historical/test_compact_integration.py
       - name: Verify historical labeling contracts
         run: python historical/test_backfill_contract.py
+      - name: Verify optimized gap logic against original on 100 sequences
+        run: python historical/test_gap_equivalence.py
       - name: Exercise synthetic historical compaction and integrity checks
         run: python historical/test_compact_integration.py
