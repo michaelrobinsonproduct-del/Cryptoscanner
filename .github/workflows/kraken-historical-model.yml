@@ -29,6 +29,10 @@ jobs:
           echo 'Starting complete historical interaction analysis'
           wc -lc historical/output/research.ndjson
           test -s historical/output/research_training.ndjson
+      - name: Independently verify restored training manifest and move evidence
+        run: |
+          python historical/verify_manifest.py
+          python historical/verify_moves.py
       - name: Mine multi-indicator patterns with independent chronological test
         run: |
           python historical/analyze_interactions.py historical/output/research_training.ndjson historical/output/interaction_model.json
