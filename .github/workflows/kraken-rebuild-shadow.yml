@@ -115,6 +115,10 @@ jobs:
           assert report["health"] == "COMPLETE", "incomplete scan"
           assert report["scanned"] == report["universe"] and report["failures"] == 0, "missing market coverage"
           assert report.get("persistence_health") == "COMPLETE", "persistence failed"
+          research = report.get("historical_research") or {}
+          assert research.get("interaction_model_loaded") is True, "validated interaction model not loaded"
+          assert research.get("status") == "VALIDATED_INTERACTIONS", "historical interaction model invalid"
+          assert isinstance(research.get("approved_rules"),list), "historical rules missing"
           hist = report.get("history_diagnostics") or {}
           assert hist.get("history_available") is True, "history unavailable"
           assert hist.get("runs",0) >= 1 and hist.get("observations",0) >= len(report["watch"]), "missing history observations"
