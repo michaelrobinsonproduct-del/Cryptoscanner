@@ -20,8 +20,9 @@ def num(x):
  try:return float(x)
  except:return None
 def pct(a,b): return (b/a-1)*100 if a and b else None
-rows=[]; moves=[]
-with zipfile.ZipFile(zp) as z:
+rows_written=0; moves=[]
+outdir="historical/output";os.makedirs(outdir,exist_ok=True)
+with open(outdir+"/research.ndjson","w",encoding="utf-8") as research_out, zipfile.ZipFile(zp) as z:
  names=[n for n in z.namelist() if n.endswith("_5.csv")]
  print("5m files",len(names),flush=True)
  for ni,n in enumerate(names):
@@ -64,7 +65,8 @@ with zipfile.ZipFile(zp) as z:
    control_sampled=(t//86400)%7==0 and (t%3600==0)
    early=p60 is not None and abs(p60)<=3
    rec={"pair":pair,"anchor_at":datetime.fromtimestamp(t,timezone.utc).isoformat(),"anchor_price":c,"pre_return_5m_pct":p5,"pre_return_15m_pct":p15,"pre_return_60m_pct":p60,"volume_accel":vacc,"trade_accel":tacc,"volatility_pct":vola,"max_forward_return_pct":mx,"still_early":early,"major_mover":mx>=20,"control_sampled":control_sampled,"source":"kraken_archive_5m_2026q2","features":{"interval":"5m","no_lookahead":True}}
-   rows.append(rec)
+   research_out.write(json.dumps(rec,separators=(",",":"))+"\n")
+   rows_written+=1
    if rec["major_mover"]:pairrows.append(rec)
   # episode-dedupe major windows: new episode after >24h gap
   majors=pairrows
@@ -75,16 +77,15 @@ with zipfile.ZipFile(zp) as z:
    else:
     moves.append(grp);grp=[r]
   if grp:moves.append(grp)
-  if ni%50==0:print("processed",ni,"research",len(rows),flush=True)
+  if ni%50==0:print("processed",ni,"research",rows_written,flush=True)
 outdir="historical/output";os.makedirs(outdir,exist_ok=True)
 def dump(path,data):
  with open(path,"w") as f:
   for x in data:f.write(json.dumps(x,separators=(",",":"))+"\n")
-dump(outdir+"/research.ndjson",rows)
 eps=[]
 for g in moves:
  best=max(g,key=lambda r:r["max_forward_return_pct"]); first=g[0]
  eps.append({"pair":first["pair"],"move_start":first["anchor_at"],"peak_at":None,"baseline_price":first["anchor_price"],"peak_price":None,"max_return_pct":best["max_forward_return_pct"],"earliest_signal_at":next((r["anchor_at"] for r in g if r["still_early"]),None),"extension_at_signal_pct":next((r["pre_return_60m_pct"] for r in g if r["still_early"]),None),"caught_early":any(r["still_early"] for r in g),"source":"kraken_archive_5m_2026q2","evidence":{"windows":len(g),"dedupe_gap_hours":24}})
 dump(outdir+"/moves.ndjson",eps)
-with open(outdir+"/summary.json","w") as f:json.dump({"research_rows":len(rows),"move_episodes":len(eps),"start":"2025-10-04","archive_end":"2026-06-30","source":"Kraken OHLCVT 5m","note":"historical L2 unavailable; not fabricated"},f)
-print(json.dumps({"ok":True,"research_rows":len(rows),"move_episodes":len(eps)}))
+with open(outdir+"/summary.json","w") as f:json.dump({"research_rows":rows_written,"move_episodes":len(eps),"start":"2025-10-04","archive_end":"2026-06-30","source":"Kraken OHLCVT 5m","note":"historical L2 unavailable; not fabricated"},f)
+print(json.dumps({"ok":True,"research_rows":rows_written,"move_episodes":len(eps)}))
