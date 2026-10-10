@@ -48,7 +48,7 @@ with zipfile.ZipFile(zp) as z:
    c=close[i]; p5=pct(close[i-1],c); p15=pct(close[i-3],c); p60=pct(close[i-12],c)
    prevv=sum(vol[i-12:i-6]); curv=sum(vol[i-6:i]); preva=sum(trades[i-12:i-6]); cura=sum(trades[i-6:i])
    vacc=curv/prevv if prevv>0 else None; tacc=cura/preva if preva>0 else None
-   rets=[pct(close[j-1],close[j]) or 0 for j in range(i-11,i+1)]
+   rets=[pct(close[j-1],close[j]) if pct(close[j-1],close[j]) is not None else 0 for j in range(i-11,i+1)]
    vola=statistics.pstdev(rets) if len(rets)>1 else 0
    fwd=close[i+1:min(len(close),i+289)]
    mx=max((pct(c,x) or -999 for x in fwd),default=None)
@@ -56,7 +56,7 @@ with zipfile.ZipFile(zp) as z:
    control_sampled=(t//86400)%7==0 and (i%12==0)
    keep=mx>=10 or control_sampled
    if not keep:continue
-   early=abs(p60 or 999)<=3
+   early=p60 is not None and abs(p60)<=3
    rec={"pair":pair,"anchor_at":datetime.fromtimestamp(t,timezone.utc).isoformat(),"anchor_price":c,"pre_return_5m_pct":p5,"pre_return_15m_pct":p15,"pre_return_60m_pct":p60,"volume_accel":vacc,"trade_accel":tacc,"volatility_pct":vola,"max_forward_return_pct":mx,"still_early":early,"major_mover":mx>=20,"control_sampled":control_sampled,"source":"kraken_archive_5m_2026q2","features":{"interval":"5m","no_lookahead":True}}
    pairrows.append(rec); rows.append(rec)
   # episode-dedupe major windows: new episode after >24h gap
