@@ -241,6 +241,10 @@ jobs:
                   baseline=json.loads(baseline_path.read_text()) if baseline_path.exists() else None
                   schedule_path=Path("rebuild_v2/output/schedule_health.json")
                   schedule=json.loads(schedule_path.read_text()) if schedule_path.exists() else None
+                  import os,sqlite3
+                  con=sqlite3.connect("rebuild_v2/output/history.sqlite3")
+                  cycle_row=con.execute("SELECT run_id FROM scan_cycles WHERE cycle_id=?",(os.environ["SCAN_CYCLE_ID"],)).fetchone()
+                  cycle_valid=cycle_row is not None and con.execute("SELECT COUNT(*) FROM runs WHERE id=?",(cycle_row[0],)).fetchone()[0]==1
                   checks={
                       "engine_v1":r.get("engine")=="rebuild-shadow-1.0",
                       "market_scan_complete":r.get("health")=="COMPLETE" and r.get("scanned")==r.get("universe") and r.get("failures")==0,
@@ -251,7 +255,7 @@ jobs:
                       "historical_interaction_model_loaded":r.get("historical_research",{}).get("interaction_model_loaded") is True and r.get("historical_research",{}).get("status")=="VALIDATED_INTERACTIONS",
                       "non_actionable_shadow":r.get("recommendation")=="NO VERIFIED BUYS",
                       "history_continuity":baseline is not None and all(h.get(k,0)>=baseline[k] for k in ("runs","observations","outcomes")),
-                      "cycle_persisted_or_retry":baseline is not None and (h.get("runs",0)>baseline["runs"] or h.get("runs",0)==baseline["runs"]),
+                      "cycle_persisted_or_retry":baseline is not None and cycle_valid and h.get("runs",0)>=baseline["runs"],
                   }
                   status.update(checks=checks,engine=r.get("engine"),completed_at=r.get("completed_at"),history=h,history_baseline=baseline,schedule_health=schedule)
                   status["acceptance"]="PASSED" if all(checks.values()) else "FAILED"
