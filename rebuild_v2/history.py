@@ -102,15 +102,23 @@ def pair_signal_adjustment(pair, min_samples=3):
 
 def prospective_learning(min_days=10, min_pairs=8):
     """Chronological validation of high-score vs lower-score 4h hit rates.
-    One record per pair-day; no unvalidated score adjustments.
+    Earliest labeled observation per pair-day; prevents hindsight-max score/outcome leakage.\n    No unvalidated score adjustments.
     """
     with connect() as con:
-        rows=con.execute("""SELECT substr(r.created_at,1,10),o.pair,
-              MAX(o.score),MAX(CASE WHEN x.return_pct>=5 THEN 1 ELSE 0 END)
-              FROM outcomes x JOIN observations o ON o.run_id=x.run_id AND o.pair=x.pair
-              JOIN runs r ON r.id=o.run_id WHERE x.horizon_hours=4
-              GROUP BY substr(r.created_at,1,10),o.pair
-              ORDER BY substr(r.created_at,1,10),o.pair""").fetchall()
+        rows=con.execute("""WITH ranked AS (
+              SELECT substr(r.created_at,1,10) AS day, o.pair,
+                     o.score, CASE WHEN x.return_pct>=5 THEN 1 ELSE 0 END AS hit,
+                     ROW_NUMBER() OVER (
+                       PARTITION BY substr(r.created_at,1,10),o.pair
+                       ORDER BY r.created_at ASC,r.id ASC
+                     ) AS rn
+              FROM outcomes x
+              JOIN observations o ON o.run_id=x.run_id AND o.pair=x.pair
+              JOIN runs r ON r.id=o.run_id
+              WHERE x.horizon_hours=4
+            )
+            SELECT day,pair,score,hit FROM ranked WHERE rn=1
+            ORDER BY day,pair""").fetchall()
     days=sorted({x[0] for x in rows})
     result={"status":"INSUFFICIENT_DATA","pair_days":len(rows),
             "days":len(days),"validated":False,"adjustment":0,"score_threshold":60}
