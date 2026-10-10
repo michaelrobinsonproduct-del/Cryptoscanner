@@ -63,7 +63,7 @@ with zipfile.ZipFile(zp) as z:
    rows.append(rec)
    if rec["major_mover"]:pairrows.append(rec)
   # episode-dedupe major windows: new episode after >24h gap
-  majors=[r for r in pairrows if r["major_mover"]]
+  majors=pairrows
   grp=[]
   for r in majors:
    ts=datetime.fromisoformat(r["anchor_at"]).timestamp()
