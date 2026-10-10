@@ -40,6 +40,8 @@ with zipfile.ZipFile(zp) as z:
     bars.append((t,o,hg,lo,c,v,tr or 0))
   if len(bars)<300:continue
   bars.sort()
+  bars=list({bar[0]:bar for bar in bars}.values())
+  if len(bars)<300:continue
   close=[x[4] for x in bars]; vol=[x[5] for x in bars]; trades=[x[6] for x in bars]
   pairrows=[]
   for i in range(12,len(bars)-288,3): # 15m anchors
