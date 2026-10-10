@@ -264,7 +264,7 @@ def scan():
         previous=None
     continuity=evaluate_watch_continuity(watches,previous,dt.datetime.now(dt.timezone.utc))
     finished = dt.datetime.now(dt.timezone.utc)
-    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-1.0", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "market_quotes": market_quotes, "prospective_learning": calibration, "historical_research": research, "confirmations": confirmations, "continuity_research": continuity, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
+    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-1.0", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "market_quotes": market_quotes, "source_coverage": {"kraken": {"enabled": True, "pairs_scanned": len(pairs)-len(failed)}, "dex": {"enabled": False, "pairs_scanned": 0, "status": "NOT_IMPLEMENTED", "entry_approved": False}}, "prospective_learning": calibration, "historical_research": research, "confirmations": confirmations, "continuity_research": continuity, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
 
 def main():
     try:
