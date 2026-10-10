@@ -87,10 +87,20 @@ jobs:
                   return json.loads(body) if body else None
           # Wait at least seven minutes after a nominal 15-minute boundary for GitHub schedule latency.
           minute = now.minute
-          boundary = now.replace(minute=(minute//15)*15, second=0, microsecond=0)
-          # During the grace period, evaluate the previous cycle rather than skipping recovery.
-          if (now-boundary).total_seconds() < 420:
-              boundary -= dt.timedelta(minutes=15)
+          def eligible_boundary(timestamp):
+              boundary = timestamp.replace(minute=(timestamp.minute//15)*15, second=0, microsecond=0)
+              if (timestamp-boundary).total_seconds() < 420:
+                  boundary -= dt.timedelta(minutes=15)
+              return boundary
+          # Verify quarter-hour offsets, grace edges, and hour rollover.
+          for test_minute in range(60):
+              for test_second in (0, 59):
+                  sample_time=now.replace(minute=test_minute,second=test_second,microsecond=0)
+                  selected=eligible_boundary(sample_time)
+                  assert selected.minute % 15 == 0 and selected.second == 0
+                  assert 420 <= (sample_time-selected).total_seconds() < 1320
+          boundary = eligible_boundary(now)
+          print("ELIGIBLE_CYCLE",boundary.isoformat())
           runs = api("/actions/workflows/kraken-rebuild-shadow.yml/runs?per_page=40")["workflow_runs"]
           def classify(items):
               # Recovery must not treat failed/cancelled runs as healthy.
