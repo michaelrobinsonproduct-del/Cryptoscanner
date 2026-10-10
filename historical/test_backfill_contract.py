@@ -37,7 +37,7 @@ for price, future, expected in [
     (100, [100, 0], 0),
     (0, [100], None),
 ]:
-    actual = eval(forward_code, {"__builtins__": {}, "max": max, "pct": pct}, {"c": price, "fwd": future})
+    actual = eval(forward_code, {"__builtins__": {}, "max": max, "pct": pct, "c": price, "fwd": future})
     check(f"forward_max_{price}_{future}", actual == expected)
 
 # Exercise prefix-gap window checks with missing and complete 5-minute bars.
