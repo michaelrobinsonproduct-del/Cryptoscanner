@@ -53,7 +53,7 @@ with zipfile.ZipFile(zp) as z:
    vacc=curv/prevv if prevv>0 else None; tacc=cura/preva if preva>0 else None
    rets=[pct(close[j-1],close[j]) if pct(close[j-1],close[j]) is not None else 0 for j in range(i-11,i+1)]
    vola=statistics.pstdev(rets) if len(rets)>1 else 0
-   fwd=close[i+1:min(len(close),i+289)]
+   fwd=[bar[4] for bar in bars[i+1:min(len(bars),i+289)] if 0<bar[0]-t<=86400]
    mx=max((v for x in fwd if (v:=pct(c,x)) is not None),default=None)
    if mx is None:continue
    control_sampled=(t//86400)%7==0 and (i%12==0)
