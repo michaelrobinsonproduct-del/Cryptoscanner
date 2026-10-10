@@ -22,13 +22,19 @@ def discover(fetch=get_json, now=None, max_tokens=12):
             "coverage":"SAMPLED_NEW_PROFILES_NOT_FULL_DEX",
             "fetched_at":now.isoformat(),"profiles_seen":0,
             "profiles_checked":0,"pairs_evaluated":0,"eligible_pairs":0,
-            "candidates":[],"errors":[],"entry_approved":False,\n            "rejection_counts":{},"near_miss_samples":[],"candidate_count_total":0}
+            "candidates":[],"errors":[],"entry_approved":False,
+            "rejection_counts":{},"near_miss_samples":[],"candidate_count_total":0}
     try:
         profiles=fetch("/token-profiles/latest/v1")
         if not isinstance(profiles,list):
             raise ValueError("invalid profile response")
         report["profiles_seen"]=len(profiles)
-        seen=set()\n        def reject(reason, pair):\n            counts=report["rejection_counts"]\n            counts[reason]=counts.get(reason,0)+1\n            if len(report["near_miss_samples"])<12:\n                report["near_miss_samples"].append({"reason":reason,"chain":chain,"pair_address":pair.get("pairAddress")})
+        seen=set()
+        def reject(reason, pair):
+            counts=report["rejection_counts"]
+            counts[reason]=counts.get(reason,0)+1
+            if len(report["near_miss_samples"])<12:
+                report["near_miss_samples"].append({"reason":reason,"chain":chain,"pair_address":pair.get("pairAddress")})
         for profile in profiles:
             if report["profiles_checked"]>=max_tokens:break
             if not isinstance(profile,dict):continue
@@ -46,10 +52,13 @@ def discover(fetch=get_json, now=None, max_tokens=12):
                 if not isinstance(pairs,list):raise ValueError("invalid pair response")
                 for pair in pairs[:25]:
                     report["pairs_evaluated"]+=1
-                    if not isinstance(pair,dict):continue\n                    if pair.get("chainId")!=chain:\n                        reject("chain_mismatch",pair);continue
+                    if not isinstance(pair,dict):continue
+                    if pair.get("chainId")!=chain:
+                        reject("chain_mismatch",pair);continue
                     base=pair.get("baseToken") or {}
                     quote=pair.get("quoteToken") or {}
-                    if address.lower() not in (str(base.get("address","")).lower(),str(quote.get("address","")).lower()):\n                        reject("token_mismatch",pair);continue
+                    if address.lower() not in (str(base.get("address","")).lower(),str(quote.get("address","")).lower()):
+                        reject("token_mismatch",pair);continue
                     liquidity=pair.get("liquidity") or {}
                     volume=pair.get("volume") or {}
                     change=pair.get("priceChange") or {}
@@ -58,9 +67,17 @@ def discover(fetch=get_json, now=None, max_tokens=12):
                         volume24=float(volume.get("h24") or 0)
                         move=float(change.get("h1") or 0)
                         created=int(pair.get("pairCreatedAt") or 0)
-                    except (ValueError,TypeError,OverflowError):\n                        reject("invalid_metrics",pair);continue
+                    except (ValueError,TypeError,OverflowError):
+                        reject("invalid_metrics",pair);continue
                     age=(now.timestamp()*1000-created)/1000 if created else -1
-                    if not 0<=age<=86400*30:\n                        reject("pool_age",pair);continue\n                    if usd<25000:\n                        reject("low_liquidity",pair);continue\n                    if volume24<10000:\n                        reject("low_volume",pair);continue\n                    if not -30<=move<=100:\n                        reject("extreme_move",pair);continue
+                    if not 0<=age<=86400*30:
+                        reject("pool_age",pair);continue
+                    if usd<25000:
+                        reject("low_liquidity",pair);continue
+                    if volume24<10000:
+                        reject("low_volume",pair);continue
+                    if not -30<=move<=100:
+                        reject("extreme_move",pair);continue
                     report["candidates"].append({
                         "chain":chain,"pair_address":pair.get("pairAddress"),
                         "token_address":address,"symbol":base.get("symbol"),
@@ -69,7 +86,8 @@ def discover(fetch=get_json, now=None, max_tokens=12):
                         "status":"DEX_RESEARCH_ONLY","entry_approved":False})
             except Exception as exc:
                 report["errors"].append({"chain":chain,"token_address":address,"error":str(exc)[:180]})
-        report["eligible_pairs"]=len(report["candidates"])\n        report["candidate_count_total"]=len(report["candidates"])
+        report["eligible_pairs"]=len(report["candidates"])
+        report["candidate_count_total"]=len(report["candidates"])
         if report["errors"]:report["status"]="PARTIAL"
     except Exception as exc:
         report["status"]="FAILED"
