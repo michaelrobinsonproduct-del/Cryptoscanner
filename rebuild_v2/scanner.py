@@ -284,6 +284,8 @@ def main():
         result["learning_report"] = learning_report()
         result["historical_cohort_analysis"] = historical_cohort_analysis(1)
         result["missed_breakouts"] = miss_report()
+        from history import early_detection_benchmark
+        result["early_detection_benchmark"] = early_detection_benchmark()
         result["historical_calibration"] = historical_signal_adjustments()
         result["history_diagnostics"] = history_diagnostics()
         result["reliability_scorecard"] = reliability_scorecard()
