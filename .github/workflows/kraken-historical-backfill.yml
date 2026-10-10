@@ -15,9 +15,11 @@ jobs:
       - name: Show revision
         run: git rev-parse HEAD
       - name: Compile historical Python scripts
-        run: python -m py_compile historical/backfill.py historical/compact.py
+        run: python -m py_compile historical/backfill.py historical/compact.py historical/verify_manifest.py historical/test_backfill_contract.py historical/test_compact_integration.py
       - name: Test historical signal contract
         run: python historical/test_backfill_contract.py
+      - name: Test synthetic historical compaction
+        run: python historical/test_compact_integration.py
       - name: Run historical reconstruction
         run: python historical/backfill.py
       - name: Build compact training dataset
