@@ -26,15 +26,15 @@ with training.open("rb") as handle:
         if not raw.strip():
             continue
         row = json.loads(raw)
-        assert isinstance(row.get("pair"), str) and row["pair"].strip(), f"invalid pair at {number}"
+        if not (isinstance(row.get("pair"), str) and row["pair"].strip()): raise ValueError(f"invalid pair at {number}")
         ts = datetime.fromisoformat(row["anchor_at"].replace("Z", "+00:00"))
-        assert ts.tzinfo is not None, f"naive timestamp at {number}"
+        if not (ts.tzinfo is not None): raise ValueError(f"naive timestamp at {number}")
         ts = ts.astimezone(timezone.utc)
         key = (row["pair"], ts.isoformat())
-        assert key not in seen_anchors, f"duplicate training observation at {number}"
+        if not (key not in seen_anchors): raise ValueError(f"duplicate training observation at {number}")
         seen_anchors.add(key)
-        assert ts.minute == 0 and ts.second == 0 and ts.microsecond == 0, f"training sample not hourly at {number}"
-        assert datetime(2025, 10, 4, tzinfo=timezone.utc) <= ts < datetime(2026, 7, 1, tzinfo=timezone.utc), f"training sample outside archive at {number}"
+        if not (ts.minute == 0 and ts.second == 0 and ts.microsecond == 0): raise ValueError(f"training sample not hourly at {number}")
+        if not (datetime(2025, 10, 4, tzinfo=timezone.utc) <= ts < datetime(2026, 7, 1, tzinfo=timezone.utc)): raise ValueError(f"training sample outside archive at {number}")
         earliest = min(earliest, ts) if earliest else ts
         latest = max(latest, ts) if latest else ts
         count += 1
