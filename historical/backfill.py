@@ -43,8 +43,10 @@ with open(outdir+"/research.ndjson","w",encoding="utf-8") as research_out, open(
     if None in (o,hg,lo,c,v) or not all(math.isfinite(q) for q in (o,hg,lo,c,v)) or min(o,hg,lo,c)<=0 or v<0 or lo>hg or not lo<=o<=hg or not lo<=c<=hg or tr is None or not math.isfinite(tr) or tr<0:continue
     bars.append((t,o,hg,lo,c,v,tr or 0))
   if len(bars)<300:continue
-  bars.sort()
-  bars=list({bar[0]:bar for bar in bars}.values())
+  # Deterministic duplicate policy: preserve the first valid candle at each timestamp.
+  bars.sort(key=lambda bar:bar[0])
+  bars=list({bar[0]:bar for bar in reversed(bars)}.values())
+  bars.sort(key=lambda bar:bar[0])
   if len(bars)<300:continue
   # Prefix gap counts allow constant-time validation of each 1h/24h window.
   gaps=[0]*len(bars)
