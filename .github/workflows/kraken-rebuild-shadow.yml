@@ -68,7 +68,12 @@ jobs:
         shell: bash
         run: |
           if git show origin/rebuild-history:latest.json > rebuild_v2/output/previous.json 2>/dev/null; then
-            python -c 'import json; r=json.load(open("rebuild_v2/output/previous.json")); assert isinstance(r.get("watch"),list) and r.get("completed_at"); print("PREVIOUS_WATCH_RESTORED",len(r["watch"]))'
+            if python -c 'import json; r=json.load(open("rebuild_v2/output/previous.json")); assert isinstance(r.get("watch"),list) and r.get("completed_at"); print("PREVIOUS_WATCH_RESTORED",len(r["watch"]))'; then
+              echo "PREVIOUS_WATCH_VALID"
+            else
+              rm -f rebuild_v2/output/previous.json
+              echo "PREVIOUS_WATCH_INVALID: ignoring malformed prior report; preserving historical database"
+            fi
           else
             rm -f rebuild_v2/output/previous.json
             echo "NO_PREVIOUS_WATCH: all candidates remain unverified"
