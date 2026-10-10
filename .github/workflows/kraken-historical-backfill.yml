@@ -6,6 +6,7 @@ on:
     paths:
       - 'historical/backfill.py'
       - 'historical/compact.py'
+      - 'historical/test_backfill_contract.py'
       - '.github/workflows/kraken-historical-backfill.yml'
 jobs:
   backfill:
@@ -22,6 +23,8 @@ jobs:
         run: git rev-parse HEAD
       - name: Compile historical Python scripts
         run: python -m py_compile historical/backfill.py historical/compact.py
+      - name: Test historical signal contract
+        run: python historical/test_backfill_contract.py
       - name: Run historical reconstruction
         run: python historical/backfill.py
       - name: Build compact training dataset
