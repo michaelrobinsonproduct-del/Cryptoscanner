@@ -6,6 +6,12 @@ on:
     paths:
       - 'production-recovery/**'
       - '.github/workflows/production-recovery-tests.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'production-recovery/**'
+      - '.github/workflows/production-recovery-tests.yml'
   workflow_dispatch:
 jobs:
   contract-tests:
