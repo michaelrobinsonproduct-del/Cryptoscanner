@@ -115,6 +115,6 @@ jobs:
               print("PRESENT: cycle appeared on recheck")
               raise SystemExit(0)
           print(state + ": dispatching shadow recovery for",boundary.isoformat())
-          api("/actions/workflows/kraken-rebuild-shadow.yml/dispatches", json.dumps({"ref":"main"}).encode())
+          api("/actions/workflows/kraken-rebuild-shadow.yml/dispatches", json.dumps({"ref":"main","inputs":{"cycle_id":boundary.strftime("%Y-%m-%dT%H:%M:%SZ")}}).encode())
           print("RECOVERY_DISPATCH_ACCEPTED: acceptance still requires independent verification")
           PY
