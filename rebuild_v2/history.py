@@ -17,11 +17,19 @@ def connect():
     con.execute("CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, health TEXT NOT NULL, payload TEXT NOT NULL)")
     con.execute("CREATE TABLE IF NOT EXISTS observations (run_id TEXT NOT NULL, pair TEXT NOT NULL, price REAL, score REAL, status TEXT, PRIMARY KEY(run_id,pair))")
     con.execute("CREATE TABLE IF NOT EXISTS outcomes (run_id TEXT, pair TEXT, horizon_hours INTEGER, return_pct REAL, evaluated_at TEXT, PRIMARY KEY(run_id,pair,horizon_hours))")
+    con.execute("CREATE TABLE IF NOT EXISTS scan_cycles (cycle_id TEXT PRIMARY KEY, run_id TEXT NOT NULL UNIQUE, recorded_at TEXT NOT NULL)")
     con.execute("CREATE INDEX IF NOT EXISTS obs_pair_idx ON observations(pair)")
     return con
 def store_run(result):
     rid=result.get("started_at") or result.get("completed_at")
+    cycle_id=os.environ.get("SCAN_CYCLE_ID","").strip()
     with connect() as con:
+        if cycle_id:
+            existing=con.execute("SELECT run_id FROM scan_cycles WHERE cycle_id=?",(cycle_id,)).fetchone()
+            if existing:
+                print("DUPLICATE_SCAN_CYCLE_SKIPPED",cycle_id,"original_run",existing[0])
+                return
+            con.execute("INSERT INTO scan_cycles VALUES (?,?,?)",(cycle_id,rid,result["completed_at"]))
         con.execute("INSERT OR IGNORE INTO runs VALUES (?,?,?,?)",(rid,result["completed_at"],result["health"],json.dumps(result)))
         watched={c["pair"] for c in result.get("watch",[])}
         for c in (result.get("market_quotes") or result.get("watch",[])):
