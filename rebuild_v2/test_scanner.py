@@ -32,8 +32,11 @@ class ScannerTests(unittest.TestCase):
         self.assertEqual(historical_rule_bonus({**features,"trade_accel":0.5},model)[0],0)
     def test_historical_features_exclude_incomplete_candle(self):
         candles=[]
+        # A fresh fixture is required now that production rejects stale OHLC.
+        now=dt.datetime.now(dt.timezone.utc).timestamp()
+        last_completed_open=int(now//300)*300-300
         for i in range(14):
-            candles.append([i*300,"1","1","1",str(100+i), "0","10",10])
+            candles.append([last_completed_open-(12-i)*300,"1","1","1",str(100+i), "0","10",10])
         candles[-1][4]="999999"
         def fake(endpoint):return {"PAIR":candles,"last":0}
         features=historical_live_features("PAIR",fake)
