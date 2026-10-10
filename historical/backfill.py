@@ -84,6 +84,8 @@ with open(outdir+"/research.ndjson","w",encoding="utf-8") as research_out, open(
     if grp and t-datetime.fromisoformat(grp[-1]["anchor_at"]).timestamp()>900:
      emit_episode(grp);grp=[]
     grp.append(rec)
+   elif grp:
+    emit_episode(grp);grp=[]
   if grp:emit_episode(grp)
   if ni%50==0:print("processed",ni,"research",rows_written,flush=True)
 with open(outdir+"/summary.json","w") as f:json.dump({"research_rows":rows_written,"move_episodes":episodes_written,"start":"2025-10-04","archive_end":"2026-06-30","source":"Kraken OHLCVT 5m","note":"historical L2 unavailable; not fabricated"},f)
