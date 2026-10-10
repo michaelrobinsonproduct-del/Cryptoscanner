@@ -43,6 +43,7 @@ for price, future, expected in [
 check("complete_24h_required", "bars[i+288][0]-t!=86400" in source)
 check("all_forward_candles_contiguous", "bars[j][0]-bars[j-1][0]!=300" in source)
 check("contiguous_1h_required", "t-bars[i-12][0]!=3600" in source)
+check("all_lookback_candles_contiguous", "range(i-11,i+1)" in source and "bars[j][0]-bars[j-1][0]!=300" in source)
 check("dedupe_candle_timestamps", "bar[0]:bar" in source)
 check("reject_invalid_candles", "math.isfinite" in source)
 check("forward_clock_bounded", "bar[0]-t<=86400" in source)
