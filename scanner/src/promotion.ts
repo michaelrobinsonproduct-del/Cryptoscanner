@@ -4,7 +4,7 @@ import { Reason } from "./reason-codes";
 
 export interface PromotionResult { decision: Decision; reason: string; extensionPct: number | null }
 
-const fresh = (c: MarketConfirmation) => c.success && c.twoSidedBook && c.executableBbo && c.recentTradeConfirmation && c.newestTradeAgeSeconds !== null && c.newestTradeAgeSeconds <= 300;
+const fresh = (c: MarketConfirmation) => c.success && c.twoSidedBook && c.executableBbo && c.recentTradeConfirmation && c.newestTradeAgeSeconds !== null && c.newestTradeAgeSeconds >= 0 && c.newestTradeAgeSeconds <= 60;
 
 export function evaluatePromotion(candidate: DiscoveryCandidate, first: MarketConfirmation, second: MarketConfirmation): PromotionResult {
   if (candidate.score < 80) return { decision: "WATCH", reason: Reason.ScoreBelow, extensionPct: null };
