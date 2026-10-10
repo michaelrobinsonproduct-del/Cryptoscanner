@@ -40,7 +40,7 @@ jobs:
           boundary=epoch-(epoch%900)
           cycle=dt.datetime.fromtimestamp(boundary,dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
           with open(os.environ["GITHUB_ENV"],"a") as env:
-              env.write(f"SCAN_CYCLE_ID={cycle}\\n".replace("\\\\n","\\n"))
+              env.write(f"SCAN_CYCLE_ID={cycle}\n")
           print("SCAN_CYCLE_ID",cycle)
           PY
       - name: Restore persistent history from dedicated branch
@@ -276,7 +276,7 @@ jobs:
               data=json.loads(p.read_text())
               data["scan_cycle_id"]=os.environ["SCAN_CYCLE_ID"]
               data["github_run_id"]=os.environ["GITHUB_RUN_ID"]
-              p.write_text(json.dumps(data,indent=2)+"\\n")
+              p.write_text(json.dumps(data,indent=2)+"\n")
           PY
           cp /tmp/kraken-schedule-health.json schedule_health.json
           cp /tmp/kraken-paper-validation.json paper_validation.json
