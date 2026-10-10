@@ -48,7 +48,7 @@ with zipfile.ZipFile(zp) as z:
    gaps[j]=gaps[j-1]+(bars[j][0]-bars[j-1][0]!=300)
   close=[x[4] for x in bars]; vol=[x[5] for x in bars]; trades=[x[6] for x in bars]
   pairrows=[]
-  for i in range(12,len(bars)-288): # inspect every 5m candle; select wall-clock quarter-hour anchors
+  for i in range(12,len(bars)-287): # inspect every 5m candle; select wall-clock quarter-hour anchors
    t=bars[i][0]
    if not START<=t<END or t%900!=0:continue
    if t-bars[i-12][0]!=3600 or gaps[i]!=gaps[i-12]:continue
