@@ -267,6 +267,8 @@ def main():
     try:
         from history import store_run, outcome_summary, evaluate_outcomes
         evaluate_outcomes(result) if result["health"] != "FAILED" else None
+        from paper_entries import assess as assess_paper_entries
+        result["paper_entry_research"] = assess_paper_entries(result)
         store_run(result)
         result["historical_outcomes"] = outcome_summary()
         from history import learning_report, history_diagnostics, reliability_scorecard, miss_report, historical_signal_adjustments, historical_cohort_analysis
