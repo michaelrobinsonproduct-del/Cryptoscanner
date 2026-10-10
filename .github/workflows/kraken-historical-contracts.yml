@@ -7,6 +7,7 @@ on:
       - 'historical/backfill.py'
       - 'historical/compact.py'
       - 'historical/test_backfill_contract.py'
+      - 'historical/verify_manifest.py'
       - '.github/workflows/kraken-historical-contracts.yml'
 jobs:
   fast-contracts:
@@ -18,6 +19,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Compile historical scripts
-        run: python -m py_compile historical/backfill.py historical/compact.py historical/test_backfill_contract.py
+        run: python -m py_compile historical/backfill.py historical/compact.py historical/test_backfill_contract.py historical/verify_manifest.py
       - name: Verify historical labeling contracts
         run: python historical/test_backfill_contract.py
