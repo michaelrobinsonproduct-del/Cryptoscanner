@@ -349,6 +349,10 @@ jobs:
           summary=remote("summary.json")
           assert summary["research_only"] is True and summary["approved_buys"]==[], "summary incorrectly actionable"
           assert summary["completed_at"]==latest["completed_at"], "summary stale or mismatched"
+          assert summary["recommendation"]==latest["recommendation"], "summary recommendation mismatch"
+          assert summary["top_research_watches"]==[{"pair":w["pair"],"score":w.get("score"),"move24_pct":w.get("move24_pct"),"signal_state":w.get("signal_state")} for w in latest["watch"][:5]], "summary watch ordering or values mismatch"
+          assert all(w.get("entry_approved") is False for w in latest["watch"]), "research watch incorrectly approved"
+          assert summary["health"]==latest["health"]=="COMPLETE", "summary health mismatch"
           assert summary["scanned"]==latest["scanned"] and summary["universe"]==latest["universe"], "summary coverage mismatch"
           assert summary["watch_count"]==len(latest["watch"]), "summary watch count mismatch"
           assert summary["delivery_status"]=="PUBLISHED_TO_GITHUB_ONLY", "summary overstates delivery"
