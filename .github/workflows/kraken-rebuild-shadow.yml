@@ -156,6 +156,7 @@ jobs:
                       "current_observations_saved":h.get("observations",0)>=len(r.get("watch",[])),
                       "outcome_diagnostics_present":isinstance(h.get("outcomes"),int),
                       "historical_research_status_present":isinstance(r.get("historical_research"),dict),
+                      "historical_interaction_model_loaded":r.get("historical_research",{}).get("interaction_model_loaded") is True and r.get("historical_research",{}).get("status")=="VALIDATED_INTERACTIONS",
                       "non_actionable_shadow":r.get("recommendation")=="NO VERIFIED BUYS",
                       "history_continuity":baseline is not None and all(h.get(k,0)>=baseline[k] for k in ("runs","observations","outcomes")),
                       "new_run_recorded":baseline is not None and h.get("runs",0)>baseline["runs"],
