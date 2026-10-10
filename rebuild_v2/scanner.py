@@ -118,6 +118,37 @@ def historical_rule_bonus(features,model):
              if isinstance(rule,list) and len(rule)>=2 and all(predicates.get(name,False) for name in rule)]
     return min(8,2*len(matched)),matched
 
+def evaluate_watch_continuity(watches, previous, now, max_age_seconds=1800):
+    """Fail closed on fading prices; never promote stale or unconfirmed watches."""
+    prior={c.get("pair"):c for c in (previous or {}).get("watch",[]) if isinstance(c,dict)}
+    stamp=(previous or {}).get("completed_at")
+    try:
+        age=(now-dt.datetime.fromisoformat(stamp.replace("Z","+00:00"))).total_seconds()
+    except (TypeError,ValueError,AttributeError):
+        age=None
+    usable=age is not None and 0<=age<=max_age_seconds
+    counts={"compared":0,"downgraded":0,"prior_report_fresh":usable}
+    for c in watches:
+        c["continuity_state"]="NEW_OR_UNVERIFIED"
+        c["entry_approved"]=False
+        old=prior.get(c["pair"]) if usable else None
+        if not old:continue
+        try:
+            old_price=float(old["price"]);new_price=float(c["price"])
+            if old_price<=0 or new_price<=0:continue
+            change=100*(new_price/old_price-1)
+            c["change_since_previous_watch_pct"]=round(change,3)
+            counts["compared"]+=1
+            # Conservative research downgrade; not a buy trigger.
+            if change<=-2 or c["move24_pct"]<0 or c["spread_bps"]>40:
+                c["continuity_state"]="DOWNGRADED_PRICE_OR_LIQUIDITY"
+                counts["downgraded"]+=1
+            else:
+                c["continuity_state"]="MONITOR_ONLY"
+        except (ValueError,TypeError,KeyError,ZeroDivisionError):
+            continue
+    return counts
+
 def scan():
     started = dt.datetime.now(dt.timezone.utc)
     pairs = {k: v for k, v in api("AssetPairs").items() if v.get("status") == "online" and v.get("quote") in ("ZUSD", "USD") and not k.endswith(".d") and eligible_crypto_pair(v)}
@@ -217,8 +248,14 @@ def scan():
         candidate["signal_state"]="DOUBLE_CONFIRMED_RESEARCH_WATCH" if candidate["pair"] in confirmed_pairs else "UNCONFIRMED_RESEARCH_WATCH"
         candidate["requires_fresh_revalidation"]=True
         candidate["signal_observed_at"]=started.isoformat()
+    previous_path=pathlib.Path("rebuild_v2/output/previous.json")
+    try:
+        previous=json.loads(previous_path.read_text()) if previous_path.exists() else None
+    except (OSError,ValueError):
+        previous=None
+    continuity=evaluate_watch_continuity(watches,previous,dt.datetime.now(dt.timezone.utc))
     finished = dt.datetime.now(dt.timezone.utc)
-    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-1.0", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "market_quotes": market_quotes, "prospective_learning": calibration, "historical_research": research, "confirmations": confirmations, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
+    return {"started_at": started.isoformat(), "completed_at": finished.isoformat(), "engine": "rebuild-shadow-1.0", "health": "COMPLETE" if not failed else "PARTIAL", "universe": len(pairs), "scanned": len(pairs) - len(failed), "failures": len(failed), "failed_pairs": failed[:25], "watch": watches[:20], "market_quotes": market_quotes, "prospective_learning": calibration, "historical_research": research, "confirmations": confirmations, "continuity_research": continuity, "recommendation": "NO VERIFIED BUYS", "note": "Double-confirmed shadow watches only; no verified buy model or trained learning"}
 
 def main():
     try:
