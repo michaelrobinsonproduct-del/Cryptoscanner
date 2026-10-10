@@ -34,12 +34,12 @@ for line_number, line in enumerate(path.open(encoding="utf-8"), 1):
     if (start.minute % 15 or peak_anchor.minute % 15 or start.second or peak_anchor.second):
         raise ValueError(f"episode anchor misaligned at {line_number}")
     for value in (row.get("baseline_price"), evidence.get("max_return_baseline_price")):
-        if not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+        if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
             raise ValueError(f"invalid episode baseline at {line_number}")
     ret = row.get("max_return_pct")
-    if not isinstance(ret, (int, float)) or not math.isfinite(ret) or ret < 20:
+    if type(ret) not in (int, float) or not math.isfinite(ret) or ret < 20:
         raise ValueError(f"invalid major mover return at {line_number}")
-    if not isinstance(evidence.get("windows"), int) or evidence["windows"] < 1:
+    if type(evidence.get("windows")) is not int or evidence["windows"] < 1:
         raise ValueError(f"invalid episode window count at {line_number}")
     # Every grouped anchor is exactly one 15-minute step apart; a group cannot span more time than its windows.
     if (peak_anchor - start).total_seconds() > (evidence["windows"] - 1) * 900:
