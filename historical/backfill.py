@@ -32,8 +32,11 @@ with open(outdir+"/research.ndjson","w",encoding="utf-8") as research_out, open(
    txt=(x.decode("utf-8") for x in raw)
    for r in csv.reader(txt):
     if not r: continue
-    try:t=int(float(r[0]))
-    except:continue
+    try:
+     timestamp=float(r[0])
+     if not math.isfinite(timestamp) or not timestamp.is_integer():continue
+     t=int(timestamp)
+    except (ValueError,TypeError,OverflowError):continue
     if t<START-3600 or t>END+86400 or t%300!=0: continue
     if len(r)<7: continue
     o,hg,lo,c,v,tr=map(num,r[1:7])
