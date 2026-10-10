@@ -91,6 +91,7 @@ check("close_episode_on_invalid_forward_window", "if i+288>=len(bars) or bars[i+
 check("close_episode_on_missing_forward_return", "if mx is None:\n    if grp:emit_episode(grp);grp=[]\n    continue" in source)
 check("max_return_has_own_baseline", '"max_return_baseline_price":best["anchor_price"]' in source)
 check("max_return_has_own_anchor", '"max_return_anchor":best["anchor_at"]' in source)
+check("date_boundary_closes_episode", "if not START<=t<END: \n    if grp:emit_episode(grp);grp=[]\n    continue" in source)
 check("archive_has_checksum", "checksum mismatch" in source)
 check("five_minute_source", "Kraken_OHLCVT_Full_2026Q2" in source)
 check("historical_not_current", "2026,7,1" in source)
