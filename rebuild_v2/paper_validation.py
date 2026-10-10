@@ -9,8 +9,9 @@ REPORT=Path("rebuild_v2/output/paper_validation.json")
 def validate(db):
     # Only scans with published paper eligibility records are evaluated;
     # historic watch flags must not be relabeled as if the policy existed then.
-    rows=db.execute("""SELECT r.id,r.created_at,r.payload FROM runs r ORDER BY r.created_at""").fetchall()
+    rows=db.execute("""SELECT r.id,r.created_at,r.payload FROM runs r ORDER BY r.created_at,r.id""").fetchall()
     samples=[]
+    # First observed outcome per coin/day is only a proxy, not a fill price.
     controls=[]
     for run_id,created,payload in rows:
         try:
@@ -45,6 +46,8 @@ def validate(db):
         vals=list(unique.values())
         result["metrics"][str(horizon)+"h"]["watch_control_pair_days"]=len(vals)
         result["metrics"][str(horizon)+"h"]["watch_control_mean_return_pct"]=round(sum(vals)/len(vals),3) if vals else None
+    result["execution_costs"]="NOT_INCLUDED: fees, slippage, entry ask and fill uncertainty"
+    result["selection_limitation"]="First observed labeled result per coin/day; not yet a reproducible first-entry cohort"
     # No promotion without a prospective, out-of-sample evaluation with controls.
     return result
 
