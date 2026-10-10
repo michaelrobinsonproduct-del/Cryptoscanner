@@ -66,4 +66,12 @@ with tempfile.TemporaryDirectory() as folder:
         result = run([corrupt], optimized=i%2==0)
         if result.returncode == 0:
             raise AssertionError(f"provenance corruption {i} accepted")
-    print("PASS 100 valid artifacts and 200 corrupted artifacts across normal/optimized modes")
+    for i in range(100):
+        row = episode(i)
+        row["evidence"]["windows"] = 2
+        row["evidence"]["max_return_anchor"] = (datetime.fromisoformat(row["move_start"]) + timedelta(minutes=30)).isoformat()
+        result = run([row], optimized=i%2==0)
+        if result.returncode == 0:
+            raise AssertionError(f"invalid grouped anchor accepted: {i}")
+    print("PASS 100 valid and 300 corrupted artifact scenarios")
+
