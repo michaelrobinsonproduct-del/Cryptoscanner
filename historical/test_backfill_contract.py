@@ -18,7 +18,7 @@ check("single_early_assignment", len(early_assignments) == 1)
 early_expr = ast.Expression(early_assignments[0].value)
 early_code = compile(early_expr, "<early-contract>", "eval")
 for value, expected in [(None, False), (-4, False), (-3, True), (-0.1, True), (0, True), (0.1, True), (3, True), (4, False)]:
-    actual = bool(eval(early_code, {"__builtins__": {}}, {"p60": value}))
+    actual = bool(eval(early_code, {"__builtins__": {"abs": abs}}, {"p60": value}))
     check(f"early_return_{value}", actual is expected)
 
 forward_assignments = [
