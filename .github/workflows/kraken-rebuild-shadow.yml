@@ -126,6 +126,8 @@ jobs:
           assert all(c["entry_approved"] is False and c["real_trade_approved"] is False for c in p["candidates"])
           print("PAPER_BOUNDARY_VERIFIED")
           PY
+      - name: Audit historical dataset coverage
+        run: python rebuild_v2/data_audit.py
       - name: Evaluate prospective paper-entry outcomes
         run: python rebuild_v2/paper_validation.py
       - name: Check paper validation report
@@ -295,6 +297,7 @@ jobs:
             rebuild_v2/output/latest.json
             rebuild_v2/output/paper_entries.json
             rebuild_v2/output/paper_validation.json
+            rebuild_v2/output/data_audit.json
             rebuild_v2/output/acceptance.json
             rebuild_v2/output/schedule_health.json
             rebuild_v2/output/history.sqlite3
