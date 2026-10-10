@@ -242,6 +242,9 @@ jobs:
           cp rebuild_v2/output/latest.json /tmp/kraken-latest.json
           cp rebuild_v2/output/acceptance.json /tmp/kraken-acceptance.json
           cp rebuild_v2/output/schedule_health.json /tmp/kraken-schedule-health.json
+          cp rebuild_v2/output/paper_validation.json /tmp/kraken-paper-validation.json
+          cp rebuild_v2/output/data_audit.json /tmp/kraken-data-audit.json
+          cp rebuild_v2/output/paper_entries.json /tmp/kraken-paper-entries.json
           if git show-ref --verify --quiet refs/remotes/origin/rebuild-history; then
             git checkout -B rebuild-history origin/rebuild-history
           else
@@ -252,7 +255,10 @@ jobs:
           cp /tmp/kraken-latest.json latest.json
           cp /tmp/kraken-acceptance.json acceptance.json
           cp /tmp/kraken-schedule-health.json schedule_health.json
-          git add history.sqlite3 latest.json acceptance.json schedule_health.json
+          cp /tmp/kraken-paper-validation.json paper_validation.json
+          cp /tmp/kraken-data-audit.json data_audit.json
+          cp /tmp/kraken-paper-entries.json paper_entries.json
+          git add history.sqlite3 latest.json acceptance.json schedule_health.json paper_validation.json data_audit.json paper_entries.json
           git -c user.name='kraken-rebuild-bot' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Shadow scan history ${GITHUB_RUN_ID}" || true
           git push origin HEAD:refs/heads/rebuild-history
           # Verify the exact consumer-facing paths after the remote branch updates.
