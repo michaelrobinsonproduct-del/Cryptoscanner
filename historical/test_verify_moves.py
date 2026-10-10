@@ -73,5 +73,15 @@ with tempfile.TemporaryDirectory() as folder:
         result = run([row], optimized=i%2==0)
         if result.returncode == 0:
             raise AssertionError(f"invalid grouped anchor accepted: {i}")
-    print("PASS 100 valid and 300 corrupted artifact scenarios")
+    for i in range(100):
+        row = episode(i)
+        mode = i % 4
+        if mode == 0: row["baseline_price"] = True
+        elif mode == 1: row["evidence"]["max_return_baseline_price"] = True
+        elif mode == 2: row["max_return_pct"] = True
+        else: row["evidence"]["windows"] = True
+        result = run([row], optimized=i%2==0)
+        if result.returncode == 0:
+            raise AssertionError(f"boolean numeric field accepted: {i}")
+    print("PASS 100 valid and 400 corrupted artifact scenarios")
 
