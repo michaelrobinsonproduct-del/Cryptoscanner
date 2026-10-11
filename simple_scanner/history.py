@@ -18,10 +18,14 @@ def persist():
     con.execute("PRAGMA journal_mode=DELETE")
     con.execute("CREATE TABLE IF NOT EXISTS snapshots (run_at TEXT NOT NULL, pair TEXT NOT NULL, price REAL NOT NULL CHECK(price>0), score REAL NOT NULL, PRIMARY KEY(run_at,pair))")
     con.execute("CREATE TABLE IF NOT EXISTS candidate_features (run_at TEXT NOT NULL, pair TEXT NOT NULL, base_score REAL NOT NULL, early_signal_score REAL, move_15m_pct REAL, volume_accel REAL, research_rank INTEGER, PRIMARY KEY(run_at,pair))")
+    con.execute("CREATE TABLE IF NOT EXISTS market_observations (run_at TEXT NOT NULL, pair TEXT NOT NULL, price REAL NOT NULL CHECK(price>0), PRIMARY KEY(run_at,pair))")
     con.execute("CREATE TABLE IF NOT EXISTS outcomes (run_at TEXT NOT NULL, pair TEXT NOT NULL, horizon_hours INTEGER NOT NULL, evaluated_at TEXT NOT NULL, return_pct REAL NOT NULL, PRIMARY KEY(run_at,pair,horizon_hours))")
     now = dt.datetime.fromisoformat(report["completed_at"])
     assert now.tzinfo is not None and now.utcoffset() is not None, "Scan timestamp must be timezone-aware"
     with con:
+        for pair,price in report.get("market_prices",{}).items():
+            if isinstance(price,(int,float)) and price>0:
+                con.execute("INSERT OR IGNORE INTO market_observations VALUES (?,?,?)",(report["completed_at"],pair,price))
         for candidate in report["watch"]:
             if candidate.get("status") == "WATCH_RESEARCH_ONLY":
                 con.execute("INSERT OR IGNORE INTO snapshots VALUES (?,?,?,?)", (report["completed_at"], candidate["pair"], candidate["price"], candidate["score"]))
@@ -42,7 +46,8 @@ def persist():
     n = con.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
     outcomes = con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
     feature_rows=con.execute("SELECT COUNT(*) FROM candidate_features").fetchone()[0]
-    summary = {"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
+    market_observations=con.execute("SELECT COUNT(*) FROM market_observations").fetchone()[0]
+    summary = {"market_observations":market_observations,"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
     (DB.parent / "learning.json").write_text(json.dumps(summary,indent=2))
     print("HISTORY_PERSISTED",json.dumps(summary))
     con.close()
