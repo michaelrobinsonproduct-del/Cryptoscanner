@@ -31,7 +31,8 @@ for(const row of rows){
  const valid=Number.isFinite(price)&&price>0 && isClosedByDeadline(targetOpen,Date.now());
  if(!valid){missing++;continue;} // Missing historical candles remain pending for later retry.
  const payload={status:"measured",measured_at:new Date().toISOString(),ask_at_horizon:price,return_pct:candleReturn(Number(obs.baseline_ask),price),measurement_method:"kraken_hourly_candle_close_vs_initial_baseline_ask"};
- await api("challenger_forward_outcomes?observation_id=eq."+row.observation_id+"&horizon_hours=eq."+row.horizon_hours+"&status=eq.pending",{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify(payload)});
+ const updated=await api("challenger_forward_outcomes?observation_id=eq."+row.observation_id+"&horizon_hours=eq."+row.horizon_hours+"&status=eq.pending",{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify(payload)});
+ if(!Array.isArray(updated)||updated.length!==1){missing++;console.log(JSON.stringify({observation_id:row.observation_id,horizon_hours:row.horizon_hours,status:"not_updated",reason:"concurrent_update_or_row_not_returned",rows_returned:Array.isArray(updated)?updated.length:null}));continue;}
  measured++;
 }
 console.log(JSON.stringify({pending_checked:rows.length,measured,missing,method:"hourly_closed_candle_close_vs_initial_executable_ask",caveat:"OHLC candle close is not an executable ask"}));
