@@ -46,6 +46,7 @@ def main():
             age=(now.timestamp()-float(candles[-1][0]))
             if age<0 or age>900:raise ValueError("stale OHLC")
             c=[float(x[4]) for x in candles[-13:]];v=[float(x[6]) for x in candles[-13:]]
+            if not all(math.isfinite(x) and x>0 for x in c) or not all(math.isfinite(x) and x>=0 for x in v):raise ValueError("invalid OHLC close or volume")
             item.update({"move_15m_pct":round(100*(c[-1]/c[-4]-1),2),"move_60m_pct":round(100*(c[-1]/c[0]-1),2),"volume_accel":round(sum(v[-6:])/max(sum(v[-12:-6]),1e-9),2),"ohlc_age_seconds":round(age),"status":"WATCH_RESEARCH_ONLY"})
         except Exception as e:item.update({"status":"UNVERIFIED","reason":str(e)})
         time.sleep(.25)
