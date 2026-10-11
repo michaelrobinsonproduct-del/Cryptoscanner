@@ -12,7 +12,7 @@ class ScanTests(unittest.TestCase):
     def test_24_screened_12_selected_and_outside_top12_promoted(self):
         now=int(dt.datetime.now(dt.timezone.utc).timestamp())
         pairs={f"COIN{i}USD":{"status":"online","wsname":f"COIN{i}/USD","base":f"COIN{i}"} for i in range(30)}
-        ticker={p:{"c":["1"],"b":["0.999"],"a":["1.001"],"o":[str(1/(1+(30-i)*.002))],"v":["1000000","1000000"]} for i,p in enumerate(pairs)}
+        ticker={p:{"c":["1"],"b":["0.999"],"a":["1.001"],"o":str(1/(1+(30-i)*.002)),"v":["1000000","1000000"]} for i,p in enumerate(pairs)}
         def fake_get(path):
             if path=="AssetPairs":return pairs
             if path.startswith("Ticker"):return ticker
