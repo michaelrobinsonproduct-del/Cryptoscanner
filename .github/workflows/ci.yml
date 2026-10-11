@@ -19,7 +19,7 @@ jobs:
       - run: bun run validate
       - run: bun run live-smoke
   shadow:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/production-source-recovery-20261010')
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/production-source-recovery-20261010') || (github.event_name == 'pull_request' && github.head_ref == 'production-source-recovery-20261010')
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
