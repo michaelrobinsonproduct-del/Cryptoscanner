@@ -26,7 +26,7 @@ jobs:
           import datetime as dt,json
           r=json.load(open("simple_scanner/output/latest.json"))
           age=(dt.datetime.now(dt.timezone.utc)-dt.datetime.fromisoformat(r["completed_at"])).total_seconds()
-          assert 0<=age<180 and r["ticker_pairs"]>0 and r["universe"]>0
+          assert 0<=age<180 and r["matched_tickers"]>=max(50,int(r["universe"]*.8)) and r["validated_watch"]>0
           assert r["buy_approved"] is False
           print("FRESH_SCAN_VERIFIED",r["ticker_pairs"],r["universe"],r["status"])
           PY
