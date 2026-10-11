@@ -70,6 +70,22 @@ class HistoryTests(unittest.TestCase):
                 self.assertEqual(json.loads((db.parent/"learning.json").read_text())["unselected_gainers_5pct_observations"],0)
                 con.close()
 
+    def test_backfills_first_observation_not_later_price(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db=Path(directory)/"history.sqlite3"
+            latest=Path(directory)/"latest.json"
+            start=dt.datetime(2026,10,11,12,tzinfo=dt.timezone.utc)
+            with patch.object(history,"DB",db),patch.object(history,"LATEST",latest):
+                for minute,price in ((0,10),(65,11),(80,15),(180,20)):
+                    now=start+dt.timedelta(minutes=minute)
+                    latest.write_text(json.dumps({"status":"RESEARCH_ONLY","buy_approved":False,"matched_tickers":100,"universe":100,"validated_watch":1,"completed_at":now.isoformat(),"watch":[{"pair":"OTHERUSD","price":5,"score":80,"status":"WATCH_RESEARCH_ONLY"}] if minute else [{"pair":"TESTUSD","price":10,"score":80,"status":"WATCH_RESEARCH_ONLY"}],"market_prices":{"TESTUSD":price,"OTHERUSD":5}}))
+                    history.persist()
+                con=sqlite3.connect(db)
+                outcome=con.execute("SELECT return_pct,evaluated_at FROM outcomes WHERE pair='TESTUSD' AND horizon_hours=1").fetchone()
+                self.assertEqual(outcome[0],10.0)
+                self.assertEqual(outcome[1],(start+dt.timedelta(minutes=65)).isoformat())
+                con.close()
+
     def test_existing_feature_table_migrates_without_losing_history(self):
         with tempfile.TemporaryDirectory() as directory:
             db=Path(directory)/"history.sqlite3"
