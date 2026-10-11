@@ -18,7 +18,7 @@ for(const row of rows){
  // Use a fully closed candle ending at the horizon, never the unfinished current candle.
  const candle=series?.find(c=>Number(c[0])===due-3600);
  const price=candle?Number(candle[4]):NaN;
- const valid=Number.isFinite(price)&&price>0 && due%3600===0 && Date.now()>= (due+3600)*1000;
+ const valid=Number.isFinite(price)&&price>0 && Date.now()>=(due+3600)*1000;
  const payload={status:valid?"measured":"missing_price",measured_at:valid?new Date().toISOString():null,ask_at_horizon:valid?price:null,return_pct:valid?(price/Number(obs.baseline_ask)-1)*100:null};
  await api("challenger_forward_outcomes?observation_id=eq."+row.observation_id+"&horizon_hours=eq."+row.horizon_hours,{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify(payload)});
  valid?measured++:missing++;
