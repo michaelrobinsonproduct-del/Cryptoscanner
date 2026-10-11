@@ -27,7 +27,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p simple_scanner/output
-          if git ls-remote --exit-code --heads origin simple-history >/dev/null; then
+          set +e
+          git ls-remote --exit-code --heads origin simple-history >/dev/null
+          remote_status=$?
+          set -e
+          if [ "$remote_status" -eq 0 ]; then
             git fetch origin refs/heads/simple-history:refs/remotes/origin/simple-history
             git show origin/simple-history:history.sqlite3 > simple_scanner/output/history.sqlite3
             python - <<'PY'
@@ -36,8 +40,11 @@ jobs:
           assert c.execute("PRAGMA integrity_check").fetchone()[0]=="ok"
           print("RESTORED_SNAPSHOTS",c.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0])
           PY
-          else
+          elif [ "$remote_status" -eq 2 ]; then
             echo "NO_SIMPLE_HISTORY: first run starts a new paper-only ledger"
+          else
+            echo "HISTORY_REMOTE_CHECK_FAILED: status=$remote_status" >&2
+            exit 1
           fi
       - name: Run fresh public Kraken scan
         run: python simple_scanner/scan.py
