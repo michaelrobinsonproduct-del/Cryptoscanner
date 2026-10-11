@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-11T06:52:16.221580+00:00",
+  "generated_at": "2026-10-11T07:15:41.195761+00:00",
   "source": "kraken-rebuild-shadow",
   "acceptance": "PASSED",
   "checks": {
@@ -15,33 +15,33 @@
     "cycle_persisted_or_retry": true
   },
   "engine": "rebuild-shadow-1.0",
-  "completed_at": "2026-10-11T06:52:13.087055+00:00",
+  "completed_at": "2026-10-11T07:15:37.828153+00:00",
   "history": {
-    "runs": 210,
-    "observations": 115614,
-    "outcomes": 261984,
-    "unlabeled_observations": 1862,
+    "runs": 211,
+    "observations": 116233,
+    "outcomes": 263222,
+    "unlabeled_observations": 2481,
     "oldest_run_at": "2026-10-08T23:56:01.225859+00:00",
-    "newest_run_at": "2026-10-11T06:52:13.087055+00:00",
+    "newest_run_at": "2026-10-11T07:15:37.828153+00:00",
     "learning_status": "OUTCOMES_AVAILABLE",
     "history_available": true
   },
   "history_baseline": {
-    "runs": 209,
-    "observations": 114995,
-    "outcomes": 260746
+    "runs": 210,
+    "observations": 115614,
+    "outcomes": 261984
   },
   "schedule_health": {
-    "previous_scan_age_seconds": 310,
+    "previous_scan_age_seconds": 1391,
     "missed_15m_intervals": 0,
     "schedule_warning": false
   },
   "reliability": {
-    "last_gap_seconds": 310,
+    "last_gap_seconds": 1391,
     "missed_15m_intervals": 0,
     "schedule_warning": false,
     "rolling_24h": {
-      "observed_completed": 55,
+      "observed_completed": 56,
       "expected_scheduled": null,
       "coverage_pct": null,
       "status": "INSUFFICIENT_HISTORY",
@@ -49,7 +49,7 @@
       "grace_minutes": 7
     },
     "rolling_7d": {
-      "observed_completed": 55,
+      "observed_completed": 56,
       "expected_scheduled": null,
       "coverage_pct": null,
       "status": "INSUFFICIENT_HISTORY",
@@ -61,6 +61,6 @@
     "shadow_notifications": "NOT_CONFIGURED",
     "production_push_email": "NOT_VERIFIED_BY_THIS_WORKFLOW"
   },
-  "scan_cycle_id": "2026-10-11T06:45:00Z",
-  "github_run_id": "38119421543"
+  "scan_cycle_id": "2026-10-11T07:00:00Z",
+  "github_run_id": "38120716422"
 }
