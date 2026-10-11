@@ -19,9 +19,9 @@ class ScanTests(unittest.TestCase):
             if path.startswith("OHLC"):
                 pair=path.split("pair=")[1].split("&")[0]
                 i=int(pair.removeprefix("COIN").removesuffix("USD"))
-                values=[1.0]*13
+                values=[1.0]*14
                 if i==15:values[-1]=1.2
-                bars=[[now-65*60+j*300,"1","1","1",str(values[j]),"1","100"] for j in range(13)]
+                bars=[[now-70*60+j*300,"1","1","1",str(values[j]),"1","100"] for j in range(14)]
                 return {pair:bars,"last":now}
             raise AssertionError(path)
         with tempfile.TemporaryDirectory() as tmp:
