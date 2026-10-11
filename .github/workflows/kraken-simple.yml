@@ -27,7 +27,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p simple_scanner/output
-          if git fetch origin refs/heads/simple-history:refs/remotes/origin/simple-history; then
+          if git ls-remote --exit-code --heads origin simple-history >/dev/null; then
+            git fetch origin refs/heads/simple-history:refs/remotes/origin/simple-history
             git show origin/simple-history:history.sqlite3 > simple_scanner/output/history.sqlite3
             python - <<'PY'
           import sqlite3
