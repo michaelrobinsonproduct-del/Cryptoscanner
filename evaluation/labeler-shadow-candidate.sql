@@ -4,10 +4,15 @@
 -- Important: NULL last_failed_at is NOT eligible when a failure row exists.
 CREATE OR REPLACE FUNCTION public.kraken_labeler_next_batch_shadow(batch_size integer DEFAULT 30)
 RETURNS TABLE(observation_id bigint,pair text,observed_at timestamptz,observed_price numeric)
-LANGUAGE sql STABLE
+LANGUAGE plpgsql STABLE
 SET search_path TO 'public','pg_catalog'
 AS $function$
-WITH params AS (SELECT CASE WHEN batch_size BETWEEN 1 AND 100 THEN batch_size ELSE NULL END AS n),
+BEGIN
+IF batch_size IS NULL OR batch_size < 1 OR batch_size > 100 THEN
+  RAISE EXCEPTION 'batch_size_out_of_range';
+END IF;
+RETURN QUERY
+WITH params AS (SELECT batch_size AS n),
 oldest AS MATERIALIZED (
  SELECT c.id,c.pair,c.observed_at,c.observed_price
  FROM public.kraken_candidate_observations c
@@ -27,7 +32,8 @@ newest AS MATERIALIZED (
  ORDER BY c.observed_at DESC,c.id DESC LIMIT (SELECT n-n/2 FROM params)
 )
 SELECT x.id,x.pair,x.observed_at,x.observed_price FROM (SELECT * FROM oldest UNION SELECT * FROM newest) x ORDER BY x.observed_at,x.id;
+END;
 $function$;
 -- Rollback: DROP FUNCTION IF EXISTS public.kraken_labeler_next_batch_shadow(integer);
--- Note: invalid batch sizes currently yield zero rows here, unlike the original exception.
--- That behavior MUST be corrected before considering this production-compatible.
+-- Invalid batch sizes (including NULL) raise batch_size_out_of_range.
+-- Still requires shadow execution, equivalence, and performance validation.
