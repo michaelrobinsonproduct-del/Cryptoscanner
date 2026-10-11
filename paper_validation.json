@@ -41,16 +41,16 @@
       "mean_return_pct": 1.708,
       "gain_5pct_rate": 0.2,
       "loss_5pct_rate": 0.0,
-      "watch_control_pair_days": 22,
-      "watch_control_mean_return_pct": 2.292,
+      "watch_control_pair_days": 24,
+      "watch_control_mean_return_pct": 2.267,
       "paper_spread_samples": 5,
       "paper_net_0bps_mean_pct": 1.703,
       "paper_net_40bps_mean_pct": 1.296,
       "paper_net_100bps_mean_pct": 0.686,
-      "control_spread_samples": 22,
-      "control_net_0bps_mean_pct": 2.204,
-      "control_net_40bps_mean_pct": 1.795,
-      "control_net_100bps_mean_pct": 1.182
+      "control_spread_samples": 24,
+      "control_net_0bps_mean_pct": 2.179,
+      "control_net_40bps_mean_pct": 1.77,
+      "control_net_100bps_mean_pct": 1.157
     },
     "72h": {
       "pair_days": 0,
@@ -72,7 +72,7 @@
   "execution_costs": "Estimated entry ask from same-scan bid and spread; exit bid inferred from stored outcome; 0/40/100bps cost scenarios are hypothetical and exclude fill/depth uncertainty.",
   "first_decision_cohorts": {
     "eligible": 8,
-    "control": 90
+    "control": 93
   },
   "selection_limitation": "First observed watch decision per UTC coin-day is locked before outcome lookup; missing outcomes are excluded and reported as a coverage limitation"
 }
