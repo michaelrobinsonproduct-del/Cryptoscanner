@@ -37,7 +37,7 @@ const dbKey=process.env.CHALLENGER_SUPABASE_SERVICE_KEY;
 if(dbUrl&&dbKey){
  const cycleId=name.split("/").pop()!.replace(".json","");
  const observations=[...candidates.map((x:any)=>({pair:x.pair,decision:x.decision,baseline_ask:x.entry_ask??null,baseline_at:x.confirmation_at??null,source_payload:x})),...watchlist.map((x:any)=>({pair:x.pair,decision:"WATCH",baseline_ask:x.reference_ask??null,baseline_at:x.reference_at??null,source_payload:x}))].map((x:any)=>({cycle_id:cycleId,pair:String(x.pair),observed_at:result.created_at,decision:x.decision==="PROMOTION_ELIGIBLE"?"PROMOTION_ELIGIBLE":"WATCH",baseline_ask:x.baseline_ask,baseline_at:x.baseline_ask?x.baseline_at:null,baseline_status:x.baseline_ask&&x.baseline_at?"observed":"missing_baseline",source_payload:x.source_payload}));
- const response=await fetch(dbUrl.replace(/\\/$/,"")+"/rest/v1/challenger_observations",{method:"POST",headers:{"apikey":dbKey,"Authorization":"Bearer "+dbKey,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates"},body:JSON.stringify(observations),signal:AbortSignal.timeout(45000)});
+ const response=await fetch(dbUrl.replace(/\/$/,"")+"/rest/v1/challenger_observations",{method:"POST",headers:{"apikey":dbKey,"Authorization":"Bearer "+dbKey,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates"},body:JSON.stringify(observations),signal:AbortSignal.timeout(45000)});
  if(!response.ok)throw Error("observation_persistence_failed:"+response.status+":"+(await response.text()).slice(0,500));
  console.log(JSON.stringify({persisted_observations:observations.length,cycle_id:cycleId}));
 }else console.log("observation_persistence_not_configured");
