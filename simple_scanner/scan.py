@@ -48,7 +48,7 @@ def main():
     # Validate 24 initial candidates before selecting 12; otherwise strong intrahour
     # acceleration outside the 24h top 12 is invisible to the research watchlist.
     # Prioritize actual intrahour acceleration after candle validation.
-    for item in scored[:12]:
+    for item in scored[:24]:
         if item.get("status")=="WATCH_RESEARCH_ONLY":
             item["early_signal_score"]=round(item["score"]+max(-25,min(25,item["move_15m_pct"]*5))+max(-15,min(15,(item["volume_accel"]-1)*10)),1)
         else:
