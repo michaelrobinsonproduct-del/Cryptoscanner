@@ -70,6 +70,24 @@ class HistoryTests(unittest.TestCase):
                 self.assertEqual(json.loads((db.parent/"learning.json").read_text())["unselected_gainers_5pct_observations"],0)
                 con.close()
 
+    def test_existing_feature_table_migrates_without_losing_history(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db=Path(directory)/"history.sqlite3"
+            latest=Path(directory)/"latest.json"
+            con=sqlite3.connect(db)
+            con.execute("CREATE TABLE candidate_features (run_at TEXT NOT NULL, pair TEXT NOT NULL, base_score REAL NOT NULL, early_signal_score REAL, move_15m_pct REAL, volume_accel REAL, research_rank INTEGER, PRIMARY KEY(run_at,pair))")
+            con.execute("INSERT INTO candidate_features VALUES (?,?,?,?,?,?,?)",("2026-10-11T10:00:00+00:00","OLDUSD",50,60,2,1.5,1))
+            con.commit();con.close()
+            now=dt.datetime(2026,10,11,12,tzinfo=dt.timezone.utc)
+            latest.write_text(json.dumps({"status":"RESEARCH_ONLY","buy_approved":False,"matched_tickers":100,"universe":100,"validated_watch":1,"completed_at":now.isoformat(),"watch":[{"pair":"NEWUSD","price":2,"score":70,"status":"WATCH_RESEARCH_ONLY","base_rank":17,"research_rank":1,"early_signal_score":90}],"market_prices":{"NEWUSD":2}}))
+            with patch.object(history,"DB",db),patch.object(history,"LATEST",latest):
+                history.persist()
+            con=sqlite3.connect(db)
+            self.assertEqual(con.execute("SELECT base_rank FROM candidate_features WHERE pair='NEWUSD'").fetchone()[0],17)
+            self.assertIsNone(con.execute("SELECT base_rank FROM candidate_features WHERE pair='OLDUSD'").fetchone()[0])
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM candidate_features").fetchone()[0],2)
+            con.close()
+
     def test_long_scan_gap_is_not_counted_as_rapid_breakout(self):
         with tempfile.TemporaryDirectory() as directory:
             db=Path(directory)/"history.sqlite3"
