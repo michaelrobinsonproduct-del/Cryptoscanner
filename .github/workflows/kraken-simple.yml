@@ -65,6 +65,7 @@ jobs:
           h=_json.load(open("simple_scanner/output/learning.json"))
           baseline=int(open("simple_scanner/output/history_baseline.txt").read())
           assert h["snapshots"]>=baseline and h["snapshots"]>=r["validated_watch"] and h["buy_approved"] is False
+          assert h["history_db_integrity"]=="ok"
           print("HISTORY_NONREGRESSION",baseline,h["snapshots"])
           print("FRESH_SCAN_VERIFIED",r["ticker_pairs"],r["universe"],r["status"])
           PY
