@@ -20,8 +20,9 @@ for(const row of rows){
  const candle=series?.find(c=>Number(c[0])===targetOpen);
  const price=candle?Number(candle[4]):NaN;
  const valid=Number.isFinite(price)&&price>0 && Date.now()>=(targetOpen+3600)*1000;
- const payload={status:valid?"measured":"missing_price",measured_at:valid?new Date().toISOString():null,ask_at_horizon:valid?price:null,return_pct:valid?(price/Number(obs.baseline_ask)-1)*100:null};
+ if(!valid){missing++;continue;} // Missing historical candles remain pending for later retry.
+ const payload={status:"measured",measured_at:new Date().toISOString(),ask_at_horizon:price,return_pct:(price/Number(obs.baseline_ask)-1)*100};
  await api("challenger_forward_outcomes?observation_id=eq."+row.observation_id+"&horizon_hours=eq."+row.horizon_hours,{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify(payload)});
- valid?measured++:missing++;
+ measured++;
 }
 console.log(JSON.stringify({pending_checked:rows.length,measured,missing,method:"hourly_closed_candle_close_vs_initial_executable_ask",caveat:"OHLC candle close is not an executable ask"}));
