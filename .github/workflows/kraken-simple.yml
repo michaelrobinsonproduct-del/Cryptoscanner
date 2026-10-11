@@ -74,6 +74,9 @@ jobs:
           git add history.sqlite3 latest.json
           git commit -m "Update paper-only scan history" || echo "No history changes"
           git push origin HEAD:refs/heads/simple-history
+          git fetch origin refs/heads/simple-history:refs/remotes/origin/simple-history
+          test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/simple-history)"
+          echo "DURABLE_HISTORY_PUSH_CONFIRMED"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
