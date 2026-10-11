@@ -46,6 +46,7 @@ jobs:
           assert c.execute("PRAGMA integrity_check").fetchone()[0]=="ok"
           count=c.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
           open("simple_scanner/output/history_baseline.txt","w").write(str(count))
+          assert count > 0, "Existing history branch has no snapshots; refusing silent reset"
           print("RESTORED_SNAPSHOTS",count)
           PY
           elif [ "$remote_status" -eq 2 ]; then
@@ -72,6 +73,7 @@ jobs:
           baseline=int(open("simple_scanner/output/history_baseline.txt").read())
           assert h["snapshots"]>=baseline and h["snapshots"]>=r["validated_watch"] and h["buy_approved"] is False
           assert h["history_db_integrity"]=="ok"
+          assert h["snapshots"] > baseline, "New scan must append at least one snapshot"
           print("HISTORY_NONREGRESSION",baseline,h["snapshots"])
           print("FRESH_SCAN_VERIFIED",r["ticker_pairs"],r["universe"],r["status"])
           PY
