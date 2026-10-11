@@ -98,6 +98,7 @@ jobs:
               time.sleep(12)
           else:
               raise SystemExit("SCAN_UNVERIFIED: request accepted but no NEW persisted, independently verified run was observed before deadline; do not reuse old scan results.")
+          PY
       - name: Publish verified manual scan result
         if: success()
         uses: actions/upload-artifact@v4
