@@ -74,6 +74,8 @@ jobs:
           assert h["snapshots"]>=baseline and h["snapshots"]>=r["validated_watch"] and h["buy_approved"] is False
           assert h["history_db_integrity"]=="ok"
           assert h["snapshots"] > baseline, "New scan must append at least one snapshot"
+          if baseline > 0:
+            print("CROSS_RUN_RESTORE_AND_APPEND_VERIFIED",baseline,h["snapshots"])
           print("HISTORY_NONREGRESSION",baseline,h["snapshots"])
           assert h["evaluation"]=="INCOMPLETE_WATCHLIST_ONLY"
           assert h["model_updates"]=="DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"
