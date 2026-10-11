@@ -9,7 +9,7 @@ from unittest.mock import patch
 from simple_scanner import scan
 
 class ScanTests(unittest.TestCase):
-    def test_24_screened_12_selected_and_outside_top12_promoted(self):
+    def test_32_screened_12_selected_and_outside_top12_promoted(self):
         now=int(dt.datetime.now(dt.timezone.utc).timestamp())
         pairs={f"COIN{i}USD":{"status":"online","wsname":f"COIN{i}/USD","base":f"COIN{i}"} for i in range(60)}
         ticker={p:{"c":["1"],"b":["0.999"],"a":["1.001"],"o":str(1/(1+(60-i)*.001)),"v":["1000000","1000000"]} for i,p in enumerate(pairs)}
@@ -31,7 +31,7 @@ class ScanTests(unittest.TestCase):
                 with patch.object(scan,"get",side_effect=fake_get),patch.object(scan.time,"sleep",return_value=None):
                     scan.main()
                 result=json.loads(Path("simple_scanner/output/latest.json").read_text())
-                self.assertEqual(result["ohlc_screened"],24)
+                self.assertEqual(result["ohlc_screened"],32)
                 self.assertEqual(len(result["watch"]),12)
                 self.assertEqual(result["validated_watch"],12)
                 self.assertEqual(len({x["pair"] for x in result["watch"]}),12)
