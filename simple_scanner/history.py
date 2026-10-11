@@ -1,6 +1,7 @@
 """Durable, paper-only snapshots and retrospective price outcome evaluation."""
 import datetime as dt
 import json
+import math
 import sqlite3
 from pathlib import Path
 
@@ -28,7 +29,7 @@ def persist():
     assert now.tzinfo is not None and now.utcoffset() is not None, "Scan timestamp must be timezone-aware"
     with con:
         for pair,price in report.get("market_prices",{}).items():
-            if isinstance(price,(int,float)) and price>0:
+            if isinstance(price,(int,float)) and math.isfinite(price) and price>0:
                 con.execute("INSERT OR IGNORE INTO market_observations VALUES (?,?,?)",(report["completed_at"],pair,price))
         for candidate in report["watch"]:
             if candidate.get("status") == "WATCH_RESEARCH_ONLY":
