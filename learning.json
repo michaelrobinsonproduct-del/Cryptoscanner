@@ -1,0 +1,30 @@
+{
+  "rank_comparison": {
+    "historical_ranked_samples": 24,
+    "mean_base_minus_early_rank": 4.13
+  },
+  "newly_discovered_outside_base_top12": 4,
+  "signal_outcomes_by_horizon": [],
+  "outcome_evaluation_coverage": {
+    "evaluated": 0,
+    "positive": 0,
+    "average_return_pct": null
+  },
+  "missed_breakout_examples": [
+    {
+      "pair": "ALTHEAUSD",
+      "observed_at": "2026-10-11T21:04:55.800641+00:00",
+      "next_scan_gain_pct": 10.34
+    }
+  ],
+  "unselected_gainers_5pct_observations": 1,
+  "market_observations": 7524,
+  "market_price_coverage": 627,
+  "feature_rows": 192,
+  "snapshots": 312,
+  "outcomes": 0,
+  "history_db_integrity": "ok",
+  "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
+  "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
+  "buy_approved": false
+}
