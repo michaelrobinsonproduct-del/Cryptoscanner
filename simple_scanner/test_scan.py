@@ -39,5 +39,7 @@ class ScanTests(unittest.TestCase):
                 self.assertTrue(all(x["research_rank"]==j for j,x in enumerate(result["watch"],1)))
                 self.assertIn("COIN15USD",[x["pair"] for x in result["watch"]])
                 self.assertFalse(result["buy_approved"])
+                self.assertTrue(all(x["ohlc_age_seconds"]<=900 for x in result["watch"]))
+                self.assertTrue(all(x["base_rank"]<=32 for x in result["watch"]))
             finally:
                 os.chdir(cwd)
