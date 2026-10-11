@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-11T17:12:24.619479+00:00",
+  "generated_at": "2026-10-11T17:14:50.539799+00:00",
   "source": "kraken-rebuild-shadow",
   "acceptance": "PASSED",
   "checks": {
@@ -15,7 +15,7 @@
     "cycle_persisted_or_retry": true
   },
   "engine": "rebuild-shadow-1.0",
-  "completed_at": "2026-10-11T17:12:20.613977+00:00",
+  "completed_at": "2026-10-11T17:14:46.823838+00:00",
   "history": {
     "runs": 250,
     "observations": 140374,
@@ -27,17 +27,17 @@
     "history_available": true
   },
   "history_baseline": {
-    "runs": 249,
-    "observations": 139755,
-    "outcomes": 336883
+    "runs": 250,
+    "observations": 140374,
+    "outcomes": 342454
   },
   "schedule_health": {
-    "previous_scan_age_seconds": 1511,
+    "previous_scan_age_seconds": 130,
     "missed_15m_intervals": 0,
     "schedule_warning": false
   },
   "reliability": {
-    "last_gap_seconds": 1511,
+    "last_gap_seconds": 130,
     "missed_15m_intervals": 0,
     "schedule_warning": false,
     "rolling_24h": {
@@ -62,5 +62,5 @@
     "production_push_email": "NOT_VERIFIED_BY_THIS_WORKFLOW"
   },
   "scan_cycle_id": "2026-10-11T17:00:00Z",
-  "github_run_id": "38158593150"
+  "github_run_id": "38158759678"
 }
