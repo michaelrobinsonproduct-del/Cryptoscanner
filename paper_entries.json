@@ -1,21 +1,24 @@
 {
   "mode": "PAPER_ONLY",
-  "scan_completed_at": "2026-10-11T13:15:13.900906+00:00",
-  "generated_at": "2026-10-11T13:15:16.072335+00:00",
+  "scan_completed_at": "2026-10-11T13:16:27.018371+00:00",
+  "generated_at": "2026-10-11T13:16:29.463801+00:00",
   "scan_healthy_and_fresh": true,
   "candidates": [
     {
       "pair": "STRKUSD",
-      "status": "PAPER_ELIGIBLE",
-      "reasons": [],
+      "status": "RESEARCH_ONLY",
+      "reasons": [
+        "spread"
+      ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.11491
+      "paper_reference_price": 0.11456
     },
     {
       "pair": "ARBUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
+        "not_double_confirmed",
         "score"
       ],
       "entry_approved": false,
@@ -30,17 +33,17 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.12348
+      "paper_reference_price": 0.12338
     },
     {
-      "pair": "AEROUSD",
+      "pair": "PUMPUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "score"
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.9746
+      "paper_reference_price": 0.00563
     },
     {
       "pair": "NILUSD",
@@ -51,7 +54,18 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.0945
+      "paper_reference_price": 0.0951
+    },
+    {
+      "pair": "AEROUSD",
+      "status": "RESEARCH_ONLY",
+      "reasons": [
+        "not_double_confirmed",
+        "score"
+      ],
+      "entry_approved": false,
+      "real_trade_approved": false,
+      "paper_reference_price": 0.974
     },
     {
       "pair": "CFXUSD",
@@ -63,7 +77,7 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.06809
+      "paper_reference_price": 0.06676
     },
     {
       "pair": "SUSD",
@@ -75,7 +89,7 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.0499
+      "paper_reference_price": 0.0493
     },
     {
       "pair": "ZKUSD",
@@ -87,19 +101,7 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.01595
-    },
-    {
-      "pair": "SENTUSD",
-      "status": "RESEARCH_ONLY",
-      "reasons": [
-        "not_double_confirmed",
-        "spread",
-        "score"
-      ],
-      "entry_approved": false,
-      "real_trade_approved": false,
-      "paper_reference_price": 0.022909
+      "paper_reference_price": 0.01596
     },
     {
       "pair": "WALUSD",
@@ -111,7 +113,7 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.03845
+      "paper_reference_price": 0.03846
     },
     {
       "pair": "PNTUSD",
@@ -126,29 +128,6 @@
       "paper_reference_price": 0.03871
     },
     {
-      "pair": "PUMPUSD",
-      "status": "RESEARCH_ONLY",
-      "reasons": [
-        "not_double_confirmed",
-        "score"
-      ],
-      "entry_approved": false,
-      "real_trade_approved": false,
-      "paper_reference_price": 0.00563
-    },
-    {
-      "pair": "AVAXUSD",
-      "status": "RESEARCH_ONLY",
-      "reasons": [
-        "not_double_confirmed",
-        "continuity_unverified",
-        "score"
-      ],
-      "entry_approved": false,
-      "real_trade_approved": false,
-      "paper_reference_price": 10.514
-    },
-    {
       "pair": "PLUMEUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
@@ -158,19 +137,31 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.01979
+      "paper_reference_price": 0.01983
     },
     {
-      "pair": "QNTUSD",
+      "pair": "ATOMUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "not_double_confirmed",
         "continuity_unverified",
+        "spread",
         "score"
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 243.41
+      "paper_reference_price": 2.0148
+    },
+    {
+      "pair": "AVAXUSD",
+      "status": "RESEARCH_ONLY",
+      "reasons": [
+        "not_double_confirmed",
+        "score"
+      ],
+      "entry_approved": false,
+      "real_trade_approved": false,
+      "paper_reference_price": 10.522
     },
     {
       "pair": "GRASSUSD",
@@ -182,7 +173,7 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.7246
+      "paper_reference_price": 0.7281
     },
     {
       "pair": "BATUSD",
@@ -197,16 +188,28 @@
       "paper_reference_price": 0.14535
     },
     {
-      "pair": "ENAUSD",
+      "pair": "QNTUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "not_double_confirmed",
-        "continuity_unverified",
         "score"
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.2258
+      "paper_reference_price": 243.33
+    },
+    {
+      "pair": "AKTUSD",
+      "status": "RESEARCH_ONLY",
+      "reasons": [
+        "not_double_confirmed",
+        "continuity_unverified",
+        "spread",
+        "score"
+      ],
+      "entry_approved": false,
+      "real_trade_approved": false,
+      "paper_reference_price": 0.7605
     },
     {
       "pair": "MEGAUSD",
@@ -217,19 +220,18 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.04414
+      "paper_reference_price": 0.04412
     },
     {
-      "pair": "NEARUSD",
+      "pair": "ENAUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "not_double_confirmed",
-        "continuity_unverified",
         "score"
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 5.3708
+      "paper_reference_price": 0.2254
     }
   ],
   "real_trade_approvals": 0,
