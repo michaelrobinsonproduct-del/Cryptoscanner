@@ -13,9 +13,9 @@ for(const row of rows){
  if(!obs||!(Number(obs.baseline_ask)>0))continue;
  const due=Math.floor(new Date(row.due_at).getTime()/1000);
  if(!Number.isFinite(due))throw Error("invalid_outcome_deadline");
- if(Date.now()-due*1000>29*24*3600*1000){missing++;continue;} // Kraken hourly OHLC has a limited historical window.
+ if(Date.now()-due*1000>29*24*3600*1000){missing++;console.log(JSON.stringify({observation_id:row.observation_id,horizon_hours:row.horizon_hours,status:"pending_retry",reason:"outside_kraken_ohlc_retention"}));continue;} // Kraken hourly OHLC has a limited historical window.
  const kraken=await fetch("https://api.kraken.com/0/public/OHLC?pair="+encodeURIComponent(obs.pair)+"&interval=60&since="+(due-7200),{signal:AbortSignal.timeout(20000)}).then(r=>r.json());
- if(kraken.error?.length)throw Error("kraken_ohlc:"+kraken.error.join(","));
+ if(kraken.error?.length){missing++;console.log(JSON.stringify({observation_id:row.observation_id,horizon_hours:row.horizon_hours,status:"pending_retry",reason:"kraken_ohlc_error",errors:kraken.error}));continue;}
  const series=Object.entries(kraken.result??{}).filter(([name])=>name!=="last").map(([,v])=>v).find(Array.isArray) as any[]|undefined;
  // Use a fully closed candle ending at the horizon, never the unfinished current candle.
  const targetOpen=Math.floor(due/3600)*3600-3600;
