@@ -15,8 +15,8 @@ async function confirm(pair:string){
   const tradeAge=Array.isArray(trades)&&trades.length?Date.now()/1000-Number(trades[trades.length-1]?.[2]):null;
   return {success:executable&&tradeAge!==null&&tradeAge>=0&&tradeAge<=60,two_sided_book:twoSided,executable_bbo:executable,recent_trade_confirmation:tradeAge!==null&&tradeAge>=0&&tradeAge<=60,newest_trade_age_seconds:tradeAge};
 }
-const health=await j(collector+"/health");if(!health)throw new Error("collector_health_unavailable");
-const scan=await j(collector+"/scan");const rows=scan.candidates??scan.results??scan.shortlist??[];
+const health=await j(collector+"/health",2,15000);if(!health)throw new Error("collector_health_unavailable");
+const scan=await j(collector+"/scan",2,15000);const rows=scan.candidates??scan.results??scan.shortlist??[];
 if(!Array.isArray(rows)||!rows.length)throw new Error("empty_scan");
 const failures:Array<{pair:string;reason:string}>=[];
 const deadline=Date.now()+120000;
