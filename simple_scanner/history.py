@@ -55,6 +55,8 @@ def persist():
     outcomes = con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
     feature_rows=con.execute("SELECT COUNT(*) FROM candidate_features").fetchone()[0]
     market_observations=con.execute("SELECT COUNT(*) FROM market_observations").fetchone()[0]
+    unresolved=con.execute("""SELECT COUNT(*) FROM snapshots s WHERE s.run_at<=?
+      AND NOT EXISTS (SELECT 1 FROM outcomes o WHERE o.run_at=s.run_at AND o.pair=s.pair AND o.horizon_hours=1)""",((now-dt.timedelta(hours=1)).isoformat(),)).fetchone()[0]
     # LEAD uses the next observed scan, not the maximum future price. A 90-minute
     # gap is excluded: long outages must not masquerade as intrahour breakouts.
     missed_rows=con.execute("""WITH observations AS (
@@ -83,7 +85,7 @@ def persist():
     # This is not a randomized or out-of-sample comparison and cannot approve trading.
     rank_shift=con.execute("""SELECT COUNT(*),ROUND(AVG(f.base_rank-f.research_rank),2) FROM candidate_features f WHERE f.base_rank IS NOT NULL AND f.research_rank IS NOT NULL""").fetchone()
     promoted=sum(1 for c in report["watch"] if c.get("status")=="WATCH_RESEARCH_ONLY" and c.get("base_rank",0)>12)
-    summary = {"rank_comparison":{"historical_ranked_samples":rank_shift[0],"mean_base_minus_early_rank":rank_shift[1]},"newly_discovered_outside_base_top12":promoted,"signal_outcomes_by_horizon":[{"hours":h,"samples":n,"early_scored_avg_return_pct":e,"all_selected_avg_return_pct":a,"early_score_above_base_avg_return_pct":b} for h,n,e,a,b in comparison],"outcome_evaluation_coverage":{"evaluated":evaluated_outcomes,"positive":winning_outcomes,"average_return_pct":avg_return},"missed_breakout_examples":[{"pair":p,"observed_at":t,"next_scan_gain_pct":g} for p,t,g in missed_examples],"unselected_gainers_5pct_observations":missed,"market_observations":market_observations,"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
+    summary = {"unresolved_1h_snapshots":unresolved,"rank_comparison":{"historical_ranked_samples":rank_shift[0],"mean_base_minus_early_rank":rank_shift[1]},"newly_discovered_outside_base_top12":promoted,"signal_outcomes_by_horizon":[{"hours":h,"samples":n,"early_scored_avg_return_pct":e,"all_selected_avg_return_pct":a,"early_score_above_base_avg_return_pct":b} for h,n,e,a,b in comparison],"outcome_evaluation_coverage":{"evaluated":evaluated_outcomes,"positive":winning_outcomes,"average_return_pct":avg_return},"missed_breakout_examples":[{"pair":p,"observed_at":t,"next_scan_gain_pct":g} for p,t,g in missed_examples],"unselected_gainers_5pct_observations":missed,"market_observations":market_observations,"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
     (DB.parent / "learning.json").write_text(json.dumps(summary,indent=2))
     print("HISTORY_PERSISTED",json.dumps(summary))
     con.close()
