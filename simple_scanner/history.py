@@ -54,7 +54,12 @@ def persist():
       AND EXISTS (SELECT 1 FROM market_observations newer WHERE newer.pair=older.pair
         AND newer.run_at=(SELECT MIN(next.run_at) FROM market_observations next WHERE next.pair=older.pair AND next.run_at>older.run_at)
         AND newer.price>=older.price*1.05)""").fetchone()[0]
-    summary = {"unselected_gainers_5pct_observations":missed,"market_observations":market_observations,"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
+    missed_examples=con.execute("""SELECT older.pair,older.run_at,ROUND(100*(newer.price/older.price-1),2) AS gain_pct
+      FROM market_observations older JOIN market_observations newer ON newer.pair=older.pair
+      AND newer.run_at=(SELECT MIN(n.run_at) FROM market_observations n WHERE n.pair=older.pair AND n.run_at>older.run_at)
+      WHERE NOT EXISTS (SELECT 1 FROM snapshots s WHERE s.run_at=older.run_at AND s.pair=older.pair)
+      AND newer.price>=older.price*1.05 ORDER BY gain_pct DESC LIMIT 10""").fetchall()
+    summary = {"missed_breakout_examples":[{"pair":p,"observed_at":t,"next_scan_gain_pct":g} for p,t,g in missed_examples],"unselected_gainers_5pct_observations":missed,"market_observations":market_observations,"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
     (DB.parent / "learning.json").write_text(json.dumps(summary,indent=2))
     print("HISTORY_PERSISTED",json.dumps(summary))
     con.close()
