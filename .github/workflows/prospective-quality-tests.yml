@@ -6,6 +6,7 @@ on:
     paths:
       - 'evaluation/prospective-quality.ts'
       - 'evaluation/prospective-quality.test.ts'
+      - 'evaluation/prospective-report.ts'
       - '.github/workflows/prospective-quality-tests.yml'
 jobs:
   verify:
@@ -16,3 +17,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - name: Test holdout evaluation and promotion gates
         run: bun test evaluation/prospective-quality.test.ts
+      - name: Validate report runner on empty holdout
+        run: |
+          printf '[]\n' > /tmp/prospective-empty.json
+          bun run evaluation/prospective-report.ts /tmp/prospective-empty.json /tmp/prospective-report.json
+          grep -q '"promotion_eligible": false' /tmp/prospective-report.json
