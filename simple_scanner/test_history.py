@@ -44,6 +44,9 @@ class HistoryTests(unittest.TestCase):
                     self.assertFalse(summary["buy_approved"])
                     self.assertEqual(summary["signal_outcomes_by_horizon"][0]["hours"],1)
                     self.assertEqual(summary["signal_outcomes_by_horizon"][0]["samples"],1)
+                    self.assertEqual(summary["forward_horizon_coverage"][0]["matured_snapshots"],1)
+                    self.assertEqual(summary["forward_horizon_coverage"][0]["evaluated"],1)
+                    self.assertEqual(summary["forward_horizon_coverage"][0]["coverage_pct"],100.0)
                     con.close()
                 finally:
                     os.chdir(cwd)
