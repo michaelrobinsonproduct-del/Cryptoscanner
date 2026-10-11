@@ -26,8 +26,8 @@ def persist():
     con.execute("CREATE INDEX IF NOT EXISTS idx_market_pair_time ON market_observations(pair,run_at)")
     con.execute("CREATE INDEX IF NOT EXISTS idx_market_time ON market_observations(run_at)")
     con.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_time ON snapshots(run_at)")
-    con.execute("CREATE INDEX IF NOT EXISTS idx_outcomes_horizon ON outcomes(horizon_hours)")
     con.execute("CREATE TABLE IF NOT EXISTS outcomes (run_at TEXT NOT NULL, pair TEXT NOT NULL, horizon_hours INTEGER NOT NULL, evaluated_at TEXT NOT NULL, return_pct REAL NOT NULL, PRIMARY KEY(run_at,pair,horizon_hours))")
+    con.execute("CREATE INDEX IF NOT EXISTS idx_outcomes_horizon ON outcomes(horizon_hours)")
     now = dt.datetime.fromisoformat(report["completed_at"])
     assert now.tzinfo is not None and now.utcoffset() is not None, "Scan timestamp must be timezone-aware"
     with con:
