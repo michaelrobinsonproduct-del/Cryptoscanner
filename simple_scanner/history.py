@@ -74,13 +74,13 @@ def persist():
       SELECT pair,run_at,price,
         LEAD(run_at) OVER (PARTITION BY pair ORDER BY run_at) AS next_at,
         LEAD(price) OVER (PARTITION BY pair ORDER BY run_at) AS next_price
-      FROM market_observations)
+      FROM market_observations WHERE run_at>=?)
       SELECT o.pair,o.run_at,ROUND(100*(o.next_price/o.price-1),2)
       FROM observations o
       WHERE o.next_price>=o.price*1.05
         AND (julianday(o.next_at)-julianday(o.run_at))*1440 BETWEEN 0 AND 90
         AND NOT EXISTS (SELECT 1 FROM snapshots s WHERE s.run_at=o.run_at AND s.pair=o.pair)
-      ORDER BY (o.next_price/o.price) DESC""").fetchall()
+      ORDER BY (o.next_price/o.price) DESC""",((now-dt.timedelta(days=7)).isoformat(),)).fetchall()
     missed=len(missed_rows)
     missed_examples=missed_rows[:10]
     evaluated_outcomes=con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
