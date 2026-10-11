@@ -35,6 +35,9 @@ class HistoryTests(unittest.TestCase):
                     self.assertEqual(con.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0],2)
                     value=con.execute("SELECT return_pct FROM outcomes WHERE horizon_hours=1").fetchone()
                     self.assertEqual(value[0],10.0)
+                    history.persist()
+                    self.assertEqual(con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0],1)
+                    self.assertEqual(con.execute("PRAGMA integrity_check").fetchone()[0],"ok")
                     self.assertFalse(json.loads((db.parent/"learning.json").read_text())["buy_approved"])
                     con.close()
                 finally:
