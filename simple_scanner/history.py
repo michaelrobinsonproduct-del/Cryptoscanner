@@ -17,7 +17,10 @@ def persist():
     con = sqlite3.connect(DB)
     con.execute("PRAGMA journal_mode=DELETE")
     con.execute("CREATE TABLE IF NOT EXISTS snapshots (run_at TEXT NOT NULL, pair TEXT NOT NULL, price REAL NOT NULL CHECK(price>0), score REAL NOT NULL, PRIMARY KEY(run_at,pair))")
-    con.execute("CREATE TABLE IF NOT EXISTS candidate_features (run_at TEXT NOT NULL, pair TEXT NOT NULL, base_score REAL NOT NULL, early_signal_score REAL, move_15m_pct REAL, volume_accel REAL, research_rank INTEGER, PRIMARY KEY(run_at,pair))")
+    con.execute("CREATE TABLE IF NOT EXISTS candidate_features (run_at TEXT NOT NULL, pair TEXT NOT NULL, base_score REAL NOT NULL, early_signal_score REAL, move_15m_pct REAL, volume_accel REAL, research_rank INTEGER, base_rank INTEGER, PRIMARY KEY(run_at,pair))")
+    existing_columns={r[1] for r in con.execute("PRAGMA table_info(candidate_features)")}
+    if "base_rank" not in existing_columns:
+        con.execute("ALTER TABLE candidate_features ADD COLUMN base_rank INTEGER")
     con.execute("CREATE TABLE IF NOT EXISTS market_observations (run_at TEXT NOT NULL, pair TEXT NOT NULL, price REAL NOT NULL CHECK(price>0), PRIMARY KEY(run_at,pair))")
     con.execute("CREATE INDEX IF NOT EXISTS idx_market_pair_time ON market_observations(pair,run_at)")
     con.execute("CREATE TABLE IF NOT EXISTS outcomes (run_at TEXT NOT NULL, pair TEXT NOT NULL, horizon_hours INTEGER NOT NULL, evaluated_at TEXT NOT NULL, return_pct REAL NOT NULL, PRIMARY KEY(run_at,pair,horizon_hours))")
@@ -30,7 +33,7 @@ def persist():
         for candidate in report["watch"]:
             if candidate.get("status") == "WATCH_RESEARCH_ONLY":
                 con.execute("INSERT OR IGNORE INTO snapshots VALUES (?,?,?,?)", (report["completed_at"], candidate["pair"], candidate["price"], candidate["score"]))
-                con.execute("INSERT OR IGNORE INTO candidate_features VALUES (?,?,?,?,?,?,?)", (report["completed_at"],candidate["pair"],candidate["score"],candidate.get("early_signal_score"),candidate.get("move_15m_pct"),candidate.get("volume_accel"),candidate.get("research_rank")))
+                con.execute("INSERT OR IGNORE INTO candidate_features (run_at,pair,base_score,early_signal_score,move_15m_pct,volume_accel,research_rank,base_rank) VALUES (?,?,?,?,?,?,?,?)", (report["completed_at"],candidate["pair"],candidate["score"],candidate.get("early_signal_score"),candidate.get("move_15m_pct"),candidate.get("volume_accel"),candidate.get("research_rank"),candidate.get("base_rank")))
         current = report.get("market_prices") or {c["pair"]: c["price"] for c in report["watch"] if c.get("status") == "WATCH_RESEARCH_ONLY"}
         # Price every prior watch candidate against the full Kraken ticker universe.
         # Missing/delisted pairs remain unevaluated; never count missing as a loss or win.
