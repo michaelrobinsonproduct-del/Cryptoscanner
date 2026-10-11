@@ -1,0 +1,26 @@
+// Prospective forward-outcome measurement: closed hourly Kraken candles only.
+// Never substitute a late spot quote for a historical horizon price.
+const url=process.env.CHALLENGER_SUPABASE_URL;
+const key=process.env.CHALLENGER_SUPABASE_SERVICE_KEY;
+if(!url||!key)throw Error("challenger_outcome_credentials_required");
+const headers={apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json"};
+const base=url.replace(/\/$/,"")+"/rest/v1/";
+async function api(path:string,init:RequestInit={}){const r=await fetch(base+path,{...init,headers:{...headers,...init.headers},signal:AbortSignal.timeout(30000)});if(!r.ok)throw Error("supabase_"+r.status+":"+(await r.text()).slice(0,200));return r.status===204?null:r.json()}
+const rows=await api("challenger_forward_outcomes?select=observation_id,horizon_hours,due_at,status,challenger_observations(pair,baseline_ask,baseline_at)&status=eq.pending&due_at=lte."+encodeURIComponent(new Date(Date.now()-3600000).toISOString())+"&limit=100");
+let measured=0,missing=0;
+for(const row of rows){
+ const obs=row.challenger_observations;
+ if(!obs||!(Number(obs.baseline_ask)>0))continue;
+ const due=Math.floor(new Date(row.due_at).getTime()/1000);
+ const kraken=await fetch("https://api.kraken.com/0/public/OHLC?pair="+encodeURIComponent(obs.pair)+"&interval=60&since="+(due-7200),{signal:AbortSignal.timeout(20000)}).then(r=>r.json());
+ if(kraken.error?.length)throw Error("kraken_ohlc:"+kraken.error.join(","));
+ const series=Object.values(kraken.result??{}).find(Array.isArray) as any[]|undefined;
+ // Use a fully closed candle ending at the horizon, never the unfinished current candle.
+ const candle=series?.find(c=>Number(c[0])===due-3600);
+ const price=candle?Number(candle[4]):NaN;
+ const valid=Number.isFinite(price)&&price>0;
+ const payload={status:valid?"measured":"missing_price",measured_at:valid?new Date().toISOString():null,ask_at_horizon:valid?price:null,return_pct:valid?(price/Number(obs.baseline_ask)-1)*100:null};
+ await api("challenger_forward_outcomes?observation_id=eq."+row.observation_id+"&horizon_hours=eq."+row.horizon_hours,{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify(payload)});
+ valid?measured++:missing++;
+}
+console.log(JSON.stringify({pending_checked:rows.length,measured,missing,method:"hourly_closed_candle_close_vs_initial_executable_ask",caveat:"OHLC candle close is not an executable ask"}));
