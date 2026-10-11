@@ -2,6 +2,10 @@ name: Kraken Manual Production Scan
 run-name: Manual production scan ${{ github.run_id }}
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/scan-requests/manual-trigger.txt'
 permissions:
   contents: read
 concurrency:
@@ -55,7 +59,6 @@ jobs:
                   if r.status!=202 or receipt.get("accepted") is not True:
                       raise SystemExit("TRIGGER_NOT_ACCEPTED: unexpected response")
           except urllib.error.HTTPError as e:
-              # Deliberately do not print any request headers or tokens.
               raise SystemExit("TRIGGER_REJECTED: HTTP "+str(e.code)+"; 401 implies token mismatch and 409 means a concurrent scan.")
           print("SCAN_REQUEST_ACCEPTED",json.dumps({"started_at":receipt.get("started_at"),"previous_run_id":previous}))
           deadline=time.monotonic()+12*60
