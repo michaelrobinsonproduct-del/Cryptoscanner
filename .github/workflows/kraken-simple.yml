@@ -43,6 +43,7 @@ jobs:
           print("RESTORED_SNAPSHOTS",count)
           PY
           elif [ "$remote_status" -eq 2 ]; then
+            echo 0 > simple_scanner/output/history_baseline.txt
             echo "NO_SIMPLE_HISTORY: first run starts a new paper-only ledger"
           else
             echo "HISTORY_REMOTE_CHECK_FAILED: status=$remote_status" >&2
