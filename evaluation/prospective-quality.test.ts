@@ -18,6 +18,8 @@ test("does not promote without enough positive outcomes",()=>{
  expect(eligibleForPromotion(m,1)).toBe(true);
 });
 test("rejects weaker precision",()=>{
- const m=evaluate([row("winner",200,null,t(1)),row("loser",0,null,t(1))]);
+ const m=evaluate([row("winner1",200,t(1),t(1)),row("winner2",200,null,t(1)),row("loser",0,null,t(1))]);
+ expect(m.challengerRecall).toBeGreaterThan(m.controlRecall!);
+ expect(m.challengerPrecision).toBeLessThan(m.controlPrecision!);
  expect(eligibleForPromotion(m,1)).toBe(false);
 });
