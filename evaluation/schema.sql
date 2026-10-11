@@ -24,6 +24,7 @@ create table if not exists challenger_forward_outcomes (
   measured_at timestamptz,
   ask_at_horizon numeric check (ask_at_horizon > 0),
   return_pct numeric,
+  measurement_method text,
   status text not null check (status in ('pending','measured','missing_price')),
   primary key(observation_id,horizon_hours),
   check ((status='measured' and measured_at is not null and ask_at_horizon is not null and return_pct is not null) or (status<>'measured' and return_pct is null))
