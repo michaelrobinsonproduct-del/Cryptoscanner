@@ -17,10 +17,11 @@ def main():
     pairs=get("AssetPairs")
     eligible={k:v for k,v in pairs.items() if v.get("status")=="online" and v.get("wsname","").endswith("/USD") and v.get("base","").upper() not in {"ZUSD","USD","USDT","USDC","DAI","PYUSD","EURC","RLUSD","TUSD"}}
     ticker=get("Ticker?pair="+",".join(eligible)) if len(eligible)<100 else get("Ticker")
-    scored=[]; errors=[]
+    scored=[]; errors=[]; matched_tickers=0
     for pair,meta in eligible.items():
         t=ticker.get(pair)
         if not t:continue
+        matched_tickers+=1
         try:
             last=float(t["c"][0]);bid=float(t["b"][0]);ask=float(t["a"][0]);op=float(t["o"]);volume=float(t["v"][1])
             if min(last,bid,ask,op)<=0 or ask<bid:continue
@@ -43,9 +44,10 @@ def main():
         except Exception as e:item.update({"status":"UNVERIFIED","reason":str(e)})
         time.sleep(.25)
     finished=dt.datetime.now(dt.timezone.utc)
-    result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"errors":errors,"watch":scored[:12],"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
+    result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in scored[:12]),"errors":errors,"watch":scored[:12],"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
     Path("simple_scanner/output").mkdir(parents=True,exist_ok=True)
     Path("simple_scanner/output/latest.json").write_text(json.dumps(result,indent=2))
     print(json.dumps(result,indent=2))
-    if not ticker:raise RuntimeError("No live ticker data")
+    if matched_tickers<max(50,int(len(eligible)*0.8)):raise RuntimeError("Insufficient eligible-pair ticker coverage")
+    if not any(x.get("status")=="WATCH_RESEARCH_ONLY" for x in scored[:12]):raise RuntimeError("No fresh verified OHLC watch candidates")
 if __name__=="__main__":main()
