@@ -16,6 +16,8 @@ FROM comparison;
 ROLLBACK;
 -- REQUIRE all equivalent=true; verify NULL failure timestamp semantics.
 -- Also test invalid batch sizes: baseline raises batch_size_out_of_range;
--- current shadow candidate DOES NOT yet match this behavior and must not replace baseline.
+-- shadow now raises the same error text for out-of-range sizes; test error behavior separately.
+-- NULL is additionally rejected by shadow; original NULL handling needs explicit assessment.
+-- Original PL/pgSQL is VOLATILE by default, whereas shadow is STABLE; assess any snapshot-semantic differences.
 -- Measure EXPLAIN (ANALYZE, BUFFERS) on representative nonproduction data.
 -- Ensure repeated scheduled calls stop timing out before production promotion.
