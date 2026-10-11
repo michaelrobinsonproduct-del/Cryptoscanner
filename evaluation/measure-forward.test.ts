@@ -6,5 +6,5 @@ describe("forward outcome math",()=>{
  test("supports negative returns",()=>{expect(candleReturn(100,85)).toBeCloseTo(-15);});
  test("rejects zero and non-finite prices",()=>{expect(()=>candleReturn(0,100)).toThrow("invalid_price");expect(()=>candleReturn(100,Infinity)).toThrow("invalid_price");});
  test("rejects invalid deadlines",()=>{expect(()=>targetCandleOpen(NaN)).toThrow("invalid_outcome_deadline");});
- test("does not accept an unfinished candle",()=>{expect(isClosedByDeadline(100,3600999)).toBe(false);expect(isClosedByDeadline(100,3601000)).toBe(true);});
+ test("does not accept an unfinished candle",()=>{expect(isClosedByDeadline(100,3699999)).toBe(false);expect(isClosedByDeadline(100,3700000)).toBe(true);});
 });
