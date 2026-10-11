@@ -1,0 +1,107 @@
+name: Kraken Manual Production Scan
+run-name: Manual production scan ${{ github.run_id }}
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: kraken-manual-production-scan
+  cancel-in-progress: false
+jobs:
+  manual-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - name: Trigger new authenticated production scan and verify distinct durable result
+        env:
+          SCAN_API_TOKEN: ${{ secrets.SCAN_API_TOKEN }}
+          RUNNER_URL: https://kraken-autonomous-runner-production.up.railway.app
+        run: |
+          python - <<'PY'
+          import datetime as dt
+          import json
+          import os
+          import pathlib
+          import time
+          import urllib.error
+          import urllib.request
+
+          base=os.environ["RUNNER_URL"].rstrip("/")
+          token=os.environ.get("SCAN_API_TOKEN","")
+          if not token:
+              raise SystemExit("NOT_CONFIGURED: GitHub Actions secret SCAN_API_TOKEN must match the protected Railway runner token. No production scan was triggered.")
+
+          def get(path, timeout=18):
+              req=urllib.request.Request(base+path,headers={"Accept":"application/json","Cache-Control":"no-cache"})
+              try:
+                  with urllib.request.urlopen(req,timeout=timeout) as r:
+                      return r.status,json.load(r)
+              except urllib.error.HTTPError as e:
+                  try: body=json.load(e)
+                  except Exception: body={"error":"http_"+str(e.code)}
+                  return e.code,body
+
+          code,old=get("/health")
+          if code!=200:
+              raise SystemExit("BEFORE_SCAN_HEALTH_FAILED: HTTP "+str(code))
+          if old.get("running"):
+              raise SystemExit("RUNNER_BUSY: an existing production scan is running; no additional scan requested.")
+          previous=old.get("last_run_id")
+          start=time.time()
+          req=urllib.request.Request(base+"/scan",method="POST",data=b"{}",headers={"Authorization":"Bearer "+token,"Content-Type":"application/json","Accept":"application/json"})
+          try:
+              with urllib.request.urlopen(req,timeout=25) as r:
+                  receipt=json.load(r)
+                  if r.status!=202 or receipt.get("accepted") is not True:
+                      raise SystemExit("TRIGGER_NOT_ACCEPTED: unexpected response")
+          except urllib.error.HTTPError as e:
+              # Deliberately do not print any request headers or tokens.
+              raise SystemExit("TRIGGER_REJECTED: HTTP "+str(e.code)+"; 401 implies token mismatch and 409 means a concurrent scan.")
+          print("SCAN_REQUEST_ACCEPTED",json.dumps({"started_at":receipt.get("started_at"),"previous_run_id":previous}))
+          deadline=time.monotonic()+12*60
+          checked=0
+          while time.monotonic()<deadline:
+              checked+=1
+              status,result=get("/verified-results")
+              run=result.get("run_id")
+              generated=result.get("generated_at")
+              try:
+                  generated_epoch=dt.datetime.fromisoformat(generated.replace("Z","+00:00")).timestamp()
+              except (AttributeError,ValueError):
+                  generated_epoch=0
+              fresh=(generated_epoch>=start-5 and generated_epoch<=time.time()+30)
+              age=result.get("report_age_seconds")
+              age_ok=isinstance(age,(int,float)) and not isinstance(age,bool) and 0<=age<=900
+              if (status==200 and result.get("status")=="VERIFIED_FRESH"
+                      and result.get("persistence_verified") is True and run and run!=previous
+                      and fresh and age_ok):
+                  output={
+                    "scan_triggered":True,"verified":True,"run_id":run,
+                    "generated_at":generated,"report_age_seconds":age,
+                    "actionable":result.get("actionable",[]),
+                    "watch":result.get("watch",[]),
+                    "checked_at":result.get("checked_at"),
+                    "note":"Watch signals are not independently approved buys; validate live quote, market depth, trades, and source-specific freshness before trading."
+                  }
+                  pathlib.Path("manual-scan-result.json").write_text(json.dumps(output,indent=2))
+                  with open(os.environ["GITHUB_STEP_SUMMARY"],"a") as f:
+                      f.write("### Verified new production scan\n")
+                      f.write("Run ID: `"+str(run)+"`  \n")
+                      f.write("Generated at: `"+str(generated)+"`  \n")
+                      f.write("Actionable signals: **"+str(len(output["actionable"]))+"**  \n")
+                      f.write("Watch signals: **"+str(len(output["watch"]))+"**  \n")
+                      f.write("Download the result artifact for full candidate details.\n")
+                  print("VERIFIED_NEW_PRODUCTION_SCAN",json.dumps(output))
+                  break
+              if checked%4==1:
+                  print("AWAITING_DISTINCT_VERIFIED_RESULT",json.dumps({"http_status":status,"status":result.get("status"),"run_id":run,"old_run_id":previous}))
+              time.sleep(12)
+          else:
+              raise SystemExit("SCAN_UNVERIFIED: request accepted but no NEW persisted, independently verified run was observed before deadline; do not reuse old scan results.")
+      - name: Publish verified manual scan result
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manual-kraken-production-scan
+          path: manual-scan-result.json
+          retention-days: 14
