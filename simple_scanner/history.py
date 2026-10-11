@@ -32,6 +32,10 @@ def persist():
         for pair,price in report.get("market_prices",{}).items():
             if isinstance(price,(int,float)) and math.isfinite(price) and price>0:
                 con.execute("INSERT OR IGNORE INTO market_observations VALUES (?,?,?)",(report["completed_at"],pair,price))
+        if not report.get("market_prices"):
+            for candidate in report["watch"]:
+                if candidate.get("status")=="WATCH_RESEARCH_ONLY":
+                    con.execute("INSERT OR IGNORE INTO market_observations VALUES (?,?,?)",(report["completed_at"],candidate["pair"],candidate["price"]))
         for candidate in report["watch"]:
             if candidate.get("status") == "WATCH_RESEARCH_ONLY":
                 con.execute("INSERT OR IGNORE INTO snapshots VALUES (?,?,?,?)", (report["completed_at"], candidate["pair"], candidate["price"], candidate["score"]))
