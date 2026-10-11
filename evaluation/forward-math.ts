@@ -9,3 +9,8 @@ export function candleReturn(baselineAsk:number,candleClose:number):number {
 export function isClosedByDeadline(targetOpen:number,nowMs:number):boolean {
   return Number.isFinite(targetOpen)&&Number.isFinite(nowMs)&&nowMs>=(targetOpen+3600)*1000;
 }
+
+export function validBaseline(baselineAsk:number,baselineAt:string,dueSeconds:number):boolean {
+ const at=Date.parse(baselineAt);
+ return Number.isFinite(baselineAsk)&&baselineAsk>0&&Number.isFinite(at)&&Number.isFinite(dueSeconds)&&dueSeconds>0&&at<dueSeconds*1000;
+}
