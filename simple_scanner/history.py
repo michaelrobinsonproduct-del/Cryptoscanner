@@ -48,17 +48,21 @@ def persist():
     outcomes = con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
     feature_rows=con.execute("SELECT COUNT(*) FROM candidate_features").fetchone()[0]
     market_observations=con.execute("SELECT COUNT(*) FROM market_observations").fetchone()[0]
-    # Compare only the next observed scan per pair: bounded work and no hindsight cherry-picking.
-    missed=con.execute("""SELECT COUNT(*) FROM market_observations older
-      WHERE NOT EXISTS (SELECT 1 FROM snapshots s WHERE s.run_at=older.run_at AND s.pair=older.pair)
-      AND EXISTS (SELECT 1 FROM market_observations newer WHERE newer.pair=older.pair
-        AND newer.run_at=(SELECT MIN(next.run_at) FROM market_observations next WHERE next.pair=older.pair AND next.run_at>older.run_at)
-        AND newer.price>=older.price*1.05)""").fetchone()[0]
-    missed_examples=con.execute("""SELECT older.pair,older.run_at,ROUND(100*(newer.price/older.price-1),2) AS gain_pct
-      FROM market_observations older JOIN market_observations newer ON newer.pair=older.pair
-      AND newer.run_at=(SELECT MIN(n.run_at) FROM market_observations n WHERE n.pair=older.pair AND n.run_at>older.run_at)
-      WHERE NOT EXISTS (SELECT 1 FROM snapshots s WHERE s.run_at=older.run_at AND s.pair=older.pair)
-      AND newer.price>=older.price*1.05 ORDER BY gain_pct DESC LIMIT 10""").fetchall()
+    # LEAD uses the next observed scan, not the maximum future price. A 90-minute
+    # gap is excluded: long outages must not masquerade as intrahour breakouts.
+    missed_rows=con.execute("""WITH observations AS (
+      SELECT pair,run_at,price,
+        LEAD(run_at) OVER (PARTITION BY pair ORDER BY run_at) AS next_at,
+        LEAD(price) OVER (PARTITION BY pair ORDER BY run_at) AS next_price
+      FROM market_observations)
+      SELECT o.pair,o.run_at,ROUND(100*(o.next_price/o.price-1),2)
+      FROM observations o
+      WHERE o.next_price>=o.price*1.05
+        AND (julianday(o.next_at)-julianday(o.run_at))*1440 BETWEEN 0 AND 90
+        AND NOT EXISTS (SELECT 1 FROM snapshots s WHERE s.run_at=o.run_at AND s.pair=o.pair)
+      ORDER BY (o.next_price/o.price) DESC""").fetchall()
+    missed=len(missed_rows)
+    missed_examples=missed_rows[:10]
     evaluated_outcomes=con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
     winning_outcomes=con.execute("SELECT COUNT(*) FROM outcomes WHERE return_pct>0").fetchone()[0]
     avg_return=con.execute("SELECT ROUND(AVG(return_pct),3) FROM outcomes").fetchone()[0]
