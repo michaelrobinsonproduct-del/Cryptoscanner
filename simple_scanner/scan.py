@@ -53,7 +53,7 @@ def main():
             item["early_signal_score"]=round(item["score"]+max(-25,min(25,item["move_15m_pct"]*5))+max(-15,min(15,(item["volume_accel"]-1)*10)),1)
         else:
             item["early_signal_score"]=None
-    watch=sorted(scored[:24],key=lambda x:(x["early_signal_score"] is not None,x["early_signal_score"] if x["early_signal_score"] is not None else -999),reverse=True)[:12]
+    watch=sorted((x for x in scored[:24] if x["early_signal_score"] is not None),key=lambda x:x["early_signal_score"],reverse=True)[:12]
     assert len(watch)<=12 and len({item["pair"] for item in watch})==len(watch)
     for rank,item in enumerate(watch,1):
         item["research_rank"]=rank
@@ -64,5 +64,5 @@ def main():
     Path("simple_scanner/output/latest.json").write_text(json.dumps(result,indent=2))
     print(json.dumps(result,indent=2))
     if matched_tickers<max(50,int(len(eligible)*0.8)):raise RuntimeError("Insufficient eligible-pair ticker coverage")
-    if not any(x.get("status")=="WATCH_RESEARCH_ONLY" for x in scored[:12]):raise RuntimeError("No fresh verified OHLC watch candidates")
+    if not watch:raise RuntimeError("No fresh verified OHLC watch candidates")
 if __name__=="__main__":main()
