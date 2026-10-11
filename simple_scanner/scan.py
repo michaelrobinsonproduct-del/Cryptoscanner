@@ -50,6 +50,9 @@ def main():
         else:
             item["early_signal_score"]=None
     watch=sorted(scored[:12],key=lambda x:(x["early_signal_score"] is not None,x["early_signal_score"] if x["early_signal_score"] is not None else -999),reverse=True)
+    for rank,item in enumerate(watch,1):
+        item["research_rank"]=rank
+        item["early_signal_basis"]="15m_momentum_plus_volume_acceleration" if item["early_signal_score"] is not None else "UNVERIFIED"
     finished=dt.datetime.now(dt.timezone.utc)
     result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in scored[:12]),"errors":errors,"watch":watch,"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
     Path("simple_scanner/output").mkdir(parents=True,exist_ok=True)
