@@ -32,7 +32,8 @@ def main():
             scored.append({"pair":pair,"symbol":meta.get("wsname",pair),"price":last,"move24_pct":round(move,2),"spread_bps":round(spread,2),"notional_24h_usd":round(notional),"score":score})
         except (ValueError,TypeError,KeyError,ZeroDivisionError) as e:errors.append({"pair":pair,"error":str(e)})
     scored.sort(key=lambda x:x["score"],reverse=True)
-    for item in scored[:24]:
+    for base_rank,item in enumerate(scored[:24],1):
+        item["base_rank"]=base_rank
         pair=item["pair"]
         try:
             bars=get("OHLC?pair="+pair+"&interval=5")
@@ -57,7 +58,7 @@ def main():
         item["research_rank"]=rank
         item["early_signal_basis"]="15m_momentum_plus_volume_acceleration" if item["early_signal_score"] is not None else "UNVERIFIED"
     finished=dt.datetime.now(dt.timezone.utc)
-    result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in watch),"errors":errors,"watch":watch,"market_prices":market_prices,"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
+    result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"ohlc_screened":min(len(scored),24),"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in watch),"errors":errors,"watch":watch,"market_prices":market_prices,"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
     Path("simple_scanner/output").mkdir(parents=True,exist_ok=True)
     Path("simple_scanner/output/latest.json").write_text(json.dumps(result,indent=2))
     print(json.dumps(result,indent=2))
