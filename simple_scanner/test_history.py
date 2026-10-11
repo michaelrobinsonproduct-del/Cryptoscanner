@@ -64,6 +64,7 @@ class HistoryTests(unittest.TestCase):
                 con=sqlite3.connect(db)
                 self.assertEqual(con.execute("SELECT return_pct FROM outcomes WHERE pair='TESTUSD' AND horizon_hours=1").fetchone()[0],20.0)
                 self.assertEqual(con.execute("SELECT COUNT(*) FROM market_observations").fetchone()[0],4)
+                self.assertEqual(json.loads((db.parent/"learning.json").read_text())["unselected_gainers_5pct_observations"],0)
                 con.close()
 
 if __name__=="__main__":
