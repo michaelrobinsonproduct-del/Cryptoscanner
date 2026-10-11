@@ -77,10 +77,10 @@ jobs:
           if baseline > 0:
             print("CROSS_RUN_RESTORE_AND_APPEND_VERIFIED",baseline,h["snapshots"])
           print("HISTORY_NONREGRESSION",baseline,h["snapshots"])
-          assert all(c.get("research_rank")==i for i,c in enumerate(d["watch"],1)), "Research ranks must be sequential"
-          verified=[c for c in d["watch"] if c.get("status")=="WATCH_RESEARCH_ONLY"]
+          assert all(c.get("research_rank")==i for i,c in enumerate(r["watch"],1)), "Research ranks must be sequential"
+          verified=[c for c in r["watch"] if c.get("status")=="WATCH_RESEARCH_ONLY"]
           assert all(c.get("early_signal_score") is not None for c in verified), "Verified candidates must have early signal score"
-          assert all(c.get("early_signal_score") is None for c in d["watch"] if c.get("status")!="WATCH_RESEARCH_ONLY"), "Unverified candidates must not have early signal score"
+          assert all(c.get("early_signal_score") is None for c in r["watch"] if c.get("status")!="WATCH_RESEARCH_ONLY"), "Unverified candidates must not have early signal score"
           assert [c["early_signal_score"] for c in verified]==sorted([c["early_signal_score"] for c in verified],reverse=True), "Verified candidates not ranked by early signal"
           assert h["evaluation"]=="INCOMPLETE_WATCHLIST_ONLY"
           assert h["model_updates"]=="DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"
