@@ -80,7 +80,7 @@ jobs:
           print("FRESH_SCAN_VERIFIED",r["ticker_pairs"],r["universe"],r["status"])
           PY
       - name: Publish durable history after successful scan
-        if: success() && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/simplified-scanner-recovery-20261011')
+        if: success() && ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'simplified-scanner-recovery-20261011') || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/simplified-scanner-recovery-20261011')))
         run: |
           set -euo pipefail
           cp simple_scanner/output/history.sqlite3 /tmp/simple-history.sqlite3
