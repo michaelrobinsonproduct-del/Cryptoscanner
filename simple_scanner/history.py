@@ -42,7 +42,6 @@ def persist():
     n = con.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
     outcomes = con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
     feature_rows=con.execute("SELECT COUNT(*) FROM candidate_features").fetchone()[0]
-    eligible_outcome_pairs=con.execute("SELECT COUNT(DISTINCT pair) FROM snapshots WHERE pair IN (SELECT pair FROM snapshots)").fetchone()[0]
     summary = {"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
     (DB.parent / "learning.json").write_text(json.dumps(summary,indent=2))
     print("HISTORY_PERSISTED",json.dumps(summary))
