@@ -23,7 +23,7 @@ for(const row of rows){
  const price=candle?Number(candle[4]):NaN;
  const valid=Number.isFinite(price)&&price>0 && Date.now()>=(targetOpen+3600)*1000;
  if(!valid){missing++;continue;} // Missing historical candles remain pending for later retry.
- const payload={status:"measured",measured_at:new Date().toISOString(),ask_at_horizon:price,return_pct:(price/Number(obs.baseline_ask)-1)*100};
+ const payload={status:"measured",measured_at:new Date().toISOString(),ask_at_horizon:price,return_pct:(price/Number(obs.baseline_ask)-1)*100,measurement_method:"kraken_hourly_candle_close_vs_initial_baseline_ask"};
  await api("challenger_forward_outcomes?observation_id=eq."+row.observation_id+"&horizon_hours=eq."+row.horizon_hours,{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify(payload)});
  measured++;
 }
