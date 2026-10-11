@@ -36,3 +36,5 @@ jobs:
           name: shadow-result
           path: evaluation/out/*.json
           retention-days: 30
+
+# Credential-backed challenger persistence is exercised only on recovery-branch pushes.
