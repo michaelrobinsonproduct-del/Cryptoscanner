@@ -35,7 +35,7 @@ class HistoryTests(unittest.TestCase):
                     self.assertEqual(con.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0],2)
                     value=con.execute("SELECT return_pct FROM outcomes WHERE horizon_hours=1").fetchone()
                     self.assertEqual(value[0],10.0)
-                    self.assertFalse(json.loads(Path("simple_scanner/output/learning.json").read_text())["buy_approved"])
+                    self.assertFalse(json.loads((db.parent/"learning.json").read_text())["buy_approved"])
                     con.close()
                 finally:
                     os.chdir(cwd)
