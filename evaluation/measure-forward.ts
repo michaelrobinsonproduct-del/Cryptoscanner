@@ -16,10 +16,10 @@ for(const row of rows){
  if(kraken.error?.length)throw Error("kraken_ohlc:"+kraken.error.join(","));
  const series=Object.values(kraken.result??{}).find(Array.isArray) as any[]|undefined;
  // Use a fully closed candle ending at the horizon, never the unfinished current candle.
- const targetOpen=Math.floor((due-1)/3600)*3600;
+ const targetOpen=Math.floor(due/3600)*3600-3600;
  const candle=series?.find(c=>Number(c[0])===targetOpen);
  const price=candle?Number(candle[4]):NaN;
- const valid=Number.isFinite(price)&&price>0 && Date.now()>=(targetOpen+7200)*1000;
+ const valid=Number.isFinite(price)&&price>0 && Date.now()>=(targetOpen+3600)*1000;
  const payload={status:valid?"measured":"missing_price",measured_at:valid?new Date().toISOString():null,ask_at_horizon:valid?price:null,return_pct:valid?(price/Number(obs.baseline_ask)-1)*100:null};
  await api("challenger_forward_outcomes?observation_id=eq."+row.observation_id+"&horizon_hours=eq."+row.horizon_hours,{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify(payload)});
  valid?measured++:missing++;
