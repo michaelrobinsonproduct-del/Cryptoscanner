@@ -8,7 +8,10 @@ on:
   schedule:
     - cron: '3,33 * * * *'
 permissions:
-  contents: read
+  contents: write
+concurrency:
+  group: kraken-simple-history
+  cancel-in-progress: false
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -18,6 +21,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Restore existing history from dedicated branch
+        run: |
+          set -euo pipefail
+          mkdir -p simple_scanner/output
+          if git fetch origin refs/heads/simple-history:refs/remotes/origin/simple-history; then
+            git show origin/simple-history:history.sqlite3 > simple_scanner/output/history.sqlite3
+            python - <<'PY'
+          import sqlite3
+          c=sqlite3.connect("simple_scanner/output/history.sqlite3")
+          assert c.execute("PRAGMA integrity_check").fetchone()[0]=="ok"
+          print("RESTORED_SNAPSHOTS",c.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0])
+          PY
+          else
+            echo "NO_SIMPLE_HISTORY: first run starts a new paper-only ledger"
+          fi
       - name: Run fresh public Kraken scan
         run: python simple_scanner/scan.py
       - name: Record paper-only snapshot and validate SQLite
@@ -35,9 +53,31 @@ jobs:
           assert h["snapshots"]>=r["validated_watch"] and h["buy_approved"] is False
           print("FRESH_SCAN_VERIFIED",r["ticker_pairs"],r["universe"],r["status"])
           PY
+      - name: Publish durable history on main-branch schedule only
+        if: success() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          cp simple_scanner/output/history.sqlite3 /tmp/simple-history.sqlite3
+          cp simple_scanner/output/latest.json /tmp/simple-latest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git show-ref --verify --quiet refs/remotes/origin/simple-history; then
+            git checkout -B simple-history origin/simple-history
+          else
+            git checkout --orphan simple-history
+            git rm -rf --ignore-unmatch . >/dev/null || true
+          fi
+          cp /tmp/simple-history.sqlite3 history.sqlite3
+          cp /tmp/simple-latest.json latest.json
+          git add history.sqlite3 latest.json
+          git commit -m "Update paper-only scan history" || echo "No history changes"
+          git push origin HEAD:refs/heads/simple-history
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: kraken-simple-result
-          path: simple_scanner/output/latest.json
+          path: |
+            simple_scanner/output/latest.json
+            simple_scanner/output/learning.json
+            simple_scanner/output/history.sqlite3
           if-no-files-found: warn
