@@ -4,11 +4,11 @@
 -- Important: NULL last_failed_at is NOT eligible when a failure row exists.
 CREATE OR REPLACE FUNCTION public.kraken_labeler_next_batch_shadow(batch_size integer DEFAULT 30)
 RETURNS TABLE(observation_id bigint,pair text,observed_at timestamptz,observed_price numeric)
-LANGUAGE plpgsql STABLE
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
 SET search_path TO 'public','pg_catalog'
 AS $function$
 BEGIN
-IF batch_size IS NULL OR batch_size < 1 OR batch_size > 100 THEN
+IF batch_size < 1 OR batch_size > 100 THEN
   RAISE EXCEPTION 'batch_size_out_of_range';
 END IF;
 RETURN QUERY
@@ -35,5 +35,8 @@ SELECT x.id,x.pair,x.observed_at,x.observed_price FROM (SELECT * FROM oldest UNI
 END;
 $function$;
 -- Rollback: DROP FUNCTION IF EXISTS public.kraken_labeler_next_batch_shadow(integer);
--- Invalid batch sizes (including NULL) raise batch_size_out_of_range.
+-- Out-of-range batch sizes raise batch_size_out_of_range; NULL follows baseline semantics.
+-- SECURITY: production original permits EXECUTE only to postgres and service_role.
+-- Before any deployment, revoke default PUBLIC execution and grant only service_role.
+-- Do not install this function into the exposed public schema without matching grants.
 -- Still requires shadow execution, equivalence, and performance validation.
