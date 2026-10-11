@@ -32,7 +32,7 @@ def main():
             scored.append({"pair":pair,"symbol":meta.get("wsname",pair),"price":last,"move24_pct":round(move,2),"spread_bps":round(spread,2),"notional_24h_usd":round(notional),"score":score})
         except (ValueError,TypeError,KeyError,ZeroDivisionError) as e:errors.append({"pair":pair,"error":str(e)})
     scored.sort(key=lambda x:x["score"],reverse=True)
-    for base_rank,item in enumerate(scored[:24],1):
+    # Reserve eight OHLC slots for liquid early movers that are not already\n    # among the strongest 24h-ranked coins. Keep API work bounded at 32.\n    seen={x["pair"] for x in scored[:24]}\n    fresh=sorted((x for x in scored[24:] if x["move24_pct"]>=0.25),key=lambda x:(x["move24_pct"],x["notional_24h_usd"]),reverse=True)[:8]\n    screened=scored[:24]+[x for x in fresh if x["pair"] not in seen]\n    for base_rank,item in enumerate(screened,1):
         item["base_rank"]=base_rank
         pair=item["pair"]
         try:
@@ -48,18 +48,18 @@ def main():
     # Validate 24 initial candidates before selecting 12; otherwise strong intrahour
     # acceleration outside the 24h top 12 is invisible to the research watchlist.
     # Prioritize actual intrahour acceleration after candle validation.
-    for item in scored[:24]:
+    for item in screened:
         if item.get("status")=="WATCH_RESEARCH_ONLY":
             item["early_signal_score"]=round(item["score"]+max(-25,min(25,item["move_15m_pct"]*5))+max(-15,min(15,(item["volume_accel"]-1)*10)),1)
         else:
             item["early_signal_score"]=None
-    watch=sorted((x for x in scored[:24] if x["early_signal_score"] is not None),key=lambda x:x["early_signal_score"],reverse=True)[:12]
+    watch=sorted((x for x in screened if x["early_signal_score"] is not None),key=lambda x:x["early_signal_score"],reverse=True)[:12]
     assert len(watch)<=12 and len({item["pair"] for item in watch})==len(watch)
     for rank,item in enumerate(watch,1):
         item["research_rank"]=rank
         item["early_signal_basis"]="15m_momentum_plus_volume_acceleration" if item["early_signal_score"] is not None else "UNVERIFIED"
     finished=dt.datetime.now(dt.timezone.utc)
-    result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"ohlc_screened":min(len(scored),24),"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in watch),"errors":errors,"watch":watch,"market_prices":market_prices,"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
+    result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"ohlc_screened":len(screened),"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in watch),"errors":errors,"watch":watch,"market_prices":market_prices,"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
     Path("simple_scanner/output").mkdir(parents=True,exist_ok=True)
     Path("simple_scanner/output/latest.json").write_text(json.dumps(result,indent=2))
     print(json.dumps(result,indent=2))
