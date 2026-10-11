@@ -1,3 +1,4 @@
+import { targetCandleOpen, candleReturn, isClosedByDeadline } from "./forward-math";
 // Prospective forward-outcome measurement: closed hourly Kraken candles only.
 // Never substitute a late spot quote for a historical horizon price.
 const url=process.env.CHALLENGER_SUPABASE_URL;
@@ -16,7 +17,7 @@ for(const row of rows){
  if(!Number.isFinite(due))throw Error("invalid_outcome_deadline");
  if(Date.now()-due*1000>29*24*3600*1000){missing++;console.log(JSON.stringify({observation_id:row.observation_id,horizon_hours:row.horizon_hours,status:"pending_retry",reason:"outside_kraken_ohlc_retention"}));continue;} // Kraken hourly OHLC has a limited historical window.
  // Use a fully closed candle ending at the horizon, never the unfinished current candle.
- const targetOpen=Math.floor(due/3600)*3600-3600;
+ const targetOpen=targetCandleOpen(due);
  const cacheKey=obs.pair+":"+targetOpen;
  let price=candleCache.get(cacheKey)??NaN;
  if(!Number.isFinite(price)){
@@ -27,9 +28,9 @@ for(const row of rows){
   price=candle?Number(candle[4]):NaN;
   if(Number.isFinite(price)&&price>0)candleCache.set(cacheKey,price);
  }
- const valid=Number.isFinite(price)&&price>0 && Date.now()>=(targetOpen+3600)*1000;
+ const valid=Number.isFinite(price)&&price>0 && isClosedByDeadline(targetOpen,Date.now());
  if(!valid){missing++;continue;} // Missing historical candles remain pending for later retry.
- const payload={status:"measured",measured_at:new Date().toISOString(),ask_at_horizon:price,return_pct:(price/Number(obs.baseline_ask)-1)*100,measurement_method:"kraken_hourly_candle_close_vs_initial_baseline_ask"};
+ const payload={status:"measured",measured_at:new Date().toISOString(),ask_at_horizon:price,return_pct:candleReturn(Number(obs.baseline_ask),price),measurement_method:"kraken_hourly_candle_close_vs_initial_baseline_ask"};
  await api("challenger_forward_outcomes?observation_id=eq."+row.observation_id+"&horizon_hours=eq."+row.horizon_hours,{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify(payload)});
  measured++;
 }
