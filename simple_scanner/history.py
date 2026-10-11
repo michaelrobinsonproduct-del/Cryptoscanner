@@ -39,7 +39,7 @@ def persist():
     assert con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
     n = con.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
     outcomes = con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
-    summary = {"snapshots":n,"outcomes":outcomes,"evaluation":"INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
+    summary = {"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
     (DB.parent / "learning.json").write_text(json.dumps(summary,indent=2))
     print("HISTORY_PERSISTED",json.dumps(summary))
     con.close()
