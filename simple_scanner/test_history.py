@@ -86,6 +86,27 @@ class HistoryTests(unittest.TestCase):
                 self.assertEqual(outcome[1],(start+dt.timedelta(minutes=65)).isoformat())
                 con.close()
 
+    def test_late_backfill_uses_first_valid_horizon_observation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db=Path(directory)/"history.sqlite3"
+            latest=Path(directory)/"latest.json"
+            start=dt.datetime(2026,10,11,12,tzinfo=dt.timezone.utc)
+            with patch.object(history,"DB",db),patch.object(history,"LATEST",latest):
+                for minute,price,selected in ((0,10,True),(65,11,False),(180,20,False)):
+                    watch=[{"pair":"TESTUSD" if selected else "OTHERUSD","price":10 if selected else 5,"score":80,"status":"WATCH_RESEARCH_ONLY"}]
+                    latest.write_text(json.dumps({"status":"RESEARCH_ONLY","buy_approved":False,"matched_tickers":100,"universe":100,"validated_watch":1,"completed_at":(start+dt.timedelta(minutes=minute)).isoformat(),"watch":watch,"market_prices":{"TESTUSD":price,"OTHERUSD":5}}))
+                    if minute==65:
+                        # Simulate a missed evaluation job while retaining its observed price.
+                        history.LATEST.read_text()
+                        con=sqlite3.connect(db)
+                        con.execute("INSERT INTO market_observations VALUES (?,?,?)",((start+dt.timedelta(minutes=65)).isoformat(),"TESTUSD",11))
+                        con.commit();con.close()
+                    else:
+                        history.persist()
+                con=sqlite3.connect(db)
+                self.assertEqual(con.execute("SELECT return_pct FROM outcomes WHERE pair='TESTUSD' AND horizon_hours=1").fetchone()[0],10.0)
+                con.close()
+
     def test_existing_feature_table_migrates_without_losing_history(self):
         with tempfile.TemporaryDirectory() as directory:
             db=Path(directory)/"history.sqlite3"
