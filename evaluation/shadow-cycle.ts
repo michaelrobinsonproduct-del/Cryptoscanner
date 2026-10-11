@@ -2,10 +2,22 @@ import { mkdir } from "node:fs/promises";
 import { evaluatePromotion } from "../scanner/src/promotion";
 import type { DiscoveryCandidate, MarketConfirmation } from "../scanner/src/types";
 const collector=process.env.CONTROL_COLLECTOR_URL||"https://kraken-collector-production.up.railway.app";
-const confirmer=process.env.CONTROL_CONFIRM_URL;
-if(!confirmer)throw new Error("shadow_confirmation_service_not_configured");
+const kraken="https://api.kraken.com/0/public";
 async function j(url:string){const r=await fetch(url,{signal:AbortSignal.timeout(45000)});if(!r.ok)throw new Error(String(r.status));return r.json() as Promise<any>}
+async function independentConfirmation(pair:string):Promise<MarketConfirmation>{
+const q="pair="+encodeURIComponent(pair);
+const [t,d,tr]=await Promise.all(["Ticker?","Depth?","Trades?"].map(p=>j(kraken+"/"+p+q)));
+for(const z of [t,d,tr])if(!Array.isArray(z.error)||z.error.length)throw Error("kraken_api_error:"+String(z.error));
+const first=(o:any)=>Object.entries(o??{}).find(([k])=>k!=="last")?.[1] as any;
+const tick=first(t.result),book=first(d.result),trades=first(tr.result);
+const bestBid=Number(tick?.b?.[0]),bestAsk=Number(tick?.a?.[0]);
+const twoSidedBook=!!book?.bids?.length&&!!book?.asks?.length;
+const executableBbo=twoSidedBook&&bestBid>0&&bestAsk>=bestBid&&Number(book.bids[0][0])>0&&Number(book.asks[0][0])>=Number(book.bids[0][0]);
+const age=trades?.length?Date.now()/1000-Number(trades[trades.length-1][2]):null;
+const recentTradeConfirmation=age!==null&&age>=0&&age<=60;
+return {pair,success:!!(executableBbo&&recentTradeConfirmation),twoSidedBook,executableBbo:!!executableBbo,recentTradeConfirmation,newestTradeAgeSeconds:age,bestBid,bestAsk,fetchedAt:new Date().toISOString()};
+}
 function confirmation(pair:string,z:any):MarketConfirmation{return{pair,success:!!z.success,twoSidedBook:!!z.two_sided_book,executableBbo:!!z.executable_bbo,recentTradeConfirmation:!!z.recent_trade_confirmation,newestTradeAgeSeconds:Number.isFinite(Number(z.newest_trade_age_seconds))?Number(z.newest_trade_age_seconds):null,bestBid:Number.isFinite(Number(z.best_bid))?Number(z.best_bid):null,bestAsk:Number.isFinite(Number(z.best_ask))?Number(z.best_ask):null,fetchedAt:String(z.fetched_at||new Date().toISOString())}}
 const scan=await j(collector+"/scan");const rows=(scan.candidates??scan.results??scan.shortlist??[]).slice(0,20);const candidates:any[]=[];
-for(const x of rows){const pair=x.pair??x.symbol;if(!pair)continue;const score=Number(x.score??x.discovery_score??0),disp=Number(x.displacement_pct??x.displacementPct??999);if(score<80||Math.abs(disp)>3)continue;try{const a0=await j(confirmer+"/confirm?pair="+encodeURIComponent(pair));const a=confirmation(pair,a0);await Bun.sleep(2500);const b0=await j(confirmer+"/confirm?pair="+encodeURIComponent(pair));const b=confirmation(pair,b0);const baseline=Number(a.bestAsk??0);const dc:DiscoveryCandidate={pair,score,displacementPct:disp,discoveryPrice:baseline,discoveryAt:String(x.discovered_at??scan.fetched_at??new Date().toISOString())};const decision=evaluatePromotion(dc,a,b);candidates.push({pair,score,displacement_pct:disp,...decision,first_trade_age_s:a.newestTradeAgeSeconds,second_trade_age_s:b.newestTradeAgeSeconds})}catch(e){candidates.push({pair,score,displacement_pct:disp,decision:"WATCH",reason:"confirmation_error",error:String(e)})}}
+for(const x of rows){const pair=x.pair??x.symbol;if(!pair)continue;const score=Number(x.score??x.discovery_score??0),disp=Number(x.displacement_pct??x.displacementPct??999);if(score<80||Math.abs(disp)>3)continue;try{const a=await independentConfirmation(pair);await Bun.sleep(2500);const b=await independentConfirmation(pair);const baseline=Number(a.bestAsk??0);const dc:DiscoveryCandidate={pair,score,displacementPct:disp,discoveryPrice:baseline,discoveryAt:String(x.discovered_at??scan.fetched_at??new Date().toISOString())};const decision=evaluatePromotion(dc,a,b);candidates.push({pair,score,displacement_pct:disp,...decision,first_trade_age_s:a.newestTradeAgeSeconds,second_trade_age_s:b.newestTradeAgeSeconds})}catch(e){candidates.push({pair,score,displacement_pct:disp,decision:"WATCH",reason:"confirmation_error",error:String(e)})}}
 const result={service:"cryptoscanner-challenger",mode:"shadow",control_untouched:true,created_at:new Date().toISOString(),source_scan:{build:scan.build??scan.version??null,count:rows.length,baseline_semantics:"refresh1_executable_ask"},candidates};await mkdir("evaluation/out",{recursive:true});const name="evaluation/out/shadow-"+Date.now()+".json";await Bun.write(name,JSON.stringify(result,null,2));console.log(JSON.stringify({file:name,candidates:candidates.length,promotable:candidates.filter(x=>x.decision==="PROMOTION_ELIGIBLE").length}));
