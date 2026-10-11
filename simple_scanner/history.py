@@ -17,6 +17,7 @@ def persist():
     con = sqlite3.connect(DB)
     con.execute("PRAGMA journal_mode=DELETE")
     con.execute("CREATE TABLE IF NOT EXISTS snapshots (run_at TEXT NOT NULL, pair TEXT NOT NULL, price REAL NOT NULL CHECK(price>0), score REAL NOT NULL, PRIMARY KEY(run_at,pair))")
+    con.execute("CREATE TABLE IF NOT EXISTS candidate_features (run_at TEXT NOT NULL, pair TEXT NOT NULL, base_score REAL NOT NULL, early_signal_score REAL, move_15m_pct REAL, volume_accel REAL, research_rank INTEGER, PRIMARY KEY(run_at,pair))")
     con.execute("CREATE TABLE IF NOT EXISTS outcomes (run_at TEXT NOT NULL, pair TEXT NOT NULL, horizon_hours INTEGER NOT NULL, evaluated_at TEXT NOT NULL, return_pct REAL NOT NULL, PRIMARY KEY(run_at,pair,horizon_hours))")
     now = dt.datetime.fromisoformat(report["completed_at"])
     assert now.tzinfo is not None and now.utcoffset() is not None, "Scan timestamp must be timezone-aware"
@@ -24,6 +25,7 @@ def persist():
         for candidate in report["watch"]:
             if candidate.get("status") == "WATCH_RESEARCH_ONLY":
                 con.execute("INSERT OR IGNORE INTO snapshots VALUES (?,?,?,?)", (report["completed_at"], candidate["pair"], candidate["price"], candidate["score"]))
+                con.execute("INSERT OR IGNORE INTO candidate_features VALUES (?,?,?,?,?,?,?)", (report["completed_at"],candidate["pair"],candidate["score"],candidate.get("early_signal_score"),candidate.get("move_15m_pct"),candidate.get("volume_accel"),candidate.get("research_rank")))
         current = {c["pair"]: c["price"] for c in report["watch"] if c.get("status") == "WATCH_RESEARCH_ONLY"}
         # Evaluate only previously observed pairs that are still in the current watchlist.
         # Absence is not scored as failure or success; coverage must be reported.
@@ -39,7 +41,8 @@ def persist():
     assert con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
     n = con.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
     outcomes = con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
-    summary = {"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
+    feature_rows=con.execute("SELECT COUNT(*) FROM candidate_features").fetchone()[0]
+    summary = {"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
     (DB.parent / "learning.json").write_text(json.dumps(summary,indent=2))
     print("HISTORY_PERSISTED",json.dumps(summary))
     con.close()
