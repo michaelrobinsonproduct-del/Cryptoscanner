@@ -4,25 +4,33 @@
       "hours": 1,
       "matured_snapshots": 516,
       "evaluated": 444,
-      "coverage_pct": 86.0
+      "coverage_pct": 86.0,
+      "unresolved": 72,
+      "no_observation_in_window": 72
     },
     {
       "hours": 3,
       "matured_snapshots": 0,
       "evaluated": 0,
-      "coverage_pct": null
+      "coverage_pct": null,
+      "unresolved": 0,
+      "no_observation_in_window": 0
     },
     {
       "hours": 6,
       "matured_snapshots": 0,
       "evaluated": 0,
-      "coverage_pct": null
+      "coverage_pct": null,
+      "unresolved": 0,
+      "no_observation_in_window": 0
     },
     {
       "hours": 24,
       "matured_snapshots": 0,
       "evaluated": 0,
-      "coverage_pct": null
+      "coverage_pct": null,
+      "unresolved": 0,
+      "no_observation_in_window": 0
     }
   ],
   "outcome_lag_hours_by_horizon": [
@@ -34,10 +42,10 @@
   ],
   "unresolved_1h_snapshots": 72,
   "rank_comparison": {
-    "historical_ranked_samples": 264,
-    "mean_base_minus_early_rank": 2.55
+    "historical_ranked_samples": 276,
+    "mean_base_minus_early_rank": 2.51
   },
-  "newly_discovered_outside_base_top12": 4,
+  "newly_discovered_outside_base_top12": 3,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
@@ -69,9 +77,19 @@
       "next_scan_gain_pct": 8.28
     },
     {
+      "pair": "DUCKUSD",
+      "observed_at": "2026-10-11T22:58:59.781338+00:00",
+      "next_scan_gain_pct": 8.03
+    },
+    {
       "pair": "ALTHEAUSD",
       "observed_at": "2026-10-11T21:22:43.998167+00:00",
       "next_scan_gain_pct": 7.59
+    },
+    {
+      "pair": "PLAYUSD",
+      "observed_at": "2026-10-11T22:58:59.781338+00:00",
+      "next_scan_gain_pct": 5.73
     },
     {
       "pair": "APXUSDUSD",
@@ -84,11 +102,11 @@
       "next_scan_gain_pct": 5.18
     }
   ],
-  "unselected_gainers_5pct_observations": 6,
-  "market_observations": 20064,
+  "unselected_gainers_5pct_observations": 8,
+  "market_observations": 20691,
   "market_price_coverage": 627,
-  "feature_rows": 432,
-  "snapshots": 552,
+  "feature_rows": 444,
+  "snapshots": 564,
   "outcomes": 444,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
