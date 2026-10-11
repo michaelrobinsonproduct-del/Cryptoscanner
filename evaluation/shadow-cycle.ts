@@ -2,7 +2,8 @@ import { mkdir } from "node:fs/promises";
 import { evaluatePromotion } from "../scanner/src/promotion";
 import type { DiscoveryCandidate, MarketConfirmation } from "../scanner/src/types";
 const collector=process.env.CONTROL_COLLECTOR_URL||"https://kraken-collector-production.up.railway.app";
-const confirmer=process.env.CONTROL_CONFIRM_URL||"https://kraken-rest-confirm-production.up.railway.app";
+const confirmer=process.env.CONTROL_CONFIRM_URL;
+if(!confirmer)throw new Error("shadow_confirmation_service_not_configured");
 async function j(url:string){const r=await fetch(url,{signal:AbortSignal.timeout(45000)});if(!r.ok)throw new Error(String(r.status));return r.json() as Promise<any>}
 function confirmation(pair:string,z:any):MarketConfirmation{return{pair,success:!!z.success,twoSidedBook:!!z.two_sided_book,executableBbo:!!z.executable_bbo,recentTradeConfirmation:!!z.recent_trade_confirmation,newestTradeAgeSeconds:Number.isFinite(Number(z.newest_trade_age_seconds))?Number(z.newest_trade_age_seconds):null,bestBid:Number.isFinite(Number(z.best_bid))?Number(z.best_bid):null,bestAsk:Number.isFinite(Number(z.best_ask))?Number(z.best_ask):null,fetchedAt:String(z.fetched_at||new Date().toISOString())}}
 const scan=await j(collector+"/scan");const rows=(scan.candidates??scan.results??scan.shortlist??[]).slice(0,20);const candidates:any[]=[];
