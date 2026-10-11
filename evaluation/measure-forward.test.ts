@@ -6,5 +6,6 @@ describe("forward outcome math",()=>{
  test("supports negative returns",()=>{expect(candleReturn(100,85)).toBeCloseTo(-15);});
  test("rejects zero and non-finite prices",()=>{expect(()=>candleReturn(0,100)).toThrow("invalid_price");expect(()=>candleReturn(100,Infinity)).toThrow("invalid_price");});
  test("rejects invalid deadlines",()=>{expect(()=>targetCandleOpen(NaN)).toThrow("invalid_outcome_deadline");});
- test("does not accept an unfinished candle",()=>{expect(isClosedByDeadline(100,3699999)).toBe(false);expect(isClosedByDeadline(100,3700000)).toBe(true);});\n test("rejects missing, invalid, and look-ahead baselines",()=>{expect(validBaseline(100,"2026-10-10T00:00:00Z",1791677850)).toBe(true);expect(validBaseline(100,"2026-10-13T00:00:00Z",1791677850)).toBe(false);expect(validBaseline(0,"2026-10-10T00:00:00Z",1791677850)).toBe(false);expect(validBaseline(100,"invalid",1791677850)).toBe(false);});
+ test("does not accept an unfinished candle",()=>{expect(isClosedByDeadline(100,3699999)).toBe(false);expect(isClosedByDeadline(100,3700000)).toBe(true);});
+ test("rejects missing, invalid, and look-ahead baselines",()=>{expect(validBaseline(100,"2026-10-10T00:00:00Z",1791677850)).toBe(true);expect(validBaseline(100,"2026-10-13T00:00:00Z",1791677850)).toBe(false);expect(validBaseline(0,"2026-10-10T00:00:00Z",1791677850)).toBe(false);expect(validBaseline(100,"invalid",1791677850)).toBe(false);});
 });
