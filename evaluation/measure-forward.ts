@@ -15,7 +15,7 @@ for(const row of rows){
  if(!obs||!String(obs.pair??"").trim()||!(Number(obs.baseline_ask)>0)||!obs.baseline_at){missing++;console.log(JSON.stringify({observation_id:row.observation_id,horizon_hours:row.horizon_hours,status:"pending_retry",reason:"missing_or_invalid_baseline"}));continue;}
  const due=Math.floor(new Date(row.due_at).getTime()/1000);
  if(!Number.isFinite(due))throw Error("invalid_outcome_deadline");
- if(Date.now()-due*1000>29*24*3600*1000){missing++;console.log(JSON.stringify({observation_id:row.observation_id,horizon_hours:row.horizon_hours,status:"pending_retry",reason:"outside_kraken_ohlc_retention"}));continue;} // Kraken hourly OHLC has a limited historical window.
+ if(Date.now()-due*1000>29*24*3600*1000){await api("challenger_forward_outcomes?observation_id=eq."+row.observation_id+"&horizon_hours=eq."+row.horizon_hours+"&status=eq.pending",{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({status:"missing_price",measured_at:new Date().toISOString(),measurement_method:"unavailable_kraken_ohlc_retention_window"})});missing++;console.log(JSON.stringify({observation_id:row.observation_id,horizon_hours:row.horizon_hours,status:"missing_price",reason:"outside_kraken_ohlc_retention"}));continue;} // Terminally label outcomes that can no longer be recovered from Kraken hourly OHLC.
  // Use a fully closed candle ending at the horizon, never the unfinished current candle.
  const targetOpen=targetCandleOpen(due);
  const cacheKey=obs.pair+":"+targetOpen;
