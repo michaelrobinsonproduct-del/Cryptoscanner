@@ -1,8 +1,6 @@
 name: Challenger Forward Outcomes
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '17 * * * *'
 permissions:
   contents: read
 jobs:
