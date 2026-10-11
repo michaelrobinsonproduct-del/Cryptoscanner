@@ -66,7 +66,13 @@ def persist():
     evaluated_outcomes=con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
     winning_outcomes=con.execute("SELECT COUNT(*) FROM outcomes WHERE return_pct>0").fetchone()[0]
     avg_return=con.execute("SELECT ROUND(AVG(return_pct),3) FROM outcomes").fetchone()[0]
-    summary = {"outcome_evaluation_coverage":{"evaluated":evaluated_outcomes,"positive":winning_outcomes,"average_return_pct":avg_return},"missed_breakout_examples":[{"pair":p,"observed_at":t,"next_scan_gain_pct":g} for p,t,g in missed_examples],"unselected_gainers_5pct_observations":missed,"market_observations":market_observations,"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
+    comparison=con.execute("""SELECT o.horizon_hours,COUNT(*),
+      ROUND(AVG(CASE WHEN f.early_signal_score IS NOT NULL THEN o.return_pct END),3),
+      ROUND(AVG(o.return_pct),3),
+      ROUND(AVG(CASE WHEN f.early_signal_score IS NOT NULL AND f.early_signal_score>f.base_score THEN o.return_pct END),3)
+      FROM outcomes o JOIN candidate_features f ON o.run_at=f.run_at AND o.pair=f.pair
+      GROUP BY o.horizon_hours ORDER BY o.horizon_hours""").fetchall()
+    summary = {"signal_outcomes_by_horizon":[{"hours":h,"samples":n,"early_scored_avg_return_pct":e,"all_selected_avg_return_pct":a,"early_score_above_base_avg_return_pct":b} for h,n,e,a,b in comparison],"outcome_evaluation_coverage":{"evaluated":evaluated_outcomes,"positive":winning_outcomes,"average_return_pct":avg_return},"missed_breakout_examples":[{"pair":p,"observed_at":t,"next_scan_gain_pct":g} for p,t,g in missed_examples],"unselected_gainers_5pct_observations":missed,"market_observations":market_observations,"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
     (DB.parent / "learning.json").write_text(json.dumps(summary,indent=2))
     print("HISTORY_PERSISTED",json.dumps(summary))
     con.close()
