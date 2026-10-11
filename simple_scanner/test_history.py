@@ -47,6 +47,8 @@ class HistoryTests(unittest.TestCase):
                     self.assertEqual(summary["forward_horizon_coverage"][0]["matured_snapshots"],1)
                     self.assertEqual(summary["forward_horizon_coverage"][0]["evaluated"],1)
                     self.assertEqual(summary["forward_horizon_coverage"][0]["coverage_pct"],100.0)
+                    self.assertEqual(summary["forward_horizon_coverage"][0]["unresolved"],0)
+                    self.assertEqual(summary["forward_horizon_coverage"][0]["no_observation_in_window"],0)
                     con.close()
                 finally:
                     os.chdir(cwd)
@@ -140,6 +142,8 @@ class HistoryTests(unittest.TestCase):
                     history.persist()
                 result=json.loads((db.parent/"learning.json").read_text())
                 self.assertEqual(result["unselected_gainers_5pct_observations"],0)
+                self.assertEqual(result["forward_horizon_coverage"][0]["unresolved"],1)
+                self.assertEqual(result["forward_horizon_coverage"][0]["no_observation_in_window"],1)
 
     def test_unselected_market_breakout_is_counted(self):
         with tempfile.TemporaryDirectory() as directory:
