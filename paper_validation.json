@@ -9,32 +9,32 @@
       "mean_return_pct": -0.556,
       "gain_5pct_rate": 0.0,
       "loss_5pct_rate": 0.0,
-      "watch_control_pair_days": 96,
-      "watch_control_mean_return_pct": 0.102,
+      "watch_control_pair_days": 97,
+      "watch_control_mean_return_pct": 0.096,
       "paper_spread_samples": 8,
       "paper_net_0bps_mean_pct": -0.561,
       "paper_net_40bps_mean_pct": -0.959,
       "paper_net_100bps_mean_pct": -1.556,
-      "control_spread_samples": 96,
-      "control_net_0bps_mean_pct": -0.009,
-      "control_net_40bps_mean_pct": -0.409,
-      "control_net_100bps_mean_pct": -1.009
+      "control_spread_samples": 97,
+      "control_net_0bps_mean_pct": -0.019,
+      "control_net_40bps_mean_pct": -0.419,
+      "control_net_100bps_mean_pct": -1.018
     },
     "4h": {
       "pair_days": 8,
       "mean_return_pct": -2.168,
       "gain_5pct_rate": 0.0,
       "loss_5pct_rate": 0.125,
-      "watch_control_pair_days": 85,
-      "watch_control_mean_return_pct": -0.026,
+      "watch_control_pair_days": 86,
+      "watch_control_mean_return_pct": -0.025,
       "paper_spread_samples": 8,
       "paper_net_0bps_mean_pct": -2.173,
       "paper_net_40bps_mean_pct": -2.564,
       "paper_net_100bps_mean_pct": -3.151,
-      "control_spread_samples": 85,
-      "control_net_0bps_mean_pct": -0.144,
-      "control_net_40bps_mean_pct": -0.544,
-      "control_net_100bps_mean_pct": -1.143
+      "control_spread_samples": 86,
+      "control_net_0bps_mean_pct": -0.142,
+      "control_net_40bps_mean_pct": -0.541,
+      "control_net_100bps_mean_pct": -1.14
     },
     "24h": {
       "pair_days": 5,
@@ -72,7 +72,7 @@
   "execution_costs": "Estimated entry ask from same-scan bid and spread; exit bid inferred from stored outcome; 0/40/100bps cost scenarios are hypothetical and exclude fill/depth uncertainty.",
   "first_decision_cohorts": {
     "eligible": 8,
-    "control": 98
+    "control": 99
   },
   "selection_limitation": "First observed watch decision per UTC coin-day is locked before outcome lookup; missing outcomes are excluded and reported as a coverage limitation"
 }
