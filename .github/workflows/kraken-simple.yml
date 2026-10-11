@@ -82,7 +82,8 @@ jobs:
           assert all(c.get("early_signal_score") is not None for c in verified), "Verified candidates must have early signal score"
           assert all(c.get("early_signal_score") is None for c in r["watch"] if c.get("status")!="WATCH_RESEARCH_ONLY"), "Unverified candidates must not have early signal score"
           assert [c["early_signal_score"] for c in verified]==sorted([c["early_signal_score"] for c in verified],reverse=True), "Verified candidates not ranked by early signal"
-          assert h["evaluation"]=="INCOMPLETE_WATCHLIST_ONLY"
+          assert h["evaluation"]=="FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE"
+          assert h["market_price_coverage"]>=int(r["matched_tickers"]*.95), "Insufficient full-market price coverage"
           assert h["model_updates"]=="DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"
           print("FRESH_SCAN_VERIFIED",r["ticker_pairs"],r["universe"],r["status"])
           PY
