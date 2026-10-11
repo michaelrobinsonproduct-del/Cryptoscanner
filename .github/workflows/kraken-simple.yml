@@ -90,7 +90,7 @@ jobs:
       - name: Print concise research results
         if: success()
         run: |
-          python -c 'import json; r=json.load(open("simple_scanner/output/latest.json")); h=json.load(open("simple_scanner/output/learning.json")); print("SCAN",r["completed_at"],"PAIRS",r["matched_tickers"],"WATCH",r["validated_watch"],"OUTCOMES",h["outcomes"]); [print(c["research_rank"],c["symbol"],c["early_signal_score"]) for c in r["watch"]]'
+          python -c 'import json; r=json.load(open("simple_scanner/output/latest.json")); h=json.load(open("simple_scanner/output/learning.json")); print("SCAN",r["completed_at"],"PAIRS",r["matched_tickers"],"WATCH",r["validated_watch"],"OUTCOMES",h["outcomes"],"COVERAGE",h["forward_horizon_coverage"]); [print(c["research_rank"],c["symbol"],c["early_signal_score"]) for c in r["watch"]]'
       - name: Publish durable history after successful scan
         if: success() && ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'simplified-scanner-recovery-20261011') || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/simplified-scanner-recovery-20261011')))
         run: |
