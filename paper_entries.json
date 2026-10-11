@@ -1,30 +1,34 @@
 {
   "mode": "PAPER_ONLY",
-  "scan_completed_at": "2026-10-11T01:46:16.108198+00:00",
-  "generated_at": "2026-10-11T01:46:18.013442+00:00",
+  "scan_completed_at": "2026-10-11T01:50:14.969748+00:00",
+  "generated_at": "2026-10-11T01:50:17.214695+00:00",
   "scan_healthy_and_fresh": true,
   "candidates": [
     {
       "pair": "STRKUSD",
-      "status": "RESEARCH_ONLY",
-      "reasons": [
-        "continuity_unverified",
-        "spread"
-      ],
+      "status": "PAPER_ELIGIBLE",
+      "reasons": [],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.11547
+      "paper_reference_price": 0.11435
     },
     {
-      "pair": "CHIPUSD",
+      "pair": "TIAUSD",
+      "status": "PAPER_ELIGIBLE",
+      "reasons": [],
+      "entry_approved": false,
+      "real_trade_approved": false,
+      "paper_reference_price": 0.6261
+    },
+    {
+      "pair": "ARBUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
-        "spread",
         "score"
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.07034
+      "paper_reference_price": 0.1959
     },
     {
       "pair": "WALUSD",
@@ -36,42 +40,30 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.03748
-    },
-    {
-      "pair": "MINAUSD",
-      "status": "RESEARCH_ONLY",
-      "reasons": [
-        "spread",
-        "score"
-      ],
-      "entry_approved": false,
-      "real_trade_approved": false,
-      "paper_reference_price": 0.08756
+      "paper_reference_price": 0.03771
     },
     {
       "pair": "ZKUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
-        "continuity_unverified",
         "spread",
         "score"
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.01593
+      "paper_reference_price": 0.01577
     },
     {
-      "pair": "TIAUSD",
+      "pair": "MINAUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "not_double_confirmed",
-        "continuity_unverified",
+        "spread",
         "score"
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.6144
+      "paper_reference_price": 0.08745
     },
     {
       "pair": "NILUSD",
@@ -83,7 +75,19 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.0877
+      "paper_reference_price": 0.088
+    },
+    {
+      "pair": "WLDUSD",
+      "status": "RESEARCH_ONLY",
+      "reasons": [
+        "not_double_confirmed",
+        "spread",
+        "score"
+      ],
+      "entry_approved": false,
+      "real_trade_approved": false,
+      "paper_reference_price": 0.5673
     },
     {
       "pair": "USUSD",
@@ -95,23 +99,23 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.02005
+      "paper_reference_price": 0.02009
     },
     {
-      "pair": "WLDUSD",
+      "pair": "NEARUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "not_double_confirmed",
         "continuity_unverified",
-        "spread",
+        "momentum",
         "score"
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.5657
+      "paper_reference_price": 5.328
     },
     {
-      "pair": "ARBUSD",
+      "pair": "OPUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "not_double_confirmed",
@@ -119,19 +123,43 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.1943
+      "paper_reference_price": 0.1427
     },
     {
       "pair": "ENAUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "not_double_confirmed",
-        "continuity_unverified",
         "score"
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.2231
+      "paper_reference_price": 0.2244
+    },
+    {
+      "pair": "XZECZUSD",
+      "status": "RESEARCH_ONLY",
+      "reasons": [
+        "not_double_confirmed",
+        "continuity_unverified",
+        "momentum",
+        "score"
+      ],
+      "entry_approved": false,
+      "real_trade_approved": false,
+      "paper_reference_price": 1227.54
+    },
+    {
+      "pair": "CHIPUSD",
+      "status": "RESEARCH_ONLY",
+      "reasons": [
+        "not_double_confirmed",
+        "spread",
+        "score"
+      ],
+      "entry_approved": false,
+      "real_trade_approved": false,
+      "paper_reference_price": 0.06923
     },
     {
       "pair": "USUALUSD",
@@ -146,29 +174,29 @@
       "paper_reference_price": 0.01259
     },
     {
-      "pair": "ATOMUSD",
+      "pair": "LINKUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "not_double_confirmed",
+        "continuity_unverified",
         "momentum",
         "score"
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 1.9665
+      "paper_reference_price": 13.06586
     },
     {
       "pair": "ENSOUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "not_double_confirmed",
-        "continuity_unverified",
         "spread",
         "score"
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.985
+      "paper_reference_price": 0.984
     },
     {
       "pair": "SUKUUSD",
@@ -183,18 +211,7 @@
       "paper_reference_price": 0.00547
     },
     {
-      "pair": "XDCUSD",
-      "status": "RESEARCH_ONLY",
-      "reasons": [
-        "not_double_confirmed",
-        "score"
-      ],
-      "entry_approved": false,
-      "real_trade_approved": false,
-      "paper_reference_price": 0.03527
-    },
-    {
-      "pair": "OPUSD",
+      "pair": "ALGOUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "not_double_confirmed",
@@ -203,46 +220,19 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.1413
+      "paper_reference_price": 0.11927
     },
     {
-      "pair": "WUSD",
+      "pair": "EIGENUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "not_double_confirmed",
         "continuity_unverified",
-        "spread",
         "score"
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.01791
-    },
-    {
-      "pair": "SUSD",
-      "status": "RESEARCH_ONLY",
-      "reasons": [
-        "not_double_confirmed",
-        "continuity_unverified",
-        "spread",
-        "score"
-      ],
-      "entry_approved": false,
-      "real_trade_approved": false,
-      "paper_reference_price": 0.0484
-    },
-    {
-      "pair": "AAVEUSD",
-      "status": "RESEARCH_ONLY",
-      "reasons": [
-        "not_double_confirmed",
-        "continuity_unverified",
-        "momentum",
-        "score"
-      ],
-      "entry_approved": false,
-      "real_trade_approved": false,
-      "paper_reference_price": 169.31
+      "paper_reference_price": 0.2483
     }
   ],
   "real_trade_approvals": 0,
