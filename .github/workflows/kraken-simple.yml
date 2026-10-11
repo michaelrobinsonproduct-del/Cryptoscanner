@@ -6,10 +6,6 @@ on:
     paths:
       - 'simple_scanner/**'
       - '.github/workflows/kraken-simple.yml'
-  pull_request:
-    paths:
-      - 'simple_scanner/**'
-      - '.github/workflows/kraken-simple.yml'
   workflow_dispatch:
   schedule:
     - cron: '3,33 * * * *'
