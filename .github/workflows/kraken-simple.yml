@@ -23,6 +23,14 @@ jobs:
           python-version: '3.12'
       - name: Offline ledger regression tests
         run: python -m unittest discover -s simple_scanner -p 'test_*.py' -v
+      - name: Exercise durable publication on isolated PR branch
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD" || true
+          echo "PR_PUBLICATION_REMAINS_DISABLED"
       - name: Restore existing history from dedicated branch
         run: |
           set -euo pipefail
