@@ -13,7 +13,6 @@ export function reconcileScanEvidence(input) {
     if (generated < completed - 120_000) errors.push("report_precedes_scan");
     if (completed > nowMs + 10_000 || generated > nowMs + 10_000) errors.push("future_timestamp");
     if (nowMs - generated > maxAgeMs) errors.push("stale_report");
-    if (generated < completed - 120_000) errors.push("report_timing_mismatch");
   }
   const u = durable.universe_count, s = durable.scanned_count, f = durable.failed_count;
   if (![u,s,f].every(x => Number.isSafeInteger(x) && x >= 0) || u === 0 || s + f !== u) errors.push("coverage_invalid");
