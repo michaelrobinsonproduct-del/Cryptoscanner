@@ -67,6 +67,19 @@ class HistoryTests(unittest.TestCase):
                 self.assertEqual(json.loads((db.parent/"learning.json").read_text())["unselected_gainers_5pct_observations"],0)
                 con.close()
 
+    def test_long_scan_gap_is_not_counted_as_rapid_breakout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db=Path(directory)/"history.sqlite3"
+            latest=Path(directory)/"latest.json"
+            start=dt.datetime(2026,10,11,12,tzinfo=dt.timezone.utc)
+            with patch.object(history,"DB",db),patch.object(history,"LATEST",latest):
+                for offset,price in ((0,10),(180,20)):
+                    watch=[{"pair":"OTHERUSD","price":5,"score":80,"status":"WATCH_RESEARCH_ONLY"}]
+                    latest.write_text(json.dumps({"status":"RESEARCH_ONLY","buy_approved":False,"matched_tickers":100,"universe":100,"validated_watch":1,"completed_at":(start+dt.timedelta(minutes=offset)).isoformat(),"watch":watch,"market_prices":{"OTHERUSD":5,"MISSEDUSD":price}}))
+                    history.persist()
+                result=json.loads((db.parent/"learning.json").read_text())
+                self.assertEqual(result["unselected_gainers_5pct_observations"],0)
+
     def test_unselected_market_breakout_is_counted(self):
         with tempfile.TemporaryDirectory() as directory:
             db=Path(directory)/"history.sqlite3"
