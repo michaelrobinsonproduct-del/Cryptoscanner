@@ -17,7 +17,7 @@ ROLLBACK;
 -- REQUIRE all equivalent=true; verify NULL failure timestamp semantics.
 -- Also test invalid batch sizes: baseline raises batch_size_out_of_range;
 -- shadow now raises the same error text for out-of-range sizes; test error behavior separately.
--- NULL is additionally rejected by shadow; original NULL handling needs explicit assessment.
--- Original PL/pgSQL is VOLATILE by default, whereas shadow is STABLE; assess any snapshot-semantic differences.
+-- Shadow now matches baseline VOLATILE setting and NULL guard semantics.
+-- SECURITY: before deploying shadow in an exposed schema, match production's EXECUTE grants (postgres and service_role only).
 -- Measure EXPLAIN (ANALYZE, BUFFERS) on representative nonproduction data.
 -- Ensure repeated scheduled calls stop timing out before production promotion.
