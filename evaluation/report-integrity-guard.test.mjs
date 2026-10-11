@@ -11,3 +11,8 @@ test("missing persistence fails closed",()=>expect(run({...durable,persistence_v
 test("bad coverage fails closed",()=>expect(run({...durable,scanned_count:667}).errors).toContain("coverage_invalid"));
 test("snapshot cannot substitute for missing report",()=>expect(run(durable,null).status).toBe("UNVERIFIED"));
 test("nonempty report requires separate execution gate",()=>{const x=run(durable,{...recommendation,currently_actionable:[{pair:"TESTUSD"}]});expect(x.eligibleForEntryReview).toBe(true);expect(x.buyApproved).toBe(false)});
+test("invalid clock fails closed",()=>expect(check({durable,recommendation,nowMs:NaN}).errors).toContain("invalid_clock_or_age_limit"));
+test("invalid age limit fails closed",()=>expect(check({durable,recommendation,nowMs:now,maxAgeMs:-1}).status).toBe("UNVERIFIED"));
+test("future report fails closed",()=>expect(run(durable,{...recommendation,generated_at:"2026-10-11T05:05:00Z"}).errors).toContain("future_timestamp"));
+test("invalid completion time fails closed",()=>expect(run({...durable,completed_at:"not-a-date"}).errors).toContain("invalid_timestamp"));
+test("unverified report never exposes candidate entries",()=>expect(run({...durable,scanned_count:10},{...recommendation,currently_actionable:[{pair:"TESTUSD"}]}).authoritativeActionable).toEqual([]));
