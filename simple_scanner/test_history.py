@@ -17,8 +17,8 @@ class HistoryTests(unittest.TestCase):
             latest=root/"latest.json"
             output=root/"learning.json"
             start=dt.datetime(2026,10,11,12,tzinfo=dt.timezone.utc)
-            def write(t, price):
-                latest.write_text(json.dumps({"status":"RESEARCH_ONLY","buy_approved":False,"matched_tickers":100,"universe":100,"validated_watch":1,"completed_at":t.isoformat(),"watch":[{"pair":"TESTUSD","price":price,"score":75,"status":"WATCH_RESEARCH_ONLY"}]}))
+            def write(t, price, market_price=None):
+                latest.write_text(json.dumps({"status":"RESEARCH_ONLY","buy_approved":False,"matched_tickers":100,"universe":100,"validated_watch":1,"completed_at":t.isoformat(),"market_prices":{"TESTUSD":market_price} if market_price is not None else {},"watch":[{"pair":"TESTUSD","price":price,"score":75,"status":"WATCH_RESEARCH_ONLY"}]}))
             with patch.object(history,"DB",db),patch.object(history,"LATEST",latest):
                 original=history.Path
                 # Redirect the fixed output path through a temporary working directory.
@@ -44,6 +44,26 @@ class HistoryTests(unittest.TestCase):
                     con.close()
                 finally:
                     os.chdir(cwd)
+
+
+    def test_forward_outcome_after_watchlist_exit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            db=root/"history.sqlite3"
+            latest=root/"latest.json"
+            start=dt.datetime(2026,10,11,12,tzinfo=dt.timezone.utc)
+            def report(t,watch,prices):
+                latest.write_text(json.dumps({"status":"RESEARCH_ONLY","buy_approved":False,"matched_tickers":100,"universe":100,"validated_watch":1,"completed_at":t.isoformat(),"watch":watch,"market_prices":prices}))
+            first=[{"pair":"TESTUSD","price":10,"score":75,"status":"WATCH_RESEARCH_ONLY"}]
+            second=[{"pair":"OTHERUSD","price":5,"score":75,"status":"WATCH_RESEARCH_ONLY"}]
+            with patch.object(history,"DB",db),patch.object(history,"LATEST",latest):
+                report(start,first,{"TESTUSD":10,"OTHERUSD":5})
+                history.persist()
+                report(start+dt.timedelta(hours=1,minutes=5),second,{"TESTUSD":12,"OTHERUSD":5})
+                history.persist()
+                con=sqlite3.connect(db)
+                self.assertEqual(con.execute("SELECT return_pct FROM outcomes WHERE pair='TESTUSD' AND horizon_hours=1").fetchone()[0],20.0)
+                con.close()
 
 if __name__=="__main__":
     unittest.main()
