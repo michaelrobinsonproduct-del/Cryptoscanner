@@ -2,10 +2,10 @@
   "outcome_lag_hours_by_horizon": [],
   "unresolved_1h_snapshots": 0,
   "rank_comparison": {
-    "historical_ranked_samples": 156,
-    "mean_base_minus_early_rank": 3.02
+    "historical_ranked_samples": 168,
+    "mean_base_minus_early_rank": 2.99
   },
-  "newly_discovered_outside_base_top12": 4,
+  "newly_discovered_outside_base_top12": 3,
   "signal_outcomes_by_horizon": [],
   "outcome_evaluation_coverage": {
     "evaluated": 0,
@@ -19,16 +19,26 @@
       "next_scan_gain_pct": 10.34
     },
     {
+      "pair": "LOFIUSD",
+      "observed_at": "2026-10-11T21:17:14.679907+00:00",
+      "next_scan_gain_pct": 8.49
+    },
+    {
       "pair": "ALTHEAUSD",
       "observed_at": "2026-10-11T21:09:25.492083+00:00",
       "next_scan_gain_pct": 8.28
+    },
+    {
+      "pair": "ZRCUSD",
+      "observed_at": "2026-10-11T21:17:14.679907+00:00",
+      "next_scan_gain_pct": 5.18
     }
   ],
-  "unselected_gainers_5pct_observations": 2,
-  "market_observations": 14421,
+  "unselected_gainers_5pct_observations": 4,
+  "market_observations": 15048,
   "market_price_coverage": 627,
-  "feature_rows": 324,
-  "snapshots": 444,
+  "feature_rows": 336,
+  "snapshots": 456,
   "outcomes": 0,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
