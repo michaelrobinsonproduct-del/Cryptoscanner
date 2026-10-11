@@ -19,6 +19,7 @@ def persist():
     con.execute("CREATE TABLE IF NOT EXISTS snapshots (run_at TEXT NOT NULL, pair TEXT NOT NULL, price REAL NOT NULL CHECK(price>0), score REAL NOT NULL, PRIMARY KEY(run_at,pair))")
     con.execute("CREATE TABLE IF NOT EXISTS outcomes (run_at TEXT NOT NULL, pair TEXT NOT NULL, horizon_hours INTEGER NOT NULL, evaluated_at TEXT NOT NULL, return_pct REAL NOT NULL, PRIMARY KEY(run_at,pair,horizon_hours))")
     now = dt.datetime.fromisoformat(report["completed_at"])
+    assert now.tzinfo is not None and now.utcoffset() is not None, "Scan timestamp must be timezone-aware"
     with con:
         for candidate in report["watch"]:
             if candidate.get("status") == "WATCH_RESEARCH_ONLY":
@@ -27,7 +28,9 @@ def persist():
         # Evaluate only previously observed pairs that are still in the current watchlist.
         # Absence is not scored as failure or success; coverage must be reported.
         for run_at, pair, price in con.execute("SELECT run_at,pair,price FROM snapshots").fetchall():
-            age = (now - dt.datetime.fromisoformat(run_at)).total_seconds()
+            observed_at = dt.datetime.fromisoformat(run_at)
+            assert observed_at.tzinfo is not None and observed_at.utcoffset() is not None
+            age = (now - observed_at).total_seconds()
             if pair not in current or age <= 0: continue
             for hours in HORIZONS:
                 if hours*3600 <= age < (hours+1)*3600:
