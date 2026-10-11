@@ -1,16 +1,18 @@
 {
   "mode": "PAPER_ONLY",
-  "scan_completed_at": "2026-10-11T11:08:27.145305+00:00",
-  "generated_at": "2026-10-11T11:08:29.412553+00:00",
+  "scan_completed_at": "2026-10-11T11:17:20.699143+00:00",
+  "generated_at": "2026-10-11T11:17:23.173491+00:00",
   "scan_healthy_and_fresh": true,
   "candidates": [
     {
       "pair": "STRKUSD",
-      "status": "PAPER_ELIGIBLE",
-      "reasons": [],
+      "status": "RESEARCH_ONLY",
+      "reasons": [
+        "spread"
+      ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.10935
+      "paper_reference_price": 0.11174
     },
     {
       "pair": "ARBUSD",
@@ -20,7 +22,7 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.1974
+      "paper_reference_price": 0.1981
     },
     {
       "pair": "NILUSD",
@@ -31,7 +33,7 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.0935
+      "paper_reference_price": 0.0936
     },
     {
       "pair": "CFXUSD",
@@ -42,7 +44,7 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.06565
+      "paper_reference_price": 0.06578
     },
     {
       "pair": "XDPUSD",
@@ -54,10 +56,23 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.025359
+      "paper_reference_price": 0.025646
     },
     {
-      "pair": "SENTUSD",
+      "pair": "RLCUSD",
+      "status": "RESEARCH_ONLY",
+      "reasons": [
+        "not_double_confirmed",
+        "continuity_unverified",
+        "spread",
+        "score"
+      ],
+      "entry_approved": false,
+      "real_trade_approved": false,
+      "paper_reference_price": 1.0535
+    },
+    {
+      "pair": "ZKUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "not_double_confirmed",
@@ -66,7 +81,7 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.023065
+      "paper_reference_price": 0.01589
     },
     {
       "pair": "WALUSD",
@@ -78,7 +93,7 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.03772
+      "paper_reference_price": 0.03779
     },
     {
       "pair": "AEROUSD",
@@ -89,7 +104,7 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.9712
+      "paper_reference_price": 0.9695
     },
     {
       "pair": "ZROUSD",
@@ -100,7 +115,18 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 2.057
+      "paper_reference_price": 2.049
+    },
+    {
+      "pair": "PUMPUSD",
+      "status": "RESEARCH_ONLY",
+      "reasons": [
+        "not_double_confirmed",
+        "score"
+      ],
+      "entry_approved": false,
+      "real_trade_approved": false,
+      "paper_reference_price": 0.00559
     },
     {
       "pair": "GRASSUSD",
@@ -111,7 +137,7 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.7066
+      "paper_reference_price": 0.7061
     },
     {
       "pair": "KNTQUSD",
@@ -125,26 +151,16 @@
       "paper_reference_price": 0.32768
     },
     {
-      "pair": "QNTUSD",
-      "status": "RESEARCH_ONLY",
-      "reasons": [
-        "not_double_confirmed",
-        "score"
-      ],
-      "entry_approved": false,
-      "real_trade_approved": false,
-      "paper_reference_price": 243.28
-    },
-    {
       "pair": "XZECZUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "not_double_confirmed",
+        "momentum",
         "score"
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 1234.15
+      "paper_reference_price": 1232.5
     },
     {
       "pair": "XXMRZUSD",
@@ -155,7 +171,7 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 530.19
+      "paper_reference_price": 531.18
     },
     {
       "pair": "CTUSD",
@@ -167,10 +183,10 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.3221
+      "paper_reference_price": 0.3231
     },
     {
-      "pair": "PUMPUSD",
+      "pair": "QNTUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "not_double_confirmed",
@@ -178,7 +194,7 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.005597
+      "paper_reference_price": 242.8
     },
     {
       "pair": "BATUSD",
@@ -190,7 +206,7 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.14414
+      "paper_reference_price": 0.14395
     },
     {
       "pair": "DOSUSD",
@@ -202,30 +218,19 @@
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.2602
-    },
-    {
-      "pair": "ZKUSD",
-      "status": "RESEARCH_ONLY",
-      "reasons": [
-        "not_double_confirmed",
-        "spread",
-        "score"
-      ],
-      "entry_approved": false,
-      "real_trade_approved": false,
-      "paper_reference_price": 0.01556
+      "paper_reference_price": 0.26
     },
     {
       "pair": "NIGHTUSD",
       "status": "RESEARCH_ONLY",
       "reasons": [
         "not_double_confirmed",
+        "momentum",
         "score"
       ],
       "entry_approved": false,
       "real_trade_approved": false,
-      "paper_reference_price": 0.05043
+      "paper_reference_price": 0.05027
     }
   ],
   "real_trade_approvals": 0,
