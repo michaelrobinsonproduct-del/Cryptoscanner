@@ -20,6 +20,8 @@ jobs:
           python-version: '3.12'
       - name: Run fresh public Kraken scan
         run: python simple_scanner/scan.py
+      - name: Record paper-only snapshot and validate SQLite
+        run: python simple_scanner/history.py
       - name: Validate freshness and result shape
         run: |
           python - <<'PY'
@@ -28,6 +30,9 @@ jobs:
           age=(dt.datetime.now(dt.timezone.utc)-dt.datetime.fromisoformat(r["completed_at"])).total_seconds()
           assert 0<=age<180 and r["matched_tickers"]>=max(50,int(r["universe"]*.8)) and r["validated_watch"]>0
           assert r["buy_approved"] is False
+          import json as _json
+          h=_json.load(open("simple_scanner/output/learning.json"))
+          assert h["snapshots"]>=r["validated_watch"] and h["buy_approved"] is False
           print("FRESH_SCAN_VERIFIED",r["ticker_pairs"],r["universe"],r["status"])
           PY
       - uses: actions/upload-artifact@v4
