@@ -14,7 +14,7 @@ for(const row of rows){
  const due=Math.floor(new Date(row.due_at).getTime()/1000);
  const kraken=await fetch("https://api.kraken.com/0/public/OHLC?pair="+encodeURIComponent(obs.pair)+"&interval=60&since="+(due-7200),{signal:AbortSignal.timeout(20000)}).then(r=>r.json());
  if(kraken.error?.length)throw Error("kraken_ohlc:"+kraken.error.join(","));
- const series=Object.values(kraken.result??{}).find(Array.isArray) as any[]|undefined;
+ const series=Object.entries(kraken.result??{}).filter(([name])=>name!=="last").map(([,v])=>v).find(Array.isArray) as any[]|undefined;
  // Use a fully closed candle ending at the horizon, never the unfinished current candle.
  const targetOpen=Math.floor(due/3600)*3600-3600;
  const candle=series?.find(c=>Number(c[0])===targetOpen);
