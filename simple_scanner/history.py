@@ -48,11 +48,13 @@ def persist():
         # a scheduled scan was missed. Do not substitute the latest price for
         # an old target: that would create false horizon returns.
         for hours in HORIZONS:
-            lower=(now-dt.timedelta(hours=hours+1)).isoformat()
+            # Revisit all matured unresolved snapshots: outages must not make
+            # valid observations permanently ineligible for later backfill.
+            mature=(now-dt.timedelta(hours=hours)).isoformat()
             pending=con.execute("""SELECT s.run_at,s.pair,s.price FROM snapshots s
-                WHERE s.run_at>? AND s.run_at<=?
+                WHERE s.run_at<=?
                 AND NOT EXISTS (SELECT 1 FROM outcomes o WHERE o.run_at=s.run_at
-                AND o.pair=s.pair AND o.horizon_hours=?)""",(lower,now.isoformat(),hours)).fetchall()
+                AND o.pair=s.pair AND o.horizon_hours=?)""",(mature,hours)).fetchall()
             for run_at,pair,price in pending:
                 target=(dt.datetime.fromisoformat(run_at)+dt.timedelta(hours=hours)).isoformat()
                 deadline=(dt.datetime.fromisoformat(run_at)+dt.timedelta(hours=hours+1)).isoformat()
