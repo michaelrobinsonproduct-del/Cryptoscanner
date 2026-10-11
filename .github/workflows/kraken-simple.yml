@@ -97,7 +97,11 @@ jobs:
           cp /tmp/simple-latest.json latest.json
           git add history.sqlite3 latest.json
           git diff --cached --check
-          git commit -m "Update paper-only scan history" || echo "No history changes"
+          if ! git diff --cached --quiet; then
+            git commit -m "Update paper-only scan history"
+          else
+            echo "NO_NEW_HISTORY_COMMIT"
+          fi
           git push origin HEAD:refs/heads/simple-history
           git fetch origin refs/heads/simple-history:refs/remotes/origin/simple-history
           test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/simple-history)"
