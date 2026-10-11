@@ -28,8 +28,8 @@
   "outcome_lag_hours_by_horizon": [],
   "unresolved_1h_snapshots": 0,
   "rank_comparison": {
-    "historical_ranked_samples": 192,
-    "mean_base_minus_early_rank": 2.79
+    "historical_ranked_samples": 204,
+    "mean_base_minus_early_rank": 2.7
   },
   "newly_discovered_outside_base_top12": 2,
   "signal_outcomes_by_horizon": [],
@@ -55,16 +55,21 @@
       "next_scan_gain_pct": 8.28
     },
     {
+      "pair": "APXUSDUSD",
+      "observed_at": "2026-10-11T21:21:15.345085+00:00",
+      "next_scan_gain_pct": 5.26
+    },
+    {
       "pair": "ZRCUSD",
       "observed_at": "2026-10-11T21:17:14.679907+00:00",
       "next_scan_gain_pct": 5.18
     }
   ],
-  "unselected_gainers_5pct_observations": 4,
-  "market_observations": 16302,
+  "unselected_gainers_5pct_observations": 5,
+  "market_observations": 16929,
   "market_price_coverage": 627,
-  "feature_rows": 360,
-  "snapshots": 480,
+  "feature_rows": 372,
+  "snapshots": 492,
   "outcomes": 0,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
