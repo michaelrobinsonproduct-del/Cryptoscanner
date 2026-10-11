@@ -47,7 +47,12 @@ def persist():
     outcomes = con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
     feature_rows=con.execute("SELECT COUNT(*) FROM candidate_features").fetchone()[0]
     market_observations=con.execute("SELECT COUNT(*) FROM market_observations").fetchone()[0]
-    missed=con.execute("""SELECT COUNT(*) FROM (SELECT older.pair FROM market_observations older JOIN market_observations newer ON older.pair=newer.pair WHERE older.run_at<newer.run_at AND newer.price>=older.price*1.05 AND NOT EXISTS (SELECT 1 FROM snapshots s WHERE s.run_at=older.run_at AND s.pair=older.pair) GROUP BY older.run_at,older.pair)""").fetchone()[0]
+    # Compare only the next observed scan per pair: bounded work and no hindsight cherry-picking.
+    missed=con.execute("""SELECT COUNT(*) FROM market_observations older
+      WHERE NOT EXISTS (SELECT 1 FROM snapshots s WHERE s.run_at=older.run_at AND s.pair=older.pair)
+      AND EXISTS (SELECT 1 FROM market_observations newer WHERE newer.pair=older.pair
+        AND newer.run_at=(SELECT MIN(next.run_at) FROM market_observations next WHERE next.pair=older.pair AND next.run_at>older.run_at)
+        AND newer.price>=older.price*1.05)""").fetchone()[0]
     summary = {"unselected_gainers_5pct_observations":missed,"market_observations":market_observations,"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
     (DB.parent / "learning.json").write_text(json.dumps(summary,indent=2))
     print("HISTORY_PERSISTED",json.dumps(summary))
