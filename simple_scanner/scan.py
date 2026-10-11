@@ -1,0 +1,51 @@
+"""Standalone, read-only Kraken early-breakout scan. Standard library only."""
+import datetime as dt, json, statistics, time, urllib.request
+from pathlib import Path
+ROOT="https://api.kraken.com/0/public/"
+def get(path):
+    for attempt in range(3):
+        try:
+            req=urllib.request.Request(ROOT+path,headers={"User-Agent":"KrakenSimpleResearch/1.0","Cache-Control":"no-cache"})
+            with urllib.request.urlopen(req,timeout=25) as r: data=json.load(r)
+            if data.get("error"): raise RuntimeError(str(data["error"]))
+            return data["result"]
+        except Exception:
+            if attempt==2:raise
+            time.sleep(2**attempt)
+def main():
+    now=dt.datetime.now(dt.timezone.utc)
+    pairs=get("AssetPairs")
+    eligible={k:v for k,v in pairs.items() if v.get("status")=="online" and v.get("wsname","").endswith("/USD") and v.get("base","").upper() not in {"ZUSD","USD","USDT","USDC","DAI","PYUSD","EURC","RLUSD","TUSD"}}
+    ticker=get("Ticker?pair="+",".join(eligible)) if len(eligible)<100 else get("Ticker")
+    scored=[]; errors=[]
+    for pair,meta in eligible.items():
+        t=ticker.get(pair)
+        if not t:continue
+        try:
+            last=float(t["c"][0]);bid=float(t["b"][0]);ask=float(t["a"][0]);op=float(t["o"]);volume=float(t["v"][1])
+            if min(last,bid,ask,op)<=0 or ask<bid:continue
+            move=100*(last/op-1);spread=10000*(ask/bid-1);notional=volume*last
+            if not (0.25<=move<=12 and spread<=45 and notional>=100000):continue
+            score=round(min(45,move*7)+min(25,notional/150000)+max(0,30-spread/2),1)
+            scored.append({"pair":pair,"symbol":meta.get("wsname",pair),"price":last,"move24_pct":round(move,2),"spread_bps":round(spread,2),"notional_24h_usd":round(notional),"score":score})
+        except (ValueError,TypeError,KeyError,ZeroDivisionError) as e:errors.append({"pair":pair,"error":str(e)})
+    scored.sort(key=lambda x:x["score"],reverse=True)
+    for item in scored[:12]:
+        pair=item["pair"]
+        try:
+            bars=get("OHLC?pair="+pair+"&interval=5")
+            candles=next(v for k,v in bars.items() if k!="last")[:-1]
+            if len(candles)<13:raise ValueError("too few completed candles")
+            age=(now.timestamp()-float(candles[-1][0]))
+            if age<0 or age>900:raise ValueError("stale OHLC")
+            c=[float(x[4]) for x in candles[-13:]];v=[float(x[6]) for x in candles[-13:]]
+            item.update({"move_15m_pct":round(100*(c[-1]/c[-4]-1),2),"move_60m_pct":round(100*(c[-1]/c[0]-1),2),"volume_accel":round(sum(v[-6:])/max(sum(v[-12:-6]),1e-9),2),"ohlc_age_seconds":round(age),"status":"WATCH_RESEARCH_ONLY"})
+        except Exception as e:item.update({"status":"UNVERIFIED","reason":str(e)})
+        time.sleep(.25)
+    finished=dt.datetime.now(dt.timezone.utc)
+    result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"errors":errors,"watch":scored[:12],"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
+    Path("simple_scanner/output").mkdir(parents=True,exist_ok=True)
+    Path("simple_scanner/output/latest.json").write_text(json.dumps(result,indent=2))
+    print(json.dumps(result,indent=2))
+    if not ticker:raise RuntimeError("No live ticker data")
+if __name__=="__main__":main()
