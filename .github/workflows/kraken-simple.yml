@@ -92,6 +92,8 @@ jobs:
           git fetch origin refs/heads/simple-history:refs/remotes/origin/simple-history
           test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/simple-history)"
           git show refs/remotes/origin/simple-history:history.sqlite3 > /tmp/simple-history-remote.sqlite3
+          git show refs/remotes/origin/simple-history:latest.json > /tmp/simple-latest-remote.json
+          cmp /tmp/simple-latest.json /tmp/simple-latest-remote.json
           python - <<'PY'
           import sqlite3
           local=sqlite3.connect("/tmp/simple-history.sqlite3")
