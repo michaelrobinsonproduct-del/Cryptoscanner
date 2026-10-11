@@ -17,7 +17,7 @@ def main():
     pairs=get("AssetPairs")
     eligible={k:v for k,v in pairs.items() if v.get("status")=="online" and v.get("wsname","").endswith("/USD") and v.get("base","").upper() not in {"ZUSD","USD","USDT","USDC","DAI","PYUSD","EURC","RLUSD","TUSD"}}
     ticker=get("Ticker?pair="+",".join(eligible)) if len(eligible)<100 else get("Ticker")
-    scored=[]; errors=[]; matched_tickers=0
+    scored=[]; errors=[]; matched_tickers=0; market_prices={}
     for pair,meta in eligible.items():
         t=ticker.get(pair)
         if not t:continue
@@ -25,6 +25,7 @@ def main():
         try:
             last=float(t["c"][0]);bid=float(t["b"][0]);ask=float(t["a"][0]);op=float(t["o"]);volume=float(t["v"][1])
             if min(last,bid,ask,op)<=0 or ask<bid:continue
+            market_prices[pair]=last
             move=100*(last/op-1);spread=10000*(ask/bid-1);notional=volume*last
             if not (0.25<=move<=12 and spread<=45 and notional>=100000):continue
             score=round(min(45,move*7)+min(25,notional/150000)+max(0,30-spread/2),1)
@@ -54,7 +55,7 @@ def main():
         item["research_rank"]=rank
         item["early_signal_basis"]="15m_momentum_plus_volume_acceleration" if item["early_signal_score"] is not None else "UNVERIFIED"
     finished=dt.datetime.now(dt.timezone.utc)
-    result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in scored[:12]),"errors":errors,"watch":watch,"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
+    result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in scored[:12]),"errors":errors,"watch":watch,"market_prices":market_prices,"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
     Path("simple_scanner/output").mkdir(parents=True,exist_ok=True)
     Path("simple_scanner/output/latest.json").write_text(json.dumps(result,indent=2))
     print(json.dumps(result,indent=2))
