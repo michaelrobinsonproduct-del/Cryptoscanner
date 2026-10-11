@@ -77,7 +77,10 @@ class HistoryTests(unittest.TestCase):
                     watch=[{"pair":"OTHERUSD","price":5,"score":80,"status":"WATCH_RESEARCH_ONLY"}]
                     latest.write_text(json.dumps({"status":"RESEARCH_ONLY","buy_approved":False,"matched_tickers":100,"universe":100,"validated_watch":1,"completed_at":(start+dt.timedelta(minutes=offset)).isoformat(),"watch":watch,"market_prices":{"OTHERUSD":5,"MISSEDUSD":price}}))
                     history.persist()
-                self.assertEqual(json.loads((db.parent/"learning.json").read_text())["unselected_gainers_5pct_observations"],1)
+                report=json.loads((db.parent/"learning.json").read_text())
+                self.assertEqual(report["unselected_gainers_5pct_observations"],1)
+                self.assertEqual(report["missed_breakout_examples"][0]["pair"],"MISSEDUSD")
+                self.assertEqual(report["missed_breakout_examples"][0]["next_scan_gain_pct"],10.0)
 
 if __name__=="__main__":
     unittest.main()
