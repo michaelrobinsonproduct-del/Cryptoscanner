@@ -38,6 +38,8 @@ class HistoryTests(unittest.TestCase):
                     history.persist()
                     self.assertEqual(con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0],1)
                     self.assertEqual(con.execute("PRAGMA integrity_check").fetchone()[0],"ok")
+                    self.assertEqual(con.execute("SELECT COUNT(*) FROM candidate_features").fetchone()[0],2)
+                    self.assertEqual(con.execute("SELECT COUNT(*) FROM candidate_features WHERE pair=\'TESTUSD\'").fetchone()[0],2)
                     self.assertFalse(json.loads((db.parent/"learning.json").read_text())["buy_approved"])
                     con.close()
                 finally:
