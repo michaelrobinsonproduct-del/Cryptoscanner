@@ -43,8 +43,15 @@ def main():
             item.update({"move_15m_pct":round(100*(c[-1]/c[-4]-1),2),"move_60m_pct":round(100*(c[-1]/c[0]-1),2),"volume_accel":round(sum(v[-6:])/max(sum(v[-12:-6]),1e-9),2),"ohlc_age_seconds":round(age),"status":"WATCH_RESEARCH_ONLY"})
         except Exception as e:item.update({"status":"UNVERIFIED","reason":str(e)})
         time.sleep(.25)
+    # Prioritize actual intrahour acceleration after candle validation, not only 24h momentum.
+    for item in scored[:12]:
+        if item.get("status")=="WATCH_RESEARCH_ONLY":
+            item["early_signal_score"]=round(item["score"]+max(-25,min(25,item["move_15m_pct"]*5))+max(-15,min(15,(item["volume_accel"]-1)*10)),1)
+        else:
+            item["early_signal_score"]=None
+    watch=sorted(scored[:12],key=lambda x:(x["early_signal_score"] is not None,x["early_signal_score"] if x["early_signal_score"] is not None else -999),reverse=True)
     finished=dt.datetime.now(dt.timezone.utc)
-    result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in scored[:12]),"errors":errors,"watch":scored[:12],"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
+    result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in scored[:12]),"errors":errors,"watch":watch,"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
     Path("simple_scanner/output").mkdir(parents=True,exist_ok=True)
     Path("simple_scanner/output/latest.json").write_text(json.dumps(result,indent=2))
     print(json.dumps(result,indent=2))
