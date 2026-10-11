@@ -32,7 +32,11 @@ def main():
             scored.append({"pair":pair,"symbol":meta.get("wsname",pair),"price":last,"move24_pct":round(move,2),"spread_bps":round(spread,2),"notional_24h_usd":round(notional),"score":score})
         except (ValueError,TypeError,KeyError,ZeroDivisionError) as e:errors.append({"pair":pair,"error":str(e)})
     scored.sort(key=lambda x:x["score"],reverse=True)
-    # Reserve eight OHLC slots for liquid early movers that are not already\n    # among the strongest 24h-ranked coins. Keep API work bounded at 32.\n    seen={x["pair"] for x in scored[:24]}\n    fresh=sorted((x for x in scored[24:] if x["move24_pct"]>=0.25),key=lambda x:(x["move24_pct"],x["notional_24h_usd"]),reverse=True)[:8]\n    screened=scored[:24]+[x for x in fresh if x["pair"] not in seen]\n    for base_rank,item in enumerate(screened,1):
+    # Include eight additional candidates beyond the base top 24.
+    seen={x["pair"] for x in scored[:24]}
+    fresh=sorted(scored[24:],key=lambda x:(x["move24_pct"],x["notional_24h_usd"]),reverse=True)[:8]
+    screened=scored[:24]+[x for x in fresh if x["pair"] not in seen]
+    for base_rank,item in enumerate(screened,1):
         item["base_rank"]=base_rank
         pair=item["pair"]
         try:
