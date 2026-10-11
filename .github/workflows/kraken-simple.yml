@@ -93,6 +93,7 @@ jobs:
           set -euo pipefail
           cp simple_scanner/output/history.sqlite3 /tmp/simple-history.sqlite3
           cp simple_scanner/output/latest.json /tmp/simple-latest.json
+          cp simple_scanner/output/learning.json /tmp/simple-learning.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git show-ref --verify --quiet refs/remotes/origin/simple-history; then
@@ -103,7 +104,8 @@ jobs:
           fi
           cp /tmp/simple-history.sqlite3 history.sqlite3
           cp /tmp/simple-latest.json latest.json
-          git add history.sqlite3 latest.json
+          cp /tmp/simple-learning.json learning.json
+          git add history.sqlite3 latest.json learning.json
           git diff --cached --check
           if ! git diff --cached --quiet; then
             git commit -m "Update paper-only scan history"
@@ -115,7 +117,9 @@ jobs:
           test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/simple-history)"
           git show refs/remotes/origin/simple-history:history.sqlite3 > /tmp/simple-history-remote.sqlite3
           git show refs/remotes/origin/simple-history:latest.json > /tmp/simple-latest-remote.json
+          git show refs/remotes/origin/simple-history:learning.json > /tmp/simple-learning-remote.json
           cmp /tmp/simple-latest.json /tmp/simple-latest-remote.json
+          cmp /tmp/simple-learning.json /tmp/simple-learning-remote.json
           python - <<'PY'
           import sqlite3
           local=sqlite3.connect("/tmp/simple-history.sqlite3")
