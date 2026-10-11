@@ -36,17 +36,19 @@ def persist():
                 con.execute("INSERT OR IGNORE INTO snapshots VALUES (?,?,?,?)", (report["completed_at"], candidate["pair"], candidate["price"], candidate["score"]))
                 con.execute("INSERT OR IGNORE INTO candidate_features (run_at,pair,base_score,early_signal_score,move_15m_pct,volume_accel,research_rank,base_rank) VALUES (?,?,?,?,?,?,?,?)", (report["completed_at"],candidate["pair"],candidate["score"],candidate.get("early_signal_score"),candidate.get("move_15m_pct"),candidate.get("volume_accel"),candidate.get("research_rank"),candidate.get("base_rank")))
         current = report.get("market_prices") or {c["pair"]: c["price"] for c in report["watch"] if c.get("status") == "WATCH_RESEARCH_ONLY"}
-        # Price every prior watch candidate against the full Kraken ticker universe.
-        # Missing/delisted pairs remain unevaluated; never count missing as a loss or win.
-        for run_at, pair, price in con.execute("SELECT run_at,pair,price FROM snapshots").fetchall():
-            observed_at = dt.datetime.fromisoformat(run_at)
-            assert observed_at.tzinfo is not None and observed_at.utcoffset() is not None
-            age = (now - observed_at).total_seconds()
-            if pair not in current or age <= 0: continue
-            for hours in HORIZONS:
-                if hours*3600 <= age < (hours+1)*3600:
-                    ret = 100*(current[pair]/price-1)
-                    con.execute("INSERT OR IGNORE INTO outcomes VALUES (?,?,?,?,?)", (run_at,pair,hours,report["completed_at"],round(ret,4)))
+        # Only fetch unresolved snapshots inside an eligible horizon window.
+        # This avoids rescanning the entire ledger on every scheduled execution.
+        for hours in HORIZONS:
+            lower=(now-dt.timedelta(hours=hours+1)).isoformat()
+            upper=(now-dt.timedelta(hours=hours)).isoformat()
+            pending=con.execute("""SELECT s.run_at,s.pair,s.price FROM snapshots s
+                WHERE s.run_at>? AND s.run_at<=?
+                AND NOT EXISTS (SELECT 1 FROM outcomes o WHERE o.run_at=s.run_at
+                AND o.pair=s.pair AND o.horizon_hours=?)""",(lower,upper,hours)).fetchall()
+            for run_at,pair,price in pending:
+                if pair not in current: continue
+                ret=100*(current[pair]/price-1)
+                con.execute("INSERT OR IGNORE INTO outcomes VALUES (?,?,?,?,?)", (run_at,pair,hours,report["completed_at"],round(ret,4)))
     assert con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
     n = con.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
     outcomes = con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
