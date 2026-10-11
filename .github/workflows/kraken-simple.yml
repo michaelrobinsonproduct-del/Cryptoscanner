@@ -1,5 +1,9 @@
 name: Simplified Kraken Scan (isolated)
 on:
+  pull_request:
+    paths:
+      - 'simple_scanner/**'
+      - '.github/workflows/kraken-simple.yml'
   workflow_dispatch:
   schedule:
     - cron: '3,33 * * * *'
