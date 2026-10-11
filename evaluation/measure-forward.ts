@@ -7,7 +7,8 @@ const headers={apikey:key,Authorization:"Bearer "+key,"Content-Type":"applicatio
 const base=url.replace(/\/$/,"")+"/rest/v1/";
 async function api(path:string,init:RequestInit={}){const r=await fetch(base+path,{...init,headers:{...headers,...init.headers},signal:AbortSignal.timeout(30000)});if(!r.ok)throw Error("supabase_"+r.status+":"+(await r.text()).slice(0,200));return r.status===204?null:r.json()}
 const rows=await api("challenger_forward_outcomes?select=observation_id,horizon_hours,due_at,status,challenger_observations(pair,baseline_ask,baseline_at)&status=eq.pending&due_at=lte."+encodeURIComponent(new Date(Date.now()-3600000).toISOString())+"&limit=500");
-let measured=0,missing=0;\nconst candleCache=new Map<string,number>();
+let measured=0,missing=0;
+const candleCache=new Map<string,number>();
 for(const row of rows){
  const obs=row.challenger_observations;
  if(!obs||!(Number(obs.baseline_ask)>0))continue;
