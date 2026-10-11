@@ -38,7 +38,9 @@ jobs:
           import sqlite3
           c=sqlite3.connect("simple_scanner/output/history.sqlite3")
           assert c.execute("PRAGMA integrity_check").fetchone()[0]=="ok"
-          print("RESTORED_SNAPSHOTS",c.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0])
+          count=c.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
+          open("simple_scanner/output/history_baseline.txt","w").write(str(count))
+          print("RESTORED_SNAPSHOTS",count)
           PY
           elif [ "$remote_status" -eq 2 ]; then
             echo "NO_SIMPLE_HISTORY: first run starts a new paper-only ledger"
@@ -60,7 +62,9 @@ jobs:
           assert r["buy_approved"] is False
           import json as _json
           h=_json.load(open("simple_scanner/output/learning.json"))
-          assert h["snapshots"]>=r["validated_watch"] and h["buy_approved"] is False
+          baseline=int(open("simple_scanner/output/history_baseline.txt").read())
+          assert h["snapshots"]>=baseline and h["snapshots"]>=r["validated_watch"] and h["buy_approved"] is False
+          print("HISTORY_NONREGRESSION",baseline,h["snapshots"])
           print("FRESH_SCAN_VERIFIED",r["ticker_pairs"],r["universe"],r["status"])
           PY
       - name: Publish durable history after successful scan
