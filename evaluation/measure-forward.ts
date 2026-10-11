@@ -12,7 +12,7 @@ let measured=0,missing=0;
 const candleCache=new Map<string,number>();
 for(const row of rows){
  const obs=row.challenger_observations;
- if(!obs||!(Number(obs.baseline_ask)>0))continue;
+ if(!obs||!String(obs.pair??"").trim()||!(Number(obs.baseline_ask)>0)||!obs.baseline_at){missing++;console.log(JSON.stringify({observation_id:row.observation_id,horizon_hours:row.horizon_hours,status:"pending_retry",reason:"missing_or_invalid_baseline"}));continue;}
  const due=Math.floor(new Date(row.due_at).getTime()/1000);
  if(!Number.isFinite(due))throw Error("invalid_outcome_deadline");
  if(Date.now()-due*1000>29*24*3600*1000){missing++;console.log(JSON.stringify({observation_id:row.observation_id,horizon_hours:row.horizon_hours,status:"pending_retry",reason:"outside_kraken_ohlc_retention"}));continue;} // Kraken hourly OHLC has a limited historical window.
@@ -31,7 +31,7 @@ for(const row of rows){
  const valid=Number.isFinite(price)&&price>0 && isClosedByDeadline(targetOpen,Date.now());
  if(!valid){missing++;continue;} // Missing historical candles remain pending for later retry.
  const payload={status:"measured",measured_at:new Date().toISOString(),ask_at_horizon:price,return_pct:candleReturn(Number(obs.baseline_ask),price),measurement_method:"kraken_hourly_candle_close_vs_initial_baseline_ask"};
- await api("challenger_forward_outcomes?observation_id=eq."+row.observation_id+"&horizon_hours=eq."+row.horizon_hours,{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify(payload)});
+ await api("challenger_forward_outcomes?observation_id=eq."+row.observation_id+"&horizon_hours=eq."+row.horizon_hours+"&status=eq.pending",{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify(payload)});
  measured++;
 }
 console.log(JSON.stringify({pending_checked:rows.length,measured,missing,method:"hourly_closed_candle_close_vs_initial_executable_ask",caveat:"OHLC candle close is not an executable ask"}));
