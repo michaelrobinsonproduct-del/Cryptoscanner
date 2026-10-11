@@ -40,7 +40,7 @@ def persist():
     n = con.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
     outcomes = con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
     summary = {"snapshots":n,"outcomes":outcomes,"evaluation":"INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
-    Path("simple_scanner/output/learning.json").write_text(json.dumps(summary,indent=2))
+    (DB.parent / "learning.json").write_text(json.dumps(summary,indent=2))
     print("HISTORY_PERSISTED",json.dumps(summary))
     con.close()
 
