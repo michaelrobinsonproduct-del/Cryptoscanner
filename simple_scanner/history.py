@@ -26,9 +26,9 @@ def persist():
             if candidate.get("status") == "WATCH_RESEARCH_ONLY":
                 con.execute("INSERT OR IGNORE INTO snapshots VALUES (?,?,?,?)", (report["completed_at"], candidate["pair"], candidate["price"], candidate["score"]))
                 con.execute("INSERT OR IGNORE INTO candidate_features VALUES (?,?,?,?,?,?,?)", (report["completed_at"],candidate["pair"],candidate["score"],candidate.get("early_signal_score"),candidate.get("move_15m_pct"),candidate.get("volume_accel"),candidate.get("research_rank")))
-        current = {c["pair"]: c["price"] for c in report["watch"] if c.get("status") == "WATCH_RESEARCH_ONLY"}
-        # Evaluate only previously observed pairs that are still in the current watchlist.
-        # Absence is not scored as failure or success; coverage must be reported.
+        current = report.get("market_prices") or {c["pair"]: c["price"] for c in report["watch"] if c.get("status") == "WATCH_RESEARCH_ONLY"}
+        # Price every prior watch candidate against the full Kraken ticker universe.
+        # Missing/delisted pairs remain unevaluated; never count missing as a loss or win.
         for run_at, pair, price in con.execute("SELECT run_at,pair,price FROM snapshots").fetchall():
             observed_at = dt.datetime.fromisoformat(run_at)
             assert observed_at.tzinfo is not None and observed_at.utcoffset() is not None
@@ -42,7 +42,8 @@ def persist():
     n = con.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
     outcomes = con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
     feature_rows=con.execute("SELECT COUNT(*) FROM candidate_features").fetchone()[0]
-    summary = {"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
+    eligible_outcome_pairs=con.execute("SELECT COUNT(DISTINCT pair) FROM snapshots WHERE pair IN (SELECT pair FROM snapshots)").fetchone()[0]
+    summary = {"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
     (DB.parent / "learning.json").write_text(json.dumps(summary,indent=2))
     print("HISTORY_PERSISTED",json.dumps(summary))
     con.close()
