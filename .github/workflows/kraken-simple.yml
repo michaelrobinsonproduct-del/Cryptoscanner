@@ -86,11 +86,21 @@ jobs:
           cp /tmp/simple-history.sqlite3 history.sqlite3
           cp /tmp/simple-latest.json latest.json
           git add history.sqlite3 latest.json
+          git diff --cached --check
           git commit -m "Update paper-only scan history" || echo "No history changes"
           git push origin HEAD:refs/heads/simple-history
           git fetch origin refs/heads/simple-history:refs/remotes/origin/simple-history
           test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/simple-history)"
-          echo "DURABLE_HISTORY_PUSH_CONFIRMED"
+          git show refs/remotes/origin/simple-history:history.sqlite3 > /tmp/simple-history-remote.sqlite3
+          python - <<'PY'
+          import sqlite3
+          local=sqlite3.connect("/tmp/simple-history.sqlite3")
+          remote=sqlite3.connect("/tmp/simple-history-remote.sqlite3")
+          assert remote.execute("PRAGMA integrity_check").fetchone()[0]=="ok"
+          for table in ("snapshots","outcomes"):
+            assert remote.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]==local.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+          print("DURABLE_HISTORY_REMOTE_VERIFIED")
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
