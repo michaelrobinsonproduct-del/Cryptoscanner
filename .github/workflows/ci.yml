@@ -27,6 +27,9 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - name: Run one challenger cycle against production control
+        env:
+          CHALLENGER_SUPABASE_URL: ${{ secrets.CHALLENGER_SUPABASE_URL }}
+          CHALLENGER_SUPABASE_SERVICE_KEY: ${{ secrets.CHALLENGER_SUPABASE_SERVICE_KEY }}
         run: bun run evaluation/shadow-cycle.ts
       - uses: actions/upload-artifact@v4
         with:
