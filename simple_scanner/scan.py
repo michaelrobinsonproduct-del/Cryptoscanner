@@ -54,6 +54,7 @@ def main():
         else:
             item["early_signal_score"]=None
     watch=sorted(scored[:24],key=lambda x:(x["early_signal_score"] is not None,x["early_signal_score"] if x["early_signal_score"] is not None else -999),reverse=True)[:12]
+    assert len(watch)<=12 and len({item["pair"] for item in watch})==len(watch)
     for rank,item in enumerate(watch,1):
         item["research_rank"]=rank
         item["early_signal_basis"]="15m_momentum_plus_volume_acceleration" if item["early_signal_score"] is not None else "UNVERIFIED"
