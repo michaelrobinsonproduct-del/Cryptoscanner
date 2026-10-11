@@ -1,5 +1,5 @@
 """Standalone, read-only Kraken early-breakout scan. Standard library only."""
-import datetime as dt, json, statistics, time, urllib.request
+import datetime as dt, json, math, statistics, time, urllib.request
 from pathlib import Path
 ROOT="https://api.kraken.com/0/public/"
 def get(path):
@@ -24,7 +24,7 @@ def main():
         matched_tickers+=1
         try:
             last=float(t["c"][0]);bid=float(t["b"][0]);ask=float(t["a"][0]);op=float(t["o"]);volume=float(t["v"][1])
-            if min(last,bid,ask,op)<=0 or ask<bid:continue
+            if not all(math.isfinite(x) for x in (last,bid,ask,op,volume)) or min(last,bid,ask,op)<=0 or volume<0 or ask<bid:continue
             market_prices[pair]=last
             move=100*(last/op-1);spread=10000*(ask/bid-1);notional=volume*last
             if not (0.25<=move<=12 and spread<=45 and notional>=100000):continue
