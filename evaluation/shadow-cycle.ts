@@ -40,5 +40,5 @@ if(dbUrl&&dbKey){
  const response=await fetch(dbUrl.replace(/\/$/,"")+"/rest/v1/challenger_observations",{method:"POST",headers:{"apikey":dbKey,"Authorization":"Bearer "+dbKey,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates"},body:JSON.stringify(observations),signal:AbortSignal.timeout(45000)});
  if(!response.ok)throw Error("observation_persistence_failed:"+response.status+":"+(await response.text()).slice(0,500));
  console.log(JSON.stringify({persisted_observations:observations.length,cycle_id:cycleId}));
-}else console.log("observation_persistence_not_configured");
+}else if(dbUrl||dbKey)throw Error("observation_persistence_partial_configuration");else console.log("observation_persistence_not_configured");
 console.log(JSON.stringify({file:name,candidates:candidates.length,diagnostics,observed_fields:[...observedFields].sort(),nested_fields:Object.fromEntries(Object.entries(nestedFields).map(([k,v])=>[k,[...v].sort()])),promotable:candidates.filter(x=>x.decision==="PROMOTION_ELIGIBLE").length}));
