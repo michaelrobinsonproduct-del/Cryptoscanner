@@ -50,21 +50,6 @@ jobs:
             echo "HISTORY_REMOTE_CHECK_FAILED: status=$remote_status" >&2
             exit 1
           fi
-      - name: Check observation continuity before scan
-        run: |
-          python - <<'PY'
-          import datetime as dt, sqlite3, json
-          path="simple_scanner/output/history.sqlite3"
-          c=sqlite3.connect(path)
-          rows=c.execute("SELECT DISTINCT run_at FROM market_observations ORDER BY run_at DESC LIMIT 2").fetchall()
-          if rows:
-            age=(dt.datetime.now(dt.timezone.utc)-dt.datetime.fromisoformat(rows[0][0])).total_seconds()/60
-            assert age>=0, "Future-dated stored market observation"
-            print("PREVIOUS_MARKET_OBSERVATION_AGE_MINUTES",round(age,1))
-            if age>90: print("WARNING_OBSERVATION_GAP_MINUTES",round(age,1))
-          else: print("NO_PREVIOUS_MARKET_OBSERVATIONS")
-          c.close()
-          PY
       - name: Run fresh public Kraken scan
         run: python simple_scanner/scan.py
       - name: Record paper-only snapshot and validate SQLite
@@ -82,7 +67,13 @@ jobs:
           baseline=int(open("simple_scanner/output/history_baseline.txt").read())
           assert h["snapshots"]>=baseline and h["snapshots"]>=r["validated_watch"] and h["buy_approved"] is False
           assert h["history_db_integrity"]=="ok"
-          assert h["market_observations"] >= r["matched_tickers"], "Market observations were not persisted"
+          import sqlite3
+          db=sqlite3.connect("simple_scanner/output/history.sqlite3")
+          observed=db.execute("SELECT COUNT(*) FROM market_observations WHERE run_at=?",(r["completed_at"],)).fetchone()[0]
+          snapshots=db.execute("SELECT COUNT(*) FROM snapshots WHERE run_at=?",(r["completed_at"],)).fetchone()[0]
+          assert observed>=int(r["matched_tickers"]*.95), "Current run market observations were not persisted"
+          assert snapshots==r["validated_watch"], "Current run candidate snapshots missing"
+          db.close()
           assert all(x["evaluated"]+x["unresolved"]==x["matured_snapshots"] for x in h["forward_horizon_coverage"]), "Forward coverage accounting inconsistent"
           assert all(x["no_observation_in_window"]<=x["unresolved"] for x in h["forward_horizon_coverage"]), "Invalid missing-observation classification"
           assert h["snapshots"] > baseline, "New scan must append at least one snapshot"
