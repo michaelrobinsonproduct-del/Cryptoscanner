@@ -22,7 +22,7 @@ class ScanTests(unittest.TestCase):
                 i=int(pair.removeprefix("COIN").removesuffix("USD"))
                 values=[1.0]*14
                 if i==56:values[-2]=1.2
-                bars=[[now-70*60+j*300,"1","1","1",str(values[j]),"1","100"] for j in range(14)]
+                bars=[[now-70*60+j*300,"1","1","1",str(values[j]),"1",str(800 if i==56 and j>=7 else 100)] for j in range(14)]
                 return {pair:bars,"last":now}
             raise AssertionError(path)
         ohlc_requested=[]
