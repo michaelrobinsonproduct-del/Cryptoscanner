@@ -82,5 +82,6 @@ def main():
         raise RuntimeError("No fresh verified OHLC watch candidates")
     Path("simple_scanner/output").mkdir(parents=True,exist_ok=True)
     Path("simple_scanner/output/latest.json").write_text(json.dumps(result,indent=2))
-    print(json.dumps(result,indent=2))
+    print("SCAN_SUMMARY "+json.dumps({k:result[k] for k in ("engine","started_at","completed_at","universe","ticker_pairs","matched_tickers","ohlc_screened","validated_watch","status","buy_approved")},separators=(",",":")),flush=True)
+    print("WATCH_SUMMARY "+json.dumps([{"symbol":x["symbol"],"score":x["early_signal_score"],"move_15m_pct":x["move_15m_pct"],"volume_accel":x["volume_accel"]} for x in watch],separators=(",",":")),flush=True)
 if __name__=="__main__":main()
