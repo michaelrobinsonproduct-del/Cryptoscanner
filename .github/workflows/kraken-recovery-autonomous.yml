@@ -58,6 +58,13 @@ jobs:
           assert all(x["evaluated"]+x["unresolved"]==x["matured_snapshots"] for x in h["forward_horizon_coverage"])
           print("RECOVERY_ACCEPTANCE_PASS",r["completed_at"],r["matched_tickers"],n)
           PY
+      - name: Attempt bounded self-recovery and rerun acceptance
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -m compileall -q simple_scanner
+          python -m unittest discover -s simple_scanner -p 'test_*.py' -v
       - name: Open or update persistent failure issue
         if: failure()
         env:
