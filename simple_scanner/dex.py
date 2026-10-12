@@ -11,12 +11,12 @@ API="https://api.dexscreener.com/latest/dex/search/?q="
 QUERIES=("solana","base","ethereum")
 def fetch(query):
     req=urllib.request.Request(API+urllib.parse.quote(query),headers={"User-Agent":"SimpleScannerResearch/1.0"})
-    for attempt in range(3):
+    for attempt in range(2):
         try:
             with urllib.request.urlopen(req,timeout=15) as response:
                 return json.load(response)
         except Exception:
-            if attempt==2: raise
+            if attempt==1: raise
             time.sleep(2**attempt)
 
 def main():
