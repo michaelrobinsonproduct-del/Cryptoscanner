@@ -4,14 +4,20 @@ import json
 import os
 import urllib.parse
 import urllib.request
+import time
 from pathlib import Path
 
 API="https://api.dexscreener.com/latest/dex/search/?q="
 QUERIES=("solana","base","ethereum")
 def fetch(query):
     req=urllib.request.Request(API+urllib.parse.quote(query),headers={"User-Agent":"SimpleScannerResearch/1.0"})
-    with urllib.request.urlopen(req,timeout=15) as response:
-        return json.load(response)
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req,timeout=15) as response:
+                return json.load(response)
+        except Exception:
+            if attempt==2: raise
+            time.sleep(2**attempt)
 
 def main():
     candidates={}
