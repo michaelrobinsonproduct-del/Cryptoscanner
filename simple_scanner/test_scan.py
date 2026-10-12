@@ -18,12 +18,14 @@ class ScanTests(unittest.TestCase):
             if path.startswith("Ticker"):return ticker
             if path.startswith("OHLC"):
                 pair=path.split("pair=")[1].split("&")[0]
+                ohlc_requested.append(pair)
                 i=int(pair.removeprefix("COIN").removesuffix("USD"))
                 values=[1.0]*14
                 if i==15:values[-2]=1.2
                 bars=[[now-70*60+j*300,"1","1","1",str(values[j]),"1","100"] for j in range(14)]
                 return {pair:bars,"last":now}
             raise AssertionError(path)
+        ohlc_requested=[]
         with tempfile.TemporaryDirectory() as tmp:
             cwd=os.getcwd()
             try:
@@ -32,6 +34,7 @@ class ScanTests(unittest.TestCase):
                     scan.main()
                 result=json.loads(Path("simple_scanner/output/latest.json").read_text())
                 self.assertEqual(result["ohlc_screened"],32)
+                self.assertIn("COIN59USD",ohlc_requested, "Early-stage lower-24h-momentum coin must be OHLC-screened")
                 self.assertEqual(len(result["watch"]),12)
                 self.assertEqual(result["validated_watch"],12)
                 self.assertEqual(len({x["pair"] for x in result["watch"]}),12)
