@@ -52,7 +52,7 @@ def main():
         if cache.exists():
             try:
                 previous=json.loads(cache.read_text())
-                print("DEX_STALE_CACHE "+json.dumps({"observed_at":previous["observed_at"],"candidates":len(previous.get("candidates",[])),"errors":errors,"buy_approved":False}),flush=True)
+                print("DEX_STALE_CACHE "+json.dumps({"observed_at":previous["observed_at"],"candidates":len(previous.get("candidates",[])),"errors":errors,"fresh":False,"usable_for_current_research":False,"buy_approved":False}),flush=True)
                 return
             except (ValueError,KeyError,TypeError): pass
         print("DEX_SOURCE_ERRORS "+json.dumps(errors),flush=True)
