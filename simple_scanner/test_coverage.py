@@ -23,6 +23,7 @@ class CoverageTests(unittest.TestCase):
                 with patch.object(scan,"get",side_effect=fake_get):
                     with self.assertRaisesRegex(RuntimeError,"Insufficient eligible-pair ticker coverage"):
                         scan.main()
+                self.assertFalse(Path("simple_scanner/output/latest.json").exists(), "Failed coverage must not publish scan output")
             finally:
                 os.chdir(previous)
 
