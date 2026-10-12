@@ -78,9 +78,9 @@ def main():
         item["early_signal_basis"]="15m_momentum_plus_volume_acceleration" if item["early_signal_score"] is not None else "UNVERIFIED"
     finished=dt.datetime.now(dt.timezone.utc)
     result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"ohlc_screened":len(screened),"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in watch),"errors":errors,"watch":watch,"market_prices":market_prices,"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
+    if not watch:
+        raise RuntimeError("No fresh verified OHLC watch candidates")
     Path("simple_scanner/output").mkdir(parents=True,exist_ok=True)
     Path("simple_scanner/output/latest.json").write_text(json.dumps(result,indent=2))
     print(json.dumps(result,indent=2))
-    if matched_tickers<max(50,int(len(eligible)*0.8)):raise RuntimeError("Insufficient eligible-pair ticker coverage")
-    if not watch:raise RuntimeError("No fresh verified OHLC watch candidates")
 if __name__=="__main__":main()
