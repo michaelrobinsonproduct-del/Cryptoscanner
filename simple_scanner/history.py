@@ -2,11 +2,13 @@
 import datetime as dt
 import json
 import math
+import os
 import sqlite3
 from pathlib import Path
 
-DB = Path("simple_scanner/output/history.sqlite3")
-LATEST = Path("simple_scanner/output/latest.json")
+DATA_DIR = Path(os.getenv("SIMPLE_SCANNER_DATA_DIR","simple_scanner/output"))
+DB = DATA_DIR / "history.sqlite3"
+LATEST = DATA_DIR / "latest.json"
 HORIZONS = (1, 3, 6, 24)
 
 def persist():
