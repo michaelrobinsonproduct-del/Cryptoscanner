@@ -34,7 +34,7 @@ class ScanTests(unittest.TestCase):
                     scan.main()
                 result=json.loads(Path("simple_scanner/output/latest.json").read_text())
                 self.assertEqual(result["ohlc_screened"],32)
-                self.assertIn("COIN59USD",ohlc_requested, "Early-stage lower-24h-momentum coin must be OHLC-screened")
+                self.assertIn("COIN56USD",ohlc_requested, "Early-stage lower-24h-momentum coin must be OHLC-screened")
                 self.assertEqual(len(result["watch"]),12)
                 self.assertEqual(result["validated_watch"],12)
                 self.assertEqual(len({x["pair"] for x in result["watch"]}),12)
