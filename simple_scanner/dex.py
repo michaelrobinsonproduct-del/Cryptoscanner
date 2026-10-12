@@ -36,7 +36,9 @@ def main():
                 key=chain+":"+address
                 candidates[key]={"chain":chain,"pair_address":address,"symbol":str((pair.get("baseToken") or {}).get("symbol") or ""),"liquidity_usd":liquidity,"volume_24h_usd":volume,"price_change_1h_pct":(pair.get("priceChange") or {}).get("h1"),"created_at_ms":age,"status":"DEX_RESEARCH_UNVERIFIED"}
         except Exception as exc:errors.append({"query":query,"error":str(exc)})
-    if len(errors)==len(QUERIES):raise RuntimeError("All DEX discovery sources failed")
+    if len(errors)==len(QUERIES):
+        print("DEX_SOURCE_ERRORS "+json.dumps(errors),flush=True)
+        raise RuntimeError("All DEX discovery sources failed")
     report={"observed_at":dt.datetime.now(dt.timezone.utc).isoformat(),"source":"dexscreener_public_search","scope":"sampled_search_not_full_dex_universe","buy_approved":False,"candidates":sorted(candidates.values(),key=lambda x:x["volume_24h_usd"],reverse=True)[:30],"errors":errors}
     directory=Path(os.getenv("SIMPLE_SCANNER_DATA_DIR","simple_scanner/output"))
     directory.mkdir(parents=True,exist_ok=True)
