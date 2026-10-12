@@ -1,14 +1,6 @@
-name: Simplified Kraken Scan (isolated)
+name: Kraken Recovery Manual Test (isolated)
 on:
-  push:
-    branches:
-      - simplified-scanner-recovery-20261011
-    paths:
-      - 'simple_scanner/**'
-      - '.github/workflows/kraken-simple.yml'
   workflow_dispatch:
-  schedule:
-    - cron: '3,33 * * * *'
 permissions:
   contents: write
 concurrency:
