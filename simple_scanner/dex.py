@@ -15,7 +15,8 @@ def fetch(query):
         try:
             with urllib.request.urlopen(req,timeout=15) as response:
                 return json.load(response)
-        except Exception:
+        except Exception as exc:
+            if getattr(exc,"code",None)==429: raise
             if attempt==1: raise
             time.sleep(2**attempt)
 
