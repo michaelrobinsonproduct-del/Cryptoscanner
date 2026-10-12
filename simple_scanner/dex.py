@@ -30,7 +30,7 @@ def main():
         try:
             previous=json.loads(cache.read_text())
             previous_at=dt.datetime.fromisoformat(previous["observed_at"])
-            if dt.datetime.now(dt.timezone.utc)-previous_at<dt.timedelta(minutes=60):
+            if dt.datetime.now(dt.timezone.utc)-previous_at<dt.timedelta(minutes=61):
                 print("DEX_CACHE_REUSED "+json.dumps({"observed_at":previous["observed_at"],"candidates":len(previous.get("candidates",[])),"buy_approved":False}),flush=True)
                 return
         except (ValueError,KeyError,TypeError): pass
