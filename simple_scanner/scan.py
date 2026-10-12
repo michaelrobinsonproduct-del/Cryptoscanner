@@ -1,5 +1,5 @@
 """Standalone, read-only Kraken early-breakout scan. Standard library only."""
-import datetime as dt, json, math, statistics, time, urllib.request
+import datetime as dt, json, math, statistics, time, urllib.request, os
 from pathlib import Path
 ROOT="https://api.kraken.com/0/public/"
 def get(path):
@@ -80,8 +80,8 @@ def main():
     result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"ohlc_screened":len(screened),"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in watch),"errors":errors,"watch":watch,"market_prices":market_prices,"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
     if not watch:
         raise RuntimeError("No fresh verified OHLC watch candidates")
-    Path("simple_scanner/output").mkdir(parents=True,exist_ok=True)
-    Path("simple_scanner/output/latest.json").write_text(json.dumps(result,indent=2))
+    Path(os.getenv("SIMPLE_SCANNER_DATA_DIR","simple_scanner/output")).mkdir(parents=True,exist_ok=True)
+    (Path(os.getenv("SIMPLE_SCANNER_DATA_DIR","simple_scanner/output"))/"latest.json").write_text(json.dumps(result,indent=2))
     print("SCAN_SUMMARY "+json.dumps({k:result[k] for k in ("engine","started_at","completed_at","universe","ticker_pairs","matched_tickers","ohlc_screened","validated_watch","status","buy_approved")},separators=(",",":")),flush=True)
     print("WATCH_SUMMARY "+json.dumps([{"symbol":x["symbol"],"score":x["early_signal_score"],"move_15m_pct":x["move_15m_pct"],"volume_accel":x["volume_accel"]} for x in watch],separators=(",",":")),flush=True)
 if __name__=="__main__":main()
