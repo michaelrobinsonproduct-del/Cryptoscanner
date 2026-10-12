@@ -1,0 +1,79 @@
+name: Kraken Autonomous Recovery Gate
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '13,43 * * * *'
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: kraken-recovery-acceptance
+  cancel-in-progress: false
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout recovery code
+        uses: actions/checkout@v4
+        with:
+          ref: simplified-scanner-recovery-20261011
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run offline acceptance suite
+        id: tests
+        run: |
+          python -m compileall -q simple_scanner
+          python -m unittest discover -s simple_scanner -p 'test_*.py' -v
+      - name: Fetch durable published results and check freshness
+        id: durable
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch origin refs/heads/simple-history:refs/remotes/origin/simple-history
+          mkdir -p /tmp/kraken-acceptance
+          git show origin/simple-history:latest.json > /tmp/kraken-acceptance/latest.json
+          git show origin/simple-history:learning.json > /tmp/kraken-acceptance/learning.json
+          git show origin/simple-history:history.sqlite3 > /tmp/kraken-acceptance/history.sqlite3
+          python - <<'PY'
+          import datetime as dt,json,sqlite3
+          from pathlib import Path
+          root=Path("/tmp/kraken-acceptance")
+          r=json.loads((root/"latest.json").read_text())
+          h=json.loads((root/"learning.json").read_text())
+          age=(dt.datetime.now(dt.timezone.utc)-dt.datetime.fromisoformat(r["completed_at"])).total_seconds()
+          assert 0<=age<5400, f"Published scan stale: {age/60:.1f} minutes"
+          assert r["matched_tickers"]>=int(r["universe"]*.8)
+          assert r["validated_watch"]>0
+          assert r["buy_approved"] is False and h["buy_approved"] is False
+          con=sqlite3.connect(root/"history.sqlite3")
+          assert con.execute("PRAGMA integrity_check").fetchone()[0]=="ok"
+          n=con.execute("SELECT COUNT(*) FROM market_observations WHERE run_at=?",(r["completed_at"],)).fetchone()[0]
+          assert n>=int(r["matched_tickers"]*.95), f"Only {n} market observations for current scan"
+          n=con.execute("SELECT COUNT(*) FROM snapshots WHERE run_at=?",(r["completed_at"],)).fetchone()[0]
+          assert n==r["validated_watch"], f"Current-run snapshots {n} != {r['validated_watch']}"
+          assert all(x["evaluated"]+x["unresolved"]==x["matured_snapshots"] for x in h["forward_horizon_coverage"])
+          print("RECOVERY_ACCEPTANCE_PASS",r["completed_at"],r["matched_tickers"],n)
+          PY
+      - name: Open or update persistent failure issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python - <<'PY'
+          import json,os,subprocess
+          title="[Automated Recovery] Acceptance gate failing"
+          cmd=["gh","issue","list","--repo",os.environ["REPO"],"--state","open","--search",title+" in:title","--json","number,title"]
+          issues=json.loads(subprocess.check_output(cmd,text=True))
+          issue=next((i for i in issues if i["title"]==title),None)
+          body="Automated acceptance failed. Inspect run: "+os.environ["RUN_URL"]+"\nThe gate checks offline tests, published freshness, current-run persistence, ledger integrity, and forward-outcome accounting. This is a diagnostic alert, not an automatic production-code mutation."
+          if issue:
+              subprocess.run(["gh","issue","comment",str(issue["number"]),"--repo",os.environ["REPO"],"--body",body],check=True)
+          else:
+              subprocess.run(["gh","issue","create","--repo",os.environ["REPO"],"--title",title,"--body",body],check=True)
+          PY
