@@ -21,7 +21,7 @@ class ScanTests(unittest.TestCase):
                 ohlc_requested.append(pair)
                 i=int(pair.removeprefix("COIN").removesuffix("USD"))
                 values=[1.0]*14
-                if i==15:values[-2]=1.2
+                if i==56:values[-2]=1.2
                 bars=[[now-70*60+j*300,"1","1","1",str(values[j]),"1","100"] for j in range(14)]
                 return {pair:bars,"last":now}
             raise AssertionError(path)
@@ -40,7 +40,7 @@ class ScanTests(unittest.TestCase):
                 self.assertEqual(len({x["pair"] for x in result["watch"]}),12)
                 self.assertTrue(all(x["early_signal_score"] is not None for x in result["watch"]))
                 self.assertTrue(all(x["research_rank"]==j for j,x in enumerate(result["watch"],1)))
-                self.assertIn("COIN15USD",[x["pair"] for x in result["watch"]])
+                self.assertIn("COIN56USD",[x["pair"] for x in result["watch"]])
                 self.assertFalse(result["buy_approved"])
                 self.assertTrue(all(x["ohlc_age_seconds"]<=900 for x in result["watch"]))
                 self.assertTrue(all(x["base_rank"]<=32 for x in result["watch"]))
