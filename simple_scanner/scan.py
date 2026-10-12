@@ -32,10 +32,20 @@ def main():
             scored.append({"pair":pair,"symbol":meta.get("wsname",pair),"price":last,"move24_pct":round(move,2),"spread_bps":round(spread,2),"notional_24h_usd":round(notional),"score":score})
         except (ValueError,TypeError,KeyError,ZeroDivisionError) as e:errors.append({"pair":pair,"error":str(e)})
     scored.sort(key=lambda x:x["score"],reverse=True)
-    # Include eight additional candidates beyond the base top 24.
-    seen={x["pair"] for x in scored[:24]}
-    fresh=sorted(scored[24:],key=lambda x:(x["move24_pct"],x["notional_24h_usd"]),reverse=True)[:8]
-    screened=scored[:24]+[x for x in fresh if x["pair"] not in seen]
+    # Diversify OHLC screening beyond the highest 24h momentum names.
+    # Large, already-extended coins otherwise monopolize the research budget.
+    selected=[]; seen=set()
+    def take(items, limit):
+        added=0
+        for item in items:
+            if item["pair"] in seen: continue
+            selected.append(item); seen.add(item["pair"]); added+=1
+            if added>=limit: break
+    take(scored,12)
+    take(sorted(scored,key=lambda x:(x["move24_pct"],-x["notional_24h_usd"])),8)
+    take(sorted(scored,key=lambda x:(x["spread_bps"],-x["notional_24h_usd"])),6)
+    take(sorted(scored,key=lambda x:(x["notional_24h_usd"],-x["move24_pct"])),6)
+    screened=selected
     for base_rank,item in enumerate(screened,1):
         item["base_rank"]=base_rank
         pair=item["pair"]
@@ -50,7 +60,7 @@ def main():
             item.update({"move_15m_pct":round(100*(c[-1]/c[-4]-1),2),"move_60m_pct":round(100*(c[-1]/c[0]-1),2),"volume_accel":round(sum(v[-6:])/max(sum(v[-12:-6]),1e-9),2),"ohlc_age_seconds":round(age),"status":"WATCH_RESEARCH_ONLY"})
         except Exception as e:item.update({"status":"UNVERIFIED","reason":str(e)})
         time.sleep(.25)
-    # Validate 24 initial candidates before selecting 12; otherwise strong intrahour
+    # Validate diversified candidates before selecting 12; otherwise strong intrahour
     # acceleration outside the 24h top 12 is invisible to the research watchlist.
     # Prioritize actual intrahour acceleration after candle validation.
     for item in screened:
