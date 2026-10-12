@@ -31,6 +31,9 @@ def main():
             score=round(min(45,move*7)+min(25,notional/150000)+max(0,30-spread/2),1)
             scored.append({"pair":pair,"symbol":meta.get("wsname",pair),"price":last,"move24_pct":round(move,2),"spread_bps":round(spread,2),"notional_24h_usd":round(notional),"score":score})
         except (ValueError,TypeError,KeyError,ZeroDivisionError) as e:errors.append({"pair":pair,"error":str(e)})
+    # Fail before OHLC requests or publishing output when market coverage is incomplete.
+    if matched_tickers<max(50,int(len(eligible)*0.8)):
+        raise RuntimeError("Insufficient eligible-pair ticker coverage")
     scored.sort(key=lambda x:x["score"],reverse=True)
     # Diversify OHLC screening beyond the highest 24h momentum names.
     # Large, already-extended coins otherwise monopolize the research budget.
