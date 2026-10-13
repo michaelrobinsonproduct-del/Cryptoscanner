@@ -42,10 +42,10 @@
   ],
   "unresolved_1h_snapshots": 144,
   "rank_comparison": {
-    "historical_ranked_samples": 312,
-    "mean_base_minus_early_rank": 2.55
+    "historical_ranked_samples": 324,
+    "mean_base_minus_early_rank": 2.5
   },
-  "newly_discovered_outside_base_top12": 2,
+  "newly_discovered_outside_base_top12": 1,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
@@ -61,6 +61,16 @@
     "average_return_pct": 1.126
   },
   "missed_breakout_examples": [
+    {
+      "pair": "RAILSUSD",
+      "observed_at": "2026-10-13T14:52:29.823864+00:00",
+      "next_scan_gain_pct": 11.48
+    },
+    {
+      "pair": "PRIMEUSD",
+      "observed_at": "2026-10-13T14:52:29.823864+00:00",
+      "next_scan_gain_pct": 11.21
+    },
     {
       "pair": "ALTHEAUSD",
       "observed_at": "2026-10-11T21:04:55.800641+00:00",
@@ -87,26 +97,26 @@
       "next_scan_gain_pct": 7.59
     },
     {
+      "pair": "UUSD",
+      "observed_at": "2026-10-13T14:52:29.823864+00:00",
+      "next_scan_gain_pct": 7.17
+    },
+    {
+      "pair": "ELIZAOSUSD",
+      "observed_at": "2026-10-13T14:52:29.823864+00:00",
+      "next_scan_gain_pct": 6.0
+    },
+    {
       "pair": "PLAYUSD",
       "observed_at": "2026-10-11T22:58:59.781338+00:00",
       "next_scan_gain_pct": 5.73
-    },
-    {
-      "pair": "APXUSDUSD",
-      "observed_at": "2026-10-11T21:21:15.345085+00:00",
-      "next_scan_gain_pct": 5.26
-    },
-    {
-      "pair": "ZRCUSD",
-      "observed_at": "2026-10-11T21:17:14.679907+00:00",
-      "next_scan_gain_pct": 5.18
     }
   ],
-  "unselected_gainers_5pct_observations": 8,
-  "market_observations": 22572,
+  "unselected_gainers_5pct_observations": 12,
+  "market_observations": 23199,
   "market_price_coverage": 627,
-  "feature_rows": 480,
-  "snapshots": 600,
+  "feature_rows": 492,
+  "snapshots": 612,
   "outcomes": 444,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
