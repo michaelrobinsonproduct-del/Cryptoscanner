@@ -42,10 +42,10 @@
   ],
   "unresolved_1h_snapshots": 168,
   "rank_comparison": {
-    "historical_ranked_samples": 348,
-    "mean_base_minus_early_rank": 2.51
+    "historical_ranked_samples": 360,
+    "mean_base_minus_early_rank": 2.54
   },
-  "newly_discovered_outside_base_top12": 3,
+  "newly_discovered_outside_base_top12": 2,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
@@ -61,6 +61,16 @@
     "average_return_pct": 1.126
   },
   "missed_breakout_examples": [
+    {
+      "pair": "GLMRUSD",
+      "observed_at": "2026-10-14T05:59:20.868472+00:00",
+      "next_scan_gain_pct": 18.67
+    },
+    {
+      "pair": "ALTHEAUSD",
+      "observed_at": "2026-10-14T05:59:20.868472+00:00",
+      "next_scan_gain_pct": 16.33
+    },
     {
       "pair": "RAILSUSD",
       "observed_at": "2026-10-13T14:52:29.823864+00:00",
@@ -100,23 +110,13 @@
       "pair": "UUSD",
       "observed_at": "2026-10-13T14:52:29.823864+00:00",
       "next_scan_gain_pct": 7.17
-    },
-    {
-      "pair": "ELIZAOSUSD",
-      "observed_at": "2026-10-13T14:52:29.823864+00:00",
-      "next_scan_gain_pct": 6.0
-    },
-    {
-      "pair": "PLAYUSD",
-      "observed_at": "2026-10-11T22:58:59.781338+00:00",
-      "next_scan_gain_pct": 5.73
     }
   ],
-  "unselected_gainers_5pct_observations": 12,
-  "market_observations": 24453,
+  "unselected_gainers_5pct_observations": 16,
+  "market_observations": 25080,
   "market_price_coverage": 627,
-  "feature_rows": 516,
-  "snapshots": 636,
+  "feature_rows": 528,
+  "snapshots": 648,
   "outcomes": 444,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
