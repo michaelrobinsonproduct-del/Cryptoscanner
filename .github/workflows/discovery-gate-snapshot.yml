@@ -7,6 +7,8 @@ on:
       - 'research/discovery_gate_attribution.py'
       - 'research/shadow_momentum_lane.py'
       - 'research/shadow_ohlc_probe.py'
+      - 'research/forward_compare.py'
+      - 'research/test_forward_compare.py'
       - 'research/test_shadow_momentum_lane.py'
       - '.github/workflows/discovery-gate-snapshot.yml'
   workflow_dispatch:
@@ -30,6 +32,10 @@ jobs:
           python -m py_compile research/shadow_momentum_lane.py research/test_shadow_momentum_lane.py
           python -m research.test_shadow_momentum_lane
           python -m research.shadow_momentum_lane discovery-ticker-snapshot.json --output discovery-shadow-lane.json
+      - name: Verify forward-return research code
+        run: |
+          python -m py_compile research/forward_compare.py research/test_forward_compare.py
+          python -m research.test_forward_compare
       - name: Probe at most 12 shadow OHLC pairs
         run: |
           python -m py_compile research/shadow_ohlc_probe.py
