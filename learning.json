@@ -2,9 +2,9 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 612,
-      "evaluated": 444,
-      "coverage_pct": 72.5,
+      "matured_snapshots": 648,
+      "evaluated": 480,
+      "coverage_pct": 74.1,
       "unresolved": 168,
       "no_observation_in_window": 168
     },
@@ -36,29 +36,29 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 444,
-      "average_delay_hours": 0.818
+      "samples": 480,
+      "average_delay_hours": 0.792
     }
   ],
   "unresolved_1h_snapshots": 168,
   "rank_comparison": {
-    "historical_ranked_samples": 360,
-    "mean_base_minus_early_rank": 2.54
+    "historical_ranked_samples": 372,
+    "mean_base_minus_early_rank": 2.57
   },
-  "newly_discovered_outside_base_top12": 2,
+  "newly_discovered_outside_base_top12": 4,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 396,
-      "early_scored_avg_return_pct": 1.175,
-      "all_selected_avg_return_pct": 1.175,
-      "early_score_above_base_avg_return_pct": 1.512
+      "samples": 432,
+      "early_scored_avg_return_pct": 1.093,
+      "all_selected_avg_return_pct": 1.093,
+      "early_score_above_base_avg_return_pct": 1.382
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 444,
-    "positive": 345,
-    "average_return_pct": 1.126
+    "evaluated": 480,
+    "positive": 368,
+    "average_return_pct": 1.056
   },
   "missed_breakout_examples": [
     {
@@ -70,6 +70,11 @@
       "pair": "ALTHEAUSD",
       "observed_at": "2026-10-14T05:59:20.868472+00:00",
       "next_scan_gain_pct": 16.33
+    },
+    {
+      "pair": "ZRCUSD",
+      "observed_at": "2026-10-14T06:34:05.036322+00:00",
+      "next_scan_gain_pct": 15.34
     },
     {
       "pair": "RAILSUSD",
@@ -102,22 +107,17 @@
       "next_scan_gain_pct": 8.03
     },
     {
-      "pair": "ALTHEAUSD",
-      "observed_at": "2026-10-11T21:22:43.998167+00:00",
-      "next_scan_gain_pct": 7.59
-    },
-    {
-      "pair": "UUSD",
-      "observed_at": "2026-10-13T14:52:29.823864+00:00",
-      "next_scan_gain_pct": 7.17
+      "pair": "ELXUSD",
+      "observed_at": "2026-10-14T06:34:05.036322+00:00",
+      "next_scan_gain_pct": 7.87
     }
   ],
-  "unselected_gainers_5pct_observations": 16,
-  "market_observations": 25080,
+  "unselected_gainers_5pct_observations": 24,
+  "market_observations": 25707,
   "market_price_coverage": 627,
-  "feature_rows": 528,
-  "snapshots": 648,
-  "outcomes": 444,
+  "feature_rows": 540,
+  "snapshots": 660,
+  "outcomes": 480,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
