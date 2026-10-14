@@ -13,6 +13,8 @@ def evaluate(path):
     finally:
         con.close()
     signals=defaultdict(list)
+    baseline=[r[4] for r in rows]
+    positive=sum(1 for r in baseline if r>0)
     for run_at,pair,momentum,volume,ret in rows:
         if momentum is not None and momentum<0:
             signals["NEGATIVE_15M_MOMENTUM"].append(ret)
@@ -20,6 +22,8 @@ def evaluate(path):
             signals["VOLUME_SPIKE_REVIEW"].append(ret)
     return {"mode":"SHADOW_READ_ONLY","observations":len(rows),
             "cohorts":len(set(r[0] for r in rows)),"outcome_horizon_hours":1,
+            "baseline":{"samples":len(baseline),"average_return_pct":round(sum(baseline)/len(baseline),4) if baseline else None,
+                        "positive_return_pct":round(100*positive/len(baseline),2) if baseline else None},
             "partial_signal_outcomes":{k:{"samples":len(v),"average_return_pct":round(sum(v)/len(v),4)}
                 for k,v in sorted(signals.items())},
             "full_risk_validation_possible":False,
