@@ -2,9 +2,9 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 899,
-      "evaluated": 731,
-      "coverage_pct": 81.3,
+      "matured_snapshots": 911,
+      "evaluated": 743,
+      "coverage_pct": 81.6,
       "unresolved": 168,
       "no_observation_in_window": 168
     },
@@ -36,8 +36,8 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 731,
-      "average_delay_hours": 0.679
+      "samples": 743,
+      "average_delay_hours": 0.674
     },
     {
       "hours": 3,
@@ -57,17 +57,17 @@
   ],
   "unresolved_1h_snapshots": 168,
   "rank_comparison": {
-    "historical_ranked_samples": 647,
-    "mean_base_minus_early_rank": 2.05
+    "historical_ranked_samples": 659,
+    "mean_base_minus_early_rank": 2.03
   },
   "newly_discovered_outside_base_top12": 1,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 683,
-      "early_scored_avg_return_pct": 0.577,
-      "all_selected_avg_return_pct": 0.577,
-      "early_score_above_base_avg_return_pct": 0.667
+      "samples": 695,
+      "early_scored_avg_return_pct": 0.555,
+      "all_selected_avg_return_pct": 0.555,
+      "early_score_above_base_avg_return_pct": 0.654
     },
     {
       "hours": 3,
@@ -92,9 +92,9 @@
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 1210,
-    "positive": 626,
-    "average_return_pct": -0.015
+    "evaluated": 1222,
+    "positive": 630,
+    "average_return_pct": -0.022
   },
   "missed_breakout_examples": [
     {
@@ -148,12 +148,12 @@
       "next_scan_gain_pct": 18.67
     }
   ],
-  "unselected_gainers_5pct_observations": 127,
-  "market_observations": 40127,
+  "unselected_gainers_5pct_observations": 128,
+  "market_observations": 40754,
   "market_price_coverage": 627,
-  "feature_rows": 815,
-  "snapshots": 935,
-  "outcomes": 1210,
+  "feature_rows": 827,
+  "snapshots": 947,
+  "outcomes": 1222,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
