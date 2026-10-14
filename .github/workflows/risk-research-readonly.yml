@@ -1,0 +1,40 @@
+name: Risk Research Read-Only Verification
+on:
+  push:
+    branches: [research-risk-shadow-20261014]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline regression tests
+        run: |
+          python -m compileall -q simple_scanner
+          python -m unittest discover -s simple_scanner -p 'test_*.py' -v
+      - name: Read existing paper-only history without writing
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin simple-history
+          git show FETCH_HEAD:history.sqlite3 > /tmp/risk-research-history.sqlite3
+          python - <<'PY'
+          import json,sqlite3
+          from simple_scanner.research_risk_shadow import evaluate
+          path="/tmp/risk-research-history.sqlite3"
+          con=sqlite3.connect("file:"+path+"?mode=ro",uri=True)
+          try:
+              assert con.execute("PRAGMA integrity_check").fetchone()[0]=="ok"
+          finally: con.close()
+          result=evaluate(path)
+          assert result["buy_approved"] is False
+          assert result["production_modified"] is False
+          assert result["full_risk_validation_possible"] is False
+          assert result["observations"]>0, "No matched historical outcomes"
+          print("RISK_SHADOW_RESULT",json.dumps(result,sort_keys=True))
+          PY
