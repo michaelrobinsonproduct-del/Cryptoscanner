@@ -6,6 +6,8 @@ on:
     paths:
       - 'research/discovery_miss_audit.py'
       - 'research/test_discovery_miss_audit.py'
+      - 'research/discovery_gate_attribution.py'
+      - 'research/test_discovery_gate_attribution.py'
       - '.github/workflows/discovery-miss-audit-tests.yml'
 permissions:
   contents: read
@@ -20,5 +22,6 @@ jobs:
           python-version: '3.12'
       - name: Compile and verify read-only diagnostic
         run: |
-          python -m py_compile research/discovery_miss_audit.py research/test_discovery_miss_audit.py
+          python -m py_compile research/discovery_miss_audit.py research/test_discovery_miss_audit.py research/discovery_gate_attribution.py research/test_discovery_gate_attribution.py
           python -m research.test_discovery_miss_audit
+          python -m research.test_discovery_gate_attribution
