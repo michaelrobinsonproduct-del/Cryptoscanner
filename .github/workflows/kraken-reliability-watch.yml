@@ -1,10 +1,6 @@
 name: Kraken Reliability Watch
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/kraken-reliability-watch.yml'
 permissions:
   contents: read
   actions: write
