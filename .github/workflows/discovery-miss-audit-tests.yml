@@ -1,0 +1,24 @@
+name: Discovery Miss Audit Offline Tests
+on:
+  workflow_dispatch:
+  push:
+    branches: [research-discovery-audit-20261014]
+    paths:
+      - 'research/discovery_miss_audit.py'
+      - 'research/test_discovery_miss_audit.py'
+      - '.github/workflows/discovery-miss-audit-tests.yml'
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and verify read-only diagnostic
+        run: |
+          python -m py_compile research/discovery_miss_audit.py research/test_discovery_miss_audit.py
+          python -m research.test_discovery_miss_audit
