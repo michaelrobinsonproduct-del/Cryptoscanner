@@ -6,6 +6,9 @@ def test():
     snapshot={"captured_at":"2026-10-14T00:00:00+00:00","universe":5,
       "records":{"PASS":base,"EARLY":row(open=10.1),"WIDE":row(open=10.1,bid=9.8,ask=10.2),
         "THIN":row(open=10.1,volume24=100),"INVALID":row(last=-1)}}
+    # Coverage guard requires at least 50 matched tickers, even in synthetic fixtures.
+    snapshot["records"].update({f"INVALID_{i}":row(last=-1) for i in range(45)})
+    snapshot["universe"]=50
     before=repr(snapshot)
     r=evaluate(snapshot)
     assert r["baseline_pairs"]==["PASS"],r
