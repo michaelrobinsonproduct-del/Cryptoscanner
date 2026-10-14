@@ -13,8 +13,6 @@ on:
     paths:
       - 'rebuild_v2/**'
       - '.github/workflows/kraken-rebuild-shadow.yml'
-  schedule:
-    - cron: '*/15 * * * *'
 
 permissions:
   contents: write
