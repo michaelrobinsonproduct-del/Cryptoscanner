@@ -42,8 +42,8 @@
   ],
   "unresolved_1h_snapshots": 168,
   "rank_comparison": {
-    "historical_ranked_samples": 372,
-    "mean_base_minus_early_rank": 2.57
+    "historical_ranked_samples": 384,
+    "mean_base_minus_early_rank": 2.65
   },
   "newly_discovered_outside_base_top12": 4,
   "signal_outcomes_by_horizon": [
@@ -65,6 +65,11 @@
       "pair": "GLMRUSD",
       "observed_at": "2026-10-14T05:59:20.868472+00:00",
       "next_scan_gain_pct": 18.67
+    },
+    {
+      "pair": "FORESTUSD",
+      "observed_at": "2026-10-14T07:36:53.493334+00:00",
+      "next_scan_gain_pct": 17.29
     },
     {
       "pair": "ALTHEAUSD",
@@ -92,6 +97,11 @@
       "next_scan_gain_pct": 10.34
     },
     {
+      "pair": "ZEREBROUSD",
+      "observed_at": "2026-10-14T07:36:53.493334+00:00",
+      "next_scan_gain_pct": 8.73
+    },
+    {
       "pair": "LOFIUSD",
       "observed_at": "2026-10-11T21:17:14.679907+00:00",
       "next_scan_gain_pct": 8.49
@@ -100,23 +110,13 @@
       "pair": "ALTHEAUSD",
       "observed_at": "2026-10-11T21:09:25.492083+00:00",
       "next_scan_gain_pct": 8.28
-    },
-    {
-      "pair": "DUCKUSD",
-      "observed_at": "2026-10-11T22:58:59.781338+00:00",
-      "next_scan_gain_pct": 8.03
-    },
-    {
-      "pair": "ELXUSD",
-      "observed_at": "2026-10-14T06:34:05.036322+00:00",
-      "next_scan_gain_pct": 7.87
     }
   ],
-  "unselected_gainers_5pct_observations": 24,
-  "market_observations": 25707,
+  "unselected_gainers_5pct_observations": 28,
+  "market_observations": 26334,
   "market_price_coverage": 627,
-  "feature_rows": 540,
-  "snapshots": 660,
+  "feature_rows": 552,
+  "snapshots": 672,
   "outcomes": 480,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
