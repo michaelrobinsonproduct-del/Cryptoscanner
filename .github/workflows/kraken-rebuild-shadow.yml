@@ -8,11 +8,6 @@ on:
         description: 'UTC 15-minute cycle being recovered (YYYY-MM-DDTHH:MM:SSZ)'
         required: false
         type: string
-  push:
-    branches: [main]
-    paths:
-      - 'rebuild_v2/**'
-      - '.github/workflows/kraken-rebuild-shadow.yml'
 
 permissions:
   contents: write
