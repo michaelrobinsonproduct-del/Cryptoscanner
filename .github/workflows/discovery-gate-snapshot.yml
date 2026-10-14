@@ -6,6 +6,7 @@ on:
       - 'research/capture_discovery_tickers.py'
       - 'research/discovery_gate_attribution.py'
       - 'research/shadow_momentum_lane.py'
+      - 'research/shadow_ohlc_probe.py'
       - 'research/test_shadow_momentum_lane.py'
       - '.github/workflows/discovery-gate-snapshot.yml'
   workflow_dispatch:
@@ -29,6 +30,10 @@ jobs:
           python -m py_compile research/shadow_momentum_lane.py research/test_shadow_momentum_lane.py
           python -m research.test_shadow_momentum_lane
           python -m research.shadow_momentum_lane discovery-ticker-snapshot.json --output discovery-shadow-lane.json
+      - name: Probe at most 12 shadow OHLC pairs
+        run: |
+          python -m py_compile research/shadow_ohlc_probe.py
+          python -m research.shadow_ohlc_probe discovery-ticker-snapshot.json --output discovery-shadow-ohlc.json
       - name: Upload isolated snapshot
         uses: actions/upload-artifact@v4
         with:
@@ -36,4 +41,5 @@ jobs:
           path: |
             discovery-ticker-snapshot.json
             discovery-shadow-lane.json
+            discovery-shadow-ohlc.json
           retention-days: 3
