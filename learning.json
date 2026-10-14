@@ -2,9 +2,9 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 672,
-      "evaluated": 504,
-      "coverage_pct": 75.0,
+      "matured_snapshots": 684,
+      "evaluated": 516,
+      "coverage_pct": 75.4,
       "unresolved": 168,
       "no_observation_in_window": 168
     },
@@ -36,8 +36,8 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 504,
-      "average_delay_hours": 0.779
+      "samples": 516,
+      "average_delay_hours": 0.773
     },
     {
       "hours": 3,
@@ -47,17 +47,17 @@
   ],
   "unresolved_1h_snapshots": 168,
   "rank_comparison": {
-    "historical_ranked_samples": 408,
+    "historical_ranked_samples": 420,
     "mean_base_minus_early_rank": 2.75
   },
-  "newly_discovered_outside_base_top12": 2,
+  "newly_discovered_outside_base_top12": 3,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 456,
-      "early_scored_avg_return_pct": 0.993,
-      "all_selected_avg_return_pct": 0.993,
-      "early_score_above_base_avg_return_pct": 1.24
+      "samples": 468,
+      "early_scored_avg_return_pct": 0.953,
+      "all_selected_avg_return_pct": 0.953,
+      "early_score_above_base_avg_return_pct": 1.166
     },
     {
       "hours": 3,
@@ -68,15 +68,25 @@
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 540,
-    "positive": 382,
-    "average_return_pct": 0.888
+    "evaluated": 552,
+    "positive": 386,
+    "average_return_pct": 0.856
   },
   "missed_breakout_examples": [
+    {
+      "pair": "UXLINKUSD",
+      "observed_at": "2026-10-14T10:02:52.470882+00:00",
+      "next_scan_gain_pct": 21.82
+    },
     {
       "pair": "GLMRUSD",
       "observed_at": "2026-10-14T05:59:20.868472+00:00",
       "next_scan_gain_pct": 18.67
+    },
+    {
+      "pair": "DUCKUSD",
+      "observed_at": "2026-10-14T10:02:52.470882+00:00",
+      "next_scan_gain_pct": 17.78
     },
     {
       "pair": "FORESTUSD",
@@ -94,42 +104,32 @@
       "next_scan_gain_pct": 15.34
     },
     {
+      "pair": "BOSUSD",
+      "observed_at": "2026-10-14T10:02:52.470882+00:00",
+      "next_scan_gain_pct": 13.04
+    },
+    {
+      "pair": "OMGUSD",
+      "observed_at": "2026-10-14T10:02:52.470882+00:00",
+      "next_scan_gain_pct": 12.02
+    },
+    {
       "pair": "RAILSUSD",
       "observed_at": "2026-10-13T14:52:29.823864+00:00",
       "next_scan_gain_pct": 11.48
     },
     {
-      "pair": "PRIMEUSD",
-      "observed_at": "2026-10-13T14:52:29.823864+00:00",
-      "next_scan_gain_pct": 11.21
-    },
-    {
-      "pair": "ALTHEAUSD",
-      "observed_at": "2026-10-11T21:04:55.800641+00:00",
-      "next_scan_gain_pct": 10.34
-    },
-    {
-      "pair": "ZEREBROUSD",
-      "observed_at": "2026-10-14T07:36:53.493334+00:00",
-      "next_scan_gain_pct": 8.73
-    },
-    {
-      "pair": "LOFIUSD",
-      "observed_at": "2026-10-11T21:17:14.679907+00:00",
-      "next_scan_gain_pct": 8.49
-    },
-    {
-      "pair": "ALTHEAUSD",
-      "observed_at": "2026-10-11T21:09:25.492083+00:00",
-      "next_scan_gain_pct": 8.28
+      "pair": "PNTUSD",
+      "observed_at": "2026-10-14T10:02:52.470882+00:00",
+      "next_scan_gain_pct": 11.32
     }
   ],
-  "unselected_gainers_5pct_observations": 30,
-  "market_observations": 27588,
+  "unselected_gainers_5pct_observations": 37,
+  "market_observations": 28215,
   "market_price_coverage": 627,
-  "feature_rows": 576,
-  "snapshots": 696,
-  "outcomes": 540,
+  "feature_rows": 588,
+  "snapshots": 708,
+  "outcomes": 552,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
