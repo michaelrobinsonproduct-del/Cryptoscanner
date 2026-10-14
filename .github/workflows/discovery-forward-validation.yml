@@ -1,0 +1,48 @@
+name: Isolated Forward Discovery Validation
+on:
+  push:
+    branches: [research-discovery-audit-20261014]
+    paths:
+      - '.github/workflows/discovery-forward-validation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  forward:
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify offline test suite
+        run: |
+          python -m research.test_discovery_gate_attribution
+          python -m research.test_shadow_momentum_lane
+          python -m research.test_forward_compare
+      - name: Capture initial read-only Kraken market snapshot
+        run: python -m research.capture_discovery_tickers --output forward-before.json
+      - name: Wait for actual 10-minute observation interval
+        run: sleep 610
+      - name: Capture subsequent read-only Kraken market snapshot
+        run: python -m research.capture_discovery_tickers --output forward-after.json
+      - name: Compare observed baseline and shadow returns
+        run: |
+          python - <<'PY'
+          import json
+          with open('forward-before.json') as f: old=json.load(f)
+          with open('forward-state.json','w') as f: json.dump({'snapshot':old},f)
+          PY
+          python -m research.forward_compare forward-state.json forward-after.json --output forward-results.json
+      - name: Upload reproducible research evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: discovery-forward-evidence
+          path: |
+            forward-before.json
+            forward-after.json
+            forward-results.json
+          retention-days: 3
+          if-no-files-found: warn
