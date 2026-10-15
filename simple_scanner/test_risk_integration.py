@@ -35,7 +35,11 @@ class ScannerIntegration(unittest.TestCase):
             # Fresh DEX cache avoids external network requests.
             (output/"dex_latest.json").write_text(json.dumps({"observed_at":now.isoformat(),"candidates":[]}))
             with patch.dict(os.environ,{"SIMPLE_SCANNER_DATA_DIR":folder}),patch.object(scan,"get",side_effect=fake_get),patch.object(scan.time,"sleep",return_value=None),patch.object(history,"DATA_DIR",output),patch.object(history,"DB",output/"history.sqlite3"),patch.object(history,"LATEST",output/"latest.json"),contextlib.redirect_stdout(io.StringIO()) as captured:
-                scan.main()
+                try:
+                    scan.main()
+                except RuntimeError:
+                    # Debug the synthetic fixture, never production scanner behavior.
+                    self.fail("Fixture did not produce a watch candidate; OHLC sample="+str(fake_get("OHLC?pair=P0&interval=5"))+" ticker="+str(tickers["P0"]))
                 report=json.loads((output/"latest.json").read_text())
                 self.assertFalse(report["buy_approved"])
                 self.assertEqual(report["status"],"RESEARCH_ONLY")
