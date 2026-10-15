@@ -1,5 +1,4 @@
 """Research-only feature storage. Explicit path required; never touches scanner history DB."""
-import os
 import sqlite3
 from pathlib import Path
 from simple_scanner.market_feature_schema import validate_record
@@ -10,8 +9,11 @@ def persist_features(path, capture, *, observed_at, keep_runs=96, max_pairs=1000
     Caller must supply an isolated path. This function is never imported by scan.py.
     """
     p=Path(path).resolve()
-    if p.name=="history.sqlite3" or p.name=="latest.json" or "/data/" in str(p)+"/":
+    protected=Path("/data")
+    if p.name in {"history.sqlite3","latest.json"} or p==protected or protected in p.parents:
         raise ValueError("protected production path")
+    if p.suffix!=".sqlite3":
+        raise ValueError("sidecar must use .sqlite3 extension")
     if type(keep_runs) is not int or not 2<=keep_runs<=1000:
         raise ValueError("invalid retention")
     if type(max_pairs) is not int or not 1<=max_pairs<=10000:
@@ -26,7 +28,7 @@ def persist_features(path, capture, *, observed_at, keep_runs=96, max_pairs=1000
     if any(r.get("observed_at")!=observed_at or
            not validate_record(r,observed_at=observed_at)["valid"] for r in records):
         raise ValueError("invalid point-in-time record")
-    if p.exists() and not p.is_file():
+    if p.exists() and (p.is_symlink() or not p.is_file()):
         raise ValueError("invalid destination")
     p.parent.mkdir(parents=True,exist_ok=True)
     con=sqlite3.connect(p,timeout=5)
