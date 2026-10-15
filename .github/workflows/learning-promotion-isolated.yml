@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'simple_scanner/promotion_gate.py'
+      - 'simple_scanner/replay_quality.py'
+      - 'simple_scanner/test_replay_quality.py'
       - 'simple_scanner/replay_comparison.py'
       - 'simple_scanner/test_replay_comparison.py'
       - 'simple_scanner/full_market_replay.py'
