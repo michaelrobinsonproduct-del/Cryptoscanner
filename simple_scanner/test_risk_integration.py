@@ -42,7 +42,7 @@ class ScannerIntegration(unittest.TestCase):
                     tb=exc.__traceback__
                     while tb and tb.tb_next: tb=tb.tb_next
                     locals_at_failure=tb.tb_frame.f_locals if tb else {}
-                    self.fail("Fixture watch failure: scored="+str(locals_at_failure.get("scored"))+" screened="+str(locals_at_failure.get("screened"))+" watch="+str(locals_at_failure.get("watch")))
+                    self.fail("Fixture watch failure: scored="+str(locals_at_failure.get("scored"))+" errors="+str(locals_at_failure.get("errors"))+" eligible="+str(len(locals_at_failure.get("eligible",{})))+" matched="+str(locals_at_failure.get("matched_tickers"))+" screened="+str(locals_at_failure.get("screened"))+" watch="+str(locals_at_failure.get("watch")))
                 report=json.loads((output/"latest.json").read_text())
                 self.assertFalse(report["buy_approved"])
                 self.assertEqual(report["status"],"RESEARCH_ONLY")
