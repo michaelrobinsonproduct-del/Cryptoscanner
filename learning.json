@@ -2,9 +2,9 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 1300,
-      "evaluated": 1132,
-      "coverage_pct": 87.1,
+      "matured_snapshots": 1312,
+      "evaluated": 1144,
+      "coverage_pct": 87.2,
       "unresolved": 168,
       "no_observation_in_window": 168
     },
@@ -36,8 +36,8 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 1132,
-      "average_delay_hours": 0.562
+      "samples": 1144,
+      "average_delay_hours": 0.561
     },
     {
       "hours": 3,
@@ -57,17 +57,17 @@
   ],
   "unresolved_1h_snapshots": 168,
   "rank_comparison": {
-    "historical_ranked_samples": 1048,
-    "mean_base_minus_early_rank": 1.52
+    "historical_ranked_samples": 1060,
+    "mean_base_minus_early_rank": 1.5
   },
   "newly_discovered_outside_base_top12": 0,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 1084,
-      "early_scored_avg_return_pct": 0.345,
-      "all_selected_avg_return_pct": 0.345,
-      "early_score_above_base_avg_return_pct": 0.457
+      "samples": 1096,
+      "early_scored_avg_return_pct": 0.337,
+      "all_selected_avg_return_pct": 0.337,
+      "early_score_above_base_avg_return_pct": 0.446
     },
     {
       "hours": 3,
@@ -92,9 +92,9 @@
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 2699,
-    "positive": 1213,
-    "average_return_pct": -0.46
+    "evaluated": 2711,
+    "positive": 1216,
+    "average_return_pct": -0.459
   },
   "missed_breakout_examples": [
     {
@@ -148,12 +148,12 @@
       "next_scan_gain_pct": 34.72
     }
   ],
-  "unselected_gainers_5pct_observations": 340,
-  "market_observations": 61237,
+  "unselected_gainers_5pct_observations": 345,
+  "market_observations": 61856,
   "market_price_coverage": 619,
-  "feature_rows": 1216,
-  "snapshots": 1336,
-  "outcomes": 2699,
+  "feature_rows": 1228,
+  "snapshots": 1348,
+  "outcomes": 2711,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
