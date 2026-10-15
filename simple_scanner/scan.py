@@ -76,6 +76,16 @@ def main():
     for rank,item in enumerate(watch,1):
         item["research_rank"]=rank
         item["early_signal_basis"]="15m_momentum_plus_volume_acceleration" if item["early_signal_score"] is not None else "UNVERIFIED"
+    # Additive risk annotation only: selection, ranks, scores and approvals remain untouched.
+    try:
+        from simple_scanner.risk_labels import assess_risk
+        for item in watch:
+            item.update(assess_risk(item))
+    except Exception as risk_error:
+        # Risk display is optional; never fail the scanner for a display-only feature.
+        for item in watch:
+            item["risk"]="UNASSESSED"
+            item["risk_reasons"]=["risk_annotation_unavailable"]
     finished=dt.datetime.now(dt.timezone.utc)
     result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"ohlc_screened":len(screened),"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in watch),"errors":errors,"watch":watch,"market_prices":market_prices,"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
     if not watch:
@@ -83,5 +93,5 @@ def main():
     Path(os.getenv("SIMPLE_SCANNER_DATA_DIR","simple_scanner/output")).mkdir(parents=True,exist_ok=True)
     (Path(os.getenv("SIMPLE_SCANNER_DATA_DIR","simple_scanner/output"))/"latest.json").write_text(json.dumps(result,indent=2))
     print("SCAN_SUMMARY "+json.dumps({k:result[k] for k in ("engine","started_at","completed_at","universe","ticker_pairs","matched_tickers","ohlc_screened","validated_watch","status","buy_approved")},separators=(",",":")),flush=True)
-    print("WATCH_SUMMARY "+json.dumps([{"symbol":x["symbol"],"score":x["early_signal_score"],"move_15m_pct":x["move_15m_pct"],"volume_accel":x["volume_accel"]} for x in watch],separators=(",",":")),flush=True)
+    print("WATCH_SUMMARY "+json.dumps([{"symbol":x["symbol"],"score":x["early_signal_score"],"move_15m_pct":x["move_15m_pct"],"volume_accel":x["volume_accel"],"risk":x.get("risk","UNASSESSED"),"risk_reasons":x.get("risk_reasons",[])} for x in watch],separators=(",",":")),flush=True)
 if __name__=="__main__":main()
