@@ -18,7 +18,7 @@ class ScannerIntegration(unittest.TestCase):
         tickers={}
         for i in range(60):
             price=1.02 if i==0 else 1.0
-            tickers[f"P{i}"]={"c":[str(price)],"b":[str(price)],"a":[str(price*1.001)],"o":["1"],"v":["0","1000000"]}
+            tickers[f"P{i}"]={"c":[str(price)],"b":[str(price)],"a":[str(price*1.001)],"o":"1","v":["0","1000000"]}
         # 14 bars; last is unfinished and is excluded by the scanner.
         candles=[]
         for j in range(14):
