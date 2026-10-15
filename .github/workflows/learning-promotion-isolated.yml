@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'simple_scanner/promotion_gate.py'
+      - 'simple_scanner/model_versioning.py'
+      - 'simple_scanner/test_model_versioning.py'
       - 'simple_scanner/learning_evidence.py'
       - 'simple_scanner/test_learning_evidence.py'
       - 'simple_scanner/test_promotion_gate.py'
