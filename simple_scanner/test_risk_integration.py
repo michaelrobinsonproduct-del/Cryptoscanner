@@ -27,7 +27,7 @@ class ScannerIntegration(unittest.TestCase):
             candles.append([t,"0","0","0",str(close),"0","100","0"])
         def fake_get(path):
             if path=="AssetPairs": return pairs
-            if path=="Ticker": return tickers
+            if path=="Ticker" or path.startswith("Ticker?pair="): return tickers
             if path.startswith("OHLC?"): return {"P0":candles,"last":int(now.timestamp())}
             raise AssertionError("Unexpected API path "+path)
         with tempfile.TemporaryDirectory() as folder:
