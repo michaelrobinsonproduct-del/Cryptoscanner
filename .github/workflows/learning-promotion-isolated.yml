@@ -1,0 +1,43 @@
+name: Learning promotion safety validation
+on:
+  pull_request:
+    paths:
+      - 'simple_scanner/promotion_gate.py'
+      - 'simple_scanner/research_feature_pipeline.py'
+      - 'simple_scanner/test_research_feature_pipeline.py'
+      - 'simple_scanner/feature_sidecar.py'
+      - 'simple_scanner/test_feature_sidecar.py'
+      - 'simple_scanner/ticker_feature_capture.py'
+      - 'simple_scanner/test_ticker_feature_capture.py'
+      - 'simple_scanner/market_feature_schema.py'
+      - 'simple_scanner/test_market_feature_schema.py'
+      - 'simple_scanner/replay_quality.py'
+      - 'simple_scanner/test_replay_quality.py'
+      - 'simple_scanner/replay_comparison.py'
+      - 'simple_scanner/test_replay_comparison.py'
+      - 'simple_scanner/full_market_replay.py'
+      - 'simple_scanner/test_full_market_replay.py'
+      - 'simple_scanner/market_recall.py'
+      - 'simple_scanner/test_market_recall.py'
+      - 'simple_scanner/model_versioning.py'
+      - 'simple_scanner/test_model_versioning.py'
+      - 'simple_scanner/learning_evidence.py'
+      - 'simple_scanner/test_learning_evidence.py'
+      - 'simple_scanner/test_promotion_gate.py'
+      - 'simple_scanner/test_promotion_gate_edge_cases.py'
+      - '.github/workflows/learning-promotion-isolated.yml'
+  workflow_dispatch:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Safety and scanner regression tests
+        run: |
+          python -m compileall -q simple_scanner
+          python -m unittest discover -s simple_scanner -p 'test_*.py' -v
