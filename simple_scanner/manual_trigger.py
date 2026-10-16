@@ -23,8 +23,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(400)
             return
         result = execute("manual")
-        status = 202 if result == 0 else 409 if result == 75 else 503
-        body = json.dumps({"execution_exit_code": result, "accepted": result == 0}).encode()
+        status = 200 if result == 0 else 409 if result == 75 else 503
+        body = json.dumps({"execution_exit_code": result, "completed": result == 0}).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
