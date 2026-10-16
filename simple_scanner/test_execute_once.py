@@ -67,4 +67,5 @@ class ExecuteTests(unittest.TestCase):
                 records[0] = Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []")
                 with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
                     self.assertEqual(execute(), 1)
-\nif __name__ == "__main__":\n    unittest.main()\n
+if __name__ == "__main__":
+    unittest.main()
