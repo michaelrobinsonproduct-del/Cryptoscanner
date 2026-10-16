@@ -32,6 +32,18 @@ def execute(origin="manual"):
             print("SCAN_BUSY " + json.dumps({"origin": origin}), flush=True)
             return 75
         started = dt.datetime.now(dt.timezone.utc)
+        # Optional mailbox check, inside the shared lock. Failure cannot block cron.
+        manual_pending = []
+        if origin == "cron" and os.environ.get("SIMPLE_SCANNER_GITHUB_TOKEN"):
+            try:
+                from .manual_requests import fetch_requests, read_ledger, plan_requests
+                state = read_ledger(data_dir)
+                if state.get("ledger_valid") is not False:
+                    manual_pending = plan_requests(fetch_requests(), state, started)
+                else:
+                    print("MANUAL_REQUEST_LEDGER_INVALID", flush=True)
+            except Exception as exc:
+                print("MANUAL_REQUEST_CHECK_FAILED " + json.dumps({"error": type(exc).__name__}), flush=True)
         records = {}
         shadow_failed = False
         for module in MODULES:
@@ -139,13 +151,24 @@ def execute(origin="manual"):
         if scan_started < started - dt.timedelta(seconds=5) or scan_started > scan_completed or scan_completed > dt.datetime.now(dt.timezone.utc) + dt.timedelta(seconds=5):
             print("SCAN_STALE_RUN", flush=True)
             return 1
+        verified_status = "VERIFIED" if shadow_ok and not dex_degraded else "PARTIAL"
         print("SCAN_EXECUTION_VERIFIED " + json.dumps({
             "origin": origin, "started_at": summary["started_at"],
             "completed_at": summary["completed_at"], "buy_approved": False,
             "shadow_present": shadow_ok, "dex_record_present": dex_ok,
             "dex_degraded": dex_degraded, "dex_fresh": dex_fresh,
-            "status": "VERIFIED" if shadow_ok and not dex_degraded else "PARTIAL",
+            "status": verified_status,
         }), flush=True)
+        if manual_pending and verified_status == "VERIFIED":
+            try:
+                from .manual_requests import acknowledge_requests
+                acknowledged = acknowledge_requests(data_dir, manual_pending, summary["completed_at"])
+                print("MANUAL_REQUESTS_SATISFIED " + json.dumps({
+                    "issue_numbers": [r["issue_number"] for r in manual_pending],
+                    "run_id": acknowledged["last_verified_run_id"],
+                }), flush=True)
+            except Exception as exc:
+                print("MANUAL_REQUEST_ACK_FAILED " + json.dumps({"error": type(exc).__name__}), flush=True)
         return 0
 
 if __name__ == "__main__":
