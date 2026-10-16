@@ -70,6 +70,10 @@ def execute(origin="manual"):
                 dex_record = json.loads(records[dex_key])
                 observed = dt.datetime.fromisoformat(dex_record["observed_at"])
                 age = dt.datetime.now(dt.timezone.utc) - observed
+                if dex_key == "DEX_SUMMARY" and (type(dex_record.get("errors")) is not int or dex_record["errors"] != 0):
+                    dex_degraded = True
+                if dex_key == "DEX_CACHE_REUSED" and (type(dex_record.get("candidates")) is not int):
+                    dex_degraded = True
                 dex_fresh = (observed.tzinfo is not None
                              and dt.timedelta(0) <= age <= dt.timedelta(minutes=61)
                              and dex_record.get("buy_approved") is False)
