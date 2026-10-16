@@ -63,6 +63,21 @@ def execute(origin="manual"):
                 }), flush=True)
                 return result.returncode
         dex_degraded = any(k in records for k in ("DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED", "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"))
+        dex_fresh = False
+        dex_key = "DEX_SUMMARY" if "DEX_SUMMARY" in records else "DEX_CACHE_REUSED"
+        if dex_key in records and not dex_degraded:
+            try:
+                dex_record = json.loads(records[dex_key])
+                observed = dt.datetime.fromisoformat(dex_record["observed_at"])
+                age = dt.datetime.now(dt.timezone.utc) - observed
+                dex_fresh = (observed.tzinfo is not None
+                             and dt.timedelta(0) <= age <= dt.timedelta(minutes=61)
+                             and dex_record.get("buy_approved") is False)
+            except (ValueError, TypeError, KeyError):
+                dex_fresh = False
+        if not dex_fresh:
+            dex_degraded = True
+            print("DEX_FRESHNESS_UNVERIFIED " + json.dumps({"origin": origin, "record": dex_key if dex_key in records else None}), flush=True)
         shadow_ok = "SHADOW_LEARNING" in records and not shadow_failed
         if shadow_ok:
             try:
@@ -111,7 +126,7 @@ def execute(origin="manual"):
             "origin": origin, "started_at": summary["started_at"],
             "completed_at": summary["completed_at"], "buy_approved": False,
             "shadow_present": shadow_ok, "dex_record_present": dex_ok,
-            "dex_degraded": dex_degraded,
+            "dex_degraded": dex_degraded, "dex_fresh": dex_fresh,
             "status": "VERIFIED" if shadow_ok and not dex_degraded else "PARTIAL",
         }), flush=True)
         return 0
