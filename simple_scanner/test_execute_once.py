@@ -58,7 +58,7 @@ class ExecuteTests(unittest.TestCase):
                 summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
                 (Path(folder) / "latest.json").write_text(json.dumps(summary))
                 records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
-                           Result("HISTORY_PERSISTED {}"), Result("SHADOW_LEARNING {}"), Result("DEX_CACHE_REUSED {}")]
+                           Result("HISTORY_PERSISTED {}"), Result('SHADOW_LEARNING {"mode":"SHADOW_ONLY","live_weights_modified":false}'), Result("DEX_CACHE_REUSED {}")]
                 with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
                     output = io.StringIO()
                     with contextlib.redirect_stdout(output):
@@ -88,7 +88,7 @@ class ExecuteTests(unittest.TestCase):
                 now = dt.datetime.now(dt.timezone.utc).isoformat()
                 summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
                 outputs = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
-                           Result("HISTORY_PERSISTED {}"), Result("SHADOW_LEARNING {}"), Result("DEX_CACHE_REUSED {}")]
+                           Result("HISTORY_PERSISTED {}"), Result('SHADOW_LEARNING {"mode":"SHADOW_ONLY","live_weights_modified":false}'), Result("DEX_CACHE_REUSED {}")]
                 for invalid in ("not-a-date", dt.datetime.now().isoformat()):
                     summary["started_at"] = invalid
                     (Path(folder) / "latest.json").write_text(json.dumps(summary))
@@ -102,7 +102,7 @@ class ExecuteTests(unittest.TestCase):
                 now = dt.datetime.now(dt.timezone.utc).isoformat()
                 summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
                 records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
-                           Result("HISTORY_PERSISTED {}"), Result("SHADOW_LEARNING {}"), Result("DEX_CACHE_REUSED {}")]
+                           Result("HISTORY_PERSISTED {}"), Result('SHADOW_LEARNING {"mode":"SHADOW_ONLY","live_weights_modified":false}'), Result("DEX_CACHE_REUSED {}")]
                 with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
                     self.assertEqual(execute(), 1)
 
@@ -115,7 +115,7 @@ class ExecuteTests(unittest.TestCase):
                            "buy_approved": False, "status": "RESEARCH_ONLY"}
                 (Path(folder) / "latest.json").write_text(json.dumps(summary))
                 records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
-                           Result("HISTORY_PERSISTED {}"), Result("SHADOW_LEARNING {}"), Result("DEX_CACHE_REUSED {}")]
+                           Result("HISTORY_PERSISTED {}"), Result('SHADOW_LEARNING {"mode":"SHADOW_ONLY","live_weights_modified":false}'), Result("DEX_CACHE_REUSED {}")]
                 with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
                     self.assertEqual(execute(), 1)
 
@@ -127,7 +127,7 @@ class ExecuteTests(unittest.TestCase):
                 latest = dict(summary, buy_approved=True)
                 (Path(folder) / "latest.json").write_text(json.dumps(latest))
                 records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
-                           Result("HISTORY_PERSISTED {}"), Result("SHADOW_LEARNING {}"), Result("DEX_CACHE_REUSED {}")]
+                           Result("HISTORY_PERSISTED {}"), Result('SHADOW_LEARNING {"mode":"SHADOW_ONLY","live_weights_modified":false}'), Result("DEX_CACHE_REUSED {}")]
                 with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
                     self.assertEqual(execute(), 1)
 
@@ -136,7 +136,7 @@ class ExecuteTests(unittest.TestCase):
             with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
                 (Path(folder) / "latest.json").write_text("{}")
                 records = [Result("SCAN_SUMMARY []\nWATCH_SUMMARY []"),
-                           Result("HISTORY_PERSISTED {}"), Result("SHADOW_LEARNING {}"), Result("DEX_CACHE_REUSED {}")]
+                           Result("HISTORY_PERSISTED {}"), Result('SHADOW_LEARNING {"mode":"SHADOW_ONLY","live_weights_modified":false}'), Result("DEX_CACHE_REUSED {}")]
                 with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
                     self.assertEqual(execute(), 1)
 
