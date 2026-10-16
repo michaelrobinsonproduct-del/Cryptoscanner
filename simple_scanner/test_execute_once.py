@@ -63,7 +63,7 @@ class ExecuteTests(unittest.TestCase):
                     output = io.StringIO()
                     with contextlib.redirect_stdout(output):
                         self.assertEqual(execute(), 0)
-                    self.assertIn(\'"shadow_present": true\', output.getvalue())
+                    self.assertIn('"shadow_present": true', output.getvalue())
                 old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=20)).isoformat()
                 summary["started_at"] = old
                 (Path(folder) / "latest.json").write_text(json.dumps(summary))
