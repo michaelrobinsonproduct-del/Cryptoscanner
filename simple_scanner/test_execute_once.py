@@ -58,7 +58,7 @@ class ExecuteTests(unittest.TestCase):
                 summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
                 (Path(folder) / "latest.json").write_text(json.dumps(summary))
                 records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
-                           Result("HISTORY_PERSISTED\\n{}"), Result("SHADOW_LEARNING {}"), Result("DEX_CACHE_REUSED {}")]
+                           Result("HISTORY_PERSISTED {}"), Result("SHADOW_LEARNING {}"), Result("DEX_CACHE_REUSED {}")]
                 with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
                     self.assertEqual(execute(), 0)
                 old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=20)).isoformat()
