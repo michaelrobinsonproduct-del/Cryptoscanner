@@ -116,5 +116,26 @@ class ExecuteTests(unittest.TestCase):
                 with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
                     self.assertEqual(execute(), 1)
 
+    def test_rejects_persisted_buy_approval(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
+                now = dt.datetime.now(dt.timezone.utc).isoformat()
+                summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
+                latest = dict(summary, buy_approved=True)
+                (Path(folder) / "latest.json").write_text(json.dumps(latest))
+                records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
+                           Result("HISTORY_PERSISTED {}"), Result("SHADOW_LEARNING {}"), Result("DEX_CACHE_REUSED {}")]
+                with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
+                    self.assertEqual(execute(), 1)
+
+    def test_rejects_non_object_summary(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
+                (Path(folder) / "latest.json").write_text("{}")
+                records = [Result("SCAN_SUMMARY []\nWATCH_SUMMARY []"),
+                           Result("HISTORY_PERSISTED {}"), Result("SHADOW_LEARNING {}"), Result("DEX_CACHE_REUSED {}")]
+                with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
+                    self.assertEqual(execute(), 1)
+
 if __name__ == "__main__":
     unittest.main()
