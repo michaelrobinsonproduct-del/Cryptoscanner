@@ -65,10 +65,12 @@ def execute(origin="manual"):
         dex_degraded = any(k in records for k in ("DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED", "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"))
         dex_fresh = False
         dex_key = "DEX_SUMMARY" if "DEX_SUMMARY" in records else "DEX_CACHE_REUSED"
-        if dex_key in records and not dex_degraded:
+        if dex_key in records:
             try:
                 dex_record = json.loads(records[dex_key])
                 observed = dt.datetime.fromisoformat(dex_record["observed_at"])
+                if observed.tzinfo is None:
+                    raise ValueError("DEX timestamp must include timezone")
                 age = dt.datetime.now(dt.timezone.utc) - observed
                 if dex_key == "DEX_SUMMARY" and (type(dex_record.get("errors")) is not int or dex_record["errors"] != 0):
                     dex_degraded = True
