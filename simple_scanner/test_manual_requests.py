@@ -1,9 +1,12 @@
 """Offline tests: untrusted GitHub issue input never causes scanner execution."""
 import datetime as dt
 import os
+import json
+import tempfile
+from pathlib import Path
 import unittest
 from unittest.mock import patch
-from simple_scanner.manual_requests import fetch_requests, parse_requests, LABEL
+from simple_scanner.manual_requests import fetch_requests, parse_requests, LABEL, plan_requests, read_ledger, acknowledge_requests
 
 NOW = dt.datetime(2026, 10, 16, 20, tzinfo=dt.timezone.utc)
 
@@ -23,6 +26,28 @@ class ManualRequestsTests(unittest.TestCase):
                issue(created_at="2026-10-14T20:00:00Z"),
                issue(created_at="not a timestamp"), issue(created_at="2026-10-16T21:05:00Z")]
         self.assertEqual(parse_requests(bad, NOW), [])
+
+    def test_multiple_requests_share_one_verified_run(self):
+        requests = parse_requests([issue(number=123), issue(number=124)], NOW)
+        self.assertEqual(len(plan_requests(requests, {"completed_issue_numbers": []}, NOW)), 2)
+        with tempfile.TemporaryDirectory() as folder:
+            acknowledge_requests(folder, requests, "verified-001")
+            state = read_ledger(folder)
+            self.assertEqual(state["completed_issue_numbers"], [123, 124])
+            self.assertEqual(plan_requests(requests, state, NOW), [])
+
+    def test_no_acknowledgment_for_corrupt_ledger(self):
+        with tempfile.TemporaryDirectory() as folder:
+            Path(folder, "manual_request_ledger.json").write_text("corrupt")
+            self.assertFalse(read_ledger(folder)["ledger_valid"])
+            with self.assertRaises(RuntimeError):
+                acknowledge_requests(folder, [{"issue_number": 123}], "verified-001")
+            self.assertEqual(Path(folder, "manual_request_ledger.json").read_text(), "corrupt")
+
+    def test_new_request_after_run_not_satisfied(self):
+        requests = parse_requests([issue()], NOW)
+        before = dt.datetime(2026, 10, 16, 19, 58, tzinfo=dt.timezone.utc)
+        self.assertEqual(plan_requests(requests, {"completed_issue_numbers": []}, before), [])
 
     def test_no_token_no_network(self):
         with patch.dict(os.environ, {}, clear=True), patch("urllib.request.urlopen") as get:
