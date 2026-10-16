@@ -33,6 +33,7 @@ def execute(origin="manual"):
             return 75
         started = dt.datetime.now(dt.timezone.utc)
         records = {}
+        shadow_failed = False
         for module in MODULES:
             try:
                 result = subprocess.run(
@@ -51,6 +52,7 @@ def execute(origin="manual"):
                     if line == key or line.startswith(key + " "):
                         records[key] = line[len(key):].strip()
             if result.returncode and module == "simple_scanner.shadow_learning":
+                shadow_failed = True
                 print("SHADOW_LEARNING_PARTIAL_FAILURE", flush=True)
                 continue
             if result.returncode:
@@ -61,7 +63,7 @@ def execute(origin="manual"):
                 }), flush=True)
                 return result.returncode
         dex_degraded = any(k in records for k in ("DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED", "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"))
-        shadow_ok = "SHADOW_LEARNING" in records
+        shadow_ok = "SHADOW_LEARNING" in records and not shadow_failed
         if shadow_ok:
             try:
                 shadow_record = json.loads(records["SHADOW_LEARNING"])
