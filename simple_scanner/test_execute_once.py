@@ -79,5 +79,19 @@ class ExecuteTests(unittest.TestCase):
                     self.assertEqual(execute(), 0)
                     self.assertEqual(run.call_count, 4)
 
+    def test_rejects_missing_and_naive_timestamps(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
+                now = dt.datetime.now(dt.timezone.utc).isoformat()
+                summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
+                outputs = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
+                           Result("HISTORY_PERSISTED {}"), Result("SHADOW_LEARNING {}"), Result("DEX_CACHE_REUSED {}")]
+                for invalid in ("not-a-date", dt.datetime.now().isoformat()):
+                    summary["started_at"] = invalid
+                    (Path(folder) / "latest.json").write_text(json.dumps(summary))
+                    outputs[0] = Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []")
+                    with patch("simple_scanner.execute_once.subprocess.run", side_effect=outputs):
+                        self.assertEqual(execute(), 1)
+
 if __name__ == "__main__":
     unittest.main()
