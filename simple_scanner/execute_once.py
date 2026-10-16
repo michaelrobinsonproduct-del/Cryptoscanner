@@ -10,7 +10,6 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-import time
 
 MODULES = (
     "simple_scanner.scan",
@@ -18,7 +17,7 @@ MODULES = (
     "simple_scanner.shadow_learning",
     "simple_scanner.dex_guard",
 )
-REQUIRED = ("SCAN_SUMMARY", "WATCH_SUMMARY", "HISTORY_PERSISTED", "SHADOW_LEARNING")
+REQUIRED = ("SCAN_SUMMARY", "WATCH_SUMMARY", "HISTORY_PERSISTED")
 
 def execute(origin="manual"):
     if origin not in ("manual", "cron"):
@@ -51,6 +50,9 @@ def execute(origin="manual"):
                             "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"):
                     if line == key or line.startswith(key + " "):
                         records[key] = line[len(key):].strip()
+            if result.returncode and module == "simple_scanner.shadow_learning":
+                print("SHADOW_LEARNING_PARTIAL_FAILURE", flush=True)
+                continue
             if result.returncode:
                 print("SCAN_EXECUTION_FAILED " + json.dumps({
                     "origin": origin, "module": module,
@@ -59,6 +61,7 @@ def execute(origin="manual"):
                 }), flush=True)
                 return result.returncode
         dex_degraded = any(k in records for k in ("DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED", "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"))
+        shadow_ok = "SHADOW_LEARNING" in records
         missing = [k for k in REQUIRED if k not in records]
         dex_ok = any(k in records for k in (
             "DEX_SUMMARY", "DEX_CACHE_REUSED", "DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED", "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"))
@@ -81,7 +84,7 @@ def execute(origin="manual"):
         print("SCAN_EXECUTION_VERIFIED " + json.dumps({
             "origin": origin, "started_at": summary["started_at"],
             "completed_at": summary["completed_at"], "buy_approved": False,
-            "shadow_present": True, "dex_record_present": dex_ok,
+            "shadow_present": shadow_ok, "dex_record_present": dex_ok,
             "dex_degraded": dex_degraded,
         }), flush=True)
         return 0
