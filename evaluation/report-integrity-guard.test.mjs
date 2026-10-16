@@ -1,0 +1,18 @@
+import { test, expect } from "bun:test";
+import { reconcileScanEvidence as check } from "./report-integrity-guard.mjs";
+const now = Date.parse("2026-10-11T05:00:00Z");
+const durable = {run_id:"a",completed_at:"2026-10-11T04:59:30Z",universe_count:668,scanned_count:668,failed_count:0,persistence_verified:true};
+const recommendation = {run_id:"a",generated_at:"2026-10-11T04:59:35Z",verified_status:"COMPLETE",currently_actionable:[]};
+const run=(d=durable,r=recommendation,refresh={actionable_count:8})=>check({durable:d,recommendation:r,refresh,nowMs:now});
+test("snapshot actionable labels never authorize a buy",()=>{const x=run();expect(x.status).toBe("VERIFIED_REPORT");expect(x.buyApproved).toBe(false);expect(x.authoritativeActionable).toEqual([]);expect(x.refreshSnapshotOnly).toBe(8)});
+test("mismatched run ID fails closed",()=>expect(run(durable,{...recommendation,run_id:"other"}).errors).toContain("run_id_mismatch"));
+test("stale report fails closed",()=>expect(check({durable,recommendation,nowMs:now+3600000}).errors).toContain("stale_report"));
+test("missing persistence fails closed",()=>expect(run({...durable,persistence_verified:false}).errors).toContain("persistence_unverified"));
+test("bad coverage fails closed",()=>expect(run({...durable,scanned_count:667}).errors).toContain("coverage_invalid"));
+test("snapshot cannot substitute for missing report",()=>expect(run(durable,null).status).toBe("UNVERIFIED"));
+test("nonempty report requires separate execution gate",()=>{const x=run(durable,{...recommendation,currently_actionable:[{pair:"TESTUSD"}]});expect(x.eligibleForEntryReview).toBe(true);expect(x.buyApproved).toBe(false)});
+test("invalid clock fails closed",()=>expect(check({durable,recommendation,nowMs:NaN}).errors).toContain("invalid_clock_or_age_limit"));
+test("invalid age limit fails closed",()=>expect(check({durable,recommendation,nowMs:now,maxAgeMs:-1}).status).toBe("UNVERIFIED"));
+test("future report fails closed",()=>expect(run(durable,{...recommendation,generated_at:"2026-10-11T05:05:00Z"}).errors).toContain("future_timestamp"));
+test("invalid completion time fails closed",()=>expect(run({...durable,completed_at:"not-a-date"}).errors).toContain("invalid_timestamp"));
+test("unverified report never exposes candidate entries",()=>expect(run({...durable,scanned_count:10},{...recommendation,currently_actionable:[{pair:"TESTUSD"}]}).authoritativeActionable).toEqual([]));
