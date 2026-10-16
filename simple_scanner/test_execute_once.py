@@ -2,6 +2,8 @@
 import contextlib
 import io
 import json
+import datetime as dt
+import subprocess
 import os
 from pathlib import Path
 import tempfile
@@ -42,5 +44,27 @@ class ExecuteTests(unittest.TestCase):
                         self.assertEqual(execute(), 75)
                         run.assert_not_called()
 
-if __name__ == "__main__":
-    unittest.main()
+
+    def test_timeout(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
+                with patch("simple_scanner.execute_once.subprocess.run", side_effect=subprocess.TimeoutExpired("scan", 240)):
+                    self.assertEqual(execute(), 124)
+
+    def test_success_and_stale_rejection(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
+                now = dt.datetime.now(dt.timezone.utc).isoformat()
+                summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
+                (Path(folder) / "latest.json").write_text(json.dumps(summary))
+                records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
+                           Result("HISTORY_PERSISTED {}"), Result("SHADOW_LEARNING {}"), Result("DEX_CACHE_REUSED {}")]
+                with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
+                    self.assertEqual(execute(), 0)
+                old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=20)).isoformat()
+                summary["started_at"] = old
+                (Path(folder) / "latest.json").write_text(json.dumps(summary))
+                records[0] = Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []")
+                with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
+                    self.assertEqual(execute(), 1)
+\nif __name__ == "__main__":\n    unittest.main()\n
