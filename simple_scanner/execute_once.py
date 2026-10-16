@@ -161,10 +161,13 @@ def execute(origin="manual"):
         }), flush=True)
         if manual_pending and verified_status == "VERIFIED":
             try:
-                from .manual_requests import acknowledge_requests
-                acknowledged = acknowledge_requests(data_dir, manual_pending, summary["completed_at"])
+                from .manual_requests import acknowledge_requests, publish_results
+                delivered = publish_results(manual_pending, summary)
+                if not delivered:
+                    print("MANUAL_RESULT_DELIVERY_PENDING", flush=True)
+                acknowledged = acknowledge_requests(data_dir, delivered, summary["completed_at"])
                 print("MANUAL_REQUESTS_SATISFIED " + json.dumps({
-                    "issue_numbers": [r["issue_number"] for r in manual_pending],
+                    "issue_numbers": [r["issue_number"] for r in delivered],
                     "run_id": acknowledged["last_verified_run_id"],
                 }), flush=True)
             except Exception as exc:
