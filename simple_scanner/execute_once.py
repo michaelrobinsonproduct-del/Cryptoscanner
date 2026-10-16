@@ -62,6 +62,12 @@ def execute(origin="manual"):
                 return result.returncode
         dex_degraded = any(k in records for k in ("DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED", "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"))
         shadow_ok = "SHADOW_LEARNING" in records
+        if shadow_ok:
+            try:
+                shadow_record = json.loads(records["SHADOW_LEARNING"])
+                shadow_ok = isinstance(shadow_record, dict) and shadow_record.get("mode") == "SHADOW_ONLY" and shadow_record.get("live_weights_modified") is False
+            except (ValueError, TypeError):
+                shadow_ok = False
         missing = [k for k in REQUIRED if k not in records]
         dex_ok = any(k in records for k in (
             "DEX_SUMMARY", "DEX_CACHE_REUSED", "DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED", "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"))
