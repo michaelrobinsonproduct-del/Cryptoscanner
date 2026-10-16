@@ -99,6 +99,17 @@ def execute(origin="manual"):
         except (ValueError, OSError) as exc:
             print("SCAN_INVALID_OUTPUT " + json.dumps({"reason": str(exc)[:240]}), flush=True)
             return 1
+        try:
+            history = json.loads(records["HISTORY_PERSISTED"])
+        except (ValueError, TypeError):
+            print("SCAN_INVALID_HISTORY_RECORD", flush=True)
+            return 1
+        if (not isinstance(history, dict)
+                or history.get("history_db_integrity") != "ok"
+                or history.get("buy_approved") is not False
+                or history.get("model_updates") != "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"):
+            print("SCAN_HISTORY_SAFETY_FAILED", flush=True)
+            return 1
         if not isinstance(summary, dict) or not isinstance(latest, dict):
             print("SCAN_INVALID_OUTPUT_SCHEMA", flush=True)
             return 1
