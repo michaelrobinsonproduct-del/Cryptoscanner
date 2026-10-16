@@ -49,8 +49,8 @@ def execute(origin="manual"):
                 for key in (*REQUIRED, "DEX_SUMMARY", "DEX_CACHE_REUSED",
                             "DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED",
                             "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"):
-                    if line.startswith(key + " "):
-                        records[key] = line[len(key) + 1:]
+                    if line == key or line.startswith(key + " "):
+                        records[key] = line[len(key):].strip()
             if result.returncode:
                 print("SCAN_EXECUTION_FAILED " + json.dumps({
                     "origin": origin, "module": module,
