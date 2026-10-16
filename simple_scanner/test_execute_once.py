@@ -67,5 +67,17 @@ class ExecuteTests(unittest.TestCase):
                 records[0] = Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []")
                 with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
                     self.assertEqual(execute(), 1)
+    def test_shadow_failure_does_not_block_dex(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
+                now = dt.datetime.now(dt.timezone.utc).isoformat()
+                summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
+                (Path(folder) / "latest.json").write_text(json.dumps(summary))
+                records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\\nWATCH_SUMMARY []"),
+                           Result("HISTORY_PERSISTED {}"), Result(code=1), Result("DEX_CACHE_REUSED {}")]
+                with patch("simple_scanner.execute_once.subprocess.run", side_effect=records) as run:
+                    self.assertEqual(execute(), 0)
+                    self.assertEqual(run.call_count, 4)
+
 if __name__ == "__main__":
     unittest.main()
