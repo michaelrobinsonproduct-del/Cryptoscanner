@@ -58,6 +58,21 @@ class ExecuteTests(unittest.TestCase):
                         run.assert_not_called()
 
 
+    def test_cron_and_manual_share_same_lock(self):
+        import fcntl
+        with tempfile.TemporaryDirectory() as folder:
+            with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
+                with (Path(folder) / "scan_execution.lock").open("a+") as lock:
+                    fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    with patch("simple_scanner.execute_once.subprocess.run") as run:
+                        for origin in ("cron", "manual"):
+                            with self.subTest(origin=origin):
+                                output = io.StringIO()
+                                with contextlib.redirect_stdout(output):
+                                    self.assertEqual(execute(origin), 75)
+                                self.assertIn("SCAN_BUSY", output.getvalue())
+                        run.assert_not_called()
+
     def test_timeout(self):
         with tempfile.TemporaryDirectory() as folder:
             with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
