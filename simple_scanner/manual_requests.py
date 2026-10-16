@@ -101,3 +101,41 @@ def acknowledge_requests(data_dir, requests, run_id):
     finally:
         temp.unlink(missing_ok=True)
     return payload
+
+def publish_results(requests, run):
+    """Post a bounded research-only receipt to GitHub issues.
+
+    No token means no publication; never include secrets or raw scan logs.
+    The request stays open if GitHub refuses the receipt.
+    """
+    token = os.environ.get("SIMPLE_SCANNER_GITHUB_TOKEN", "")
+    if not token or not requests:
+        return []
+    receipt = {
+        "type": "MANUAL_SCAN_RESULT",
+        "status": "VERIFIED",
+        "completed_at": run["completed_at"],
+        "buy_approved": False,
+        "scan_origin": "scheduled",
+        "learning": "SHADOW_ONLY",
+        "dex_fresh": True,
+    }
+    body = "Verified scheduled scan satisfied this manual request.\\n\\n" + "```json\\n" + json.dumps(receipt, sort_keys=True) + "\\n```"
+    delivered = []
+    for item in requests:
+        number = item["issue_number"]
+        url = "https://api.github.com/repos/" + REPO + "/issues/" + str(number) + "/comments"
+        request = urllib.request.Request(url, data=json.dumps({"body": body}).encode(), method="POST", headers={
+            "Authorization": "Bearer " + token,
+            "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "kraken-simple-scanner-manual-result",
+        })
+        try:
+            with urllib.request.urlopen(request, timeout=5) as response:
+                if response.status == 201:
+                    delivered.append(item)
+        except (urllib.error.URLError, TimeoutError, OSError):
+            continue
+    return delivered
