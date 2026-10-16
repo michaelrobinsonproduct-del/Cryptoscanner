@@ -45,7 +45,7 @@ def execute(origin="manual"):
                 return 124
             for line in result.stdout.splitlines():
                 print(line, flush=True)
-                for key in (*REQUIRED, "DEX_SUMMARY", "DEX_CACHE_REUSED",
+                for key in (*REQUIRED, "SHADOW_LEARNING", "DEX_SUMMARY", "DEX_CACHE_REUSED",
                             "DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED",
                             "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"):
                     if line == key or line.startswith(key + " "):
