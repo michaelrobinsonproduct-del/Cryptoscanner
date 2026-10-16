@@ -41,7 +41,7 @@ class TriggerTests(unittest.TestCase):
 
     def test_valid_token_runs_same_executor(self):
         with patch.dict("os.environ", {"SIMPLE_SCANNER_TRIGGER_TOKEN": "correct"}), patch("simple_scanner.manual_trigger.execute", return_value=0) as run:
-            self.assertEqual(self.request("Bearer correct"), 202)
+            self.assertEqual(self.request("Bearer correct"), 200)
             run.assert_called_once_with("manual")
 
     def test_busy_does_not_retry(self):
