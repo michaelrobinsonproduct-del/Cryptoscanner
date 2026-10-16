@@ -35,11 +35,15 @@ def execute(origin="manual"):
         started = dt.datetime.now(dt.timezone.utc)
         records = {}
         for module in MODULES:
-            result = subprocess.run(
-                [sys.executable, "-m", module],
-                capture_output=True, text=True, timeout=240,
-                env=os.environ.copy(),
-            )
+            try:
+                result = subprocess.run(
+                    [sys.executable, "-m", module],
+                    capture_output=True, text=True, timeout=240,
+                    env=os.environ.copy(),
+                )
+            except subprocess.TimeoutExpired:
+                print("SCAN_EXECUTION_TIMEOUT " + json.dumps({"module": module}), flush=True)
+                return 124
             for line in result.stdout.splitlines():
                 print(line, flush=True)
                 for key in (*REQUIRED, "DEX_SUMMARY", "DEX_CACHE_REUSED",
@@ -78,6 +82,7 @@ def execute(origin="manual"):
             "origin": origin, "started_at": summary["started_at"],
             "completed_at": summary["completed_at"], "buy_approved": False,
             "shadow_present": True, "dex_record_present": dex_ok,
+            "dex_degraded": dex_degraded,
         }), flush=True)
         return 0
 
