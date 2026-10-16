@@ -43,7 +43,8 @@ def execute(origin="manual"):
             for line in result.stdout.splitlines():
                 print(line, flush=True)
                 for key in (*REQUIRED, "DEX_SUMMARY", "DEX_CACHE_REUSED",
-                            "DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED",\n                            "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"):
+                            "DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED",
+                            "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"):
                     if line.startswith(key + " "):
                         records[key] = line[len(key) + 1:]
             if result.returncode:
@@ -53,15 +54,16 @@ def execute(origin="manual"):
                     "stderr_tail": result.stderr[-1200:],
                 }), flush=True)
                 return result.returncode
+        dex_degraded = any(k in records for k in ("DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED", "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"))
         missing = [k for k in REQUIRED if k not in records]
         dex_ok = any(k in records for k in (
-            "DEX_SUMMARY", "DEX_CACHE_REUSED", "DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED"))
+            "DEX_SUMMARY", "DEX_CACHE_REUSED", "DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED", "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"))
         if missing or not dex_ok:
             print("SCAN_INCOMPLETE " + json.dumps({
                 "origin": origin, "missing": missing, "dex_record_present": dex_ok, "dex_degraded": dex_degraded,
             }), flush=True)
             return 1
-        # DEX degraded states are reported but never accepted as fresh DEX evidence.\n        dex_degraded = any(k in records for k in ("DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED", "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"))\n        summary = json.loads(records["SCAN_SUMMARY"])
+        summary = json.loads(records["SCAN_SUMMARY"])
         if summary.get("buy_approved") is not False or summary.get("status") != "RESEARCH_ONLY":
             print("SCAN_INVALID_APPROVAL", flush=True)
             return 1
