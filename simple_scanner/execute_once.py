@@ -70,11 +70,15 @@ def execute(origin="manual"):
                 "origin": origin, "missing": missing, "dex_record_present": dex_ok, "dex_degraded": dex_degraded,
             }), flush=True)
             return 1
-        summary = json.loads(records["SCAN_SUMMARY"])
+        try:
+            summary = json.loads(records["SCAN_SUMMARY"])
+            latest = json.loads((data_dir / "latest.json").read_text())
+        except (ValueError, OSError) as exc:
+            print("SCAN_INVALID_OUTPUT " + json.dumps({"reason": str(exc)[:240]}), flush=True)
+            return 1
         if summary.get("buy_approved") is not False or summary.get("status") != "RESEARCH_ONLY":
             print("SCAN_INVALID_APPROVAL", flush=True)
             return 1
-        latest = json.loads((data_dir / "latest.json").read_text())
         if latest.get("completed_at") != summary.get("completed_at"):
             print("SCAN_MISMATCHED_RUN", flush=True)
             return 1
