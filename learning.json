@@ -10,9 +10,9 @@
     },
     {
       "hours": 3,
-      "matured_snapshots": 1612,
-      "evaluated": 1000,
-      "coverage_pct": 62.0,
+      "matured_snapshots": 1624,
+      "evaluated": 1012,
+      "coverage_pct": 62.3,
       "unresolved": 612,
       "no_observation_in_window": 612
     },
@@ -41,8 +41,8 @@
     },
     {
       "hours": 3,
-      "samples": 1000,
-      "average_delay_hours": 0.348
+      "samples": 1012,
+      "average_delay_hours": 0.35
     },
     {
       "hours": 6,
@@ -57,10 +57,10 @@
   ],
   "unresolved_1h_snapshots": 168,
   "rank_comparison": {
-    "historical_ranked_samples": 1396,
-    "mean_base_minus_early_rank": 1.61
+    "historical_ranked_samples": 1408,
+    "mean_base_minus_early_rank": 1.62
   },
-  "newly_discovered_outside_base_top12": 4,
+  "newly_discovered_outside_base_top12": 3,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
@@ -71,10 +71,10 @@
     },
     {
       "hours": 3,
-      "samples": 1000,
-      "early_scored_avg_return_pct": -0.357,
-      "all_selected_avg_return_pct": -0.357,
-      "early_score_above_base_avg_return_pct": -0.292
+      "samples": 1012,
+      "early_scored_avg_return_pct": -0.402,
+      "all_selected_avg_return_pct": -0.402,
+      "early_score_above_base_avg_return_pct": -0.352
     },
     {
       "hours": 6,
@@ -92,9 +92,9 @@
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 4084,
+    "evaluated": 4096,
     "positive": 1843,
-    "average_return_pct": -0.157
+    "average_return_pct": -0.169
   },
   "missed_breakout_examples": [
     {
@@ -128,6 +128,11 @@
       "next_scan_gain_pct": 62.7
     },
     {
+      "pair": "DUCKUSD",
+      "observed_at": "2026-10-16T17:28:04.269907+00:00",
+      "next_scan_gain_pct": 50.38
+    },
+    {
       "pair": "NOBODYUSD",
       "observed_at": "2026-10-16T12:34:51.310062+00:00",
       "next_scan_gain_pct": 48.71
@@ -141,19 +146,14 @@
       "pair": "UMXMUSD",
       "observed_at": "2026-10-15T02:29:40.253922+00:00",
       "next_scan_gain_pct": 44.59
-    },
-    {
-      "pair": "ELXUSD",
-      "observed_at": "2026-10-16T13:36:10.658648+00:00",
-      "next_scan_gain_pct": 44.04
     }
   ],
-  "unselected_gainers_5pct_observations": 458,
-  "market_observations": 79289,
+  "unselected_gainers_5pct_observations": 463,
+  "market_observations": 79913,
   "market_price_coverage": 624,
-  "feature_rows": 1564,
-  "snapshots": 1684,
-  "outcomes": 4084,
+  "feature_rows": 1576,
+  "snapshots": 1696,
+  "outcomes": 4096,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
