@@ -82,7 +82,15 @@ def execute(origin="manual"):
         if latest.get("completed_at") != summary.get("completed_at"):
             print("SCAN_MISMATCHED_RUN", flush=True)
             return 1
-        if dt.datetime.fromisoformat(summary["started_at"]) < started - dt.timedelta(seconds=5):
+        try:
+            scan_started = dt.datetime.fromisoformat(summary["started_at"])
+            scan_completed = dt.datetime.fromisoformat(summary["completed_at"])
+            if scan_started.tzinfo is None or scan_completed.tzinfo is None:
+                raise ValueError("scan timestamps must include timezone")
+        except (ValueError, KeyError, TypeError) as exc:
+            print("SCAN_INVALID_TIMESTAMP " + json.dumps({"reason": str(exc)[:240]}), flush=True)
+            return 1
+        if scan_started < started - dt.timedelta(seconds=5) or scan_started > scan_completed or scan_completed > dt.datetime.now(dt.timezone.utc) + dt.timedelta(seconds=5):
             print("SCAN_STALE_RUN", flush=True)
             return 1
         print("SCAN_EXECUTION_VERIFIED " + json.dumps({
