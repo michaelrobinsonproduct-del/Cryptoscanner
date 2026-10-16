@@ -76,8 +76,14 @@ def execute(origin="manual"):
         except (ValueError, OSError) as exc:
             print("SCAN_INVALID_OUTPUT " + json.dumps({"reason": str(exc)[:240]}), flush=True)
             return 1
+        if not isinstance(summary, dict) or not isinstance(latest, dict):
+            print("SCAN_INVALID_OUTPUT_SCHEMA", flush=True)
+            return 1
         if summary.get("buy_approved") is not False or summary.get("status") != "RESEARCH_ONLY":
             print("SCAN_INVALID_APPROVAL", flush=True)
+            return 1
+        if latest.get("buy_approved") is not False or latest.get("status") != "RESEARCH_ONLY":
+            print("SCAN_INVALID_PERSISTED_APPROVAL", flush=True)
             return 1
         if latest.get("completed_at") != summary.get("completed_at"):
             print("SCAN_MISMATCHED_RUN", flush=True)
