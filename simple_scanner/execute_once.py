@@ -110,6 +110,7 @@ def execute(origin="manual"):
             "completed_at": summary["completed_at"], "buy_approved": False,
             "shadow_present": shadow_ok, "dex_record_present": dex_ok,
             "dex_degraded": dex_degraded,
+            "status": "VERIFIED" if shadow_ok and not dex_degraded else "PARTIAL",
         }), flush=True)
         return 0
 
