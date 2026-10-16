@@ -2,17 +2,17 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 1708,
-      "evaluated": 1540,
+      "matured_snapshots": 1720,
+      "evaluated": 1552,
       "coverage_pct": 90.2,
       "unresolved": 168,
       "no_observation_in_window": 168
     },
     {
       "hours": 3,
-      "matured_snapshots": 1660,
-      "evaluated": 1048,
-      "coverage_pct": 63.1,
+      "matured_snapshots": 1672,
+      "evaluated": 1060,
+      "coverage_pct": 63.4,
       "unresolved": 612,
       "no_observation_in_window": 612
     },
@@ -26,9 +26,9 @@
     },
     {
       "hours": 24,
-      "matured_snapshots": 1264,
-      "evaluated": 664,
-      "coverage_pct": 52.5,
+      "matured_snapshots": 1276,
+      "evaluated": 676,
+      "coverage_pct": 53.0,
       "unresolved": 600,
       "no_observation_in_window": 600
     }
@@ -36,12 +36,12 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 1540,
-      "average_delay_hours": 0.51
+      "samples": 1552,
+      "average_delay_hours": 0.508
     },
     {
       "hours": 3,
-      "samples": 1048,
+      "samples": 1060,
       "average_delay_hours": 0.358
     },
     {
@@ -51,30 +51,30 @@
     },
     {
       "hours": 24,
-      "samples": 664,
+      "samples": 676,
       "average_delay_hours": 0.376
     }
   ],
   "unresolved_1h_snapshots": 168,
   "rank_comparison": {
-    "historical_ranked_samples": 1444,
-    "mean_base_minus_early_rank": 1.64
+    "historical_ranked_samples": 1456,
+    "mean_base_minus_early_rank": 1.65
   },
-  "newly_discovered_outside_base_top12": 2,
+  "newly_discovered_outside_base_top12": 3,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 1492,
-      "early_scored_avg_return_pct": 0.207,
-      "all_selected_avg_return_pct": 0.207,
+      "samples": 1504,
+      "early_scored_avg_return_pct": 0.208,
+      "all_selected_avg_return_pct": 0.208,
       "early_score_above_base_avg_return_pct": 0.285
     },
     {
       "hours": 3,
-      "samples": 1048,
-      "early_scored_avg_return_pct": -0.399,
-      "all_selected_avg_return_pct": -0.399,
-      "early_score_above_base_avg_return_pct": -0.319
+      "samples": 1060,
+      "early_scored_avg_return_pct": -0.394,
+      "all_selected_avg_return_pct": -0.394,
+      "early_score_above_base_avg_return_pct": -0.322
     },
     {
       "hours": 6,
@@ -85,16 +85,16 @@
     },
     {
       "hours": 24,
-      "samples": 664,
-      "early_scored_avg_return_pct": -0.277,
-      "all_selected_avg_return_pct": -0.277,
-      "early_score_above_base_avg_return_pct": 0.067
+      "samples": 676,
+      "early_scored_avg_return_pct": -0.354,
+      "all_selected_avg_return_pct": -0.354,
+      "early_score_above_base_avg_return_pct": 0.028
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 4252,
-    "positive": 1877,
-    "average_return_pct": -0.221
+    "evaluated": 4288,
+    "positive": 1892,
+    "average_return_pct": -0.231
   },
   "missed_breakout_examples": [
     {
@@ -148,12 +148,12 @@
       "next_scan_gain_pct": 44.59
     }
   ],
-  "unselected_gainers_5pct_observations": 479,
-  "market_observations": 81787,
+  "unselected_gainers_5pct_observations": 484,
+  "market_observations": 82412,
   "market_price_coverage": 625,
-  "feature_rows": 1612,
-  "snapshots": 1732,
-  "outcomes": 4252,
+  "feature_rows": 1624,
+  "snapshots": 1744,
+  "outcomes": 4288,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
