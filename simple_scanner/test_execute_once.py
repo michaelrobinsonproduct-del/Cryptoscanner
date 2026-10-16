@@ -73,7 +73,7 @@ class ExecuteTests(unittest.TestCase):
                 now = dt.datetime.now(dt.timezone.utc).isoformat()
                 summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
                 (Path(folder) / "latest.json").write_text(json.dumps(summary))
-                records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\\nWATCH_SUMMARY []"),
+                records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
                            Result("HISTORY_PERSISTED {}"), Result(code=1), Result("DEX_CACHE_REUSED {}")]
                 with patch("simple_scanner.execute_once.subprocess.run", side_effect=records) as run:
                     self.assertEqual(execute(), 0)
