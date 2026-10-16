@@ -148,6 +148,28 @@ class ExecuteTests(unittest.TestCase):
                             self.assertEqual(execute(), 0)
                         self.assertIn('"status": "' + expected + '"', output.getvalue())
 
+    def test_rejects_unsafe_history_record(self):
+        for unsafe in (
+            {"history_db_integrity": "corrupt", "buy_approved": False, "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"},
+            {"history_db_integrity": "ok", "buy_approved": True, "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"},
+            {"history_db_integrity": "ok", "buy_approved": False, "model_updates": "ENABLED"},
+        ):
+            with self.subTest(unsafe=unsafe), tempfile.TemporaryDirectory() as folder:
+                with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
+                    now = dt.datetime.now(dt.timezone.utc).isoformat()
+                    summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
+                    (Path(folder) / "latest.json").write_text(json.dumps(summary))
+                    dex = {"observed_at": now, "buy_approved": False}
+                    records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
+                               Result("HISTORY_PERSISTED " + json.dumps(unsafe)),
+                               Result('SHADOW_LEARNING {"mode":"SHADOW_ONLY","live_weights_modified":false}'),
+                               Result("DEX_CACHE_REUSED " + json.dumps(dex))]
+                    with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
+                        output = io.StringIO()
+                        with contextlib.redirect_stdout(output):
+                            self.assertEqual(execute(), 1)
+                        self.assertIn("SCAN_HISTORY_SAFETY_FAILED", output.getvalue())
+
     def test_rejects_missing_and_naive_timestamps(self):
         with tempfile.TemporaryDirectory() as folder:
             with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
