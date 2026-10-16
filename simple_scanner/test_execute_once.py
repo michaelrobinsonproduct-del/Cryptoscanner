@@ -60,7 +60,10 @@ class ExecuteTests(unittest.TestCase):
                 records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
                            Result("HISTORY_PERSISTED {}"), Result("SHADOW_LEARNING {}"), Result("DEX_CACHE_REUSED {}")]
                 with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
-                    self.assertEqual(execute(), 0)
+                    output = io.StringIO()
+                    with contextlib.redirect_stdout(output):
+                        self.assertEqual(execute(), 0)
+                    self.assertIn(\'"shadow_present": true\', output.getvalue())
                 old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=20)).isoformat()
                 summary["started_at"] = old
                 (Path(folder) / "latest.json").write_text(json.dumps(summary))
