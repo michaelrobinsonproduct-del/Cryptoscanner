@@ -5,6 +5,7 @@ No issue body is executed as code. This module never launches a scan.
 """
 import datetime as dt
 import json
+from pathlib import Path
 import os
 import urllib.error
 import urllib.parse
@@ -56,3 +57,47 @@ def fetch_requests():
         return parse_requests(items)
     except (urllib.error.URLError, TimeoutError, ValueError, OSError):
         return []
+
+def plan_requests(items, ledger, completed_at=None):
+    """Pure idempotency planner: never execute duplicate issue IDs."""
+    done = set(ledger.get("completed_issue_numbers", []))
+    pending = [x for x in items if x["issue_number"] not in done]
+    # One scheduled run can satisfy all requests present at its start.
+    if completed_at:
+        pending = [x for x in pending if dt.datetime.fromisoformat(x["created_at"]) <= completed_at]
+    return pending
+
+def read_ledger(data_dir):
+    path = Path(data_dir) / "manual_request_ledger.json"
+    try:
+        data = json.loads(path.read_text())
+        if isinstance(data, dict) and isinstance(data.get("completed_issue_numbers"), list):
+            return data
+    except FileNotFoundError:
+        pass
+    except (OSError, ValueError):
+        pass
+    # Corrupt state fails closed: caller must not acknowledge any request.
+    return {"completed_issue_numbers": [], "ledger_valid": not path.exists()}
+
+def acknowledge_requests(data_dir, requests, run_id):
+    """Atomic local acknowledgment after a verified scan, never before."""
+    directory = Path(data_dir)
+    state = read_ledger(directory)
+    if state.get("ledger_valid") is False:
+        raise RuntimeError("Manual request ledger invalid; refusing acknowledgment")
+    done = {n for n in state["completed_issue_numbers"] if type(n) is int and n > 0}
+    done.update(r["issue_number"] for r in requests)
+    payload = {"completed_issue_numbers": sorted(done), "last_verified_run_id": str(run_id)}
+    import os
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode="w", dir=directory, prefix=".manual_ledger_", delete=False) as f:
+        temp = Path(f.name)
+        json.dump(payload, f)
+        f.flush()
+        os.fsync(f.fileno())
+    try:
+        os.replace(temp, directory / "manual_request_ledger.json")
+    finally:
+        temp.unlink(missing_ok=True)
+    return payload
