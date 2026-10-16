@@ -116,6 +116,25 @@ class ExecuteTests(unittest.TestCase):
                     self.assertIn('"status": "PARTIAL"', output.getvalue())
                     self.assertIn('"shadow_present": false', output.getvalue())
 
+    def test_dex_freshness_gate(self):
+        for age_minutes, expected in ((1, "VERIFIED"), (62, "PARTIAL")):
+            with self.subTest(age_minutes=age_minutes), tempfile.TemporaryDirectory() as folder:
+                with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
+                    now = dt.datetime.now(dt.timezone.utc).isoformat()
+                    summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
+                    (Path(folder) / "latest.json").write_text(json.dumps(summary))
+                    observed = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=age_minutes)).isoformat()
+                    dex = {"observed_at": observed, "buy_approved": False}
+                    records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
+                               Result("HISTORY_PERSISTED {}"),
+                               Result('SHADOW_LEARNING {"mode":"SHADOW_ONLY","live_weights_modified":false}'),
+                               Result("DEX_CACHE_REUSED " + json.dumps(dex))]
+                    with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
+                        output = io.StringIO()
+                        with contextlib.redirect_stdout(output):
+                            self.assertEqual(execute(), 0)
+                        self.assertIn('"status": "' + expected + '"', output.getvalue())
+
     def test_rejects_missing_and_naive_timestamps(self):
         with tempfile.TemporaryDirectory() as folder:
             with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
