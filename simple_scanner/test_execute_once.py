@@ -18,6 +18,19 @@ class Result:
         self.returncode = code
 
 class ExecuteTests(unittest.TestCase):
+    def test_wrapper_preserves_production_stage_order(self):
+        from simple_scanner.execute_once import MODULES
+        self.assertEqual(MODULES, (
+            "simple_scanner.scan",
+            "simple_scanner.history",
+            "simple_scanner.shadow_learning",
+            "simple_scanner.dex_guard",
+        ))
+
+    def test_docker_default_uses_locked_cron_wrapper(self):
+        dockerfile = (Path(__file__).parent / "Dockerfile").read_text()
+        self.assertIn('CMD ["python","-m","simple_scanner.execute_once","cron"]', dockerfile)
+
     def test_reject_invalid_origin(self):
         with self.assertRaises(ValueError):
             execute("invalid")
