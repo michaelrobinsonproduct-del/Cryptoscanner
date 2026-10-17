@@ -24,8 +24,8 @@ def persist():
     # Do not use journal_mode=OFF: it offers no rollback protection.
     con.execute("PRAGMA journal_mode=MEMORY")
     con.execute("PRAGMA temp_store=MEMORY")
-    # Reuse free pages in place. Never VACUUM on the nearly full live volume.
-    # Keep the existing observation resolution and learning inputs unchanged.
+    # Incremental free-page reuse avoids creating a second database copy.
+    # Preserve all raw samples and training inputs until parity tests pass.
     con.execute("CREATE TABLE IF NOT EXISTS snapshots (run_at TEXT NOT NULL, pair TEXT NOT NULL, price REAL NOT NULL CHECK(price>0), score REAL NOT NULL, PRIMARY KEY(run_at,pair))")
     con.execute("CREATE TABLE IF NOT EXISTS candidate_features (run_at TEXT NOT NULL, pair TEXT NOT NULL, base_score REAL NOT NULL, early_signal_score REAL, move_15m_pct REAL, volume_accel REAL, research_rank INTEGER, base_rank INTEGER, PRIMARY KEY(run_at,pair))")
     existing_columns={r[1] for r in con.execute("PRAGMA table_info(candidate_features)")}
