@@ -102,7 +102,26 @@ def acknowledge_requests(data_dir, requests, run_id):
         temp.unlink(missing_ok=True)
     return payload
 
-def publish_results(requests, run):
+def sanitize_watch(items):
+    """Publish only known, bounded watchlist fields; never raw scanner data."""
+    if not isinstance(items, list):
+        return []
+    result = []
+    for item in items[:12]:
+        if not isinstance(item, dict):
+            continue
+        symbol = item.get("symbol")
+        if not isinstance(symbol, str) or not (1 <= len(symbol) <= 32):
+            continue
+        row = {"symbol": symbol, "risk": str(item.get("risk", "UNASSESSED"))[:32]}
+        for field in ("score", "move_15m_pct", "volume_accel"):
+            value = item.get(field)
+            if type(value) in (int, float) and -1000000 <= value <= 1000000:
+                row[field] = value
+        result.append(row)
+    return result
+
+def publish_results(requests, run, watch, dex_status):
     """Post a bounded research-only receipt to GitHub issues.
 
     No token means no publication; never include secrets or raw scan logs.
@@ -118,7 +137,9 @@ def publish_results(requests, run):
         "buy_approved": False,
         "scan_origin": "scheduled",
         "learning": "SHADOW_ONLY",
-        "dex_fresh": True,
+        "dex_fresh": dex_status == "FRESH",
+        "dex_status": dex_status,
+        "watch": sanitize_watch(watch),
     }
     body = "Verified scheduled scan satisfied this manual request.\\n\\n" + "```json\\n" + json.dumps(receipt, sort_keys=True) + "\\n```"
     delivered = []
