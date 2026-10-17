@@ -34,7 +34,7 @@ def execute(origin="manual"):
         started = dt.datetime.now(dt.timezone.utc)
         # Optional mailbox check, inside the shared lock. Failure cannot block cron.
         manual_pending = []
-        if origin == "cron" and os.environ.get("SIMPLE_SCANNER_GITHUB_TOKEN"):
+        if origin in ("cron", "manual") and os.environ.get("SIMPLE_SCANNER_GITHUB_TOKEN"):
             try:
                 from .manual_requests import fetch_requests, read_ledger, plan_requests
                 state = read_ledger(data_dir)
