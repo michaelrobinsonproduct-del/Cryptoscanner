@@ -14,7 +14,7 @@ from .execute_once import execute
 from .manual_requests import fetch_requests, plan_requests, read_ledger
 
 POLL_SECONDS = 30
-MANUAL_COOLDOWN_SECONDS = 300
+MANUAL_COOLDOWN_SECONDS = 60
 _stop = False
 
 def stop(*_args):
@@ -59,6 +59,7 @@ def serve(*, sleep=time.sleep, clock=lambda: dt.datetime.now(dt.timezone.utc), r
             print("DAEMON_CRON_EXIT " + json.dumps({"exit_code":result}), flush=True)
         elif time.monotonic() - last_manual_attempt >= MANUAL_COOLDOWN_SECONDS and due_manual(data_dir, now):
             last_manual_attempt = time.monotonic()
+            print("DAEMON_MANUAL_REQUEST_ACCEPTED " + json.dumps({"at": now.isoformat()}), flush=True)
             result = run("manual")
             print("DAEMON_MANUAL_EXIT " + json.dumps({"exit_code":result}), flush=True)
         sleep(POLL_SECONDS)
