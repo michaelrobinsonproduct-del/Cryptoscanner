@@ -24,6 +24,7 @@ def persist():
     # Do not use journal_mode=OFF: it offers no rollback protection.
     con.execute("PRAGMA journal_mode=MEMORY")
     con.execute("PRAGMA temp_store=MEMORY")
+    # Retain full transaction rollback support while avoiding extra disk journals.
     # SQLite reuses available database pages; avoid a live VACUUM on this volume.
     # Keep observation retention and training inputs unchanged pending parity tests.
     con.execute("CREATE TABLE IF NOT EXISTS snapshots (run_at TEXT NOT NULL, pair TEXT NOT NULL, price REAL NOT NULL CHECK(price>0), score REAL NOT NULL, PRIMARY KEY(run_at,pair))")
