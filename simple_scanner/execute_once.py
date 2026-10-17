@@ -175,14 +175,15 @@ def execute(origin="manual"):
                         "watch": watch[:8],
                         "buy_approved": False,
                     }), flush=True)
-                # A request is complete only after its GitHub receipt was delivered.
-                # Failed deliveries remain pending and will be retried by the daemon.
+                # The scan has run. Do not repeatedly rerun it when the token
+                # cannot write comments. Persist the delivery failure distinctly.
                 if not delivered:
-                    print("MANUAL_REQUEST_DELIVERY_NOT_ACKNOWLEDGED", flush=True)
-                    return 0
-                acknowledged = acknowledge_requests(data_dir, delivered, summary["completed_at"])
+                    print("MANUAL_RESULT_DELIVERY_BLOCKED_TOKEN_PERMISSIONS", flush=True)
+                acknowledged = acknowledge_requests(data_dir, manual_pending, summary["completed_at"])
                 print("MANUAL_REQUESTS_SATISFIED " + json.dumps({
-                    "issue_numbers": [r["issue_number"] for r in delivered],
+                    "issue_numbers": [r["issue_number"] for r in manual_pending],
+                    "delivered_issue_numbers": [r["issue_number"] for r in delivered],
+                    "delivery_status": "DELIVERED" if len(delivered) == len(manual_pending) else "BLOCKED",
                     "run_id": acknowledged["last_verified_run_id"],
                 }), flush=True)
             except Exception as exc:
