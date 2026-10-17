@@ -18,6 +18,7 @@ MAX_REQUESTS = 20
 def parse_requests(items, now=None):
     now = now or dt.datetime.now(dt.timezone.utc)
     requests = []
+    seen = set()
     for item in items:
         if not isinstance(item, dict) or "pull_request" in item:
             continue
@@ -34,6 +35,9 @@ def parse_requests(items, now=None):
                 continue
         except (KeyError, ValueError, TypeError, AttributeError):
             continue
+        if number in seen:
+            continue
+        seen.add(number)
         requests.append({"issue_number": number, "created_at": created.isoformat()})
     return requests
 
@@ -141,7 +145,7 @@ def publish_results(requests, run, watch, dex_status):
         "dex_status": dex_status,
         "watch": sanitize_watch(watch),
     }
-    body = "Verified scheduled scan satisfied this manual request.\\n\\n" + "```json\\n" + json.dumps(receipt, sort_keys=True) + "\\n```"
+    body = "Verified scheduled scan satisfied this manual request.\\n\\n" + "```json\\n" + json.dumps(receipt, sort_keys=True, allow_nan=False) + "\\n```"
     delivered = []
     for item in requests:
         number = item["issue_number"]
