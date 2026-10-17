@@ -177,7 +177,7 @@ def execute(origin="manual"):
                     }), flush=True)
                 acknowledged = acknowledge_requests(data_dir, manual_pending, summary["completed_at"])
                 print("MANUAL_REQUESTS_SATISFIED " + json.dumps({
-                    "issue_numbers": [r["issue_number"] for r in delivered],
+                    "issue_numbers": [r["issue_number"] for r in manual_pending],
                     "run_id": acknowledged["last_verified_run_id"],
                 }), flush=True)
             except Exception as exc:
