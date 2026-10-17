@@ -5,7 +5,7 @@ import os
 import unittest
 from unittest.mock import patch
 from urllib.error import URLError
-from simple_scanner.manual_requests import publish_results
+from simple_scanner.manual_requests import publish_results, sanitize_watch
 
 class FakeResponse:
     status = 201
@@ -16,6 +16,9 @@ class ReceiptTests(unittest.TestCase):
     def setUp(self):
         self.items = [{"issue_number": 123, "created_at": "2026-10-16T19:59:00+00:00"}]
         self.run = {"completed_at": "2026-10-16T20:00:00+00:00"}
+
+    def test_nonfinite_scores_never_published(self):
+        self.assertNotIn("score", sanitize_watch([{"symbol": "TEST/USD", "score": float("nan")}])[0])
 
     def test_no_token_never_calls_network(self):
         with patch.dict(os.environ, {}, clear=True), patch("urllib.request.urlopen") as send:
