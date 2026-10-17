@@ -163,7 +163,10 @@ def execute(origin="manual"):
             try:
                 from .manual_requests import acknowledge_requests, publish_results
                 watch = json.loads(records["WATCH_SUMMARY"])
-                delivered = publish_results(manual_pending, summary, watch, "FRESH" if dex_fresh and not dex_degraded else "DEGRADED")
+                if not isinstance(watch, list):
+                    print("MANUAL_WATCH_INVALID_SCHEMA", flush=True)
+                    return 1
+                delivered = publish_results(manual_pending, summary, watch, "FRESH" if dex_fresh and not dex_degraded else "DEGRADED", origin=origin)
                 if not delivered:
                     print("MANUAL_RESULT_DELIVERY_PENDING", flush=True)
                 acknowledged = acknowledge_requests(data_dir, delivered, summary["completed_at"])
