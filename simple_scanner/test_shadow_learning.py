@@ -54,3 +54,24 @@ class ShadowTests(unittest.TestCase):
    r=evaluate(p)
    self.assertEqual(r["missed_breakout_examples"][0]["pair"],"MISS")
    self.assertFalse(r["misses_included_in_weight_training"])
+
+ def test_market_miss_model_requires_mature_outcomes(self):
+  import datetime as dt
+  with tempfile.TemporaryDirectory() as d:
+   p=Path(d)/"history.sqlite3";c=sqlite3.connect(p)
+   c.execute("CREATE TABLE candidate_features(run_at TEXT,pair TEXT,move_15m_pct REAL,volume_accel REAL,base_score REAL)")
+   c.execute("CREATE TABLE outcomes(run_at TEXT,pair TEXT,horizon_hours INTEGER,return_pct REAL)")
+   c.execute("CREATE TABLE snapshots(run_at TEXT,pair TEXT)")
+   c.execute("CREATE TABLE market_observations(run_at TEXT,pair TEXT,price REAL)")
+   c.execute("CREATE TABLE market_signals(run_at TEXT,pair TEXT,move24_pct REAL,spread_bps REAL,notional_24h_usd REAL)")
+   now=dt.datetime.now(dt.timezone.utc)
+   for j in range(5):
+    t=(now-dt.timedelta(hours=4,minutes=j)).isoformat()
+    c.execute("INSERT INTO market_signals VALUES (?,?,?,?,?)",(t,f"C{j}",.5,20,200000))
+    c.execute("INSERT INTO market_observations VALUES (?,?,?)",(t,f"C{j}",1.0))
+    c.execute("INSERT INTO market_observations VALUES (?,?,?)",((now-dt.timedelta(hours=3,minutes=j)).isoformat(),f"C{j}",1.2))
+   c.commit();c.close()
+   r=evaluate(p)
+   self.assertEqual(r["market_miss_model"]["samples"],5)
+   self.assertEqual(r["market_miss_model"]["breakouts"],5)
+   self.assertEqual(r["market_miss_model"]["status"],"INSUFFICIENT_MARKET_OUTCOMES")
