@@ -38,12 +38,12 @@ def evaluate_market_misses(con):
         return {"status": "AWAITING_MARKET_FEATURES", "samples": 0}
     rows = con.execute("""SELECT s.run_at,s.pair,s.move24_pct,s.spread_bps,s.notional_24h_usd,
         (SELECT 100*(o.price/m.price-1) FROM market_observations o
-         WHERE o.pair=s.pair AND o.run_at>=datetime(s.run_at,'+1 hour')
-           AND o.run_at<datetime(s.run_at,'+2 hours')
+         WHERE o.pair=s.pair AND julianday(o.run_at)>=julianday(s.run_at)+1.0/24
+           AND julianday(o.run_at)<julianday(s.run_at)+2.0/24
          ORDER BY o.run_at LIMIT 1) AS return_pct
         FROM market_signals s JOIN market_observations m
           ON m.run_at=s.run_at AND m.pair=s.pair
-        WHERE s.run_at < datetime('now','-2 hours')
+        WHERE julianday(s.run_at) < julianday('now')-2.0/24
         ORDER BY s.run_at DESC LIMIT 12000""").fetchall()
     rows = [r for r in rows if r[5] is not None and all(math.isfinite(float(x)) for x in r[2:])]
     rows.sort(key=lambda r:(r[0],r[1]))
