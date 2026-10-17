@@ -126,7 +126,7 @@ def sanitize_watch(items):
         result.append(row)
     return result
 
-def publish_results(requests, run, watch, dex_status):
+def publish_results(requests, run, watch, dex_status, origin="cron"):
     """Post a bounded research-only receipt to GitHub issues.
 
     No token means no publication; never include secrets or raw scan logs.
@@ -140,13 +140,13 @@ def publish_results(requests, run, watch, dex_status):
         "status": "VERIFIED",
         "completed_at": run["completed_at"],
         "buy_approved": False,
-        "scan_origin": "scheduled",
+        "scan_origin": "manual" if origin == "manual" else "scheduled",
         "learning": "SHADOW_ONLY",
         "dex_fresh": dex_status == "FRESH",
         "dex_status": dex_status,
         "watch": sanitize_watch(watch),
     }
-    body = "Verified scheduled scan satisfied this manual request.\n\n" + "```json\n" + json.dumps(receipt, sort_keys=True, allow_nan=False) + "\n```"
+    body = "Verified scan satisfied this manual request.\n\n" + "```json\n" + json.dumps(receipt, sort_keys=True, allow_nan=False) + "\n```"
     delivered = []
     for item in requests:
         number = item["issue_number"]
