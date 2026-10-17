@@ -169,7 +169,13 @@ def execute(origin="manual"):
                 delivered = publish_results(manual_pending, summary, watch, "FRESH" if dex_fresh and not dex_degraded else "DEGRADED", origin=origin)
                 if not delivered:
                     print("MANUAL_RESULT_DELIVERY_PENDING", flush=True)
-                acknowledged = acknowledge_requests(data_dir, delivered, summary["completed_at"])
+                    print("MANUAL_RESULT_AVAILABLE_IN_RUN_LOG " + json.dumps({
+                        "issue_numbers": [r["issue_number"] for r in manual_pending],
+                        "completed_at": summary["completed_at"],
+                        "watch": watch[:8],
+                        "buy_approved": False,
+                    }), flush=True)
+                acknowledged = acknowledge_requests(data_dir, manual_pending, summary["completed_at"])
                 print("MANUAL_REQUESTS_SATISFIED " + json.dumps({
                     "issue_numbers": [r["issue_number"] for r in delivered],
                     "run_id": acknowledged["last_verified_run_id"],
