@@ -23,6 +23,7 @@ def audit(path, *, max_bytes=None):
         page_size = con.execute("PRAGMA page_size").fetchone()[0]
         pages = con.execute("PRAGMA page_count").fetchone()[0]
         freelist = con.execute("PRAGMA freelist_count").fetchone()[0]
+        indexes = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='index' AND name NOT LIKE 'sqlite_autoindex%'")}
     report = {
         "integrity": integrity, "counts": counts,
         "orphan_outcomes": unmatched, "snapshots_missing_features": missing_features,
@@ -30,6 +31,7 @@ def audit(path, *, max_bytes=None):
         "page_bytes": page_size, "pages": pages, "free_pages": freelist,
         "reclaimable_inside_db_bytes": freelist * page_size,
         "max_bytes": max_bytes,
+        "redundant_indexes_remaining": sorted(indexes & {"idx_market_time","idx_market_signals_time","idx_snapshots_time"}),
     }
     report["passed"] = (
         integrity == "ok" and unmatched == 0 and missing_features == 0
