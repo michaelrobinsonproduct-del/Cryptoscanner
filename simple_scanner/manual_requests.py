@@ -163,7 +163,19 @@ def publish_results(requests, run, watch, dex_status, origin="cron"):
                 if response.status == 201:
                     delivered.append(item)
         except urllib.error.HTTPError as exc:
-            print("MANUAL_RESULT_HTTP_FAILED " + json.dumps({"status": exc.code, "issue_number": number}), flush=True)
+            # GitHub supplies the rejection reason in the response body and
+            # often a permissions hint in X-Accepted-GitHub-Permissions.
+            # Never log tokens, request headers, or unrelated response fields.
+            try:
+                detail = json.loads(exc.read(4096).decode("utf-8", errors="replace"))
+                reason = str(detail.get("message", ""))[:300] if isinstance(detail, dict) else ""
+            except (ValueError, OSError):
+                reason = ""
+            accepted = str(exc.headers.get("X-Accepted-GitHub-Permissions", ""))[:160]
+            print("MANUAL_RESULT_HTTP_FAILED " + json.dumps({
+                "status": exc.code, "issue_number": number,
+                "github_message": reason, "accepted_permissions": accepted,
+            }), flush=True)
             continue
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             print("MANUAL_RESULT_NETWORK_FAILED " + json.dumps({"error": type(exc).__name__, "issue_number": number}), flush=True)
