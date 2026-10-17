@@ -47,6 +47,11 @@ def persist():
     # observations to one hourly sample per pair, preserving a year of trend
     # history while freeing SQLite pages for ongoing scans.
     with con:
+        # All three single-column indexes duplicate the leftmost run_at
+        # prefix of the tables' (run_at,pair) primary-key indexes.
+        # DROP INDEX frees internal SQLite pages without deleting observations.
+        for redundant in ("idx_market_signals_time", "idx_market_time", "idx_snapshots_time"):
+            con.execute("DROP INDEX IF EXISTS " + redundant)
         older_than=(now-dt.timedelta(hours=24)).isoformat()
         con.execute("""DELETE FROM market_observations
             WHERE run_at < ? AND CAST(strftime('%M',run_at) AS INTEGER) >= 15""",(older_than,))
