@@ -27,6 +27,63 @@ def compare(rows, momentum, volume):
             "challenger_avg_pct": round(sum(candidate) / n, 4),
             "delta_pct": round((sum(candidate) - sum(base)) / n, 4)}
 
+def evaluate_market_misses(con):
+    """Learn market-wide screening thresholds from matured 1h observations.
+
+    Training and later holdout are split by timestamp, never by random row.
+    This learner cannot change production filters until forward proof exists.
+    """
+    tables = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    if not {"market_signals", "market_observations", "snapshots"}.issubset(tables):
+        return {"status": "AWAITING_MARKET_FEATURES", "samples": 0}
+    rows = con.execute("""SELECT s.run_at,s.pair,s.move24_pct,s.spread_bps,s.notional_24h_usd,
+        (SELECT 100*(o.price/m.price-1) FROM market_observations o
+         WHERE o.pair=s.pair AND o.run_at>=datetime(s.run_at,'+1 hour')
+           AND o.run_at<datetime(s.run_at,'+2 hours')
+         ORDER BY o.run_at LIMIT 1) AS return_pct
+        FROM market_signals s JOIN market_observations m
+          ON m.run_at=s.run_at AND m.pair=s.pair
+        WHERE s.run_at < datetime('now','-2 hours')
+        ORDER BY s.run_at DESC LIMIT 12000""").fetchall()
+    rows = [r for r in rows if r[5] is not None and all(math.isfinite(float(x)) for x in r[2:])]
+    rows.sort(key=lambda r:(r[0],r[1]))
+    positives = sum(r[5]>=5 for r in rows)
+    report = {"status":"INSUFFICIENT_MARKET_OUTCOMES","samples":len(rows),"breakouts":positives}
+    times=sorted({r[0] for r in rows})
+    if len(rows)<1200 or positives<15 or len(times)<20:
+        return report
+    cutoff=times[int(len(times)*.7)]
+    train=[r for r in rows if r[0]<cutoff]
+    test=[r for r in rows if r[0]>=cutoff]
+    def evaluate_rule(group, rule):
+        tp=fp=fn=0
+        for r in group:
+            selected=rule(r)
+            breakout=r[5]>=5
+            tp+=bool(selected and breakout)
+            fp+=bool(selected and not breakout)
+            fn+=bool(not selected and breakout)
+        return {"recall":round(tp/max(1,tp+fn),4),"precision":round(tp/max(1,tp+fp),4),
+                "true_positives":tp,"false_positives":fp,"missed_breakouts":fn}
+    baseline=lambda r: .25<=r[2]<=12 and r[3]<=45 and r[4]>=100000
+    # Small, interpretable threshold grid; no holdout tuning.
+    trials=[]
+    for minimum_move in (-5, -2, 0, .25):
+        for max_spread in (45, 75, 125):
+            for min_notional in (25000,50000,100000):
+                rule=lambda r,mm=minimum_move,ms=max_spread,mn=min_notional: mm<=r[2]<=12 and r[3]<=ms and r[4]>=mn
+                metrics=evaluate_rule(train,rule)
+                trials.append((metrics["recall"]-.00001*metrics["false_positives"],minimum_move,max_spread,min_notional,metrics))
+    _,mm,ms,mn,train_metrics=max(trials,key=lambda x:x[0])
+    learned=lambda r:mm<=r[2]<=12 and r[3]<=ms and r[4]>=mn
+    report.update({"status":"MARKET_MISS_MODEL_EVALUATED",
+                   "learned_filter":{"min_move24_pct":mm,"max_spread_bps":ms,"min_notional_usd":mn},
+                   "train":train_metrics,"holdout":evaluate_rule(test,learned),
+                   "baseline_holdout":evaluate_rule(test,baseline),
+                   "production_adopted":False,
+                   "promotion_reason":"Prospective validation and executable-liquidity checks pending"})
+    return report
+
 def evaluate(db_path):
     con = sqlite3.connect(f"file:{Path(db_path).resolve()}?mode=ro", uri=True)
     try:
@@ -36,6 +93,7 @@ def evaluate(db_path):
             ORDER BY f.run_at,f.pair""").fetchall()
         has_observations = con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='market_observations'").fetchone()
         missed = con.execute("SELECT COUNT(*) FROM market_observations").fetchone()[0] if has_observations else 0
+        market_miss_model = evaluate_market_misses(con)
         # Audited misses: full-market observed jumps not present in watch snapshots.
         # Restrict to the last seven days and consecutive observations <=90m.
         miss_examples = []
@@ -60,7 +118,8 @@ def evaluate(db_path):
               "status": "INSUFFICIENT_DATA", "market_observations_total": missed,
               "missed_breakout_examples": [{"pair": p, "observed_at": t, "gain_pct": g}
                                             for p, t, g in miss_examples],
-              "misses_included_in_weight_training": False}
+              "misses_included_in_weight_training": False,
+              "market_miss_model": market_miss_model}
     times = sorted({r[0] for r in rows})
     if len(rows) < MIN_TRAIN + MIN_TEST or len(times) < 12:
         return result
