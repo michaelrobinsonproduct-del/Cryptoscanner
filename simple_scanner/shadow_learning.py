@@ -43,12 +43,15 @@ def evaluate_market_misses(con):
          ORDER BY o.run_at LIMIT 1) AS return_pct
         FROM market_signals s JOIN market_observations m
           ON m.run_at=s.run_at AND m.pair=s.pair
-        WHERE julianday(s.run_at) < julianday('now')-2.0/24
-        ORDER BY s.run_at DESC LIMIT 12000""").fetchall()
+        WHERE s.run_at < ?
+        ORDER BY s.run_at DESC LIMIT 12000""",
+        ((dt.datetime.now(dt.timezone.utc)-dt.timedelta(hours=2)).isoformat(),)).fetchall()
     rows = [r for r in rows if r[5] is not None and all(math.isfinite(float(x)) for x in r[2:])]
+    # Track the proportion of mature feature rows with usable future prices.
+    reportable_samples = len(rows)
     rows.sort(key=lambda r:(r[0],r[1]))
     positives = sum(r[5]>=5 for r in rows)
-    report = {"status":"INSUFFICIENT_MARKET_OUTCOMES","samples":len(rows),"breakouts":positives}
+    report = {"status":"INSUFFICIENT_MARKET_OUTCOMES","samples":reportable_samples,"breakouts":positives}
     times=sorted({r[0] for r in rows})
     if len(rows)<1200 or positives<15 or len(times)<20:
         return report
