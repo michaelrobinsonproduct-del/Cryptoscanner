@@ -34,7 +34,18 @@ def persist():
     con.execute("CREATE INDEX IF NOT EXISTS idx_outcomes_horizon ON outcomes(horizon_hours)")
     now = dt.datetime.fromisoformat(report["completed_at"])
     assert now.tzinfo is not None and now.utcoffset() is not None, "Scan timestamp must be timezone-aware"
+    # Storage guard for Railway's 100 MB volume. Preserve all candidate snapshots,
+    # outcomes, and recent full-resolution prices. Downsample older raw market
+    # observations to one hourly sample per pair, preserving a year of trend
+    # history while freeing SQLite pages for ongoing scans.
     with con:
+        older_than=(now-dt.timedelta(hours=24)).isoformat()
+        con.execute("""DELETE FROM market_observations
+            WHERE run_at < ? AND CAST(strftime('%M',run_at) AS INTEGER) >= 15""",(older_than,))
+        con.execute("""DELETE FROM market_signals
+            WHERE run_at < ? AND CAST(strftime('%M',run_at) AS INTEGER) >= 15""",(older_than,))
+        # The 24h outcome window needs 1h granularity; retain an hourly anchor.
+        # Remove only non-candidate raw observations, never the outcome ledger.
         for pair,signals in report.get("market_signals",{}).items():
             if pair not in report.get("market_prices",{}):
                 continue
