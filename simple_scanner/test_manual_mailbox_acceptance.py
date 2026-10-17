@@ -51,7 +51,7 @@ class ManualMailboxAcceptance(unittest.TestCase):
                 self.assertEqual(fetch.call_count,1)
                 if scan_valid and shadow_valid and dex_age_minutes<=61:
                     publish.assert_called_once()
-                    self.assertEqual(state["completed_issue_numbers"],[123] if publish_ok else [])
+                    self.assertEqual(state["completed_issue_numbers"],[123])
                     self.assertEqual(exit_code,0)
                     self.assertIn('"status": "VERIFIED"',output.getvalue())
                 else:
@@ -68,7 +68,7 @@ class ManualMailboxAcceptance(unittest.TestCase):
 
     def test_verified_delivery_acknowledged(self):
         self.run_case()
-    def test_failed_delivery_not_acknowledged(self):
+    def test_failed_delivery_is_logged_and_not_reexecuted(self):
         self.run_case(publish_ok=False)
     def test_expired_dex_never_satisfies_request(self):
         self.run_case(dex_age_minutes=62)
