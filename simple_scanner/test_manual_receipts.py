@@ -41,7 +41,7 @@ class ReceiptTests(unittest.TestCase):
         with patch.dict(os.environ, {"SIMPLE_SCANNER_GITHUB_TOKEN": "synthetic"}), patch("urllib.request.urlopen", return_value=FakeResponse()) as send:
             self.assertEqual(publish_results(self.items, self.run, [], "FRESH", origin="manual"), self.items)
             body = json.loads(send.call_args.args[0].data)["body"]
-            self.assertIn(\'"scan_origin": "manual"\', body)
+            self.assertIn('"scan_origin": "manual"', body)
 
     def test_delivery_failure_never_acknowledged(self):
         with patch.dict(os.environ, {"SIMPLE_SCANNER_GITHUB_TOKEN": "synthetic"}), patch("urllib.request.urlopen", side_effect=URLError("offline")):
