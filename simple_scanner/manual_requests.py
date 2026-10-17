@@ -162,6 +162,10 @@ def publish_results(requests, run, watch, dex_status, origin="cron"):
             with urllib.request.urlopen(request, timeout=5) as response:
                 if response.status == 201:
                     delivered.append(item)
-        except (urllib.error.URLError, TimeoutError, OSError):
+        except urllib.error.HTTPError as exc:
+            print("MANUAL_RESULT_HTTP_FAILED " + json.dumps({"status": exc.code, "issue_number": number}), flush=True)
+            continue
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            print("MANUAL_RESULT_NETWORK_FAILED " + json.dumps({"error": type(exc).__name__, "issue_number": number}), flush=True)
             continue
     return delivered
