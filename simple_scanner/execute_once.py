@@ -175,9 +175,14 @@ def execute(origin="manual"):
                         "watch": watch[:8],
                         "buy_approved": False,
                     }), flush=True)
-                acknowledged = acknowledge_requests(data_dir, manual_pending, summary["completed_at"])
+                # A request is complete only after its GitHub receipt was delivered.
+                # Failed deliveries remain pending and will be retried by the daemon.
+                if not delivered:
+                    print("MANUAL_REQUEST_DELIVERY_NOT_ACKNOWLEDGED", flush=True)
+                    return 0
+                acknowledged = acknowledge_requests(data_dir, delivered, summary["completed_at"])
                 print("MANUAL_REQUESTS_SATISFIED " + json.dumps({
-                    "issue_numbers": [r["issue_number"] for r in manual_pending],
+                    "issue_numbers": [r["issue_number"] for r in delivered],
                     "run_id": acknowledged["last_verified_run_id"],
                 }), flush=True)
             except Exception as exc:
