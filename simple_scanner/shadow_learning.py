@@ -37,7 +37,7 @@ def evaluate(db_path):
             WHERE m.run_at >= datetime('now','-7 days')""").fetchone()[0]
     finally:
         con.close()
-    result = {"mode": "ADAPTIVE_SHADOW", "samples": len(rows), "min_train": MIN_TRAIN,
+    result = {"mode": "SHADOW_ONLY", "samples": len(rows), "min_train": MIN_TRAIN,
               "min_test": MIN_TEST, "live_weights_modified": False, "buy_approved": False,
               "status": "INSUFFICIENT_DATA", "market_observations_recent": missed}
     times = sorted({r[0] for r in rows})
