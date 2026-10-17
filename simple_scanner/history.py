@@ -101,6 +101,18 @@ def persist():
                 ret=100*(observed_price/price-1)
                 con.execute("INSERT OR IGNORE INTO outcomes VALUES (?,?,?,?,?)", (run_at,pair,hours,observed_at,round(ret,4)))
     assert con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+    # Report SQLite's reusable pages separately from filesystem free space.
+    # Dropping indexes releases pages inside the DB, not necessarily OS bytes.
+    page_bytes=con.execute("PRAGMA page_size").fetchone()[0]
+    free_pages=con.execute("PRAGMA freelist_count").fetchone()[0]
+    remaining_indexes=[name for (name,) in con.execute(
+        "SELECT name FROM sqlite_master WHERE type='index' AND name IN (?,?,?)",
+        ("idx_market_time","idx_market_signals_time","idx_snapshots_time"))]
+    print("STORAGE_SQLITE_AUDIT "+json.dumps({
+        "integrity":"ok", "db_bytes":DB.stat().st_size,
+        "reusable_bytes":page_bytes*free_pages,
+        "redundant_indexes_remaining":remaining_indexes,
+    }),flush=True)
     n = con.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
     outcomes = con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
     feature_rows=con.execute("SELECT COUNT(*) FROM candidate_features").fetchone()[0]
