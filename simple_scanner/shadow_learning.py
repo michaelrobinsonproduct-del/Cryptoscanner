@@ -1,4 +1,5 @@
 """Train adaptive research challenger on matured outcomes; production stays gated."""
+import datetime as dt
 import json
 import math
 import os
@@ -50,7 +51,7 @@ def evaluate(db_path):
               AND (julianday(q.next_at)-julianday(q.run_at))*1440 BETWEEN 0 AND 90
               AND NOT EXISTS (SELECT 1 FROM snapshots s WHERE s.run_at=q.run_at AND s.pair=q.pair)
             ORDER BY (q.next_price/q.price) DESC LIMIT 20
-            """, (max((r[0] for r in rows), default="0000")[:10],)).fetchall()
+            """, ((dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=7)).isoformat(),)).fetchall()
 
     finally:
         con.close()
