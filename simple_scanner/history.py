@@ -35,9 +35,7 @@ def persist():
     con.execute("CREATE TABLE IF NOT EXISTS market_observations (run_at TEXT NOT NULL, pair TEXT NOT NULL, price REAL NOT NULL CHECK(price>0), PRIMARY KEY(run_at,pair))")
     con.execute("CREATE TABLE IF NOT EXISTS market_signals (run_at TEXT NOT NULL, pair TEXT NOT NULL, move24_pct REAL NOT NULL, spread_bps REAL NOT NULL, notional_24h_usd REAL NOT NULL, PRIMARY KEY(run_at,pair))")
     con.execute("CREATE INDEX IF NOT EXISTS idx_market_pair_time ON market_observations(pair,run_at)")
-    # Redundant run_at indexes are covered by each table's (run_at,pair) primary key.
-    # Redundant run_at indexes are covered by each table's (run_at,pair) primary key.
-    # Redundant run_at indexes are covered by each table's (run_at,pair) primary key.
+    # Single-column timestamp indexes are unnecessary: the PK covers run_at.
     con.execute("CREATE TABLE IF NOT EXISTS outcomes (run_at TEXT NOT NULL, pair TEXT NOT NULL, horizon_hours INTEGER NOT NULL, evaluated_at TEXT NOT NULL, return_pct REAL NOT NULL, PRIMARY KEY(run_at,pair,horizon_hours))")
     con.execute("CREATE INDEX IF NOT EXISTS idx_outcomes_horizon ON outcomes(horizon_hours)")
     now = dt.datetime.fromisoformat(report["completed_at"])
