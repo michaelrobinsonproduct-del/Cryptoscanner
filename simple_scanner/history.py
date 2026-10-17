@@ -51,6 +51,13 @@ def persist():
             WHERE run_at < ? AND CAST(strftime('%M',run_at) AS INTEGER) >= 15""",(older_than,))
         con.execute("""DELETE FROM market_signals
             WHERE run_at < ? AND CAST(strftime('%M',run_at) AS INTEGER) >= 15""",(older_than,))
+        # Bound raw market storage to eight days. The missed-breakout query
+        # examines seven days; forward outcomes mature within 25 hours.
+        # Candidate features, snapshots and matured outcomes remain untouched.
+        # Delete oldest raw rows first so SQLite can reuse their pages.
+        retention_floor=(now-dt.timedelta(days=8)).isoformat()
+        con.execute("DELETE FROM market_observations WHERE run_at < ?",(retention_floor,))
+        con.execute("DELETE FROM market_signals WHERE run_at < ?",(retention_floor,))
         # The 24h outcome window needs 1h granularity; retain an hourly anchor.
         # Remove only non-candidate raw observations, never the outcome ledger.
         for pair,signals in report.get("market_signals",{}).items():
