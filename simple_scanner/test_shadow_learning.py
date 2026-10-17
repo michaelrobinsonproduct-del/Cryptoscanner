@@ -38,3 +38,19 @@ class ShadowTests(unittest.TestCase):
    self.assertGreater(r["holdout"]["delta_pct"],0)
    self.assertFalse(r["promotion_eligible"])
    self.assertFalse(r["live_weights_modified"])
+
+ def test_unselected_breakout_audit(self):
+  import datetime as dt
+  with tempfile.TemporaryDirectory() as d:
+   p=Path(d)/"history.sqlite3";c=sqlite3.connect(p)
+   c.execute("CREATE TABLE candidate_features(run_at TEXT,pair TEXT,move_15m_pct REAL,volume_accel REAL,base_score REAL)")
+   c.execute("CREATE TABLE outcomes(run_at TEXT,pair TEXT,horizon_hours INTEGER,return_pct REAL)")
+   c.execute("CREATE TABLE snapshots(run_at TEXT,pair TEXT)")
+   c.execute("CREATE TABLE market_observations(run_at TEXT,pair TEXT,price REAL)")
+   t=dt.datetime.now(dt.timezone.utc)-dt.timedelta(minutes=35)
+   c.execute("INSERT INTO market_observations VALUES (?,?,?)",(t.isoformat(),"MISS",1.0))
+   c.execute("INSERT INTO market_observations VALUES (?,?,?)",((t+dt.timedelta(minutes=15)).isoformat(),"MISS",1.2))
+   c.commit();c.close()
+   r=evaluate(p)
+   self.assertEqual(r["missed_breakout_examples"][0]["pair"],"MISS")
+   self.assertFalse(r["misses_included_in_weight_training"])
