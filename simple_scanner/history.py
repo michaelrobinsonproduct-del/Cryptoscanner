@@ -18,7 +18,12 @@ def persist():
     assert report["validated_watch"] > 0
     DB.parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(DB)
-    con.execute("PRAGMA journal_mode=DELETE")
+    # Emergency recovery: a full filesystem cannot allocate SQLite's disk rollback
+    # journal even to DELETE rows. MEMORY journal allows the retention transaction
+    # to free pages within the existing DB file without allocating a journal file.
+    # Do not use journal_mode=OFF: it offers no rollback protection.
+    con.execute("PRAGMA journal_mode=MEMORY")
+    con.execute("PRAGMA temp_store=MEMORY")
     con.execute("CREATE TABLE IF NOT EXISTS snapshots (run_at TEXT NOT NULL, pair TEXT NOT NULL, price REAL NOT NULL CHECK(price>0), score REAL NOT NULL, PRIMARY KEY(run_at,pair))")
     con.execute("CREATE TABLE IF NOT EXISTS candidate_features (run_at TEXT NOT NULL, pair TEXT NOT NULL, base_score REAL NOT NULL, early_signal_score REAL, move_15m_pct REAL, volume_accel REAL, research_rank INTEGER, base_rank INTEGER, PRIMARY KEY(run_at,pair))")
     existing_columns={r[1] for r in con.execute("PRAGMA table_info(candidate_features)")}
