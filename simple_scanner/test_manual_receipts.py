@@ -19,7 +19,7 @@ class ReceiptTests(unittest.TestCase):
 
     def test_no_token_never_calls_network(self):
         with patch.dict(os.environ, {}, clear=True), patch("urllib.request.urlopen") as send:
-            self.assertEqual(publish_results(self.items, self.run), [])
+            self.assertEqual(publish_results(self.items, self.run, [{"symbol": "TAO/USD", "score": 73.5, "move_15m_pct": 2.1, "volume_accel": 1.7, "risk": "HIGH", "private": "must-not-leak"}], "FRESH"), [])
             send.assert_not_called()
 
     def test_receipt_is_bounded_and_research_only(self):
@@ -29,6 +29,9 @@ class ReceiptTests(unittest.TestCase):
             body = json.loads(request.data)["body"]
             self.assertIn('"buy_approved": false', body)
             self.assertIn("MANUAL_SCAN_RESULT", body)
+            self.assertIn("TAO/USD", body)
+            self.assertIn('"dex_status": "FRESH"', body)
+            self.assertNotIn("must-not-leak", body)
             self.assertNotIn("synthetic", body)
 
     def test_delivery_failure_never_acknowledged(self):
