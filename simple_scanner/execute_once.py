@@ -188,6 +188,12 @@ def execute(origin="manual"):
                 }), flush=True)
             except Exception as exc:
                 print("MANUAL_REQUEST_ACK_FAILED " + json.dumps({"error": type(exc).__name__}), flush=True)
+        # Report free space without modifying historical observations or outcomes.
+        try:
+            disk = os.statvfs(data_dir)
+            print("STORAGE_FREE_BYTES " + str(disk.f_bavail * disk.f_frsize), flush=True)
+        except OSError:
+            print("STORAGE_FREE_UNAVAILABLE", flush=True)
         return 0
 
 if __name__ == "__main__":
