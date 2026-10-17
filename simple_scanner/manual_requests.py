@@ -146,7 +146,7 @@ def publish_results(requests, run, watch, dex_status):
         "dex_status": dex_status,
         "watch": sanitize_watch(watch),
     }
-    body = "Verified scheduled scan satisfied this manual request.\\n\\n" + "```json\\n" + json.dumps(receipt, sort_keys=True, allow_nan=False) + "\\n```"
+    body = "Verified scheduled scan satisfied this manual request.\n\n" + "```json\n" + json.dumps(receipt, sort_keys=True, allow_nan=False) + "\n```"
     delivered = []
     for item in requests:
         number = item["issue_number"]
