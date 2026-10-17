@@ -5,6 +5,7 @@ No issue body is executed as code. This module never launches a scan.
 """
 import datetime as dt
 import json
+import math
 from pathlib import Path
 import os
 import urllib.error
@@ -120,7 +121,7 @@ def sanitize_watch(items):
         row = {"symbol": symbol, "risk": str(item.get("risk", "UNASSESSED"))[:32]}
         for field in ("score", "move_15m_pct", "volume_accel"):
             value = item.get(field)
-            if type(value) in (int, float) and -1000000 <= value <= 1000000:
+            if type(value) in (int, float) and math.isfinite(value) and -1000000 <= value <= 1000000:
                 row[field] = value
         result.append(row)
     return result
