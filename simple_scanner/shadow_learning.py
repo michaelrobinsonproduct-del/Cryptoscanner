@@ -35,11 +35,31 @@ def evaluate(db_path):
             ORDER BY f.run_at,f.pair""").fetchall()
         has_observations = con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='market_observations'").fetchone()
         missed = con.execute("SELECT COUNT(*) FROM market_observations").fetchone()[0] if has_observations else 0
+        # Audited misses: full-market observed jumps not present in watch snapshots.
+        # Restrict to the last seven days and consecutive observations <=90m.
+        miss_examples = []
+        if has_observations and con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='snapshots'").fetchone():
+            miss_examples = con.execute("""WITH sequence AS (
+                SELECT pair,run_at,price,
+                       LEAD(run_at) OVER (PARTITION BY pair ORDER BY run_at) next_at,
+                       LEAD(price) OVER (PARTITION BY pair ORDER BY run_at) next_price
+                FROM market_observations WHERE run_at >= ?
+            )
+            SELECT q.pair,q.run_at,ROUND(100*(q.next_price/q.price-1),2)
+            FROM sequence q WHERE q.next_price >= q.price*1.05
+              AND (julianday(q.next_at)-julianday(q.run_at))*1440 BETWEEN 0 AND 90
+              AND NOT EXISTS (SELECT 1 FROM snapshots s WHERE s.run_at=q.run_at AND s.pair=q.pair)
+            ORDER BY (q.next_price/q.price) DESC LIMIT 20
+            """, (max((r[0] for r in rows), default="0000")[:10],)).fetchall()
+
     finally:
         con.close()
     result = {"mode": "SHADOW_ONLY", "samples": len(rows), "min_train": MIN_TRAIN,
               "min_test": MIN_TEST, "live_weights_modified": False, "buy_approved": False,
-              "status": "INSUFFICIENT_DATA", "market_observations_recent": missed}
+              "status": "INSUFFICIENT_DATA", "market_observations_total": missed,
+              "missed_breakout_examples": [{"pair": p, "observed_at": t, "gain_pct": g}
+                                            for p, t, g in miss_examples],
+              "misses_included_in_weight_training": False}
     times = sorted({r[0] for r in rows})
     if len(rows) < MIN_TRAIN + MIN_TEST or len(times) < 12:
         return result
