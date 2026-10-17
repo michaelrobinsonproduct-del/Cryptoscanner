@@ -33,8 +33,8 @@ def evaluate(db_path):
             FROM candidate_features f JOIN outcomes o ON f.run_at=o.run_at AND f.pair=o.pair
             WHERE o.horizon_hours=1 AND f.move_15m_pct IS NOT NULL AND f.volume_accel IS NOT NULL
             ORDER BY f.run_at,f.pair""").fetchall()
-        missed = con.execute("""SELECT COUNT(*) FROM market_observations m
-            WHERE m.run_at >= datetime('now','-7 days')""").fetchone()[0]
+        has_observations = con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='market_observations'").fetchone()
+        missed = con.execute("SELECT COUNT(*) FROM market_observations").fetchone()[0] if has_observations else 0
     finally:
         con.close()
     result = {"mode": "SHADOW_ONLY", "samples": len(rows), "min_train": MIN_TRAIN,
