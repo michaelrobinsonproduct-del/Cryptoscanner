@@ -20,3 +20,21 @@ class ShadowTests(unittest.TestCase):
    c.execute("CREATE TABLE outcomes(run_at TEXT,pair TEXT,horizon_hours INTEGER,return_pct REAL)")
    c.commit();c.close()
    before=p.read_bytes();evaluate(p);self.assertEqual(before,p.read_bytes())
+
+ def test_adaptive_weights_fit_training_not_live_model(self):
+  with tempfile.TemporaryDirectory() as d:
+   p=Path(d)/"history.sqlite3";c=sqlite3.connect(p)
+   c.execute("CREATE TABLE candidate_features(run_at TEXT,pair TEXT,move_15m_pct REAL,volume_accel REAL,base_score REAL)")
+   c.execute("CREATE TABLE outcomes(run_at TEXT,pair TEXT,horizon_hours INTEGER,return_pct REAL)")
+   for t in range(30):
+    for j in range(8):
+     # Baseline ranks a loser highest; intrahour momentum identifies the winner.
+     c.execute("INSERT INTO candidate_features VALUES (?,?,?,?,?)",(f"2026-10-{t+1:02d}",f"C{j}",4.0 if j==7 else 0.0,1.0,80.0 if j==0 else 60.0))
+     c.execute("INSERT INTO outcomes VALUES (?,?,?,?)",(f"2026-10-{t+1:02d}",f"C{j}",1,8.0 if j==7 else -3.0))
+   c.commit();c.close()
+   r=evaluate(p)
+   self.assertEqual(r["status"],"ADAPTIVE_SHADOW_EVALUATED")
+   self.assertGreater(r["learned_weights"]["momentum"],0)
+   self.assertGreater(r["holdout"]["delta_pct"],0)
+   self.assertFalse(r["promotion_eligible"])
+   self.assertFalse(r["live_weights_modified"])
