@@ -19,7 +19,7 @@ class Result:
         self.stdout = stdout
 
 class ManualMailboxAcceptance(unittest.TestCase):
-    def run_case(self, *, shadow_valid=True, dex_age_minutes=1, publish_ok=True, scan_valid=True):
+    def run_case(self, *, shadow_valid=True, dex_age_minutes=1, publish_ok=True, scan_valid=True, origin="cron"):
         with tempfile.TemporaryDirectory() as folder:
             now = dt.datetime.now(dt.timezone.utc)
             stamp = now.isoformat()
@@ -45,7 +45,7 @@ class ManualMailboxAcceptance(unittest.TestCase):
                  patch("simple_scanner.execute_once.subprocess.run",side_effect=records) as stages:
                 output = io.StringIO()
                 with contextlib.redirect_stdout(output):
-                    exit_code=execute("cron")
+                    exit_code=execute(origin)
                 state=read_ledger(folder)
                 self.assertEqual(stages.call_count,4)
                 self.assertEqual(fetch.call_count,1)
@@ -62,6 +62,9 @@ class ManualMailboxAcceptance(unittest.TestCase):
                     else:
                         self.assertNotEqual(exit_code,0)
                 return output.getvalue()
+
+    def test_manual_origin_delivers_and_acknowledges(self):
+        self.run_case(origin="manual")
 
     def test_verified_delivery_acknowledged(self):
         self.run_case()
