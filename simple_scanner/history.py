@@ -25,6 +25,7 @@ def persist():
     if "base_rank" not in existing_columns:
         con.execute("ALTER TABLE candidate_features ADD COLUMN base_rank INTEGER")
     con.execute("CREATE TABLE IF NOT EXISTS market_observations (run_at TEXT NOT NULL, pair TEXT NOT NULL, price REAL NOT NULL CHECK(price>0), PRIMARY KEY(run_at,pair))")
+    con.execute("CREATE TABLE IF NOT EXISTS market_signals (run_at TEXT NOT NULL, pair TEXT NOT NULL, move24_pct REAL NOT NULL, spread_bps REAL NOT NULL, notional_24h_usd REAL NOT NULL, PRIMARY KEY(run_at,pair))")
     con.execute("CREATE INDEX IF NOT EXISTS idx_market_pair_time ON market_observations(pair,run_at)")
     con.execute("CREATE INDEX IF NOT EXISTS idx_market_time ON market_observations(run_at)")
     con.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_time ON snapshots(run_at)")
@@ -33,6 +34,15 @@ def persist():
     now = dt.datetime.fromisoformat(report["completed_at"])
     assert now.tzinfo is not None and now.utcoffset() is not None, "Scan timestamp must be timezone-aware"
     with con:
+        for pair,signals in report.get("market_signals",{}).items():
+            if pair not in report.get("market_prices",{}):
+                continue
+            try:
+                move=float(signals["move24_pct"]); spread=float(signals["spread_bps"]); notional=float(signals["notional_24h_usd"])
+            except (TypeError,KeyError,ValueError):
+                continue
+            if all(math.isfinite(v) for v in (move,spread,notional)) and spread>=0 and notional>=0:
+                con.execute("INSERT OR IGNORE INTO market_signals VALUES (?,?,?,?,?)",(report["completed_at"],pair,move,spread,notional))
         for pair,price in report.get("market_prices",{}).items():
             if isinstance(price,(int,float)) and math.isfinite(price) and price>0:
                 con.execute("INSERT OR IGNORE INTO market_observations VALUES (?,?,?)",(report["completed_at"],pair,price))
@@ -126,7 +136,7 @@ def persist():
         eligible_count=con.execute("SELECT COUNT(*) FROM snapshots WHERE run_at<=?",(mature,)).fetchone()[0]
         evaluated_count=con.execute("SELECT COUNT(*) FROM outcomes WHERE horizon_hours=?",(hours,)).fetchone()[0]
         horizon_coverage.append({"hours":hours,"matured_snapshots":eligible_count,"evaluated":evaluated_count,"coverage_pct":round(100*evaluated_count/eligible_count,1) if eligible_count else None,**missing_by_horizon[hours]})
-    summary = {"forward_horizon_coverage":horizon_coverage,"outcome_lag_hours_by_horizon":[{"hours":h,"samples":n,"average_delay_hours":lag} for h,n,lag in outcome_lags],"unresolved_1h_snapshots":unresolved,"rank_comparison":{"historical_ranked_samples":rank_shift[0],"mean_base_minus_early_rank":rank_shift[1]},"newly_discovered_outside_base_top12":promoted,"signal_outcomes_by_horizon":[{"hours":h,"samples":n,"early_scored_avg_return_pct":e,"all_selected_avg_return_pct":a,"early_score_above_base_avg_return_pct":b} for h,n,e,a,b in comparison],"outcome_evaluation_coverage":{"evaluated":evaluated_outcomes,"positive":winning_outcomes,"average_return_pct":avg_return},"missed_breakout_examples":[{"pair":p,"observed_at":t,"next_scan_gain_pct":g} for p,t,g in missed_examples],"unselected_gainers_5pct_observations":missed,"market_observations":market_observations,"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
+    summary = {"forward_horizon_coverage":horizon_coverage,"outcome_lag_hours_by_horizon":[{"hours":h,"samples":n,"average_delay_hours":lag} for h,n,lag in outcome_lags],"unresolved_1h_snapshots":unresolved,"rank_comparison":{"historical_ranked_samples":rank_shift[0],"mean_base_minus_early_rank":rank_shift[1]},"newly_discovered_outside_base_top12":promoted,"signal_outcomes_by_horizon":[{"hours":h,"samples":n,"early_scored_avg_return_pct":e,"all_selected_avg_return_pct":a,"early_score_above_base_avg_return_pct":b} for h,n,e,a,b in comparison],"outcome_evaluation_coverage":{"evaluated":evaluated_outcomes,"positive":winning_outcomes,"average_return_pct":avg_return},"missed_breakout_examples":[{"pair":p,"observed_at":t,"next_scan_gain_pct":g} for p,t,g in missed_examples],"unselected_gainers_5pct_observations":missed,"market_observations":market_observations,"market_signal_coverage":len(report.get("market_signals",{})),"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
     (DB.parent / "learning.json").write_text(json.dumps(summary,indent=2))
     print("HISTORY_PERSISTED",json.dumps(summary))
     con.close()
