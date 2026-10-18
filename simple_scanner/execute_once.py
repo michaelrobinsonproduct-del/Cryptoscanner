@@ -158,13 +158,17 @@ def execute(origin="manual"):
             pass
         if not same_run_ok:
             print("SCAN_SAME_RUN_EVIDENCE_UNVERIFIED " + json.dumps({"origin": origin}), flush=True)
-        verified_status = "VERIFIED" if shadow_ok and not dex_degraded and same_run_ok else "PARTIAL"
+        archive_ok = latest.get("archive_status") != "NOT_RECORDED"
+        if not archive_ok:
+            print("SCAN_ARCHIVE_EVIDENCE_UNVERIFIED " + json.dumps({"origin": origin, "archive_error": latest.get("archive_error")}), flush=True)
+        verified_status = "VERIFIED" if shadow_ok and not dex_degraded and same_run_ok and archive_ok else "PARTIAL"
         print("SCAN_EXECUTION_VERIFIED " + json.dumps({
             "origin": origin, "started_at": summary["started_at"],
             "completed_at": summary["completed_at"], "buy_approved": False,
             "shadow_present": shadow_ok, "dex_record_present": dex_ok,
             "dex_degraded": dex_degraded, "dex_fresh": dex_fresh,
             "sqlite_same_run_verified": same_run_ok,
+            "archive_evidence_eligible": archive_ok,
             "status": verified_status,
         }), flush=True)
         if manual_pending and verified_status == "VERIFIED":
