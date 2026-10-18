@@ -18,6 +18,12 @@ class Result:
         self.returncode = code
 
 class ExecuteTests(unittest.TestCase):
+    def setUp(self):
+        verifier = patch("simple_scanner.scan_output.verify_scan_history_evidence",
+                         return_value={"status": "VERIFIED"})
+        verifier.start()
+        self.addCleanup(verifier.stop)
+
     def test_wrapper_preserves_production_stage_order(self):
         from simple_scanner.execute_once import MODULES
         self.assertEqual(MODULES, (
@@ -83,10 +89,12 @@ class ExecuteTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
                 now = dt.datetime.now(dt.timezone.utc).isoformat()
-                summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
+                summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY", "archive_status": "RECORDED"}
                 (Path(folder) / "latest.json").write_text(json.dumps(summary))
+                import sqlite3
+                sqlite3.connect(Path(folder) / "history.sqlite3").close()
                 records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
-                           Result('HISTORY_PERSISTED {"history_db_integrity":"ok","buy_approved":false,"model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"}'), Result('SHADOW_LEARNING {"mode":"SHADOW_ONLY","live_weights_modified":false}'), Result("DEX_CACHE_REUSED {}")]
+                           Result('HISTORY_SAME_RUN_AUDIT {"status":"MATCHED"}\nHISTORY_PERSISTED {"history_db_integrity":"ok","buy_approved":false,"model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"}'), Result('SHADOW_LEARNING {"mode":"SHADOW_ONLY","live_weights_modified":false}'), Result("DEX_CACHE_REUSED {}")]
                 with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
                     output = io.StringIO()
                     with contextlib.redirect_stdout(output):
@@ -102,7 +110,7 @@ class ExecuteTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
                 now = dt.datetime.now(dt.timezone.utc).isoformat()
-                summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
+                summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY", "archive_status": "RECORDED"}
                 (Path(folder) / "latest.json").write_text(json.dumps(summary))
                 records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
                            Result('HISTORY_PERSISTED {"history_db_integrity":"ok","buy_approved":false,"model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"}'),
@@ -119,7 +127,7 @@ class ExecuteTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
                 now = dt.datetime.now(dt.timezone.utc).isoformat()
-                summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
+                summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY", "archive_status": "RECORDED"}
                 (Path(folder) / "latest.json").write_text(json.dumps(summary))
                 records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
                            Result('HISTORY_PERSISTED {"history_db_integrity":"ok","buy_approved":false,"model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"}'), Result(code=1), Result("DEX_CACHE_REUSED {}")]
@@ -149,12 +157,14 @@ class ExecuteTests(unittest.TestCase):
             with self.subTest(age_minutes=age_minutes), tempfile.TemporaryDirectory() as folder:
                 with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
                     now = dt.datetime.now(dt.timezone.utc).isoformat()
-                    summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
+                    summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY", "archive_status": "RECORDED"}
                     (Path(folder) / "latest.json").write_text(json.dumps(summary))
+                    import sqlite3
+                    sqlite3.connect(Path(folder) / "history.sqlite3").close()
                     observed = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=age_minutes)).isoformat()
                     dex = {"observed_at": observed, "buy_approved": False, "candidates": 0}
                     records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
-                               Result('HISTORY_PERSISTED {"history_db_integrity":"ok","buy_approved":false,"model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"}'),
+                               Result('HISTORY_SAME_RUN_AUDIT {"status":"MATCHED"}\nHISTORY_PERSISTED {"history_db_integrity":"ok","buy_approved":false,"model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"}'),
                                Result('SHADOW_LEARNING {"mode":"SHADOW_ONLY","live_weights_modified":false}'),
                                Result("DEX_CACHE_REUSED " + json.dumps(dex))]
                     with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):

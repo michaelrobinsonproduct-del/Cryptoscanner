@@ -27,14 +27,17 @@ def compare(rows, momentum, volume):
             "challenger_avg_pct": round(sum(candidate) / n, 4),
             "delta_pct": round((sum(candidate) - sum(base)) / n, 4)}
 
-def early_accumulation_rank(rows):
+def early_accumulation_rank(rows, asset_pairs=None):
     """Rank current market observations using only information available at scan time.
 
     Input: (pair, move24_pct, spread_bps, notional_24h_usd,
             previous_price, current_price). No future prices or order-book claims.
     """
     ranked = []
+    from simple_scanner.historical_precursor import crypto_pair
     for pair, move24, spread, notional, previous, current in rows:
+        if asset_pairs is not None and not crypto_pair(pair, asset_pairs):
+            continue
         values = (move24, spread, notional, previous, current)
         if not all(isinstance(x, (int, float)) and math.isfinite(x) for x in values):
             continue
@@ -77,8 +80,12 @@ def evaluate_early_accumulation(con):
           ON m.run_at=s.run_at AND m.pair=s.pair
         WHERE s.run_at=?""", (latest,)).fetchall()
     eligible = [r for r in rows if r[4] is not None]
-    ranked = early_accumulation_rank(eligible)
-    return {"status": "SHADOW_CANDIDATES", "observed_at": latest,
+    # Use the canonical metadata only when it belongs to this exact scan.
+    # Missing metadata fails closed for the early-accumulation shadow.
+    from simple_scanner.historical_precursor import load_same_run_asset_pairs
+    asset_pairs = load_same_run_asset_pairs(latest)
+    ranked = early_accumulation_rank(eligible, asset_pairs=asset_pairs) if asset_pairs is not None else []
+    return {"status": "SHADOW_CANDIDATES" if asset_pairs is not None else "AWAITING_CANONICAL_ASSET_METADATA", "observed_at": latest,
             "universe_observed": len(rows), "history_eligible": len(eligible),
             "candidates": ranked[:12], "buy_approved": False,
             "live_weights_modified": False,
@@ -111,6 +118,22 @@ def validate_accumulation_history(con):
                AND julianday(p.run_at)>=julianday(s.run_at)-90.0/1440)
         WHERE s.run_at < ? ORDER BY s.run_at DESC LIMIT 6000""",
         ((dt.datetime.now(dt.timezone.utc)-dt.timedelta(hours=2)).isoformat(),)).fetchall()
+    if not rows:
+        return {"status": "INSUFFICIENT_MATURED_HISTORY", "samples": 0,
+                "timestamps": 0, "promotion_eligible": False}
+    # Historical observations do not retain canonical Kraken base IDs per run.
+    # The latest.json metadata applies only to one exact run, never to past
+    # cohorts. Refuse to report historical recall on an unidentified universe.
+    from simple_scanner.historical_precursor import load_same_run_asset_pairs
+    latest_run = con.execute("SELECT MAX(run_at) FROM market_signals").fetchone()[0]
+    latest_identity = load_same_run_asset_pairs(latest_run) if latest_run else None
+    return {"status": "AWAITING_HISTORICAL_CANONICAL_IDENTITIES",
+            "samples": len(rows), "timestamps": len({r[0] for r in rows}),
+            "identity_coverage": {"historical_rows_verified": 0,
+                                  "historical_rows_total": len(rows),
+                                  "latest_run_metadata_available": latest_identity is not None,
+                                  "reason": "No immutable per-run Kraken base identity ledger"},
+            "promotion_eligible": False, "live_weights_modified": False}
     usable = [r for r in rows if r[5] is not None and r[7] is not None
               and r[6] > 0 and r[7] > 0]
     times = sorted({r[0] for r in usable})
@@ -327,6 +350,21 @@ def evaluate(db_path):
 def main():
     folder = Path(os.getenv("SIMPLE_SCANNER_DATA_DIR", "simple_scanner/output"))
     report = evaluate(folder / "history.sqlite3")
+    # Require immutable identity evidence and actual SQLite value parity for current-scan validation.
+    try:
+        from .scan_output import verify_scan_history_evidence
+        con = sqlite3.connect(f"file:{(folder / 'history.sqlite3').resolve()}?mode=ro", uri=True)
+        try:
+            evidence = verify_scan_history_evidence(folder, con)
+        finally:
+            con.close()
+    except (OSError, ValueError, TypeError, KeyError, sqlite3.Error):
+        evidence = {"status": "UNVERIFIED", "reason": "EVIDENCE_UNAVAILABLE"}
+    report["current_scan_evidence"] = evidence
+    if evidence["status"] != "VERIFIED":
+        report["status"] = "CURRENT_SCAN_EVIDENCE_UNVERIFIED"
+        report["promotion_eligible"] = False
+        report["challenger_promotion_gate"] = {"status": "BLOCKED_UNVERIFIED_CURRENT_SCAN"}
     target = folder / "shadow_learning.json"
     tmp = folder / "shadow_learning.json.tmp"
     tmp.write_text(json.dumps(report, indent=2))

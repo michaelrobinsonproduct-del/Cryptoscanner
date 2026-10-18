@@ -1,6 +1,11 @@
 """Early accumulation shadow research tests; no production scoring changes."""
 import sqlite3
 import unittest
+import tempfile
+import os
+import json
+from pathlib import Path
+from unittest.mock import patch
 from simple_scanner.shadow_learning import early_accumulation_rank, evaluate_early_accumulation
 
 class AccumulationTests(unittest.TestCase):
@@ -33,7 +38,12 @@ class AccumulationTests(unittest.TestCase):
             con.executemany("INSERT INTO market_observations VALUES(?,?,?)",[
                 ("2026-10-17T00:00:00+00:00","ABC",100),
                 ("2026-10-17T00:15:00+00:00","ABC",101)])
-            result=evaluate_early_accumulation(con)
+            with tempfile.TemporaryDirectory() as folder:
+                Path(folder, "latest.json").write_text(json.dumps({
+                    "completed_at": "2026-10-17T00:15:00+00:00",
+                    "asset_pairs": {"ABC": {"base": "ABC"}}}))
+                with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
+                    result=evaluate_early_accumulation(con)
             self.assertEqual(result["status"],"SHADOW_CANDIDATES")
             self.assertEqual(result["history_eligible"],1)
             self.assertEqual(result["candidates"][0]["pair"],"ABC")

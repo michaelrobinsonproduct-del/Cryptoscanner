@@ -44,6 +44,8 @@ class ScannerIntegration(unittest.TestCase):
                     locals_at_failure=tb.tb_frame.f_locals if tb else {}
                     self.fail("Fixture watch failure: scored="+str(locals_at_failure.get("scored"))+" errors="+str(locals_at_failure.get("errors"))+" eligible="+str(len(locals_at_failure.get("eligible",{})))+" matched="+str(locals_at_failure.get("matched_tickers"))+" screened="+str(locals_at_failure.get("screened"))+" watch="+str(locals_at_failure.get("watch")))
                 report=json.loads((output/"latest.json").read_text())
+                self.assertEqual(len(report["asset_pairs"]), 60)
+                self.assertEqual(report["asset_pairs"]["P0"]["base"], "C0")
                 self.assertFalse(report["buy_approved"])
                 self.assertEqual(report["status"],"RESEARCH_ONLY")
                 self.assertTrue(report["watch"])
@@ -53,7 +55,10 @@ class ScannerIntegration(unittest.TestCase):
                 self.assertTrue((output/"history.sqlite3").exists())
                 self.assertEqual(json.loads((output/"learning.json").read_text())["history_db_integrity"],"ok")
                 shadow_learning.main()
-                self.assertFalse(json.loads((output/"shadow_learning.json").read_text())["buy_approved"])
+                shadow_report=json.loads((output/"shadow_learning.json").read_text())
+                self.assertFalse(shadow_report["buy_approved"])
+                self.assertFalse(shadow_report.get("live_weights_modified",False))
+
                 dex_guard.run()
                 self.assertIn("DEX_CACHE_REUSED",captured.getvalue())
                 self.assertIn("WATCH_SUMMARY",captured.getvalue())

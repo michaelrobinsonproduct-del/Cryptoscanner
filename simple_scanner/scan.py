@@ -15,6 +15,10 @@ def get(path):
 def main():
     now=dt.datetime.now(dt.timezone.utc)
     pairs=get("AssetPairs")
+    # Preserve the live eligibility and scoring logic; record identity metadata only.
+    canonical_asset_pairs={k:{"base":v["base"],"source":"kraken_assetpairs","observed_at":now.isoformat()} for k,v in pairs.items()
+                           if isinstance(v,dict) and v.get("base") and v.get("status")=="online"
+                           and v.get("wsname","").endswith("/USD")}
     eligible={k:v for k,v in pairs.items() if v.get("status")=="online" and v.get("wsname","").endswith("/USD") and v.get("base","").upper() not in {"ZUSD","USD","USDT","USDC","DAI","PYUSD","EURC","RLUSD","TUSD"}}
     ticker=get("Ticker?pair="+",".join(eligible)) if len(eligible)<100 else get("Ticker")
     scored=[]; errors=[]; matched_tickers=0; market_prices={}; market_signals={}
@@ -88,11 +92,16 @@ def main():
             item["risk"]="UNASSESSED"
             item["risk_reasons"]=["risk_annotation_unavailable"]
     finished=dt.datetime.now(dt.timezone.utc)
-    result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"ohlc_screened":len(screened),"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in watch),"errors":errors,"watch":watch,"market_prices":market_prices,"market_signals":market_signals,"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
+    result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"ohlc_screened":len(screened),"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in watch),"errors":errors,"watch":watch,"market_prices":market_prices,"market_signals":market_signals,"asset_pairs":canonical_asset_pairs,"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
     if not watch:
         raise RuntimeError("No fresh verified OHLC watch candidates")
     Path(os.getenv("SIMPLE_SCANNER_DATA_DIR","simple_scanner/output")).mkdir(parents=True,exist_ok=True)
-    (Path(os.getenv("SIMPLE_SCANNER_DATA_DIR","simple_scanner/output"))/"latest.json").write_text(json.dumps(result,indent=2))
-    print("SCAN_SUMMARY "+json.dumps({k:result[k] for k in ("engine","started_at","completed_at","universe","ticker_pairs","matched_tickers","ohlc_screened","validated_watch","status","buy_approved")},separators=(",",":")),flush=True)
+    from simple_scanner.scan_output import publish_scan_with_archive, verify_market_evidence
+    result["market_evidence_audit"] = verify_market_evidence(result)
+    data_dir = Path(os.getenv("SIMPLE_SCANNER_DATA_DIR","simple_scanner/output"))
+    result = publish_scan_with_archive(data_dir, result)
+    print("SCAN_SUMMARY "+json.dumps({k:result[k] for k in ("engine","started_at","completed_at","universe","ticker_pairs","matched_tickers","ohlc_screened","validated_watch","status","buy_approved","archive_status")},separators=(",",":")),flush=True)
+    if result["archive_status"] != "RECORDED":
+        print("SCAN_ARCHIVE_WARNING "+json.dumps({"completed_at":result["completed_at"],"archive_status":result["archive_status"],"archive_error":result.get("archive_error")},separators=(",",":")),flush=True)
     print("WATCH_SUMMARY "+json.dumps([{"symbol":x["symbol"],"score":x["early_signal_score"],"move_15m_pct":x["move_15m_pct"],"volume_accel":x["volume_accel"],"risk":x.get("risk","UNASSESSED"),"risk_reasons":x.get("risk_reasons",[])} for x in watch],separators=(",",":")),flush=True)
 if __name__=="__main__":main()
