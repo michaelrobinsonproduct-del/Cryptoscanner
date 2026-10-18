@@ -90,3 +90,19 @@ def verify_scan_archive(path):
     if verify_market_evidence(report)["status"] != "COMPLETE":
         raise ValueError("incomplete archived market evidence")
     return report
+
+def publish_scan_with_archive(directory, report):
+    """Always publish a valid scan; explicitly disclose missing archive evidence."""
+    directory = Path(directory)
+    report = dict(report)
+    try:
+        archive_path = persist_scan_archive(directory / "scan_archive", report)
+        report["archive_status"] = "RECORDED"
+        report["archive_record"] = archive_path.name
+    except (OSError, ValueError, TypeError) as error:
+        # Never pretend missing evidence was saved, or suppress valid scan output.
+        report["archive_status"] = "NOT_RECORDED"
+        report["archive_error"] = type(error).__name__
+        report["learning_status"] = "NOT_VALIDATED"
+    publish_latest_atomic(directory / "latest.json", report)
+    return report
