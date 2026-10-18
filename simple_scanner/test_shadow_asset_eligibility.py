@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 from simple_scanner.historical_precursor import crypto_pair, rank_precursors, precursor_feature_audit, evaluate_precursor, load_same_run_asset_pairs
-from simple_scanner.shadow_learning import early_accumulation_rank, evaluate_early_accumulation
+from simple_scanner.shadow_learning import early_accumulation_rank, evaluate_early_accumulation, validate_accumulation_history
 
 class ShadowEligibilityTests(unittest.TestCase):
     def test_stablecoin_aliases_excluded(self):
@@ -94,6 +94,22 @@ class ShadowEligibilityTests(unittest.TestCase):
             with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
                 self.assertIsNone(load_same_run_asset_pairs("expected"))
                 self.assertEqual(load_same_run_asset_pairs("wrong")["SOLUSD"]["base"], "SOL")
+
+    def test_historical_holdout_cannot_claim_identity_coverage(self):
+        con = sqlite3.connect(":memory:")
+        try:
+            con.execute("CREATE TABLE market_signals (run_at TEXT, pair TEXT, move24_pct REAL, spread_bps REAL, notional_24h_usd REAL)")
+            con.execute("CREATE TABLE market_observations (run_at TEXT, pair TEXT, price REAL)")
+            con.execute("INSERT INTO market_signals VALUES ('2026-10-01T00:00:00+00:00','ZEURZUSD',1,2,100000)")
+            con.execute("INSERT INTO market_observations VALUES ('2026-10-01T00:00:00+00:00','ZEURZUSD',1)")
+            result = validate_accumulation_history(con)
+            self.assertEqual(result["status"], "AWAITING_HISTORICAL_CANONICAL_IDENTITIES")
+            self.assertEqual(result["identity_coverage"]["historical_rows_verified"], 0)
+            self.assertFalse(result["promotion_eligible"])
+            self.assertFalse(result["live_weights_modified"])
+            self.assertNotIn("metrics", result)
+        finally:
+            con.close()
 
     def test_historical_replay_preserves_unaffected_rank_scores(self):
         # Deterministic 48-snapshot replay: original eligibility vs canonical
