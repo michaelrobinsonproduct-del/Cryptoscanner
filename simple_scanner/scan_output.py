@@ -199,3 +199,17 @@ def audit_sqlite_same_run(con, report):
             "extra_signals": extra_signals[:20], "extra_prices": extra_prices[:20],
             "price_value_mismatches": price_mismatch[:20],
             "signal_value_mismatches": signal_mismatch[:20]}
+
+def verify_scan_history_evidence(directory, con):
+    """Fail closed unless independent archive and persisted same-run values agree."""
+    directory = Path(directory)
+    archive_audit = verify_archive_against_latest(directory)
+    if archive_audit["status"] != "VERIFIED":
+        return {"status": "UNVERIFIED", "archive_status": archive_audit["status"],
+                "sqlite_status": "NOT_CHECKED"}
+    latest = json.loads((directory / "latest.json").read_text(encoding="utf-8"))
+    archive = verify_scan_archive(directory / "scan_archive" / latest["archive_record"])
+    same_run = audit_sqlite_same_run(con, archive)
+    return {"status": "VERIFIED" if same_run["status"] == "MATCHED" else "UNVERIFIED",
+            "archive_status": archive_audit["status"], "sqlite_status": same_run["status"],
+            "completed_at": archive["completed_at"]}
