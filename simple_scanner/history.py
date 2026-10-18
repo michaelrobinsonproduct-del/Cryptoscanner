@@ -175,6 +175,10 @@ def persist():
         evaluated_count=con.execute("SELECT COUNT(*) FROM outcomes WHERE horizon_hours=?",(hours,)).fetchone()[0]
         horizon_coverage.append({"hours":hours,"matured_snapshots":eligible_count,"evaluated":evaluated_count,"coverage_pct":round(100*evaluated_count/eligible_count,1) if eligible_count else None,**missing_by_horizon[hours]})
     summary = {"forward_horizon_coverage":horizon_coverage,"outcome_lag_hours_by_horizon":[{"hours":h,"samples":n,"average_delay_hours":lag} for h,n,lag in outcome_lags],"unresolved_1h_snapshots":unresolved,"rank_comparison":{"historical_ranked_samples":rank_shift[0],"mean_base_minus_early_rank":rank_shift[1]},"newly_discovered_outside_base_top12":promoted,"signal_outcomes_by_horizon":[{"hours":h,"samples":n,"early_scored_avg_return_pct":e,"all_selected_avg_return_pct":a,"early_score_above_base_avg_return_pct":b} for h,n,e,a,b in comparison],"outcome_evaluation_coverage":{"evaluated":evaluated_outcomes,"positive":winning_outcomes,"average_return_pct":avg_return},"missed_breakout_examples":[{"pair":p,"observed_at":t,"next_scan_gain_pct":g} for p,t,g in missed_examples],"unselected_gainers_5pct_observations":missed,"market_observations":market_observations,"market_signal_coverage":len(report.get("market_signals",{})),"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
+    summary["same_run_evidence_status"] = same_run_audit["status"]
+    if same_run_audit["status"] != "MATCHED":
+        summary["evaluation"] = "UNVERIFIED_SQLITE_SAME_RUN"
+        print("HISTORY_SAME_RUN_WARNING " + json.dumps({"run_at": same_run_audit["run_at"], "status": same_run_audit["status"]}), flush=True)
     (DB.parent / "learning.json").write_text(json.dumps(summary,indent=2))
     print("HISTORY_PERSISTED",json.dumps(summary))
     con.close()
