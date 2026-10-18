@@ -100,6 +100,8 @@ def main():
     result["market_evidence_audit"] = verify_market_evidence(result)
     data_dir = Path(os.getenv("SIMPLE_SCANNER_DATA_DIR","simple_scanner/output"))
     result = publish_scan_with_archive(data_dir, result)
-    print("SCAN_SUMMARY "+json.dumps({k:result[k] for k in ("engine","started_at","completed_at","universe","ticker_pairs","matched_tickers","ohlc_screened","validated_watch","status","buy_approved")},separators=(",",":")),flush=True)
+    print("SCAN_SUMMARY "+json.dumps({k:result[k] for k in ("engine","started_at","completed_at","universe","ticker_pairs","matched_tickers","ohlc_screened","validated_watch","status","buy_approved","archive_status")},separators=(",",":")),flush=True)
+    if result["archive_status"] != "RECORDED":
+        print("SCAN_ARCHIVE_WARNING "+json.dumps({"completed_at":result["completed_at"],"archive_status":result["archive_status"],"archive_error":result.get("archive_error")},separators=(",",":")),flush=True)
     print("WATCH_SUMMARY "+json.dumps([{"symbol":x["symbol"],"score":x["early_signal_score"],"move_15m_pct":x["move_15m_pct"],"volume_accel":x["volume_accel"],"risk":x.get("risk","UNASSESSED"),"risk_reasons":x.get("risk_reasons",[])} for x in watch],separators=(",",":")),flush=True)
 if __name__=="__main__":main()
