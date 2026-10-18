@@ -209,6 +209,22 @@ def verify_scan_history_evidence(directory, con):
                 "sqlite_status": "NOT_CHECKED"}
     latest = json.loads((directory / "latest.json").read_text(encoding="utf-8"))
     archive = verify_scan_archive(directory / "scan_archive" / latest["archive_record"])
+    import datetime as dt
+    try:
+        started = dt.datetime.fromisoformat(archive["started_at"])
+        identities = archive["asset_pairs"]
+        identity_ok = bool(archive.get("market_signals")) and all(
+            isinstance(identities.get(pair), dict)
+            and isinstance(identities[pair].get("base"), str)
+            and bool(identities[pair]["base"])
+            and identities[pair].get("source") == "kraken_assetpairs"
+            and dt.datetime.fromisoformat(identities[pair]["observed_at"]) == started
+            for pair in archive["market_signals"])
+    except (KeyError, ValueError, TypeError, AttributeError):
+        identity_ok = False
+    if not identity_ok:
+        return {"status": "UNVERIFIED", "archive_status": "INVALID_IDENTITY_PROVENANCE",
+                "sqlite_status": "NOT_CHECKED"}
     same_run = audit_sqlite_same_run(con, archive)
     return {"status": "VERIFIED" if same_run["status"] == "MATCHED" else "UNVERIFIED",
             "archive_status": archive_audit["status"], "sqlite_status": same_run["status"],
