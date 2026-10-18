@@ -271,6 +271,8 @@ def evaluate(db_path):
         accumulation = evaluate_early_accumulation(con)
         accumulation_validation = validate_accumulation_history(con)
         promotion_gate = assess_challenger_promotion(accumulation_validation)
+        from simple_scanner.historical_precursor import evaluate_precursor
+        historical_precursor = evaluate_precursor(con)
         # Audited misses: full-market observed jumps not present in watch snapshots.
         # Restrict to the last seven days and consecutive observations <=90m.
         miss_examples = []
@@ -299,7 +301,8 @@ def evaluate(db_path):
               "market_miss_model": market_miss_model,
               "early_accumulation": accumulation,
               "early_accumulation_validation": accumulation_validation,
-              "challenger_promotion_gate": promotion_gate}
+              "challenger_promotion_gate": promotion_gate,
+              "historical_precursor": historical_precursor}
     times = sorted({r[0] for r in rows})
     if len(rows) < MIN_TRAIN + MIN_TEST or len(times) < 12:
         return result
