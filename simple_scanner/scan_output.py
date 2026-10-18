@@ -15,6 +15,13 @@ def publish_latest_atomic(destination, report):
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary, destination)
+        # Flush the directory entry after atomic replacement on POSIX systems.
+        if os.name == "posix":
+            directory_fd = os.open(str(destination.parent), os.O_RDONLY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
