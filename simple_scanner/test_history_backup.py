@@ -25,6 +25,8 @@ class HistoryBackupTests(unittest.TestCase):
                 if str(path) == str(target_dir):
                     class DeviceOverride:
                         st_dev = result.st_dev + 1
+                        def __getattr__(self, key):
+                            return getattr(result, key)
                     return DeviceOverride()
                 return result
             with patch('simple_scanner.history_backup.os.stat', side_effect=separate_devices):
