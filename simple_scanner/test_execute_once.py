@@ -19,7 +19,7 @@ class Result:
 
 class ExecuteTests(unittest.TestCase):
     def setUp(self):
-        verifier = patch("simple_scanner.scan_output.verify_archive_against_latest",
+        verifier = patch("simple_scanner.scan_output.verify_scan_history_evidence",
                          return_value={"status": "VERIFIED"})
         verifier.start()
         self.addCleanup(verifier.stop)
@@ -91,6 +91,8 @@ class ExecuteTests(unittest.TestCase):
                 now = dt.datetime.now(dt.timezone.utc).isoformat()
                 summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY", "archive_status": "RECORDED"}
                 (Path(folder) / "latest.json").write_text(json.dumps(summary))
+                import sqlite3
+                sqlite3.connect(Path(folder) / "history.sqlite3").close()
                 records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
                            Result('HISTORY_SAME_RUN_AUDIT {"status":"MATCHED"}\nHISTORY_PERSISTED {"history_db_integrity":"ok","buy_approved":false,"model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"}'), Result('SHADOW_LEARNING {"mode":"SHADOW_ONLY","live_weights_modified":false}'), Result("DEX_CACHE_REUSED {}")]
                 with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
@@ -157,6 +159,8 @@ class ExecuteTests(unittest.TestCase):
                     now = dt.datetime.now(dt.timezone.utc).isoformat()
                     summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY", "archive_status": "RECORDED"}
                     (Path(folder) / "latest.json").write_text(json.dumps(summary))
+                    import sqlite3
+                    sqlite3.connect(Path(folder) / "history.sqlite3").close()
                     observed = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=age_minutes)).isoformat()
                     dex = {"observed_at": observed, "buy_approved": False, "candidates": 0}
                     records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
