@@ -47,7 +47,7 @@ def replay(db_path, identities_path):
     excluded = 0
     for cohort in by_run.values():
         eligible = {row[0] for row in cohort if crypto_pair(row[0], identities)}
-        baseline = rank_precursors([row[1:] for row in []]) if False else rank_precursors(cohort,limit=len(cohort))
+        baseline = rank_precursors(cohort,limit=len(cohort))
         candidate = rank_precursors(cohort,limit=len(cohort),asset_pairs=identities)
         base_map = {x["pair"]:x for x in baseline}
         for x in candidate:
