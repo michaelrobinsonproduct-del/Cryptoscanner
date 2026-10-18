@@ -4,9 +4,31 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from simple_scanner.scan_output import publish_latest_atomic, verify_market_evidence
+from simple_scanner.scan_output import publish_latest_atomic, verify_market_evidence, persist_scan_archive
 
 class AtomicOutputTests(unittest.TestCase):
+    def test_archive_is_write_once(self):
+        report={"started_at":"2026-10-18T16:00:00+00:00",
+                "completed_at":"2026-10-18T16:00:10+00:00",
+                "market_prices":{"SOLUSD":100},
+                "market_signals":{"SOLUSD":{"move24_pct":2}},
+                "asset_pairs":{"SOLUSD":{"base":"SOL"}}}
+        with tempfile.TemporaryDirectory() as directory:
+            path=persist_scan_archive(directory,report)
+            self.assertEqual(json.loads(path.read_text())["asset_pairs"]["SOLUSD"]["base"],"SOL")
+            with self.assertRaises(FileExistsError):
+                persist_scan_archive(directory,report)
+
+    def test_archive_rejects_missing_identity(self):
+        report={"started_at":"2026-10-18T16:00:00+00:00",
+                "completed_at":"2026-10-18T16:00:10+00:00",
+                "market_prices":{"SOLUSD":100},
+                "market_signals":{"SOLUSD":{"move24_pct":2}},
+                "asset_pairs":{}}
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(ValueError):
+                persist_scan_archive(directory,report)
+
     def test_market_evidence_audit_complete(self):
         report={"started_at":"2026-10-18T16:00:00+00:00",
                 "completed_at":"2026-10-18T16:00:10+00:00",
