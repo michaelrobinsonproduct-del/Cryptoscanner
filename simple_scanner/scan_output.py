@@ -159,25 +159,43 @@ def verify_archive_against_latest(directory):
     return {"status": "VERIFIED", "completed_at": latest["completed_at"]}
 
 def audit_sqlite_same_run(con, report):
-    """Read back the actual SQLite rows keyed by the scan's exact completion time."""
+    """Compare actual persisted SQLite prices/signals with same-run scanner values."""
+    import math
     stamp = report["completed_at"]
-    signals = report.get("market_signals", {})
     prices = report.get("market_prices", {})
-    signal_rows = con.execute("SELECT pair FROM market_signals WHERE run_at=?", (stamp,)).fetchall()
-    price_rows = con.execute("SELECT pair FROM market_observations WHERE run_at=?", (stamp,)).fetchall()
-    actual_signals = {row[0] for row in signal_rows}
-    actual_prices = {row[0] for row in price_rows}
-    expected_signals = set(signals)
-    expected_prices = set(prices)
-    missing_signals = sorted(expected_signals - actual_signals)
-    missing_prices = sorted(expected_prices - actual_prices)
-    extra_signals = sorted(actual_signals - expected_signals)
-    extra_prices = sorted(actual_prices - expected_prices)
+    signals = report.get("market_signals", {})
+    actual_prices = dict(con.execute(
+        "SELECT pair,price FROM market_observations WHERE run_at=?", (stamp,)).fetchall())
+    actual_signals = {pair: (move, spread, notional) for pair, move, spread, notional in
+        con.execute("SELECT pair,move24_pct,spread_bps,notional_24h_usd "
+                    "FROM market_signals WHERE run_at=?", (stamp,)).fetchall()}
+    expected_prices = {pair: float(value) for pair, value in prices.items()
+                       if isinstance(value, (int, float)) and math.isfinite(value) and value > 0}
+    expected_signals = {}
+    for pair, values in signals.items():
+        if pair not in prices:
+            continue
+        try:
+            row = tuple(float(values[k]) for k in ("move24_pct","spread_bps","notional_24h_usd"))
+            if all(math.isfinite(v) for v in row) and row[1] >= 0 and row[2] >= 0:
+                expected_signals[pair] = row
+        except (KeyError, TypeError, ValueError):
+            continue
+    missing_signals = sorted(set(expected_signals) - set(actual_signals))
+    missing_prices = sorted(set(expected_prices) - set(actual_prices))
+    extra_signals = sorted(set(actual_signals) - set(expected_signals))
+    extra_prices = sorted(set(actual_prices) - set(expected_prices))
+    price_mismatch = sorted(p for p in set(expected_prices) & set(actual_prices)
+                            if expected_prices[p] != actual_prices[p])
+    signal_mismatch = sorted(p for p in set(expected_signals) & set(actual_signals)
+                             if expected_signals[p] != actual_signals[p])
     complete = bool(expected_signals and expected_prices and
-                    not (missing_signals or missing_prices or extra_signals or extra_prices))
-    return {"status": "MATCHED" if complete else "MISMATCH",
-            "run_at": stamp, "expected_signals": len(expected_signals),
-            "persisted_signals": len(actual_signals), "expected_prices": len(expected_prices),
-            "persisted_prices": len(actual_prices), "missing_signals": missing_signals[:20],
-            "missing_prices": missing_prices[:20],
-            "extra_signals": extra_signals[:20], "extra_prices": extra_prices[:20]}
+                    not any((missing_signals, missing_prices, extra_signals, extra_prices,
+                             price_mismatch, signal_mismatch)))
+    return {"status": "MATCHED" if complete else "MISMATCH", "run_at": stamp,
+            "expected_signals": len(expected_signals), "persisted_signals": len(actual_signals),
+            "expected_prices": len(expected_prices), "persisted_prices": len(actual_prices),
+            "missing_signals": missing_signals[:20], "missing_prices": missing_prices[:20],
+            "extra_signals": extra_signals[:20], "extra_prices": extra_prices[:20],
+            "price_value_mismatches": price_mismatch[:20],
+            "signal_value_mismatches": signal_mismatch[:20]}
