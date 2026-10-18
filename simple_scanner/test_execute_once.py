@@ -155,7 +155,7 @@ class ExecuteTests(unittest.TestCase):
             with self.subTest(age_minutes=age_minutes), tempfile.TemporaryDirectory() as folder:
                 with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
                     now = dt.datetime.now(dt.timezone.utc).isoformat()
-                    summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
+                    summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY", "archive_status": "RECORDED"}
                     (Path(folder) / "latest.json").write_text(json.dumps(summary))
                     observed = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=age_minutes)).isoformat()
                     dex = {"observed_at": observed, "buy_approved": False, "candidates": 0}
