@@ -154,7 +154,7 @@ class ExecuteTests(unittest.TestCase):
                     observed = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=age_minutes)).isoformat()
                     dex = {"observed_at": observed, "buy_approved": False, "candidates": 0}
                     records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
-                               Result('HISTORY_PERSISTED {"history_db_integrity":"ok","buy_approved":false,"model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"}'),
+                               Result('HISTORY_SAME_RUN_AUDIT {"status":"MATCHED"}\nHISTORY_PERSISTED {"history_db_integrity":"ok","buy_approved":false,"model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"}'),
                                Result('SHADOW_LEARNING {"mode":"SHADOW_ONLY","live_weights_modified":false}'),
                                Result("DEX_CACHE_REUSED " + json.dumps(dex))]
                     with patch("simple_scanner.execute_once.subprocess.run", side_effect=records):
