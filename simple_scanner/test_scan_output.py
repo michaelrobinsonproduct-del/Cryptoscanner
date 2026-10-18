@@ -10,12 +10,12 @@ class AtomicOutputTests(unittest.TestCase):
     def test_sqlite_readback_matches_exact_run(self):
         import sqlite3
         con=sqlite3.connect(":memory:")
-        con.execute("CREATE TABLE market_signals(run_at TEXT,pair TEXT)")
-        con.execute("CREATE TABLE market_observations(run_at TEXT,pair TEXT)")
+        con.execute("CREATE TABLE market_signals(run_at TEXT,pair TEXT,move24_pct REAL,spread_bps REAL,notional_24h_usd REAL)")
+        con.execute("CREATE TABLE market_observations(run_at TEXT,pair TEXT,price REAL)")
         stamp="2026-10-18T16:00:10+00:00"
-        con.execute("INSERT INTO market_signals VALUES (?,?)",(stamp,"SOLUSD"))
-        con.execute("INSERT INTO market_observations VALUES (?,?)",(stamp,"SOLUSD"))
-        report={"completed_at":stamp,"market_signals":{"SOLUSD":{}},
+        con.execute("INSERT INTO market_signals VALUES (?,?,?,?,?)",(stamp,"SOLUSD",2,5,10000))
+        con.execute("INSERT INTO market_observations VALUES (?,?,?)",(stamp,"SOLUSD",100))
+        report={"completed_at":stamp,"market_signals":{"SOLUSD":{"move24_pct":2,"spread_bps":5,"notional_24h_usd":10000}},
                 "market_prices":{"SOLUSD":100}}
         self.assertEqual(audit_sqlite_same_run(con,report)["status"],"MATCHED")
         report["completed_at"]="2026-10-18T16:00:11+00:00"
@@ -27,15 +27,30 @@ class AtomicOutputTests(unittest.TestCase):
     def test_sqlite_readback_detects_partial_ingestion(self):
         import sqlite3
         con=sqlite3.connect(":memory:")
-        con.execute("CREATE TABLE market_signals(run_at TEXT,pair TEXT)")
-        con.execute("CREATE TABLE market_observations(run_at TEXT,pair TEXT)")
+        con.execute("CREATE TABLE market_signals(run_at TEXT,pair TEXT,move24_pct REAL,spread_bps REAL,notional_24h_usd REAL)")
+        con.execute("CREATE TABLE market_observations(run_at TEXT,pair TEXT,price REAL)")
         stamp="2026-10-18T16:00:10+00:00"
-        con.execute("INSERT INTO market_signals VALUES (?,?)",(stamp,"SOLUSD"))
-        report={"completed_at":stamp,"market_signals":{"SOLUSD":{}},
+        con.execute("INSERT INTO market_signals VALUES (?,?,?,?,?)",(stamp,"SOLUSD",2,5,10000))
+        report={"completed_at":stamp,"market_signals":{"SOLUSD":{"move24_pct":2,"spread_bps":5,"notional_24h_usd":10000}},
                 "market_prices":{"SOLUSD":100}}
         audit=audit_sqlite_same_run(con,report)
         self.assertEqual(audit["status"],"MISMATCH")
         self.assertEqual(audit["missing_prices"],["SOLUSD"])
+        con.close()
+
+    def test_sqlite_readback_detects_insert_ignore_collision(self):
+        import sqlite3
+        con=sqlite3.connect(":memory:")
+        con.execute("CREATE TABLE market_signals(run_at TEXT,pair TEXT,move24_pct REAL,spread_bps REAL,notional_24h_usd REAL)")
+        con.execute("CREATE TABLE market_observations(run_at TEXT,pair TEXT,price REAL)")
+        stamp="2026-10-18T16:00:10+00:00"
+        con.execute("INSERT INTO market_signals VALUES (?,?,?,?,?)",(stamp,"SOLUSD",2,5,10000))
+        con.execute("INSERT INTO market_observations VALUES (?,?,?)",(stamp,"SOLUSD",99))
+        report={"completed_at":stamp,"market_signals":{"SOLUSD":{"move24_pct":2,"spread_bps":5,"notional_24h_usd":10000}},
+                "market_prices":{"SOLUSD":100}}
+        audit=audit_sqlite_same_run(con,report)
+        self.assertEqual(audit["status"],"MISMATCH")
+        self.assertEqual(audit["price_value_mismatches"],["SOLUSD"])
         con.close()
 
     def test_archive_digest_detects_tampering(self):
