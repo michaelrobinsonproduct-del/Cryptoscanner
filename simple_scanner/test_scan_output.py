@@ -4,9 +4,32 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from simple_scanner.scan_output import publish_latest_atomic, verify_market_evidence, persist_scan_archive, verify_scan_archive, publish_scan_with_archive
+from simple_scanner.scan_output import publish_latest_atomic, verify_market_evidence, persist_scan_archive, verify_scan_archive, publish_scan_with_archive, compare_sqlite_run_timestamp, archive_content_sha256
 
 class AtomicOutputTests(unittest.TestCase):
+    def test_sqlite_run_timestamp_exact_match_and_offset(self):
+        report={"completed_at":"2026-10-18T16:00:10+00:00"}
+        self.assertEqual(compare_sqlite_run_timestamp("2026-10-18T16:00:10Z",report)["status"],"EXACT_MATCH")
+        mismatch=compare_sqlite_run_timestamp("2026-10-18T16:00:11+00:00",report)
+        self.assertEqual(mismatch["status"],"TIMESTAMP_MISMATCH")
+        self.assertEqual(mismatch["offset_seconds"],1)
+
+    def test_sqlite_run_timestamp_rejects_naive_time(self):
+        self.assertEqual(compare_sqlite_run_timestamp("2026-10-18 16:00:10",
+                         {"completed_at":"2026-10-18T16:00:10+00:00"})["status"],"UNVERIFIED_TIMEZONE")
+
+    def test_archive_byte_digest_is_reported(self):
+        report={"started_at":"2026-10-18T16:00:00+00:00",
+                "completed_at":"2026-10-18T16:00:10+00:00",
+                "market_prices":{"SOLUSD":100},
+                "market_signals":{"SOLUSD":{"move24_pct":2}},
+                "asset_pairs":{"SOLUSD":{"base":"SOL"}}}
+        with tempfile.TemporaryDirectory() as directory:
+            published=publish_scan_with_archive(directory,report)
+            archive=Path(directory)/"scan_archive"/published["archive_record"]
+            self.assertEqual(published["archive_sha256"],archive_content_sha256(archive))
+            self.assertEqual(len(published["archive_sha256"]),64)
+
     def test_archive_full_still_publishes_valid_scan_with_explicit_failure(self):
         report={"started_at":"2026-10-18T16:00:00+00:00",
                 "completed_at":"2026-10-18T16:00:10+00:00",
