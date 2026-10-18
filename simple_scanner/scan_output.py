@@ -96,6 +96,25 @@ def verify_scan_archive(path):
         raise ValueError("incomplete archived market evidence")
     return report
 
+def compare_sqlite_run_timestamp(run_at, archived_report):
+    """Exact, read-only timestamp reconciliation; never infer a same-run join."""
+    import datetime as dt
+    try:
+        sqlite_time = dt.datetime.fromisoformat(str(run_at).replace("Z", "+00:00"))
+        archive_time = dt.datetime.fromisoformat(archived_report["completed_at"].replace("Z", "+00:00"))
+        if sqlite_time.tzinfo is None or archive_time.tzinfo is None:
+            return {"status": "UNVERIFIED_TIMEZONE"}
+        offset = (sqlite_time - archive_time).total_seconds()
+        return {"status": "EXACT_MATCH" if offset == 0 else "TIMESTAMP_MISMATCH",
+                "offset_seconds": offset}
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return {"status": "INVALID_TIMESTAMP"}
+
+def archive_content_sha256(path):
+    """Hash actual persisted bytes, for independent future integrity comparisons."""
+    import hashlib
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
 def publish_scan_with_archive(directory, report):
     """Always publish a valid scan; explicitly disclose missing archive evidence."""
     directory = Path(directory)
@@ -105,6 +124,7 @@ def publish_scan_with_archive(directory, report):
         report["archive_status"] = "RECORDED"
         report["archive_record"] = archive_path.name
         verify_scan_archive(archive_path)
+        report["archive_sha256"] = archive_content_sha256(archive_path)
     except (OSError, ValueError, TypeError) as error:
         # Never pretend missing evidence was saved, or suppress valid scan output.
         report["archive_status"] = "NOT_RECORDED"
