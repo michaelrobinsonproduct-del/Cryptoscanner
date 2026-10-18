@@ -150,6 +150,35 @@ def validate_accumulation_history(con):
             "caveats": "Descriptive holdout only; unequal selection budgets, no execution/slippage or prospective proof"}
 
 
+def assess_challenger_promotion(validation):
+    """Automated research gate: never authorize production scoring changes.
+
+    This is deliberately independent of trading execution. A future release
+    requires prospective evidence and an explicitly reviewed rollback path.
+    """
+    metrics = validation.get("metrics", {})
+    if validation.get("status") != "HISTORICAL_HOLDOUT_EVALUATED":
+        return {"status": "BLOCKED_INSUFFICIENT_EVIDENCE",
+                "reasons": ["historical_holdout_unavailable"],
+                "promotion_eligible": False, "live_weights_modified": False}
+    reasons = []
+    for threshold in ("20pct_1h", "50pct_1h", "100pct_1h"):
+        m = metrics.get(threshold, {})
+        if m.get("events", 0) < 10:
+            reasons.append("insufficient_events_"+threshold)
+        elif m.get("challenger_recall", 0) <= m.get("baseline_recall", 0):
+            reasons.append("no_recall_advantage_"+threshold)
+    # Backtests alone never establish forward robustness or execution quality.
+    reasons.extend(["prospective_validation_pending",
+                    "equal_budget_comparison_pending",
+                    "slippage_and_liquidity_validation_pending",
+                    "reviewed_rollback_not_configured"])
+    return {"status": "SHADOW_EVIDENCE_REVIEW",
+            "reasons": reasons, "promotion_eligible": False,
+            "live_weights_modified": False,
+            "next_action": "Accumulate independent forward cohorts; retain live model"}
+
+
 def evaluate_market_misses(con):
     """Learn market-wide screening thresholds from matured 1h observations.
 
@@ -241,6 +270,7 @@ def evaluate(db_path):
         market_miss_model = evaluate_market_misses(con)
         accumulation = evaluate_early_accumulation(con)
         accumulation_validation = validate_accumulation_history(con)
+        promotion_gate = assess_challenger_promotion(accumulation_validation)
         # Audited misses: full-market observed jumps not present in watch snapshots.
         # Restrict to the last seven days and consecutive observations <=90m.
         miss_examples = []
@@ -268,7 +298,8 @@ def evaluate(db_path):
               "misses_included_in_weight_training": False,
               "market_miss_model": market_miss_model,
               "early_accumulation": accumulation,
-              "early_accumulation_validation": accumulation_validation}
+              "early_accumulation_validation": accumulation_validation,
+              "challenger_promotion_gate": promotion_gate}
     times = sorted({r[0] for r in rows})
     if len(rows) < MIN_TRAIN + MIN_TEST or len(times) < 12:
         return result
