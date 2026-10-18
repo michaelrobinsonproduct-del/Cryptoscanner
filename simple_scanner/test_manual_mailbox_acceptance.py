@@ -19,7 +19,7 @@ class Result:
         self.stdout = stdout
 
 class ManualMailboxAcceptance(unittest.TestCase):
-    def run_case(self, *, shadow_valid=True, dex_age_minutes=1, publish_ok=True, scan_valid=True, origin="cron"):
+    def run_case(self, *, shadow_valid=True, dex_age_minutes=1, publish_ok=True, scan_valid=True, origin="cron", same_run_valid=True):
         with tempfile.TemporaryDirectory() as folder:
             now = dt.datetime.now(dt.timezone.utc)
             stamp = now.isoformat()
@@ -33,7 +33,7 @@ class ManualMailboxAcceptance(unittest.TestCase):
             dex = {"observed_at":(now-dt.timedelta(minutes=dex_age_minutes)).isoformat(), "buy_approved":False, "candidates":0}
             records = [
                 Result("SCAN_SUMMARY "+json.dumps(summary)+"\nWATCH_SUMMARY "+json.dumps(watch)),
-                Result("HISTORY_PERSISTED "+json.dumps(history)),
+                Result("HISTORY_SAME_RUN_AUDIT "+json.dumps({"status":"MATCHED" if same_run_valid else "MISMATCH"})+"\nHISTORY_PERSISTED "+json.dumps(history)),
                 Result("SHADOW_LEARNING "+json.dumps(shadow)),
                 Result("DEX_CACHE_REUSED "+json.dumps(dex)),
             ]
@@ -49,7 +49,7 @@ class ManualMailboxAcceptance(unittest.TestCase):
                 state=read_ledger(folder)
                 self.assertEqual(stages.call_count,4)
                 self.assertEqual(fetch.call_count,1)
-                if scan_valid and shadow_valid and dex_age_minutes<=61:
+                if scan_valid and shadow_valid and dex_age_minutes<=61 and same_run_valid:
                     publish.assert_called_once()
                     self.assertEqual(state["completed_issue_numbers"],[123])
                     self.assertEqual(exit_code,0)
@@ -64,6 +64,10 @@ class ManualMailboxAcceptance(unittest.TestCase):
                     else:
                         self.assertNotEqual(exit_code,0)
                 return output.getvalue()
+
+    def test_mismatched_sqlite_evidence_blocks_verified_delivery(self):
+        output=self.run_case(same_run_valid=False)
+        self.assertIn("SCAN_SAME_RUN_EVIDENCE_UNVERIFIED",output)
 
     def test_manual_origin_delivers_and_acknowledges(self):
         self.run_case(origin="manual")
