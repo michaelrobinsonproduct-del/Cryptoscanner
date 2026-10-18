@@ -93,6 +93,20 @@ def precursor_feature_audit(rows, asset_pairs=None):
                               "cross_venue_flow"],
             "score_adjustment": 0, "promotion_eligible": False}
 
+def load_same_run_asset_pairs(latest):
+    """Return authoritative Kraken pair identities from the exact scan, or None."""
+    import json
+    import os
+    from pathlib import Path
+    try:
+        report = json.loads((Path(os.getenv("SIMPLE_SCANNER_DATA_DIR",
+                                          "simple_scanner/output")) / "latest.json").read_text())
+        if report.get("completed_at") == latest and isinstance(report.get("asset_pairs"), dict):
+            return report["asset_pairs"]
+    except (OSError, ValueError, TypeError):
+        pass
+    return None
+
 def evaluate_precursor(con):
     tables={r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     if not {"market_signals","market_observations"}.issubset(tables):
@@ -106,19 +120,7 @@ def evaluate_precursor(con):
          ORDER BY p.run_at DESC LIMIT 1 OFFSET 1)
        FROM market_signals s JOIN market_observations n ON n.pair=s.pair AND n.run_at=s.run_at
        WHERE s.run_at=?""",(latest,)).fetchall()
-    # Canonical metadata is supplied only by the same-run scan report.
-    # No network access, DB writes, or guessed pair identity in this learner.
-    import json
-    import os
-    from pathlib import Path
-    metadata = None
-    try:
-        report = json.loads((Path(os.getenv("SIMPLE_SCANNER_DATA_DIR",
-                                         "simple_scanner/output")) / "latest.json").read_text())
-        if report.get("completed_at") == latest and isinstance(report.get("asset_pairs"), dict):
-            metadata = report["asset_pairs"]
-    except (OSError, ValueError, TypeError):
-        pass
+    metadata = load_same_run_asset_pairs(latest)
     if metadata is None:
         return {"status": "AWAITING_CANONICAL_ASSET_METADATA",
                 "observed_at": latest, "universe_observed": len(rows),
