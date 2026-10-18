@@ -16,6 +16,8 @@ def backup(source, destination):
         raise ValueError("Source history database missing or empty")
     if source == destination or source.parent == destination.parent:
         raise ValueError("Backup destination must be outside source directory")
+    if os.stat(source).st_dev == os.stat(destination.parent).st_dev:
+        raise ValueError("Backup destination must be on a separate filesystem")
     if destination.exists():
         raise FileExistsError("Never overwrite an existing backup")
     if not destination.parent.is_dir():
