@@ -15,6 +15,10 @@ def get(path):
 def main():
     now=dt.datetime.now(dt.timezone.utc)
     pairs=get("AssetPairs")
+    # Metadata-only addition for the research shadow; production eligibility and scores stay unchanged.
+    canonical_asset_pairs={k:{"base":v["base"]} for k,v in pairs.items()
+                           if isinstance(v,dict) and v.get("base") and v.get("status")=="online"
+                           and v.get("wsname","").endswith("/USD")}
     eligible={k:v for k,v in pairs.items() if v.get("status")=="online" and v.get("wsname","").endswith("/USD") and v.get("base","").upper() not in {"ZUSD","USD","USDT","USDC","DAI","PYUSD","EURC","RLUSD","TUSD"}}
     ticker=get("Ticker?pair="+",".join(eligible)) if len(eligible)<100 else get("Ticker")
     scored=[]; errors=[]; matched_tickers=0; market_prices={}; market_signals={}
@@ -88,7 +92,7 @@ def main():
             item["risk"]="UNASSESSED"
             item["risk_reasons"]=["risk_annotation_unavailable"]
     finished=dt.datetime.now(dt.timezone.utc)
-    result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"ohlc_screened":len(screened),"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in watch),"errors":errors,"watch":watch,"market_prices":market_prices,"market_signals":market_signals,"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
+    result={"engine":"simple-kraken-1","started_at":now.isoformat(),"completed_at":finished.isoformat(),"universe":len(eligible),"ticker_pairs":len(ticker),"matched_tickers":matched_tickers,"ohlc_screened":len(screened),"validated_watch":sum(x.get("status")=="WATCH_RESEARCH_ONLY" for x in watch),"errors":errors,"watch":watch,"market_prices":market_prices,"market_signals":market_signals,"asset_pairs":canonical_asset_pairs,"buy_approved":False,"learning_status":"NOT_VALIDATED","status":"RESEARCH_ONLY" if ticker else "FAILED"}
     if not watch:
         raise RuntimeError("No fresh verified OHLC watch candidates")
     Path(os.getenv("SIMPLE_SCANNER_DATA_DIR","simple_scanner/output")).mkdir(parents=True,exist_ok=True)
