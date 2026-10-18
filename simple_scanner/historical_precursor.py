@@ -29,12 +29,12 @@ def crypto_pair(pair, asset_pairs=None):
     base = ALIASES.get(base, base)
     return bool(base) and base not in FIAT | STABLE
 
-def rank_precursors(rows, limit=12):
+def rank_precursors(rows, limit=12, asset_pairs=None):
     """Rows: (pair, move24, spread, notional, previous_price, current_price,
     older_price). Relative volume and cross-venue features are unavailable."""
     candidates=[]
     for pair, move24, spread, notional, previous, current, older in rows:
-        if not crypto_pair(pair): continue
+        if not crypto_pair(pair, asset_pairs): continue
         vals=(move24,spread,notional,previous,current,older)
         if not all(isinstance(v,(int,float)) and math.isfinite(v) for v in vals): continue
         if min(previous,current,older)<=0 or notional<25000 or spread<0 or spread>125: continue
@@ -51,7 +51,7 @@ def rank_precursors(rows, limit=12):
                            "acceleration_pct":round(acceleration,4)})
     return sorted(candidates,key=lambda x:(-x["score"],x["pair"]))[:limit]
 
-def precursor_feature_audit(rows):
+def precursor_feature_audit(rows, asset_pairs=None):
     """Read-only diagnostic of existing precursor feature availability.
 
     Does not modify scoring, ranking, promotion, or production outputs.
@@ -62,7 +62,7 @@ def precursor_feature_audit(rows):
               "positive_acceleration": 0}
     for pair, move24, spread, notional, previous, current, older in rows:
         counts["rows"] += 1
-        if not crypto_pair(pair):
+        if not crypto_pair(pair, asset_pairs):
             continue
         counts["eligible_identity"] += 1
         vals = (move24, spread, notional, previous, current, older)
@@ -106,8 +106,27 @@ def evaluate_precursor(con):
          ORDER BY p.run_at DESC LIMIT 1 OFFSET 1)
        FROM market_signals s JOIN market_observations n ON n.pair=s.pair AND n.run_at=s.run_at
        WHERE s.run_at=?""",(latest,)).fetchall()
-    ranked=rank_precursors(rows)
-    audit=precursor_feature_audit(rows)
+    # Canonical metadata is supplied only by the same-run scan report.
+    # No network access, DB writes, or guessed pair identity in this learner.
+    import json
+    import os
+    from pathlib import Path
+    metadata = None
+    try:
+        report = json.loads((Path(os.getenv("SIMPLE_SCANNER_DATA_DIR",
+                                         "simple_scanner/output")) / "latest.json").read_text())
+        if report.get("completed_at") == latest and isinstance(report.get("asset_pairs"), dict):
+            metadata = report["asset_pairs"]
+    except (OSError, ValueError, TypeError):
+        pass
+    if metadata is None:
+        return {"status": "AWAITING_CANONICAL_ASSET_METADATA",
+                "observed_at": latest, "universe_observed": len(rows),
+                "candidates": [], "selection_budget": 12,
+                "promotion_eligible": False, "live_weights_modified": False,
+                "buy_approved": False}
+    ranked=rank_precursors(rows, asset_pairs=metadata)
+    audit=precursor_feature_audit(rows, asset_pairs=metadata)
     return {"feature_audit":audit,"status":"SHADOW_PRECURSOR_RESEARCH","observed_at":latest,
             "universe_observed":len(rows),"candidates":ranked,"selection_budget":12,
             "features_unavailable":["relative_volume_full_market","cross_venue_flow","open_interest"],
