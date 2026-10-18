@@ -22,7 +22,7 @@ class RealHistoryReplayTests(unittest.TestCase):
             identities.write_text(json.dumps({"SOLUSD":{"base":"SOL"}}))
             blocked=replay(db,identities)
             self.assertEqual(blocked["status"],"BLOCKED_UNVERIFIED_IDENTITIES")
-            self.assertEqual(blocked["missing_examples"],["ZEURZUSD"])
+            self.assertEqual(blocked["missing_examples"],["SOLUSD","ZEURZUSD"])
             identities.write_text(json.dumps({"SOLUSD":{"base":"SOL"},"ZEURZUSD":{"base":"ZEUR"}}))
             self.assertEqual(replay(db,identities)["status"],"BLOCKED_UNVERIFIED_IDENTITIES")
             def verified(base):
