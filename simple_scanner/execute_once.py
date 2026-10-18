@@ -60,7 +60,7 @@ def execute(origin="manual"):
                 print(line, flush=True)
                 for key in (*REQUIRED, "SHADOW_LEARNING", "DEX_SUMMARY", "DEX_CACHE_REUSED",
                             "DEX_CIRCUIT_OPEN", "DEX_CIRCUIT_TRIPPED",
-                            "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS"):
+                            "DEX_STALE_CACHE", "DEX_SOURCE_ERRORS", "HISTORY_SAME_RUN_AUDIT", "HISTORY_SAME_RUN_WARNING"):
                     if line == key or line.startswith(key + " "):
                         records[key] = line[len(key):].strip()
             if result.returncode and module == "simple_scanner.shadow_learning":
@@ -151,12 +151,20 @@ def execute(origin="manual"):
         if scan_started < started - dt.timedelta(seconds=5) or scan_started > scan_completed or scan_completed > dt.datetime.now(dt.timezone.utc) + dt.timedelta(seconds=5):
             print("SCAN_STALE_RUN", flush=True)
             return 1
-        verified_status = "VERIFIED" if shadow_ok and not dex_degraded else "PARTIAL"
+        same_run_ok = False
+        try:
+            same_run_ok = json.loads(records.get("HISTORY_SAME_RUN_AUDIT", "{}")).get("status") == "MATCHED"
+        except (ValueError, TypeError):
+            pass
+        if not same_run_ok:
+            print("SCAN_SAME_RUN_EVIDENCE_UNVERIFIED " + json.dumps({"origin": origin}), flush=True)
+        verified_status = "VERIFIED" if shadow_ok and not dex_degraded and same_run_ok else "PARTIAL"
         print("SCAN_EXECUTION_VERIFIED " + json.dumps({
             "origin": origin, "started_at": summary["started_at"],
             "completed_at": summary["completed_at"], "buy_approved": False,
             "shadow_present": shadow_ok, "dex_record_present": dex_ok,
             "dex_degraded": dex_degraded, "dex_fresh": dex_fresh,
+            "sqlite_same_run_verified": same_run_ok,
             "status": verified_status,
         }), flush=True)
         if manual_pending and verified_status == "VERIFIED":
