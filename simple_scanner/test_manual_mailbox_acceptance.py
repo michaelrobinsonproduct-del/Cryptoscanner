@@ -19,7 +19,7 @@ class Result:
         self.stdout = stdout
 
 class ManualMailboxAcceptance(unittest.TestCase):
-    def run_case(self, *, shadow_valid=True, dex_age_minutes=1, publish_ok=True, scan_valid=True, origin="cron", same_run_valid=True):
+    def run_case(self, *, shadow_valid=True, dex_age_minutes=1, publish_ok=True, scan_valid=True, origin="cron", same_run_valid=True, combined_valid=True):
         with tempfile.TemporaryDirectory() as folder:
             now = dt.datetime.now(dt.timezone.utc)
             stamp = now.isoformat()
@@ -44,7 +44,7 @@ class ManualMailboxAcceptance(unittest.TestCase):
             with patch.dict(os.environ,env,clear=True), \
                  patch("simple_scanner.manual_requests.fetch_requests", return_value=[request]) as fetch, \
                  patch("simple_scanner.manual_requests.publish_results", return_value=[request] if publish_ok else []) as publish, \
-                 patch("simple_scanner.scan_output.verify_scan_history_evidence",return_value={"status":"VERIFIED"}), \
+                 patch("simple_scanner.scan_output.verify_scan_history_evidence",return_value={"status":"VERIFIED" if combined_valid else "UNVERIFIED","sqlite_status":"MATCHED" if combined_valid else "MISMATCH"}), \
                  patch("simple_scanner.execute_once.subprocess.run",side_effect=records) as stages:
                 output = io.StringIO()
                 with contextlib.redirect_stdout(output):
@@ -52,7 +52,7 @@ class ManualMailboxAcceptance(unittest.TestCase):
                 state=read_ledger(folder)
                 self.assertEqual(stages.call_count,4)
                 self.assertEqual(fetch.call_count,1)
-                if scan_valid and shadow_valid and dex_age_minutes<=61 and same_run_valid:
+                if scan_valid and shadow_valid and dex_age_minutes<=61 and same_run_valid and combined_valid:
                     publish.assert_called_once()
                     self.assertEqual(state["completed_issue_numbers"],[123])
                     self.assertEqual(exit_code,0)
@@ -67,6 +67,11 @@ class ManualMailboxAcceptance(unittest.TestCase):
                     else:
                         self.assertNotEqual(exit_code,0)
                 return output.getvalue()
+
+    def test_combined_readback_mismatch_never_acknowledges_manual_request(self):
+        output=self.run_case(origin="manual",combined_valid=False)
+        self.assertIn("SCAN_ARCHIVE_EVIDENCE_UNVERIFIED",output)
+        self.assertIn('"status": "PARTIAL"',output)
 
     def test_mismatched_sqlite_evidence_blocks_verified_delivery(self):
         output=self.run_case(same_run_valid=False)
