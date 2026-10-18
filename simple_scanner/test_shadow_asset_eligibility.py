@@ -6,7 +6,8 @@ import tempfile
 import os
 from pathlib import Path
 from unittest.mock import patch
-from simple_scanner.historical_precursor import crypto_pair, rank_precursors, precursor_feature_audit, evaluate_precursor
+from simple_scanner.historical_precursor import crypto_pair, rank_precursors, precursor_feature_audit, evaluate_precursor, load_same_run_asset_pairs
+from simple_scanner.shadow_learning import early_accumulation_rank, evaluate_early_accumulation
 
 class ShadowEligibilityTests(unittest.TestCase):
     def test_stablecoin_aliases_excluded(self):
@@ -77,6 +78,22 @@ class ShadowEligibilityTests(unittest.TestCase):
             self.assertEqual(result["candidates"], [])
             self.assertFalse(result["promotion_eligible"])
             con.close()
+
+    def test_both_shadow_rankers_exclude_fiat_and_stable(self):
+        meta = {"ZGBPZUSD": {"base": "ZGBP"}, "ZEURZUSD": {"base": "ZEUR"},
+                "USDSUSD": {"base": "USDS"}, "SOLUSD": {"base": "SOL"}}
+        six = [(p, 2.0, 10.0, 250000.0, 100.0, 101.0) for p in meta]
+        seven = [(*row, 100.0) for row in six]
+        self.assertEqual([r["pair"] for r in early_accumulation_rank(six, meta)], ["SOLUSD"])
+        self.assertEqual([r["pair"] for r in rank_precursors(seven, asset_pairs=meta)], ["SOLUSD"])
+
+    def test_metadata_loader_rejects_wrong_timestamp(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "latest.json"
+            path.write_text(json.dumps({"completed_at": "wrong", "asset_pairs": {"SOLUSD": {"base": "SOL"}}}))
+            with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
+                self.assertIsNone(load_same_run_asset_pairs("expected"))
+                self.assertEqual(load_same_run_asset_pairs("wrong")["SOLUSD"]["base"], "SOL")
 
 if __name__ == "__main__":
     unittest.main()
