@@ -62,6 +62,32 @@ class AtomicOutputTests(unittest.TestCase):
             self.assertTrue(path.exists())
             self.assertEqual(len(list(Path(directory).glob("*.json"))),1)
 
+    def test_archive_readback_rejects_timestamp_identity_mismatch(self):
+        report={"started_at":"2026-10-18T16:00:00+00:00",
+                "completed_at":"2026-10-18T16:00:10+00:00",
+                "market_prices":{"SOLUSD":100},
+                "market_signals":{"SOLUSD":{"move24_pct":2}},
+                "asset_pairs":{"SOLUSD":{"base":"SOL"}}}
+        with tempfile.TemporaryDirectory() as directory:
+            path=persist_scan_archive(directory,report)
+            other=path.with_name("wrong-identity.json")
+            other.write_bytes(path.read_bytes())
+            with self.assertRaisesRegex(ValueError,"timestamp identity mismatch"):
+                verify_scan_archive(other)
+
+    def test_archive_readback_failure_is_not_marked_recorded(self):
+        report={"started_at":"2026-10-18T16:00:00+00:00",
+                "completed_at":"2026-10-18T16:00:10+00:00",
+                "market_prices":{"SOLUSD":100},
+                "market_signals":{"SOLUSD":{"move24_pct":2}},
+                "asset_pairs":{"SOLUSD":{"base":"SOL"}}}
+        with tempfile.TemporaryDirectory() as directory:
+            with patch("simple_scanner.scan_output.verify_scan_archive",side_effect=ValueError("bad readback")):
+                published=publish_scan_with_archive(directory,report)
+            self.assertEqual(published["archive_status"],"NOT_RECORDED")
+            self.assertEqual(published["archive_error"],"ValueError")
+            self.assertTrue((Path(directory)/"latest.json").exists())
+
     def test_archive_is_write_once(self):
         report={"started_at":"2026-10-18T16:00:00+00:00",
                 "completed_at":"2026-10-18T16:00:10+00:00",
