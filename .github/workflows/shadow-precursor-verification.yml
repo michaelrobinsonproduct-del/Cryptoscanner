@@ -1,0 +1,23 @@
+name: Shadow precursor verification
+on:
+  pull_request:
+    paths:
+      - 'simple_scanner/historical_precursor.py'
+      - 'simple_scanner/scan.py'
+      - 'simple_scanner/test_shadow_asset_eligibility.py'
+      - '.github/workflows/shadow-precursor-verification.yml'
+  workflow_dispatch:
+jobs:
+  shadow-regression:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile scanner
+        run: python -m compileall -q simple_scanner
+      - name: Run scanner regression suite
+        run: python -m unittest discover -s simple_scanner -p 'test_*.py' -v
