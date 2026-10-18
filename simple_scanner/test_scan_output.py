@@ -23,6 +23,15 @@ class AtomicOutputTests(unittest.TestCase):
             self.assertEqual(json.loads(target.read_text()),{"last_good":True})
             self.assertEqual([p.name for p in Path(d).iterdir()],["latest.json"])
 
+    def test_directory_sync_failure_is_reported(self):
+        with tempfile.TemporaryDirectory() as d:
+            target=Path(d)/"latest.json"
+            with patch("simple_scanner.scan_output.os.fsync",side_effect=[None,OSError("directory sync failed")]):
+                with self.assertRaisesRegex(OSError,"directory sync failed"):
+                    publish_latest_atomic(target, {"completed_at":"t2"})
+            self.assertEqual(json.loads(target.read_text()),{"completed_at":"t2"})
+            self.assertEqual([p.name for p in Path(d).iterdir()],["latest.json"])
+
     def test_replace_failure_preserves_previous_scan(self):
         with tempfile.TemporaryDirectory() as d:
             target=Path(d)/"latest.json"
