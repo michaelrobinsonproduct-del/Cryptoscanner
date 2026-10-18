@@ -157,3 +157,27 @@ def verify_archive_against_latest(directory):
     if archive.get("completed_at") != latest.get("completed_at"):
         return {"status": "ARCHIVE_SCAN_MISMATCH"}
     return {"status": "VERIFIED", "completed_at": latest["completed_at"]}
+
+def audit_sqlite_same_run(con, report):
+    """Read back the actual SQLite rows keyed by the scan's exact completion time."""
+    stamp = report["completed_at"]
+    signals = report.get("market_signals", {})
+    prices = report.get("market_prices", {})
+    signal_rows = con.execute("SELECT pair FROM market_signals WHERE run_at=?", (stamp,)).fetchall()
+    price_rows = con.execute("SELECT pair FROM market_observations WHERE run_at=?", (stamp,)).fetchall()
+    actual_signals = {row[0] for row in signal_rows}
+    actual_prices = {row[0] for row in price_rows}
+    expected_signals = set(signals)
+    expected_prices = set(prices)
+    missing_signals = sorted(expected_signals - actual_signals)
+    missing_prices = sorted(expected_prices - actual_prices)
+    extra_signals = sorted(actual_signals - expected_signals)
+    extra_prices = sorted(actual_prices - expected_prices)
+    complete = bool(expected_signals and expected_prices and
+                    not (missing_signals or missing_prices or extra_signals or extra_prices))
+    return {"status": "MATCHED" if complete else "MISMATCH",
+            "run_at": stamp, "expected_signals": len(expected_signals),
+            "persisted_signals": len(actual_signals), "expected_prices": len(expected_prices),
+            "persisted_prices": len(actual_prices), "missing_signals": missing_signals[:20],
+            "missing_prices": missing_prices[:20],
+            "extra_signals": extra_signals[:20], "extra_prices": extra_prices[:20]}
