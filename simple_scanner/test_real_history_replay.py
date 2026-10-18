@@ -24,6 +24,12 @@ class RealHistoryReplayTests(unittest.TestCase):
             self.assertEqual(blocked["status"],"BLOCKED_UNVERIFIED_IDENTITIES")
             self.assertEqual(blocked["missing_examples"],["ZEURZUSD"])
             identities.write_text(json.dumps({"SOLUSD":{"base":"SOL"},"ZEURZUSD":{"base":"ZEUR"}}))
+            self.assertEqual(replay(db,identities)["status"],"BLOCKED_UNVERIFIED_IDENTITIES")
+            def verified(base):
+                return {"base":base,"source":"kraken_assetpairs",
+                        "observed_at":"2026-10-18T00:00:00+00:00",
+                        "evidence_ref":"archive/kraken-assetpairs-20261018.json"}
+            identities.write_text(json.dumps({"SOLUSD":verified("SOL"),"ZEURZUSD":verified("ZEUR")}))
             result=replay(db,identities)
             self.assertTrue(result["passed"])
             self.assertEqual(result["rows"],6)
