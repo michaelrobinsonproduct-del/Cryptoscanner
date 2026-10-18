@@ -1,6 +1,12 @@
 """Regression tests for isolated shadow precursor eligibility; no network calls."""
 import unittest
-from simple_scanner.historical_precursor import crypto_pair, rank_precursors, precursor_feature_audit
+import sqlite3
+import json
+import tempfile
+import os
+from pathlib import Path
+from unittest.mock import patch
+from simple_scanner.historical_precursor import crypto_pair, rank_precursors, precursor_feature_audit, evaluate_precursor
 
 class ShadowEligibilityTests(unittest.TestCase):
     def test_stablecoin_aliases_excluded(self):
@@ -51,6 +57,26 @@ class ShadowEligibilityTests(unittest.TestCase):
     def test_audit_handles_invalid_history(self):
         rows = [("SOLUSD", 2.0, 10.0, 250000.0, None, 101.0, 100.0)]
         self.assertEqual(precursor_feature_audit(rows)["counts"]["valid_numeric"], 0)
+
+    def test_canonical_rank_excludes_stable_without_changing_sol_score(self):
+        rows = [("SOLUSD", 2.0, 10.0, 250000.0, 100.0, 101.0, 100.0),
+                ("MYSTERYUSD", 2.0, 10.0, 250000.0, 100.0, 101.0, 100.0)]
+        meta = {"SOLUSD": {"base": "SOL"}, "MYSTERYUSD": {"base": "USDS"}}
+        self.assertEqual(rank_precursors(rows, asset_pairs=meta), rank_precursors(rows[:1]))
+
+    def test_evaluation_fails_closed_without_same_run_metadata(self):
+        with tempfile.TemporaryDirectory() as folder:
+            con = sqlite3.connect(":memory:")
+            con.execute("CREATE TABLE market_signals (run_at TEXT, pair TEXT, move24_pct REAL, spread_bps REAL, notional_24h_usd REAL)")
+            con.execute("CREATE TABLE market_observations (run_at TEXT, pair TEXT, price REAL)")
+            con.execute("INSERT INTO market_signals VALUES ('2026-10-18T00:00:00+00:00','SOLUSD',2,10,250000)")
+            con.execute("INSERT INTO market_observations VALUES ('2026-10-18T00:00:00+00:00','SOLUSD',101)")
+            with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
+                result = evaluate_precursor(con)
+            self.assertEqual(result["status"], "AWAITING_CANONICAL_ASSET_METADATA")
+            self.assertEqual(result["candidates"], [])
+            self.assertFalse(result["promotion_eligible"])
+            con.close()
 
 if __name__ == "__main__":
     unittest.main()
