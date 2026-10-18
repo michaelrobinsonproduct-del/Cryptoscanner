@@ -18,21 +18,54 @@ def persist():
     assert report["validated_watch"] > 0
     DB.parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(DB)
-    con.execute("PRAGMA journal_mode=DELETE")
+    # Emergency recovery: a full filesystem cannot allocate SQLite's disk rollback
+    # journal even to DELETE rows. MEMORY journal allows the retention transaction
+    # to free pages within the existing DB file without allocating a journal file.
+    # Do not use journal_mode=OFF: it offers no rollback protection.
+    con.execute("PRAGMA journal_mode=MEMORY")
+    con.execute("PRAGMA temp_store=MEMORY")
+    # Retain full transaction rollback support while avoiding extra disk journals.
+    # SQLite reuses available database pages; avoid a live VACUUM on this volume.
+    # Keep observation retention and training inputs unchanged pending parity tests.
     con.execute("CREATE TABLE IF NOT EXISTS snapshots (run_at TEXT NOT NULL, pair TEXT NOT NULL, price REAL NOT NULL CHECK(price>0), score REAL NOT NULL, PRIMARY KEY(run_at,pair))")
     con.execute("CREATE TABLE IF NOT EXISTS candidate_features (run_at TEXT NOT NULL, pair TEXT NOT NULL, base_score REAL NOT NULL, early_signal_score REAL, move_15m_pct REAL, volume_accel REAL, research_rank INTEGER, base_rank INTEGER, PRIMARY KEY(run_at,pair))")
     existing_columns={r[1] for r in con.execute("PRAGMA table_info(candidate_features)")}
     if "base_rank" not in existing_columns:
         con.execute("ALTER TABLE candidate_features ADD COLUMN base_rank INTEGER")
     con.execute("CREATE TABLE IF NOT EXISTS market_observations (run_at TEXT NOT NULL, pair TEXT NOT NULL, price REAL NOT NULL CHECK(price>0), PRIMARY KEY(run_at,pair))")
+    con.execute("CREATE TABLE IF NOT EXISTS market_signals (run_at TEXT NOT NULL, pair TEXT NOT NULL, move24_pct REAL NOT NULL, spread_bps REAL NOT NULL, notional_24h_usd REAL NOT NULL, PRIMARY KEY(run_at,pair))")
     con.execute("CREATE INDEX IF NOT EXISTS idx_market_pair_time ON market_observations(pair,run_at)")
-    con.execute("CREATE INDEX IF NOT EXISTS idx_market_time ON market_observations(run_at)")
-    con.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_time ON snapshots(run_at)")
+    # Single-column timestamp indexes are unnecessary: the PK covers run_at.
     con.execute("CREATE TABLE IF NOT EXISTS outcomes (run_at TEXT NOT NULL, pair TEXT NOT NULL, horizon_hours INTEGER NOT NULL, evaluated_at TEXT NOT NULL, return_pct REAL NOT NULL, PRIMARY KEY(run_at,pair,horizon_hours))")
     con.execute("CREATE INDEX IF NOT EXISTS idx_outcomes_horizon ON outcomes(horizon_hours)")
     now = dt.datetime.fromisoformat(report["completed_at"])
     assert now.tzinfo is not None and now.utcoffset() is not None, "Scan timestamp must be timezone-aware"
+    # Storage guard for Railway's 100 MB volume. Preserve all candidate snapshots,
+    # outcomes, and recent full-resolution prices. Downsample older raw market
+    # observations to one hourly sample per pair, preserving a year of trend
+    # history while freeing SQLite pages for ongoing scans.
     with con:
+        # All three single-column indexes duplicate the leftmost run_at
+        # prefix of the tables' (run_at,pair) primary-key indexes.
+        # DROP INDEX frees internal SQLite pages without deleting observations.
+        for redundant in ("idx_market_signals_time", "idx_market_time", "idx_snapshots_time"):
+            con.execute("DROP INDEX IF EXISTS " + redundant)
+        older_than=(now-dt.timedelta(hours=24)).isoformat()
+        con.execute("""DELETE FROM market_observations
+            WHERE run_at < ? AND CAST(strftime('%M',run_at) AS INTEGER) >= 15""",(older_than,))
+        con.execute("""DELETE FROM market_signals
+            WHERE run_at < ? AND CAST(strftime('%M',run_at) AS INTEGER) >= 15""",(older_than,))
+        # The 24h outcome window needs 1h granularity; retain an hourly anchor.
+        # Remove only non-candidate raw observations, never the outcome ledger.
+        for pair,signals in report.get("market_signals",{}).items():
+            if pair not in report.get("market_prices",{}):
+                continue
+            try:
+                move=float(signals["move24_pct"]); spread=float(signals["spread_bps"]); notional=float(signals["notional_24h_usd"])
+            except (TypeError,KeyError,ValueError):
+                continue
+            if all(math.isfinite(v) for v in (move,spread,notional)) and spread>=0 and notional>=0:
+                con.execute("INSERT OR IGNORE INTO market_signals VALUES (?,?,?,?,?)",(report["completed_at"],pair,move,spread,notional))
         for pair,price in report.get("market_prices",{}).items():
             if isinstance(price,(int,float)) and math.isfinite(price) and price>0:
                 con.execute("INSERT OR IGNORE INTO market_observations VALUES (?,?,?)",(report["completed_at"],pair,price))
@@ -68,6 +101,18 @@ def persist():
                 ret=100*(observed_price/price-1)
                 con.execute("INSERT OR IGNORE INTO outcomes VALUES (?,?,?,?,?)", (run_at,pair,hours,observed_at,round(ret,4)))
     assert con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+    # Report SQLite's reusable pages separately from filesystem free space.
+    # Dropping indexes releases pages inside the DB, not necessarily OS bytes.
+    page_bytes=con.execute("PRAGMA page_size").fetchone()[0]
+    free_pages=con.execute("PRAGMA freelist_count").fetchone()[0]
+    remaining_indexes=[name for (name,) in con.execute(
+        "SELECT name FROM sqlite_master WHERE type='index' AND name IN (?,?,?)",
+        ("idx_market_time","idx_market_signals_time","idx_snapshots_time"))]
+    print("STORAGE_SQLITE_AUDIT "+json.dumps({
+        "integrity":"ok", "db_bytes":DB.stat().st_size,
+        "reusable_bytes":page_bytes*free_pages,
+        "redundant_indexes_remaining":remaining_indexes,
+    }),flush=True)
     n = con.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
     outcomes = con.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0]
     feature_rows=con.execute("SELECT COUNT(*) FROM candidate_features").fetchone()[0]
@@ -126,7 +171,7 @@ def persist():
         eligible_count=con.execute("SELECT COUNT(*) FROM snapshots WHERE run_at<=?",(mature,)).fetchone()[0]
         evaluated_count=con.execute("SELECT COUNT(*) FROM outcomes WHERE horizon_hours=?",(hours,)).fetchone()[0]
         horizon_coverage.append({"hours":hours,"matured_snapshots":eligible_count,"evaluated":evaluated_count,"coverage_pct":round(100*evaluated_count/eligible_count,1) if eligible_count else None,**missing_by_horizon[hours]})
-    summary = {"forward_horizon_coverage":horizon_coverage,"outcome_lag_hours_by_horizon":[{"hours":h,"samples":n,"average_delay_hours":lag} for h,n,lag in outcome_lags],"unresolved_1h_snapshots":unresolved,"rank_comparison":{"historical_ranked_samples":rank_shift[0],"mean_base_minus_early_rank":rank_shift[1]},"newly_discovered_outside_base_top12":promoted,"signal_outcomes_by_horizon":[{"hours":h,"samples":n,"early_scored_avg_return_pct":e,"all_selected_avg_return_pct":a,"early_score_above_base_avg_return_pct":b} for h,n,e,a,b in comparison],"outcome_evaluation_coverage":{"evaluated":evaluated_outcomes,"positive":winning_outcomes,"average_return_pct":avg_return},"missed_breakout_examples":[{"pair":p,"observed_at":t,"next_scan_gain_pct":g} for p,t,g in missed_examples],"unselected_gainers_5pct_observations":missed,"market_observations":market_observations,"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
+    summary = {"forward_horizon_coverage":horizon_coverage,"outcome_lag_hours_by_horizon":[{"hours":h,"samples":n,"average_delay_hours":lag} for h,n,lag in outcome_lags],"unresolved_1h_snapshots":unresolved,"rank_comparison":{"historical_ranked_samples":rank_shift[0],"mean_base_minus_early_rank":rank_shift[1]},"newly_discovered_outside_base_top12":promoted,"signal_outcomes_by_horizon":[{"hours":h,"samples":n,"early_scored_avg_return_pct":e,"all_selected_avg_return_pct":a,"early_score_above_base_avg_return_pct":b} for h,n,e,a,b in comparison],"outcome_evaluation_coverage":{"evaluated":evaluated_outcomes,"positive":winning_outcomes,"average_return_pct":avg_return},"missed_breakout_examples":[{"pair":p,"observed_at":t,"next_scan_gain_pct":g} for p,t,g in missed_examples],"unselected_gainers_5pct_observations":missed,"market_observations":market_observations,"market_signal_coverage":len(report.get("market_signals",{})),"market_price_coverage":len(report.get("market_prices",{})),"feature_rows":feature_rows,"snapshots":n,"outcomes":outcomes,"history_db_integrity":"ok","evaluation":"FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE" if report.get("market_prices") else "INCOMPLETE_WATCHLIST_ONLY","model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION","buy_approved":False}
     (DB.parent / "learning.json").write_text(json.dumps(summary,indent=2))
     print("HISTORY_PERSISTED",json.dumps(summary))
     con.close()
