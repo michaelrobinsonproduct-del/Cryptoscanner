@@ -4,9 +4,29 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from simple_scanner.scan_output import publish_latest_atomic
+from simple_scanner.scan_output import publish_latest_atomic, verify_market_evidence
 
 class AtomicOutputTests(unittest.TestCase):
+    def test_market_evidence_audit_complete(self):
+        report={"started_at":"2026-10-18T16:00:00+00:00",
+                "completed_at":"2026-10-18T16:00:10+00:00",
+                "market_prices":{"SOLUSD":100},
+                "market_signals":{"SOLUSD":{"move24_pct":2}},
+                "asset_pairs":{"SOLUSD":{"base":"SOL"}}}
+        result=verify_market_evidence(report)
+        self.assertEqual(result["status"],"COMPLETE")
+        self.assertEqual(result["scan_duration_seconds"],10)
+
+    def test_market_evidence_audit_fails_closed(self):
+        report={"started_at":"2026-10-18T16:00:10+00:00",
+                "completed_at":"2026-10-18T16:00:00+00:00",
+                "market_prices":{},
+                "market_signals":{"SOLUSD":{"move24_pct":2}},
+                "asset_pairs":{}}
+        result=verify_market_evidence(report)
+        self.assertEqual(result["status"],"INCOMPLETE")
+        self.assertEqual(result["missing_pairs"],["SOLUSD"])
+
     def test_complete_output_and_no_temporary_file(self):
         with tempfile.TemporaryDirectory() as d:
             target=Path(d)/"latest.json"
