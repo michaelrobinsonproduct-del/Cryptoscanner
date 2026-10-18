@@ -4,9 +4,40 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from simple_scanner.scan_output import publish_latest_atomic, verify_market_evidence, persist_scan_archive, verify_scan_archive, publish_scan_with_archive, compare_sqlite_run_timestamp, archive_content_sha256, verify_archive_against_latest
+from simple_scanner.scan_output import publish_latest_atomic, verify_market_evidence, persist_scan_archive, verify_scan_archive, publish_scan_with_archive, compare_sqlite_run_timestamp, archive_content_sha256, verify_archive_against_latest, audit_sqlite_same_run
 
 class AtomicOutputTests(unittest.TestCase):
+    def test_sqlite_readback_matches_exact_run(self):
+        import sqlite3
+        con=sqlite3.connect(":memory:")
+        con.execute("CREATE TABLE market_signals(run_at TEXT,pair TEXT)")
+        con.execute("CREATE TABLE market_observations(run_at TEXT,pair TEXT)")
+        stamp="2026-10-18T16:00:10+00:00"
+        con.execute("INSERT INTO market_signals VALUES (?,?)",(stamp,"SOLUSD"))
+        con.execute("INSERT INTO market_observations VALUES (?,?)",(stamp,"SOLUSD"))
+        report={"completed_at":stamp,"market_signals":{"SOLUSD":{}},
+                "market_prices":{"SOLUSD":100}}
+        self.assertEqual(audit_sqlite_same_run(con,report)["status"],"MATCHED")
+        report["completed_at"]="2026-10-18T16:00:11+00:00"
+        mismatch=audit_sqlite_same_run(con,report)
+        self.assertEqual(mismatch["status"],"MISMATCH")
+        self.assertEqual(mismatch["missing_signals"],["SOLUSD"])
+        con.close()
+
+    def test_sqlite_readback_detects_partial_ingestion(self):
+        import sqlite3
+        con=sqlite3.connect(":memory:")
+        con.execute("CREATE TABLE market_signals(run_at TEXT,pair TEXT)")
+        con.execute("CREATE TABLE market_observations(run_at TEXT,pair TEXT)")
+        stamp="2026-10-18T16:00:10+00:00"
+        con.execute("INSERT INTO market_signals VALUES (?,?)",(stamp,"SOLUSD"))
+        report={"completed_at":stamp,"market_signals":{"SOLUSD":{}},
+                "market_prices":{"SOLUSD":100}}
+        audit=audit_sqlite_same_run(con,report)
+        self.assertEqual(audit["status"],"MISMATCH")
+        self.assertEqual(audit["missing_prices"],["SOLUSD"])
+        con.close()
+
     def test_archive_digest_detects_tampering(self):
         report={"started_at":"2026-10-18T16:00:00+00:00",
                 "completed_at":"2026-10-18T16:00:10+00:00",
