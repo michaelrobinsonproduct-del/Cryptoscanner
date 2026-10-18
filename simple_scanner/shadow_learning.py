@@ -350,6 +350,21 @@ def evaluate(db_path):
 def main():
     folder = Path(os.getenv("SIMPLE_SCANNER_DATA_DIR", "simple_scanner/output"))
     report = evaluate(folder / "history.sqlite3")
+    # Require immutable identity evidence and actual SQLite value parity for current-scan validation.
+    try:
+        from .scan_output import verify_scan_history_evidence
+        con = sqlite3.connect(f"file:{(folder / 'history.sqlite3').resolve()}?mode=ro", uri=True)
+        try:
+            evidence = verify_scan_history_evidence(folder, con)
+        finally:
+            con.close()
+    except (OSError, ValueError, TypeError, KeyError, sqlite3.Error):
+        evidence = {"status": "UNVERIFIED", "reason": "EVIDENCE_UNAVAILABLE"}
+    report["current_scan_evidence"] = evidence
+    if evidence["status"] != "VERIFIED":
+        report["status"] = "CURRENT_SCAN_EVIDENCE_UNVERIFIED"
+        report["promotion_eligible"] = False
+        report["challenger_promotion_gate"] = {"status": "BLOCKED_UNVERIFIED_CURRENT_SCAN"}
     target = folder / "shadow_learning.json"
     tmp = folder / "shadow_learning.json.tmp"
     tmp.write_text(json.dumps(report, indent=2))
