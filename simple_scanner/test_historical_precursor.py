@@ -6,7 +6,7 @@ class PrecursorTests(unittest.TestCase):
     def test_excludes_fiat_and_stable(self):
         for pair in ('ZEURZUSD','ZGBPZUSD','USDTUSD','USDCUSD'):
             self.assertFalse(crypto_pair(pair))
-        self.assertTrue(crypto_pair('XXBTZUSD') is False or crypto_pair('XXBTZUSD') is True)
+        self.assertTrue(crypto_pair('XXBTZUSD'))
         self.assertTrue(crypto_pair('TAOUSD'))
 
     def test_early_acceleration_and_budget(self):
