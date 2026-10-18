@@ -118,6 +118,9 @@ def validate_accumulation_history(con):
                AND julianday(p.run_at)>=julianday(s.run_at)-90.0/1440)
         WHERE s.run_at < ? ORDER BY s.run_at DESC LIMIT 6000""",
         ((dt.datetime.now(dt.timezone.utc)-dt.timedelta(hours=2)).isoformat(),)).fetchall()
+    if not rows:
+        return {"status": "INSUFFICIENT_MATURED_HISTORY", "samples": 0,
+                "timestamps": 0, "promotion_eligible": False}
     # Historical observations do not retain canonical Kraken base IDs per run.
     # The latest.json metadata applies only to one exact run, never to past
     # cohorts. Refuse to report historical recall on an unidentified universe.
