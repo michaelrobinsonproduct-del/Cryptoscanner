@@ -15,7 +15,7 @@ def get(path):
 def main():
     now=dt.datetime.now(dt.timezone.utc)
     pairs=get("AssetPairs")
-    # Metadata-only addition for the research shadow; production eligibility and scores stay unchanged.
+    # Preserve the live eligibility and scoring logic; record identity metadata only.
     canonical_asset_pairs={k:{"base":v["base"]} for k,v in pairs.items()
                            if isinstance(v,dict) and v.get("base") and v.get("status")=="online"
                            and v.get("wsname","").endswith("/USD")}
