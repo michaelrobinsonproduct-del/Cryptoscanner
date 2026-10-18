@@ -75,3 +75,28 @@ class ShadowTests(unittest.TestCase):
    self.assertEqual(r["market_miss_model"]["samples"],5)
    self.assertEqual(r["market_miss_model"]["breakouts"],5)
    self.assertEqual(r["market_miss_model"]["status"],"INSUFFICIENT_MARKET_OUTCOMES")
+
+ def test_shadow_main_current_scan_evidence_states(self):
+  import json,os
+  from unittest.mock import patch
+  from simple_scanner.shadow_learning import main
+  for evidence,expected in (
+      ({"status":"VERIFIED"},"INSUFFICIENT_DATA"),
+      ({"status":"UNVERIFIED","archive_status":"UNVERIFIED_NOT_RECORDED"},"CURRENT_SCAN_EVIDENCE_UNVERIFIED"),
+      ({"status":"UNVERIFIED","sqlite_status":"MISMATCH"},"CURRENT_SCAN_EVIDENCE_UNVERIFIED")):
+   with self.subTest(evidence=evidence),tempfile.TemporaryDirectory() as d:
+    sqlite3.connect(Path(d)/"history.sqlite3").close()
+    baseline={"mode":"SHADOW_ONLY","status":"INSUFFICIENT_DATA",
+              "buy_approved":False,"live_weights_modified":False,
+              "challenger_promotion_gate":{"status":"BLOCKED"}}
+    with patch.dict(os.environ,{"SIMPLE_SCANNER_DATA_DIR":d}),\
+         patch("simple_scanner.shadow_learning.evaluate",return_value=baseline),\
+         patch("simple_scanner.scan_output.verify_scan_history_evidence",return_value=evidence):
+     main()
+    saved=json.loads((Path(d)/"shadow_learning.json").read_text())
+    self.assertEqual(saved["status"],expected)
+    self.assertFalse(saved["buy_approved"])
+    self.assertFalse(saved["live_weights_modified"])
+    if evidence["status"]!="VERIFIED":
+     self.assertFalse(saved["promotion_eligible"])
+     self.assertEqual(saved["challenger_promotion_gate"]["status"],"BLOCKED_UNVERIFIED_CURRENT_SCAN")
