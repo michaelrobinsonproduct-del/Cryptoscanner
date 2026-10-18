@@ -23,6 +23,9 @@ class ReleaseGateTests(unittest.TestCase):
         e["identity_coverage"].update({"verified":100, "total":100})
         with self.assertRaisesRegex(ValueError, "exact release commit"):
             validate(e,"different")
+        with self.assertRaisesRegex(ValueError, "previous production commit"):
+            validate(e,"abc")
+        e["rollback_verified"]["production_commit"]="d"*40
         self.assertTrue(validate(e,"abc"))
 
 if __name__=="__main__":
