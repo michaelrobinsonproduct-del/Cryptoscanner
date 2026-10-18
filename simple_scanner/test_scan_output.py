@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from simple_scanner.scan_output import publish_latest_atomic, verify_market_evidence, persist_scan_archive, verify_scan_archive, publish_scan_with_archive, compare_sqlite_run_timestamp, archive_content_sha256, verify_archive_against_latest, audit_sqlite_same_run
+from simple_scanner.scan_output import publish_latest_atomic, verify_market_evidence, persist_scan_archive, verify_scan_archive, publish_scan_with_archive, compare_sqlite_run_timestamp, archive_content_sha256, verify_archive_against_latest, audit_sqlite_same_run, verify_scan_history_evidence
 
 class AtomicOutputTests(unittest.TestCase):
     def test_sqlite_readback_matches_exact_run(self):
@@ -52,6 +52,54 @@ class AtomicOutputTests(unittest.TestCase):
         self.assertEqual(audit["status"],"MISMATCH")
         self.assertEqual(audit["price_value_mismatches"],["SOLUSD"])
         con.close()
+
+    def test_archive_identity_sqlite_value_end_to_end_read_only(self):
+        import sqlite3
+        report={"started_at":"2026-10-18T16:00:00+00:00",
+                "completed_at":"2026-10-18T16:00:10+00:00",
+                "market_prices":{"SOLUSD":100},
+                "market_signals":{"SOLUSD":{"move24_pct":2,"spread_bps":5,"notional_24h_usd":10000}},
+                "asset_pairs":{"SOLUSD":{"base":"SOL","source":"kraken_assetpairs"}}}
+        with tempfile.TemporaryDirectory() as directory:
+            published=publish_scan_with_archive(directory,report)
+            self.assertEqual(published["archive_status"],"RECORDED")
+            db=Path(directory)/"history.sqlite3"
+            writer=sqlite3.connect(db)
+            writer.execute("CREATE TABLE market_signals(run_at TEXT,pair TEXT,move24_pct REAL,spread_bps REAL,notional_24h_usd REAL,PRIMARY KEY(run_at,pair))")
+            writer.execute("CREATE TABLE market_observations(run_at TEXT,pair TEXT,price REAL,PRIMARY KEY(run_at,pair))")
+            writer.execute("INSERT INTO market_signals VALUES (?,?,?,?,?)",(report["completed_at"],"SOLUSD",2,5,10000))
+            writer.execute("INSERT INTO market_observations VALUES (?,?,?)",(report["completed_at"],"SOLUSD",100))
+            writer.commit()
+            writer.close()
+            reader=sqlite3.connect("file:"+str(db)+"?mode=ro",uri=True)
+            self.assertEqual(verify_scan_history_evidence(directory,reader)["status"],"VERIFIED")
+            reader.close()
+            writer=sqlite3.connect(db)
+            writer.execute("UPDATE market_observations SET price=99")
+            writer.commit()
+            writer.close()
+            reader=sqlite3.connect("file:"+str(db)+"?mode=ro",uri=True)
+            result=verify_scan_history_evidence(directory,reader)
+            self.assertEqual(result["status"],"UNVERIFIED")
+            self.assertEqual(result["sqlite_status"],"MISMATCH")
+            reader.close()
+
+    def test_archive_failure_never_verifies_history_evidence(self):
+        import sqlite3
+        report={"started_at":"2026-10-18T16:00:00+00:00",
+                "completed_at":"2026-10-18T16:00:10+00:00",
+                "market_prices":{"SOLUSD":100},
+                "market_signals":{"SOLUSD":{"move24_pct":2,"spread_bps":5,"notional_24h_usd":10000}},
+                "asset_pairs":{"SOLUSD":{"base":"SOL"}}}
+        with tempfile.TemporaryDirectory() as directory:
+            with patch("simple_scanner.scan_output.persist_scan_archive",side_effect=OSError("capacity")):
+                published=publish_scan_with_archive(directory,report)
+            self.assertEqual(published["archive_status"],"NOT_RECORDED")
+            reader=sqlite3.connect(":memory:")
+            result=verify_scan_history_evidence(directory,reader)
+            self.assertEqual(result["status"],"UNVERIFIED")
+            self.assertEqual(result["sqlite_status"],"NOT_CHECKED")
+            reader.close()
 
     def test_archive_digest_detects_tampering(self):
         report={"started_at":"2026-10-18T16:00:00+00:00",
