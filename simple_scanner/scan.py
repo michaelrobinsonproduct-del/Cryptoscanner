@@ -96,7 +96,8 @@ def main():
     if not watch:
         raise RuntimeError("No fresh verified OHLC watch candidates")
     Path(os.getenv("SIMPLE_SCANNER_DATA_DIR","simple_scanner/output")).mkdir(parents=True,exist_ok=True)
-    (Path(os.getenv("SIMPLE_SCANNER_DATA_DIR","simple_scanner/output"))/"latest.json").write_text(json.dumps(result,indent=2))
+    from simple_scanner.scan_output import publish_latest_atomic
+    publish_latest_atomic(Path(os.getenv("SIMPLE_SCANNER_DATA_DIR","simple_scanner/output"))/"latest.json", result)
     print("SCAN_SUMMARY "+json.dumps({k:result[k] for k in ("engine","started_at","completed_at","universe","ticker_pairs","matched_tickers","ohlc_screened","validated_watch","status","buy_approved")},separators=(",",":")),flush=True)
     print("WATCH_SUMMARY "+json.dumps([{"symbol":x["symbol"],"score":x["early_signal_score"],"move_15m_pct":x["move_15m_pct"],"volume_accel":x["volume_accel"],"risk":x.get("risk","UNASSESSED"),"risk_reasons":x.get("risk_reasons",[])} for x in watch],separators=(",",":")),flush=True)
 if __name__=="__main__":main()
