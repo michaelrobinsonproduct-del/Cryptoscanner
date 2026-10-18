@@ -7,8 +7,7 @@ ALIASES = {"XXBT":"BTC","XETH":"ETH","XXRP":"XRP","XXDG":"DOGE","XBT":"BTC"}
 
 def crypto_pair(pair):
     name = str(pair).upper()
-    if not name.endswith("USD"): return False
-    base = name[:-3]
+    if name.endswith("ZUSD"):\n        base = name[:-4]\n    elif name.endswith("USD"):\n        base = name[:-3]\n    else:\n        return False
     base = ALIASES.get(base, base)
     return bool(base) and base not in FIAT | STABLE
 
