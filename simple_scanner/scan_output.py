@@ -47,17 +47,46 @@ def verify_market_evidence(report):
             "scan_duration_seconds": duration if valid_time else None}
 
 def persist_scan_archive(directory, report):
-    """Keep one independent snapshot per completed scan; never replace old scans."""
+    """Atomically publish one immutable scan snapshot, without replacing older data."""
     import hashlib
-    stamp = report["completed_at"]
     if verify_market_evidence(report)["status"] != "COMPLETE":
         raise ValueError("incomplete market evidence")
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
+    stamp = report["completed_at"]
     target = directory / (hashlib.sha256(stamp.encode()).hexdigest() + ".json")
-    fd = os.open(str(target), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as stream:
-        json.dump(report, stream, allow_nan=False, sort_keys=True)
-        stream.flush()
-        os.fsync(stream.fileno())
+    payload = json.dumps(report, allow_nan=False, sort_keys=True).encode("utf-8")
+    # Never silently evict history. Fail closed if the configured evidence budget is full.
+    max_bytes = int(os.getenv("SIMPLE_SCANNER_ARCHIVE_MAX_BYTES", "10485760"))
+    max_record = int(os.getenv("SIMPLE_SCANNER_ARCHIVE_MAX_RECORD_BYTES", "1048576"))
+    if max_bytes <= 0 or max_record <= 0 or len(payload) > max_record:
+        raise ValueError("scan evidence exceeds configured record budget")
+    if target.exists():
+        raise FileExistsError(str(target))
+    used = sum(p.stat().st_size for p in directory.glob("*.json") if p.is_file())
+    if used + len(payload) > max_bytes:
+        raise OSError("scan evidence archive budget exceeded; no records removed")
+    fd, temporary = tempfile.mkstemp(prefix=".scan-", suffix=".tmp", dir=str(directory))
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        # Hard-link creates a new name only if absent; readers never see partial data.
+        os.link(temporary, target)
+        if os.name == "posix":
+            dirfd = os.open(str(directory), os.O_RDONLY)
+            try:
+                os.fsync(dirfd)
+            finally:
+                os.close(dirfd)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
     return target
+
+def verify_scan_archive(path):
+    """Reject corrupt or incomplete archived market evidence."""
+    report = json.loads(Path(path).read_text(encoding="utf-8"))
+    if verify_market_evidence(report)["status"] != "COMPLETE":
+        raise ValueError("incomplete archived market evidence")
+    return report
