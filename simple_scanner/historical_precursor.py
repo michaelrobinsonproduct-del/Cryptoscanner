@@ -2,11 +2,24 @@
 import math
 
 FIAT = {"USD","EUR","GBP","JPY","CHF","CAD","AUD","NZD","ZUSD","ZEUR","ZGBP","ZJPY","ZCAD","ZAUD"}
-STABLE = {"USDT","USDC","DAI","PYUSD","EURC","RLUSD","TUSD","FDUSD","USDD","USDE"}
+STABLE = {"USDT","USDC","DAI","PYUSD","EURC","RLUSD","TUSD","FDUSD","USDD","USDE",
+          "USDG","USDS","UST","USTC"}
 ALIASES = {"XXBT":"BTC","XETH":"ETH","XXRP":"XRP","XXDG":"DOGE","XBT":"BTC"}
 
-def crypto_pair(pair):
+def crypto_pair(pair, asset_pairs=None):
+    """Exclude known fiat/stable bases; prefer Kraken AssetPairs metadata if supplied.
+
+    Historical rows currently lack canonical asset IDs. The legacy suffix path
+    remains a compatibility fallback until canonical IDs are persisted.
+    """
     name = str(pair).upper()
+    if asset_pairs is not None:
+        meta = asset_pairs.get(pair) or asset_pairs.get(name)
+        if meta is None or not isinstance(meta, dict) or not meta.get("base"):
+            return False  # Never guess identity when authoritative metadata was requested.
+        base = str(meta["base"]).upper()
+        base = ALIASES.get(base, base)
+        return base not in FIAT | STABLE
     if name.endswith("ZUSD"):
         base = name[:-4]
     elif name.endswith("USD"):
