@@ -51,6 +51,48 @@ def rank_precursors(rows, limit=12):
                            "acceleration_pct":round(acceleration,4)})
     return sorted(candidates,key=lambda x:(-x["score"],x["pair"]))[:limit]
 
+def precursor_feature_audit(rows):
+    """Read-only diagnostic of existing precursor feature availability.
+
+    Does not modify scoring, ranking, promotion, or production outputs.
+    """
+    counts = {"rows": 0, "eligible_identity": 0, "valid_numeric": 0,
+              "valid_price_history": 0, "liquid_spread": 0,
+              "move24_in_range": 0, "recent_move_in_range": 0,
+              "positive_acceleration": 0}
+    for pair, move24, spread, notional, previous, current, older in rows:
+        counts["rows"] += 1
+        if not crypto_pair(pair):
+            continue
+        counts["eligible_identity"] += 1
+        vals = (move24, spread, notional, previous, current, older)
+        if not all(isinstance(v, (int, float)) and math.isfinite(v) for v in vals):
+            continue
+        counts["valid_numeric"] += 1
+        if min(previous, current, older) <= 0:
+            continue
+        counts["valid_price_history"] += 1
+        if notional < 25000 or spread < 0 or spread > 125:
+            continue
+        counts["liquid_spread"] += 1
+        if move24 < -8 or move24 > 20:
+            continue
+        counts["move24_in_range"] += 1
+        recent = 100 * (current / previous - 1)
+        earlier = 100 * (previous / older - 1)
+        if recent < -3 or recent > 6:
+            continue
+        counts["recent_move_in_range"] += 1
+        if recent > earlier:
+            counts["positive_acceleration"] += 1
+    return {"mode": "OBSERVE_ONLY", "counts": counts,
+            "available": ["recent_change_pct", "acceleration_pct",
+                          "move24_pct", "spread_bps", "notional_24h_usd"],
+            "not_available": ["completed_5m_candles", "trade_acceleration",
+                              "relative_volume", "order_book_imbalance",
+                              "cross_venue_flow"],
+            "score_adjustment": 0, "promotion_eligible": False}
+
 def evaluate_precursor(con):
     tables={r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     if not {"market_signals","market_observations"}.issubset(tables):
@@ -65,7 +107,8 @@ def evaluate_precursor(con):
        FROM market_signals s JOIN market_observations n ON n.pair=s.pair AND n.run_at=s.run_at
        WHERE s.run_at=?""",(latest,)).fetchall()
     ranked=rank_precursors(rows)
-    return {"status":"SHADOW_PRECURSOR_RESEARCH","observed_at":latest,
+    audit=precursor_feature_audit(rows)
+    return {"feature_audit":audit,"status":"SHADOW_PRECURSOR_RESEARCH","observed_at":latest,
             "universe_observed":len(rows),"candidates":ranked,"selection_budget":12,
             "features_unavailable":["relative_volume_full_market","cross_venue_flow","open_interest"],
             "comparison_status":"AWAITING_EQUAL_BUDGET_FORWARD_OUTCOMES",
