@@ -9,6 +9,8 @@ on:
       - 'simple_scanner/test_risk_integration.py'
       - 'simple_scanner/history_backup.py'
       - 'simple_scanner/test_history_backup.py'
+      - 'simple_scanner/release_gate.py'
+      - 'simple_scanner/test_release_gate.py'
       - 'simple_scanner/test_shadow_asset_eligibility.py'
       - '.github/workflows/shadow-precursor-verification.yml'
   workflow_dispatch:
