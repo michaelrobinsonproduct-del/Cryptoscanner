@@ -27,6 +27,64 @@ def compare(rows, momentum, volume):
             "challenger_avg_pct": round(sum(candidate) / n, 4),
             "delta_pct": round((sum(candidate) - sum(base)) / n, 4)}
 
+def early_accumulation_rank(rows):
+    """Rank current market observations using only information available at scan time.
+
+    Input: (pair, move24_pct, spread_bps, notional_24h_usd,
+            previous_price, current_price). No future prices or order-book claims.
+    """
+    ranked = []
+    for pair, move24, spread, notional, previous, current in rows:
+        values = (move24, spread, notional, previous, current)
+        if not all(isinstance(x, (int, float)) and math.isfinite(x) for x in values):
+            continue
+        if previous <= 0 or current <= 0 or spread < 0 or notional < 25000:
+            continue
+        # Avoid chasing an already extended 24-hour move.
+        if move24 < -5 or move24 > 12 or spread > 125:
+            continue
+        change = 100 * (current / previous - 1)
+        if change < -2 or change > 5:
+            continue
+        # Liquidity and narrow spread reward tradability; moderate price
+        # acceleration rewards earlier entry. These are research heuristics.
+        score = (min(30, max(0, change) * 10)
+                 + min(30, math.log10(max(1, notional / 25000)) * 15)
+                 + max(0, 25 - spread / 5)
+                 + max(0, 15 - abs(move24 - 1.5) * 2))
+        ranked.append({"pair": pair, "score": round(score, 3),
+                       "recent_change_pct": round(change, 4),
+                       "spread_bps": spread, "notional_24h_usd": notional})
+    return sorted(ranked, key=lambda x: (-x["score"], x["pair"]))
+
+
+def evaluate_early_accumulation(con):
+    """Full-universe shadow screening without persistent tables or extra API calls."""
+    if not {"market_signals", "market_observations"}.issubset(
+            {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}):
+        return {"status": "AWAITING_MARKET_HISTORY", "buy_approved": False}
+    latest = con.execute("SELECT MAX(run_at) FROM market_signals").fetchone()[0]
+    if not latest:
+        return {"status": "AWAITING_MARKET_HISTORY", "buy_approved": False}
+    # Prior observations must precede the current scan; use up to 90 minutes
+    # because the existing scan cadence is 15 minutes.
+    rows = con.execute("""SELECT s.pair,s.move24_pct,s.spread_bps,s.notional_24h_usd,
+           (SELECT p.price FROM market_observations p
+            WHERE p.pair=s.pair AND p.run_at<s.run_at
+              AND julianday(p.run_at)>=julianday(s.run_at)-90.0/1440
+            ORDER BY p.run_at DESC LIMIT 1),m.price
+        FROM market_signals s JOIN market_observations m
+          ON m.run_at=s.run_at AND m.pair=s.pair
+        WHERE s.run_at=?""", (latest,)).fetchall()
+    eligible = [r for r in rows if r[4] is not None]
+    ranked = early_accumulation_rank(eligible)
+    return {"status": "SHADOW_CANDIDATES", "observed_at": latest,
+            "universe_observed": len(rows), "history_eligible": len(eligible),
+            "candidates": ranked[:12], "buy_approved": False,
+            "live_weights_modified": False,
+            "limitations": "No order-book imbalance, buyer/seller flow or full-market intraday volume collected"}
+
+
 def evaluate_market_misses(con):
     """Learn market-wide screening thresholds from matured 1h observations.
 
@@ -116,6 +174,7 @@ def evaluate(db_path):
         has_observations = con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='market_observations'").fetchone()
         missed = con.execute("SELECT COUNT(*) FROM market_observations").fetchone()[0] if has_observations else 0
         market_miss_model = evaluate_market_misses(con)
+        accumulation = evaluate_early_accumulation(con)
         # Audited misses: full-market observed jumps not present in watch snapshots.
         # Restrict to the last seven days and consecutive observations <=90m.
         miss_examples = []
@@ -141,7 +200,8 @@ def evaluate(db_path):
               "missed_breakout_examples": [{"pair": p, "observed_at": t, "gain_pct": g}
                                             for p, t, g in miss_examples],
               "misses_included_in_weight_training": False,
-              "market_miss_model": market_miss_model}
+              "market_miss_model": market_miss_model,
+              "early_accumulation": accumulation}
     times = sorted({r[0] for r in rows})
     if len(rows) < MIN_TRAIN + MIN_TEST or len(times) < 12:
         return result
