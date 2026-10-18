@@ -1,6 +1,6 @@
 """Regression tests for isolated shadow precursor eligibility; no network calls."""
 import unittest
-from simple_scanner.historical_precursor import crypto_pair, rank_precursors
+from simple_scanner.historical_precursor import crypto_pair, rank_precursors, precursor_feature_audit
 
 class ShadowEligibilityTests(unittest.TestCase):
     def test_stablecoin_aliases_excluded(self):
@@ -34,6 +34,23 @@ class ShadowEligibilityTests(unittest.TestCase):
         rows = [(s + "USD", 2.0, 10.0, 250000.0, 100.0, 101.0, 100.0)
                 for s in ("USDG", "USDS", "UST", "USTC")]
         self.assertEqual(rank_precursors(rows), [])
+
+    def test_audit_is_observe_only_and_does_not_change_ranking(self):
+        rows = [("SOLUSD", 2.0, 10.0, 250000.0, 100.0, 101.0, 100.0),
+                ("USDSUSD", 2.0, 10.0, 250000.0, 100.0, 101.0, 100.0)]
+        before = rank_precursors(rows)
+        audit = precursor_feature_audit(rows)
+        after = rank_precursors(rows)
+        self.assertEqual(before, after)
+        self.assertEqual(audit["mode"], "OBSERVE_ONLY")
+        self.assertEqual(audit["score_adjustment"], 0)
+        self.assertFalse(audit["promotion_eligible"])
+        self.assertEqual(audit["counts"]["rows"], 2)
+        self.assertEqual(audit["counts"]["eligible_identity"], 1)
+
+    def test_audit_handles_invalid_history(self):
+        rows = [("SOLUSD", 2.0, 10.0, 250000.0, None, 101.0, 100.0)]
+        self.assertEqual(precursor_feature_audit(rows)["counts"]["valid_numeric"], 0)
 
 if __name__ == "__main__":
     unittest.main()
