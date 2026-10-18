@@ -4,9 +4,35 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from simple_scanner.scan_output import publish_latest_atomic, verify_market_evidence, persist_scan_archive, verify_scan_archive
+from simple_scanner.scan_output import publish_latest_atomic, verify_market_evidence, persist_scan_archive, verify_scan_archive, publish_scan_with_archive
 
 class AtomicOutputTests(unittest.TestCase):
+    def test_archive_full_still_publishes_valid_scan_with_explicit_failure(self):
+        report={"started_at":"2026-10-18T16:00:00+00:00",
+                "completed_at":"2026-10-18T16:00:10+00:00",
+                "market_prices":{"SOLUSD":100},
+                "market_signals":{"SOLUSD":{"move24_pct":2}},
+                "asset_pairs":{"SOLUSD":{"base":"SOL"}},
+                "learning_status":"NOT_VALIDATED"}
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.dict("os.environ",{"SIMPLE_SCANNER_ARCHIVE_MAX_BYTES":"1"}):
+                published=publish_scan_with_archive(directory,report)
+            self.assertEqual(published["archive_status"],"NOT_RECORDED")
+            self.assertEqual(published["archive_error"],"OSError")
+            self.assertEqual(json.loads((Path(directory)/"latest.json").read_text())["archive_status"],"NOT_RECORDED")
+            self.assertEqual(list((Path(directory)/"scan_archive").glob("*.json")),[])
+
+    def test_successful_archive_is_disclosed(self):
+        report={"started_at":"2026-10-18T16:00:00+00:00",
+                "completed_at":"2026-10-18T16:00:10+00:00",
+                "market_prices":{"SOLUSD":100},
+                "market_signals":{"SOLUSD":{"move24_pct":2}},
+                "asset_pairs":{"SOLUSD":{"base":"SOL"}}}
+        with tempfile.TemporaryDirectory() as directory:
+            published=publish_scan_with_archive(directory,report)
+            self.assertEqual(published["archive_status"],"RECORDED")
+            self.assertTrue((Path(directory)/"scan_archive"/published["archive_record"]).exists())
+
     def test_archive_write_failure_does_not_publish_partial_record(self):
         report={"started_at":"2026-10-18T16:00:00+00:00",
                 "completed_at":"2026-10-18T16:00:10+00:00",
