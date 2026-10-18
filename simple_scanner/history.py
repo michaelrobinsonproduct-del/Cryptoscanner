@@ -100,6 +100,9 @@ def persist():
                 observed_at,observed_price=observed
                 ret=100*(observed_price/price-1)
                 con.execute("INSERT OR IGNORE INTO outcomes VALUES (?,?,?,?,?)", (run_at,pair,hours,observed_at,round(ret,4)))
+    from .scan_output import audit_sqlite_same_run
+    same_run_audit = audit_sqlite_same_run(con, report)
+    print("HISTORY_SAME_RUN_AUDIT " + json.dumps(same_run_audit, separators=(",", ":")), flush=True)
     assert con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
     # Report SQLite's reusable pages separately from filesystem free space.
     # Dropping indexes releases pages inside the DB, not necessarily OS bytes.
