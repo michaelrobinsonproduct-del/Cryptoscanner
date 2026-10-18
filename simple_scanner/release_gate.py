@@ -19,9 +19,9 @@ def validate(evidence, expected_sha):
     identity = evidence["identity_coverage"]
     if type(identity.get("verified")) is not int or type(identity.get("total")) is not int or identity["verified"] <= 0 or identity["verified"] != identity["total"]:
         raise ValueError("Canonical identities must cover all evaluated rows")
-    if evidence["rollback_verified"].get("production_commit"):
-        if not isinstance(evidence["rollback_verified"]["production_commit"], str):
-            raise ValueError("Rollback commit invalid")
+    previous = evidence["rollback_verified"].get("production_commit")
+    if not isinstance(previous, str) or len(previous) != 40 or any(c not in "0123456789abcdef" for c in previous.lower()) or previous == expected_sha:
+        raise ValueError("Verified previous production commit required for rollback")
     return True
 
 def main():
