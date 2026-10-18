@@ -85,6 +85,71 @@ def evaluate_early_accumulation(con):
             "limitations": "No order-book imbalance, buyer/seller flow or full-market intraday volume collected"}
 
 
+def validate_accumulation_history(con):
+    """Time-separated, market-wide, read-only historical challenger evaluation.
+
+    Only the immediately preceding observation is used for features. A future
+    observation is used strictly for the label, never the ranking. Evaluation
+    is descriptive: no parameter tuning or live promotion.
+    """
+    required = {"market_signals", "market_observations"}
+    if not required.issubset({r[0] for r in con.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'")}):
+        return {"status": "AWAITING_HISTORY", "promotion_eligible": False}
+    rows = con.execute("""SELECT s.run_at,s.pair,s.move24_pct,s.spread_bps,
+             s.notional_24h_usd,prior.price,now.price,
+             (SELECT later.price FROM market_observations later
+              WHERE later.pair=s.pair
+                AND julianday(later.run_at)>=julianday(s.run_at)+1.0/24
+                AND julianday(later.run_at)<julianday(s.run_at)+2.0/24
+              ORDER BY later.run_at LIMIT 1) AS future_price
+        FROM market_signals s
+        JOIN market_observations now ON now.run_at=s.run_at AND now.pair=s.pair
+        LEFT JOIN market_observations prior ON prior.pair=s.pair
+          AND prior.run_at=(SELECT MAX(p.run_at) FROM market_observations p
+             WHERE p.pair=s.pair AND p.run_at<s.run_at
+               AND julianday(p.run_at)>=julianday(s.run_at)-90.0/1440)
+        WHERE s.run_at < ? ORDER BY s.run_at DESC LIMIT 6000""",
+        ((dt.datetime.now(dt.timezone.utc)-dt.timedelta(hours=2)).isoformat(),)).fetchall()
+    usable = [r for r in rows if r[5] is not None and r[7] is not None
+              and r[6] > 0 and r[7] > 0]
+    times = sorted({r[0] for r in usable})
+    if len(times) < 20 or len(usable) < 500:
+        return {"status": "INSUFFICIENT_MATURED_HISTORY",
+                "samples": len(usable), "timestamps": len(times),
+                "promotion_eligible": False}
+    cutoff = times[int(len(times)*0.7)]
+    holdout = [r for r in usable if r[0] >= cutoff]
+    by_time = {}
+    for r in holdout:
+        by_time.setdefault(r[0], []).append(r)
+    results = {}
+    for threshold in (5, 20, 50, 100):
+        baseline_hits = challenger_hits = events = 0
+        challenger_picks = 0
+        for cohort in by_time.values():
+            ranked = early_accumulation_rank([r[1:7] for r in cohort])
+            top = {x["pair"] for x in ranked[:12]}
+            challenger_picks += len(top)
+            for r in cohort:
+                breakout = 100*(r[7]/r[6]-1) >= threshold
+                events += int(breakout)
+                baseline = 0.25 <= r[2] <= 12 and r[3] <= 45 and r[4] >= 100000
+                baseline_hits += int(breakout and baseline)
+                challenger_hits += int(breakout and r[1] in top)
+        results[str(threshold)+"pct_1h"] = {
+            "events": events, "baseline_identified": baseline_hits,
+            "challenger_identified": challenger_hits,
+            "baseline_recall": round(baseline_hits/max(1,events),4),
+            "challenger_recall": round(challenger_hits/max(1,events),4),
+            "challenger_picks": challenger_picks}
+    return {"status": "HISTORICAL_HOLDOUT_EVALUATED",
+            "train_timestamps": len(times)-len(by_time),
+            "holdout_timestamps": len(by_time), "holdout_rows": len(holdout),
+            "metrics": results, "promotion_eligible": False,
+            "caveats": "Descriptive holdout only; unequal selection budgets, no execution/slippage or prospective proof"}
+
+
 def evaluate_market_misses(con):
     """Learn market-wide screening thresholds from matured 1h observations.
 
@@ -175,6 +240,7 @@ def evaluate(db_path):
         missed = con.execute("SELECT COUNT(*) FROM market_observations").fetchone()[0] if has_observations else 0
         market_miss_model = evaluate_market_misses(con)
         accumulation = evaluate_early_accumulation(con)
+        accumulation_validation = validate_accumulation_history(con)
         # Audited misses: full-market observed jumps not present in watch snapshots.
         # Restrict to the last seven days and consecutive observations <=90m.
         miss_examples = []
@@ -201,7 +267,8 @@ def evaluate(db_path):
                                             for p, t, g in miss_examples],
               "misses_included_in_weight_training": False,
               "market_miss_model": market_miss_model,
-              "early_accumulation": accumulation}
+              "early_accumulation": accumulation,
+              "early_accumulation_validation": accumulation_validation}
     times = sorted({r[0] for r in rows})
     if len(rows) < MIN_TRAIN + MIN_TEST or len(times) < 12:
         return result
