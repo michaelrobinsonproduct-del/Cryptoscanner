@@ -18,9 +18,9 @@
     },
     {
       "hours": 6,
-      "matured_snapshots": 2402,
-      "evaluated": 1790,
-      "coverage_pct": 74.5,
+      "matured_snapshots": 2414,
+      "evaluated": 1802,
+      "coverage_pct": 74.6,
       "unresolved": 612,
       "no_observation_in_window": 612
     },
@@ -46,8 +46,8 @@
     },
     {
       "hours": 6,
-      "samples": 1790,
-      "average_delay_hours": 0.339
+      "samples": 1802,
+      "average_delay_hours": 0.34
     },
     {
       "hours": 24,
@@ -57,10 +57,10 @@
   ],
   "unresolved_1h_snapshots": 168,
   "rank_comparison": {
-    "historical_ranked_samples": 2258,
+    "historical_ranked_samples": 2270,
     "mean_base_minus_early_rank": 1.61
   },
-  "newly_discovered_outside_base_top12": 2,
+  "newly_discovered_outside_base_top12": 1,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
@@ -78,10 +78,10 @@
     },
     {
       "hours": 6,
-      "samples": 1790,
-      "early_scored_avg_return_pct": -0.643,
-      "all_selected_avg_return_pct": -0.643,
-      "early_score_above_base_avg_return_pct": -0.683
+      "samples": 1802,
+      "early_scored_avg_return_pct": -0.64,
+      "all_selected_avg_return_pct": -0.64,
+      "early_score_above_base_avg_return_pct": -0.679
     },
     {
       "hours": 24,
@@ -92,8 +92,8 @@
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 7438,
-    "positive": 2968,
+    "evaluated": 7450,
+    "positive": 2972,
     "average_return_pct": -0.41
   },
   "missed_breakout_examples": [
@@ -143,17 +143,17 @@
       "next_scan_gain_pct": 84.03
     },
     {
-      "pair": "ALTHEAUSD",
-      "observed_at": "2026-10-18T05:22:26.763584+00:00",
-      "next_scan_gain_pct": 75.87
+      "pair": "ELXUSD",
+      "observed_at": "2026-10-18T08:56:56.410205+00:00",
+      "next_scan_gain_pct": 76.0
     }
   ],
-  "unselected_gainers_5pct_observations": 753,
-  "market_observations": 124948,
+  "unselected_gainers_5pct_observations": 758,
+  "market_observations": 125574,
   "market_price_coverage": 626,
-  "feature_rows": 2426,
-  "snapshots": 2546,
-  "outcomes": 7438,
+  "feature_rows": 2438,
+  "snapshots": 2558,
+  "outcomes": 7450,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
