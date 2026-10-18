@@ -95,5 +95,35 @@ class ShadowEligibilityTests(unittest.TestCase):
                 self.assertIsNone(load_same_run_asset_pairs("expected"))
                 self.assertEqual(load_same_run_asset_pairs("wrong")["SOLUSD"]["base"], "SOL")
 
+    def test_historical_replay_preserves_unaffected_rank_scores(self):
+        # Deterministic 48-snapshot replay: original eligibility vs canonical
+        # identity, with fiat and stablecoin identities removed.
+        import math
+        for step in range(48):
+            rows = []
+            metadata = {}
+            for i in range(18):
+                pair = "COIN" + str(i) + "USD"
+                older = 100.0 + i
+                previous = older * (1 + ((step + i) % 5) / 1000)
+                current = previous * (1 + ((step * 3 + i) % 20) / 1000)
+                rows.append((pair, 1.0 + (i % 6), 8.0 + i,
+                             100000.0 + 1000 * i, previous, current, older))
+                metadata[pair] = {"base": "COIN" + str(i)}
+            rows.extend([
+                ("ZEURZUSD", 0.1, 2.0, 300000, 100, 100.2, 100),
+                ("USDSUSD", 0.1, 2.0, 300000, 100, 100.2, 100),
+            ])
+            metadata.update({"ZEURZUSD": {"base": "ZEUR"},
+                             "USDSUSD": {"base": "USDS"}})
+            baseline = rank_precursors(rows, limit=100)
+            candidate = rank_precursors(rows, limit=100, asset_pairs=metadata)
+            baseline_by_pair = {item["pair"]: item for item in baseline}
+            self.assertEqual(len(candidate), 18)
+            for item in candidate:
+                self.assertEqual(item, baseline_by_pair[item["pair"]])
+            self.assertNotIn("ZEURZUSD", {item["pair"] for item in candidate})
+            self.assertNotIn("USDSUSD", {item["pair"] for item in candidate})
+
 if __name__ == "__main__":
     unittest.main()
