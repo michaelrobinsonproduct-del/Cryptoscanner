@@ -23,7 +23,7 @@ class ManualMailboxAcceptance(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             now = dt.datetime.now(dt.timezone.utc)
             stamp = now.isoformat()
-            summary = {"started_at":stamp, "completed_at":stamp, "buy_approved":False, "status":"RESEARCH_ONLY"}
+            summary = {"started_at":stamp, "completed_at":stamp, "buy_approved":False, "status":"RESEARCH_ONLY","archive_status":"RECORDED"}
             if not scan_valid:
                 summary["buy_approved"] = True
             Path(folder, "latest.json").write_text(json.dumps(summary))
@@ -42,6 +42,7 @@ class ManualMailboxAcceptance(unittest.TestCase):
             with patch.dict(os.environ,env,clear=True), \
                  patch("simple_scanner.manual_requests.fetch_requests", return_value=[request]) as fetch, \
                  patch("simple_scanner.manual_requests.publish_results", return_value=[request] if publish_ok else []) as publish, \
+                 patch("simple_scanner.scan_output.verify_archive_against_latest",return_value={"status":"VERIFIED"}), \
                  patch("simple_scanner.execute_once.subprocess.run",side_effect=records) as stages:
                 output = io.StringIO()
                 with contextlib.redirect_stdout(output):
