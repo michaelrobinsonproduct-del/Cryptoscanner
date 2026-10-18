@@ -4,9 +4,33 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from simple_scanner.scan_output import publish_latest_atomic, verify_market_evidence, persist_scan_archive, verify_scan_archive, publish_scan_with_archive, compare_sqlite_run_timestamp, archive_content_sha256
+from simple_scanner.scan_output import publish_latest_atomic, verify_market_evidence, persist_scan_archive, verify_scan_archive, publish_scan_with_archive, compare_sqlite_run_timestamp, archive_content_sha256, verify_archive_against_latest
 
 class AtomicOutputTests(unittest.TestCase):
+    def test_archive_digest_detects_tampering(self):
+        report={"started_at":"2026-10-18T16:00:00+00:00",
+                "completed_at":"2026-10-18T16:00:10+00:00",
+                "market_prices":{"SOLUSD":100},
+                "market_signals":{"SOLUSD":{"move24_pct":2}},
+                "asset_pairs":{"SOLUSD":{"base":"SOL"}}}
+        with tempfile.TemporaryDirectory() as directory:
+            published=publish_scan_with_archive(directory,report)
+            self.assertEqual(verify_archive_against_latest(directory)["status"],"VERIFIED")
+            archive=Path(directory)/"scan_archive"/published["archive_record"]
+            archive.write_text(archive.read_text().replace('"SOL"', '"ETH"'))
+            self.assertEqual(verify_archive_against_latest(directory)["status"],"ARCHIVE_DIGEST_MISMATCH")
+
+    def test_missing_archive_fails_integrity_check(self):
+        report={"started_at":"2026-10-18T16:00:00+00:00",
+                "completed_at":"2026-10-18T16:00:10+00:00",
+                "market_prices":{"SOLUSD":100},
+                "market_signals":{"SOLUSD":{"move24_pct":2}},
+                "asset_pairs":{"SOLUSD":{"base":"SOL"}}}
+        with tempfile.TemporaryDirectory() as directory:
+            published=publish_scan_with_archive(directory,report)
+            (Path(directory)/"scan_archive"/published["archive_record"]).unlink()
+            self.assertEqual(verify_archive_against_latest(directory)["status"],"ARCHIVE_READBACK_FAILED")
+
     def test_sqlite_run_timestamp_exact_match_and_offset(self):
         report={"completed_at":"2026-10-18T16:00:10+00:00"}
         self.assertEqual(compare_sqlite_run_timestamp("2026-10-18T16:00:10Z",report)["status"],"EXACT_MATCH")
