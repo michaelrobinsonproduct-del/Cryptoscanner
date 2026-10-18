@@ -158,7 +158,7 @@ def execute(origin="manual"):
             pass
         if not same_run_ok:
             print("SCAN_SAME_RUN_EVIDENCE_UNVERIFIED " + json.dumps({"origin": origin}), flush=True)
-        archive_ok = latest.get("archive_status") != "NOT_RECORDED"
+        archive_ok = latest.get("archive_status") == "RECORDED"
         if latest.get("archive_status") == "RECORDED":
             try:
                 from .scan_output import verify_archive_against_latest
