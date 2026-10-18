@@ -158,15 +158,24 @@ def execute(origin="manual"):
             pass
         if not same_run_ok:
             print("SCAN_SAME_RUN_EVIDENCE_UNVERIFIED " + json.dumps({"origin": origin}), flush=True)
-        archive_ok = latest.get("archive_status") == "RECORDED"
+        # Read-only independent archive, Kraken provenance and SQLite value parity.
+        # A history log alone cannot authorize VERIFIED/manual acknowledgement.
+        evidence = {"status": "UNVERIFIED", "reason": "ARCHIVE_NOT_RECORDED"}
         if latest.get("archive_status") == "RECORDED":
             try:
-                from .scan_output import verify_archive_against_latest
-                archive_ok = verify_archive_against_latest(data_dir)["status"] == "VERIFIED"
-            except (OSError, ValueError, TypeError, KeyError):
-                archive_ok = False
+                import sqlite3
+                from .scan_output import verify_scan_history_evidence
+                db_uri = (data_dir / "history.sqlite3").resolve().as_uri() + "?mode=ro"
+                with sqlite3.connect(db_uri, uri=True) as con:
+                    evidence = verify_scan_history_evidence(data_dir, con)
+            except (OSError, ValueError, TypeError, KeyError, sqlite3.Error) as error:
+                evidence = {"status": "UNVERIFIED", "reason": type(error).__name__}
+        archive_ok = evidence.get("status") == "VERIFIED"
         if not archive_ok:
-            print("SCAN_ARCHIVE_EVIDENCE_UNVERIFIED " + json.dumps({"origin": origin, "archive_error": latest.get("archive_error")}), flush=True)
+            print("SCAN_ARCHIVE_EVIDENCE_UNVERIFIED " + json.dumps({
+                "origin": origin, "archive_error": latest.get("archive_error"),
+                "evidence": evidence,
+            }), flush=True)
         verified_status = "VERIFIED" if shadow_ok and not dex_degraded and same_run_ok and archive_ok else "PARTIAL"
         print("SCAN_EXECUTION_VERIFIED " + json.dumps({
             "origin": origin, "started_at": summary["started_at"],
@@ -175,6 +184,7 @@ def execute(origin="manual"):
             "dex_degraded": dex_degraded, "dex_fresh": dex_fresh,
             "sqlite_same_run_verified": same_run_ok,
             "archive_evidence_eligible": archive_ok,
+            "combined_evidence_status": evidence.get("status"),
             "status": verified_status,
         }), flush=True)
         if manual_pending and verified_status == "VERIFIED":
