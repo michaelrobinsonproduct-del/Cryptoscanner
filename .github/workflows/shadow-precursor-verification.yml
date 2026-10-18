@@ -7,6 +7,8 @@ on:
       - 'simple_scanner/shadow_learning.py'
       - 'simple_scanner/test_early_accumulation.py'
       - 'simple_scanner/test_risk_integration.py'
+      - 'simple_scanner/history_backup.py'
+      - 'simple_scanner/test_history_backup.py'
       - 'simple_scanner/test_shadow_asset_eligibility.py'
       - '.github/workflows/shadow-precursor-verification.yml'
   workflow_dispatch:
