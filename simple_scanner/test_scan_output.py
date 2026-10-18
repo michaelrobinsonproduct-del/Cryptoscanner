@@ -4,9 +4,38 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from simple_scanner.scan_output import publish_latest_atomic, verify_market_evidence, persist_scan_archive
+from simple_scanner.scan_output import publish_latest_atomic, verify_market_evidence, persist_scan_archive, verify_scan_archive
 
 class AtomicOutputTests(unittest.TestCase):
+    def test_archive_write_failure_does_not_publish_partial_record(self):
+        report={"started_at":"2026-10-18T16:00:00+00:00",
+                "completed_at":"2026-10-18T16:00:10+00:00",
+                "market_prices":{"SOLUSD":100},
+                "market_signals":{"SOLUSD":{"move24_pct":2}},
+                "asset_pairs":{"SOLUSD":{"base":"SOL"}}}
+        with tempfile.TemporaryDirectory() as directory:
+            with patch("simple_scanner.scan_output.os.link",side_effect=OSError("disk error")):
+                with self.assertRaises(OSError):
+                    persist_scan_archive(directory,report)
+            self.assertEqual(list(Path(directory).iterdir()),[])
+            path=persist_scan_archive(directory,report)
+            self.assertEqual(verify_scan_archive(path)["completed_at"],report["completed_at"])
+
+    def test_archive_budget_rejects_without_deleting_history(self):
+        report={"started_at":"2026-10-18T16:00:00+00:00",
+                "completed_at":"2026-10-18T16:00:10+00:00",
+                "market_prices":{"SOLUSD":100},
+                "market_signals":{"SOLUSD":{"move24_pct":2}},
+                "asset_pairs":{"SOLUSD":{"base":"SOL"}}}
+        with tempfile.TemporaryDirectory() as directory:
+            path=persist_scan_archive(directory,report)
+            report["completed_at"]="2026-10-18T16:00:20+00:00"
+            with patch.dict("os.environ",{"SIMPLE_SCANNER_ARCHIVE_MAX_BYTES":"1"}):
+                with self.assertRaisesRegex(OSError,"budget exceeded"):
+                    persist_scan_archive(directory,report)
+            self.assertTrue(path.exists())
+            self.assertEqual(len(list(Path(directory).glob("*.json"))),1)
+
     def test_archive_is_write_once(self):
         report={"started_at":"2026-10-18T16:00:00+00:00",
                 "completed_at":"2026-10-18T16:00:10+00:00",
