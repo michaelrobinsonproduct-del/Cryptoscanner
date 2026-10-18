@@ -159,6 +159,12 @@ def execute(origin="manual"):
         if not same_run_ok:
             print("SCAN_SAME_RUN_EVIDENCE_UNVERIFIED " + json.dumps({"origin": origin}), flush=True)
         archive_ok = latest.get("archive_status") != "NOT_RECORDED"
+        if latest.get("archive_status") == "RECORDED":
+            try:
+                from .scan_output import verify_archive_against_latest
+                archive_ok = verify_archive_against_latest(data_dir)["status"] == "VERIFIED"
+            except (OSError, ValueError, TypeError, KeyError):
+                archive_ok = False
         if not archive_ok:
             print("SCAN_ARCHIVE_EVIDENCE_UNVERIFIED " + json.dumps({"origin": origin, "archive_error": latest.get("archive_error")}), flush=True)
         verified_status = "VERIFIED" if shadow_ok and not dex_degraded and same_run_ok and archive_ok else "PARTIAL"
