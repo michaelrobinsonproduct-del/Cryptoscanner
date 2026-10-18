@@ -132,3 +132,28 @@ def publish_scan_with_archive(directory, report):
         report["learning_status"] = "NOT_VALIDATED"
     publish_latest_atomic(directory / "latest.json", report)
     return report
+
+def verify_archive_against_latest(directory):
+    """Compare persisted archive to the separately published latest digest."""
+    import hmac
+    directory = Path(directory)
+    latest = json.loads((directory / "latest.json").read_text(encoding="utf-8"))
+    if latest.get("archive_status") != "RECORDED":
+        return {"status": "UNVERIFIED_NOT_RECORDED"}
+    filename = latest.get("archive_record")
+    digest = latest.get("archive_sha256")
+    if not isinstance(filename, str) or Path(filename).name != filename:
+        return {"status": "INVALID_ARCHIVE_REFERENCE"}
+    if not isinstance(digest, str) or len(digest) != 64:
+        return {"status": "INVALID_ARCHIVE_DIGEST"}
+    path = directory / "scan_archive" / filename
+    try:
+        archive = verify_scan_archive(path)
+        actual = archive_content_sha256(path)
+    except (OSError, ValueError, TypeError, KeyError):
+        return {"status": "ARCHIVE_READBACK_FAILED"}
+    if not hmac.compare_digest(actual, digest):
+        return {"status": "ARCHIVE_DIGEST_MISMATCH"}
+    if archive.get("completed_at") != latest.get("completed_at"):
+        return {"status": "ARCHIVE_SCAN_MISMATCH"}
+    return {"status": "VERIFIED", "completed_at": latest["completed_at"]}
