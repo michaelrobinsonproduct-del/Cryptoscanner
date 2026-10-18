@@ -86,7 +86,12 @@ def persist_scan_archive(directory, report):
 
 def verify_scan_archive(path):
     """Reject corrupt or incomplete archived market evidence."""
-    report = json.loads(Path(path).read_text(encoding="utf-8"))
+    import hashlib
+    path = Path(path)
+    report = json.loads(path.read_text(encoding="utf-8"))
+    expected_name = hashlib.sha256(report["completed_at"].encode()).hexdigest() + ".json"
+    if path.name != expected_name:
+        raise ValueError("scan archive timestamp identity mismatch")
     if verify_market_evidence(report)["status"] != "COMPLETE":
         raise ValueError("incomplete archived market evidence")
     return report
@@ -99,6 +104,7 @@ def publish_scan_with_archive(directory, report):
         archive_path = persist_scan_archive(directory / "scan_archive", report)
         report["archive_status"] = "RECORDED"
         report["archive_record"] = archive_path.name
+        verify_scan_archive(archive_path)
     except (OSError, ValueError, TypeError) as error:
         # Never pretend missing evidence was saved, or suppress valid scan output.
         report["archive_status"] = "NOT_RECORDED"
