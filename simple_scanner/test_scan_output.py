@@ -59,7 +59,7 @@ class AtomicOutputTests(unittest.TestCase):
                 "completed_at":"2026-10-18T16:00:10+00:00",
                 "market_prices":{"SOLUSD":100},
                 "market_signals":{"SOLUSD":{"move24_pct":2,"spread_bps":5,"notional_24h_usd":10000}},
-                "asset_pairs":{"SOLUSD":{"base":"SOL","source":"kraken_assetpairs"}}}
+                "asset_pairs":{"SOLUSD":{"base":"SOL","source":"kraken_assetpairs","observed_at":"2026-10-18T16:00:00+00:00"}}}
         with tempfile.TemporaryDirectory() as directory:
             published=publish_scan_with_archive(directory,report)
             self.assertEqual(published["archive_status"],"RECORDED")
@@ -83,6 +83,22 @@ class AtomicOutputTests(unittest.TestCase):
             self.assertEqual(result["status"],"UNVERIFIED")
             self.assertEqual(result["sqlite_status"],"MISMATCH")
             reader.close()
+
+    def test_missing_kraken_identity_provenance_blocks_same_run(self):
+        import sqlite3
+        report={"started_at":"2026-10-18T16:00:00+00:00",
+                "completed_at":"2026-10-18T16:00:10+00:00",
+                "market_prices":{"SOLUSD":100},
+                "market_signals":{"SOLUSD":{"move24_pct":2,"spread_bps":5,"notional_24h_usd":10000}},
+                "asset_pairs":{"SOLUSD":{"base":"SOL"}}}
+        with tempfile.TemporaryDirectory() as directory:
+            publish_scan_with_archive(directory,report)
+            con=sqlite3.connect(":memory:")
+            result=verify_scan_history_evidence(directory,con)
+            self.assertEqual(result["status"],"UNVERIFIED")
+            self.assertEqual(result["archive_status"],"INVALID_IDENTITY_PROVENANCE")
+            self.assertEqual(result["sqlite_status"],"NOT_CHECKED")
+            con.close()
 
     def test_archive_failure_never_verifies_history_evidence(self):
         import sqlite3
