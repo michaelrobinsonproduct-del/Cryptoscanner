@@ -79,10 +79,29 @@ def evaluate_market_misses(con):
                 trials.append((metrics["recall"]-.00001*metrics["false_positives"],minimum_move,max_spread,min_notional,metrics))
     _,mm,ms,mn,train_metrics=max(trials,key=lambda x:x[0])
     learned=lambda r:mm<=r[2]<=12 and r[3]<=ms and r[4]>=mn
+    # Evaluate substantial breakouts separately. The existing 5% objective
+    # remains unchanged; these are diagnostic metrics, not trading signals.
+    large_breakout_metrics={}
+    for threshold in (20, 50, 100):
+        def metrics_for(group, rule):
+            tp=fp=fn=0
+            for row in group:
+                picked=bool(rule(row))
+                event=row[5]>=threshold
+                tp+=int(picked and event)
+                fp+=int(picked and not event)
+                fn+=int(not picked and event)
+            return {"events":tp+fn,"identified":tp,"missed":fn,
+                    "precision":round(tp/max(1,tp+fp),4),
+                    "recall":round(tp/max(1,tp+fn),4)}
+        large_breakout_metrics[str(threshold)+"pct_1h"]={
+            "baseline":metrics_for(test,baseline),
+            "challenger":metrics_for(test,learned)}
     report.update({"status":"MARKET_MISS_MODEL_EVALUATED",
                    "learned_filter":{"min_move24_pct":mm,"max_spread_bps":ms,"min_notional_usd":mn},
                    "train":train_metrics,"holdout":evaluate_rule(test,learned),
                    "baseline_holdout":evaluate_rule(test,baseline),
+                   "large_breakout_holdout":large_breakout_metrics,
                    "production_adopted":False,
                    "promotion_reason":"Prospective validation and executable-liquidity checks pending"})
     return report
