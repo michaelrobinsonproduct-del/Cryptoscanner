@@ -118,6 +118,19 @@ def validate_accumulation_history(con):
                AND julianday(p.run_at)>=julianday(s.run_at)-90.0/1440)
         WHERE s.run_at < ? ORDER BY s.run_at DESC LIMIT 6000""",
         ((dt.datetime.now(dt.timezone.utc)-dt.timedelta(hours=2)).isoformat(),)).fetchall()
+    # Historical observations do not retain canonical Kraken base IDs per run.
+    # The latest.json metadata applies only to one exact run, never to past
+    # cohorts. Refuse to report historical recall on an unidentified universe.
+    from simple_scanner.historical_precursor import load_same_run_asset_pairs
+    latest_run = con.execute("SELECT MAX(run_at) FROM market_signals").fetchone()[0]
+    latest_identity = load_same_run_asset_pairs(latest_run) if latest_run else None
+    return {"status": "AWAITING_HISTORICAL_CANONICAL_IDENTITIES",
+            "samples": len(rows), "timestamps": len({r[0] for r in rows}),
+            "identity_coverage": {"historical_rows_verified": 0,
+                                  "historical_rows_total": len(rows),
+                                  "latest_run_metadata_available": latest_identity is not None,
+                                  "reason": "No immutable per-run Kraken base identity ledger"},
+            "promotion_eligible": False, "live_weights_modified": False}
     usable = [r for r in rows if r[5] is not None and r[7] is not None
               and r[6] > 0 and r[7] > 0]
     times = sorted({r[0] for r in usable})
