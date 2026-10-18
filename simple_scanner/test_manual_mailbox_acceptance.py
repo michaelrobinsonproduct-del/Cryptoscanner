@@ -27,6 +27,8 @@ class ManualMailboxAcceptance(unittest.TestCase):
             if not scan_valid:
                 summary["buy_approved"] = True
             Path(folder, "latest.json").write_text(json.dumps(summary))
+            import sqlite3
+            sqlite3.connect(Path(folder, "history.sqlite3")).close()
             watch = [{"symbol":"TAO/USD", "score":50.0, "move_15m_pct":0.1, "volume_accel":1.1, "risk":"MEDIUM"}]
             history = {"history_db_integrity":"ok", "buy_approved":False, "model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"}
             shadow = {"mode":"SHADOW_ONLY", "live_weights_modified":not shadow_valid}
@@ -42,7 +44,7 @@ class ManualMailboxAcceptance(unittest.TestCase):
             with patch.dict(os.environ,env,clear=True), \
                  patch("simple_scanner.manual_requests.fetch_requests", return_value=[request]) as fetch, \
                  patch("simple_scanner.manual_requests.publish_results", return_value=[request] if publish_ok else []) as publish, \
-                 patch("simple_scanner.scan_output.verify_archive_against_latest",return_value={"status":"VERIFIED"}), \
+                 patch("simple_scanner.scan_output.verify_scan_history_evidence",return_value={"status":"VERIFIED"}), \
                  patch("simple_scanner.execute_once.subprocess.run",side_effect=records) as stages:
                 output = io.StringIO()
                 with contextlib.redirect_stdout(output):
