@@ -45,3 +45,19 @@ def verify_market_evidence(report):
             "signals": len(signals), "prices": len(prices),
             "canonical_identities": len(identities), "missing_pairs": missing,
             "scan_duration_seconds": duration if valid_time else None}
+
+def persist_scan_archive(directory, report):
+    """Keep one independent snapshot per completed scan; never replace old scans."""
+    import hashlib
+    stamp = report["completed_at"]
+    if verify_market_evidence(report)["status"] != "COMPLETE":
+        raise ValueError("incomplete market evidence")
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    target = directory / (hashlib.sha256(stamp.encode()).hexdigest() + ".json")
+    fd = os.open(str(target), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as stream:
+        json.dump(report, stream, allow_nan=False, sort_keys=True)
+        stream.flush()
+        os.fsync(stream.fileno())
+    return target
