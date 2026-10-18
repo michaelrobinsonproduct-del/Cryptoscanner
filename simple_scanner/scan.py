@@ -16,7 +16,7 @@ def main():
     now=dt.datetime.now(dt.timezone.utc)
     pairs=get("AssetPairs")
     # Preserve the live eligibility and scoring logic; record identity metadata only.
-    canonical_asset_pairs={k:{"base":v["base"]} for k,v in pairs.items()
+    canonical_asset_pairs={k:{"base":v["base"],"source":"kraken_assetpairs","observed_at":now.isoformat()} for k,v in pairs.items()
                            if isinstance(v,dict) and v.get("base") and v.get("status")=="online"
                            and v.get("wsname","").endswith("/USD")}
     eligible={k:v for k,v in pairs.items() if v.get("status")=="online" and v.get("wsname","").endswith("/USD") and v.get("base","").upper() not in {"ZUSD","USD","USDT","USDC","DAI","PYUSD","EURC","RLUSD","TUSD"}}
