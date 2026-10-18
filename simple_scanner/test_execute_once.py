@@ -108,7 +108,7 @@ class ExecuteTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             with patch.dict(os.environ, {"SIMPLE_SCANNER_DATA_DIR": folder}):
                 now = dt.datetime.now(dt.timezone.utc).isoformat()
-                summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY"}
+                summary = {"started_at": now, "completed_at": now, "buy_approved": False, "status": "RESEARCH_ONLY", "archive_status": "RECORDED"}
                 (Path(folder) / "latest.json").write_text(json.dumps(summary))
                 records = [Result("SCAN_SUMMARY " + json.dumps(summary) + "\nWATCH_SUMMARY []"),
                            Result('HISTORY_PERSISTED {"history_db_integrity":"ok","buy_approved":false,"model_updates":"DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"}'),
