@@ -26,9 +26,9 @@
     },
     {
       "hours": 24,
-      "matured_snapshots": 2792,
-      "evaluated": 2192,
-      "coverage_pct": 78.5,
+      "matured_snapshots": 2804,
+      "evaluated": 2204,
+      "coverage_pct": 78.6,
       "unresolved": 600,
       "no_observation_in_window": 600
     }
@@ -51,16 +51,16 @@
     },
     {
       "hours": 24,
-      "samples": 2192,
-      "average_delay_hours": 0.324
+      "samples": 2204,
+      "average_delay_hours": 0.323
     }
   ],
   "unresolved_1h_snapshots": 180,
   "rank_comparison": {
-    "historical_ranked_samples": 2888,
+    "historical_ranked_samples": 2900,
     "mean_base_minus_early_rank": 1.63
   },
-  "newly_discovered_outside_base_top12": 3,
+  "newly_discovered_outside_base_top12": 2,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
@@ -85,16 +85,16 @@
     },
     {
       "hours": 24,
-      "samples": 2192,
-      "early_scored_avg_return_pct": -1.701,
-      "all_selected_avg_return_pct": -1.701,
-      "early_score_above_base_avg_return_pct": -1.557
+      "samples": 2204,
+      "early_scored_avg_return_pct": -1.699,
+      "all_selected_avg_return_pct": -1.699,
+      "early_score_above_base_avg_return_pct": -1.565
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 10124,
-    "positive": 4094,
-    "average_return_pct": -0.573
+    "evaluated": 10136,
+    "positive": 4101,
+    "average_return_pct": -0.574
   },
   "missed_breakout_examples": [
     {
@@ -148,12 +148,12 @@
       "next_scan_gain_pct": 84.03
     }
   ],
-  "unselected_gainers_5pct_observations": 1061,
-  "market_observations": 161267,
+  "unselected_gainers_5pct_observations": 1070,
+  "market_observations": 161894,
   "market_price_coverage": 627,
-  "feature_rows": 3056,
-  "snapshots": 3176,
-  "outcomes": 10124,
+  "feature_rows": 3068,
+  "snapshots": 3188,
+  "outcomes": 10136,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
