@@ -6,6 +6,8 @@ on:
     paths:
       - 'simple_scanner/storage_safety.py'
       - 'simple_scanner/dex.py'
+      - 'simple_scanner/scan.py'
+      - 'tests/test_kraken_freshness.py'
       - 'simple_scanner/dex_guard.py'
       - 'tests/test_dex_reliability.py'
       - 'simple_scanner/external_backup.py'
@@ -45,3 +47,6 @@ jobs:
 
       - name: Run DEX freshness and circuit tests
         run: python -W error -m unittest discover -s tests -p 'test_dex_reliability.py' -v
+
+      - name: Run Kraken freshness regression tests
+        run: python -W error -m unittest discover -s tests -p 'test_kraken_freshness.py' -v
