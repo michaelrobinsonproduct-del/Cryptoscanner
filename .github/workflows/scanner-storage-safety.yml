@@ -7,6 +7,8 @@ on:
       - 'simple_scanner/storage_safety.py'
       - 'simple_scanner/external_backup.py'
       - 'tests/test_storage_safety.py'
+      - 'tests/test_storage_inventory_edge_cases.py'
+      - 'tests/test_storage_inventory_edge_cases.py'
       - 'tests/test_external_backup.py'
       - '.github/workflows/scanner-storage-safety.yml'
   pull_request:
@@ -34,3 +36,6 @@ jobs:
         run: python -W error -m unittest discover -s tests -p 'test_*backup.py' -v
       - name: Run storage safety regression tests
         run: python -W error -m unittest discover -s tests -p 'test_storage_safety.py' -v
+
+      - name: Run SQLite inventory edge cases
+        run: python -W error -m unittest discover -s tests -p 'test_storage_inventory_edge_cases.py' -v
