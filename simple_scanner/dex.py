@@ -20,6 +20,18 @@ def fetch(query):
             if attempt==1: raise
             time.sleep(2**attempt)
 
+def cache_is_fresh(observed_at, now=None):
+    """Reuse only UTC-aware observations aged 0 through 61 minutes."""
+    now = now or dt.datetime.now(dt.timezone.utc)
+    try:
+        observed = dt.datetime.fromisoformat(observed_at)
+        if observed.tzinfo is None or observed.utcoffset() is None:
+            return False
+        age = now - observed
+        return dt.timedelta(0) <= age <= dt.timedelta(minutes=61)
+    except (ValueError, TypeError, OverflowError):
+        return False
+
 def main():
     candidates={}
     errors=[]
@@ -29,8 +41,7 @@ def main():
     if cache.exists():
         try:
             previous=json.loads(cache.read_text())
-            previous_at=dt.datetime.fromisoformat(previous["observed_at"])
-            if dt.datetime.now(dt.timezone.utc)-previous_at<dt.timedelta(minutes=61):
+            if cache_is_fresh(previous["observed_at"]):
                 print("DEX_CACHE_REUSED "+json.dumps({"observed_at":previous["observed_at"],"candidates":len(previous.get("candidates",[])),"buy_approved":False}),flush=True)
                 return
         except (ValueError,KeyError,TypeError): pass
