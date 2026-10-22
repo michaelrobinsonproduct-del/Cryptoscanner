@@ -21,6 +21,8 @@ on:
       - 'tests/test_batch23_readiness.py'
       - 'tests/test_batch23_reporting_reliability.py'
       - 'tests/test_batch24_outbox.py'
+      - 'tests/test_batch24_crash_recovery.py'
+      - 'docs/batch24_outbox_readiness.md'
       - 'simple_scanner/fixture_delivery_outbox.py'
       - 'docs/batch23_readiness_and_delivery.md'
       - 'docs/batch22_release_acceptance.md'
@@ -102,3 +104,6 @@ jobs:
 
       - name: Run Batch 24 isolated delivery outbox acceptance
         run: python -W error -m unittest discover -s tests -p 'test_batch24_outbox.py' -v
+
+      - name: Run Batch 24 isolated crash and reconciliation acceptance
+        run: python -W error -m unittest discover -s tests -p 'test_batch24_crash_recovery.py' -v
