@@ -1,0 +1,36 @@
+name: Scanner Storage Safety CI
+on:
+  push:
+    branches:
+      - repair-batches-17a-20-20261021
+    paths:
+      - 'simple_scanner/storage_safety.py'
+      - 'simple_scanner/external_backup.py'
+      - 'tests/test_storage_safety.py'
+      - 'tests/test_external_backup.py'
+      - '.github/workflows/scanner-storage-safety.yml'
+  pull_request:
+    paths:
+      - 'simple_scanner/storage_safety.py'
+      - 'simple_scanner/external_backup.py'
+      - 'tests/test_storage_safety.py'
+      - 'tests/test_external_backup.py'
+      - '.github/workflows/scanner-storage-safety.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile backup modules
+        run: python -m py_compile simple_scanner/storage_safety.py simple_scanner/external_backup.py
+      - name: Run backup and restore regression tests
+        run: python -W error -m unittest discover -s tests -p 'test_*backup.py' -v
+      - name: Run storage safety regression tests
+        run: python -W error -m unittest discover -s tests -p 'test_storage_safety.py' -v
