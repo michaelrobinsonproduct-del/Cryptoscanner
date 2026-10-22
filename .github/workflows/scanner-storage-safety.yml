@@ -13,6 +13,8 @@ on:
       - 'tests/test_offline_replay.py'
       - 'simple_scanner/offline_scoring_comparison.py'
       - 'tests/test_offline_scoring_comparison.py'
+      - 'tests/test_execution_contract.py'
+      - 'simple_scanner/execute_once.py'
       - 'simple_scanner/dex_guard.py'
       - 'tests/test_dex_reliability.py'
       - 'simple_scanner/external_backup.py'
@@ -64,3 +66,6 @@ jobs:
 
       - name: Run independent offline scoring comparison tests
         run: python -W error -m unittest discover -s tests -p 'test_offline_scoring_comparison.py' -v
+
+      - name: Run shared execution contract tests
+        run: python -W error -m unittest discover -s tests -p 'test_execution_contract.py' -v
