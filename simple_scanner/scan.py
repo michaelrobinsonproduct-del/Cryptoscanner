@@ -12,6 +12,13 @@ def get(path):
         except Exception:
             if attempt==2:raise
             time.sleep(2**attempt)
+def ohlc_is_fresh(timestamp, now, max_age_seconds=900):
+    try:
+        age = now.timestamp() - float(timestamp)
+        return math.isfinite(age) and 0 <= age <= max_age_seconds
+    except (ValueError, TypeError, OverflowError):
+        return False
+
 def main():
     now=dt.datetime.now(dt.timezone.utc)
     pairs=get("AssetPairs")
@@ -57,8 +64,8 @@ def main():
             bars=get("OHLC?pair="+pair+"&interval=5")
             candles=next(v for k,v in bars.items() if k!="last")[:-1]
             if len(candles)<13:raise ValueError("too few completed candles")
-            age=(now.timestamp()-float(candles[-1][0]))
-            if age<0 or age>900:raise ValueError("stale OHLC")
+            if not ohlc_is_fresh(candles[-1][0], now):raise ValueError("stale OHLC")
+            age=now.timestamp()-float(candles[-1][0])
             c=[float(x[4]) for x in candles[-13:]];v=[float(x[6]) for x in candles[-13:]]
             if not all(math.isfinite(x) and x>0 for x in c) or not all(math.isfinite(x) and x>=0 for x in v):raise ValueError("invalid OHLC close or volume")
             item.update({"move_15m_pct":round(100*(c[-1]/c[-4]-1),2),"move_60m_pct":round(100*(c[-1]/c[0]-1),2),"volume_accel":round(sum(v[-6:])/max(sum(v[-12:-6]),1e-9),2),"ohlc_age_seconds":round(age),"status":"WATCH_RESEARCH_ONLY"})
