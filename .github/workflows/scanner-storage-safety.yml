@@ -14,6 +14,7 @@ on:
       - 'simple_scanner/offline_scoring_comparison.py'
       - 'tests/test_offline_scoring_comparison.py'
       - 'tests/test_execution_contract.py'
+      - 'tests/test_execution_acceptance_fixtures.py'
       - 'simple_scanner/execute_once.py'
       - 'simple_scanner/dex_guard.py'
       - 'tests/test_dex_reliability.py'
@@ -69,3 +70,6 @@ jobs:
 
       - name: Run shared execution contract tests
         run: python -W error -m unittest discover -s tests -p 'test_execution_contract.py' -v
+
+      - name: Run fixture end-to-end execution acceptance tests
+        run: python -W error -m unittest discover -s tests -p 'test_execution_acceptance_fixtures.py' -v
