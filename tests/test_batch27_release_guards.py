@@ -13,16 +13,15 @@ from simple_scanner import fixture_receipt_reconciliation as recon
 RECEIPT={"status":"VERIFIED","buy_approved":False,"watch":[{"symbol":"BTC/USD"}]}
 
 class Batch27Acceptance(unittest.TestCase):
-    def test_corrupted_receipt_body_is_detectable_but_not_yet_rejected(self):
-        # Documents an important limitation: persisted SHA is not revalidated on read.
+    def test_corrupted_receipt_body_is_rejected_on_read(self):
         with tempfile.TemporaryDirectory() as root:
             outbox.stage(root,10,"run-10",RECEIPT)
             path=Path(root,outbox.FILENAME)
             state=json.loads(path.read_text())
             state["entries"]["10"]["receipt"]["watch"][0]["symbol"]="FORGED"
             path.write_text(json.dumps(state))
-            entry=outbox.pending(root)[0]
-            self.assertNotEqual(recon.receipt_digest(entry["receipt"]),entry["sha256"])
+            with self.assertRaises(RuntimeError):
+                outbox.pending(root)
 
     def test_rollback_atomic_write_preserves_preexisting_pending(self):
         with tempfile.TemporaryDirectory() as root:
