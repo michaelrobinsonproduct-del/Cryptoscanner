@@ -18,6 +18,7 @@ on:
       - 'tests/test_rollback_rehearsal.py'
       - 'tests/test_batch22_delivery_recovery.py'
       - 'tests/test_batch22_source_recovery.py'
+      - 'tests/test_batch23_readiness.py'
       - 'docs/batch22_release_acceptance.md'
       - 'simple_scanner/manual_requests.py'
       - 'docs/batch21_release_readiness.md'
@@ -88,3 +89,6 @@ jobs:
 
       - name: Run offline Kraken and DEX source recovery acceptance
         run: python -W error -m unittest discover -s tests -p 'test_batch22_source_recovery.py' -v
+
+      - name: Run Batch 23 offline history and reporting readiness
+        run: python -W error -m unittest discover -s tests -p 'test_batch23_readiness.py' -v
