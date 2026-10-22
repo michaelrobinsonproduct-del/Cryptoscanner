@@ -9,6 +9,8 @@ on:
       - 'simple_scanner/scan.py'
       - 'tests/test_kraken_freshness.py'
       - 'tests/test_shadow_learning_guards.py'
+      - 'simple_scanner/offline_replay.py'
+      - 'tests/test_offline_replay.py'
       - 'simple_scanner/dex_guard.py'
       - 'tests/test_dex_reliability.py'
       - 'simple_scanner/external_backup.py'
@@ -54,3 +56,6 @@ jobs:
 
       - name: Run shadow learning guard tests
         run: python -W error -m unittest discover -s tests -p 'test_shadow_learning_guards.py' -v
+
+      - name: Run offline replay feasibility and holdout tests
+        run: python -W error -m unittest discover -s tests -p 'test_offline_replay.py' -v
