@@ -5,6 +5,7 @@ with no matching comment remains unresolved: never blindly repost.
 """
 import hashlib
 import json
+import re
 from . import fixture_delivery_outbox as outbox
 
 def marker(issue_number,run_id,digest):
@@ -27,7 +28,7 @@ def reconcile(root,issue_number,comments):
     for comment in comments:
         if not isinstance(comment,dict) or type(comment.get("id")) is not int or not isinstance(comment.get("body"),str):
             raise ValueError("Incomplete comment evidence")
-        if expected in comment["body"]:
+        if re.search(r"(?<![A-Za-z0-9_])"+re.escape(expected)+r"(?![A-Za-z0-9_])",comment["body"]):
             matches.append(comment["id"])
     if len(matches)>1:
         return "DUPLICATE_REQUIRES_OPERATOR"
