@@ -5,6 +5,9 @@ on:
       - repair-batches-17a-20-20261021
     paths:
       - 'simple_scanner/storage_safety.py'
+      - 'simple_scanner/dex.py'
+      - 'simple_scanner/dex_guard.py'
+      - 'tests/test_dex_reliability.py'
       - 'simple_scanner/external_backup.py'
       - 'tests/test_storage_safety.py'
       - 'tests/test_storage_inventory_edge_cases.py'
@@ -39,3 +42,6 @@ jobs:
 
       - name: Run SQLite inventory edge cases
         run: python -W error -m unittest discover -s tests -p 'test_storage_inventory_edge_cases.py' -v
+
+      - name: Run DEX freshness and circuit tests
+        run: python -W error -m unittest discover -s tests -p 'test_dex_reliability.py' -v
