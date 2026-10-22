@@ -2,6 +2,7 @@
 import hashlib
 import json
 import sqlite3
+import shutil
 from pathlib import Path
 
 def inventory(db):
