@@ -37,6 +37,20 @@ class Batch28Evidence(unittest.TestCase):
             self.assertEqual(recon.reconcile(root,41,[{"id":701,"body":token},{"id":702,"body":token}]),"DUPLICATE_REQUIRES_OPERATOR")
             self.assertEqual(outbox.pending(root)[0]["status"],"PENDING")
 
+    def test_embedded_marker_substring_does_not_confirm(self):
+        with tempfile.TemporaryDirectory() as root:
+            entry=outbox.stage(root,41,"run-41",RECEIPT)
+            token=recon.marker(41,"run-41",entry["sha256"])
+            self.assertEqual(recon.reconcile(root,41,[{"id":701,"body":"prefix"+token+"suffix"}]),"UNRESOLVED_NO_REPOST")
+            self.assertEqual(len(outbox.pending(root)),1)
+
+    def test_bounded_marker_in_prose_confirms(self):
+        with tempfile.TemporaryDirectory() as root:
+            entry=outbox.stage(root,41,"run-41",RECEIPT)
+            token=recon.marker(41,"run-41",entry["sha256"])
+            self.assertEqual(recon.reconcile(root,41,[{"id":701,"body":"Receipt: "+token+" (verified fixture)"}]),"DELIVERED")
+            self.assertEqual(outbox.pending(root),[])
+
     def test_interrupted_confirm_preserves_previous_pending_receipt(self):
         with tempfile.TemporaryDirectory() as root:
             entry=outbox.stage(root,41,"run-41",RECEIPT)
