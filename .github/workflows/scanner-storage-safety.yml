@@ -28,6 +28,8 @@ on:
       - 'tests/test_batch26_failure_matrix.py'
       - 'tests/test_batch27_release_guards.py'
       - 'tests/test_batch27_final_acceptance.py'
+      - 'tests/test_batch28_evidence_integrity.py'
+      - 'docs/batch28_evidence_readiness.md'
       - 'docs/batch27_integrity_acceptance.md'
       - 'docs/batch26_offline_acceptance.md'
       - 'docs/batch25_reconciliation_limitations.md'
@@ -135,3 +137,6 @@ jobs:
 
       - name: Run Batch 27 final fixture integrity acceptance
         run: python -W error -m unittest discover -s tests -p 'test_batch27_final_acceptance.py' -v
+
+      - name: Run Batch 28 isolated receipt evidence integrity
+        run: python -W error -m unittest discover -s tests -p 'test_batch28_evidence_integrity.py' -v
