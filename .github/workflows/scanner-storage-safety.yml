@@ -25,6 +25,8 @@ on:
       - 'tests/test_batch25_reconciliation.py'
       - 'tests/test_batch25_integrity.py'
       - 'tests/test_batch26_isolated_readiness.py'
+      - 'tests/test_batch26_failure_matrix.py'
+      - 'docs/batch26_offline_acceptance.md'
       - 'docs/batch25_reconciliation_limitations.md'
       - 'simple_scanner/fixture_receipt_reconciliation.py'
       - 'docs/batch24_outbox_readiness.md'
@@ -121,3 +123,6 @@ jobs:
 
       - name: Run Batch 26 isolated cross-gate readiness
         run: python -W error -m unittest discover -s tests -p 'test_batch26_isolated_readiness.py' -v
+
+      - name: Run Batch 26 isolated failure matrix
+        run: python -W error -m unittest discover -s tests -p 'test_batch26_failure_matrix.py' -v
