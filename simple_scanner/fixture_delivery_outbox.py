@@ -25,6 +25,18 @@ def _read(root):
     for key,value in state["entries"].items():
         if not isinstance(key,str) or not isinstance(value,dict) or value.get("status") not in ("PENDING","DELIVERED"):
             raise RuntimeError("Invalid outbox entry")
+        if type(value.get("issue_number")) is not int or str(value["issue_number"])!=key or not isinstance(value.get("run_id"),str) or not value["run_id"]:
+            raise RuntimeError("Invalid outbox identity")
+        if not isinstance(value.get("receipt"),dict):
+            raise RuntimeError("Invalid outbox receipt")
+        try:
+            canonical=json.dumps(value["receipt"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()
+        except (TypeError,ValueError) as exc:
+            raise RuntimeError("Invalid outbox receipt") from exc
+        if value.get("sha256")!=hashlib.sha256(canonical).hexdigest():
+            raise RuntimeError("Outbox receipt integrity mismatch")
+        if value["status"]=="DELIVERED" and (type(value.get("comment_id")) is not int or value["comment_id"]<=0):
+            raise RuntimeError("Delivered receipt lacks confirmation")
     return state
 
 def _write(root,state):
