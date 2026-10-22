@@ -38,7 +38,7 @@ class DeliveryRecoveryTests(unittest.TestCase):
         captured=[]
         def send(request,timeout):
             payload=json.loads(request.data.decode())
-            receipt=json.loads(payload['body'].split('\\x60\\x60\\x60json\\n',1)[1].split('\\n\\x60\\x60\\x60',1)[0])
+            receipt=json.loads(payload['body'].split('```json'+chr(10),1)[1].split(chr(10)+'```',1)[0])
             captured.append(receipt)
             return FakeResponse()
         with patch.dict(os.environ,{'SIMPLE_SCANNER_GITHUB_TOKEN':'fixture'},clear=True),patch('simple_scanner.manual_requests.urllib.request.urlopen',side_effect=send):
