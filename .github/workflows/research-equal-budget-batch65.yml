@@ -15,6 +15,6 @@ jobs:
         with:
           python-version: '3.11'
       - name: Compile research modules
-        run: python -m compileall -q research/equal_budget_forward.py research/export_candidate_cohorts.py research/test_equal_budget_forward.py
+        run: python -m compileall -q research/equal_budget_forward.py research/export_candidate_cohorts.py research/test_equal_budget_forward.py research/test_export_candidate_cohorts.py
       - name: Unit tests
-        run: python -m unittest -v research.test_equal_budget_forward
+        run: python -m unittest -v research.test_equal_budget_forward research.test_export_candidate_cohorts
