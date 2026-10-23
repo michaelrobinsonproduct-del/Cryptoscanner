@@ -1,0 +1,20 @@
+name: Research equal-budget offline tests
+on:
+  push:
+    branches:
+      - research-batch64-20261022
+  workflow_dispatch:
+jobs:
+  offline-research:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile research modules
+        run: python -m compileall -q research/equal_budget_forward.py research/export_candidate_cohorts.py research/test_equal_budget_forward.py
+      - name: Unit tests
+        run: python -m unittest -v research.test_equal_budget_forward
