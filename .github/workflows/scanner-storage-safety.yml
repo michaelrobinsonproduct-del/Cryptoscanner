@@ -29,6 +29,8 @@ on:
       - 'tests/test_batch27_release_guards.py'
       - 'tests/test_batch27_final_acceptance.py'
       - 'tests/test_batch28_evidence_integrity.py'
+      - 'tests/test_batch29_release_audit.py'
+      - 'docs/batch29_release_audit.md'
       - 'docs/batch28_evidence_readiness.md'
       - 'docs/batch27_integrity_acceptance.md'
       - 'docs/batch26_offline_acceptance.md'
@@ -140,3 +142,6 @@ jobs:
 
       - name: Run Batch 28 isolated receipt evidence integrity
         run: python -W error -m unittest discover -s tests -p 'test_batch28_evidence_integrity.py' -v
+
+      - name: Run Batch 29 consolidated offline release audit
+        run: python -W error -m unittest discover -s tests -p 'test_batch29_release_audit.py' -v
