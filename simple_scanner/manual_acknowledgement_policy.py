@@ -37,3 +37,32 @@ def acknowledgement_decision(requested, confirmed):
         "scan_rerun_required":False,
         "status":"ALL_CONFIRMED" if requested_ids and len(confirmations)==len(requested_ids) else ("NO_REQUESTS" if not requested_ids else "RECONCILIATION_REQUIRED"),
     }
+
+def plan_manual_delivery_transition(requests, confirmed_comments, outbox_entries):
+    """Offline-only preflight for a future wrapper integration.
+
+    Fail closed unless every requested issue has one matching durable DELIVERED
+    outbox record with the same confirmed comment ID. Does not write ledger,
+    call GitHub, rescan, or post; never treat HTTP 201 as confirmation.
+    """
+    decision=acknowledgement_decision(requests,confirmed_comments)
+    if not isinstance(outbox_entries,list):
+        raise ValueError("Durable outbox evidence required")
+    entries={}
+    for entry in outbox_entries:
+        if not isinstance(entry,dict) or type(entry.get("issue_number")) is not int:
+            raise ValueError("Invalid outbox entry")
+        issue=entry["issue_number"]
+        if issue in entries:
+            raise ValueError("Duplicate outbox identity")
+        entries[issue]=entry
+    confirmed={item["issue_number"]:item["comment_id"] for item in confirmed_comments}
+    for issue,comment_id in confirmed.items():
+        entry=entries.get(issue)
+        if (not entry or entry.get("status")!="DELIVERED"
+                or type(entry.get("comment_id")) is not int
+                or entry["comment_id"]!=comment_id
+                or not isinstance(entry.get("run_id"),str) or not entry["run_id"]
+                or not isinstance(entry.get("sha256"),str) or len(entry["sha256"])!=64):
+            raise ValueError("Confirmed comment lacks matching durable delivered receipt")
+    return decision
