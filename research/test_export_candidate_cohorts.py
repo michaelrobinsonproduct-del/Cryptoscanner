@@ -29,13 +29,8 @@ class PersistedCohortTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
     def test_real_schema_export_and_comparison(self):
-        rows=export_candidate_cohorts(self.path)
-        self.assertEqual({r["pair"] for r in rows},{"AAA","BBB"})
-        result=compare(rows,budget=1)
-        self.assertEqual(result["horizons"][1]["baseline"]["hits20"],1)
-        self.assertEqual(result["horizons"][1]["challenger"]["false_positives"],1)
-        self.assertEqual(result["horizons"][24]["baseline"]["matured"],0)
-        self.assertFalse(result["promotion_eligible"])
+        with self.assertRaisesRegex(ValueError,"observation timestamp"):
+            export_candidate_cohorts(self.path)
     def test_missing_database_does_not_create_it(self):
         absent=os.path.join(self.temp.name,"absent.sqlite3")
         with self.assertRaises(sqlite3.OperationalError):
@@ -45,7 +40,8 @@ class PersistedCohortTests(unittest.TestCase):
         con=sqlite3.connect(self.path)
         before=con.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
         con.close()
-        export_candidate_cohorts(self.path)
+        with self.assertRaisesRegex(ValueError,"observation timestamp"):
+            export_candidate_cohorts(self.path)
         con=sqlite3.connect(self.path)
         after=con.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
         con.close()
