@@ -30,6 +30,9 @@ on:
       - 'tests/test_batch27_final_acceptance.py'
       - 'tests/test_batch28_evidence_integrity.py'
       - 'tests/test_batch29_release_audit.py'
+      - 'tests/test_batch30_manual_ack_recovery.py'
+      - 'simple_scanner/fixture_manual_delivery_decision.py'
+      - 'docs/batch30_manual_delivery_recovery.md'
       - 'docs/batch29_release_audit.md'
       - 'docs/batch28_evidence_readiness.md'
       - 'docs/batch27_integrity_acceptance.md'
@@ -145,3 +148,6 @@ jobs:
 
       - name: Run Batch 29 consolidated offline release audit
         run: python -W error -m unittest discover -s tests -p 'test_batch29_release_audit.py' -v
+
+      - name: Run Batch 30 offline manual acknowledgement recovery
+        run: python -W error -m unittest discover -s tests -p 'test_batch30_manual_ack_recovery.py' -v
