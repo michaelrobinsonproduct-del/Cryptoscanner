@@ -2,32 +2,32 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 4883,
-      "evaluated": 4703,
+      "matured_snapshots": 4895,
+      "evaluated": 4715,
       "coverage_pct": 96.3,
       "unresolved": 180,
       "no_observation_in_window": 180
     },
     {
       "hours": 3,
-      "matured_snapshots": 4835,
-      "evaluated": 4223,
-      "coverage_pct": 87.3,
+      "matured_snapshots": 4847,
+      "evaluated": 4235,
+      "coverage_pct": 87.4,
       "unresolved": 612,
       "no_observation_in_window": 612
     },
     {
       "hours": 6,
-      "matured_snapshots": 4763,
-      "evaluated": 4146,
-      "coverage_pct": 87.0,
+      "matured_snapshots": 4775,
+      "evaluated": 4158,
+      "coverage_pct": 87.1,
       "unresolved": 617,
       "no_observation_in_window": 617
     },
     {
       "hours": 24,
-      "matured_snapshots": 4427,
-      "evaluated": 3815,
+      "matured_snapshots": 4439,
+      "evaluated": 3827,
       "coverage_pct": 86.2,
       "unresolved": 612,
       "no_observation_in_window": 612
@@ -36,65 +36,65 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 4703,
+      "samples": 4715,
       "average_delay_hours": 0.438
     },
     {
       "hours": 3,
-      "samples": 4223,
+      "samples": 4235,
       "average_delay_hours": 0.348
     },
     {
       "hours": 6,
-      "samples": 4146,
-      "average_delay_hours": 0.367
+      "samples": 4158,
+      "average_delay_hours": 0.368
     },
     {
       "hours": 24,
-      "samples": 3815,
+      "samples": 3827,
       "average_delay_hours": 0.349
     }
   ],
   "unresolved_1h_snapshots": 180,
   "rank_comparison": {
-    "historical_ranked_samples": 4619,
+    "historical_ranked_samples": 4631,
     "mean_base_minus_early_rank": 1.78
   },
   "newly_discovered_outside_base_top12": 1,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 4655,
-      "early_scored_avg_return_pct": -0.029,
-      "all_selected_avg_return_pct": -0.029,
+      "samples": 4667,
+      "early_scored_avg_return_pct": -0.03,
+      "all_selected_avg_return_pct": -0.03,
       "early_score_above_base_avg_return_pct": -0.017
     },
     {
       "hours": 3,
-      "samples": 4223,
+      "samples": 4235,
       "early_scored_avg_return_pct": -0.252,
       "all_selected_avg_return_pct": -0.252,
-      "early_score_above_base_avg_return_pct": -0.192
+      "early_score_above_base_avg_return_pct": -0.194
     },
     {
       "hours": 6,
-      "samples": 4146,
-      "early_scored_avg_return_pct": -0.56,
-      "all_selected_avg_return_pct": -0.56,
-      "early_score_above_base_avg_return_pct": -0.53
+      "samples": 4158,
+      "early_scored_avg_return_pct": -0.566,
+      "all_selected_avg_return_pct": -0.566,
+      "early_score_above_base_avg_return_pct": -0.536
     },
     {
       "hours": 24,
-      "samples": 3815,
-      "early_scored_avg_return_pct": -1.431,
-      "all_selected_avg_return_pct": -1.431,
-      "early_score_above_base_avg_return_pct": -1.293
+      "samples": 3827,
+      "early_scored_avg_return_pct": -1.441,
+      "all_selected_avg_return_pct": -1.441,
+      "early_score_above_base_avg_return_pct": -1.304
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 16887,
-    "positive": 6818,
-    "average_return_pct": -0.529
+    "evaluated": 16935,
+    "positive": 6828,
+    "average_return_pct": -0.534
   },
   "missed_breakout_examples": [
     {
@@ -148,12 +148,12 @@
       "next_scan_gain_pct": 88.1
     }
   ],
-  "unselected_gainers_5pct_observations": 1279,
-  "market_observations": 259003,
+  "unselected_gainers_5pct_observations": 1283,
+  "market_observations": 259618,
   "market_price_coverage": 615,
-  "feature_rows": 4787,
-  "snapshots": 4907,
-  "outcomes": 16887,
+  "feature_rows": 4799,
+  "snapshots": 4919,
+  "outcomes": 16935,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
