@@ -2,32 +2,32 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 4835,
-      "evaluated": 4655,
+      "matured_snapshots": 4847,
+      "evaluated": 4667,
       "coverage_pct": 96.3,
       "unresolved": 180,
       "no_observation_in_window": 180
     },
     {
       "hours": 3,
-      "matured_snapshots": 4787,
-      "evaluated": 4175,
+      "matured_snapshots": 4799,
+      "evaluated": 4187,
       "coverage_pct": 87.2,
       "unresolved": 612,
       "no_observation_in_window": 612
     },
     {
       "hours": 6,
-      "matured_snapshots": 4727,
-      "evaluated": 4110,
-      "coverage_pct": 86.9,
+      "matured_snapshots": 4739,
+      "evaluated": 4122,
+      "coverage_pct": 87.0,
       "unresolved": 617,
       "no_observation_in_window": 617
     },
     {
       "hours": 24,
-      "matured_snapshots": 4391,
-      "evaluated": 3779,
+      "matured_snapshots": 4403,
+      "evaluated": 3791,
       "coverage_pct": 86.1,
       "unresolved": 612,
       "no_observation_in_window": 612
@@ -36,65 +36,65 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 4655,
+      "samples": 4667,
       "average_delay_hours": 0.439
     },
     {
       "hours": 3,
-      "samples": 4175,
+      "samples": 4187,
       "average_delay_hours": 0.349
     },
     {
       "hours": 6,
-      "samples": 4110,
-      "average_delay_hours": 0.365
+      "samples": 4122,
+      "average_delay_hours": 0.366
     },
     {
       "hours": 24,
-      "samples": 3779,
+      "samples": 3791,
       "average_delay_hours": 0.348
     }
   ],
   "unresolved_1h_snapshots": 180,
   "rank_comparison": {
-    "historical_ranked_samples": 4583,
+    "historical_ranked_samples": 4595,
     "mean_base_minus_early_rank": 1.79
   },
-  "newly_discovered_outside_base_top12": 1,
+  "newly_discovered_outside_base_top12": 2,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 4607,
+      "samples": 4619,
       "early_scored_avg_return_pct": -0.024,
       "all_selected_avg_return_pct": -0.024,
-      "early_score_above_base_avg_return_pct": -0.012
+      "early_score_above_base_avg_return_pct": -0.013
     },
     {
       "hours": 3,
-      "samples": 4175,
-      "early_scored_avg_return_pct": -0.243,
-      "all_selected_avg_return_pct": -0.243,
-      "early_score_above_base_avg_return_pct": -0.184
+      "samples": 4187,
+      "early_scored_avg_return_pct": -0.247,
+      "all_selected_avg_return_pct": -0.247,
+      "early_score_above_base_avg_return_pct": -0.19
     },
     {
       "hours": 6,
-      "samples": 4110,
-      "early_scored_avg_return_pct": -0.543,
-      "all_selected_avg_return_pct": -0.543,
-      "early_score_above_base_avg_return_pct": -0.511
+      "samples": 4122,
+      "early_scored_avg_return_pct": -0.549,
+      "all_selected_avg_return_pct": -0.549,
+      "early_score_above_base_avg_return_pct": -0.515
     },
     {
       "hours": 24,
-      "samples": 3779,
-      "early_scored_avg_return_pct": -1.39,
-      "all_selected_avg_return_pct": -1.39,
-      "early_score_above_base_avg_return_pct": -1.233
+      "samples": 3791,
+      "early_scored_avg_return_pct": -1.406,
+      "all_selected_avg_return_pct": -1.406,
+      "early_score_above_base_avg_return_pct": -1.258
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 16719,
-    "positive": 6769,
-    "average_return_pct": -0.513
+    "evaluated": 16767,
+    "positive": 6782,
+    "average_return_pct": -0.519
   },
   "missed_breakout_examples": [
     {
@@ -149,11 +149,11 @@
     }
   ],
   "unselected_gainers_5pct_observations": 1284,
-  "market_observations": 257158,
+  "market_observations": 257773,
   "market_price_coverage": 615,
-  "feature_rows": 4751,
-  "snapshots": 4871,
-  "outcomes": 16719,
+  "feature_rows": 4763,
+  "snapshots": 4883,
+  "outcomes": 16767,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
