@@ -2,32 +2,32 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 5287,
-      "evaluated": 5107,
+      "matured_snapshots": 5299,
+      "evaluated": 5119,
       "coverage_pct": 96.6,
       "unresolved": 180,
       "no_observation_in_window": 180
     },
     {
       "hours": 3,
-      "matured_snapshots": 5251,
-      "evaluated": 4639,
-      "coverage_pct": 88.3,
+      "matured_snapshots": 5263,
+      "evaluated": 4651,
+      "coverage_pct": 88.4,
       "unresolved": 612,
       "no_observation_in_window": 612
     },
     {
       "hours": 6,
-      "matured_snapshots": 5191,
-      "evaluated": 4574,
+      "matured_snapshots": 5203,
+      "evaluated": 4586,
       "coverage_pct": 88.1,
       "unresolved": 617,
       "no_observation_in_window": 617
     },
     {
       "hours": 24,
-      "matured_snapshots": 4787,
-      "evaluated": 4175,
+      "matured_snapshots": 4799,
+      "evaluated": 4187,
       "coverage_pct": 87.2,
       "unresolved": 612,
       "no_observation_in_window": 612
@@ -36,65 +36,65 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 5107,
+      "samples": 5119,
       "average_delay_hours": 0.425
     },
     {
       "hours": 3,
-      "samples": 4639,
-      "average_delay_hours": 0.344
+      "samples": 4651,
+      "average_delay_hours": 0.345
     },
     {
       "hours": 6,
-      "samples": 4574,
+      "samples": 4586,
       "average_delay_hours": 0.365
     },
     {
       "hours": 24,
-      "samples": 4175,
-      "average_delay_hours": 0.344
+      "samples": 4187,
+      "average_delay_hours": 0.345
     }
   ],
   "unresolved_1h_snapshots": 180,
   "rank_comparison": {
-    "historical_ranked_samples": 5023,
-    "mean_base_minus_early_rank": 1.78
+    "historical_ranked_samples": 5031,
+    "mean_base_minus_early_rank": 1.77
   },
   "newly_discovered_outside_base_top12": 0,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 5059,
-      "early_scored_avg_return_pct": -0.044,
-      "all_selected_avg_return_pct": -0.044,
-      "early_score_above_base_avg_return_pct": -0.055
+      "samples": 5071,
+      "early_scored_avg_return_pct": -0.045,
+      "all_selected_avg_return_pct": -0.045,
+      "early_score_above_base_avg_return_pct": -0.059
     },
     {
       "hours": 3,
-      "samples": 4639,
-      "early_scored_avg_return_pct": -0.264,
-      "all_selected_avg_return_pct": -0.264,
-      "early_score_above_base_avg_return_pct": -0.239
+      "samples": 4651,
+      "early_scored_avg_return_pct": -0.266,
+      "all_selected_avg_return_pct": -0.266,
+      "early_score_above_base_avg_return_pct": -0.238
     },
     {
       "hours": 6,
-      "samples": 4574,
-      "early_scored_avg_return_pct": -0.566,
-      "all_selected_avg_return_pct": -0.566,
-      "early_score_above_base_avg_return_pct": -0.588
+      "samples": 4586,
+      "early_scored_avg_return_pct": -0.569,
+      "all_selected_avg_return_pct": -0.569,
+      "early_score_above_base_avg_return_pct": -0.593
     },
     {
       "hours": 24,
-      "samples": 4175,
-      "early_scored_avg_return_pct": -1.554,
-      "all_selected_avg_return_pct": -1.554,
-      "early_score_above_base_avg_return_pct": -1.398
+      "samples": 4187,
+      "early_scored_avg_return_pct": -1.557,
+      "all_selected_avg_return_pct": -1.557,
+      "early_score_above_base_avg_return_pct": -1.405
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 18495,
-    "positive": 7423,
-    "average_return_pct": -0.567
+    "evaluated": 18543,
+    "positive": 7432,
+    "average_return_pct": -0.569
   },
   "missed_breakout_examples": [
     {
@@ -128,11 +128,6 @@
       "next_scan_gain_pct": 88.1
     },
     {
-      "pair": "ELXUSD",
-      "observed_at": "2026-10-18T08:56:56.410205+00:00",
-      "next_scan_gain_pct": 76.0
-    },
-    {
       "pair": "FORESTUSD",
       "observed_at": "2026-10-21T00:31:31.367565+00:00",
       "next_scan_gain_pct": 70.05
@@ -146,14 +141,19 @@
       "pair": "MFUSD",
       "observed_at": "2026-10-19T11:03:14.000212+00:00",
       "next_scan_gain_pct": 66.21
+    },
+    {
+      "pair": "DUCKUSD",
+      "observed_at": "2026-10-22T23:26:39.351333+00:00",
+      "next_scan_gain_pct": 65.83
     }
   ],
-  "unselected_gainers_5pct_observations": 1260,
-  "market_observations": 279913,
+  "unselected_gainers_5pct_observations": 1258,
+  "market_observations": 280528,
   "market_price_coverage": 615,
-  "feature_rows": 5191,
-  "snapshots": 5311,
-  "outcomes": 18495,
+  "feature_rows": 5199,
+  "snapshots": 5319,
+  "outcomes": 18543,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
