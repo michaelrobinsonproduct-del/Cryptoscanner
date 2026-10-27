@@ -2,8 +2,8 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 6087,
-      "evaluated": 5835,
+      "matured_snapshots": 6099,
+      "evaluated": 5847,
       "coverage_pct": 95.9,
       "unresolved": 252,
       "no_observation_in_window": 252
@@ -18,16 +18,16 @@
     },
     {
       "hours": 6,
-      "matured_snapshots": 6039,
-      "evaluated": 5398,
+      "matured_snapshots": 6051,
+      "evaluated": 5410,
       "coverage_pct": 89.4,
       "unresolved": 641,
       "no_observation_in_window": 641
     },
     {
       "hours": 24,
-      "matured_snapshots": 5787,
-      "evaluated": 5113,
+      "matured_snapshots": 5799,
+      "evaluated": 5125,
       "coverage_pct": 88.4,
       "unresolved": 674,
       "no_observation_in_window": 674
@@ -36,8 +36,8 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 5835,
-      "average_delay_hours": 0.427
+      "samples": 5847,
+      "average_delay_hours": 0.428
     },
     {
       "hours": 3,
@@ -46,28 +46,28 @@
     },
     {
       "hours": 6,
-      "samples": 5398,
+      "samples": 5410,
       "average_delay_hours": 0.359
     },
     {
       "hours": 24,
-      "samples": 5113,
-      "average_delay_hours": 0.354
+      "samples": 5125,
+      "average_delay_hours": 0.355
     }
   ],
   "unresolved_1h_snapshots": 252,
   "rank_comparison": {
-    "historical_ranked_samples": 5823,
+    "historical_ranked_samples": 5835,
     "mean_base_minus_early_rank": 1.74
   },
   "newly_discovered_outside_base_top12": 3,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 5787,
-      "early_scored_avg_return_pct": -0.049,
-      "all_selected_avg_return_pct": -0.049,
-      "early_score_above_base_avg_return_pct": -0.066
+      "samples": 5799,
+      "early_scored_avg_return_pct": -0.047,
+      "all_selected_avg_return_pct": -0.047,
+      "early_score_above_base_avg_return_pct": -0.064
     },
     {
       "hours": 3,
@@ -78,23 +78,23 @@
     },
     {
       "hours": 6,
-      "samples": 5398,
-      "early_scored_avg_return_pct": -0.534,
-      "all_selected_avg_return_pct": -0.534,
-      "early_score_above_base_avg_return_pct": -0.552
+      "samples": 5410,
+      "early_scored_avg_return_pct": -0.53,
+      "all_selected_avg_return_pct": -0.53,
+      "early_score_above_base_avg_return_pct": -0.555
     },
     {
       "hours": 24,
-      "samples": 5113,
-      "early_scored_avg_return_pct": -1.113,
-      "all_selected_avg_return_pct": -1.113,
-      "early_score_above_base_avg_return_pct": -1.057
+      "samples": 5125,
+      "early_scored_avg_return_pct": -1.111,
+      "all_selected_avg_return_pct": -1.111,
+      "early_score_above_base_avg_return_pct": -1.058
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 21737,
-    "positive": 8700,
-    "average_return_pct": -0.472
+    "evaluated": 21773,
+    "positive": 8720,
+    "average_return_pct": -0.47
   },
   "missed_breakout_examples": [
     {
@@ -106,11 +106,6 @@
       "pair": "FORESTUSD",
       "observed_at": "2026-10-20T19:30:51.455508+00:00",
       "next_scan_gain_pct": 134.86
-    },
-    {
-      "pair": "ELXUSD",
-      "observed_at": "2026-10-20T16:05:03.836505+00:00",
-      "next_scan_gain_pct": 133.85
     },
     {
       "pair": "FORESTUSD",
@@ -146,14 +141,19 @@
       "pair": "TUSD",
       "observed_at": "2026-10-24T23:50:41.029185+00:00",
       "next_scan_gain_pct": 62.23
+    },
+    {
+      "pair": "BMTUSD",
+      "observed_at": "2026-10-24T03:01:36.863578+00:00",
+      "next_scan_gain_pct": 61.37
     }
   ],
-  "unselected_gainers_5pct_observations": 1087,
-  "market_observations": 322963,
+  "unselected_gainers_5pct_observations": 1073,
+  "market_observations": 323578,
   "market_price_coverage": 615,
-  "feature_rows": 5991,
-  "snapshots": 6111,
-  "outcomes": 21737,
+  "feature_rows": 6003,
+  "snapshots": 6123,
+  "outcomes": 21773,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
