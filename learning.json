@@ -2,32 +2,32 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 6147,
-      "evaluated": 5883,
+      "matured_snapshots": 6171,
+      "evaluated": 5907,
       "coverage_pct": 95.7,
       "unresolved": 264,
       "no_observation_in_window": 264
     },
     {
       "hours": 3,
-      "matured_snapshots": 6123,
-      "evaluated": 5427,
-      "coverage_pct": 88.6,
+      "matured_snapshots": 6135,
+      "evaluated": 5439,
+      "coverage_pct": 88.7,
       "unresolved": 696,
       "no_observation_in_window": 696
     },
     {
       "hours": 6,
-      "matured_snapshots": 6087,
-      "evaluated": 5446,
+      "matured_snapshots": 6099,
+      "evaluated": 5458,
       "coverage_pct": 89.5,
       "unresolved": 641,
       "no_observation_in_window": 641
     },
     {
       "hours": 24,
-      "matured_snapshots": 5859,
-      "evaluated": 5185,
+      "matured_snapshots": 5871,
+      "evaluated": 5197,
       "coverage_pct": 88.5,
       "unresolved": 674,
       "no_observation_in_window": 674
@@ -36,65 +36,65 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 5883,
+      "samples": 5907,
       "average_delay_hours": 0.428
     },
     {
       "hours": 3,
-      "samples": 5427,
-      "average_delay_hours": 0.353
+      "samples": 5439,
+      "average_delay_hours": 0.354
     },
     {
       "hours": 6,
-      "samples": 5446,
-      "average_delay_hours": 0.358
+      "samples": 5458,
+      "average_delay_hours": 0.359
     },
     {
       "hours": 24,
-      "samples": 5185,
-      "average_delay_hours": 0.353
+      "samples": 5197,
+      "average_delay_hours": 0.352
     }
   ],
   "unresolved_1h_snapshots": 264,
   "rank_comparison": {
-    "historical_ranked_samples": 5883,
+    "historical_ranked_samples": 5895,
     "mean_base_minus_early_rank": 1.75
   },
-  "newly_discovered_outside_base_top12": 1,
+  "newly_discovered_outside_base_top12": 2,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 5835,
+      "samples": 5859,
       "early_scored_avg_return_pct": -0.045,
       "all_selected_avg_return_pct": -0.045,
       "early_score_above_base_avg_return_pct": -0.062
     },
     {
       "hours": 3,
-      "samples": 5427,
-      "early_scored_avg_return_pct": -0.258,
-      "all_selected_avg_return_pct": -0.258,
+      "samples": 5439,
+      "early_scored_avg_return_pct": -0.256,
+      "all_selected_avg_return_pct": -0.256,
       "early_score_above_base_avg_return_pct": -0.24
     },
     {
       "hours": 6,
-      "samples": 5446,
-      "early_scored_avg_return_pct": -0.513,
-      "all_selected_avg_return_pct": -0.513,
-      "early_score_above_base_avg_return_pct": -0.534
+      "samples": 5458,
+      "early_scored_avg_return_pct": -0.507,
+      "all_selected_avg_return_pct": -0.507,
+      "early_score_above_base_avg_return_pct": -0.532
     },
     {
       "hours": 24,
-      "samples": 5185,
-      "early_scored_avg_return_pct": -1.088,
-      "all_selected_avg_return_pct": -1.088,
-      "early_score_above_base_avg_return_pct": -1.035
+      "samples": 5197,
+      "early_scored_avg_return_pct": -1.083,
+      "all_selected_avg_return_pct": -1.083,
+      "early_score_above_base_avg_return_pct": -1.031
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 21941,
-    "positive": 8823,
-    "average_return_pct": -0.458
+    "evaluated": 22001,
+    "positive": 8854,
+    "average_return_pct": -0.455
   },
   "missed_breakout_examples": [
     {
@@ -148,12 +148,12 @@
       "next_scan_gain_pct": 58.83
     }
   ],
-  "unselected_gainers_5pct_observations": 1071,
-  "market_observations": 326038,
+  "unselected_gainers_5pct_observations": 1068,
+  "market_observations": 326653,
   "market_price_coverage": 615,
-  "feature_rows": 6051,
-  "snapshots": 6171,
-  "outcomes": 21941,
+  "feature_rows": 6063,
+  "snapshots": 6183,
+  "outcomes": 22001,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
