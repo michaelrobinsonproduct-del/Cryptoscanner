@@ -2,32 +2,32 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 6231,
-      "evaluated": 5967,
+      "matured_snapshots": 6243,
+      "evaluated": 5979,
       "coverage_pct": 95.8,
       "unresolved": 264,
       "no_observation_in_window": 264
     },
     {
       "hours": 3,
-      "matured_snapshots": 6195,
-      "evaluated": 5499,
+      "matured_snapshots": 6219,
+      "evaluated": 5523,
       "coverage_pct": 88.8,
       "unresolved": 696,
       "no_observation_in_window": 696
     },
     {
       "hours": 6,
-      "matured_snapshots": 6159,
-      "evaluated": 5518,
+      "matured_snapshots": 6171,
+      "evaluated": 5530,
       "coverage_pct": 89.6,
       "unresolved": 641,
       "no_observation_in_window": 641
     },
     {
       "hours": 24,
-      "matured_snapshots": 5943,
-      "evaluated": 5269,
+      "matured_snapshots": 5955,
+      "evaluated": 5281,
       "coverage_pct": 88.7,
       "unresolved": 674,
       "no_observation_in_window": 674
@@ -36,65 +36,65 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 5967,
-      "average_delay_hours": 0.43
+      "samples": 5979,
+      "average_delay_hours": 0.431
     },
     {
       "hours": 3,
-      "samples": 5499,
+      "samples": 5523,
       "average_delay_hours": 0.358
     },
     {
       "hours": 6,
-      "samples": 5518,
+      "samples": 5530,
       "average_delay_hours": 0.362
     },
     {
       "hours": 24,
-      "samples": 5269,
+      "samples": 5281,
       "average_delay_hours": 0.351
     }
   ],
   "unresolved_1h_snapshots": 264,
   "rank_comparison": {
-    "historical_ranked_samples": 5967,
+    "historical_ranked_samples": 5979,
     "mean_base_minus_early_rank": 1.77
   },
-  "newly_discovered_outside_base_top12": 3,
+  "newly_discovered_outside_base_top12": 2,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 5919,
+      "samples": 5931,
       "early_scored_avg_return_pct": -0.042,
       "all_selected_avg_return_pct": -0.042,
       "early_score_above_base_avg_return_pct": -0.059
     },
     {
       "hours": 3,
-      "samples": 5499,
-      "early_scored_avg_return_pct": -0.249,
-      "all_selected_avg_return_pct": -0.249,
-      "early_score_above_base_avg_return_pct": -0.236
+      "samples": 5523,
+      "early_scored_avg_return_pct": -0.243,
+      "all_selected_avg_return_pct": -0.243,
+      "early_score_above_base_avg_return_pct": -0.227
     },
     {
       "hours": 6,
-      "samples": 5518,
-      "early_scored_avg_return_pct": -0.496,
-      "all_selected_avg_return_pct": -0.496,
-      "early_score_above_base_avg_return_pct": -0.522
+      "samples": 5530,
+      "early_scored_avg_return_pct": -0.492,
+      "all_selected_avg_return_pct": -0.492,
+      "early_score_above_base_avg_return_pct": -0.519
     },
     {
       "hours": 24,
-      "samples": 5269,
-      "early_scored_avg_return_pct": -1.049,
-      "all_selected_avg_return_pct": -1.049,
-      "early_score_above_base_avg_return_pct": -0.994
+      "samples": 5281,
+      "early_scored_avg_return_pct": -1.051,
+      "all_selected_avg_return_pct": -1.051,
+      "early_score_above_base_avg_return_pct": -0.992
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 22253,
-    "positive": 9015,
-    "average_return_pct": -0.443
+    "evaluated": 22313,
+    "positive": 9058,
+    "average_return_pct": -0.441
   },
   "missed_breakout_examples": [
     {
@@ -148,12 +148,12 @@
       "next_scan_gain_pct": 56.25
     }
   ],
-  "unselected_gainers_5pct_observations": 1051,
-  "market_observations": 330344,
+  "unselected_gainers_5pct_observations": 1045,
+  "market_observations": 330960,
   "market_price_coverage": 616,
-  "feature_rows": 6135,
-  "snapshots": 6255,
-  "outcomes": 22253,
+  "feature_rows": 6147,
+  "snapshots": 6267,
+  "outcomes": 22313,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
