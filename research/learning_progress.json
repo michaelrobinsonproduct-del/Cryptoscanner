@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch1d-20261027",
-    "lease_expires_at": "2026-10-28T05:00:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "IN_PROGRESS"
+      "status": "BLOCKED_READONLY_DATA_ACCESS"
     },
     "2": {
       "status": "NOT_STARTED"
@@ -35,7 +35,7 @@
     }
   },
   "audit": {
-    "status": "BLOCKED_READONLY_DATA_ACCESS_WITH_OFFLINE_AUDITOR_READY",
+    "status": "BLOCKED_READONLY_DATA_ACCESS_AND_CI",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -53,12 +53,19 @@
       "Batch 1C added offline-only SQLite audit research/audit_history.py and fixture tests research/test_audit_history.py on isolated branch at commit 8c7a23e6f2bea3a2c37311ee2e416e184d427394.",
       "Offline audit reports table time bounds, pair coverage, >90m global timestamp gaps, duplicate pair/timestamp rows, outcome horizons, orphaned/missing evaluation observations, and recomputed return mismatches.",
       "Two analogous local fixture tests passed (duplicate/gap/read-only byte invariance and incorrect return label); exact GitHub final commit tests were not independently executed; GitHub reports no CI runs/statuses.",
-      "Immutable SQLite opening requires a consistent detached backup; never point this audit at a live Railway SQLite database with active WAL. No authorized detached backup/export currently available."
+      "Immutable SQLite opening requires a consistent detached backup; never point this audit at a live Railway SQLite database with active WAL. No authorized detached backup/export currently available.",
+      "Batch 1D confirmed production Railway environment has one attached durable volume /data (200 MB) and an existing bucket kraken-shadow-reports; no volume snapshot/download action is exposed, and bucket presence alone does not prove SQLite backup exists.",
+      "GitHub repository code searches for history.sqlite3 and backup returned no matching results; absence of search results does not prove backup absent.",
+      "GitHub returned exact committed audit_history.py and test_audit_history.py blob SHA values bf006ae6c3eb6bcd522d54f64aa1f673dd05816f and 13ca03a72c0a3fc70b0420c4e817686eef1ea7c0.",
+      "GitHub combined status and workflow runs for checkpoint b0c30bb4c5136f733b9afc14a6eb0693539b7d5b were both empty; final-commit CI not verified.",
+      "Container network cannot resolve raw.githubusercontent.com, so exact committed files could not be fetched into isolated runtime; no new test execution claimed.",
+      "Railway connector tunnels read-only discovery failed internally; no safe access path established."
     ],
     "blockers": [
-      "No authorized consistent detached read-only copy of Railway production SQLite; earliest/latest timestamps, per-pair coverage, and actual label checks remain unverified",
-      "No final-commit GitHub CI or independent run of exact committed tests",
-      "Cooperative lease adherence by scheduled automation not verified"
+      "No accessible, consistent detached SQLite backup verified; bucket exists but contents and backup provenance unknown",
+      "No exact committed-code isolated test execution or final-commit CI",
+      "Historical coverage, per-asset timestamps, duplicate/gap/label metrics cannot be audited without backup",
+      "Cooperative scheduled/manual lease compliance not verified"
     ]
   }
 }
