@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch1r-20261027",
-    "lease_expires_at": "2026-10-28T02:23:56.253Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "IN_PROGRESS"
+      "status": "BLOCKED_AWAITING_PREFLIGHT_RUN"
     },
     "2": {
       "status": "NOT_STARTED"
@@ -35,7 +35,7 @@
     }
   },
   "audit": {
-    "status": "BOUNDED_ACQUISITION_PREFLIGHT_COMMITTED_AWAITING_RUN",
+    "status": "BLOCKED_NEEDS_UPDATED_PREFLIGHT_RUN_URL",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -115,12 +115,16 @@
       "Created research/preflight_kraken_archive.py commit 27a7f2e089456528bfd4bdbd6d3c3c6bb1089f53: five 64KiB range samples, 320KiB cap, min 20GiB disk and 2GiB memory, per-request 12s, script 90s, range status and size checks, SHA256 of each sample only, no archive file writes.",
       "Created research/test_preflight_kraken_archive.py commit de6a1fa61918ba73439a8d9bdb7a87dfdaa723b6 with eight new fixture tests, not yet executed. Updated manually dispatched main workflow commit 421b00f1534b7e776baff477ff3e0a03b0cb0362 to run research tests and bounded preflight with 4m job timeout; no existing CI modified.",
       "The 20GiB free disk preflight may fail on GitHub-hosted runner; failure would be an intentional capacity gate and should not be bypassed. No full archive downloaded, no complete archive SHA256 verified, no historical observations acquired.",
-      "No production deployment, restart, volume modification, scoring promotion or trading. New code/workflow not independently run yet."
+      "No production deployment, restart, volume modification, scoring promotion or trading. New code/workflow not independently run yet.",
+      "Batch 1R: acquired and verified cooperative lease. The only supplied GitHub Actions run URL is 40618943412, which predates the new five-part preflight committed in Batch 1Q; cannot claim its logs verify new 8 tests, 20GiB disk/2GiB memory gates or five bounded HTTP range samples.",
+      "No newer manually dispatched run URL or run ID provided in conversation. Avoided repeating unavailable general run listings and avoided substituting old 12-test result for new 20-test validation.",
+      "Safe alternate if GitHub runner fails capacity: separate approved isolated runner with >=20GiB free disk and >=2GiB available RAM; alternatively obtain a smaller independently checksum-verified source artifact with an authoritative checksum/manifest. Do not relax capacity gates or claim full archive integrity from 320KiB ranges.",
+      "No production changes or actual archive acquisition during Batch 1R."
     ],
     "blockers": [
-      "Need manual workflow run of updated research-kraken-archive-probe.yml and run ID to verify 20 tests and actual capacity/range responses",
-      "Full archive SHA256, historical data coverage and provenance remain unverified; 320KiB samples are not a dataset",
-      "Do not relax 20GiB/2GiB resource gates to force GitHub-hosted runner success"
+      "Need newly manually dispatched GitHub Actions run URL/ID after main workflow update 421b00f1534b7e776baff477ff3e0a03b0cb0362",
+      "New 8 fixture tests and resource gates not remotely verified; 5 part range results absent",
+      "Full archive and historical provenance remain unverified"
     ]
   }
 }
