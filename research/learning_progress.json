@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch1e-20261027",
-    "lease_expires_at": "2026-10-28T06:00:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "IN_PROGRESS"
+      "status": "BLOCKED_NEEDS_READONLY_S3_OBJECT_ACCESS"
     },
     "2": {
       "status": "NOT_STARTED"
@@ -35,7 +35,7 @@
     }
   },
   "audit": {
-    "status": "BLOCKED_READONLY_DATA_ACCESS_AND_CI",
+    "status": "BLOCKED_NEEDS_READONLY_S3_OBJECT_ACCESS",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -59,13 +59,17 @@
       "GitHub returned exact committed audit_history.py and test_audit_history.py blob SHA values bf006ae6c3eb6bcd522d54f64aa1f673dd05816f and 13ca03a72c0a3fc70b0420c4e817686eef1ea7c0.",
       "GitHub combined status and workflow runs for checkpoint b0c30bb4c5136f733b9afc14a6eb0693539b7d5b were both empty; final-commit CI not verified.",
       "Container network cannot resolve raw.githubusercontent.com, so exact committed files could not be fetched into isolated runtime; no new test execution claimed.",
-      "Railway connector tunnels read-only discovery failed internally; no safe access path established."
+      "Railway connector tunnels read-only discovery failed internally; no safe access path established.",
+      "Batch 1E verified Railway bucket kraken-shadow-reports S3-compatible endpoint and bucket metadata exist, but OAuth connector explicitly redacts access key and secret; cannot enumerate objects or read SQLite backup with available connector actions.",
+      "Existing Railway tools provide bucket metadata/credentials details but no read-only bucket list-objects or get-object action; no backup contents inspected.",
+      "Required safe path: authorized read-only S3 ListBucket/GetObject capability scoped to kraken-shadow-reports, followed by detached verified consistent SQLite backup; if none, authorized SQLite online-backup/export from production by owner under separately approved operational procedure. Neither performed.",
+      "Exact committed audit tests remain without independently verified execution; no historical coverage claim made."
     ],
     "blockers": [
-      "No accessible, consistent detached SQLite backup verified; bucket exists but contents and backup provenance unknown",
-      "No exact committed-code isolated test execution or final-commit CI",
-      "Historical coverage, per-asset timestamps, duplicate/gap/label metrics cannot be audited without backup",
-      "Cooperative scheduled/manual lease compliance not verified"
+      "Need authorized read-only S3 object listing and retrieval on existing kraken-shadow-reports bucket; connector OAuth redacts credentials and exposes no object API",
+      "If bucket lacks a consistent SQLite backup, require separately authorized non-disruptive SQLite online backup/export; do not execute without approved path",
+      "Exact committed-code tests and final-commit CI remain unverified",
+      "No verified year-long historical coverage, provenance, gaps, duplicates, or labels"
     ]
   }
 }
