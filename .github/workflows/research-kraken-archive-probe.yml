@@ -1,0 +1,32 @@
+name: Isolated Kraken Archive Probe (Research Only)
+
+# GitHub only exposes manual Run workflow for workflows registered on the default branch.
+# This research-branch-only definition is intentionally not activated on default.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: isolated-kraken-archive-probe-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bounded-archive-probe:
+    if: github.ref == 'refs/heads/research-learning-program-20261027'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify exact committed offline research tests
+        run: python -m unittest discover -s research -p 'test_*.py' -v
+      - name: Bounded Kraken HTTP Range probe (maximum 64 KiB response)
+        run: python research/probe_kraken_archive.py --part 0
