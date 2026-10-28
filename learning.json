@@ -2,33 +2,33 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 6387,
-      "evaluated": 6099,
+      "matured_snapshots": 6399,
+      "evaluated": 6111,
       "coverage_pct": 95.5,
       "unresolved": 288,
       "no_observation_in_window": 288
     },
     {
       "hours": 3,
-      "matured_snapshots": 6375,
-      "evaluated": 5655,
+      "matured_snapshots": 6387,
+      "evaluated": 5667,
       "coverage_pct": 88.7,
       "unresolved": 720,
       "no_observation_in_window": 720
     },
     {
       "hours": 6,
-      "matured_snapshots": 6339,
-      "evaluated": 5686,
+      "matured_snapshots": 6351,
+      "evaluated": 5698,
       "coverage_pct": 89.7,
       "unresolved": 653,
       "no_observation_in_window": 653
     },
     {
       "hours": 24,
-      "matured_snapshots": 6099,
-      "evaluated": 5425,
-      "coverage_pct": 88.9,
+      "matured_snapshots": 6111,
+      "evaluated": 5437,
+      "coverage_pct": 89.0,
       "unresolved": 674,
       "no_observation_in_window": 674
     }
@@ -36,65 +36,65 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 6099,
-      "average_delay_hours": 0.432
+      "samples": 6111,
+      "average_delay_hours": 0.433
     },
     {
       "hours": 3,
-      "samples": 5655,
-      "average_delay_hours": 0.36
+      "samples": 5667,
+      "average_delay_hours": 0.359
     },
     {
       "hours": 6,
-      "samples": 5686,
-      "average_delay_hours": 0.36
+      "samples": 5698,
+      "average_delay_hours": 0.359
     },
     {
       "hours": 24,
-      "samples": 5425,
+      "samples": 5437,
       "average_delay_hours": 0.356
     }
   ],
   "unresolved_1h_snapshots": 288,
   "rank_comparison": {
-    "historical_ranked_samples": 6123,
-    "mean_base_minus_early_rank": 1.78
+    "historical_ranked_samples": 6135,
+    "mean_base_minus_early_rank": 1.79
   },
-  "newly_discovered_outside_base_top12": 1,
+  "newly_discovered_outside_base_top12": 4,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 6051,
-      "early_scored_avg_return_pct": -0.042,
-      "all_selected_avg_return_pct": -0.042,
-      "early_score_above_base_avg_return_pct": -0.058
+      "samples": 6063,
+      "early_scored_avg_return_pct": -0.041,
+      "all_selected_avg_return_pct": -0.041,
+      "early_score_above_base_avg_return_pct": -0.057
     },
     {
       "hours": 3,
-      "samples": 5655,
-      "early_scored_avg_return_pct": -0.242,
-      "all_selected_avg_return_pct": -0.242,
-      "early_score_above_base_avg_return_pct": -0.226
+      "samples": 5667,
+      "early_scored_avg_return_pct": -0.24,
+      "all_selected_avg_return_pct": -0.24,
+      "early_score_above_base_avg_return_pct": -0.223
     },
     {
       "hours": 6,
-      "samples": 5686,
+      "samples": 5698,
       "early_scored_avg_return_pct": -0.478,
       "all_selected_avg_return_pct": -0.478,
       "early_score_above_base_avg_return_pct": -0.504
     },
     {
       "hours": 24,
-      "samples": 5425,
-      "early_scored_avg_return_pct": -0.993,
-      "all_selected_avg_return_pct": -0.993,
-      "early_score_above_base_avg_return_pct": -0.94
+      "samples": 5437,
+      "early_scored_avg_return_pct": -0.991,
+      "all_selected_avg_return_pct": -0.991,
+      "early_score_above_base_avg_return_pct": -0.939
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 22865,
-    "positive": 9307,
-    "average_return_pct": -0.424
+    "evaluated": 22913,
+    "positive": 9328,
+    "average_return_pct": -0.423
   },
   "missed_breakout_examples": [
     {
@@ -148,12 +148,12 @@
       "next_scan_gain_pct": 58.83
     }
   ],
-  "unselected_gainers_5pct_observations": 1009,
-  "market_observations": 338352,
+  "unselected_gainers_5pct_observations": 1001,
+  "market_observations": 338968,
   "market_price_coverage": 616,
-  "feature_rows": 6291,
-  "snapshots": 6411,
-  "outcomes": 22865,
+  "feature_rows": 6303,
+  "snapshots": 6423,
+  "outcomes": 22913,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
