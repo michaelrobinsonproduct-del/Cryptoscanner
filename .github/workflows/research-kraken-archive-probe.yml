@@ -13,7 +13,7 @@ concurrency:
 jobs:
   bounded-archive-probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 4
     permissions:
       contents: read
     env:
@@ -28,3 +28,5 @@ jobs:
         run: python -m unittest discover -s research -p 'test_*.py' -v
       - name: Bounded 64 KiB archive range probe
         run: python research/probe_kraken_archive.py --part 0
+      - name: Five-part archive capacity and bounded range preflight (320 KiB maximum)
+        run: python research/preflight_kraken_archive.py
