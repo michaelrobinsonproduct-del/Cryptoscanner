@@ -1,0 +1,26 @@
+name: Isolated Full Kraken Archive SHA256 Verification (NOT YET ENABLED)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isolated-full-archive-verify
+  cancel-in-progress: false
+jobs:
+  verify-full-archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Checkout fixed research branch without credentials
+        uses: actions/checkout@v4
+        with:
+          ref: research-learning-program-20261027
+          persist-credentials: false
+      - name: Verify all offline research tests before any network acquisition
+        run: python -m unittest discover -s research -p 'test_*.py' -v
+      - name: Full archive stream and SHA256 verify only (no files, no extraction)
+        run: python research/acquire_kraken_archive.py
