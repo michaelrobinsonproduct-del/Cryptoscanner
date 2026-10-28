@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch1l-20261027",
-    "lease_expires_at": "2026-10-28T01:37:21.464Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "IN_PROGRESS"
+      "status": "BLOCKED_REMOTE_RUNNER_NOT_EXECUTED"
     },
     "2": {
       "status": "NOT_STARTED"
@@ -35,7 +35,7 @@
     }
   },
   "audit": {
-    "status": "BLOCKED_REMOTE_RUNNER_NOT_EXECUTED",
+    "status": "OFFLINE_PROBE_TESTS_PASSED_REMOTE_DISPATCH_BLOCKED",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -92,12 +92,17 @@
       "Kraken official 2026Q2 archive comprises five ~2GB parts, full combined SHA256 fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4; full download and extraction would exceed a small bounded sample and require separate capacity approval.",
       "Created research/probe_kraken_archive.py at 896e66787777d5e2ceafa041c96874e4414738b3: fixed Kraken host and part IDs 00-04, 12s timeout, 64KiB HTTP Range request, strict 206/content-range check, max 65537 bytes read, no disk writes, explicitly reports SHA and archive unverified.",
       "Created research/test_probe_kraken_archive.py at 9a98c71f94d2f85bbde7f50627a415c0a6a0349b with five offline fake-response cases; new tests not executed in this turn and no CI evidence.",
-      "No authorized remote runner execution or genuine archive bytes obtained, so no actual timestamps/pairs/gaps/outcomes audited. Seven prior exact-blob tests preserved as historical evidence, not rerun."
+      "No authorized remote runner execution or genuine archive bytes obtained, so no actual timestamps/pairs/gaps/outcomes audited. Seven prior exact-blob tests preserved as historical evidence, not rerun.",
+      "Batch 1L independently materialized exact committed research/probe_kraken_archive.py (Git blob 398cc57e60a4c42d9386927948d0e87da8c47da1) and research/test_probe_kraken_archive.py (Git blob cbfae0a50566aaa2fbb2665eab3a86ee9025a768), verified both with git hash-object.",
+      "Executed python -m unittest discover -v in isolated /mnt/data/cryptoscanner_1l: 5 tests passed, 0 failures, including 206 bounded response, invalid part, ignored Range, invalid Content-Range, truncated payload.",
+      "Prior 7 exact-blob fixture tests remain preserved as previously verified; not rerun during 1L. Distinct total previously/new verified fixture tests = 12.",
+      "Available GitHub connector offers workflow artifact read and job reruns but no workflow_dispatch or generic runner execution; existing .github/workflows/ci.yml has workflow_dispatch but cannot invoke via connected tool. No remote execution attempted.",
+      "Container raw.githubusercontent.com fetch failed DNS; no Kraken archive HTTP probe run against actual network and no bytes acquired. No CI evidence or archive data audit."
     ],
     "blockers": [
-      "Need authorized isolated network-enabled runner with permission to execute bounded research-only probe, such as GitHub Actions; current GitHub connector has no workflow dispatch action",
-      "No archive bytes or checksum-verified dataset acquired; do not treat a range probe as full archive verification",
-      "New bounded probe and five tests committed but not independently executed or CI verified; historical coverage still unknown"
+      "GitHub connector lacks workflow_dispatch/generic runner execution; user can manually trigger existing workflow via GitHub UI, but existing workflow does not run bounded archive probe",
+      "Need approved isolated network-enabled runner or verified detached data upload; no genuine Kraken archive bytes",
+      "Batch 1 acceptance requires actual historical coverage/provenance/outcome validation; cannot advance Batches 2–3"
     ]
   }
 }
