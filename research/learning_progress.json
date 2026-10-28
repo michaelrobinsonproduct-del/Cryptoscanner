@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch1m-20261027",
-    "lease_expires_at": "2026-10-28T01:38:04.208Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "IN_PROGRESS"
+      "status": "BLOCKED_REMOTE_RUNNER_NOT_EXECUTED"
     },
     "2": {
       "status": "NOT_STARTED"
@@ -35,7 +35,7 @@
     }
   },
   "audit": {
-    "status": "OFFLINE_PROBE_TESTS_PASSED_REMOTE_DISPATCH_BLOCKED",
+    "status": "BRANCH_ONLY_WORKFLOW_COMMITTED_REMOTE_DISPATCH_BLOCKED",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -97,12 +97,17 @@
       "Executed python -m unittest discover -v in isolated /mnt/data/cryptoscanner_1l: 5 tests passed, 0 failures, including 206 bounded response, invalid part, ignored Range, invalid Content-Range, truncated payload.",
       "Prior 7 exact-blob fixture tests remain preserved as previously verified; not rerun during 1L. Distinct total previously/new verified fixture tests = 12.",
       "Available GitHub connector offers workflow artifact read and job reruns but no workflow_dispatch or generic runner execution; existing .github/workflows/ci.yml has workflow_dispatch but cannot invoke via connected tool. No remote execution attempted.",
-      "Container raw.githubusercontent.com fetch failed DNS; no Kraken archive HTTP probe run against actual network and no bytes acquired. No CI evidence or archive data audit."
+      "Container raw.githubusercontent.com fetch failed DNS; no Kraken archive HTTP probe run against actual network and no bytes acquired. No CI evidence or archive data audit.",
+      "Batch 1M created .github/workflows/research-kraken-archive-probe.yml at 429c85c67010debefa6533b723b8bc5b55e2a27b on research-learning-program-20261027 only: workflow_dispatch, explicit research branch guard, contents:read, checkout persist-credentials:false, 3-minute job timeout, unittest research suite then bounded 64KiB part00 probe; no existing CI/default branch changed.",
+      "Locally verified exact Git blob hashes of committed probe_kraken_archive.py (398cc57e60a4c42d9386927948d0e87da8c47da1) and test_probe_kraken_archive.py (cbfae0a50566aaa2fbb2665eab3a86ee9025a768); ran 5 probe tests OK. Previous 7 fixture tests preserved but not rerun.",
+      "Parsed workflow-equivalent YAML structure locally with PyYAML; note PyYAML YAML 1.1 treats key 'on' as boolean True, so this is not an official GitHub Actions workflow validation.",
+      "GitHub workflow_dispatch UI generally requires workflow file to exist on default branch; branch-only workflow is not presently one-tap runnable under default-branch prohibition. GitHub connector has no workflow dispatch action; no remote run attempted.",
+      "No Kraken archive bytes acquired, no actual historical sample or checksum verified. Production unchanged."
     ],
     "blockers": [
-      "GitHub connector lacks workflow_dispatch/generic runner execution; user can manually trigger existing workflow via GitHub UI, but existing workflow does not run bounded archive probe",
-      "Need approved isolated network-enabled runner or verified detached data upload; no genuine Kraken archive bytes",
-      "Batch 1 acceptance requires actual historical coverage/provenance/outcome validation; cannot advance Batches 2–3"
+      "Branch-only workflow_dispatch is not normally visible/runnable from GitHub Actions UI until workflow is registered on default branch; default-branch changes explicitly forbidden",
+      "No remote execution and no actual historical dataset; full checksum and provenance remain unverified",
+      "Workflow syntax parsed locally but no actionlint or GitHub runner validation; Batch 1 cannot advance"
     ]
   }
 }
