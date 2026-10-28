@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch1n-20261027",
-    "lease_expires_at": "2026-10-28T01:39:41.271Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "IN_PROGRESS"
+      "status": "BLOCKED_AWAITING_WORKFLOW_DISPATCH"
     },
     "2": {
       "status": "NOT_STARTED"
@@ -35,7 +35,7 @@
     }
   },
   "audit": {
-    "status": "BRANCH_ONLY_WORKFLOW_COMMITTED_REMOTE_DISPATCH_BLOCKED",
+    "status": "WORKFLOW_REGISTERED_AWAITING_MANUAL_DISPATCH",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -102,12 +102,15 @@
       "Locally verified exact Git blob hashes of committed probe_kraken_archive.py (398cc57e60a4c42d9386927948d0e87da8c47da1) and test_probe_kraken_archive.py (cbfae0a50566aaa2fbb2665eab3a86ee9025a768); ran 5 probe tests OK. Previous 7 fixture tests preserved but not rerun.",
       "Parsed workflow-equivalent YAML structure locally with PyYAML; note PyYAML YAML 1.1 treats key 'on' as boolean True, so this is not an official GitHub Actions workflow validation.",
       "GitHub workflow_dispatch UI generally requires workflow file to exist on default branch; branch-only workflow is not presently one-tap runnable under default-branch prohibition. GitHub connector has no workflow dispatch action; no remote run attempted.",
-      "No Kraken archive bytes acquired, no actual historical sample or checksum verified. Production unchanged."
+      "No Kraken archive bytes acquired, no actual historical sample or checksum verified. Production unchanged.",
+      "Batch 1N user explicitly authorized safe default-branch change. Registered .github/workflows/research-kraken-archive-probe.yml on main at commit 11f61f2d71b50b6e134fb6b1de41250ca98990fb; workflow_dispatch only, contents:read, 3-minute timeout, checkout fixed research-learning-program-20261027 branch with persist-credentials:false, run offline tests then bounded 64KiB Kraken HTTP probe.",
+      "Default branch workflow registration solves GitHub Actions manual workflow visibility precondition, but GitHub connector has no workflow_dispatch action. No remote execution or logs verified. Workflow's actual runtime status must be checked after user manually runs it.",
+      "No existing CI workflow edited, no production deployment, scanner service, storage or scoring change. Existing 12 fixture test evidence preserved, not newly rerun in Batch 1N."
     ],
     "blockers": [
-      "Branch-only workflow_dispatch is not normally visible/runnable from GitHub Actions UI until workflow is registered on default branch; default-branch changes explicitly forbidden",
-      "No remote execution and no actual historical dataset; full checksum and provenance remain unverified",
-      "Workflow syntax parsed locally but no actionlint or GitHub runner validation; Batch 1 cannot advance"
+      "User must manually dispatch research-kraken-archive-probe.yml via GitHub Actions UI; connected GitHub tools cannot start new workflow runs",
+      "Need actual GitHub-hosted runner logs to verify network response and test suite before proceeding to source data acquisition",
+      "No real historical archive rows/checksum validation; Batch 1 remains blocked"
     ]
   }
 }
