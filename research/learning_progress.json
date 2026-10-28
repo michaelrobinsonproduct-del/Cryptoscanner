@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch1i-20261027",
-    "lease_expires_at": "2026-10-28T10:00:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "IN_PROGRESS"
+      "status": "BLOCKED_NEEDS_DATASET_OR_READONLY_EXPORT"
     },
     "2": {
       "status": "NOT_STARTED"
@@ -35,7 +35,7 @@
     }
   },
   "audit": {
-    "status": "BLOCKED_NEEDS_DETACHED_ARCHIVE_OR_MANIFEST",
+    "status": "BLOCKED_NEEDS_DATASET_OR_READONLY_EXPORT",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -77,12 +77,17 @@
       "Historical archive validation window in those files is 2025-10-04 through 2026-06-30, shorter than a full year; no actual earliest/latest dataset observation verified.",
       "Tried historical/output/research_training_manifest.json, research_training.ndjson, research.ndjson, manifest.json and historical/README.md on backup branch; all returned 404; cannot infer archive nonexistent elsewhere.",
       "Historical reconstruction tests and scripts are present, but no historical/output evidence available through inspected repository paths.",
-      "Seven previously verified exact-blob isolated fixture tests preserved; no new execution or CI claim in Batch 1H."
+      "Seven previously verified exact-blob isolated fixture tests preserved; no new execution or CI claim in Batch 1H.",
+      "Batch 1I inspected historical/backfill.py on research-batch1-backup-20261023: archive source is five Kraken-hosted multipart ZIP URLs Kraken_OHLCVT_Full_2026Q2.zip.part00..04 with hard-coded full archive SHA256 fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4; source download/reconstruction code only, not proof of successful fetch.",
+      "Backfill writes historical/output/research.ndjson, moves.ndjson and summary.json; historical/compact.py writes research_training.ndjson and research_training_manifest.json; verify_manifest.py verifies count/checksum. No publication/upload destination found in inspected scripts.",
+      "Four candidate .github/workflows/historical-backfill.yml, historical.yml, archive.yml and backfill.yml paths were absent on backup branch; this is not a comprehensive workflow inventory.",
+      "Actual archive output and manifest absent at inspected GitHub paths; no accessible independently verified dataset found. No archive download performed.",
+      "The hard-coded intended archive window 2025-10-04 through 2026-06-30 cannot satisfy a full-year requirement by itself. Seven prior exact-blob tests remain recorded; no tests newly executed in 1I."
     ],
     "blockers": [
-      "Need a consistent detached SQLite file or complete independently verified historical/output dataset plus manifest and checksums, delivered through an authorized read-only file/connector path",
-      "No accessible historical training artifact or manifest at inspected GitHub backup branch paths",
-      "Even declared historical backfill window is less than 1 year; actual per-asset coverage and outcome integrity remain unknown"
+      "Provide an existing verified historical/output/research_training.ndjson and research_training_manifest.json with source archive checksum/provenance, or a consistent detached SQLite backup via an authorized read-only connector/file upload",
+      "No accessible published artifacts or manifests found; source URLs and checksums are instructions for reconstruction, not verified data",
+      "Batch 1 remains unaccepted until actual per-asset history, feature provenance, duplicates, gaps and outcome labels audited"
     ]
   }
 }
