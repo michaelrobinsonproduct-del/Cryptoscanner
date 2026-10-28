@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch1h-20261027",
-    "lease_expires_at": "2026-10-28T09:00:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "IN_PROGRESS"
+      "status": "BLOCKED_READONLY_DATA_ACCESS"
     },
     "2": {
       "status": "NOT_STARTED"
@@ -35,7 +35,7 @@
     }
   },
   "audit": {
-    "status": "OFFLINE_TESTS_VERIFIED_HISTORY_ACCESS_BLOCKED",
+    "status": "BLOCKED_NEEDS_DETACHED_ARCHIVE_OR_MANIFEST",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -72,12 +72,17 @@
       "Ran python -m unittest discover -v locally against exact committed file contents: 7 tests passed (2 original audit + 5 new export safety/label tests); test command output confirmed OK.",
       "Five new tests cover source-byte preservation, duplicate/gap/missing-table output, no-overwrite, no same-source destination, corrupt SQLite rejection, missing evaluation observation, and incorrect return label.",
       "New fixture tests committed at 6cac652b1ffb3695eb4e1314f2061b2a2dcc4d05; GitHub combined status and PR-filtered workflow runs were empty. Independent local tests are verified, final commit CI not verified.",
-      "No independently verified detached production SQLite dataset available, so one-year coverage and historical learning eligibility remain unverified."
+      "No independently verified detached production SQLite dataset available, so one-year coverage and historical learning eligibility remain unverified.",
+      "Batch 1H inspected historical/compact.py, historical/verify_manifest.py and historical/test_backfill_contract.py on research-batch1-backup-20261023; code enforces UTC hourly training sample, duplicate rejection, checksums, and source-window checks, but is not itself historical data.",
+      "Historical archive validation window in those files is 2025-10-04 through 2026-06-30, shorter than a full year; no actual earliest/latest dataset observation verified.",
+      "Tried historical/output/research_training_manifest.json, research_training.ndjson, research.ndjson, manifest.json and historical/README.md on backup branch; all returned 404; cannot infer archive nonexistent elsewhere.",
+      "Historical reconstruction tests and scripts are present, but no historical/output evidence available through inspected repository paths.",
+      "Seven previously verified exact-blob isolated fixture tests preserved; no new execution or CI claim in Batch 1H."
     ],
     "blockers": [
-      "Consistent detached historical SQLite copy or independently validated equivalent archive unavailable",
-      "No final-commit GitHub CI (statuses/workflow runs empty); local exact-blob 7-test suite passes",
-      "Batch 1 acceptance requires actual historical coverage, feature provenance and outcome audits, not synthetic fixtures"
+      "Need a consistent detached SQLite file or complete independently verified historical/output dataset plus manifest and checksums, delivered through an authorized read-only file/connector path",
+      "No accessible historical training artifact or manifest at inspected GitHub backup branch paths",
+      "Even declared historical backfill window is less than 1 year; actual per-asset coverage and outcome integrity remain unknown"
     ]
   }
 }
