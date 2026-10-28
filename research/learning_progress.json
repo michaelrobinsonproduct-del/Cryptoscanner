@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch1u-20261027",
-    "lease_expires_at": "2026-10-28T02:34:52.604Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "IN_PROGRESS"
+      "status": "BLOCKED_AWAITING_FULL_ARCHIVE_RUN"
     },
     "2": {
       "status": "NOT_STARTED"
@@ -35,7 +35,7 @@
     }
   },
   "audit": {
-    "status": "BATCH_1T_AWAITING_FRESH_EXACT_CODE_TEST_RUN",
+    "status": "FULL_ARCHIVE_MANUAL_WORKFLOW_REGISTERED_AWAITING_DISPATCH",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -127,12 +127,15 @@
       "No production changes, no complete archive checksum verification, no historical observations extracted.",
       "Batch 1T: acquired and verified lease; retrieved exact committed research/acquire_kraken_archive.py blob 5cffe3a8973127acc5fc2dedc5194d7fa0d0555b and research/test_acquire_kraken_archive.py blob 8566566d4ade1721deedd35412308d8eb9c7c122; reviewed staged full workflow blob fdbba38edf54cae008de13a7aec39bdc54f1e62b.",
       "Existing bounded workflow on main runs python -m unittest discover -s research -p 'test_*.py' -v before bounded probes; fresh manual run will exercise exact committed expanded 30-test suite without downloading archive. No new run ID provided; cannot inspect new remote test logs or claim exact-code tests passed.",
-      "Full workflow stays staged only on research branch; not registered on main. No production changes, full archive download or SHA256 verification. Review noted request timeout is per network operation and total deadline checked between reads, not hard external kill; 40m job timeout is outer enforcement."
+      "Full workflow stays staged only on research branch; not registered on main. No production changes, full archive download or SHA256 verification. Review noted request timeout is per network operation and total deadline checked between reads, not hard external kill; 40m job timeout is outer enforcement.",
+      "Batch 1U: verified actual GitHub Actions run 40619714505, job 122590518272, checked out research commit 07c12fad2d5ccc8c021ac7ce9217ca1354390eb4, 30/30 exact-code offline tests passed; five bounded samples passed and resource capacity above thresholds.",
+      "Reviewed exact full verifier and staged manual workflow; registered separate manual-only .github/workflows/research-kraken-full-archive-verify.yml on main commit 1296dbc9e33ff903e1c82c234e6de7d0322b7d25; fetched and verified content after write.",
+      "Workflow has contents:read, persist-credentials:false, 40m job cap, 35m script deadline, 25GiB disk/2GiB memory gate, no file writes or extraction, SHA256 check. No dispatch performed; no full archive downloaded or verified; production untouched.",
+      "Safety caveat: network timeout is per urllib request and script deadline checked between reads, while GitHub job timeout provides outer bound. Full archive verifier does not persist data; a successful digest alone will not satisfy historical coverage/provenance audit."
     ],
     "blockers": [
-      "New GitHub Actions run of bounded research-kraken-archive-probe.yml required to verify expanded 30-test suite on exact committed research branch",
-      "Do not register full archive workflow on main until 30/30 remote test pass and any defects fixed",
-      "Full archive SHA256, historical coverage, outcomes and feature provenance unverified"
+      "Manual dispatch of newly registered full archive verification workflow and supply run URL to inspect actual logs; not yet run",
+      "Full archive combined SHA256, historical observations, outcomes, feature provenance and >=1 year coverage remain unverified"
     ]
   }
 }
