@@ -1,0 +1,34 @@
+name: Isolated Kraken Historical CSV Inventory (RESEARCH BRANCH ONLY)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isolated-kraken-csv-inventory
+  cancel-in-progress: false
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Checkout fixed research branch without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          ref: research-learning-program-20261027
+          persist-credentials: false
+      - name: Verify research fixture tests before downloading
+        run: python -m unittest discover -s research -p 'test_*.py' -v
+      - name: SHA256-verify temporary Kraken archive and inventory every 5-minute CSV
+        run: python research/inventory_kraken_archive.py --output research/output/kraken_archive_inventory.json
+      - name: Publish only bounded inventory JSON, never archive or CSV data
+        uses: actions/upload-artifact@v4
+        with:
+          name: kraken-verified-5m-inventory
+          path: research/output/kraken_archive_inventory.json
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 6
