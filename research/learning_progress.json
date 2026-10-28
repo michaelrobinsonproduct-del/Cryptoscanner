@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "scheduled-learning-batch1x-20261028",
-    "lease_expires_at": "2026-10-28T05:26:22.748Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "IN_PROGRESS",
+      "status": "BLOCKED_AWAITING_INVENTORY_MANUAL_RUN",
       "verified_archive": {
         "source": "Kraken OHLCVT Full 2026Q2 five-part archive",
         "run_id": 40619879587,
@@ -23,7 +23,14 @@
         "historical_data_validated": false,
         "artifact_count": 0
       },
-      "next": "Register manual-only inventory workflow on main only with authorized safe workflow registration, run 40-test gate, execute isolated archive CSV inventory, retrieve JSON artifact, audit actual source timestamps/pairs/gaps, and verify one-year/48h/provenance separately."
+      "next": "Manually run research-kraken-csv-inventory.yml on main, then inspect exact 40-test logs, official archive SHA, CSV inventory artifact and timestamp coverage. Do not progress to pattern discovery without real verified historical rows and provenance.",
+      "inventory_workflow": {
+        "registered_main_commit": "52bd8a09296ec4680c27bd8f11c0552c2fc921b5",
+        "workflow_blob_sha": "316eb13efc8b6c33377ba5f63354d08aa96365d1",
+        "pinned_research_commit": "a03297e20fc8912a24fd9b505170945ddce05012",
+        "dispatched": false,
+        "remote_40_tests_verified": false
+      }
     },
     "2": {
       "status": "NOT_STARTED"
@@ -48,7 +55,7 @@
     }
   },
   "audit": {
-    "status": "ARCHIVE_INVENTORY_CODE_LOCAL_TESTS_PASSED_REMOTE_CI_AND_DATA_PENDING",
+    "status": "INVENTORY_MANUAL_WORKFLOW_REGISTERED_AWAITING_40_TEST_AND_REAL_DATA",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -154,13 +161,16 @@
       "Inventory script downloads exactly 8,972,380,104 bytes to a temporary isolated ZIP, checks official full SHA256 before opening, validates ZIP path/encryption/size caps, scans every 5m CSV row and CRC, counts invalid/alignment/gap/adjacent-duplicate/out-of-order rows and earliest/latest observed timestamps, emits bounded JSON only. No raw CSV/archive published; temporary ZIP removed on normal exit; GitHub ephemeral runner handles hard job timeout.",
       "Staged .github/workflows/research-kraken-csv-inventory.yml on research branch ONLY commit a03297e20fc8912a24fd9b505170945ddce05012; manual-only, 60m job cap, read-only checkout, 40 research tests before network, artifact JSON max 10MiB and 7-day retention. NOT registered on main or dispatched; no actual archive inventory or dataset artifact exists yet.",
       "GitHub branch search confirmed research-learning-program-20261027; PR search returned no open PR with that head; compare main...research branch diverged (336 ahead, 19 behind). Final workflow commit a03297e20fc8912a24fd9b505170945ddce05012 fetched, GitHub combined statuses empty, PR-triggered workflow runs empty; neither endpoint verifies manual workflow CI.",
-      "Historical program acceptance remains 0/8. Full archive checksum was previously verified by run 40619879587, but no actual 5m CSV inventory, feature timestamps, forward outcomes or >=365-day coverage validated. No Railway/production changes."
+      "Historical program acceptance remains 0/8. Full archive checksum was previously verified by run 40619879587, but no actual 5m CSV inventory, feature timestamps, forward outcomes or >=365-day coverage validated. No Railway/production changes.",
+      "Batch 1X: confirmed isolated research branch exists, no open PR matching research head, prior full-archive run 40619879587 completed success, and main lacked inventory workflow before this run; shared cooperative lease acquired/verified.",
+      "Registered manual-only isolated inventory workflow on main, commit 52bd8a09296ec4680c27bd8f11c0552c2fc921b5; fetched and verified exact workflow blob 316eb13efc8b6c33377ba5f63354d08aa96365d1. Workflow uses contents:read, main-ref guard, no persisted credentials, immutable research code ref a03297e20fc8912a24fd9b505170945ddce05012, 60m job timeout, all research tests before network, JSON-only artifact max 10MiB retained 7d.",
+      "Exact pinned research code already had 10/10 local exact-blob inventory fixture tests; previous 30/30 remote research tests ran before inventory code was added. Expanded 40/40 remote suite has NOT run. GitHub combined statuses for pinned code and registration commit empty; PR-filtered workflow runs empty and cannot establish manual run state.",
+      "Inventory has NOT been manually dispatched; no new archive CSV inventory or historical row/date/gap evidence, no verified 48h labels, no production SQLite backup, no validated lift or patterns. No scanner, Railway, production writer, trading or scoring changes."
     ],
     "blockers": [
-      "New inventory workflow is staged only on research branch and cannot be manually dispatched from GitHub Actions UI until separately registered on main; no main change made under isolated-branch-only instruction.",
-      "Expanded 40-test suite requires fresh GitHub Actions run; local 10/10 exact-blob tests and prior 30/30 are separate evidence, not an integrated CI result.",
-      "Archive inventory has not run; no CSV counts/time bounds/gap audit artifact, no detached production SQLite backup or feature provenance; no actual historical dataset for research acceptance.",
-      "Kraken source archive window is under one year; verified 48h forward outcome labels, liquidity/feature provenance and full-year coverage require genuine additional data."
+      "Manually dispatch .github/workflows/research-kraken-csv-inventory.yml on main; it runs 40-test gate before isolated 8.97GB download. No workflow_dispatch connector action is available.",
+      "Provide new GitHub Actions run URL for actual 40/40 tests, full archive checksum, CSV inventory results and published JSON artifact; until then no historical dataset acceptance.",
+      "Kraken source archive period under 365 days; genuine additional history, 48h forward outcomes, feature/liquidity provenance, and detached production SQLite backup still unverified."
     ]
   }
 }
