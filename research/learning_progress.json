@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch1b-20261027",
-    "lease_expires_at": "2026-10-28T03:00:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "IN_PROGRESS"
+      "status": "BLOCKED_READONLY_DATA_ACCESS"
     },
     "2": {
       "status": "NOT_STARTED"
@@ -35,7 +35,7 @@
     }
   },
   "audit": {
-    "status": "PARTIAL_RUNTIME_EVIDENCE",
+    "status": "BLOCKED_READONLY_DATA_ACCESS",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -47,13 +47,15 @@
       "Production logs show 1006 unselected >=5% next-observation gains over recent 7-day window, but labels use next sampled price and require anomaly/market-quality validation.",
       "Shadow learner selects momentum/volume weights using 36 trials and 1h candidate outcomes; market-miss learner uses 36 three-feature threshold trials with 1h >=5% labels; no demonstrated 30% 48h pattern search.",
       "Reported 1h market-miss holdout recall 0.0345, precision 0.0019, 1 TP, 513 FP, 28 FN at 00:45Z; no promotion.",
-      "No authorized read-only SQL/volume snapshot action was found in Railway connector; only runtime emitted diagnostics inspected."
+      "No authorized read-only SQL/volume snapshot action was found in Railway connector; only runtime emitted diagnostics inspected.",
+      "Batch 1B verified source history.py retains only 1/3/6/24h candidate outcomes and removes non-hourly full-market observations older than 24h; cannot reconstruct historical 48h intrahour maxima from retained observations.",
+      "historical_precursor.py explicitly marks relative full-market volume, cross-venue flow, and open interest unavailable; precursor uses latest scan only, not a year-long validated precursor training set."
     ],
     "blockers": [
-      "Direct read-only SQL/SQLite audit of production volume unavailable through connected Railway actions",
-      "No verified one-year raw historical data inventory or provenance",
-      "Independent isolated test execution and final-commit CI unavailable; commit checks and workflow runs absent",
-      "Cross-worker exclusion remains cooperative until scheduled task confirmed honoring lease"
+      "No authorized production-volume read-only SQLite query or export action available in Railway connector; Railway Automations is not enabled",
+      "One-year timestamp range, per-pair coverage, duplicates, missing periods and source provenance cannot be independently audited from current runtime summary",
+      "No independent isolated tests or final-commit CI verification; no workflow runs reported",
+      "Scheduled/manual cooperative lease compliance unverified"
     ]
   }
 }
