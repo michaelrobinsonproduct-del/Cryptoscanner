@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch1k-20261027",
-    "lease_expires_at": "2026-10-28T01:36:15.347Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "IN_PROGRESS"
+      "status": "BLOCKED_REMOTE_RUNNER_NOT_EXECUTED"
     },
     "2": {
       "status": "NOT_STARTED"
@@ -35,7 +35,7 @@
     }
   },
   "audit": {
-    "status": "BLOCKED_ISOLATED_ARCHIVE_DOWNLOAD_DNS",
+    "status": "BLOCKED_REMOTE_RUNNER_NOT_EXECUTED",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -87,12 +87,17 @@
       "Kraken says five parts are approximately 2 GB each, implying approximately 10 GB compressed plus assembly/extraction overhead. Isolated container df reported ~30 GB available; disk may be tight for full assembly plus extraction and processing.",
       "Isolated container HTTPS HEAD to assets.kraken.com failed DNS resolution; support.kraken.com and raw.githubusercontent.com also failed. No archive bytes downloaded; no SHA256 validation, actual pair/time/gap audit or reconstructed sample performed.",
       "Public archive OHLCVT omits no-trade intervals; apparent missing candles require distinguishing illiquidity from collection failure. Public OHLCVT lacks independent order book/flow features.",
-      "Seven exact-blob fixture tests previously verified in Batch 1G; not rerun in 1J. No production operations performed."
+      "Seven exact-blob fixture tests previously verified in Batch 1G; not rerun in 1J. No production operations performed.",
+      "Batch 1K identified existing GitHub Actions workflow .github/workflows/ci.yml with workflow_dispatch and ubuntu-latest runner; an isolated GitHub-hosted runner is a plausible network-enabled research path, but no workflow run or network connectivity was executed/verified.",
+      "Kraken official 2026Q2 archive comprises five ~2GB parts, full combined SHA256 fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4; full download and extraction would exceed a small bounded sample and require separate capacity approval.",
+      "Created research/probe_kraken_archive.py at 896e66787777d5e2ceafa041c96874e4414738b3: fixed Kraken host and part IDs 00-04, 12s timeout, 64KiB HTTP Range request, strict 206/content-range check, max 65537 bytes read, no disk writes, explicitly reports SHA and archive unverified.",
+      "Created research/test_probe_kraken_archive.py at 9a98c71f94d2f85bbde7f50627a415c0a6a0349b with five offline fake-response cases; new tests not executed in this turn and no CI evidence.",
+      "No authorized remote runner execution or genuine archive bytes obtained, so no actual timestamps/pairs/gaps/outcomes audited. Seven prior exact-blob tests preserved as historical evidence, not rerun."
     ],
     "blockers": [
-      "Isolated container cannot resolve external archive host; need authorized external download-capable isolated runner or a user-supplied checksum-verified archive/sample",
-      "Full archive ~10 GB compressed plus substantial temporary assembly and extraction space; size-bound streaming/range retrieval and independent SHA validation needed",
-      "No real archive rows or detached SQLite acquired; Batch 1 acceptance and Batches 2–3 blocked"
+      "Need authorized isolated network-enabled runner with permission to execute bounded research-only probe, such as GitHub Actions; current GitHub connector has no workflow dispatch action",
+      "No archive bytes or checksum-verified dataset acquired; do not treat a range probe as full archive verification",
+      "New bounded probe and five tests committed but not independently executed or CI verified; historical coverage still unknown"
     ]
   }
 }
