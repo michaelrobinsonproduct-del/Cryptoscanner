@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch1f-20261027",
-    "lease_expires_at": "2026-10-28T07:00:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "IN_PROGRESS"
+      "status": "BLOCKED_READONLY_DATA_ACCESS"
     },
     "2": {
       "status": "NOT_STARTED"
@@ -35,7 +35,7 @@
     }
   },
   "audit": {
-    "status": "BLOCKED_NEEDS_READONLY_S3_OBJECT_ACCESS",
+    "status": "BLOCKED_BACKUP_UNAVAILABLE_OFFLINE_EXPORT_PREPARED",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -63,13 +63,17 @@
       "Batch 1E verified Railway bucket kraken-shadow-reports S3-compatible endpoint and bucket metadata exist, but OAuth connector explicitly redacts access key and secret; cannot enumerate objects or read SQLite backup with available connector actions.",
       "Existing Railway tools provide bucket metadata/credentials details but no read-only bucket list-objects or get-object action; no backup contents inspected.",
       "Required safe path: authorized read-only S3 ListBucket/GetObject capability scoped to kraken-shadow-reports, followed by detached verified consistent SQLite backup; if none, authorized SQLite online-backup/export from production by owner under separately approved operational procedure. Neither performed.",
-      "Exact committed audit tests remain without independently verified execution; no historical coverage claim made."
+      "Exact committed audit tests remain without independently verified execution; no historical coverage claim made.",
+      "Batch 1F GitHub branch search found research-batch1-backup-20261023, research-batch2-20261024, research-batch64-20261022, rebuild-history, simple-history; branch names alone do not establish presence of detached SQLite backup.",
+      "No accessible consistent SQLite archive verified in inspected branch paths; research/backup_manifest.json not found in tested backup/research branches.",
+      "Created research/export_detached_history.py at commit 1d3b5ff063f36be5eaed1f2c8824f30f0c509bad: offline-only metadata audit export from operator-supplied detached consistent SQLite database, with exclusive-create output and integrity gate; does not connect to or alter production.",
+      "Offline exporter not executed against a real backup; no independent committed-code tests were run this invocation."
     ],
     "blockers": [
-      "Need authorized read-only S3 object listing and retrieval on existing kraken-shadow-reports bucket; connector OAuth redacts credentials and exposes no object API",
-      "If bucket lacks a consistent SQLite backup, require separately authorized non-disruptive SQLite online backup/export; do not execute without approved path",
-      "Exact committed-code tests and final-commit CI remain unverified",
-      "No verified year-long historical coverage, provenance, gaps, duplicates, or labels"
+      "No accessible consistent detached production SQLite archive or validated provenance; branch names are not backup evidence",
+      "Offline exporter requires operator-supplied verified detached SQLite copy; Railway OAuth S3 object listing/download unavailable",
+      "Exact committed audit/export tests and final-commit CI unverified",
+      "Cannot independently audit historical coverage or promote Batch 1"
     ]
   }
 }
