@@ -2,32 +2,32 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 6339,
-      "evaluated": 6063,
-      "coverage_pct": 95.6,
+      "matured_snapshots": 6351,
+      "evaluated": 6075,
+      "coverage_pct": 95.7,
       "unresolved": 276,
       "no_observation_in_window": 276
     },
     {
       "hours": 3,
-      "matured_snapshots": 6315,
-      "evaluated": 5607,
+      "matured_snapshots": 6327,
+      "evaluated": 5619,
       "coverage_pct": 88.8,
       "unresolved": 708,
       "no_observation_in_window": 708
     },
     {
       "hours": 6,
-      "matured_snapshots": 6291,
-      "evaluated": 5638,
+      "matured_snapshots": 6303,
+      "evaluated": 5650,
       "coverage_pct": 89.6,
       "unresolved": 653,
       "no_observation_in_window": 653
     },
     {
       "hours": 24,
-      "matured_snapshots": 6051,
-      "evaluated": 5377,
+      "matured_snapshots": 6063,
+      "evaluated": 5389,
       "coverage_pct": 88.9,
       "unresolved": 674,
       "no_observation_in_window": 674
@@ -36,65 +36,65 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 6063,
-      "average_delay_hours": 0.432
+      "samples": 6075,
+      "average_delay_hours": 0.433
     },
     {
       "hours": 3,
-      "samples": 5607,
-      "average_delay_hours": 0.358
+      "samples": 5619,
+      "average_delay_hours": 0.359
     },
     {
       "hours": 6,
-      "samples": 5638,
-      "average_delay_hours": 0.361
+      "samples": 5650,
+      "average_delay_hours": 0.36
     },
     {
       "hours": 24,
-      "samples": 5377,
+      "samples": 5389,
       "average_delay_hours": 0.354
     }
   ],
   "unresolved_1h_snapshots": 276,
   "rank_comparison": {
-    "historical_ranked_samples": 6075,
+    "historical_ranked_samples": 6087,
     "mean_base_minus_early_rank": 1.79
   },
   "newly_discovered_outside_base_top12": 2,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 6015,
+      "samples": 6027,
       "early_scored_avg_return_pct": -0.039,
       "all_selected_avg_return_pct": -0.039,
-      "early_score_above_base_avg_return_pct": -0.054
+      "early_score_above_base_avg_return_pct": -0.055
     },
     {
       "hours": 3,
-      "samples": 5607,
-      "early_scored_avg_return_pct": -0.241,
-      "all_selected_avg_return_pct": -0.241,
-      "early_score_above_base_avg_return_pct": -0.226
+      "samples": 5619,
+      "early_scored_avg_return_pct": -0.238,
+      "all_selected_avg_return_pct": -0.238,
+      "early_score_above_base_avg_return_pct": -0.223
     },
     {
       "hours": 6,
-      "samples": 5638,
-      "early_scored_avg_return_pct": -0.48,
-      "all_selected_avg_return_pct": -0.48,
-      "early_score_above_base_avg_return_pct": -0.509
+      "samples": 5650,
+      "early_scored_avg_return_pct": -0.476,
+      "all_selected_avg_return_pct": -0.476,
+      "early_score_above_base_avg_return_pct": -0.504
     },
     {
       "hours": 24,
-      "samples": 5377,
+      "samples": 5389,
       "early_scored_avg_return_pct": -1.001,
       "all_selected_avg_return_pct": -1.001,
-      "early_score_above_base_avg_return_pct": -0.963
+      "early_score_above_base_avg_return_pct": -0.958
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 22685,
-    "positive": 9251,
-    "average_return_pct": -0.425
+    "evaluated": 22733,
+    "positive": 9278,
+    "average_return_pct": -0.423
   },
   "missed_breakout_examples": [
     {
@@ -148,12 +148,12 @@
       "next_scan_gain_pct": 56.52
     }
   ],
-  "unselected_gainers_5pct_observations": 1023,
-  "market_observations": 335888,
+  "unselected_gainers_5pct_observations": 1014,
+  "market_observations": 336504,
   "market_price_coverage": 616,
-  "feature_rows": 6243,
-  "snapshots": 6363,
-  "outcomes": 22685,
+  "feature_rows": 6255,
+  "snapshots": 6375,
+  "outcomes": 22733,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
