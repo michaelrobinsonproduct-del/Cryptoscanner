@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch1q-20261027",
-    "lease_expires_at": "2026-10-28T02:27:24.447Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "IN_PROGRESS"
+      "status": "BLOCKED_AWAITING_PREFLIGHT_RUN"
     },
     "2": {
       "status": "NOT_STARTED"
@@ -35,7 +35,7 @@
     }
   },
   "audit": {
-    "status": "BLOCKED_NEEDS_GITHUB_ACTIONS_RUN_URL",
+    "status": "BOUNDED_ACQUISITION_PREFLIGHT_COMMITTED_AWAITING_RUN",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -110,11 +110,17 @@
       "GitHub connector fetch_commit_workflow_runs for registration commit 11f61f2d71b50b6e134fb6b1de41250ca98990fb returned workflow_runs: []; this endpoint filters to PR-triggered runs and cannot establish absence of workflow_dispatch runs. Connector lacks general workflow-run listing. No run ID or logs obtained.",
       "No verified remote job steps, test logs, archive HTTP response or downloaded bytes. No historical sample, SHA256 verification or dataset acceptance. Prior offline fixture tests preserved; no production changes.",
       "Batch 1P: User supplied no GitHub Actions run URL or numeric run ID in current conversation. Existing GitHub connector lacks general workflow-run listing/dispatch, so no specific job steps or logs could be inspected. Avoided repeating exhausted searches.",
-      "No Kraken HTTP response or historical source bytes verified, no new tests executed, no production changes. Prior 12 distinct fixture test results preserved as historical evidence."
+      "No Kraken HTTP response or historical source bytes verified, no new tests executed, no production changes. Prior 12 distinct fixture test results preserved as historical evidence.",
+      "Batch 1Q grounded in verified GitHub Actions run 40618943412, job 122587964010: exact runner logs show 12/12 offline tests passed and real HTTP 206 bytes 0-65535/2097152000, 65536 bytes part00; sha256_verified false.",
+      "Created research/preflight_kraken_archive.py commit 27a7f2e089456528bfd4bdbd6d3c3c6bb1089f53: five 64KiB range samples, 320KiB cap, min 20GiB disk and 2GiB memory, per-request 12s, script 90s, range status and size checks, SHA256 of each sample only, no archive file writes.",
+      "Created research/test_preflight_kraken_archive.py commit de6a1fa61918ba73439a8d9bdb7a87dfdaa723b6 with eight new fixture tests, not yet executed. Updated manually dispatched main workflow commit 421b00f1534b7e776baff477ff3e0a03b0cb0362 to run research tests and bounded preflight with 4m job timeout; no existing CI modified.",
+      "The 20GiB free disk preflight may fail on GitHub-hosted runner; failure would be an intentional capacity gate and should not be bypassed. No full archive downloaded, no complete archive SHA256 verified, no historical observations acquired.",
+      "No production deployment, restart, volume modification, scoring promotion or trading. New code/workflow not independently run yet."
     ],
     "blockers": [
-      "User must provide actual run URL from https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/workflows/research-kraken-archive-probe.yml or manually start workflow and then provide URL",
-      "No remote test logs or HTTP response evidence; no verified historical archive dataset"
+      "Need manual workflow run of updated research-kraken-archive-probe.yml and run ID to verify 20 tests and actual capacity/range responses",
+      "Full archive SHA256, historical data coverage and provenance remain unverified; 320KiB samples are not a dataset",
+      "Do not relax 20GiB/2GiB resource gates to force GitHub-hosted runner success"
     ]
   }
 }
