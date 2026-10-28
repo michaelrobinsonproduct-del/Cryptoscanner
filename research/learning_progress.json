@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch1t-20261027",
-    "lease_expires_at": "2026-10-28T02:32:02.216Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "IN_PROGRESS"
+      "status": "BLOCKED_PENDING_EXACT_CODE_TESTS"
     },
     "2": {
       "status": "NOT_STARTED"
@@ -35,7 +35,7 @@
     }
   },
   "audit": {
-    "status": "FULL_ARCHIVE_STREAM_VERIFIER_STAGED_NOT_ENABLED",
+    "status": "BATCH_1T_AWAITING_FRESH_EXACT_CODE_TEST_RUN",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -124,12 +124,15 @@
       "Created research/acquire_kraken_archive.py (commit 2cd04be92e85832a00226f18e40261ea45f1fac2): streaming full SHA256 verification, no archive files or extraction, 25GiB disk/2GiB memory preflight, 35m deadline, 1MiB buffers, HTTP 200/Content-Length/identity checks, strict byte caps, fail closed.",
       "Created research/test_acquire_kraken_archive.py (commit 16cd969217278513f989ef99fb77246ee5374643) with 10 tests; an equivalent local implementation passed 10/10 tests, but exact committed GitHub files have NOT yet been executed or independently verified.",
       "Staged .github/workflows/research-kraken-full-archive-verify.yml ONLY on research branch (commit 568540071dfc76f1315bdc3646e4e36850acbee2), 40m timeout, read-only checkout, tests before streaming. NOT registered on default main; full download NOT enabled or executed.",
-      "No production changes, no complete archive checksum verification, no historical observations extracted."
+      "No production changes, no complete archive checksum verification, no historical observations extracted.",
+      "Batch 1T: acquired and verified lease; retrieved exact committed research/acquire_kraken_archive.py blob 5cffe3a8973127acc5fc2dedc5194d7fa0d0555b and research/test_acquire_kraken_archive.py blob 8566566d4ade1721deedd35412308d8eb9c7c122; reviewed staged full workflow blob fdbba38edf54cae008de13a7aec39bdc54f1e62b.",
+      "Existing bounded workflow on main runs python -m unittest discover -s research -p 'test_*.py' -v before bounded probes; fresh manual run will exercise exact committed expanded 30-test suite without downloading archive. No new run ID provided; cannot inspect new remote test logs or claim exact-code tests passed.",
+      "Full workflow stays staged only on research branch; not registered on main. No production changes, full archive download or SHA256 verification. Review noted request timeout is per network operation and total deadline checked between reads, not hard external kill; 40m job timeout is outer enforcement."
     ],
     "blockers": [
-      "Run exact committed research code/tests on isolated GitHub Actions runner before registering full-download workflow on main",
-      "Explicit safety review and authorized enabling of full ~8.97GB streamed download, with strict 40m job cap and cleanup, after tests pass",
-      "Full archive SHA256 and historical coverage/provenance unverified"
+      "New GitHub Actions run of bounded research-kraken-archive-probe.yml required to verify expanded 30-test suite on exact committed research branch",
+      "Do not register full archive workflow on main until 30/30 remote test pass and any defects fixed",
+      "Full archive SHA256, historical coverage, outcomes and feature provenance unverified"
     ]
   }
 }
