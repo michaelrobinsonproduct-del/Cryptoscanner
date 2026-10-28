@@ -26,8 +26,8 @@
     },
     {
       "hours": 24,
-      "matured_snapshots": 5907,
-      "evaluated": 5233,
+      "matured_snapshots": 5919,
+      "evaluated": 5245,
       "coverage_pct": 88.6,
       "unresolved": 674,
       "no_observation_in_window": 674
@@ -51,16 +51,16 @@
     },
     {
       "hours": 24,
-      "samples": 5233,
-      "average_delay_hours": 0.351
+      "samples": 5245,
+      "average_delay_hours": 0.35
     }
   ],
   "unresolved_1h_snapshots": 264,
   "rank_comparison": {
-    "historical_ranked_samples": 5931,
+    "historical_ranked_samples": 5943,
     "mean_base_minus_early_rank": 1.75
   },
-  "newly_discovered_outside_base_top12": 2,
+  "newly_discovered_outside_base_top12": 3,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
@@ -85,23 +85,18 @@
     },
     {
       "hours": 24,
-      "samples": 5233,
-      "early_scored_avg_return_pct": -1.065,
-      "all_selected_avg_return_pct": -1.065,
-      "early_score_above_base_avg_return_pct": -1.012
+      "samples": 5245,
+      "early_scored_avg_return_pct": -1.062,
+      "all_selected_avg_return_pct": -1.062,
+      "early_score_above_base_avg_return_pct": -1.008
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 22133,
-    "positive": 8941,
+    "evaluated": 22145,
+    "positive": 8948,
     "average_return_pct": -0.448
   },
   "missed_breakout_examples": [
-    {
-      "pair": "ALTHEAUSD",
-      "observed_at": "2026-10-20T23:53:45.454931+00:00",
-      "next_scan_gain_pct": 253.52
-    },
     {
       "pair": "FORESTUSD",
       "observed_at": "2026-10-23T17:58:40.514081+00:00",
@@ -146,14 +141,19 @@
       "pair": "KEEPUSD",
       "observed_at": "2026-10-24T23:50:41.029185+00:00",
       "next_scan_gain_pct": 58.83
+    },
+    {
+      "pair": "BMTUSD",
+      "observed_at": "2026-10-24T02:25:10.001888+00:00",
+      "next_scan_gain_pct": 56.52
     }
   ],
-  "unselected_gainers_5pct_observations": 1058,
-  "market_observations": 328498,
+  "unselected_gainers_5pct_observations": 1054,
+  "market_observations": 329113,
   "market_price_coverage": 615,
-  "feature_rows": 6099,
-  "snapshots": 6219,
-  "outcomes": 22133,
+  "feature_rows": 6111,
+  "snapshots": 6231,
+  "outcomes": 22145,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
