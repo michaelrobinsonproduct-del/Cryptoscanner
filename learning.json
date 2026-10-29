@@ -2,32 +2,32 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 6547,
-      "evaluated": 6247,
+      "matured_snapshots": 6555,
+      "evaluated": 6255,
       "coverage_pct": 95.4,
       "unresolved": 300,
       "no_observation_in_window": 300
     },
     {
       "hours": 3,
-      "matured_snapshots": 6531,
-      "evaluated": 5811,
+      "matured_snapshots": 6543,
+      "evaluated": 5823,
       "coverage_pct": 89.0,
       "unresolved": 720,
       "no_observation_in_window": 720
     },
     {
       "hours": 6,
-      "matured_snapshots": 6495,
-      "evaluated": 5830,
+      "matured_snapshots": 6507,
+      "evaluated": 5842,
       "coverage_pct": 89.8,
       "unresolved": 665,
       "no_observation_in_window": 665
     },
     {
       "hours": 24,
-      "matured_snapshots": 6279,
-      "evaluated": 5605,
+      "matured_snapshots": 6291,
+      "evaluated": 5617,
       "coverage_pct": 89.3,
       "unresolved": 674,
       "no_observation_in_window": 674
@@ -36,65 +36,65 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 6247,
+      "samples": 6255,
       "average_delay_hours": 0.44
     },
     {
       "hours": 3,
-      "samples": 5811,
+      "samples": 5823,
       "average_delay_hours": 0.367
     },
     {
       "hours": 6,
-      "samples": 5830,
+      "samples": 5842,
       "average_delay_hours": 0.358
     },
     {
       "hours": 24,
-      "samples": 5605,
-      "average_delay_hours": 0.353
+      "samples": 5617,
+      "average_delay_hours": 0.352
     }
   ],
   "unresolved_1h_snapshots": 300,
   "rank_comparison": {
-    "historical_ranked_samples": 6267,
+    "historical_ranked_samples": 6271,
     "mean_base_minus_early_rank": 1.78
   },
   "newly_discovered_outside_base_top12": 0,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 6199,
+      "samples": 6207,
       "early_scored_avg_return_pct": -0.057,
       "all_selected_avg_return_pct": -0.057,
-      "early_score_above_base_avg_return_pct": -0.072
+      "early_score_above_base_avg_return_pct": -0.071
     },
     {
       "hours": 3,
-      "samples": 5811,
-      "early_scored_avg_return_pct": -0.249,
-      "all_selected_avg_return_pct": -0.249,
-      "early_score_above_base_avg_return_pct": -0.23
+      "samples": 5823,
+      "early_scored_avg_return_pct": -0.256,
+      "all_selected_avg_return_pct": -0.256,
+      "early_score_above_base_avg_return_pct": -0.237
     },
     {
       "hours": 6,
-      "samples": 5830,
-      "early_scored_avg_return_pct": -0.484,
-      "all_selected_avg_return_pct": -0.484,
-      "early_score_above_base_avg_return_pct": -0.51
+      "samples": 5842,
+      "early_scored_avg_return_pct": -0.491,
+      "all_selected_avg_return_pct": -0.491,
+      "early_score_above_base_avg_return_pct": -0.511
     },
     {
       "hours": 24,
-      "samples": 5605,
-      "early_scored_avg_return_pct": -1.006,
-      "all_selected_avg_return_pct": -1.006,
-      "early_score_above_base_avg_return_pct": -0.957
+      "samples": 5617,
+      "early_scored_avg_return_pct": -1.011,
+      "all_selected_avg_return_pct": -1.011,
+      "early_score_above_base_avg_return_pct": -0.962
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 23493,
-    "positive": 9558,
-    "average_return_pct": -0.435
+    "evaluated": 23537,
+    "positive": 9564,
+    "average_return_pct": -0.44
   },
   "missed_breakout_examples": [
     {
@@ -148,12 +148,12 @@
       "next_scan_gain_pct": 61.37
     }
   ],
-  "unselected_gainers_5pct_observations": 978,
-  "market_observations": 346975,
+  "unselected_gainers_5pct_observations": 979,
+  "market_observations": 347591,
   "market_price_coverage": 616,
-  "feature_rows": 6435,
-  "snapshots": 6555,
-  "outcomes": 23493,
+  "feature_rows": 6439,
+  "snapshots": 6559,
+  "outcomes": 23537,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
