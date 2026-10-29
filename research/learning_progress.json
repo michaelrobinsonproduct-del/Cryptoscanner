@@ -4,13 +4,13 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-learning-20261029-inventory-reconstruction",
-    "lease_expires_at": "2026-10-29T05:15:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
-      "status": "BLOCKED_AWAITING_INVENTORY_MANUAL_RUN",
+      "status": "INVENTORY_VERIFIED_RECONSTRUCTION_BLOCKED",
       "verified_archive": {
         "source": "Kraken OHLCVT Full 2026Q2 five-part archive",
         "run_id": 40619879587,
@@ -23,13 +23,36 @@
         "historical_data_validated": false,
         "artifact_count": 0
       },
-      "next": "Manually run research-kraken-csv-inventory.yml on main, then inspect exact 40-test logs, official archive SHA, CSV inventory artifact and timestamp coverage. Do not progress to pattern discovery without real verified historical rows and provenance.",
+      "next": "Validate pair-level continuous usable coverage, missing-candle semantics and point-in-time feature provenance; develop isolated fixture-tested 1/6/24/48h forward label reconstruction. Do not claim full-year eligibility from file spans.",
       "inventory_workflow": {
         "registered_main_commit": "52bd8a09296ec4680c27bd8f11c0552c2fc921b5",
         "workflow_blob_sha": "316eb13efc8b6c33377ba5f63354d08aa96365d1",
         "pinned_research_commit": "a03297e20fc8912a24fd9b505170945ddce05012",
         "dispatched": false,
         "remote_40_tests_verified": false
+      },
+      "inventory": {
+        "run_id": 40814726443,
+        "job_id": 123253033515,
+        "artifact_id": 12871991601,
+        "artifact_digest": "sha256:0f7477287adbaa2b2feb9b91734260a6c1d8ac84c2948d149760d6eda08532f1",
+        "pinned_research_commit": "a03297e20fc8912a24fd9b505170945ddce05012",
+        "tests_passed": 40,
+        "archive_sha256_verified": true,
+        "archive_bytes": 8972380104,
+        "csv_members": 1713,
+        "csv_rows": 141059866,
+        "earliest_utc": "2013-09-10T23:45:00Z",
+        "latest_utc": "2026-06-30T23:55:00Z",
+        "files_with_span_at_least_365_days": 1128,
+        "gap_intervals": 46898137,
+        "invalid_rows": 0,
+        "adjacent_duplicates": 0,
+        "out_of_order_rows": 0,
+        "crc_checked_members": 1713,
+        "point_in_time_features_validated": false,
+        "forward_outcomes_validated": false,
+        "full_year_training_coverage_validated": false
       }
     },
     "2": {
@@ -55,7 +78,7 @@
     }
   },
   "audit": {
-    "status": "INVENTORY_MANUAL_WORKFLOW_REGISTERED_AWAITING_40_TEST_AND_REAL_DATA",
+    "status": "REAL_ARCHIVE_INVENTORY_VERIFIED_RECONSTRUCTION_PENDING",
     "verified_source_branch": "manual-scan-isolation-20261015",
     "findings": [
       "history.py retains candidate snapshots and outcome returns at 1,3,6,24 hours; not yet validated against production database",
@@ -165,12 +188,13 @@
       "Batch 1X: confirmed isolated research branch exists, no open PR matching research head, prior full-archive run 40619879587 completed success, and main lacked inventory workflow before this run; shared cooperative lease acquired/verified.",
       "Registered manual-only isolated inventory workflow on main, commit 52bd8a09296ec4680c27bd8f11c0552c2fc921b5; fetched and verified exact workflow blob 316eb13efc8b6c33377ba5f63354d08aa96365d1. Workflow uses contents:read, main-ref guard, no persisted credentials, immutable research code ref a03297e20fc8912a24fd9b505170945ddce05012, 60m job timeout, all research tests before network, JSON-only artifact max 10MiB retained 7d.",
       "Exact pinned research code already had 10/10 local exact-blob inventory fixture tests; previous 30/30 remote research tests ran before inventory code was added. Expanded 40/40 remote suite has NOT run. GitHub combined statuses for pinned code and registration commit empty; PR-filtered workflow runs empty and cannot establish manual run state.",
-      "Inventory has NOT been manually dispatched; no new archive CSV inventory or historical row/date/gap evidence, no verified 48h labels, no production SQLite backup, no validated lift or patterns. No scanner, Railway, production writer, trading or scoring changes."
+      "Inventory has NOT been manually dispatched; no new archive CSV inventory or historical row/date/gap evidence, no verified 48h labels, no production SQLite backup, no validated lift or patterns. No scanner, Railway, production writer, trading or scoring changes.",
+      "Batch 1Y: GitHub Actions run 40814726443 job 123253033515 completed success; exact pinned research commit a03297e20fc8912a24fd9b505170945ddce05012 passed 40/40 tests; official 8,972,380,104-byte SHA verified; artifact 12871991601 digest sha256:0f7477287adbaa2b2feb9b91734260a6c1d8ac84c2948d149760d6eda08532f1 downloaded and JSON inspected: 1,713 CRC-checked 5m CSV files, 141,059,866 rows, earliest 2013-09-10T23:45Z, latest 2026-06-30T23:55Z, 1,128 files with >=365d endpoint span, 46,898,137 missing 5m intervals, 0 invalid/adjacent-duplicate/out-of-order rows. File spans do not establish full-year training eligibility. No verified point-in-time features or forward outcomes."
     ],
     "blockers": [
-      "Manually dispatch .github/workflows/research-kraken-csv-inventory.yml on main; it runs 40-test gate before isolated 8.97GB download. No workflow_dispatch connector action is available.",
-      "Provide new GitHub Actions run URL for actual 40/40 tests, full archive checksum, CSV inventory results and published JSON artifact; until then no historical dataset acceptance.",
-      "Kraken source archive period under 365 days; genuine additional history, 48h forward outcomes, feature/liquidity provenance, and detached production SQLite backup still unverified."
+      "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
+      "Missing 5-minute intervals may reflect no trades; label reconstruction must avoid imputing nonexistent prices or leakage and enforce horizon maturity.",
+      "Consistent detached production SQLite backup remains unavailable; no production writer changes authorized."
     ]
   }
 }
