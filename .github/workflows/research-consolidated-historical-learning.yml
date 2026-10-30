@@ -9,29 +9,29 @@ concurrency:
 jobs:
   research:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 41d11c2cc26c17f7380c686702fa78e5436c3369
+          ref: 697d1bb99cef31b7c3b6fc783e430f633909059a
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify exact SHA and offline research tests
+      - name: Verify pinned code and all offline tests
         run: |
-          test "$(git rev-parse HEAD)" = "41d11c2cc26c17f7380c686702fa78e5436c3369"
+          test "$(git rev-parse HEAD)" = "697d1bb99cef31b7c3b6fc783e430f633909059a"
           test -z "$(git status --porcelain)"
           python -m unittest discover -s research -p 'test_*.py' -v
-      - name: Verify bounded real historical Kraken trades archive source
+      - name: Download real 2026Q2 trade archive once and inspect ZIP safely
         run: |
           mkdir -p research/output
-          python research/probe_kraken_historical_trade_archive.py --output research/output/official_historical_trades_probe.json
-      - name: Upload compact source verification evidence
+          python research/acquire_kraken_historical_trades.py --output research/output/full_trade_archive_evidence.json
+      - name: Upload bounded source evidence, not archive
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: consolidated-official-historical-trades-probe
-          path: research/output/official_historical_trades_probe.json
+          name: consolidated-full-historical-trade-archive-evidence
+          path: research/output/full_trade_archive_evidence.json
           if-no-files-found: error
           retention-days: 7
