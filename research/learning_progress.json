@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-learning-batch6-20261030",
-    "lease_expires_at": "2026-10-31T02:00:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -138,7 +138,21 @@
       "verification": "68/68 exact research-commit offline tests passed, zero failures/errors; no real archive historical outcomes yet"
     },
     "6": {
-      "status": "NOT_STARTED"
+      "status": "OFFICIAL_SOURCE_REVIEW_COMMITTED_TIMESTAMP_SEMANTICS_UNVERIFIED",
+      "baseline_run_id": 41144801352,
+      "baseline_tests": "68/68 verified in prior CI",
+      "research_commit": "388a35b406664908affb43ae5c9c88cb5e8c3b3c",
+      "new_code_tests": 0,
+      "actual_archive_labels": 0,
+      "evidence_file": "research/kraken_timestamp_provenance_batch6.md",
+      "findings": [
+        "Kraken official schema timestamp,open,high,low,close,volume,trades and missing-candle no-trade semantics verified.",
+        "Official 2026Q2 SHA matches earlier verified full archive.",
+        "Source CSV timestamp opening-versus-closing boundary NOT independently established; caller asserted semantics insufficient.",
+        "Full verified archive bytes unavailable in this invocation; no real archive-backed outcomes computed.",
+        "No new code/tests requiring exact-commit CI; previous 68/68 CI remains baseline."
+      ],
+      "next": "Independently verify candle-open timestamp against original trade timestamps and source archive, then run bounded isolated archive-backed 1/6/24/48h outcomes; keep gaps abstaining and production unchanged."
     },
     "7": {
       "status": "NOT_STARTED"
@@ -272,7 +286,8 @@
       "Batch 4: added as-of candle-open strict reconstruction and six offline fixture tests at research commit 3db29cb38481882a676bc8897405a6a1bc5c431d; pinned manual-only CI main commit 1069cdb739bbdbfa6cbd6cbbe836c6416635463b. No new CI dispatch, archive-backed labels or source-provenance verification; production unchanged.",
       "Batch 4: exact-commit manual-only GitHub Actions run 41144626722 job 124366726792 verified 63/63 offline research tests passed. Real archive-backed outcomes and independently verified source timestamp provenance still pending. Production untouched.",
       "Batch 5 committed bounded preverified archive adapter and five fail-closed fixtures, research 62358e79b34c540b9b916d52e8b442116c9672bc; manual-only CI main 432a281fbef0221d1817141f59d2d1a2211664a4. No archive-backed real outcomes or new CI yet; production untouched.",
-      "Batch 5 manual-only CI run 41144801352 verified 68/68 offline tests on research commit 62358e79b34c540b9b916d52e8b442116c9672bc. Source timestamp provenance and genuine archive-backed labels remain pending; no production changes."
+      "Batch 5 manual-only CI run 41144801352 verified 68/68 offline tests on research commit 62358e79b34c540b9b916d52e8b442116c9672bc. Source timestamp provenance and genuine archive-backed labels remain pending; no production changes.",
+      "Batch 6 reviewed Kraken official OHLCVT schema/no-trade gaps/2026Q2 checksum and committed research evidence at 388a35b4. Candle timestamp open/close boundary and genuine archive-backed labels remain unverified; no new CI or production changes."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
