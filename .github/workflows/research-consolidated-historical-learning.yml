@@ -1,0 +1,37 @@
+name: Consolidated Kraken Historical Learning (Manual Research Only)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: consolidated-kraken-research
+  cancel-in-progress: false
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 0f717861445e10487a0b538dc06d7252d5d06b6d
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact SHA and all offline research tests
+        run: |
+          test "$(git rev-parse HEAD)" = "0f717861445e10487a0b538dc06d7252d5d06b6d"
+          test -z "$(git status --porcelain)"
+          python -m unittest discover -s research -p 'test_*.py' -v
+      - name: One bounded download and real archive-backed evidence inspection
+        run: |
+          mkdir -p research/output
+          python research/consolidated_historical_learning.py --output research/output/consolidated_evidence.json
+      - name: Upload compact verified report, never the archive
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: consolidated-historical-research-evidence
+          path: research/output/consolidated_evidence.json
+          if-no-files-found: error
+          retention-days: 7
