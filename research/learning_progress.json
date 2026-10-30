@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-consolidated-phase2-20261030",
-    "lease_expires_at": "2026-10-31T05:00:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -284,6 +284,23 @@
       "verified_member_rows": 19886,
       "verified_member_first_timestamp": 1758535200,
       "verified_member_last_timestamp": 1782863100
+    },
+    "consolidated_phase2": {
+      "status": "REAL_INDEPENDENT_TRADE_API_PROBE_COMMITTED_MANUAL_CI_PENDING",
+      "start_checkpoint": "63c65b430ce2ad211eb4b126bf67f9ed068f8403",
+      "research_commit": "11adfb2d4355509d1ead698f1a981f322f3e5fbd",
+      "workflow_commit": "dc1ce966a32d3537a7a0f9281737369a03e23e8c",
+      "workflow": ".github/workflows/research-consolidated-historical-learning.yml",
+      "baseline_tests": 92,
+      "added_tests": 5,
+      "expected_tests": 97,
+      "tests_verified": false,
+      "real_trade_probe_executed": false,
+      "complete_historical_trades_verified": false,
+      "real_historical_labels": 0,
+      "pattern_evaluation": "blocked",
+      "archive_reused": "prior SHA256 evidence from run 41146357480; no repeat 9GB download",
+      "next": "Manually dispatch consolidated workflow once; inspect actual 97-test logs and genuine public trade probe evidence. Investigate verifiable historical trades archive or completeness-capable source before matching 2026Q2 candles and calculating outcomes."
     }
   },
   "audit": {
@@ -421,7 +438,8 @@
       "Batch 10 added 8 offline trade page provenance fixtures and fail-closed cursor validator at 8aec95ce; manual-only test workflow pinned at 70fc71c7. No actual complete independent trade interval, real timestamp proof or archive-backed labels; 86-test CI pending. Production unchanged.",
       "Batch 10 actual CI run 41146028510 job 124371230587 passed 86/86 exact-code offline tests, including eight new trade cursor provenance fixtures. Actual complete trades, source timestamp proof and historical labels remain pending; production unchanged.",
       "Consolidated execution implemented one manual research workflow at main 9e9ce7e, research 0f717861, six offline fixtures, full archive single-download SHA and bounded real member inspection, fail-closed real labels. No independent 2026Q2 trades or actual outcomes; CI dispatch pending; production unchanged.",
-      "Consolidated run 41146357480 job 124372275677: 92/92 exact-code offline tests; verified 8,972,380,104-byte Kraken SHA256 fc81b54c...; real archive member 0GEUR_5.csv 19,886 rows; evidence artifact 13021266415. Real labels zero due to independent trade provenance, production unchanged."
+      "Consolidated run 41146357480 job 124372275677: 92/92 exact-code offline tests; verified 8,972,380,104-byte Kraken SHA256 fc81b54c...; real archive member 0GEUR_5.csv 19,886 rows; evidence artifact 13021266415. Real labels zero due to independent trade provenance, production unchanged.",
+      "Consolidated Phase 2 added bounded genuine Kraken public Trades API probe and 5 offline tests at 11adfb2d; pinned main manual workflow dc1ce966; avoids repeat 9GB download. No real API execution yet, no historical trade completeness or labels; production unchanged."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
