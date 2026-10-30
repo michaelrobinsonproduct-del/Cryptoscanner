@@ -1,5 +1,5 @@
 import unittest
-from reconstruct_forward_outcomes import Candle, reconstruct
+from reconstruct_forward_outcomes import Candle, reconstruct, reconstruct_as_of
 
 def series(n, high=100, volume=10):
     return [Candle(i * 300, high, 100, volume) for i in range(n)]
@@ -89,6 +89,45 @@ class Tests(unittest.TestCase):
         # parameter, so do not treat its fixture success as live PIT validation.
         from inspect import signature
         self.assertNotIn("as_of_timestamp", signature(reconstruct).parameters)
+
+    def test_as_of_requires_source_timestamp_semantics(self):
+        self.assertEqual(reconstruct_as_of(series(578), 300)["status"], "unverified_source_timestamp_semantics")
+        self.assertEqual(reconstruct_as_of(series(578), 300, source_timestamp_semantics="candle_close_utc")["status"], "unverified_source_timestamp_semantics")
+
+    def test_as_of_closed_entry_and_all_four_horizons(self):
+        rows = series(578)
+        rows[0] = Candle(0, 200, 100, 10)
+        rows[12] = Candle(3600, 130, 100, 10)
+        result = reconstruct_as_of(rows, 300, source_timestamp_semantics="candle_open_utc")
+        self.assertEqual(result["entry_source_open"], 0)
+        self.assertEqual(result["observation_as_of"], 300)
+        for h in ("1", "6", "24", "48"):
+            self.assertEqual(result["horizons"][h]["status"], "mature")
+            self.assertTrue(result["horizons"][h]["hit_30"])
+
+    def test_as_of_excludes_first_candle_after_one_hour(self):
+        rows = series(578)
+        rows[13] = Candle(3900, 190, 100, 10)
+        result = reconstruct_as_of(rows, 300, source_timestamp_semantics="candle_open_utc")
+        self.assertFalse(result["horizons"]["1"]["hit_10"])
+        self.assertTrue(result["horizons"]["6"]["hit_30"])
+
+    def test_as_of_missing_no_trade_interval_abstains(self):
+        rows = [c for c in series(578) if c.timestamp != 600]
+        result = reconstruct_as_of(rows, 300, source_timestamp_semantics="candle_open_utc")
+        for h in ("1", "6", "24", "48"):
+            self.assertEqual(result["horizons"][h]["status"], "gap")
+
+    def test_as_of_liquidity_uses_only_closed_entry(self):
+        rows = series(578)
+        rows[0] = Candle(0, 100, 100, 0)
+        rows[1] = Candle(300, 100, 100, 1000)
+        result = reconstruct_as_of(rows, 300, min_quote_volume=1, source_timestamp_semantics="candle_open_utc")
+        self.assertEqual(result["status"], "insufficient_entry_liquidity")
+
+    def test_as_of_requires_completed_48h_end(self):
+        result = reconstruct_as_of(series(576), 300, source_timestamp_semantics="candle_open_utc")
+        self.assertEqual(result["horizons"]["48"]["status"], "immature")
 
 if __name__ == "__main__":
     unittest.main()
