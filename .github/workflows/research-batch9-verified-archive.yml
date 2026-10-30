@@ -1,0 +1,39 @@
+name: Kraken Batch 9 Verified Archive (Manual, Isolated, Research Only)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: kraken-batch9-archive-isolated
+  cancel-in-progress: false
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 5f5342276e6bea7b9d825d5b4e72a84b2ccfc969
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact research code and run offline tests first
+        run: |
+          test "$(git rev-parse HEAD)" = "5f5342276e6bea7b9d825d5b4e72a84b2ccfc969"
+          test -f research/batch9_verify_archive.py
+          test -f research/test_batch9_verify_archive.py
+          test -z "$(git status --porcelain)"
+          python -m unittest discover -s research -p 'test_*.py' -v
+      - name: Download and SHA256 verify original Kraken archive in temporary storage
+        run: |
+          mkdir -p research/output
+          python research/batch9_verify_archive.py --output research/output/batch9_archive_evidence.json
+      - name: Upload small verification/abstention evidence only
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: batch9-verified-archive-evidence
+          path: research/output/batch9_archive_evidence.json
+          if-no-files-found: error
+          retention-days: 7
