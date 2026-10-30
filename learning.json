@@ -2,8 +2,8 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 6837,
-      "evaluated": 6474,
+      "matured_snapshots": 6849,
+      "evaluated": 6486,
       "coverage_pct": 94.7,
       "unresolved": 363,
       "no_observation_in_window": 363
@@ -36,8 +36,8 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 6474,
-      "average_delay_hours": 0.441
+      "samples": 6486,
+      "average_delay_hours": 0.442
     },
     {
       "hours": 3,
@@ -57,17 +57,17 @@
   ],
   "unresolved_1h_snapshots": 363,
   "rank_comparison": {
-    "historical_ranked_samples": 6573,
+    "historical_ranked_samples": 6585,
     "mean_base_minus_early_rank": 1.74
   },
-  "newly_discovered_outside_base_top12": 2,
+  "newly_discovered_outside_base_top12": 1,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 6426,
-      "early_scored_avg_return_pct": -0.067,
-      "all_selected_avg_return_pct": -0.067,
-      "early_score_above_base_avg_return_pct": -0.081
+      "samples": 6438,
+      "early_scored_avg_return_pct": -0.066,
+      "all_selected_avg_return_pct": -0.066,
+      "early_score_above_base_avg_return_pct": -0.08
     },
     {
       "hours": 3,
@@ -92,8 +92,8 @@
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 24523,
-    "positive": 9933,
+    "evaluated": 24535,
+    "positive": 9940,
     "average_return_pct": -0.487
   },
   "missed_breakout_examples": [
@@ -148,12 +148,12 @@
       "next_scan_gain_pct": 56.52
     }
   ],
-  "unselected_gainers_5pct_observations": 969,
-  "market_observations": 364606,
+  "unselected_gainers_5pct_observations": 968,
+  "market_observations": 365219,
   "market_price_coverage": 613,
-  "feature_rows": 6741,
-  "snapshots": 6861,
-  "outcomes": 24523,
+  "feature_rows": 6753,
+  "snapshots": 6873,
+  "outcomes": 24535,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
