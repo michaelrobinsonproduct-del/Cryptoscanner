@@ -5,6 +5,8 @@ digest (none verified yet). Therefore this is NOT authenticated provenance.
 No production access or outcome labels.
 """
 import argparse
+import csv
+import io
 import hashlib
 import json
 import shutil
@@ -75,6 +77,14 @@ def download(path, opener=None, clock=None):
         raise
 
 
+def _is_number(value):
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
+
+
 def inspect(path):
     with zipfile.ZipFile(path) as archive:
         infos = archive.infolist()
@@ -97,7 +107,16 @@ def inspect(path):
                 members.append({"name": name, "bytes": info.file_size})
         if not members:
             raise RuntimeError("empty archive")
-        return {"members": len(members), "uncompressed_bytes": total,
+        first = next((x for x in infos if x.filename.endswith(".csv") and x.file_size <= 64*1024*1024), None)
+        if first is None:
+            raise RuntimeError("no bounded CSV member for schema inspection")
+        with archive.open(first) as stream:
+            sample = stream.read(4096)
+        lines = list(csv.reader(io.StringIO(sample.decode("utf-8", errors="strict").splitlines()[0] + "\\n")))
+        schema_sample = {"member": first.filename, "first_row_columns": len(lines[0]),
+                         "first_row_types": ["numeric" if _is_number(v) else "text" for v in lines[0]],
+                         "sample_sha256": hashlib.sha256(sample).hexdigest()}
+        return {"csv_schema_sample": schema_sample, "members": len(members), "uncompressed_bytes": total,
                 "sample_members": members[:5], "zip_metadata_checked": True,
                 "member_csv_semantics_verified": False}
 
