@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-learning-20261030-test-validation",
-    "lease_expires_at": "2026-10-31T00:00:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -60,9 +60,9 @@
       "commit_sha": "5245a6572a3df8ba406b0658b1b7870b80a91730",
       "tests": "10 fixture cases committed, not executed against exact committed code",
       "blockers": [
-        "Exact committed test suite has not been run; no CI run associated with final commit",
-        "Strict complete-5m-coverage assumption may exclude genuine no-trade markets; coverage policy requires evaluation",
-        "No verified historical point-in-time features or forward labels generated from archive"
+        "All 14 exact committed research Python files fetched and blob SHAs inspected, but isolated container git clone failed DNS resolution; no tests executed this invocation.",
+        "No current research-branch CI test run verified; 40/40 prior inventory workflow tests predate reconstruction files.",
+        "No-trade interval policy and timestamp provenance remain unresolved; no historical source outcome labels validated."
       ]
     },
     "3": {
@@ -197,7 +197,8 @@
       "Exact pinned research code already had 10/10 local exact-blob inventory fixture tests; previous 30/30 remote research tests ran before inventory code was added. Expanded 40/40 remote suite has NOT run. GitHub combined statuses for pinned code and registration commit empty; PR-filtered workflow runs empty and cannot establish manual run state.",
       "Inventory has NOT been manually dispatched; no new archive CSV inventory or historical row/date/gap evidence, no verified 48h labels, no production SQLite backup, no validated lift or patterns. No scanner, Railway, production writer, trading or scoring changes.",
       "Batch 1Y: GitHub Actions run 40814726443 job 123253033515 completed success; exact pinned research commit a03297e20fc8912a24fd9b505170945ddce05012 passed 40/40 tests; official 8,972,380,104-byte SHA verified; artifact 12871991601 digest sha256:0f7477287adbaa2b2feb9b91734260a6c1d8ac84c2948d149760d6eda08532f1 downloaded and JSON inspected: 1,713 CRC-checked 5m CSV files, 141,059,866 rows, earliest 2013-09-10T23:45Z, latest 2026-06-30T23:55Z, 1,128 files with >=365d endpoint span, 46,898,137 missing 5m intervals, 0 invalid/adjacent-duplicate/out-of-order rows. File spans do not establish full-year training eligibility. No verified point-in-time features or forward outcomes.",
-      "Batch 2 initial implementation: research/reconstruct_forward_outcomes.py blob cbcce3ca38d6e1108e8b7016897f280cac5079c0 and test_reconstruct_forward_outcomes.py blob d751fb5ed104fc459acbd3c478c29db30f5e5f5e committed at 5245a6572a3df8ba406b0658b1b7870b80a91730; 10 offline fixture cases staged, NOT executed. No data reconstruction, CI or performance validation claimed."
+      "Batch 2 initial implementation: research/reconstruct_forward_outcomes.py blob cbcce3ca38d6e1108e8b7016897f280cac5079c0 and test_reconstruct_forward_outcomes.py blob d751fb5ed104fc459acbd3c478c29db30f5e5f5e committed at 5245a6572a3df8ba406b0658b1b7870b80a91730; 10 offline fixture cases staged, NOT executed. No data reconstruction, CI or performance validation claimed.",
+      "Batch 2 test validation attempt 2026-10-30: GitHub branch 779f9dfe9f6204a621ec87522318380bf2cc037d confirmed; no active research workflow in latest 20 runs and no research PR. Acquired verified cooperative lease. Fetched exact committed reconstruction module and 10-case test suite (blobs cbcce3ca38d6e1108e8b7016897f280cac5079c0, d751fb5ed104fc459acbd3c478c29db30f5e5f5e) and 12 other research files. Container git clone failed DNS 'Could not resolve host: github.com'; NO new tests run and no code changes. Prior 40/40 inventory tests do not cover new reconstruction code. Stop on verification gate; no production changes."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
