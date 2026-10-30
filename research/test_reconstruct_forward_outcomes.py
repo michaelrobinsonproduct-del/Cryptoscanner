@@ -41,5 +41,54 @@ class Tests(unittest.TestCase):
         with self.assertRaises(ValueError):
             reconstruct(series(577), 1)
 
+    def test_exact_horizon_end_excludes_next_candle_all_horizons(self):
+        for h in (1, 6, 24, 48):
+            rows = series(577)
+            after = h * 12 + 1
+            rows[after] = Candle(after * 300, 190, 100, 10)
+            result = reconstruct(rows, 0)
+            self.assertFalse(result["horizons"][str(h)]["hit_10"])
+
+    def test_missing_intermediate_candle_abstains_all_horizons(self):
+        for h in (1, 6, 24, 48):
+            missing = h * 12 - 1
+            rows = [c for c in series(577) if c.timestamp != missing * 300]
+            result = reconstruct(rows, 0)
+            self.assertEqual(result["horizons"][str(h)]["status"], "gap")
+
+    def test_no_trade_gap_is_not_assumed_flat(self):
+        rows = [c for c in series(577) if c.timestamp != 300]
+        result = reconstruct(rows, 0)
+        self.assertEqual(result["horizons"]["1"]["status"], "gap")
+        self.assertNotIn("hit_10", result["horizons"]["1"])
+
+    def test_future_high_only_after_entry_not_entry_high(self):
+        rows = series(577)
+        rows[0] = Candle(0, 200, 100, 10)
+        result = reconstruct(rows, 0)
+        self.assertFalse(result["horizons"]["48"]["hit_10"])
+
+    def test_exact_threshold_at_all_horizons(self):
+        for h in (1, 6, 24, 48):
+            rows = series(577)
+            rows[h * 12] = Candle(h * 3600, 130, 100, 10)
+            result = reconstruct(rows, 0)
+            self.assertTrue(result["horizons"][str(h)]["hit_30"])
+
+    def test_liquidity_at_entry_only_not_future(self):
+        rows = series(577)
+        rows[0] = Candle(0, 100, 100, 1)
+        rows[1] = Candle(300, 100, 100, 1000)
+        result = reconstruct(rows, 0, min_quote_volume=101)
+        self.assertEqual(result["status"], "insufficient_entry_liquidity")
+
+    def test_source_open_timestamp_requires_explicit_observation_provenance(self):
+        # Kraken OHLCVT timestamps label the candle opening; the candle's close
+        # and full volume are unavailable at the opening instant. The legacy
+        # reconstruct() API has no observation-as-of or candle-close provenance
+        # parameter, so do not treat its fixture success as live PIT validation.
+        from inspect import signature
+        self.assertNotIn("as_of_timestamp", signature(reconstruct).parameters)
+
 if __name__ == "__main__":
     unittest.main()
