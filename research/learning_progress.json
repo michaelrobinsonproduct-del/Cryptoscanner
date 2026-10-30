@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-learning-batch7-20261030",
-    "lease_expires_at": "2026-10-31T02:15:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -155,7 +155,22 @@
       "next": "Independently verify candle-open timestamp against original trade timestamps and source archive, then run bounded isolated archive-backed 1/6/24/48h outcomes; keep gaps abstaining and production unchanged."
     },
     "7": {
-      "status": "NOT_STARTED"
+      "status": "TRADE_BOUNDARY_VERIFIER_COMMITTED_REAL_PROVENANCE_PENDING",
+      "baseline_run_id": 41144801352,
+      "baseline_tests": "68/68 offline tests passed",
+      "research_commit": "b732c19b5d35048bf2cf0bf16e8014d0147786ae",
+      "manual_workflow_commit": "23fc19672d2bca41d3d4645e9a15d4e0b54d67fe",
+      "added_tests": 7,
+      "expected_total_tests": 75,
+      "verified_new_tests": 0,
+      "actual_archive_labels": 0,
+      "implementation": "Offline independent trade-to-5m-candle boundary comparison of time, OHLC, base volume, count; fail closed on missing provenance, incomplete trade sample, misaligned boundaries and aggregation mismatch",
+      "blockers": [
+        "No independently captured trade sample matched to an actual 2026Q2 archive candle; opening timestamp provenance remains unverified.",
+        "No verified archive bytes available to reconstruct real outcomes.",
+        "75-test exact-commit CI not yet dispatched; baseline remains 68/68."
+      ],
+      "next": "Run pinned 75-test manual-only CI and inspect logs. Acquire independently source-identified complete trade records and matching archive candle, verify interval boundary, then bounded real 1/6/24/48h reconstruction. No production writes."
     },
     "8": {
       "status": "NOT_STARTED"
@@ -287,7 +302,8 @@
       "Batch 4: exact-commit manual-only GitHub Actions run 41144626722 job 124366726792 verified 63/63 offline research tests passed. Real archive-backed outcomes and independently verified source timestamp provenance still pending. Production untouched.",
       "Batch 5 committed bounded preverified archive adapter and five fail-closed fixtures, research 62358e79b34c540b9b916d52e8b442116c9672bc; manual-only CI main 432a281fbef0221d1817141f59d2d1a2211664a4. No archive-backed real outcomes or new CI yet; production untouched.",
       "Batch 5 manual-only CI run 41144801352 verified 68/68 offline tests on research commit 62358e79b34c540b9b916d52e8b442116c9672bc. Source timestamp provenance and genuine archive-backed labels remain pending; no production changes.",
-      "Batch 6 reviewed Kraken official OHLCVT schema/no-trade gaps/2026Q2 checksum and committed research evidence at 388a35b4. Candle timestamp open/close boundary and genuine archive-backed labels remain unverified; no new CI or production changes."
+      "Batch 6 reviewed Kraken official OHLCVT schema/no-trade gaps/2026Q2 checksum and committed research evidence at 388a35b4. Candle timestamp open/close boundary and genuine archive-backed labels remain unverified; no new CI or production changes.",
+      "Batch 7 added independent trade-to-candle timestamp boundary verifier with 7 fixtures at research b732c19b5d35048bf2cf0bf16e8014d0147786ae; manual-only CI pinned on main 23fc19672d2bca41d3d4645e9a15d4e0b54d67fe. No independently verified real timestamp provenance, actual archive labels or new CI run. Production unchanged."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
