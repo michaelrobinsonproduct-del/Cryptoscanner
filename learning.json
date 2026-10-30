@@ -2,35 +2,35 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 6765,
+      "matured_snapshots": 6777,
       "evaluated": 6426,
-      "coverage_pct": 95.0,
-      "unresolved": 339,
-      "no_observation_in_window": 339
+      "coverage_pct": 94.8,
+      "unresolved": 351,
+      "no_observation_in_window": 351
     },
     {
       "hours": 3,
-      "matured_snapshots": 6742,
-      "evaluated": 6001,
-      "coverage_pct": 89.0,
-      "unresolved": 741,
-      "no_observation_in_window": 741
+      "matured_snapshots": 6765,
+      "evaluated": 6013,
+      "coverage_pct": 88.9,
+      "unresolved": 752,
+      "no_observation_in_window": 752
     },
     {
       "hours": 6,
-      "matured_snapshots": 6699,
-      "evaluated": 5994,
-      "coverage_pct": 89.5,
-      "unresolved": 705,
-      "no_observation_in_window": 705
+      "matured_snapshots": 6732,
+      "evaluated": 6006,
+      "coverage_pct": 89.2,
+      "unresolved": 726,
+      "no_observation_in_window": 726
     },
     {
       "hours": 24,
-      "matured_snapshots": 6543,
-      "evaluated": 5869,
+      "matured_snapshots": 6555,
+      "evaluated": 5877,
       "coverage_pct": 89.7,
-      "unresolved": 674,
-      "no_observation_in_window": 674
+      "unresolved": 678,
+      "no_observation_in_window": 678
     }
   ],
   "outcome_lag_hours_by_horizon": [
@@ -41,26 +41,26 @@
     },
     {
       "hours": 3,
-      "samples": 6001,
-      "average_delay_hours": 0.372
+      "samples": 6013,
+      "average_delay_hours": 0.373
     },
     {
       "hours": 6,
-      "samples": 5994,
+      "samples": 6006,
       "average_delay_hours": 0.361
     },
     {
       "hours": 24,
-      "samples": 5869,
+      "samples": 5877,
       "average_delay_hours": 0.341
     }
   ],
-  "unresolved_1h_snapshots": 339,
+  "unresolved_1h_snapshots": 351,
   "rank_comparison": {
-    "historical_ranked_samples": 6489,
+    "historical_ranked_samples": 6501,
     "mean_base_minus_early_rank": 1.74
   },
-  "newly_discovered_outside_base_top12": 2,
+  "newly_discovered_outside_base_top12": 0,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
@@ -71,30 +71,30 @@
     },
     {
       "hours": 3,
-      "samples": 6001,
-      "early_scored_avg_return_pct": -0.289,
-      "all_selected_avg_return_pct": -0.289,
-      "early_score_above_base_avg_return_pct": -0.262
+      "samples": 6013,
+      "early_scored_avg_return_pct": -0.287,
+      "all_selected_avg_return_pct": -0.287,
+      "early_score_above_base_avg_return_pct": -0.261
     },
     {
       "hours": 6,
-      "samples": 5994,
-      "early_scored_avg_return_pct": -0.554,
-      "all_selected_avg_return_pct": -0.554,
-      "early_score_above_base_avg_return_pct": -0.573
+      "samples": 6006,
+      "early_scored_avg_return_pct": -0.557,
+      "all_selected_avg_return_pct": -0.557,
+      "early_score_above_base_avg_return_pct": -0.577
     },
     {
       "hours": 24,
-      "samples": 5869,
-      "early_scored_avg_return_pct": -1.079,
-      "all_selected_avg_return_pct": -1.079,
-      "early_score_above_base_avg_return_pct": -1.049
+      "samples": 5877,
+      "early_scored_avg_return_pct": -1.096,
+      "all_selected_avg_return_pct": -1.096,
+      "early_score_above_base_avg_return_pct": -1.06
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 24290,
-    "positive": 9817,
-    "average_return_pct": -0.485
+    "evaluated": 24322,
+    "positive": 9829,
+    "average_return_pct": -0.489
   },
   "missed_breakout_examples": [
     {
@@ -148,12 +148,12 @@
       "next_scan_gain_pct": 56.52
     }
   ],
-  "unselected_gainers_5pct_observations": 957,
-  "market_observations": 360323,
+  "unselected_gainers_5pct_observations": 939,
+  "market_observations": 360934,
   "market_price_coverage": 611,
-  "feature_rows": 6657,
-  "snapshots": 6777,
-  "outcomes": 24290,
+  "feature_rows": 6669,
+  "snapshots": 6789,
+  "outcomes": 24322,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
