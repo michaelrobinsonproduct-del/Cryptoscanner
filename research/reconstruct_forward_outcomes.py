@@ -66,3 +66,31 @@ def reconstruct(candles, observation_timestamp, *, min_quote_volume=None):
                                 "hit_30": ret >= .30}
     return {"status": "ok", "entry_timestamp": observation_timestamp,
             "entry_close": entry.close, "horizons": horizons}
+
+
+def reconstruct_as_of(candles, observation_as_of, *, min_quote_volume=None,
+                      source_timestamp_semantics=None):
+    """Fail-closed labels for Kraken 5m OPEN-timestamped candles.
+
+    observation_as_of is the exact close boundary of the entry candle, i.e.
+    source opening timestamp + 300 seconds. Only fully closed entry candles
+    may supply entry close and volume. Future labels use complete candles
+    opening at or after observation_as_of; their 1/6/24/48h boundaries are
+    measured from observation_as_of, not from the entry candle opening.
+    This is an offline research label, not evidence of executable fills.
+    """
+    if source_timestamp_semantics != "candle_open_utc":
+        return {"status": "unverified_source_timestamp_semantics", "horizons": {}}
+    if not isinstance(observation_as_of, int) or isinstance(observation_as_of, bool) or observation_as_of % STEP:
+        raise ValueError("as-of timestamp must align to 5m UTC")
+    entry_open = observation_as_of - STEP
+    # The existing strict reconstruction expects entry at observation_timestamp.
+    # Rebase timestamps by one candle, so horizons include exactly the
+    # candles opening [as_of, as_of + horizon - STEP].
+    shifted = [Candle(c.timestamp + STEP, c.high, c.close, c.volume) for c in candles]
+    result = reconstruct(shifted, observation_as_of, min_quote_volume=min_quote_volume)
+    if result["status"] == "ok":
+        result["observation_as_of"] = observation_as_of
+        result["entry_source_open"] = entry_open
+        result["source_timestamp_semantics"] = source_timestamp_semantics
+    return result
