@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch4-record-ci-20261030",
-    "lease_expires_at": "2026-10-31T01:30:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -93,21 +93,26 @@
       "tests": "57/57 exact pinned research offline tests passed, no errors, no failures; research commit 4112d1355b28d82b2dca20f5eed4788e316f5877"
     },
     "4": {
-      "status": "AS_OF_FIXTURES_COMMITTED_AWAITING_CI_AND_ARCHIVE",
+      "status": "AS_OF_OFFLINE_FIXTURES_VERIFIED_ARCHIVE_PENDING",
       "baseline_verified_run_id": 41144328419,
       "baseline_tests": "57/57 passed",
       "research_commit": "3db29cb38481882a676bc8897405a6a1bc5c431d",
       "manual_workflow_commit": "1069cdb739bbdbfa6cbd6cbbe836c6416635463b",
       "new_tests": 6,
       "expected_total_tests": 63,
-      "verified_new_tests": 0,
+      "verified_new_tests": 6,
       "implementation": "research/reconstruct_forward_outcomes.py reconstruct_as_of requires source_timestamp_semantics=candle_open_utc, closed entry candle at as_of-300, strict missing-candle abstention and liquidity at entry",
       "limitations": [
         "Source semantics are caller-asserted and not independently proven from original archive documentation; cannot claim trustworthy provenance without verification.",
         "No real Kraken archive historical 1/6/24/48h outcomes computed; verified inventory is aggregate only.",
         "No exact final-commit CI run yet; no outcome/feature lift, no promotion."
       ],
-      "next": "Dispatch pinned manual-only CI and inspect 63 tests; validate timestamp semantics against trustworthy Kraken source docs and verified archive; implement bounded, no-network/no-production-write archive-backed reconstruction with source provenance and fail-closed gaps."
+      "next": "Dispatch pinned manual-only CI and inspect 63 tests; validate timestamp semantics against trustworthy Kraken source docs and verified archive; implement bounded, no-network/no-production-write archive-backed reconstruction with source provenance and fail-closed gaps.",
+      "verified_total_tests": 63,
+      "verified_run_id": 41144626722,
+      "verified_job_id": 124366726792,
+      "verified_run_url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41144626722",
+      "verification": "Exact research commit 3db29cb38481882a676bc8897405a6a1bc5c431d; 63/63 tests passed in actual GitHub Actions logs, zero failures and errors"
     },
     "5": {
       "status": "NOT_STARTED"
@@ -244,7 +249,8 @@
       "Batch 3 partial: added seven offline fixtures for horizon boundaries, gap/no-trade abstention, future exclusion, entry liquidity and explicit PIT provenance limitation; research commit ee250ed6998d5a14012634b36dd40188a6e1ec4b. Registered pinned manual-only workflow main commit 42f8d3dc1fc696a24a5e1cf52d5a3f3eec41c5f5 and verified readback. No new CI run available, new tests UNVERIFIED, no archive-backed outcomes. Production untouched.",
       "Run 41144194784 checked out correct research SHA but failed 1/57 tests: test fixture attempted rows[577] in series(577). Corrected to series(578), research commit 4112d1355b28d82b2dca20f5eed4788e316f5877; updated manual-only workflow main 0e607aeb51e4142d515c2e6f0ca14f005c3f7911. Await final-commit GitHub Actions verification.",
       "Batch 3 corrected exact-commit CI verified: GitHub Actions run 41144328419 job 124365739315 passed 57/57 offline tests; no genuine archive-backed historical labels or PIT provenance validated. Production unchanged.",
-      "Batch 4: added as-of candle-open strict reconstruction and six offline fixture tests at research commit 3db29cb38481882a676bc8897405a6a1bc5c431d; pinned manual-only CI main commit 1069cdb739bbdbfa6cbd6cbbe836c6416635463b. No new CI dispatch, archive-backed labels or source-provenance verification; production unchanged."
+      "Batch 4: added as-of candle-open strict reconstruction and six offline fixture tests at research commit 3db29cb38481882a676bc8897405a6a1bc5c431d; pinned manual-only CI main commit 1069cdb739bbdbfa6cbd6cbbe836c6416635463b. No new CI dispatch, archive-backed labels or source-provenance verification; production unchanged.",
+      "Batch 4: exact-commit manual-only GitHub Actions run 41144626722 job 124366726792 verified 63/63 offline research tests passed. Real archive-backed outcomes and independently verified source timestamp provenance still pending. Production untouched."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
