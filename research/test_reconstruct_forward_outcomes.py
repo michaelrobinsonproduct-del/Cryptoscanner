@@ -43,7 +43,7 @@ class Tests(unittest.TestCase):
 
     def test_exact_horizon_end_excludes_next_candle_all_horizons(self):
         for h in (1, 6, 24, 48):
-            rows = series(577)
+            rows = series(578)
             after = h * 12 + 1
             rows[after] = Candle(after * 300, 190, 100, 10)
             result = reconstruct(rows, 0)
