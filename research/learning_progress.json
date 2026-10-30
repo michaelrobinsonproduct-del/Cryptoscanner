@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-learning-batch5-20261030",
-    "lease_expires_at": "2026-10-31T01:45:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -115,7 +115,22 @@
       "verification": "Exact research commit 3db29cb38481882a676bc8897405a6a1bc5c431d; 63/63 tests passed in actual GitHub Actions logs, zero failures and errors"
     },
     "5": {
-      "status": "NOT_STARTED"
+      "status": "ARCHIVE_ADAPTER_COMMITTED_CI_AND_REAL_DATA_PENDING",
+      "baseline_run_id": 41144626722,
+      "baseline_tests": "63/63 passed",
+      "research_commit": "62358e79b34c540b9b916d52e8b442116c9672bc",
+      "manual_workflow_commit": "432a281fbef0221d1817141f59d2d1a2211664a4",
+      "added_tests": 5,
+      "expected_total_tests": 68,
+      "verified_new_tests": 0,
+      "implementation": "research/reconstruct_verified_archive.py: bounded local preverified ZIP SHA-256, one member, capped bytes/rows, explicit caller-confirmed source timestamp semantics, strict as-of reconstruction, no network or production writer",
+      "blockers": [
+        "No independent source timestamp semantics evidence, so adapter abstains by default.",
+        "No actual verified Kraken archive bytes available in this execution; no genuine historical labels produced.",
+        "New exact-commit 68-test CI not executed yet; workflow is manual-only.",
+        "Quote liquidity is only a close*base-volume proxy, not independently verified executed quote notional."
+      ],
+      "next": "Run pinned manual-only 68-test CI, inspect logs; establish independently sourced timestamp semantics and bounded verified archive-backed labels, with fail-closed gap policy and no leakage."
     },
     "6": {
       "status": "NOT_STARTED"
@@ -250,7 +265,8 @@
       "Run 41144194784 checked out correct research SHA but failed 1/57 tests: test fixture attempted rows[577] in series(577). Corrected to series(578), research commit 4112d1355b28d82b2dca20f5eed4788e316f5877; updated manual-only workflow main 0e607aeb51e4142d515c2e6f0ca14f005c3f7911. Await final-commit GitHub Actions verification.",
       "Batch 3 corrected exact-commit CI verified: GitHub Actions run 41144328419 job 124365739315 passed 57/57 offline tests; no genuine archive-backed historical labels or PIT provenance validated. Production unchanged.",
       "Batch 4: added as-of candle-open strict reconstruction and six offline fixture tests at research commit 3db29cb38481882a676bc8897405a6a1bc5c431d; pinned manual-only CI main commit 1069cdb739bbdbfa6cbd6cbbe836c6416635463b. No new CI dispatch, archive-backed labels or source-provenance verification; production unchanged.",
-      "Batch 4: exact-commit manual-only GitHub Actions run 41144626722 job 124366726792 verified 63/63 offline research tests passed. Real archive-backed outcomes and independently verified source timestamp provenance still pending. Production untouched."
+      "Batch 4: exact-commit manual-only GitHub Actions run 41144626722 job 124366726792 verified 63/63 offline research tests passed. Real archive-backed outcomes and independently verified source timestamp provenance still pending. Production untouched.",
+      "Batch 5 committed bounded preverified archive adapter and five fail-closed fixtures, research 62358e79b34c540b9b916d52e8b442116c9672bc; manual-only CI main 432a281fbef0221d1817141f59d2d1a2211664a4. No archive-backed real outcomes or new CI yet; production untouched."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
