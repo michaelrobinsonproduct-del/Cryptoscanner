@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-phase4-fix-20261030",
-    "lease_expires_at": "2026-10-31T06:00:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -338,7 +338,7 @@
       "evidence_artifact_digest": "sha256:5ad89e2cc57387b3feed1cd9f292911ed2c8f909b9588b2bcbcd2918f8a90439"
     },
     "consolidated_phase4": {
-      "status": "FULL_HISTORICAL_TRADE_ZIP_ACQUISITION_COMMITTED_CI_PENDING",
+      "status": "DOWNLOADER_EXISTING_FILE_CLEANUP_BUG_FIXED_CI_RERUN_PENDING",
       "starting_checkpoint": "5d10e453e1030349da2250d838a79d037ff430b1",
       "research_commit": "697d1bb99cef31b7c3b6fc783e430f633909059a",
       "workflow_commit": "8cb4766ad8a5465a760738d026163bb403d8f882",
@@ -350,7 +350,15 @@
       "trade_to_ohlc_match": false,
       "real_labels": 0,
       "heldout_evaluation": "blocked",
-      "next": "Dispatch full trade ZIP workflow, inspect exact 108 offline tests and ZIP metadata evidence; then add bounded real CSV parser and independently authenticated OHLCVT matching. Do not claim SHA authenticity absent independently published digest."
+      "next": "Rerun manual workflow; inspect exact 108/108 tests then real full archive download/metadata evidence.",
+      "failed_run_id": 41147118603,
+      "failed_job_id": 124374699579,
+      "observed_tests": 108,
+      "failed_tests": 1,
+      "root_cause": "cleanup unlinked pre-existing file on exclusive-create FileExistsError",
+      "fix_commit": "254c9207981ae386f9324cbb3b21015745585f1e",
+      "fixed_workflow_commit": "31af6588adbf6491d88398df036b6a058fea3f70",
+      "full_archive_executed": false
     }
   },
   "audit": {
@@ -493,7 +501,8 @@
       "Phase 2 run 41146685922 job 124373326390: 97/97 exact-code tests, real Kraken public Trades response 1 recent XXBTZUSD trade, cursor present, response SHA256 7a9925a3...; no 2026Q2 completeness, zero real labels, no production changes.",
       "Phase 3 identified official Kraken time-and-sales 2026Q2 archive documented Oct 12 2026; implemented bounded 64KiB HTTP 206 ZIP range probe and six offline tests, pinned manual workflow. Real source not yet executed; full archive checksum, OHLC match and labels pending. No production changes.",
       "Phase 3 run 41146930281 job 124374100854: 103/103 tests, official Kraken_Trades_2026Q2.zip HTTP 206 65536 bytes ZIP header, reported 1,334,345,194 bytes, sample SHA256 c6abdb9a...; full archive not downloaded, no historical trade completeness or labels; production unchanged.",
-      "Phase 4 implemented full 1,334,345,194-byte Kraken trades ZIP download, resource/timeout/byte limits, observed SHA256, safe ZIP member metadata, five offline tests, pinned manual workflow. Full archive not yet executed, independent digest absent, no OHLCVT matching or labels, production unchanged."
+      "Phase 4 implemented full 1,334,345,194-byte Kraken trades ZIP download, resource/timeout/byte limits, observed SHA256, safe ZIP member metadata, five offline tests, pinned manual workflow. Full archive not yet executed, independent digest absent, no OHLCVT matching or labels, production unchanged.",
+      "Phase 4 run 41147118603 failed 1/108 tests: pre-existing output file incorrectly unlinked on FileExistsError; download skipped. Fixed cleanup to unlink only after exclusive create succeeded, commit 254c920; manual workflow repinned 31af658. Awaiting rerun; production unchanged."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
