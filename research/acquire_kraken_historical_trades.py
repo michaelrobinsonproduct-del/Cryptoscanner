@@ -45,8 +45,11 @@ def download(path, opener=None, clock=None):
     count = 0
     req = urllib.request.Request(URL, headers={"Accept-Encoding": "identity",
         "User-Agent": "Cryptoscanner-isolated-research/1.0"})
+    # Never remove a pre-existing path on exclusive-create failure.
+    created = False
     try:
         with open(path, "xb") as out:
+            created = True
             with opener(req, timeout=30) as response:
                 if response.status != 200 or response.headers.get("Content-Encoding", "identity").lower() != "identity":
                     raise RuntimeError("unexpected archive HTTP response")
@@ -67,7 +70,8 @@ def download(path, opener=None, clock=None):
         return {"bytes": count, "sha256_observed": sha.hexdigest(),
                 "independent_sha256_verified": False}
     except BaseException:
-        Path(path).unlink(missing_ok=True)
+        if created:
+            Path(path).unlink(missing_ok=True)
         raise
 
 
