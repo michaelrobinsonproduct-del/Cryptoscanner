@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch3-record-success-20261030",
-    "lease_expires_at": "2026-10-31T01:15:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -73,11 +73,11 @@
       "verified_job_id": 124361673502
     },
     "3": {
-      "status": "INDEXING_FIX_COMMITTED_AWAITING_CI",
+      "status": "OFFLINE_FIXTURES_VERIFIED_REAL_HISTORY_PENDING",
       "test_commit": "4112d1355b28d82b2dca20f5eed4788e316f5877",
       "manual_ci_main_commit": "0e607aeb51e4142d515c2e6f0ca14f005c3f7911",
       "added_tests": 7,
-      "verified_tests": 0,
+      "verified_tests": 57,
       "baseline": "Previous research commit 5245a657 passed 50/50 tests in run 41143062550; not proof new 57-test suite passed",
       "findings": [
         "Kraken source 5m OHLCVT candle timestamps are opening timestamps; current reconstruction API uses candle close at observation_timestamp without explicit observation-as-of provenance, so true point-in-time eligibility cannot yet be claimed.",
@@ -86,7 +86,11 @@
       ],
       "next": "Manually run pinned workflow on main, inspect 57-test suite; then implement explicit as-of/source-open timestamp fail-closed reconstruction and bounded archive-backed label workflow with independent source verification.",
       "failed_run_id": 41144194784,
-      "failed_run_summary": "56/57 tests passed; 48h next-candle test IndexError at rows[577] on series(577); corrected fixture to series(578), preserving assertions. Final code not yet CI-tested."
+      "failed_run_summary": "56/57 tests passed; 48h next-candle test IndexError at rows[577] on series(577); corrected fixture to series(578), preserving assertions. Final code not yet CI-tested.",
+      "verified_run_id": 41144328419,
+      "verified_job_id": 124365739315,
+      "verified_run_url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41144328419",
+      "tests": "57/57 exact pinned research offline tests passed, no errors, no failures; research commit 4112d1355b28d82b2dca20f5eed4788e316f5877"
     },
     "4": {
       "status": "NOT_STARTED"
@@ -224,7 +228,8 @@
       "Batch 2 CI repair: inspected real GitHub Actions failed run 41142842663 job 124360962495, verified checkout main SHA 9e82777 and unittest discovery ImportError research absent. Acquired and independently confirmed cooperative lease. Repaired only manual-only read-only workflow on main commit f233675fff590f7c7f320ff448cb7aadbab82a1a; pinned checkout to immutable research SHA 5245a6572a3df8ba406b0658b1b7870b80a91730 and fail-closed file/SHA checks. Verified workflow blob e664bd01e5934eadcb1afadc60cebb295bc9c4a6 readback. No dispatch available, no new tests run or CI pass claimed. Production code and scanner untouched.",
       "2026-10-30 GitHub Actions run 41143062550 job 124361673502 completed success: exact checkout SHA 5245a6572a3df8ba406b0658b1b7870b80a91730 verified, 50/50 offline research tests passed including all 10 reconstruction fixtures; actual job logs inspected. This does not validate real historical outcomes, no-trade policy, source timestamp provenance or model lift.",
       "Batch 3 partial: added seven offline fixtures for horizon boundaries, gap/no-trade abstention, future exclusion, entry liquidity and explicit PIT provenance limitation; research commit ee250ed6998d5a14012634b36dd40188a6e1ec4b. Registered pinned manual-only workflow main commit 42f8d3dc1fc696a24a5e1cf52d5a3f3eec41c5f5 and verified readback. No new CI run available, new tests UNVERIFIED, no archive-backed outcomes. Production untouched.",
-      "Run 41144194784 checked out correct research SHA but failed 1/57 tests: test fixture attempted rows[577] in series(577). Corrected to series(578), research commit 4112d1355b28d82b2dca20f5eed4788e316f5877; updated manual-only workflow main 0e607aeb51e4142d515c2e6f0ca14f005c3f7911. Await final-commit GitHub Actions verification."
+      "Run 41144194784 checked out correct research SHA but failed 1/57 tests: test fixture attempted rows[577] in series(577). Corrected to series(578), research commit 4112d1355b28d82b2dca20f5eed4788e316f5877; updated manual-only workflow main 0e607aeb51e4142d515c2e6f0ca14f005c3f7911. Await final-commit GitHub Actions verification.",
+      "Batch 3 corrected exact-commit CI verified: GitHub Actions run 41144328419 job 124365739315 passed 57/57 offline tests; no genuine archive-backed historical labels or PIT provenance validated. Production unchanged."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
