@@ -1,0 +1,26 @@
+name: Isolated Kraken Reconstruction Tests (Manual, Research Only)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: isolated-kraken-reconstruction-tests
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact research commit
+        run: |
+          git rev-parse HEAD
+          git status --porcelain
+      - name: Run all offline research fixtures
+        run: |
+          python -m unittest discover -s research -p 'test_*.py' -v
