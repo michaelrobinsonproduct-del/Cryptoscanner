@@ -13,25 +13,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 11adfb2d4355509d1ead698f1a981f322f3e5fbd
+          ref: 41d11c2cc26c17f7380c686702fa78e5436c3369
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify exact SHA and all offline research tests
+      - name: Verify exact SHA and offline research tests
         run: |
-          test "$(git rev-parse HEAD)" = "11adfb2d4355509d1ead698f1a981f322f3e5fbd"
+          test "$(git rev-parse HEAD)" = "41d11c2cc26c17f7380c686702fa78e5436c3369"
           test -z "$(git status --porcelain)"
           python -m unittest discover -s research -p 'test_*.py' -v
-      - name: Probe real independent Kraken public trade records
+      - name: Verify bounded real historical Kraken trades archive source
         run: |
           mkdir -p research/output
-          python research/probe_independent_kraken_trades.py --output research/output/independent_trade_probe.json
-      - name: Upload bounded source evidence without repeating verified 9GB archive
+          python research/probe_kraken_historical_trade_archive.py --output research/output/official_historical_trades_probe.json
+      - name: Upload compact source verification evidence
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: consolidated-independent-trade-source-evidence
-          path: research/output/independent_trade_probe.json
+          name: consolidated-official-historical-trades-probe
+          path: research/output/official_historical_trades_probe.json
           if-no-files-found: error
           retention-days: 7
