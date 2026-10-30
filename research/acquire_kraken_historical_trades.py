@@ -112,7 +112,7 @@ def inspect(path):
             raise RuntimeError("no bounded CSV member for schema inspection")
         with archive.open(first) as stream:
             sample = stream.read(4096)
-        lines = list(csv.reader(io.StringIO(sample.decode("utf-8", errors="strict").splitlines()[0] + "\\n")))
+        lines = list(csv.reader(io.StringIO(sample.decode("utf-8", errors="strict").splitlines()[0])))
         schema_sample = {"member": first.filename, "first_row_columns": len(lines[0]),
                          "first_row_types": ["numeric" if _is_number(v) else "text" for v in lines[0]],
                          "sample_sha256": hashlib.sha256(sample).hexdigest()}
