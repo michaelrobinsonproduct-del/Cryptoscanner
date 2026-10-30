@@ -30,7 +30,7 @@ def probe(opener=None):
         if total <= MAX_SAMPLE or total > 20 * 1024**3:
             raise RuntimeError("unexpected archive size")
         raw = response.read(MAX_SAMPLE + 1)
-    if len(raw) != MAX_SAMPLE or raw[:4] != b"PK\\x03\\x04":
+    if len(raw) != MAX_SAMPLE or raw[:4] != bytes((80, 75, 3, 4)):
         raise RuntimeError("not an expected ZIP prefix")
     return {"status": "official_trade_archive_range_verified_not_full_checksum",
             "source": URL, "bytes_total": total, "bytes_sampled": len(raw),
