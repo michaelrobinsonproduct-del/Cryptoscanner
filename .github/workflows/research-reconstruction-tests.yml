@@ -13,14 +13,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: 5245a6572a3df8ba406b0658b1b7870b80a91730
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify exact research commit
+      - name: Fail closed on exact research SHA and test presence
         run: |
-          git rev-parse HEAD
-          git status --porcelain
+          test "$(git rev-parse HEAD)" = "5245a6572a3df8ba406b0658b1b7870b80a91730"
+          test -f research/reconstruct_forward_outcomes.py
+          test -f research/test_reconstruct_forward_outcomes.py
+          test -f research/test_inventory_kraken_archive.py
+          test -z "$(git status --porcelain)"
       - name: Run all offline research fixtures
         run: |
           python -m unittest discover -s research -p 'test_*.py' -v
