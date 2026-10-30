@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-consolidated-phase3-20261030",
-    "lease_expires_at": "2026-10-31T05:30:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -311,6 +311,23 @@
       "probe_response_sha256": "7a9925a37a2c6b2d2153a61e284aee87dfd28189ec69adc8ba25aa9b94818cfd",
       "evidence_artifact_id": 13020942939,
       "evidence_artifact_digest": "sha256:a62f33d2d82b9138e2e8e4a26e84c8b012252835bbd20d8ac8e94b919d8afeb6"
+    },
+    "consolidated_phase3": {
+      "status": "OFFICIAL_KRAKEN_2026Q2_TRADES_ARCHIVE_SOURCE_FOUND_BOUNDED_PROBE_CI_PENDING",
+      "starting_checkpoint": "8b49065f11c1c8ee2e69e32c88efbf1c2a6451d2",
+      "official_source": "https://support.kraken.com/articles/360047543791-downloadable-historical-market-data-time-and-sales-",
+      "trade_archive_url": "https://assets.kraken.com/marketing/institutions/Kraken_Trades_2026Q2.zip",
+      "research_commit": "41d11c2cc26c17f7380c686702fa78e5436c3369",
+      "workflow_commit": "2186ac92b8162f0244b6cfd16951a9ac97627a43",
+      "prior_tests_verified": 97,
+      "added_tests": 6,
+      "expected_tests": 103,
+      "ci_executed": false,
+      "real_archive_trade_bytes_verified": false,
+      "trade_completeness_verified": false,
+      "actual_labels": 0,
+      "pattern_evaluation": "not_authorized",
+      "next": "Dispatch manual consolidated workflow to test official 2026Q2 trades ZIP 64KiB range probe and 103 offline tests. If source available, implement single-run bounded authenticated complete trade ZIP download plus matching OHLCVT archive and strict real historical outcome evaluation."
     }
   },
   "audit": {
@@ -450,7 +467,8 @@
       "Consolidated execution implemented one manual research workflow at main 9e9ce7e, research 0f717861, six offline fixtures, full archive single-download SHA and bounded real member inspection, fail-closed real labels. No independent 2026Q2 trades or actual outcomes; CI dispatch pending; production unchanged.",
       "Consolidated run 41146357480 job 124372275677: 92/92 exact-code offline tests; verified 8,972,380,104-byte Kraken SHA256 fc81b54c...; real archive member 0GEUR_5.csv 19,886 rows; evidence artifact 13021266415. Real labels zero due to independent trade provenance, production unchanged.",
       "Consolidated Phase 2 added bounded genuine Kraken public Trades API probe and 5 offline tests at 11adfb2d; pinned main manual workflow dc1ce966; avoids repeat 9GB download. No real API execution yet, no historical trade completeness or labels; production unchanged.",
-      "Phase 2 run 41146685922 job 124373326390: 97/97 exact-code tests, real Kraken public Trades response 1 recent XXBTZUSD trade, cursor present, response SHA256 7a9925a3...; no 2026Q2 completeness, zero real labels, no production changes."
+      "Phase 2 run 41146685922 job 124373326390: 97/97 exact-code tests, real Kraken public Trades response 1 recent XXBTZUSD trade, cursor present, response SHA256 7a9925a3...; no 2026Q2 completeness, zero real labels, no production changes.",
+      "Phase 3 identified official Kraken time-and-sales 2026Q2 archive documented Oct 12 2026; implemented bounded 64KiB HTTP 206 ZIP range probe and six offline tests, pinned manual workflow. Real source not yet executed; full archive checksum, OHLC match and labels pending. No production changes."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
