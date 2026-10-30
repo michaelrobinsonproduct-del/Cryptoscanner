@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-consolidated-learning-20261030",
-    "lease_expires_at": "2026-10-31T04:30:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -253,6 +253,26 @@
       "verified_job_id": 124371230587,
       "verified_run_url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41146028510",
       "verification": "Exact pinned research SHA 8aec95ce9a5468e1a4284d15211b94d4d6bc2e33, 86/86 offline tests passed, no failures/errors."
+    },
+    "consolidated": {
+      "status": "SINGLE_RUN_ARCHIVE_AND_ABSTENTION_PIPELINE_COMMITTED_UNEXECUTED",
+      "starting_checkpoint": "f21df908c1922ddc23ee63af34fece17aa677df5",
+      "research_commit": "0f717861445e10487a0b538dc06d7252d5d06b6d",
+      "workflow_commit": "9e9ce7e412228dc5a9577aec6f9d443d3767d88f",
+      "workflow": ".github/workflows/research-consolidated-historical-learning.yml",
+      "baseline_verified_tests": 86,
+      "added_tests": 6,
+      "expected_tests": 92,
+      "new_ci_verified": false,
+      "real_trade_provenance_verified": false,
+      "actual_labels": 0,
+      "pattern_evaluation": "blocked until actual verified observations",
+      "safety": "single temporary original archive download; SHA gate; one bounded real member; no output labels without complete independent trade evidence; no production changes",
+      "blockers": [
+        "No independently complete Kraken trade data for 2026Q2 archive interval, so genuine timestamp proof and outcomes unavailable.",
+        "Workflow manual dispatch pending; 92 tests and archive member inspection not yet run."
+      ],
+      "next": "Dispatch consolidated workflow once; inspect exact-code 92 tests and actual archive-member report. Obtain independent complete historical trades before claiming genuine outcome or pattern evaluation."
     }
   },
   "audit": {
@@ -388,7 +408,8 @@
       "Batch 9 created bounded manual-only archive acquisition runner and 3 fixtures at 5f534227; pinned main workflow 5c92d9b1, unexecuted. 75/75 prior tests remain baseline, real trade provenance and archive-backed labels pending. No production changes.",
       "Batch 9 actual GitHub Actions run 41145651741 job 124370012247: 78/78 tests, full original Kraken 2026Q2 archive 8,972,380,104 bytes SHA256 fc81b54c... verified, artifact 13021070671. Independent complete trade evidence and genuine labels still pending; no production changes.",
       "Batch 10 added 8 offline trade page provenance fixtures and fail-closed cursor validator at 8aec95ce; manual-only test workflow pinned at 70fc71c7. No actual complete independent trade interval, real timestamp proof or archive-backed labels; 86-test CI pending. Production unchanged.",
-      "Batch 10 actual CI run 41146028510 job 124371230587 passed 86/86 exact-code offline tests, including eight new trade cursor provenance fixtures. Actual complete trades, source timestamp proof and historical labels remain pending; production unchanged."
+      "Batch 10 actual CI run 41146028510 job 124371230587 passed 86/86 exact-code offline tests, including eight new trade cursor provenance fixtures. Actual complete trades, source timestamp proof and historical labels remain pending; production unchanged.",
+      "Consolidated execution implemented one manual research workflow at main 9e9ce7e, research 0f717861, six offline fixtures, full archive single-download SHA and bounded real member inspection, fail-closed real labels. No independent 2026Q2 trades or actual outcomes; CI dispatch pending; production unchanged."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
