@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-batch9-ci-checkpoint-20261030",
-    "lease_expires_at": "2026-10-31T03:00:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -198,7 +198,7 @@
       "next": "Bounded isolated verified archive acquisition and independent complete trade-to-candle evidence; stop on missing provenance, then generate actual labels only with strict gaps and liquidity gates."
     },
     "9": {
-      "status": "MANUAL_ONLY_ARCHIVE_VERIFICATION_WORKFLOW_READY_UNEXECUTED",
+      "status": "FULL_ORIGINAL_ARCHIVE_SHA256_AND_78_TESTS_VERIFIED_TRADE_PROVENANCE_PENDING",
       "baseline_run_id": 41145081769,
       "baseline_verified_tests": 75,
       "added_offline_tests": 3,
@@ -206,8 +206,8 @@
       "research_commit": "5f5342276e6bea7b9d825d5b4e72a84b2ccfc969",
       "main_workflow_commit": "5c92d9b14f53e5f64a983134694aa85d5c5a7d6f",
       "workflow": ".github/workflows/research-batch9-verified-archive.yml",
-      "new_ci_verified": false,
-      "actual_archive_verified_this_batch": false,
+      "new_ci_verified": true,
+      "actual_archive_verified_this_batch": true,
       "independent_trade_timestamp_provenance_verified": false,
       "real_archive_backed_labels": 0,
       "blockers": [
@@ -215,7 +215,17 @@
         "Complete independently sourced trade records unavailable; workflow intentionally abstains from labels.",
         "No 1/6/24/48h real labels or scoring promotion."
       ],
-      "next": "User manually dispatches main workflow; inspect actual job logs, exact SHA, 78/78 tests, archive checksum, artifact and failure details; then obtain independent complete trade source."
+      "next": "User manually dispatches main workflow; inspect actual job logs, exact SHA, 78/78 tests, archive checksum, artifact and failure details; then obtain independent complete trade source.",
+      "verified_run_id": 41145651741,
+      "verified_job_id": 124370012247,
+      "verified_total_tests": 78,
+      "verified_new_tests": 3,
+      "archive_sha256_verified": true,
+      "archive_sha256": "fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4",
+      "archive_bytes": 8972380104,
+      "evidence_artifact_id": 13021070671,
+      "evidence_artifact_digest": "sha256:331ae663cb42830867fd46ede1c0b955f6d17a619ce07315bf341afccb71cd82",
+      "verification": "Exact research commit pinned; 78/78 tests passed; full archive SHA matched; small evidence artifact uploaded; no labels."
     }
   },
   "audit": {
@@ -348,7 +358,8 @@
       "Batch 7 added independent trade-to-candle timestamp boundary verifier with 7 fixtures at research b732c19b5d35048bf2cf0bf16e8014d0147786ae; manual-only CI pinned on main 23fc19672d2bca41d3d4645e9a15d4e0b54d67fe. No independently verified real timestamp provenance, actual archive labels or new CI run. Production unchanged.",
       "Batch 7 exact-commit GitHub Actions run 41145081769 job 124368188235 verified 75/75 offline tests. Real independent trade timestamp provenance and archive-backed historical labels still pending; no production changes.",
       "Batch 8 verified prior inventory artifact 12871991601 still available, but it is not source archive or independent trades. Documented strict provenance stop at research be705a29; no real archive labels, no new tests/CI or production changes.",
-      "Batch 9 created bounded manual-only archive acquisition runner and 3 fixtures at 5f534227; pinned main workflow 5c92d9b1, unexecuted. 75/75 prior tests remain baseline, real trade provenance and archive-backed labels pending. No production changes."
+      "Batch 9 created bounded manual-only archive acquisition runner and 3 fixtures at 5f534227; pinned main workflow 5c92d9b1, unexecuted. 75/75 prior tests remain baseline, real trade provenance and archive-backed labels pending. No production changes.",
+      "Batch 9 actual GitHub Actions run 41145651741 job 124370012247: 78/78 tests, full original Kraken 2026Q2 archive 8,972,380,104 bytes SHA256 fc81b54c... verified, artifact 13021070671. Independent complete trade evidence and genuine labels still pending; no production changes."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
