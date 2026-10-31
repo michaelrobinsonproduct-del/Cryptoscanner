@@ -66,12 +66,62 @@ def inspect_archive(archive, wanted):
             "zip_compressed_bytes": info.compress_size, "zip_crc32": info.CRC,
             "member_full_sha256_verified": False,
         } if info is not None and not info.is_dir() else {"present": False})
+    # Surface bounded, *untrusted* manifest structure to determine whether
+    # published metadata can support future independent completeness checks.
+    def scalar(value):
+        if value is None or isinstance(value, (bool, int, float)):
+            return value
+        if isinstance(value, str) and len(value) <= 128:
+            return value
+        return {"type": type(value).__name__}
+
+    def shape(value):
+        if isinstance(value, dict):
+            return {"type": "dict", "count": len(value),
+                    "keys": sorted(str(k) for k in value)[:24]}
+        if isinstance(value, list):
+            return {"type": "list", "count": len(value),
+                    "first_item_keys": (sorted(str(k) for k in value[0])[:24]
+                                        if value and isinstance(value[0], dict) else [])}
+        return {"type": type(value).__name__, "value": scalar(value)}
+
+    summary = {key: shape(obj[key]) for key in
+               ("files", "coverage", "columns", "schema_1_differences")
+               if key in obj}
+    summary["scalars"] = {key: scalar(obj[key]) for key in
+                          ("schema_version", "product", "release", "generated",
+                           "has_header", "pairs", "rows") if key in obj}
+    files = obj.get("files")
+    selected_entries = {}
+    if isinstance(files, dict):
+        for name in wanted:
+            if name in files:
+                selected_entries[name] = shape(files[name])
+                if isinstance(files[name], dict):
+                    selected_entries[name]["scalar_fields"] = {
+                        str(k): scalar(v) for k, v in files[name].items()
+                        if str(k) in ("sha256", "rows", "first", "last", "min_ts",
+                                      "max_ts", "size", "bytes", "checksum", "crc32")}
+    elif isinstance(files, list):
+        for entry in files:
+            if not isinstance(entry, dict):
+                continue
+            name = next((entry[k] for k in ("name", "file", "filename", "path")
+                         if isinstance(entry.get(k), str)), None)
+            if name in wanted and name not in selected_entries:
+                selected_entries[name] = shape(entry)
+                selected_entries[name]["scalar_fields"] = {
+                    str(k): scalar(v) for k, v in entry.items()
+                    if str(k) in ("sha256", "rows", "first", "last", "min_ts",
+                                  "max_ts", "size", "bytes", "checksum", "crc32")}
+    summary["selected_file_entries"] = selected_entries
     return {
         "status": "official_manifest_structurally_inspected_not_authenticated",
         "manifest_sha256": hashlib.sha256(raw).hexdigest(),
         "manifest_bytes": len(raw),
         "manifest_top_level_keys": sorted(str(k) for k in obj)[:64],
         "manifest_top_level_key_count": len(obj),
+        "manifest_schema_summary": summary,
         "selected_members": metadata,
     }
 
