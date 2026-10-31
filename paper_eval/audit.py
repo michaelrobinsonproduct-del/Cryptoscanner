@@ -205,7 +205,10 @@ def evaluate(state, horizon_hours=24, top_k=5):
     return {
         "schema": 1, "horizon_hours": horizon_hours, "top_k": top_k,
         "ledger_generation": state["generation"], "ledger_sha256": state["sha256"],
-        "actual_scans": len(runs), "mature_enough_runs": mature_runs,
+        "actual_scans": ledger.scoreboard(state)["actual_scans"],
+        "active_scans_evaluated": len(runs),
+        "archived_scans_not_reconstructed": state.get("archived", {}).get("scans", 0),
+        "mature_enough_runs": mature_runs,
         "comparable_runs": eligible_runs, "excluded_incomplete_or_gap": excluded_gap,
         "excluded_immature": excluded_immature, "comparison_samples_per_arm": count,
         "baseline_observed_hits": baseline_hits,
@@ -218,5 +221,5 @@ def evaluate(state, horizon_hours=24, top_k=5):
         "continuously_sampled_nonwatch_pairs": covered_nonwatch,
         "nonwatch_gap_abstentions": gap_nonwatch,
         "independent_held_out_lift": None, "production_applied": False,
-        "limitations": "Same selected watch pool; client-observed snapshots, not complete price highs. Observed hits/misses are sampled lower bounds, not all-market recall or independent held-out uplift."
+        "limitations": "Same selected watch pool; client-observed snapshots, not complete price highs. Only active rolling-window records are evaluated; archived runs require independent artifact reconstruction. Observed hits/misses are sampled lower bounds, not all-market recall or independent held-out uplift."
     }
