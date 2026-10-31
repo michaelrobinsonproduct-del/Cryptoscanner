@@ -136,5 +136,47 @@ class RevisionBindingTests(unittest.TestCase):
         self.assertEqual(bounded_reuse_decision(t, m), "abort_source_identity_mismatch")
 
 
+
+    def test_missing_last_modified_never_claims_same_revision(self):
+        t, m = reports()
+        t["source_revision_validator"].pop("last_modified")
+        self.assertFalse(verify(t, m)["same_source_revision"])
+
+    def test_malformed_strong_etag_abstains_even_if_both_match(self):
+        for value in ("unquoted", 'W/"weak"', '""', '"bad\\nvalue"', '"bad"quote"'):
+            with self.subTest(value=value):
+                t, m = reports()
+                t["source_revision_validator"]["strong_etag"] = value
+                m["source_revision_validator"]["strong_etag"] = value
+                self.assertFalse(verify(t, m)["same_source_revision"])
+                self.assertEqual(bounded_reuse_decision(t, m), "abort_source_revision_conflict")
+
+    def test_zero_archive_size_is_not_source_identity(self):
+        t, m = reports()
+        t["source_archive_bytes_expected"] = 0
+        m["source_expected_archive_bytes"] = 0
+        self.assertFalse(verify(t, m)["same_source_revision"])
+
+    def test_malformed_manifest_summary_abstains_not_crashes(self):
+        for value in ([], "text", True, 0):
+            with self.subTest(value=value):
+                t, m = reports()
+                m["manifest_schema_summary"] = value
+                self.assertEqual(verify(t, m)["status"], "abstain_manifest_directory_inconsistent")
+
+    def test_unsafe_market_names_abstain(self):
+        for name in ("../BCHJPY.csv", "BCH-JPY.csv", "BCHJPY.txt", ".csv"):
+            with self.subTest(name=name):
+                t, m = reports()
+                t["markets"] = {name: {}}
+                m["selected_members"] = {name: {"present": True}}
+                self.assertEqual(verify(t, m)["status"], "abstain_trade_market_selection_unverified")
+
+    def test_official_last_modified_missing_abstains(self):
+        t, m = reports()
+        m["source_revision_validator"].pop("last_modified")
+        self.assertFalse(verify(t, m)["same_source_revision"])
+        self.assertEqual(bounded_reuse_decision(t, m), "refresh_bounded_trade_once")
+
 if __name__ == "__main__":
     unittest.main()

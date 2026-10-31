@@ -10,6 +10,22 @@ from pathlib import Path
 MAX_REPORT_BYTES = 32768
 
 
+def _same_source_identity(trade, official):
+    url = trade.get("source_url")
+    size = trade.get("source_archive_bytes_expected")
+    return (isinstance(url, str) and url.startswith("https://assets.kraken.com/")
+            and url == official.get("source_url")
+            and type(size) is int and size > 0
+            and type(official.get("source_expected_archive_bytes")) is int
+            and size == official["source_expected_archive_bytes"])
+
+
+def _strong_etag(value):
+    # HTTP entity tags are quoted; reject weak, control and malformed validators.
+    return (isinstance(value, str) and len(value) > 2
+            and value[0] == value[-1] == '"'
+            and all(0x21 <= ord(c) <= 0x7e and c != '"' for c in value[1:-1]))
+
 
 def bounded_reuse_decision(trade, official):
     """Fail closed on revision drift; permit ONE bounded recapture on metadata drift.
@@ -19,17 +35,13 @@ def bounded_reuse_decision(trade, official):
     """
     if not isinstance(trade, dict) or not isinstance(official, dict):
         return "abort_invalid_revision_evidence"
-    if (trade.get("source_url") != official.get("source_url") or
-            not isinstance(trade.get("source_url"), str) or
-            not trade["source_url"].startswith("https://assets.kraken.com/") or
-            type(trade.get("source_archive_bytes_expected")) is not int or
-            trade["source_archive_bytes_expected"] != official.get("source_expected_archive_bytes")):
+    if not _same_source_identity(trade, official):
         return "abort_source_identity_mismatch"
     tv, ov = trade.get("source_revision_validator"), official.get("source_revision_validator")
     if not isinstance(tv, dict) or not isinstance(ov, dict):
         return "abort_missing_revision_validator"
     te, oe = tv.get("strong_etag"), ov.get("strong_etag")
-    if not isinstance(te, str) or not te or te.startswith("W/") or te != oe:
+    if not _strong_etag(te) or not _strong_etag(oe) or te != oe:
         return "abort_source_revision_conflict"
     if (not isinstance(tv.get("last_modified"), str) or not tv["last_modified"] or
             not isinstance(ov.get("last_modified"), str) or not ov["last_modified"] or
@@ -50,11 +62,7 @@ def verify(trade, official):
     }
     if not isinstance(trade, dict) or not isinstance(official, dict):
         return result
-    if (trade.get("source_url") != official.get("source_url")
-            or not isinstance(trade.get("source_url"), str)
-            or not trade["source_url"].startswith("https://assets.kraken.com/")
-            or type(trade.get("source_archive_bytes_expected")) is not int
-            or trade["source_archive_bytes_expected"] != official.get("source_expected_archive_bytes")):
+    if not _same_source_identity(trade, official):
         result["status"] = "abstain_source_identity_mismatch"
         return result
     t = trade.get("source_revision_validator")
@@ -62,14 +70,16 @@ def verify(trade, official):
     if not isinstance(t, dict) or not isinstance(m, dict):
         return result
     te, me = t.get("strong_etag"), m.get("strong_etag")
-    if not isinstance(te, str) or not te or te.startswith("W/") or not isinstance(me, str) or te != me:
+    if not _strong_etag(te) or not _strong_etag(me) or te != me:
         result["status"] = "abstain_missing_or_mismatched_strong_etag"
         return result
-    if (t.get("last_modified") and m.get("last_modified")
-            and t["last_modified"] != m["last_modified"]):
+    if (not isinstance(t.get("last_modified"), str) or not t["last_modified"] or
+            not isinstance(m.get("last_modified"), str) or not m["last_modified"] or
+            t["last_modified"] != m["last_modified"]):
         result["status"] = "abstain_last_modified_mismatch"
         return result
-    consistency = (official.get("manifest_schema_summary") or {}).get("structural_consistency")
+    summary = official.get("manifest_schema_summary")
+    consistency = summary.get("structural_consistency") if isinstance(summary, dict) else None
     if not isinstance(consistency, dict) or not (
             consistency.get("manifest_file_count_matches_zip_csv_count") is True
             and consistency.get("file_count_matches_pair_count") is True):
@@ -81,8 +91,9 @@ def verify(trade, official):
         result["status"] = "abstain_trade_market_selection_unverified"
         return result
     for market in markets:
-        if (not isinstance(market, str) or market not in selected
-                or not isinstance(selected[market], dict)
+        if (not isinstance(market, str) or not market.endswith(".csv") or
+                not market[:-4].isalnum() or len(market) > 28 or
+                market not in selected or not isinstance(selected[market], dict)
                 or selected[market].get("present") is not True):
             result["status"] = "abstain_trade_market_selection_unverified"
             return result
