@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 0ab31ba46b6d22a2b4159b86f300ebff9301dcbb
+          ref: c847aa0bdc69e0c3ef2c120108f1e905e2b21d40
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -26,11 +26,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = '0ab31ba46b6d22a2b4159b86f300ebff9301dcbb'
+          test "$(git rev-parse HEAD)" = 'c847aa0bdc69e0c3ef2c120108f1e905e2b21d40'
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-gap-tests.log
-          grep -q 'Ran 426 tests' /tmp/research-gap-tests.log
+          grep -q 'Ran 459 tests' /tmp/research-gap-tests.log
           grep -q '^OK$' /tmp/research-gap-tests.log
       - name: Reuse bounded retained artifacts only when cooperative lease clear
         id: source
@@ -68,6 +68,7 @@ jobs:
           PYTHONPATH=research python research/probe_historical_rest_gap.py \
             --retained-trades research/output/bounded_independent_trade_members.zip \
             --ohlc research/output/reusable_ohlc_evidence.zip \
+            --candidate-index 1 \
             --output research/output/historical_rest_gap_candidate_report.json
           python - <<'PY'
           import json
