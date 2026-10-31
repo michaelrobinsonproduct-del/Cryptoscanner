@@ -38,8 +38,12 @@ def discover_schema(z, name):
             rows.append(row)
     if not rows or any(not row for row in rows):
         raise RuntimeError("empty source schema sample")
+    header = ("timestamp", "price", "volume", "type", "order_type", "misc", "trade_id")
     return {"member": name, "columns": [len(x) for x in rows],
-            "first_row_numeric": [is_number(x) for x in rows[0]],
+            "header": rows[0],
+            "official_header_match": tuple(x.strip() for x in rows[0]) == header,
+            "first_data_numeric_timestamp_price_volume":
+                len(rows) > 1 and len(rows[1]) == 7 and all(is_number(x) for x in rows[1][:3]),
             "sample_rows": len(rows)}
 
 
@@ -68,7 +72,7 @@ def analyze(ohlc_z, trade_z, *, pair="0GEUR", schema_attested=False):
               "matched_candles": 0, "real_labels": 0,
               "held_out_evaluation": "not_authorized",
               "status": "abstain_pending_real_source_schema_and_completeness"}
-    if schema["columns"] != [3, 3, 3] or not all(schema["first_row_numeric"]):
+    if not schema["official_header_match"] or not schema["first_data_numeric_timestamp_price_volume"]:
         result["status"] = "abstain_unknown_trade_csv_schema"
         return result
     # Parsing is a candidate, never an assertion of complete independent coverage.
@@ -108,7 +112,7 @@ def run(output, *, pair="0GEUR"):
         # Inspect actual source schema before spending 9GB on the OHLC archive.
         with zipfile.ZipFile(trades_path) as tz:
             trade_schema = discover_schema(tz, candidate_trade_member(tz, pair))
-        if trade_schema["columns"] != [3, 3, 3] or not all(trade_schema["first_row_numeric"]):
+        if not trade_schema["official_header_match"] or not trade_schema["first_data_numeric_timestamp_price_volume"]:
             report = {"status": "blocked_unknown_real_trade_schema",
                       "trade_sha256_observed": trade_evidence["sha256_observed"],
                       "trade_archive_bytes": trade_evidence["bytes"],
