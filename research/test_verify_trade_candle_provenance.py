@@ -41,5 +41,66 @@ class TradeBoundaryTests(unittest.TestCase):
                          "incomplete_evidence")
 
 
+    def test_bool_candle_fields_rejected(self):
+        for i in (0, 1, 2, 3, 4, 5, 6):
+            candle = list((300, 100, 120, 100, 110, 5, 3))
+            candle[i] = True
+            with self.subTest(field=i):
+                self.assertNotEqual(verify_open_boundary(candle, self.trades,
+                    independent_trade_source=True)["status"], "verified_open_boundary")
+
+    def test_negative_or_fractional_candle_open_rejected(self):
+        for timestamp in (-300, 300.5, 301):
+            candle = (timestamp, 100, 120, 100, 110, 5, 3)
+            with self.subTest(timestamp=timestamp):
+                self.assertNotEqual(verify_open_boundary(candle, self.trades,
+                    independent_trade_source=True)["status"], "verified_open_boundary")
+
+    def test_noninteger_count_rejected(self):
+        for count in (3.5, True, float("inf")):
+            candle = (300, 100, 120, 100, 110, 5, count)
+            with self.subTest(count=count):
+                self.assertNotEqual(verify_open_boundary(candle, self.trades,
+                    independent_trade_source=True)["status"], "verified_open_boundary")
+
+    def test_inconsistent_ohlc_bounds_rejected(self):
+        for candle in ((300, 100, 99, 100, 110, 5, 3),
+                       (300, 100, 120, 111, 110, 5, 3),
+                       (300, 0, 120, 0, 110, 5, 3)):
+            with self.subTest(candle=candle):
+                self.assertNotEqual(verify_open_boundary(candle, self.trades,
+                    independent_trade_source=True)["status"], "verified_open_boundary")
+
+    def test_duplicate_trade_stable_order_rejected(self):
+        trades = [(301, 100, 1, 0), (450, 120, 2, 0), (599, 110, 2, 2)]
+        self.assertEqual(verify_open_boundary((300, 100, 120, 100, 110, 5, 3),
+            trades, independent_trade_source=True)["status"], "invalid_evidence")
+
+    def test_fractional_or_negative_trade_order_rejected(self):
+        for order in (1.5, -1, float("nan"), True):
+            trades = [(301, 100, 1, 0), (450, 120, 2, order), (599, 110, 2, 2)]
+            with self.subTest(order=order):
+                self.assertEqual(verify_open_boundary((300, 100, 120, 100, 110, 5, 3),
+                    trades, independent_trade_source=True)["status"], "invalid_evidence")
+
+    def test_bool_or_nonfinite_trade_fields_rejected(self):
+        for field, value in ((0, True), (1, float("nan")), (2, True), (3, float("inf"))):
+            trades = list(self.trades)
+            bad = list(trades[1])
+            bad[field] = value
+            trades[1] = tuple(bad)
+            with self.subTest(field=field):
+                self.assertEqual(verify_open_boundary((300, 100, 120, 100, 110, 5, 3),
+                    trades, independent_trade_source=True)["status"], "invalid_evidence")
+
+    def test_integer_valued_csv_floats_still_match(self):
+        candle = (300.0, 100.0, 120.0, 100.0, 110.0, 5.0, 3.0)
+        trades = [(301.0, 100.0, 1.0, 0.0),
+                  (450.0, 120.0, 2.0, 1.0),
+                  (599.0, 110.0, 2.0, 2.0)]
+        self.assertEqual(verify_open_boundary(candle, trades,
+            independent_trade_source=True)["status"], "verified_open_boundary")
+
+
 if __name__ == "__main__":
     unittest.main()
