@@ -714,6 +714,25 @@
         "ohlc_market_count": 48,
         "trade_market_count": 4
       }
+    },
+    "independent_trade_compare_hardening_20261031_15": {
+      "status": "EXACT_COMMIT_191_TESTS_VERIFIED_NO_REAL_LABELS",
+      "research_commit": "05660704b0daeecf6edc4f38071b4996ca904032",
+      "code_commit": "8dc3b8c594d554065b2f91ed1ec0f09603665854",
+      "workflow_main_commit": "5389de653a5dfbf0dc54d88d2726b01ff271cda4",
+      "verified_workflow_run_id": 41159057324,
+      "verified_job_id": 124412279402,
+      "verified_tests": 191,
+      "added_regression_tests": 5,
+      "changes": [
+        "Fail-closed empty OHLC selection, malformed/nonfinite/unaligned timestamps, duplicate candles, and oversized comparisons even when completeness is caller-asserted",
+        "Isolated CI pinned to exact final research commit, no source download, no production writes"
+      ],
+      "source_evidence": "Prior 5001 exact candidate trade/OHLC intervals are diagnostics only; independently complete trade source still not authenticated",
+      "real_labels": 0,
+      "held_out_predictive_delta": null,
+      "production_applied": false,
+      "next": "Independent official trade-source authentication and complete-interval coverage; broaden contiguous 6/24/48h windows using retained evidence. Integrate verified hardening into scheduled research workflow only with next substantive vertical slice, avoiding repetitive audit."
     }
   },
   "audit": {
