@@ -9,14 +9,14 @@ class TradeMatchingTests(unittest.TestCase):
     def test_schema_not_verified_abstains(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d)/"trades.zip"
-            with zipfile.ZipFile(p, "w") as z: z.writestr("XBTUSD.csv", "300,100,2\n")
+            with zipfile.ZipFile(p, "w") as z: z.writestr("XBTUSD.csv", "timestamp,price,volume,type,order_type,misc,trade_id\n300,100,2,b,l,,id1\n")
             with zipfile.ZipFile(p) as z:
                 with self.assertRaises(RuntimeError): parse_member(z, "XBTUSD.csv")
 
     def test_parse_three_column_fixture_only(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d)/"trades.zip"
-            with zipfile.ZipFile(p, "w") as z: z.writestr("XBTUSD.csv", "300,100,2\n301,101,3\n")
+            with zipfile.ZipFile(p, "w") as z: z.writestr("XBTUSD.csv", "timestamp,price,volume,type,order_type,misc,trade_id\n300,100,2,b,l,,id1\n301,101,3,s,m,,id2\n")
             with zipfile.ZipFile(p) as z:
                 rows = parse_member(z, "XBTUSD.csv", schema_verified=True)
             self.assertEqual(len(rows), 2)
@@ -24,7 +24,7 @@ class TradeMatchingTests(unittest.TestCase):
     def test_parse_wrong_shape_fails(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d)/"trades.zip"
-            with zipfile.ZipFile(p, "w") as z: z.writestr("XBTUSD.csv", "300,100,2,extra\n")
+            with zipfile.ZipFile(p, "w") as z: z.writestr("XBTUSD.csv", "timestamp,price,volume,type,order_type,misc,trade_id\n300,100,2,extra\n")
             with zipfile.ZipFile(p) as z:
                 with self.assertRaises(ValueError): parse_member(z, "XBTUSD.csv", schema_verified=True)
 
