@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "learning-20261031T0118Z-15-recovery",
-    "lease_expires_at": "2026-10-31T01:29:59Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -574,6 +574,17 @@
         }
       },
       "source_archive_downloads_observed": 0
+    },
+    "recovery_20261031_15": {
+      "status": "LEASE_RECOVERED_WORKFLOW_UPDATE_BLOCKED",
+      "expired_previous_owner": "learning-20261031T0059Z-00-verified",
+      "prior_expiry": "2026-10-31T01:17:51.290Z",
+      "workflow_commit": null,
+      "verified_predictive_labels": 0,
+      "held_out_improvement": "not_demonstrated",
+      "production_applied": false,
+      "workflow_run": "awaiting triggered run",
+      "next": "Verify push-triggered workflow executes substantive bounded independent trade evidence steps and reuses 48-market artifact without archive download; confirm automatic lease release and source provenance."
     }
   },
   "audit": {
