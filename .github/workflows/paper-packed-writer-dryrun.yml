@@ -1,0 +1,90 @@
+name: Paper packed writer REAL ledger dry-run (read only)
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/**'
+      - '.github/workflows/paper-pipeline.yml'
+      - '.github/workflows/paper-packed-writer-dryrun.yml'
+permissions:
+  contents: read
+concurrency:
+  group: paper-packed-dryrun-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  read-only-dryrun:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact-source contracts before any public Kraken request
+        run: |
+          set -euo pipefail
+          echo "PAPER_PACKED_DRYRUN_SOURCE_SHA=$(git rev-parse HEAD)"
+          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+      - name: Authenticate actual public Git ledger and its immutable checkpoint
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          git rev-parse refs/remotes/origin/paper-proof-ledger > /tmp/paper-base.sha
+          BASE="$(cat /tmp/paper-base.sha)"
+          if git cat-file -e "${BASE}:paper-segment-manifest.json" 2>/dev/null; then
+            CHECKPOINT="$(git show "${BASE}:paper-segment-manifest.json" | python -c 'import json,sys;print(json.load(sys.stdin)["checkpoint"]["git_commit"])')"
+            git cat-file -e "${CHECKPOINT}^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$CHECKPOINT"
+          fi
+          python -m paper_pov.segmented_repository export-git \
+            --repository . --commit "$BASE" --output /tmp/paper-dryrun-before.json --full-replay
+      - name: Real bounded public Kraken PAPER scan, NO ledger push
+        run: |
+          set -euo pipefail
+          python -m paper_pov.scanner
+      - name: Stage and replay REAL data without changing remote ledger
+        run: |
+          set -euo pipefail
+          python -m paper_pov.segmented_live_writer stage \
+            --repository . --base "$(cat /tmp/paper-base.sha)" \
+            --report paper_pov/output/latest.json --source-sha "$GITHUB_SHA" \
+            --staged /tmp/paper-staged --next-ledger /tmp/paper-dryrun-after.json \
+            --scoreboard /tmp/paper-dryrun-score.json
+          python -m paper_pov.segmented_repository verify \
+            --directory /tmp/paper-staged --full-replay --git-repository .
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from paper_pov import ledger, segmented_repository as repo, segmented_storage as storage
+          before=ledger.verify(json.loads(Path("/tmp/paper-dryrun-before.json").read_bytes()),storage.MAX_RAW_BYTES)
+          after=ledger.verify(json.loads(Path("/tmp/paper-dryrun-after.json").read_bytes()),storage.MAX_RAW_BYTES)
+          assert after["generation"]==before["generation"]+1
+          assert after["sha256"]==repo.read_state("/tmp/paper-staged",True)[0]["sha256"]
+          assert len(after["predictions"])>=len(before["predictions"])
+          assert len(after["observations"])>=len(before["observations"])
+          assert ledger.scoreboard(after,storage.MAX_RAW_BYTES)["held_out_lift"] is None
+          print("PAPER_PACKED_DRYRUN_OK",before["generation"],after["generation"],
+                len(ledger.canonical(after)),
+                Path("/tmp/paper-staged/paper-ledger.packed.json").stat().st_size,
+                after["sha256"])
+          PY
+          git fetch --no-tags origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/paper-base.sha)" || {
+            echo "DRYRUN_REMOTE_MOVED_ABSTAIN"; exit 1;
+          }
+      - name: Upload bounded SHA256 evidence, NO remote write
+        run: |
+          set -euo pipefail
+          mkdir -p paper_pov/output/dryrun
+          cp /tmp/paper-staged/paper-ledger.packed.json paper_pov/output/dryrun/
+          cp /tmp/paper-staged/paper-segment-manifest.json paper_pov/output/dryrun/
+          cp /tmp/paper-staged/paper-segments/segment-*.json paper_pov/output/dryrun/
+          cp /tmp/paper-dryrun-score.json paper_pov/output/dryrun/scoreboard.json
+          (cd paper_pov/output/dryrun && sha256sum *.json > SHA256SUMS && sha256sum -c SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paper-packed-real-ledger-readonly-${{ github.run_id }}
+          path: paper_pov/output/dryrun/
+          retention-days: 90
+          if-no-files-found: error
