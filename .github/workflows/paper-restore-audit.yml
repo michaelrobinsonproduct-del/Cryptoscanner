@@ -103,6 +103,8 @@ jobs:
           run=next(r for r in runs if str(r["id"])==Path("/tmp/paper-run-id.txt").read_text().strip())
           if run["event"]!="schedule" or run["conclusion"]!="success":
               raise ValueError("Artifact source is not successful unattended schedule")
+          if proof["remote_git_bytes_match"] is not True:
+              raise ValueError("Independent immutable ledger readback mismatch")
           if proof["source_sha"]!=run["head_sha"]:
               raise ValueError("Artifact report source differs from scheduled workflow SHA")
           proof["scheduled_run_id"]=run["id"]
