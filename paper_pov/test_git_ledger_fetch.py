@@ -27,7 +27,7 @@ class BoundedFetchTests(unittest.TestCase):
         manifest = ('{"checkpoint":{"git_commit":"' + CHECKPOINT + '"}}').encode()
         run.return_value = subprocess.CompletedProcess([], 0, manifest, b"")
         self.assertEqual(f.fetch_bounded(), HEAD)
-        self.assertIn(("--no-tags", "--depth=1", "origin", CHECKPOINT),
+        self.assertIn(("fetch", "--no-tags", "--depth=1", "origin", CHECKPOINT),
                       [c.args for c in git.call_args_list])
 
     @patch.object(f, "_git")
