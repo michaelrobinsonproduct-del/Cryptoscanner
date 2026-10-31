@@ -123,7 +123,7 @@ def _check_manifest(manifest):
         if not isinstance(entry, dict) or set(entry) != {
                 "generation", "segment_sha256", "before_sha256", "after_sha256"}:
             raise ValueError("Invalid segment entry")
-        if entry["generation"] != i or not all(_hex(entry[k], 64) for k in (
+        if type(entry["generation"]) is not int or entry["generation"] != i or not all(_hex(entry[k], 64) for k in (
                 "segment_sha256", "before_sha256", "after_sha256")):
             raise ValueError("Invalid or noncontiguous segment entry")
         if entry["before_sha256"] != prior:
@@ -303,6 +303,12 @@ def read_git_state(repository, commit, full_replay=False):
     if has_manifest != has_snapshot:
         raise ValueError("Partially migrated Git ledger commit")
     if not has_manifest:
+        # A commit immediately after a packed writer may not silently downgrade
+        # to a stale legacy ledger by deleting both storage files.
+        ancestry = _git(repository, "rev-list", "--parents", "-n", "1", commit).decode().split()
+        for parent in ancestry[1:]:
+            if _git_has(repository, parent, MANIFEST) or _git_has(repository, parent, SNAPSHOT):
+                raise ValueError("Packed Git ledger was removed: unsafe downgrade")
         raw = _git(repository, "show", commit + ":paper-ledger.json")
         if len(raw) > storage.MAX_RAW_BYTES:
             raise ValueError("Legacy Git ledger exceeds bound")
