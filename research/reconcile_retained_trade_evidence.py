@@ -9,6 +9,7 @@ import hashlib
 import io
 import json
 import zipfile
+from math import isfinite
 from pathlib import Path
 
 from audit_trade_candidate_windows import audit_candidate_windows
@@ -76,6 +77,74 @@ def _bounded_sha256(path, cap):
     return digest.hexdigest()
 
 
+
+def _validate_retained_ohlc(payload, meta):
+    """Revalidate untrusted retained bytes and source-tail gap accounting.
+
+    A retained SHA alone only binds bytes to a self-reported manifest; it does
+    not prove source origin, trade completeness, or eligibility for labels.
+    """
+    if not isinstance(meta, dict):
+        raise ValueError("invalid OHLC provenance metadata")
+    rows = []
+    previous = None
+    gaps = missing = current = longest = 0
+    try:
+        decoded = payload.decode("utf-8", errors="strict")
+        reader = csv.reader(io.StringIO(decoded))
+        for raw in reader:
+            if len(raw) != 7:
+                raise ValueError("invalid retained OHLC column count")
+            row = tuple(float(value) for value in raw)
+            if not all(isfinite(value) for value in row):
+                raise ValueError("nonfinite retained OHLC value")
+            timestamp, opening, high, low, close, volume, count = row
+            if (timestamp < 0 or not timestamp.is_integer() or
+                    int(timestamp) % STEP or
+                    (previous is not None and timestamp <= previous)):
+                raise ValueError("invalid retained OHLC timestamp order")
+            if (min(opening, high, low, close) <= 0 or
+                    not low <= opening <= high or not low <= close <= high or
+                    volume < 0 or count < 0 or not count.is_integer()):
+                raise ValueError("invalid retained OHLC candle values")
+            if previous is not None and timestamp > previous + STEP:
+                gaps += 1
+                missing += int((timestamp - previous) // STEP - 1)
+                current = 0
+            current += 1
+            longest = max(longest, current)
+            rows.append(row)
+            if len(rows) > 8000:
+                raise ValueError("retained OHLC row cap")
+            previous = timestamp
+    except (UnicodeError, OverflowError, TypeError) as exc:
+        raise ValueError("invalid retained OHLC encoding or value") from exc
+    if not rows:
+        raise ValueError("empty retained OHLC evidence")
+    keys = ("retained_rows", "source_rows", "retained_first_open",
+            "retained_last_open", "source_gap_events",
+            "source_missing_intervals", "source_longest_contiguous")
+    if any(type(meta.get(key)) is not int for key in keys):
+        raise ValueError("invalid source-tail provenance metadata")
+    if (meta["retained_rows"] != len(rows) or
+            meta["source_rows"] < len(rows) or
+            meta["retained_first_open"] != int(rows[0][0]) or
+            meta["retained_last_open"] != int(rows[-1][0]) or
+            meta["source_longest_contiguous"] < longest or
+            meta["source_longest_contiguous"] > meta["source_rows"]):
+        raise ValueError("OHLC retained source-tail provenance mismatch")
+    if (meta["source_gap_events"] < gaps or
+            meta["source_missing_intervals"] < missing):
+        raise ValueError("OHLC source gap floor mismatch")
+    if meta["source_rows"] == len(rows) and (
+            meta["source_gap_events"] != gaps or
+            meta["source_missing_intervals"] != missing or
+            meta["source_longest_contiguous"] != longest):
+        raise ValueError("OHLC full-retention gap metadata mismatch")
+    return rows, {"gap_events": gaps, "missing_intervals": missing,
+                  "longest_contiguous": longest}
+
+
 def reconcile(ohlc_artifact, trade_artifact, *, expected_ohlc_digest=None,
               expected_trade_digest=None):
     """Inspect genuine retained source bytes; all labels stay gated."""
@@ -127,21 +196,7 @@ def reconcile(ohlc_artifact, trade_artifact, *, expected_ohlc_digest=None,
             ometa = om["markets"][o_name]
             if hashlib.sha256(ohlc_bytes).hexdigest() != ometa["retained_sha256"]:
                 raise ValueError("OHLC retained member SHA mismatch")
-            ohlc = [tuple(float(v) for v in row) for row in
-                    csv.reader(io.StringIO(ohlc_bytes.decode("utf-8", errors="strict")))]
-            if not ohlc or len(ohlc) != ometa["retained_rows"] or len(ohlc) > 8000:
-                raise ValueError("OHLC retained row count mismatch")
-            # The original builder retains the final N *unfiltered* source
-            # rows. Check that contract before interpreting interior absent
-            # timestamps as documented no-trade candles. Never extrapolate
-            # before the first or after the last retained source observation.
-            if (type(ometa.get("source_rows")) is not int
-                    or ometa["source_rows"] < len(ohlc)
-                    or type(ometa.get("retained_first_open")) is not int
-                    or type(ometa.get("retained_last_open")) is not int
-                    or int(ohlc[0][0]) != ometa["retained_first_open"]
-                    or int(ohlc[-1][0]) != ometa["retained_last_open"]):
-                raise ValueError("OHLC retained source-tail provenance mismatch")
+            ohlc, validated_gaps = _validate_retained_ohlc(ohlc_bytes, ometa)
             diagnostic = diagnose(ohlc, parsed)
             _, buckets = aggregate(parsed)
             source = {int(row[0]): row for row in ohlc}
@@ -175,6 +230,9 @@ def reconcile(ohlc_artifact, trade_artifact, *, expected_ohlc_digest=None,
                 "ohlc_documented_no_trade_semantics_reference": audit["ohlc_gap_documentation_url"],
                 "ohlc_gap_semantics_authorize_labels": False,
                 "retained_source_tail_contract_verified": True,
+                "retained_ohlc_structure_validated": True,
+                "retained_ohlc_gap_floor_verified": True,
+                "retained_ohlc_longest_contiguous": validated_gaps["longest_contiguous"],
             }
     return {"schema_version": 1,
             "status": "descriptive_candidate_outcomes_source_completeness_unverified",
