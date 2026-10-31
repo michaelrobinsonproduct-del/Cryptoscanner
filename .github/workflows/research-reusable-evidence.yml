@@ -45,22 +45,22 @@ jobs:
           # An owner string alone is not an active lease. Expired leases must not
           # permanently suppress research; malformed timestamps fail closed.
           lease_active=$(gh api "repos/$GITHUB_REPOSITORY/contents/research/learning_progress.json?ref=research-learning-program-20261027" --jq '.content' | base64 -d | python -c '
-import datetime as dt, json, sys
-state = json.load(sys.stdin)["concurrency"]
-owner = state.get("owner")
-expiry = state.get("lease_expires_at")
-if not owner:
-    print("false")
-elif not expiry:
-    print("true")
-else:
-    try:
-        deadline = dt.datetime.fromisoformat(expiry.replace("Z", "+00:00"))
-        if deadline.tzinfo is None:
-            raise ValueError("timezone required")
-        print("true" if deadline > dt.datetime.now(dt.timezone.utc) else "false")
-    except (ValueError, TypeError):
-        print("true")
+          import datetime as dt, json, sys
+          state = json.load(sys.stdin)["concurrency"]
+          owner = state.get("owner")
+          expiry = state.get("lease_expires_at")
+          if not owner:
+              print("false")
+          elif not expiry:
+              print("true")
+          else:
+              try:
+                  deadline = dt.datetime.fromisoformat(expiry.replace("Z", "+00:00"))
+                  if deadline.tzinfo is None:
+                      raise ValueError("timezone required")
+                  print("true" if deadline > dt.datetime.now(dt.timezone.utc) else "false")
+              except (ValueError, TypeError):
+                  print("true")
 ')
           other_active=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?per_page=100" --jq '[.workflow_runs[] | select(.status != "completed" and (.id | tostring) != env.GITHUB_RUN_ID and (.name | test("Research|Learning|Historical"; "i")))] | length')
           if [[ "$lease_active" != 'false' || "$other_active" != '0' ]]; then
