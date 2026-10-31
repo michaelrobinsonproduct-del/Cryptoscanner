@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'paper_eval/capacity.py'
+      - 'paper_pov/segmented_repository.py'
+      - 'paper_pov/git_ledger_fetch.py'
       - 'paper_eval/test_capacity.py'
       - '.github/workflows/paper-capacity-gate.yml'
   workflow_dispatch:
@@ -32,9 +34,10 @@ jobs:
       - name: Independently size genuine public Git ledger
         run: |
           set -euo pipefail
-          git fetch --no-tags --depth=1 origin refs/heads/paper-proof-ledger
-          LEDGER_COMMIT="$(git rev-parse FETCH_HEAD)"
-          git show "${LEDGER_COMMIT}:paper-ledger.json" > /tmp/paper-capacity-ledger.json
+          LEDGER_COMMIT="$(python -c 'from paper_pov.git_ledger_fetch import fetch_bounded;print(fetch_bounded())')"
+          python -m paper_pov.segmented_repository export-git \
+            --repository . --commit "$LEDGER_COMMIT" \
+            --output /tmp/paper-capacity-ledger.json --full-replay
           mkdir -p paper_eval/output
           python -m paper_eval.capacity \
             --ledger /tmp/paper-capacity-ledger.json \
