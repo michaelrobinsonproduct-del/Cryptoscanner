@@ -2139,6 +2139,26 @@
       "held_out_lift": null,
       "production_applied": false,
       "limitation": "Two independently corroborated observed bracket buckets, but candidate empty interval is NOT authenticated as complete no-trade source; no predictive labels."
+    },
+    "latest_role15_independent_20261031": {
+      "timestamp_utc": "2026-10-31T13:17:43.518Z",
+      "task_execution": "COMPLETED",
+      "research_commit": "97c10caf7841c64c4e487d49e9a0a5d6baf816f0",
+      "test_workflow_commit": "3b4ba9388d121a4d88f0d4ac1ec15792dae5e4a7",
+      "verified_ci_run_id": 41204829688,
+      "verified_ci_job_id": 124547681352,
+      "offline_tests_passed": 467,
+      "new_regression_tests": 8,
+      "verified_primary_source_run_id": 41203801205,
+      "verified_primary_source_artifact_id": 13044135604,
+      "new_source_observations_in_this_batch": 0,
+      "authenticated_complete_trade_intervals": 0,
+      "verified_no_trade_intervals": 0,
+      "real_predictive_labels": 0,
+      "held_out_lift": null,
+      "production_applied": false,
+      "source_completeness_gate": "BLOCKED",
+      "notes": "Official Kraken docs explain no-trade candle semantics for complete archives but do not attest retained bounded source member completeness; fail closed. :20/:50 reporting tasks disabled and Railway services lack active deployments."
     }
   }
 }
