@@ -1247,6 +1247,50 @@
       "production_applied": false,
       "blocker": "Full independent trade source authentication/completeness remains unproven; no verified predictive labels; real-source feature audit awaiting pinned retained-evidence workflow run.",
       "next": "Pin and execute existing scheduled reusable-evidence workflow with this exact tested research code after lease release; inspect real-source feature counts and abstentions without 9GB archive download."
+    },
+    "bounded_revision_retry_20261031_15": {
+      "status": "EXACT_PINNED_300_TESTS_VERIFIED_BOUNDED_METADATA_DRIFT_RECOVERY_PENDING_REAL_RUN",
+      "research_commit": "882366a1f10779cfebec13e54bdbc22cf0b46695",
+      "verified_ci_run_id": 41175962435,
+      "verified_ci_job_id": 124463463526,
+      "tests_passed": 300,
+      "added_tests": 6,
+      "prior_real_run_id": 41175862810,
+      "prior_real_run_status": "FAILED_SOURCE_LAST_MODIFIED_MISMATCH",
+      "prior_real_run_point_in_time_descriptive": {
+        "BCHJPY": {
+          "feature_ready": 1,
+          "one_hour_complete": 0,
+          "early_30_peaks": 0
+        },
+        "CMETHETH": {
+          "feature_ready": 9,
+          "one_hour_complete": 0,
+          "early_30_peaks": 0
+        },
+        "DENTEUR": {
+          "feature_ready": 263,
+          "one_hour_complete": 16,
+          "early_30_peaks": 3
+        },
+        "ELXEUR": {
+          "feature_ready": 236,
+          "one_hour_complete": 31,
+          "early_30_peaks": 4
+        }
+      },
+      "changes": [
+        "Detected actual cached trade/official manifest Last-Modified mismatch despite matching strong ETag; prior workflow correctly failed closed",
+        "Added explicit strong ETag, URL, source size and Last-Modified cache reuse decision; permits only one bounded trade recapture when ETag agrees and metadata differs",
+        "Added six regression tests for cache reuse, metadata refresh, weak/missing ETag and source identity drift; original strict verify gate unchanged",
+        "Verified exact pinned research commit in GitHub Actions run 41175962435 with 300/300 tests"
+      ],
+      "real_labels": 0,
+      "held_out_delta": null,
+      "candidate_rule": "none validated",
+      "production_applied": false,
+      "blocker": "Quarterly trade archive lacks independently published SHA; real source complete trade intervals unproven. A one-time bounded recapture is needed for cached Last-Modified mismatch.",
+      "next": "Register one bounded trade-only recapture retry in existing reusable research workflow after releasing lease; rerun source revision binding and full retained feature audit. Do not alter production or promote descriptive peaks."
     }
   },
   "audit": {
