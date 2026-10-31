@@ -1899,7 +1899,8 @@
       "Consistent detached production SQLite backup remains unavailable; no production writer changes authorized."
     ],
     "notes": [
-      "2026-10-31T10:12:23.521Z Role15: research c8f7e87e02d77248685a570e0cb390c2faba7690 REST JSON/cursor/chronology source-integrity hardening + eight tests; isolated test workflow main e97cbc53d03db894a5abdb7be26faa3e63cca21b triggered, exact 391-test CI PENDING. No new historical evidence, labels or production changes."
+      "2026-10-31T10:12:23.521Z Role15: research c8f7e87e02d77248685a570e0cb390c2faba7690 REST JSON/cursor/chronology source-integrity hardening + eight tests; isolated test workflow main e97cbc53d03db894a5abdb7be26faa3e63cca21b triggered, exact 391-test CI PENDING. No new historical evidence, labels or production changes.",
+      "2026-10-31T10:14:22.453Z Role15: initial exact CI 41191799719 failed 1/391 because preexisting unwitnessed-tail fixture used impossible cursors under new strict request-boundary gate. Corrected fixture only (no safety weakening) at research 0a9aa1e067281f4de6cf65c7bbd8dbd8356faa08; main isolated test workflow 5516d56c07319b73d784430084a94642778f5085 triggered. Final exact CI pending, no labels or production changes."
     ]
   }
 }
