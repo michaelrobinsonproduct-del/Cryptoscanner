@@ -244,6 +244,11 @@ class GitRepositoryStorageTests(unittest.TestCase):
         git("commit", "-m", "simulate missing manifest")
         with self.assertRaises(ValueError):
             repo.read_git_state(gitdir, git("rev-parse", "HEAD"))
+        (gitdir / repo.SNAPSHOT).unlink()
+        git("add", "-A")
+        git("commit", "-m", "simulate both packed files removed")
+        with self.assertRaisesRegex(ValueError, "downgrade"):
+            repo.read_git_state(gitdir, git("rev-parse", "HEAD"))
 
     def test_cli_migrate_verify_and_append(self):
         legacy = self.root / "legacy.json"
