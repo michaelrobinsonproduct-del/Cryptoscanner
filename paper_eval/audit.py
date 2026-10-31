@@ -205,7 +205,7 @@ def evaluate(state, horizon_hours=24, top_k=5):
     return {
         "schema": 1, "horizon_hours": horizon_hours, "top_k": top_k,
         "ledger_generation": state["generation"], "ledger_sha256": state["sha256"],
-        "actual_scans": ledger.scoreboard(state)["actual_scans"],
+        "actual_scans": state.get("archived", {}).get("scans", 0) + len(runs),
         "active_scans_evaluated": len(runs),
         "archived_scans_not_reconstructed": state.get("archived", {}).get("scans", 0),
         "mature_enough_runs": mature_runs,
