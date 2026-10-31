@@ -1,0 +1,42 @@
+name: Paper Ledger Compaction Boundary (isolated exact-code CI)
+on:
+  push:
+    branches: [proof-storage-boundary-20261031]
+    paths:
+      - 'paper_pov/**'
+      - '.github/workflows/paper-storage-ci.yml'
+  pull_request:
+    paths:
+      - 'paper_pov/**'
+      - '.github/workflows/paper-storage-ci.yml'
+permissions:
+  contents: read
+concurrency:
+  group: paper-storage-exact-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  exact-paper-storage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact-commit synthetic storage and scanner contracts
+        run: |
+          set -euo pipefail
+          echo "PAPER_STORAGE_EXACT_SHA=$(git rev-parse HEAD)"
+          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+          python - <<'PY'
+          from pathlib import Path
+          source=Path("paper_pov/ledger.py").read_text()
+          assert 'old_run_ids = {r["id"] for r in old_runs}' in source
+          assert 'o["run_id"] not in old_run_ids' in source
+          assert 'o["run_id"] in old_run_ids' in source
+          assert "api.kraken.com/0/private/" not in Path("paper_pov/scanner.py").read_text()
+          print("PAPER_STORAGE_ISOLATED_SAFETY_OK")
+          PY
