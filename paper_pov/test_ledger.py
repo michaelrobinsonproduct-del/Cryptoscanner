@@ -114,6 +114,29 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(state["archived"]["scans"], 1)
         ledger.verify(state)
 
+    def test_compaction_preserves_retained_run_quote_before_cutoff(self):
+        """An as-of retained at cutoff can own a quote from 2 minutes earlier."""
+        state = ledger.advance(ledger.empty(), synthetic(0), SHA)
+        second = synthetic(50 * 60 + 1)
+        quote_at = (NOW + dt.timedelta(minutes=50 * 60 - 1)).isoformat()
+        second["started_at"] = (NOW + dt.timedelta(minutes=50 * 60 - 2)).isoformat()
+        for p in second["watch"]:
+            p["quote_observed_at"] = quote_at
+        for o in second["observations"]:
+            o["observed_at"] = quote_at
+        state = ledger.advance(state, second, SHA)
+        second_run = state["runs"][-1]
+        self.assertEqual(second_run["observation_count"], 25)
+        state = ledger.advance(state, synthetic(100 * 60 + 1), SHA)
+        retained = {r["id"]: r["observation_count"] for r in state["runs"]}
+        self.assertIn(second_run["id"], retained)
+        self.assertEqual(
+            sum(o["run_id"] == second_run["id"] for o in state["observations"]), 25)
+        self.assertEqual(state["archived"]["observations"], 25)
+        self.assertEqual(len(state["observations"]), 50)
+        self.assertEqual(ledger.scoreboard(state)["market_observations"], 75)
+        ledger.verify(state)
+
     def test_compacted_archive_tampering_fails_closed(self):
         state = ledger.advance(ledger.empty(), synthetic(0), SHA)
         state = ledger.advance(state, synthetic(51 * 60), SHA)
