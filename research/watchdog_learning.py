@@ -48,6 +48,11 @@ def run_state(run, jobs):
         return "running"
     if run.get("conclusion") != "success":
         return "failed"
+    # A green workflow may contain a failed or unfinished continue-on-error job.
+    # Required steps alone must never conceal job-level execution failures.
+    if any(job.get("conclusion") in ("failure", "cancelled", "timed_out") or
+           job.get("status") not in (None, "completed") for job in jobs):
+        return "unverified_green"
     steps = [s for job in jobs for s in job.get("steps", [])]
     # A real bounded REST source run is substantive provenance research, but
     # never proof of complete intervals, real labels or predictive lift.
@@ -141,6 +146,13 @@ def assess(now, workflow_created, runs, jobs_by_id, artifacts, checkpoint,
     # Count the two latest completed batches; queued retries do not erase skips.
     if len(completed) >= 2 and all(s == "skipped_no_work" for _, s in completed[:2]):
         alerts.append("REPEATED_GREEN_NO_WORK")
+    # Interleaved success in a different research stream must not conceal two
+    # consecutive skipped batches in this stream.
+    for stream in (primary_runs, extra_runs):
+        stream_ids = {r["id"] for r in stream}
+        recent = [s for r, s in completed if r["id"] in stream_ids]
+        if len(recent) >= 2 and all(s == "skipped_no_work" for s in recent[:2]):
+            alerts.append("REPEATED_GREEN_NO_WORK")
     # The 90-minute freshness gate applies to substantive evidence work, not
     # merely a green CI/test job or a queued retry. A daily schedule alone is
     # not sufficient for the user-requested continuous-learning cadence.
