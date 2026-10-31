@@ -121,6 +121,33 @@ jobs:
           assert report['real_labels'] == 0 and report['held_out_evaluation'] == 'not_authorized'
           print(json.dumps({'markets':report['markets'],'real_labels':0,'status':report['status']},sort_keys=True))
           PY
+      - name: Capture bounded official trade members for independent provenance (no full ZIP download)
+        if: steps.cache.outputs.skip == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=research python research/probe_bounded_trade_members.py \
+            --selection research/kraken_reusable_market_selection.json \
+            --output research/output/bounded_independent_trade_members.zip \
+            | tee research/output/bounded_trade_probe_summary.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('research/output/bounded_trade_probe_summary.json').read_text())
+          assert r['real_labels'] == 0 and r['source_archive_full_sha256_verified'] is False
+          assert r['range_bytes_transferred'] <= 24*1024*1024
+          print('bounded source evidence only; historical labels remain gated')
+          PY
+      - name: Upload bounded independent trade evidence and manifest
+        if: steps.cache.outputs.skip == 'false' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kraken-bounded-independent-trade-members
+          path: |
+            research/output/bounded_independent_trade_members.zip
+            research/output/bounded_trade_probe_summary.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload bounded descriptive peak audit
         if: steps.cache.outputs.skip == 'false' && success()
         uses: actions/upload-artifact@v4
