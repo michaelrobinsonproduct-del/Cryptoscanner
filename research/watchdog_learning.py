@@ -75,7 +75,10 @@ def assess(now, workflow_created, runs, jobs_by_id, artifacts, checkpoint):
     statuses = [(r, run_state(r, jobs_by_id.get(r["id"], []))) for r in runs]
     if not statuses and now - workflow_created > dt.timedelta(hours=2):
         alerts.append("NO_RESEARCH_RUNS")
-    if statuses and statuses[0][1] == "failed":
+    # A queued/running retry must not hide the latest completed failure.
+    # Clear the alert only after a newer completed run has recovered.
+    completed = [(r, s) for r, s in statuses if s != "running"]
+    if completed and completed[0][1] == "failed":
         alerts.append("LATEST_RESEARCH_RUN_FAILED")
     if statuses and statuses[0][1] == "unverified_green":
         alerts.append("LATEST_GREEN_RUN_UNVERIFIED")
