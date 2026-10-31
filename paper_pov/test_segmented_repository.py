@@ -2,6 +2,7 @@
 import copy
 import hashlib
 import json
+import shutil
 import subprocess
 from pathlib import Path
 import tempfile
@@ -188,6 +189,61 @@ class GitRepositoryStorageTests(unittest.TestCase):
         repo.stage_migration(raw, "f" * 40, bad)
         with self.assertRaises(ValueError):
             repo.verify_checkpoint_origin(bad, gitdir)
+
+    def test_git_reader_supports_legacy_and_segmented_commits(self):
+        gitdir = self.root / "git-compat"
+        gitdir.mkdir()
+        def git(*args):
+            return subprocess.run(["git", "-C", str(gitdir), *args],
+                                  capture_output=True, check=True).stdout.decode().strip()
+        def copy_storage(directory):
+            for path in directory.rglob("*"):
+                if path.is_file():
+                    relative = path.relative_to(directory)
+                    target = gitdir / relative
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(path, target)
+        git("init")
+        git("config", "user.email", "paper@example.invalid")
+        git("config", "user.name", "Paper Test")
+        raw = ledger.canonical(ledger.empty())
+        (gitdir / "paper-ledger.json").write_bytes(raw)
+        git("add", "-A")
+        git("commit", "-m", "legacy ledger")
+        legacy_sha = git("rev-parse", "HEAD")
+        legacy_state, mode = repo.read_git_state(gitdir, legacy_sha)
+        self.assertEqual(mode, "legacy")
+        self.assertEqual(legacy_state["generation"], 0)
+        migrated = self.root / "migrated"
+        repo.stage_migration(raw, legacy_sha, migrated)
+        copy_storage(migrated)
+        git("add", "-A")
+        git("commit", "-m", "atomic storage migration")
+        migration_sha = git("rev-parse", "HEAD")
+        state, mode = repo.read_git_state(gitdir, migration_sha, full_replay=True)
+        self.assertEqual(mode, "segmented")
+        self.assertEqual(state, legacy_state)
+        appended = self.root / "appended"
+        repo.stage_append(migrated, synthetic(0), SHA, appended)
+        copy_storage(appended)
+        git("add", "-A")
+        git("commit", "-m", "atomic scan append")
+        append_sha = git("rev-parse", "HEAD")
+        state, mode = repo.read_git_state(gitdir, append_sha, full_replay=True)
+        self.assertEqual(mode, "segmented")
+        self.assertEqual(state["generation"], 1)
+        export = self.root / "export.json"
+        repo.main(["export-git", "--repository", str(gitdir),
+                   "--commit", append_sha, "--output", str(export),
+                   "--full-replay"])
+        self.assertEqual(json.loads(export.read_bytes()), state)
+        self.assertEqual(repo.read_git_state(gitdir, legacy_sha)[1], "legacy")
+        # A half-migrated Git commit must NEVER fall back to stale plain JSON.
+        (gitdir / repo.MANIFEST).unlink()
+        git("add", "-A")
+        git("commit", "-m", "simulate missing manifest")
+        with self.assertRaises(ValueError):
+            repo.read_git_state(gitdir, git("rev-parse", "HEAD"))
 
     def test_cli_migrate_verify_and_append(self):
         legacy = self.root / "legacy.json"
