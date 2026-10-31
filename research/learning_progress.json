@@ -1226,13 +1226,13 @@
       "artifact_expires_at": "2026-11-30T06:04:16Z"
     },
     "point_in_time_early_mover_audit_20261031_15": {
-      "status": "EXACT_PINNED_294_TESTS_VERIFIED_REAL_SOURCE_EVALUATION_PENDING",
-      "research_commit": "e652ce70b8157f3a465e697fbb624670d978e38a",
-      "workflow_main_commit": "550322d80702298db1d0eba8fccb31a9d89a3313",
-      "verified_ci_run_id": 41175802116,
-      "verified_ci_job_id": 124462996525,
-      "tests_passed": 294,
-      "added_tests": 10,
+      "status": "EXACT_PINNED_300_TESTS_REAL_RETAINED_FEATURE_AUDIT_VERIFIED_NO_PREDICTIVE_LABELS",
+      "research_commit": "882366a1f10779cfebec13e54bdbc22cf0b46695",
+      "workflow_main_commit": "b7596209f6f8ef3b4c524ba6f177bd19943db9cf",
+      "verified_ci_run_id": 41176008483,
+      "verified_ci_job_id": 124463595806,
+      "tests_passed": 300,
+      "added_tests": 16,
       "changes": [
         "New strict closed-candle 15-minute return, range and quote-volume proxy feature audit with entry as-of = candle open+300s",
         "Separate future 1/6/24/48h descriptive peaks from features; count pre-surge prior-return<10% opportunities and exclusions",
@@ -1240,16 +1240,46 @@
         "Add 10 exact-code regression tests including 48h boundary, no lookahead, missing prior/future, prior surge and malformed rows",
         "Verified exact-code test-only GitHub Actions CI; earlier malformed workflow YAML fixed after syntax-only failure"
       ],
-      "real_source_feature_run_verified": false,
+      "real_source_feature_run_verified": true,
       "real_labels": 0,
       "held_out_delta": null,
-      "candidate_rule": "none validated",
+      "candidate_rule": "none independently validated",
       "production_applied": false,
-      "blocker": "Full independent trade source authentication/completeness remains unproven; no verified predictive labels; real-source feature audit awaiting pinned retained-evidence workflow run.",
-      "next": "Pin and execute existing scheduled reusable-evidence workflow with this exact tested research code after lease release; inspect real-source feature counts and abstentions without 9GB archive download."
+      "blocker": "No independent authentication/completeness of Kraken quarterly trade source; feature-ready entries and 30% peaks are descriptive only, not training labels or predictive wins.",
+      "next": "Obtain independently complete source interval attestation using bounded official data/API, then unlock only eligible genuine 1/6/24/48h labels; chronological held-out baseline comparison remains gated.",
+      "full_ohlc_archive_downloads": 0,
+      "reused_ohlc_markets": 48,
+      "reconciled_trade_markets": 4,
+      "feature_ready_entries": 509,
+      "descriptive_complete_1h_future_windows": 47,
+      "descriptive_early_1h_peak30_windows": 7,
+      "per_market": {
+        "BCHJPY": {
+          "features": 1,
+          "complete_1h": 0,
+          "early_peak30": 0
+        },
+        "CMETHETH": {
+          "features": 9,
+          "complete_1h": 0,
+          "early_peak30": 0
+        },
+        "DENTEUR": {
+          "features": 263,
+          "complete_1h": 16,
+          "early_peak30": 3
+        },
+        "ELXEUR": {
+          "features": 236,
+          "complete_1h": 31,
+          "early_peak30": 4
+        }
+      },
+      "reconciliation_artifact_id": 13033476055,
+      "reconciliation_artifact_digest": "sha256:4cb2d8ad2c3f778cd9c14bf70431be8190d0fe96faef17c4ec01c1b5bc56b05b"
     },
     "bounded_revision_retry_20261031_15": {
-      "status": "EXACT_PINNED_300_TESTS_VERIFIED_BOUNDED_METADATA_DRIFT_RECOVERY_PENDING_REAL_RUN",
+      "status": "RECOVERED_SUCCESSFUL_300_TEST_RETAINED_EVIDENCE_RUN_NO_LABELS",
       "research_commit": "882366a1f10779cfebec13e54bdbc22cf0b46695",
       "verified_ci_run_id": 41175962435,
       "verified_ci_job_id": 124463463526,
@@ -1290,7 +1320,15 @@
       "candidate_rule": "none validated",
       "production_applied": false,
       "blocker": "Quarterly trade archive lacks independently published SHA; real source complete trade intervals unproven. A one-time bounded recapture is needed for cached Last-Modified mismatch.",
-      "next": "Register one bounded trade-only recapture retry in existing reusable research workflow after releasing lease; rerun source revision binding and full retained feature audit. Do not alter production or promote descriptive peaks."
+      "next": "Register one bounded trade-only recapture retry in existing reusable research workflow after releasing lease; rerun source revision binding and full retained feature audit. Do not alter production or promote descriptive peaks.",
+      "verified_real_run_id": 41176008483,
+      "verified_real_job_id": 124463595806,
+      "workflow_main_commit": "b7596209f6f8ef3b4c524ba6f177bd19943db9cf",
+      "observed_cache_decision": "reuse",
+      "bounded_recapture_exercised_live": false,
+      "revision_binding_status": "same_revision_and_directory_consistent_not_source_authenticated",
+      "source_trade_archive_sha256_verified": false,
+      "recovery_note": "Initial run 41175862810 failed closed on Last-Modified mismatch; next run 41176008483 passed all substantive steps with cache reuse and same-source revision binding. Bounded recapture fallback fixture-tested but not exercised live."
     }
   },
   "audit": {
