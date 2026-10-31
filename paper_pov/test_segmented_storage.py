@@ -123,5 +123,47 @@ class StorageTests(unittest.TestCase):
         self.assertNotEqual(after["sha256"], original["sha256"])
 
 
+    def test_100_half_hour_scans_1200_markets_measured_storage(self):
+        # Representative synthetic stress, NOT measured real Kraken growth.
+        # A raw 50-hour state may exceed 12MB while its sealed persisted
+        # snapshot must stay below 12MB. No evidence is discarded.
+        state = ledger.empty()
+        packed = storage.pack_snapshot(state)
+        final_segment = None
+        for i in range(100):
+            report = synthetic(i * 30)
+            at = report["as_of"]
+            for n in range(len(report["observations"]), 1200):
+                report["observations"].append({
+                    "pair": "SYNTH%04dUSD" % n, "price": 1.01,
+                    "observed_at": at})
+            report["observed_markets"] = len(report["observations"])
+            packed, final_segment, score = storage.advance_segmented(
+                packed, report, SHA)
+        restored = storage.unpack_snapshot(packed)
+        raw_size = len(ledger.canonical(restored))
+        self.assertEqual(restored["generation"], 100)
+        self.assertGreater(raw_size, ledger.MAX_BYTES)
+        self.assertLess(len(packed), storage.MAX_PACKED_BYTES)
+        self.assertEqual(score["market_observations"], 120000)
+        self.assertEqual(storage.read_segment(final_segment)["generation"], 100)
+        print("MEASURED_SYNTHETIC_2_PER_HOUR_50H",
+              json.dumps({"scans": 100, "markets_per_scan": 1200,
+                          "raw_bytes": raw_size, "packed_bytes": len(packed),
+                          "limit_bytes": storage.MAX_PACKED_BYTES,
+                          "matured_labels": score["matured_labels"],
+                          "production_applied": False}, sort_keys=True))
+
+    def test_segmented_transition_does_not_mutate_input(self):
+        before = ledger.empty()
+        original = storage.pack_snapshot(before)
+        next_snapshot, segment, score = storage.advance_segmented(
+            original, synthetic(0), SHA)
+        self.assertEqual(storage.unpack_snapshot(original), before)
+        self.assertEqual(storage.unpack_snapshot(next_snapshot)["generation"], 1)
+        self.assertEqual(storage.replay_segments([segment]),
+                         storage.unpack_snapshot(next_snapshot))
+        self.assertFalse(score["production_applied"])
+
 if __name__ == "__main__":
     unittest.main()
