@@ -34,5 +34,5 @@ jobs:
           set -euo pipefail
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-tests.log
-          grep -q 'Ran 431 tests' /tmp/research-tests.log
+          grep -q 'Ran 440 tests' /tmp/research-tests.log
           grep -q '^OK$' /tmp/research-tests.log
