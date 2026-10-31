@@ -20,20 +20,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 6e603b49d1824a3714b42418d18cb8df1b5acf1f
+          ref: efe34c22e27de93d2c13c8b6410ca5eb8a5d8013
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify immutable research code and 147 offline tests
+      - name: Verify immutable research code and 151 offline tests
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = '6e603b49d1824a3714b42418d18cb8df1b5acf1f'
+          test "$(git rev-parse HEAD)" = 'efe34c22e27de93d2c13c8b6410ca5eb8a5d8013'
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-tests.log
-          grep -q 'Ran 147 tests' /tmp/research-tests.log
+          grep -q 'Ran 151 tests' /tmp/research-tests.log
           grep -q '^OK$' /tmp/research-tests.log
       - name: Check cooperative research lease, active runs, and cached source evidence
         id: cache
@@ -108,6 +108,27 @@ jobs:
           print(json.dumps({'markets': report['markets'], 'real_labels': report['real_labels'],
                             'archive_downloads_this_run': report['archive_downloads_this_run']}, sort_keys=True))
           PY
+      - name: Audit bounded descriptive 30-percent OHLC peak windows (not validated labels)
+        if: steps.cache.outputs.skip == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=research python research/analyze_reusable_ohlc_candidates.py --evidence research/output/reusable_ohlc_evidence.zip --expected-sha256 fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 > research/output/descriptive_ohlc_peak_audit.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path('research/output/descriptive_ohlc_peak_audit.json').read_text())
+          assert report['real_labels'] == 0 and report['held_out_evaluation'] == 'not_authorized'
+          print(json.dumps({'markets':report['markets'],'real_labels':0,'status':report['status']},sort_keys=True))
+          PY
+      - name: Upload bounded descriptive peak audit
+        if: steps.cache.outputs.skip == 'false' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kraken-descriptive-ohlc-peak-audit
+          path: research/output/descriptive_ohlc_peak_audit.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Refresh reusable evidence artifact for future unattended runs
         if: steps.cache.outputs.skip == 'false' && success()
         uses: actions/upload-artifact@v4
