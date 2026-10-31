@@ -1,0 +1,84 @@
+name: Role V one-shot final merged-main paper acceptance (read-only)
+on:
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/proof-role-v-final-main.yml']
+permissions:
+  contents: read
+concurrency:
+  group: role-v-final-main-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  exact-main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 7a9f4a2eecae710a1df4ecad817ae8573d6f8e2d
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact merged main and both full test suites
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "7a9f4a2eecae710a1df4ecad817ae8573d6f8e2d"
+          echo "ROLE_V_FINAL_MERGED_MAIN_SHA=$(git rev-parse HEAD)"
+          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+          python -m unittest discover -s paper_eval -p 'test_*.py' -v
+          python - <<'PY'
+          from pathlib import Path
+          scanner=Path("paper_pov/scanner.py").read_text()
+          restore=Path(".github/workflows/paper-restore-audit.yml").read_text()
+          assert "move_since_utc_open_pct" in scanner
+          assert "kraken_ticker_today_open_utc" in scanner
+          assert "--max-filesize 20000000 --max-time 120 --connect-timeout 15" in restore
+          assert "contents: write" not in restore
+          assert "  schedule:" not in restore
+          for forbidden in ("api.kraken.com/0/private/", "AddOrder", "railway"):
+              assert forbidden not in scanner
+          print("ROLE_V_FINAL_STATIC_NO_WRITER_OK")
+          PY
+      - name: Independently read back sealed public ledger and chain
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=40 origin refs/heads/paper-proof-ledger
+          COMMIT="$(git rev-parse FETCH_HEAD)"
+          git show "$COMMIT:paper-ledger.json" > /tmp/paper-final-ledger.json
+          mkdir -p /tmp/paper-final
+          LEDGER_COMMIT="$COMMIT" python - <<'PY'
+          import json,os,hashlib
+          from pathlib import Path
+          from paper_pov import ledger
+          state=ledger.verify(json.loads(Path("/tmp/paper-final-ledger.json").read_text()))
+          score=ledger.scoreboard(state)
+          result={
+            "mode":"READ_ONLY_FINAL_MAIN_ACCEPTANCE",
+            "main_source_sha":"7a9f4a2eecae710a1df4ecad817ae8573d6f8e2d",
+            "ledger_commit":os.environ["LEDGER_COMMIT"],
+            "ledger_generation":state["generation"],
+            "ledger_sha256":state["sha256"],
+            "actual_scans":score["actual_scans"],
+            "active_predictions":len(state["predictions"]),
+            "active_observations":len(state["observations"]),
+            "matured_labels":sum(o["status"]=="MATURED_OBSERVED" for o in state["outcomes"]),
+            "gap_abstentions":sum(o["status"]=="ABSTAIN_GAP" for o in state["outcomes"]),
+            "held_out_lift":None,
+            "production_applied":False,
+          }
+          assert result["actual_scans"]>=8
+          assert result["matured_labels"]==0 or result["matured_labels"]>0
+          Path("/tmp/paper-final/readback.json").write_bytes(ledger.canonical(result))
+          print("ROLE_V_FINAL_REMOTE_READBACK",json.dumps(result,sort_keys=True))
+          PY
+          (cd /tmp/paper-final && sha256sum readback.json > SHA256SUMS)
+      - name: Preserve exact merged-code remote evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: role-v-final-main-${{ github.run_id }}
+          path: |
+            /tmp/paper-final/readback.json
+            /tmp/paper-final/SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
