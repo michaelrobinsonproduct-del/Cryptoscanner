@@ -1633,6 +1633,32 @@
       "evidence_artifact_expires_at": "2026-11-30T09:06:36Z",
       "issue_comment_id": 6541504997,
       "issue_comment_readback_verified": true
+    },
+    "role15_20261031_0918": {
+      "status": "EXACT_CODE_VERIFIED_SOURCE_COMPLETENESS_STILL_BLOCKED",
+      "worker": ":15 independent verifier",
+      "utc": "2026-10-31T09:20:31.148Z",
+      "research_commit": "f4588baf16df4225e273ee86477ec12c91f97ea1",
+      "main_test_workflow_commit": "0ce4a8457515097c4f41093a0bdaa36d7ebba4ac",
+      "ci_run_id": 41188248840,
+      "ci_job_id": 124499481573,
+      "ci_url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41188248840",
+      "tests_passed": 368,
+      "new_regression_tests": 7,
+      "changes": [
+        "Validate every selected retained trade ZIP market before accepting first observed REST window",
+        "Reject later-market invalid header, duplicate trade IDs, out-of-order rows, invalid trade direction, oversized member and unsafe market identity",
+        "Preserve valid first-window selection after validating later markets"
+      ],
+      "last_actual_historical_evidence_run_id": 41187283901,
+      "last_actual_historical_evidence": "12 contiguous observed DENTEUR five-minute REST/trades/OHLC correspondences; not source-complete or predictive",
+      "new_historical_evidence_this_batch": false,
+      "full_archive_downloads": 0,
+      "genuine_labels": 0,
+      "held_out_lift": null,
+      "production_applied": false,
+      "blocker": "No independent complete trade intervals, no-trade semantics or certified forward outcome labels; test-only CI does not validate historical predictive performance",
+      "next": "Primary worker should strengthen bounded REST pagination and source-completeness evidence, then certify only genuinely complete forward intervals; preserve no-label fail-closed behavior."
     }
   },
   "audit": {
@@ -1791,7 +1817,8 @@
       "Automation Stagger A inspected real unexpired inventory artifact 12871991601 without any full archive download: 1713 Kraken 5m markets, 1677 eligible under bounded 577-row/64MiB screen, density cohorts 489/553/466/169. Inventory gap_intervals counts GAP EVENTS, not missing candle count; corrected independent accounting. Added exact-blob tested deterministic 48-market cohort selector (7 tests) and bounded SHA-verified reusable 48-market source evidence builder/replay inspector (6 tests), 13/13 local exact-code tests. Registered isolated daily/push GitHub Actions workflow on main with pinned research SHA, no production writer, archive once only if no reusable artifact; later daily runs refresh artifact without source download. New remote 147-test CI and actual source extraction pending. Production untouched.",
       "Added bounded future-only 30% OHLC descriptive window audit for 48 retained markets, 4 offline regression tests and artifact upload in the single unattended research workflow. Results remain explicitly unverified descriptions; no labels or production writes. Remote exact 151-test run pending at checkpoint.",
       "Verified run 41151315621 passed exact pinned 151 tests, reused retained 48-market artifact with zero archive downloads, and uploaded bounded descriptive OHLC peak audit 13023570790. Counts of overlapping complete future OHLC windows and >=30% peaks: 1h 54007/328, 6h 22721/224, 24h 11150/85, 48h 9129/1. These are NOT validated labels or predictive signals: source timestamp semantics and independent trade completeness remain unverified. Production unchanged.",
-      "2026-10-31 09:07 UTC Role00 verified GitHub Actions run 41187283901, 361/361 exact-code tests, 12 DENTEUR observed 5m three-way REST/trades/OHLC correspondences, 859463 REST bytes, zero authenticated complete historical intervals/labels/heldout lift, no production changes. Issue #34 comment 6541504997."
+      "2026-10-31 09:07 UTC Role00 verified GitHub Actions run 41187283901, 361/361 exact-code tests, 12 DENTEUR observed 5m three-way REST/trades/OHLC correspondences, 859463 REST bytes, zero authenticated complete historical intervals/labels/heldout lift, no production changes. Issue #34 comment 6541504997.",
+      "2026-10-31 :15 verified exact-code 368/368 offline tests in run 41188248840 on research f4588baf; seven later-market corruption tests now prevent first valid window from bypassing validation of other retained trade members. Zero new historical evidence/labels/held-out lift; production unchanged."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
