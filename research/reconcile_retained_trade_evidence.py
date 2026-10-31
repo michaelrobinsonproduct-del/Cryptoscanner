@@ -11,6 +11,7 @@ import json
 import zipfile
 from pathlib import Path
 
+from audit_trade_candidate_windows import audit_candidate_windows
 from diagnose_real_trade_candle_overlap import diagnose
 from match_historical_trades_to_ohlcvt import parse_member, aggregate
 from verify_trade_candle_provenance import verify_open_boundary
@@ -64,12 +65,23 @@ def _candidate_windows(timestamps):
                         for t in observed) for h in HORIZONS}
 
 
+def _bounded_sha256(path, cap):
+    path = Path(path)
+    if not path.is_file() or path.stat().st_size > cap:
+        raise ValueError("missing or oversized input artifact")
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def reconcile(ohlc_artifact, trade_artifact, *, expected_ohlc_digest=None,
               expected_trade_digest=None):
     """Inspect genuine retained source bytes; all labels stay gated."""
     o_path, t_path = Path(ohlc_artifact), Path(trade_artifact)
-    o_digest = hashlib.sha256(o_path.read_bytes()).hexdigest()
-    t_digest = hashlib.sha256(t_path.read_bytes()).hexdigest()
+    o_digest = _bounded_sha256(o_path, MAX_OHLC_ARTIFACT)
+    t_digest = _bounded_sha256(t_path, MAX_TRADE_ARTIFACT)
     if (expected_ohlc_digest and o_digest != expected_ohlc_digest or
             expected_trade_digest and t_digest != expected_trade_digest):
         raise ValueError("GitHub artifact SHA256 mismatch")
@@ -126,17 +138,23 @@ def reconcile(ohlc_artifact, trade_artifact, *, expected_ohlc_digest=None,
                      if ts in source and verify_open_boundary(
                          source[ts], records, independent_trade_source=True
                      )["status"] == "verified_open_boundary"}
+            audit = audit_candidate_windows(ohlc, exact)
+            candidate_windows = _candidate_windows(exact)
+            if any(candidate_windows[str(h)] != audit["horizons"][str(h)]["candidate_full_future_windows"]
+                   for h in HORIZONS):
+                raise AssertionError("candidate window accounting disagrees")
             reports[market] = {
                 "trade_rows": len(parsed), "trade_buckets": len(buckets),
                 "retained_ohlc_rows": len(ohlc),
                 "exact_trade_ohlc_candidate_intervals": len(exact),
                 "mismatch_counts": diagnostic.get("mismatch_counts", {}),
-                "candidate_contiguous_horizon_windows": _candidate_windows(exact),
+                "candidate_contiguous_horizon_windows": candidate_windows,
+                "candidate_outcome_audit": audit,
                 "verified_complete_intervals": 0, "real_labels": 0,
                 "no_trade_or_source_gap_semantics": "unknown",
             }
     return {"schema_version": 1,
-            "status": "exact_trade_ohlc_diagnostics_source_completeness_unverified",
+            "status": "descriptive_candidate_outcomes_source_completeness_unverified",
             "source_ohlc_archive_sha256_in_retained_manifest": EXPECTED_SHA256,
             "source_trade_archive_sha256_verified": False,
             "input_ohlc_zip_sha256": o_digest,
