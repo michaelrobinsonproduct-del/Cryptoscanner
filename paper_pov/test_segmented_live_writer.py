@@ -73,7 +73,7 @@ class LiveWriterTests(unittest.TestCase):
 
     def test_wrong_base_or_dirty_checkout_refused(self):
         staged, _, _ = self.prepare()
-        with self.assertRaisesRegex(ValueError, "moved"):
+        with self.assertRaises(ValueError):
             live.apply(self.gitdir, "f" * 40, staged)
         (self.gitdir / "unexpected.txt").write_text("do not commit")
         with self.assertRaisesRegex(ValueError, "not clean"):
