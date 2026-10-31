@@ -6,6 +6,8 @@ on:
       - 'paper_pov/segmented_storage.py'
       - 'paper_pov/test_segmented_storage.py'
       - 'paper_pov/segmented_writer.py'
+      - 'paper_pov/segmented_repository.py'
+      - 'paper_pov/test_segmented_repository.py'
       - 'paper_pov/ledger.py'
       - '.github/workflows/paper-segmented-storage-ci.yml'
   workflow_dispatch:
