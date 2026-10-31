@@ -115,7 +115,7 @@ jobs:
           print("Ledger generation: "+str(d["metrics"]["scans_persisted"]))
           print("Latest paper as-of: "+str(d["metrics"]["latest_scan_as_of"]))
           print("Matured labels: "+str(d["metrics"]["matured_labels"])+"; held-out lift: NOT MEASURED")
-          print("Paper only; no trades, production/Railway operations or DEX freshness gate.")
+          print("Paper only; no trades, production infrastructure operations or DEX freshness gate.")
           print("Issue comment readback verifies GitHub delivery only, not email/push receipt.")
           PY
           COMMENT_COUNT="$(gh api "repos/$GITHUB_REPOSITORY/issues/34" --jq '.comments')"
