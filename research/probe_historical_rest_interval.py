@@ -16,6 +16,9 @@ import zipfile
 from pathlib import Path
 
 from match_historical_trades_to_ohlcvt import parse_member, aggregate
+from reconcile_retained_trade_evidence import _open_inner, _manifest, _validate_retained_ohlc, _bounded_sha256, MAX_OHLC_ARTIFACT
+from verify_trade_candle_provenance import verify_open_boundary
+from inventory_kraken_archive import EXPECTED_SHA256
 
 BASE = "https://api.kraken.com/0/public/Trades"
 MAX_PAGES = 4
@@ -59,7 +62,7 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
             raise RuntimeError("Kraken historical REST error")
         result = data["result"]
         names = [name for name in result if name != "last"]
-        if len(names) != 1 or not isinstance(result[names[0]], list) or len(result[names[0]]) > 1000:
+        if names != [pair] or not isinstance(result[names[0]], list) or len(result[names[0]]) > 1000:
             raise RuntimeError("invalid historical REST page")
         next_cursor = result.get("last")
         if not isinstance(next_cursor, str) or not next_cursor.isdigit() or int(next_cursor) <= cursor:
@@ -110,7 +113,63 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
             "real_labels": 0, "production_modified": False}
 
 
-def probe_retained(archive_path, *, opener=None):
+
+def corroborate_retained_ohlc(ohlc_artifact, market, start, expected, rest_result):
+    """Triangulate REST, retained trades and retained OHLC for one observed bucket.
+
+    This validates a *correspondence*, not historical trade completeness or
+    predictive-label eligibility. All missing or mismatching buckets abstain.
+    """
+    result = dict(rest_result)
+    result["independent_complete_historical_intervals"] = 0
+    result["independent_quarterly_completeness_verified"] = False
+    result["real_labels"] = 0
+    result["production_modified"] = False
+    result["three_way_candle_correspondence"] = False
+    if result.get("status") != "independent_rest_bucket_correlated":
+        return result
+    ohlc_digest = _bounded_sha256(ohlc_artifact, MAX_OHLC_ARTIFACT)
+    with _open_inner(ohlc_artifact, "reusable_ohlc_evidence.zip", MAX_OHLC_ARTIFACT) as archive:
+        manifest = _manifest(archive)
+        if (manifest.get("schema") != 1 or
+                manifest.get("source_archive_sha256") != EXPECTED_SHA256 or
+                manifest.get("independent_trade_completeness") is not False or
+                manifest.get("real_labels") != 0):
+            raise ValueError("untrusted OHLC source manifest")
+        member = market + "_5.csv"
+        meta = manifest.get("markets", {}).get(member)
+        if not isinstance(meta, dict):
+            result["status"] = "abstain_ohlc_market_missing"
+            return result
+        name = "candles/" + member
+        if name not in archive.namelist() or archive.namelist().count(name) != 1:
+            raise ValueError("missing or duplicated retained OHLC member")
+        info = archive.getinfo(name)
+        if info.file_size > 64 * 1024 * 1024 or info.flag_bits & 1:
+            raise ValueError("unsafe OHLC member")
+        payload = archive.read(info)
+        if hashlib.sha256(payload).hexdigest() != meta.get("retained_sha256"):
+            raise ValueError("retained OHLC SHA256 mismatch")
+        candles, _ = _validate_retained_ohlc(payload, meta)
+    candle = next((row for row in candles if int(row[0]) == start), None)
+    if candle is None:
+        result["status"] = "abstain_ohlc_bucket_missing"
+        return result
+    boundary = verify_open_boundary(candle, expected, independent_trade_source=True)
+    if boundary.get("status") != "verified_open_boundary":
+        result["status"] = "abstain_rest_trade_ohlc_disagreement"
+        result["boundary_check"] = boundary["status"]
+        return result
+    result.update(status="independent_rest_trade_ohlc_correlated",
+                  three_way_candle_correspondence=True,
+                  ohlc_candle_open=start,
+                  ohlc_member_sha256=meta["retained_sha256"],
+                  ohlc_artifact_sha256=ohlc_digest,
+                  timestamp_semantics="observed_open_boundary_for_this_bucket_only")
+    return result
+
+
+def probe_retained(archive_path, *, opener=None, ohlc_artifact=None):
     """Choose first bounded real bucket from retained ZIP; never download source."""
     archive_path = Path(archive_path)
     if not archive_path.is_file() or archive_path.stat().st_size > 12*1024*1024:
@@ -138,7 +197,9 @@ def probe_retained(archive_path, *, opener=None):
             for start, records in sorted(buckets.items()):
                 if 1 <= len(records) <= MAX_EXPECTED_TRADES:
                     try:
-                        return compare_rest_bucket(market, start, records, opener=opener)
+                        rest = compare_rest_bucket(market, start, records, opener=opener)
+                        return (corroborate_retained_ohlc(ohlc_artifact, market, start, records, rest)
+                                if ohlc_artifact is not None else rest)
                     except (OSError, RuntimeError, ValueError) as exc:
                         return {"status": "abstain_rest_transport_or_source_error",
                                 "error_type": type(exc).__name__, "market": market,
@@ -151,14 +212,15 @@ def probe_retained(archive_path, *, opener=None):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--retained-trades", required=True)
+    ap.add_argument("--ohlc", required=False)
     ap.add_argument("--output", required=True)
     args = ap.parse_args()
     output = Path(args.output)
     if output.exists():
         raise FileExistsError("refuse historical probe overwrite")
-    result = probe_retained(args.retained_trades)
+    result = probe_retained(args.retained_trades, ohlc_artifact=args.ohlc)
     payload = (json.dumps(result, sort_keys=True) + "\n").encode()
-    if len(payload) > 4096:
+    if len(payload) > 8192:
         raise ValueError("oversized historical probe report")
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("xb") as dest:
