@@ -227,6 +227,80 @@ class HistoricalRestProbeTests(unittest.TestCase):
         self.assertEqual(r["real_labels"], 0)
 
 
+
+class HistoricalGapCandidateTests(unittest.TestCase):
+    """Synthetic source-page checks: a candidate empty gap is NOT source proof."""
+
+    def setUp(self):
+        self.expected = [(300.1, 0.00001, 2, 0), (301.5, 0.000011, 3, 1)]
+        self.before = [["0.00001", "2", 300.1, "b", "l", ""],
+                       ["0.000011", "3", 301.5, "s", "m", ""]]
+        self.after = ["0.000012", "1", 900, "b", "l", ""]
+
+    def audit(self, rows, *, gap_buckets=1):
+        return compare_rest_bucket(
+            "DENTEUR", 300, self.expected,
+            opener=lambda *a, **kw: Response(make_page(rows)),
+            gap_buckets=gap_buckets)
+
+    def test_one_empty_gap_is_only_a_candidate(self):
+        result = self.audit(self.before + [self.after])
+        self.assertEqual(result["status"], "independent_rest_gap_candidate_correlated_not_complete")
+        self.assertEqual(result["candidate_empty_gap_buckets"], [600])
+        self.assertEqual(result["witness_end"], 900)
+        self.assertEqual(result["no_trade_intervals_verified"], 0)
+        self.assertEqual(result["independent_complete_historical_intervals"], 0)
+        self.assertEqual(result["real_labels"], 0)
+        self.assertFalse(result["independent_quarterly_completeness_verified"])
+
+    def test_gap_trade_at_exact_open_abstains(self):
+        rows = self.before + [["0.000012", "1", 600, "s", "l", ""], self.after]
+        result = self.audit(rows)
+        self.assertEqual(result["status"], "abstain_rest_gap_contains_trades")
+        self.assertEqual(result["candidate_empty_gap_buckets"], [])
+        self.assertEqual(result["no_trade_intervals_verified"], 0)
+
+    def test_gap_trade_at_last_instant_abstains(self):
+        rows = self.before + [["0.000012", "1", 899.999, "s", "l", ""], self.after]
+        self.assertEqual(self.audit(rows)["status"], "abstain_rest_gap_contains_trades")
+
+    def test_exact_after_gap_boundary_is_not_gap_trade(self):
+        rows = self.before + [["0.000012", "1", 900, "s", "l", ""]]
+        self.assertEqual(self.audit(rows)["candidate_empty_gap_buckets"], [600])
+
+    def test_mismatch_in_observed_bucket_rejects_gap_candidate(self):
+        rows = [["0.999", "2", 300.1, "b", "l", ""], self.before[1], self.after]
+        result = self.audit(rows)
+        self.assertEqual(result["status"], "abstain_rest_archive_disagreement")
+        self.assertEqual(result["candidate_empty_gap_buckets"], [])
+
+    def test_missing_historical_start_does_not_certify_empty_gap(self):
+        result = self.audit([self.after])
+        self.assertEqual(result["status"], "abstain_historical_range_unavailable")
+        self.assertEqual(result["real_labels"], 0)
+
+    def test_gap_count_strictly_bounded_and_not_boolean(self):
+        for n in (-1, 2, 10, True, 0.5, None):
+            with self.subTest(n=n), self.assertRaises(ValueError):
+                self.audit(self.before + [self.after], gap_buckets=n)
+
+    def test_default_mode_does_not_audit_gap(self):
+        result = self.audit(self.before + [self.after], gap_buckets=0)
+        self.assertEqual(result["status"], "independent_rest_bucket_correlated")
+        self.assertEqual(result["candidate_empty_gap_buckets"], [])
+        self.assertEqual(result["witness_end"], 600)
+
+    def test_malformed_after_gap_witness_is_rejected(self):
+        rows = self.before + [["0.000012", "1", 900, "bad", "l", ""]]
+        with self.assertRaisesRegex(RuntimeError, "schema"):
+            self.audit(rows)
+
+    def test_nonadvancing_cursor_rejected_even_if_gap_looks_empty(self):
+        with self.assertRaisesRegex(RuntimeError, "nonadvancing"):
+            compare_rest_bucket(
+                "DENTEUR", 300, self.expected, gap_buckets=1,
+                opener=lambda *a, **kw: Response(make_page(self.before + [self.after], "1")))
+
 class RetainedHistoricalIntegrationTests(unittest.TestCase):
     def test_selects_bounded_bucket_from_retained_zip(self):
         import tempfile
