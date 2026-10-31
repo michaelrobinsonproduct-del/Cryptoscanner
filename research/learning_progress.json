@@ -1224,6 +1224,29 @@
       "reusable_artifact_id": 13032543650,
       "reusable_artifact_digest": "sha256:068223f1d920b36a9e9b0f190ffa1c870bf20f84f0b9c471df055c21b7423d38",
       "artifact_expires_at": "2026-11-30T06:04:16Z"
+    },
+    "point_in_time_early_mover_audit_20261031_15": {
+      "status": "EXACT_PINNED_294_TESTS_VERIFIED_REAL_SOURCE_EVALUATION_PENDING",
+      "research_commit": "e652ce70b8157f3a465e697fbb624670d978e38a",
+      "workflow_main_commit": "550322d80702298db1d0eba8fccb31a9d89a3313",
+      "verified_ci_run_id": 41175802116,
+      "verified_ci_job_id": 124462996525,
+      "tests_passed": 294,
+      "added_tests": 10,
+      "changes": [
+        "New strict closed-candle 15-minute return, range and quote-volume proxy feature audit with entry as-of = candle open+300s",
+        "Separate future 1/6/24/48h descriptive peaks from features; count pre-surge prior-return<10% opportunities and exclusions",
+        "Integrate bounded point-in-time feature report into retained four-market trade/OHLC reconciliation; never unlock labels or held-out evaluation",
+        "Add 10 exact-code regression tests including 48h boundary, no lookahead, missing prior/future, prior surge and malformed rows",
+        "Verified exact-code test-only GitHub Actions CI; earlier malformed workflow YAML fixed after syntax-only failure"
+      ],
+      "real_source_feature_run_verified": false,
+      "real_labels": 0,
+      "held_out_delta": null,
+      "candidate_rule": "none validated",
+      "production_applied": false,
+      "blocker": "Full independent trade source authentication/completeness remains unproven; no verified predictive labels; real-source feature audit awaiting pinned retained-evidence workflow run.",
+      "next": "Pin and execute existing scheduled reusable-evidence workflow with this exact tested research code after lease release; inspect real-source feature counts and abstentions without 9GB archive download."
     }
   },
   "audit": {
