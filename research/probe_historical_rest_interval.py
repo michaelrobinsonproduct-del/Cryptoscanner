@@ -28,11 +28,16 @@ MAX_EXPECTED_TRADES = 100
 STEP = 300
 
 
-def compare_rest_bucket(pair, start, expected, *, opener=None):
-    """Check exact ordered timestamp/price/volume rows, with after-end witness."""
+def compare_rest_bucket(pair, start, expected, *, opener=None, gap_buckets=0):
+    """Corroborate an observed bucket; optionally audit ONE following empty-gap candidate.
+
+    Even a continuous REST cursor walk is not a source-completeness attestation.
+    A candidate gap is NEVER a verified no-trade interval or a predictive label.
+    """
     if (not isinstance(pair, str) or not pair.isalnum() or len(pair) > 24 or
             type(start) is not int or start < 0 or start % STEP or
-            not isinstance(expected, list) or not 1 <= len(expected) <= MAX_EXPECTED_TRADES):
+            not isinstance(expected, list) or not 1 <= len(expected) <= MAX_EXPECTED_TRADES or
+            type(gap_buckets) is not int or gap_buckets not in (0, 1)):
         raise ValueError("invalid bounded historical bucket request")
     if any(len(row) != 4 or not all(type(x) in (int, float) and math.isfinite(x) for x in row)
            or row[0] < start or row[0] >= start + STEP or row[1] <= 0 or row[2] <= 0
@@ -40,6 +45,7 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
         raise ValueError("invalid retained source trades")
     if any(expected[i][0] > expected[i+1][0] for i in range(len(expected)-1)):
         raise ValueError("unsorted retained source trades")
+    witness_end = start + STEP * (1 + gap_buckets)
     opener = opener or urllib.request.urlopen
     cursor = start * 1_000_000_000 - 1
     total = 0
@@ -48,6 +54,7 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
     prior_time = -1.0
     seen_trade_ids = set()
     page_trace = []
+    gap_has_trades = False
     for page in range(MAX_PAGES):
         requested_since = cursor
         url = BASE + "?" + urllib.parse.urlencode({"pair": pair, "since": str(cursor), "count": 1000})
@@ -116,8 +123,11 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
             if page_first is None:
                 page_first = t
             page_last = t
-            if t >= start + STEP:
+            if t >= witness_end:
                 reached_after = True
+                continue
+            if t >= start + STEP:
+                gap_has_trades = True
                 continue
             if t >= start:
                 seen.append((t, price, volume))
@@ -139,7 +149,7 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
             "after_end_witness": reached_after,
         })
         if reached_after:
-            if not seen and page == 0 and float(rows[0][2]) >= start + STEP:
+            if not seen and page == 0 and float(rows[0][2]) >= witness_end:
                 return {"status": "abstain_historical_range_unavailable", "real_labels": 0}
             # Exact row sequence is a bounded corroboration, not an authenticated
             # quarterly completeness certificate. No-trade intervals stay unknown.
@@ -148,11 +158,18 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
                 math.isclose(a[1], b[1], rel_tol=1e-9, abs_tol=0) and
                 math.isclose(a[2], b[2], rel_tol=1e-9, abs_tol=0)
                 for a, b in zip(seen, expected))
-            return {"status": "independent_rest_bucket_correlated" if equal else "abstain_rest_archive_disagreement",
+            status = ("abstain_rest_archive_disagreement" if not equal else
+                      "abstain_rest_gap_contains_trades" if gap_has_trades else
+                      "independent_rest_gap_candidate_correlated_not_complete" if gap_buckets else
+                      "independent_rest_bucket_correlated")
+            return {"status": status,
                     "market": pair, "bucket_open": start, "archive_trades": len(expected),
                     "rest_trades": len(seen), "pages": page+1, "bytes_transferred": total,
                     "rest_page_sha256": digests, "rest_cursor_trace": page_trace,
                     "after_end_witness": True,
+                    "witness_end": witness_end,
+                    "candidate_empty_gap_buckets": [start + STEP] if gap_buckets and equal and not gap_has_trades else [],
+                    "independent_complete_historical_intervals": 0,
                     "independent_quarterly_completeness_verified": False,
                     "no_trade_intervals_verified": 0, "real_labels": 0,
                     "production_modified": False}
