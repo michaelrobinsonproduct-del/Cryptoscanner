@@ -238,7 +238,7 @@ class RetainedReconciliationTests(unittest.TestCase):
         raw = b"300,100,101,100,101,5,2\n600,100,101,100,101,5,2\n"
         with self.assertRaisesRegex(ValueError, "gap metadata mismatch"):
             _validate_retained_ohlc(
-                raw, self._meta(rows=2, gaps=0, missing=0, longest=1, last=600))
+                raw, self._meta(rows=2, gaps=1, missing=1, longest=2, last=600))
 
     def test_reconciliation_reports_validation_without_authorizing_labels(self):
         with tempfile.TemporaryDirectory() as root:
