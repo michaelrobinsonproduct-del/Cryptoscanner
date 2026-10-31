@@ -69,6 +69,61 @@ class BracketedGapTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             select_bracketed_gap(self.trades, self.ohlc)
 
+    @patch("probe_historical_rest_gap.load_ohlc_starts")
+    def test_second_bounded_gap_candidate_selected(self, ohlc):
+        self.write_trades([301, 901, 1501])
+        ohlc.return_value = ({300, 900, 1500}, "digest")
+        market, start, before, after, digest = select_bracketed_gap(
+            self.trades, self.ohlc, candidate_index=1)
+        self.assertEqual((market, start, len(before), len(after), digest),
+                         ("BCHJPY", 900, 1, 1, "digest"))
+        ohlc.assert_called_once()
+
+    @patch("probe_historical_rest_gap.load_ohlc_starts")
+    def test_ohlc_rejected_first_gap_does_not_mask_later_valid_gap(self, ohlc):
+        self.write_trades([301, 901, 1501])
+        ohlc.return_value = ({300, 600, 900, 1500}, "digest")
+        selected = select_bracketed_gap(self.trades, self.ohlc)
+        self.assertEqual(selected[1], 900)
+
+    @patch("probe_historical_rest_gap.load_ohlc_starts")
+    def test_out_of_range_candidate_index_abstains_without_rest(self, ohlc):
+        ohlc.return_value = ({300, 900}, "digest")
+        self.assertIsNone(select_bracketed_gap(
+            self.trades, self.ohlc, candidate_index=1))
+
+    def test_invalid_candidate_index_fails_closed(self):
+        for index in (-1, 4, True, 1.5, None, "1"):
+            with self.subTest(index=index), self.assertRaises(ValueError):
+                select_bracketed_gap(self.trades, self.ohlc,
+                                     candidate_index=index)
+
+    @patch("probe_historical_rest_gap.load_ohlc_starts")
+    def test_later_invalid_market_still_fails_with_alternate_index(self, ohlc):
+        self.write_trades([301, 901, 1501])
+        with zipfile.ZipFile(self.trades, "a") as archive:
+            archive.writestr("trades/ZZZUSD.csv", "bad,header\\n1,2,3\\n")
+        with self.assertRaises(ValueError):
+            select_bracketed_gap(self.trades, self.ohlc, candidate_index=1)
+        ohlc.assert_not_called()
+
+    @patch("probe_historical_rest_gap.load_ohlc_starts")
+    def test_audit_alternate_missing_candidate_never_creates_label(self, ohlc):
+        ohlc.return_value = ({300, 900}, "digest")
+        result = audit_bracketed_gap(self.trades, self.ohlc,
+                                     candidate_index=1)
+        self.assertEqual(result["status"], "abstain_no_bracketed_retained_gap")
+        self.assertEqual(result["candidate_index"], 1)
+        self.assertEqual(result["no_trade_intervals_verified"], 0)
+        self.assertEqual(result["real_labels"], 0)
+        self.assertIsNone(result["held_out_lift"])
+
+    @patch("probe_historical_rest_gap.load_ohlc_starts")
+    def test_bounded_candidate_index_three_is_allowed_but_abstains(self, ohlc):
+        ohlc.return_value = ({300, 900}, "digest")
+        self.assertIsNone(select_bracketed_gap(
+            self.trades, self.ohlc, candidate_index=3))
+
     @patch("probe_historical_rest_gap.corroborate_retained_ohlc")
     @patch("probe_historical_rest_gap.compare_rest_bucket")
     @patch("probe_historical_rest_gap.load_ohlc_starts")
