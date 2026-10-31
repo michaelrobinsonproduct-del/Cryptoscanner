@@ -228,6 +228,62 @@ class HistoricalRestProbeTests(unittest.TestCase):
 
 
 
+    def test_two_page_cursor_contiguous_correspondence_not_completeness(self):
+        pages = iter([
+            make_page(self.rows[:2], "301500000001"),
+            make_page(self.rows[2:], "601000000001"),
+        ])
+        r = compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(next(pages)))
+        self.assertEqual(r["status"], "independent_rest_bucket_correlated")
+        self.assertEqual(r["pages"], 2)
+        self.assertEqual(r["independent_complete_historical_intervals"], 0)
+        self.assertEqual(r["real_labels"], 0)
+
+    def test_two_page_cursor_leap_cannot_hide_unobserved_trades(self):
+        pages = iter([
+            make_page(self.rows[:2], "500000000000"),
+            make_page(self.rows[2:], "601000000001"),
+        ])
+        with self.assertRaisesRegex(RuntimeError, "skips unobserved historical range"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(next(pages)))
+
+    def test_partial_bucket_cursor_leap_rejected_before_false_correspondence(self):
+        pages = iter([
+            make_page(self.rows[:1], "400000000000"),
+            make_page(self.rows[1:], "601000000001"),
+        ])
+        with self.assertRaisesRegex(RuntimeError, "skips unobserved historical range"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(next(pages)))
+
+    def test_two_page_gap_cursor_contiguous_remains_candidate_only(self):
+        after = ["0.000012", "1", 900, "b", "l", ""]
+        pages = iter([
+            make_page(self.rows[:2], "301500000001"),
+            make_page([after], "900000000001"),
+        ])
+        r = compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(next(pages)),
+                                gap_buckets=1)
+        self.assertEqual(r["status"], "independent_rest_gap_candidate_correlated_not_complete")
+        self.assertEqual(r["candidate_empty_gap_buckets"], [600])
+        self.assertEqual(r["no_trade_intervals_verified"], 0)
+        self.assertEqual(r["real_labels"], 0)
+
+    def test_two_page_gap_cursor_leap_cannot_certify_missing_interval(self):
+        after = ["0.000012", "1", 900, "b", "l", ""]
+        pages = iter([
+            make_page(self.rows[:2], "800000000000"),
+            make_page([after], "900000000001"),
+        ])
+        with self.assertRaisesRegex(RuntimeError, "skips unobserved historical range"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(next(pages)),
+                                gap_buckets=1)
+
+
 class HistoricalGapCandidateTests(unittest.TestCase):
     """Synthetic source-page checks: a candidate empty gap is NOT source proof."""
 
