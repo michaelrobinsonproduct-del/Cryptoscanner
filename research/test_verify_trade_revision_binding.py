@@ -6,7 +6,7 @@ import zipfile
 from pathlib import Path
 
 from inspect_kraken_trade_manifest import retained_trade_market_names
-from verify_trade_revision_binding import verify, read_json
+from verify_trade_revision_binding import verify, read_json, bounded_reuse_decision
 
 
 def reports():
@@ -98,6 +98,42 @@ class RevisionBindingTests(unittest.TestCase):
             p.write_bytes(b"x" * 32769)
             with self.assertRaisesRegex(ValueError, "oversized"):
                 read_json(p)
+
+
+    def test_revision_reuse_matching_strong_etag_and_metadata(self):
+        t, m = reports()
+        self.assertEqual(bounded_reuse_decision(t, m), "reuse")
+
+    def test_same_etag_different_last_modified_requires_bounded_refresh(self):
+        t, m = reports()
+        m["source_revision_validator"]["last_modified"] = "Sat, 17 Oct 2026 13:22:27 GMT"
+        self.assertEqual(bounded_reuse_decision(t, m), "refresh_bounded_trade_once")
+        self.assertEqual(verify(t, m)["status"], "abstain_last_modified_mismatch")
+
+    def test_missing_last_modified_requires_bounded_refresh(self):
+        t, m = reports()
+        del t["source_revision_validator"]["last_modified"]
+        self.assertEqual(bounded_reuse_decision(t, m), "refresh_bounded_trade_once")
+
+    def test_different_etag_never_recaptured_as_same_source(self):
+        t, m = reports()
+        m["source_revision_validator"]["strong_etag"] = '"revision-b"'
+        self.assertEqual(bounded_reuse_decision(t, m), "abort_source_revision_conflict")
+
+    def test_weak_or_missing_etag_aborts(self):
+        for value in ("", 'W/"revision-a"', None):
+            with self.subTest(value=value):
+                t, m = reports()
+                t["source_revision_validator"]["strong_etag"] = value
+                self.assertEqual(bounded_reuse_decision(t, m), "abort_source_revision_conflict")
+
+    def test_wrong_url_or_size_aborts_without_refresh(self):
+        t, m = reports()
+        m["source_url"] = "https://example.com/other.zip"
+        self.assertEqual(bounded_reuse_decision(t, m), "abort_source_identity_mismatch")
+        t, m = reports()
+        m["source_expected_archive_bytes"] += 1
+        self.assertEqual(bounded_reuse_decision(t, m), "abort_source_identity_mismatch")
 
 
 if __name__ == "__main__":
