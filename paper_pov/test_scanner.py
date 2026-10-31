@@ -11,7 +11,11 @@ NOW = dt.datetime(2026, 10, 31, 15, 0, tzinfo=dt.timezone.utc)
 def fixture(*, gap=False, zero_volume=False, stale=False, coverage=False, stable=False):
     pairs = {f"C{i}USD": {"status": "online", "wsname": f"C{i}/USD"} for i in range(25)}
     if stable:
-        pairs["USDTUSD"] = {"status": "online", "wsname": "USDT/USD"}
+        # Explicit source-backed fixtures: NEVER derive fixtures from scanner.STABLE.
+        # Kraken also lists fiat-pegged BRL1, QCAD, USDG, EURQ, etc.
+        for base in ("USDT", "BRL1", "QCAD", "USDG", "USDQ", "USDS",
+                     "USDR", "USD1", "EURQ", "EURR", "EUROP", "EURT", "TGBP"):
+            pairs[base + "USD"] = {"status": "online", "wsname": base + "/USD"}
     tickers = {key: {"c": ["1.01"], "b": ["1.009"], "a": ["1.011"],
                       "o": "1", "v": ["200000", "200000"]} for key in pairs}
     if coverage:
@@ -69,7 +73,20 @@ class PaperScanTests(unittest.TestCase):
     def test_stablecoin_is_excluded(self):
         result = run(stable=True)
         self.assertEqual(result["eligible_pairs"], 25)
-        self.assertNotIn("USDTUSD", {x["pair"] for x in result["observations"]})
+        observed = {x["pair"] for x in result["observations"]}
+        watched = {x["pair"] for x in result["watch"]}
+        for base in ("USDT", "BRL1", "QCAD", "USDG", "USDQ", "USDS",
+                     "USDR", "USD1", "EURQ", "EURR", "EUROP", "EURT", "TGBP"):
+            with self.subTest(stablecoin=base):
+                self.assertNotIn(base + "USD", observed)
+                self.assertNotIn(base + "USD", watched)
+
+    def test_documented_fiat_pegs_are_explicitly_excluded(self):
+        # The source-backed fixture catches omissions even if ranking changes.
+        official = {"BRL1", "QCAD", "USDG", "USDQ", "USDS", "USDR",
+                    "EURQ", "EURR", "EUROP", "EURT", "TGBP"}
+        self.assertTrue(official.issubset(scanner.STABLE))
+        self.assertIn("USD1", scanner.STABLE)
 
     def test_client_observed_ticker_not_exchange_time(self):
         result = run()
