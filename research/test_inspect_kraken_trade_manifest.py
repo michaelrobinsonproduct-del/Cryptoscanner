@@ -69,6 +69,37 @@ class TradeManifestTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "invalid bounded"):
                 inspect_archive(z, ["A.csv"]*5)
 
+    def test_dictionary_file_metadata_is_reported_but_not_authenticated(self):
+        manifest = {"files": {"DENTEUR.csv": {"sha256": "a"*64, "rows": 100,
+                                                "first": "2026-04-01"},
+                              "OTHER.csv": {"sha256": "b"*64}},
+                    "coverage": {"start": "2026-04-01", "end": "2026-06-30"},
+                    "schema_version": 2}
+        with archive([("MANIFEST.json", json.dumps(manifest))]) as z:
+            r = inspect_archive(z, ["DENTEUR.csv"])
+        meta = r["manifest_schema_summary"]
+        self.assertEqual(meta["files"]["count"], 2)
+        self.assertEqual(meta["selected_file_entries"]["DENTEUR.csv"]["scalar_fields"]["rows"], 100)
+        self.assertNotIn("OTHER.csv", meta["selected_file_entries"])
+        self.assertEqual(meta["scalars"]["schema_version"], 2)
+        self.assertIn("not_authenticated", r["status"])
+
+    def test_list_file_metadata_is_bounded_to_selected(self):
+        manifest = {"files": [{"filename": "DENTEUR.csv", "rows": 11},
+                              {"filename": "OTHER.csv", "rows": 22}]}
+        with archive([("MANIFEST.json", json.dumps(manifest))]) as z:
+            r = inspect_archive(z, ["DENTEUR.csv"])
+        entries = r["manifest_schema_summary"]["selected_file_entries"]
+        self.assertEqual(entries["DENTEUR.csv"]["scalar_fields"]["rows"], 11)
+        self.assertEqual(len(entries), 1)
+
+    def test_unbounded_scalar_values_are_redacted(self):
+        manifest = {"release": "X"*300, "files": {"DENTEUR.csv": {"sha256": "X"*300}}}
+        with archive([("MANIFEST.json", json.dumps(manifest))]) as z:
+            r = inspect_archive(z, ["DENTEUR.csv"])
+        self.assertEqual(r["manifest_schema_summary"]["scalars"]["release"]["type"], "str")
+        self.assertEqual(r["manifest_schema_summary"]["selected_file_entries"]["DENTEUR.csv"]["scalar_fields"]["sha256"]["type"], "str")
+
     def test_utf8_bom_accepted(self):
         with archive([("MANIFEST.json", b"\xef\xbb\xbf"+json.dumps({"build": "q2"}).encode())]) as z:
             r = inspect_archive(z, [])
