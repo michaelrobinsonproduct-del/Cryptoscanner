@@ -49,10 +49,24 @@ def run_state(run, jobs):
                      "Verify and summarize retained evidence without labels"), None)
     cache = next((s for s in steps if s.get("name", "").startswith(
                  "Check cooperative research lease")), None)
-    if verified and verified.get("conclusion") == "success":
-        return "evidence_run"
     if verified and verified.get("conclusion") == "skipped" and cache and cache.get("conclusion") == "success":
         return "skipped_no_work"
+    # A green verification step alone is not evidence: downstream provenance
+    # and its retained report must actually have completed successfully.
+    required = (
+        "Reconcile retained trades and audit closed-candle early-mover candidates (no labels)",
+        "Independently corroborate contiguous observed 1h trade buckets (no labels)",
+        "Upload bounded independent observed-window corroboration",
+    )
+    downstream = [next((s for s in steps if s.get("name") == name), None)
+                  for name in required]
+    if verified and verified.get("conclusion") == "success":
+        if any(s is None for s in downstream):
+            return "unverified_green"
+        if any(s.get("conclusion") == "skipped" for s in downstream):
+            return "skipped_no_work"
+        if all(s.get("conclusion") == "success" for s in downstream):
+            return "evidence_run"
     return "unverified_green"
 
 
