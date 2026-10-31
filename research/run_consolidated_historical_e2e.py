@@ -16,7 +16,7 @@ from pathlib import Path
 from acquire_kraken_historical_trades import download as download_trades, inspect as inspect_trades, resource_gate as trades_gate
 from inventory_kraken_archive import download_verified as download_ohlc, resource_gate as ohlc_gate, EXPECTED_SHA256
 from consolidated_historical_learning import read_member
-from match_historical_trades_to_ohlcvt import aggregate, compare
+from match_historical_trades_to_ohlcvt import aggregate, compare, parse_member
 from reconstruct_forward_outcomes import Candle, reconstruct_as_of
 
 TRADE_SHA256_OBSERVED = "4adddad07b0dbe11891a25137c1adfc11a9a5f63798680a6b88eae2b3a867cf9"
@@ -68,10 +68,26 @@ def analyze(ohlc_z, trade_z, *, pair="0GEUR", schema_attested=False):
               "matched_candles": 0, "real_labels": 0,
               "held_out_evaluation": "not_authorized",
               "status": "abstain_pending_real_source_schema_and_completeness"}
-    if not schema_attested:
+    if schema["columns"] != [3, 3, 3] or not all(schema["first_row_numeric"]):
+        result["status"] = "abstain_unknown_trade_csv_schema"
         return result
-    # No automatic schema attestation: trade CSV format must first be proven
-    # from actual source documentation and timestamps, not guessed.
+    # Parsing is a candidate, never an assertion of complete independent coverage.
+    records = parse_member(trade_z, trade_name, schema_verified=True)
+    result["trade_records_parsed"] = len(records)
+    result["trade_first_timestamp"] = records[0][0]
+    result["trade_last_timestamp"] = records[-1][0]
+    if not (1710000000 < records[0][0] < 1800000000 and
+            1710000000 < records[-1][0] < 1800000000):
+        result["status"] = "abstain_trade_timestamp_range"
+        return result
+    ohlc_name = pair + "_5.csv"
+    ohlc_rows = read_member(ohlc_z, ohlc_name)
+    buckets, _ = aggregate(records)
+    matching = [r for r in ohlc_rows if int(r[0]) in buckets]
+    result["ohlc_rows_parsed"] = len(ohlc_rows)
+    result["candidate_overlapping_candles"] = len(matching)
+    result["comparison"] = compare(matching, records, independently_complete=False)
+    result["status"] = "candidate_trade_and_ohlc_overlap_completeness_not_attested"
     return result
 
 
