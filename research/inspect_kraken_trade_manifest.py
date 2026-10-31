@@ -130,15 +130,32 @@ def inspect_archive(archive, wanted):
                 if name:
                     listed.add(name)
     pair_count = obj.get("pairs")
+    # Kraken's observed 2026Q2 schema uses scalar "files": 1399,
+    # not a per-file list. Do not turn absent listing into false missing
+    # members or claim that a matching count proves complete trades.
+    declared_count = (len(files) if isinstance(files, (dict, list))
+                      else files if type(files) is int and
+                      0 <= files <= MAX_ARCHIVE_MEMBERS else None)
+    listing_available = isinstance(files, (dict, list))
+    zip_csv_count = sum(x.filename.endswith(".csv") and not x.is_dir()
+                        for x in infos)
     structural = {
-        "manifest_file_count": len(files) if isinstance(files, (dict, list)) else None,
+        "manifest_file_count": declared_count,
         "manifest_pair_count": pair_count if type(pair_count) is int else None,
         "file_count_matches_pair_count": (
-            len(files) == pair_count if isinstance(files, (dict, list))
+            declared_count == pair_count if declared_count is not None
             and type(pair_count) is int else None),
-        "listed_selected_members": {name: name in listed for name in wanted},
+        "zip_csv_member_count": zip_csv_count,
+        "manifest_file_count_matches_zip_csv_count": (
+            declared_count == zip_csv_count if declared_count is not None else None),
+        "manifest_per_file_listing_available": listing_available,
+        "listed_selected_members": {
+            name: name in listed if listing_available else None for name in wanted},
+        "selected_members_present_in_zip": {
+            name: name in by_name and not by_name[name].is_dir() for name in wanted},
         "listed_selected_members_in_zip": {
-            name: name in by_name and name in listed for name in wanted},
+            name: name in by_name and name in listed if listing_available else None
+            for name in wanted},
         "source_authenticated": False,
         "complete_trade_intervals_verified": 0,
     }
