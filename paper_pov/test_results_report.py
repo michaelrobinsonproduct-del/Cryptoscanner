@@ -137,6 +137,53 @@ class PaperResultsContracts(unittest.TestCase):
         with self.assertRaises(ValueError):
             render(s, b, run_id="1", source_sha="unknown", ledger_commit=LEDGER)
 
+    def test_all_four_horizons_are_explicit_without_invented_counts(self):
+        payload, md = self.report()
+        self.assertEqual(set(payload["horizons"]), {"1", "6", "24", "48"})
+        for h in ("1", "6", "24", "48"):
+            self.assertEqual(payload["horizons"][h]["status"], "NOT_MATURED_OR_INELIGIBLE")
+            self.assertIsNone(payload["horizons"][h]["verified_matured_count"])
+            self.assertIsNone(payload["horizons"][h]["verified_hits"])
+            self.assertIn("| " + h + "h |", md)
+        self.assertFalse(payload["storage_recovery_verified_this_run"])
+        self.assertIn("NOT VERIFIED by this scan alone", md)
+
+    def test_aggregate_maturity_never_claims_per_horizon_evidence(self):
+        s, b = fixture()
+        b["matured_labels"] = 2
+        b["observed_30pct_hits"] = 1
+        payload, md = self.report(s, b)
+        for horizon in payload["horizons"].values():
+            self.assertEqual(horizon["status"], "PER_HORIZON_NOT_INDEPENDENTLY_VERIFIED")
+            self.assertIsNone(horizon["verified_hits"])
+        self.assertIn("NOT INDEPENDENTLY VERIFIED", md)
+        self.assertIsNone(payload["held_out_lift"])
+
+    def test_reject_hits_without_matured_outcomes(self):
+        s, b = fixture()
+        b["observed_30pct_hits"] = 1
+        with self.assertRaises(ValueError):
+            self.report(s, b)
+        b["matured_labels"] = 1
+        b["observed_30pct_hits"] = 2
+        with self.assertRaises(ValueError):
+            self.report(s, b)
+
+    def test_reject_inconsistent_market_coverage(self):
+        for field, bad in (("eligible_pairs", 1), ("observed_markets", 3),
+                           ("ohlc_screened", 3), ("eligible_pairs", True),
+                           ("ohlc_screened", -1)):
+            s, b = fixture()
+            s[field] = bad
+            with self.subTest(field=field, bad=bad), self.assertRaises(ValueError):
+                self.report(s, b)
+
+    def test_reject_nonregressing_but_wrong_scan_count(self):
+        s, b = fixture()
+        b["actual_scans"] = 9
+        with self.assertRaises(ValueError):
+            self.report(s, b)
+
     def test_matured_count_does_not_invent_per_horizon_lift(self):
         s, b = fixture()
         b["matured_labels"] = 4
