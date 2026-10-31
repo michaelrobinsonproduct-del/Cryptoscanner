@@ -75,5 +75,13 @@ class TradeMatchingTests(unittest.TestCase):
         self.assertEqual(r["status"], "missing_trade_interval")
 
 
+    def test_comparison_rejects_duplicate_trade_order_even_if_prices_match(self):
+        candle = (300, 100, 101, 100, 101, 5, 2)
+        trades = [(300, 100, 2, 0), (301, 101, 3, 0)]
+        r = compare([candle], trades, independently_complete=True)
+        self.assertEqual(r["status"], "invalid_evidence")
+        self.assertEqual(r["verified_intervals"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
