@@ -1,0 +1,47 @@
+name: Isolated Paper Segmented Storage Verification
+on:
+  push:
+    branches: [proof-lossless-segmented-ledger-roleb-20261031]
+    paths:
+      - 'paper_pov/segmented_storage.py'
+      - 'paper_pov/test_segmented_storage.py'
+      - '.github/workflows/paper-segmented-storage-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-storage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact committed code and all paper tests
+        run: |
+          set -euo pipefail
+          echo "STORAGE_SOURCE_SHA=$(git rev-parse HEAD)"
+          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+      - name: Verify isolated storage fixtures and measured byte sizes
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from paper_pov import ledger,segmented_storage as storage
+          from paper_pov.test_ledger import synthetic,SHA
+          before=ledger.empty()
+          after=ledger.advance(before,synthetic(0),SHA)
+          segment=storage.make_segment(before,after,synthetic(0),SHA)
+          snapshot=storage.pack_snapshot(after)
+          assert storage.replay_segments([segment])==after
+          assert storage.unpack_snapshot(snapshot)==after
+          print("STORAGE_VERIFIED",json.dumps({
+            "raw_snapshot_bytes":len(ledger.canonical(after)),
+            "packed_snapshot_bytes":len(snapshot),
+            "segment_bytes":len(segment),
+            "packed_hard_limit_bytes":storage.MAX_PACKED_BYTES,
+            "replay_generation":after["generation"],
+            "source_sha":__import__("os").popen("git rev-parse HEAD").read().strip(),
+            "production_applied":False},sort_keys=True))
+          PY
