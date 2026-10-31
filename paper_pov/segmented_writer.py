@@ -22,6 +22,14 @@ def _write_sync(path, payload):
         os.fsync(handle.fileno())
 
 
+def _fsync_directory(directory):
+    fd = os.open(str(directory), os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
 def prepare(previous_bytes, report, source_sha, destination):
     """Stage one complete atomic transaction in a new directory."""
     destination = Path(destination)
@@ -48,7 +56,9 @@ def prepare(previous_bytes, report, source_sha, destination):
         _write_sync(staging / "manifest.json", ledger.canonical(manifest))
         _write_sync(staging / "scoreboard.json", ledger.canonical(score))
         verify_prepared(previous_bytes, staging)
+        _fsync_directory(staging)
         os.replace(staging, destination)
+        _fsync_directory(destination.parent)
         return manifest
     finally:
         if staging.exists():
