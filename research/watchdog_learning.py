@@ -14,6 +14,7 @@ UTC = dt.timezone.utc
 RESEARCH_WORKFLOW = "research-reusable-evidence.yml"
 ALERT_TITLE = "[Learning Watchdog] Research attention required"
 EVIDENCE_ARTIFACT = "kraken-reusable-ohlc-evidence"
+TRADE_EVIDENCE_ARTIFACT = "kraken-bounded-independent-trade-members"
 
 
 def timestamp(value):
@@ -72,17 +73,18 @@ def assess(now, workflow_created, runs, jobs_by_id, artifacts, checkpoint):
         alerts.append("UNVERIFIABLE_LEASE_EXPIRY")
     runs = sorted(runs, key=lambda r: timestamp(r["created_at"]), reverse=True)
     statuses = [(r, run_state(r, jobs_by_id.get(r["id"], []))) for r in runs]
+    if not statuses and now - workflow_created > dt.timedelta(hours=2):
+        alerts.append("NO_RESEARCH_RUNS")
     if statuses and statuses[0][1] == "failed":
         alerts.append("LATEST_RESEARCH_RUN_FAILED")
+    if statuses and statuses[0][1] == "unverified_green":
+        alerts.append("LATEST_GREEN_RUN_UNVERIFIED")
     for r, status in statuses:
         if status == "running" and now - timestamp(r["created_at"]) > dt.timedelta(minutes=120):
             alerts.append("RESEARCH_RUN_STALLED")
             break
     if len(statuses) >= 2 and all(s == "skipped_no_work" for _, s in statuses[:2]):
-        recent_work = any(s == "evidence_run" and now - timestamp(r["created_at"]) <
-                          dt.timedelta(hours=48) for r, s in statuses)
-        if not recent_work:
-            alerts.append("REPEATED_GREEN_NO_WORK")
+        alerts.append("REPEATED_GREEN_NO_WORK")
     due = latest_due(now)
     if due >= workflow_created:
         scheduled = [r for r in runs if r.get("event") == "schedule" and
@@ -91,12 +93,29 @@ def assess(now, workflow_created, runs, jobs_by_id, artifacts, checkpoint):
             alerts.append("MISSED_DAILY_RESEARCH_SCHEDULE")
         elif all(run_state(r, jobs_by_id.get(r["id"], [])) == "failed" for r in scheduled):
             alerts.append("FAILED_DAILY_RESEARCH_SCHEDULE")
-    retained = [a for a in artifacts if a.get("name") == EVIDENCE_ARTIFACT and
-                not a.get("expired") and timestamp(a["expires_at"]) > now]
-    if not retained:
-        alerts.append("NO_RETAINED_RESEARCH_EVIDENCE")
-    elif max(timestamp(a["expires_at"]) for a in retained) - now < dt.timedelta(hours=72):
-        alerts.append("RESEARCH_ARTIFACT_EXPIRING")
+    def retained_expiries(name):
+        expiries = []
+        for artifact in artifacts:
+            if artifact.get("name") != name:
+                continue
+            try:
+                expiry = timestamp(artifact.get("expires_at"))
+            except (ValueError, TypeError, OverflowError):
+                alerts.append("MALFORMED_RESEARCH_ARTIFACT_METADATA")
+                continue
+            if not artifact.get("expired") and expiry > now:
+                expiries.append(expiry)
+        return expiries
+
+    for name, missing, expiring in (
+        (EVIDENCE_ARTIFACT, "NO_RETAINED_RESEARCH_EVIDENCE", "RESEARCH_ARTIFACT_EXPIRING"),
+        (TRADE_EVIDENCE_ARTIFACT, "NO_RETAINED_TRADE_EVIDENCE", "TRADE_ARTIFACT_EXPIRING"),
+    ):
+        expiries = retained_expiries(name)
+        if not expiries:
+            alerts.append(missing)
+        elif max(expiries) - now < dt.timedelta(hours=72):
+            alerts.append(expiring)
     return {
         "status": "ALERT" if alerts else "HEALTHY",
         "alerts": sorted(set(alerts)),
@@ -131,9 +150,16 @@ def alert_issue(api, report, *, dry_run=False):
     """Deduplicated issue delivery; verifies remote state after each write."""
     if dry_run:
         return "DRY_RUN"
-    issues = api.call("/issues?state=open&per_page=100")
-    existing = next((x for x in issues if x.get("title") == ALERT_TITLE and
-                     "pull_request" not in x), None)
+    existing = None
+    # Fail closed rather than creating duplicate alerts when the issue list is paginated.
+    for page in range(1, 6):
+        issues = api.call("/issues?state=open&per_page=100&page=" + str(page))
+        existing = next((x for x in issues if x.get("title") == ALERT_TITLE and
+                         "pull_request" not in x), None)
+        if existing or len(issues) < 100:
+            break
+    else:
+        raise RuntimeError("open issue pagination exceeded safe bound")
     if report["status"] != "ALERT":
         if existing:
             api.call("/issues/" + str(existing["number"]), method="PATCH",
@@ -143,10 +169,10 @@ def alert_issue(api, report, *, dry_run=False):
                 raise RuntimeError("alert issue recovery was not persisted")
             return "RECOVERED_CLOSED"
         return "NO_ALERT"
-    body = ("Independent research watchdog found actionable issues.\\n\\n" +
-            "\\n".join("- " + a for a in report["alerts"]) +
-            "\\n\\nLatest workflow run: " + str(report["latest_run"]) +
-            "\\nThis issue does not guarantee a push notification or email.")
+    body = ("Independent research watchdog found actionable issues.\n\n" +
+            "\n".join("- " + a for a in report["alerts"]) +
+            "\n\nLatest workflow run: " + str(report["latest_run"]) +
+            "\nThis issue does not guarantee a push notification or email.")
     if existing:
         number = existing["number"]
         if existing.get("body") != body:
