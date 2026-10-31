@@ -39,7 +39,7 @@ class ChainTests(unittest.TestCase):
 
     def test_resealed_prior_prediction_mutation_rejected(self):
         entries = sequence((0, 30, 60))
-        changed = copy.deepcopy(entries)
+        changed = [{"commit": e["commit"], "state": copy.deepcopy(e["state"])} for e in entries]
         changed[1]["state"]["predictions"][0]["baseline_score"] += 1
         ledger.seal(changed[1]["state"])
         with self.assertRaises(ValueError):
@@ -47,7 +47,7 @@ class ChainTests(unittest.TestCase):
 
     def test_resealed_prior_quote_mutation_rejected(self):
         entries = sequence((0, 30, 60))
-        changed = copy.deepcopy(entries)
+        changed = [{"commit": e["commit"], "state": copy.deepcopy(e["state"])} for e in entries]
         first = changed[1]["state"]["runs"][0]["id"]
         watched = {p["pair"] for p in changed[1]["state"]["predictions"]
                    if p["run_id"] == first}
