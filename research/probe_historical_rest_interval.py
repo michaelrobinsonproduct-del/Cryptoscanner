@@ -101,7 +101,7 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
             page_last = t
             if t >= start + STEP:
                 reached_after = True
-                break
+                continue
             if t >= start:
                 seen.append((t, price, volume))
                 if len(seen) > MAX_EXPECTED_TRADES:
