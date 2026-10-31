@@ -11,6 +11,7 @@ must atomically add the segment and advance the snapshot; a non-force push and
 remote byte-for-byte readback remain mandatory at workflow integration.
 """
 import base64
+import binascii
 import hashlib
 import json
 import zlib
@@ -71,7 +72,7 @@ def unpack_blob(data, kind):
         if ledger.canonical(result) != raw:
             raise ValueError("Noncanonical packed JSON")
         return result
-    except (UnicodeError, json.JSONDecodeError, zlib.error, TypeError,
+    except (UnicodeError, json.JSONDecodeError, zlib.error, binascii.Error, TypeError,
             KeyError, OverflowError) as exc:
         raise ValueError("Invalid packed storage payload") from exc
 
