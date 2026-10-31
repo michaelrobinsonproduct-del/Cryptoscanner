@@ -15,7 +15,7 @@ class VerifierWorkflowTests(unittest.TestCase):
         self.assertIn("cron: '21 * * * *'", self.code)
         self.assertIn("--before-commit", self.code)
         self.assertIn("--after-commit", self.code)
-        self.assertIn("git show", self.code)
+        self.assertIn("paper_pov.segmented_repository export-git", self.code)
 
     def test_pull_request_checks_use_exact_immutable_head(self):
         self.assertIn("github.event.pull_request.head.sha || github.sha", self.code)
