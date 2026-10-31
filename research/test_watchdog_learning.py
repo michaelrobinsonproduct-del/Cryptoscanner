@@ -57,6 +57,20 @@ class AssessmentTests(unittest.TestCase):
         result = assess_case(runs=[run(conclusion="failure")])
         self.assertIn("LATEST_RESEARCH_RUN_FAILED", result["alerts"])
 
+    def test_active_retry_does_not_hide_latest_completed_failure(self):
+        result = assess_case(runs=[run(1, status="in_progress", conclusion=None, age=2),
+                                   run(2, conclusion="failure", age=10)],
+                             jobs_by_id={2: jobs()})
+        self.assertIn("LATEST_RESEARCH_RUN_FAILED", result["alerts"])
+
+    def test_active_retry_after_completed_success_is_not_false_failure(self):
+        result = assess_case(runs=[run(1, status="queued", conclusion=None, age=2),
+                                   run(2, age=10),
+                                   run(3, conclusion="failure", age=20)],
+                             jobs_by_id={2: jobs()})
+        self.assertNotIn("LATEST_RESEARCH_RUN_FAILED", result["alerts"])
+        self.assertEqual(result["status"], "HEALTHY")
+
     def test_recovered_old_failure_does_not_alert(self):
         result = assess_case(runs=[run(1), run(2, conclusion="failure", age=10)])
         self.assertEqual(result["status"], "HEALTHY")
