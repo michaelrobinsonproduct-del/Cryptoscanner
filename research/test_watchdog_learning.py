@@ -19,12 +19,19 @@ def run(identifier=1, *, status="completed", conclusion="success", age=5,
             "created_at": iso(NOW - dt.timedelta(minutes=age)), "event": event}
 
 
-def jobs(*, verified="success", cache="success"):
+def jobs(*, verified="success", cache="success",
+         reconcile="success", observed="success", upload="success"):
     return [{"steps": [
         {"name": "Check cooperative research lease, active runs, and cached source evidence",
          "conclusion": cache},
         {"name": "Verify and summarize retained evidence without labels",
-         "conclusion": verified}]}]
+         "conclusion": verified},
+        {"name": "Reconcile retained trades and audit closed-candle early-mover candidates (no labels)",
+         "conclusion": reconcile},
+        {"name": "Independently corroborate contiguous observed 1h trade buckets (no labels)",
+         "conclusion": observed},
+        {"name": "Upload bounded independent observed-window corroboration",
+         "conclusion": upload}]}]
 
 
 def artifact(expiry_days=25, name="kraken-reusable-ohlc-evidence"):
@@ -52,6 +59,27 @@ class AssessmentTests(unittest.TestCase):
 
     def test_green_without_step_logs_is_unverified(self):
         self.assertEqual(run_state(run(), []), "unverified_green")
+
+    def test_green_verify_but_skipped_reconciliation_is_no_work(self):
+        self.assertEqual(run_state(run(), jobs(reconcile="skipped")), "skipped_no_work")
+
+    def test_green_verify_but_skipped_independent_corroboration_is_no_work(self):
+        self.assertEqual(run_state(run(), jobs(observed="skipped")), "skipped_no_work")
+
+    def test_green_verify_but_skipped_report_upload_is_no_work(self):
+        self.assertEqual(run_state(run(), jobs(upload="skipped")), "skipped_no_work")
+
+    def test_green_verify_without_downstream_step_logs_is_unverified(self):
+        partial = jobs()
+        partial[0]["steps"] = partial[0]["steps"][:2]
+        self.assertEqual(run_state(run(), partial), "unverified_green")
+
+    def test_two_green_partial_batches_cannot_hide_no_progress(self):
+        result = assess_case(runs=[run(1, age=5), run(2, age=15), run(3, age=25)],
+                             jobs_by_id={1: jobs(observed="skipped"),
+                                         2: jobs(upload="skipped"),
+                                         3: jobs()})
+        self.assertIn("REPEATED_GREEN_NO_WORK", result["alerts"])
 
     def test_failed_latest_run_alerts(self):
         result = assess_case(runs=[run(conclusion="failure")])
