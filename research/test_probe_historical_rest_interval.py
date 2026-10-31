@@ -14,7 +14,7 @@ class Response:
     def read(self, n): return self.data.read(n)
 
 
-def make_page(rows, cursor="9999999999999", *, error=None):
+def make_page(rows, cursor="1900000000000000000", *, error=None):
     return {"error": error or [], "result": {"DENTEUR": rows, "last": cursor}}
 
 
@@ -102,7 +102,7 @@ class HistoricalRestProbeTests(unittest.TestCase):
         trace = r["rest_cursor_trace"]
         self.assertEqual(len(trace), 1)
         self.assertEqual(trace[0]["requested_since"], "299999999999")
-        self.assertEqual(trace[0]["returned_last"], "9999999999999")
+        self.assertEqual(trace[0]["returned_last"], "1900000000000000000")
         self.assertEqual(trace[0]["rows"], 3)
         self.assertTrue(trace[0]["after_end_witness"])
         self.assertEqual(trace[0]["page_sha256"], r["rest_page_sha256"][0])
