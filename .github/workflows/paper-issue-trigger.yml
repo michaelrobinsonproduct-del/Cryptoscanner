@@ -1,0 +1,53 @@
+name: Owner paper scan command (dispatch only)
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: paper-owner-trigger-issue-34
+  cancel-in-progress: false
+jobs:
+  dispatch-existing-paper-scanner:
+    if: >-
+      ${{
+        github.repository == 'michaelrobinsonproduct-del/Cryptoscanner' &&
+        github.event.issue.number == 34 &&
+        github.event.issue.pull_request == null &&
+        github.event.comment.user.login == 'michaelrobinsonproduct-del' &&
+        github.event.comment.author_association == 'OWNER' &&
+        github.event.comment.body == '/paper-scan' &&
+        github.event.sender.login == 'michaelrobinsonproduct-del'
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Independently validate exact owner event and fixed dispatch intent
+        run: |
+          set -euo pipefail
+          python -m paper_pov.manual_trigger \
+            --event "$GITHUB_EVENT_PATH" \
+            --repository "$GITHUB_REPOSITORY" \
+            --output /tmp/paper-dispatch-intent.json
+          python - <<'PY'
+          import json
+          intent=json.load(open('/tmp/paper-dispatch-intent.json'))
+          assert intent['workflow']=='paper-pipeline.yml' and intent['ref']=='main'
+          assert intent['paper_only'] is True
+          PY
+      - name: Dispatch existing GitHub paper pipeline (no new ledger writer)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run paper-pipeline.yml --ref main
+          {
+            echo '### Owner paper scan dispatch accepted'
+            echo 'The existing paper-only single-writer workflow was requested on main.'
+            echo 'This is NOT confirmation of a completed scan or delivered results.'
+            echo "[View paper scan runs](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/paper-pipeline.yml)"
+          } >> "$GITHUB_STEP_SUMMARY"
