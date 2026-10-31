@@ -35,7 +35,7 @@ class Tests(unittest.TestCase):
             out = Path(tmp) / "evidence.zip"
             manifest = build(archive, cohort, out, expected_archive_sha256=sha)
             self.assertEqual(manifest["markets"]["TESTUSD_5.csv"]["retained_rows"], 578)
-            result = inspect(out)
+            result = inspect(out, expected_archive_sha256=sha)
             self.assertEqual(result["coverage"]["TESTUSD_5.csv"]["candidate_windows"]["48"], 2)
             self.assertEqual(result["real_labels"], 0)
 
@@ -66,7 +66,7 @@ class Tests(unittest.TestCase):
             build(archive, cohort, out, expected_archive_sha256=sha)
             with zipfile.ZipFile(out, "a") as z:
                 z.writestr("candles/EXTRA_5.csv", "x")
-            with self.assertRaises(ValueError): inspect(out)
+            with self.assertRaises(ValueError): inspect(out, expected_archive_sha256=sha)
 
     def test_gap_breaks_48h_candidate(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -80,7 +80,7 @@ class Tests(unittest.TestCase):
             sha=hashlib.sha256(archive.read_bytes()).hexdigest();cohort["archive_sha256"]=sha
             out=Path(tmp)/"out.zip"
             build(archive,cohort,out,expected_archive_sha256=sha)
-            self.assertEqual(inspect(out)["coverage"]["TESTUSD_5.csv"]["candidate_windows"]["48"],0)
+            self.assertEqual(inspect(out, expected_archive_sha256=sha)["coverage"]["TESTUSD_5.csv"]["candidate_windows"]["48"],0)
 
 
 if __name__ == "__main__": unittest.main()
