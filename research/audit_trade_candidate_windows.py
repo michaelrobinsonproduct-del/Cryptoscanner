@@ -37,17 +37,19 @@ def audit_candidate_windows(ohlc_rows, exact_timestamps):
     exact = set(exact_timestamps)
     if any(not isinstance(t, int) or isinstance(t, bool) or t not in source for t in exact):
         raise ValueError("unmatched or invalid exact candle timestamp")
+    # The retained slice may end long before the present; missing future rows
+    # are UNKNOWN beyond retained evidence, never claimed calendar-immature.
     last = max(source)
     result = {}
     for hours in HORIZONS:
         n = hours * 12
-        complete = immature = gaps = peaks10 = peaks20 = peaks30 = 0
+        complete = beyond_retained_end = gaps = peaks10 = peaks20 = peaks30 = 0
         largest = None
         first_entry = last_entry = None
         for t in sorted(exact):
             end = t + n * STEP
             if end > last:
-                immature += 1
+                beyond_retained_end += 1
                 continue
             future = [source.get(t + i * STEP) if t + i * STEP in exact else None
                       for i in range(1, n + 1)]
@@ -65,7 +67,7 @@ def audit_candidate_windows(ohlc_rows, exact_timestamps):
         result[str(hours)] = {
             "candidate_entries": len(exact),
             "candidate_full_future_windows": complete,
-            "excluded_immature": immature,
+            "excluded_beyond_retained_end": beyond_retained_end,
             "excluded_missing_exact_future": gaps,
             "descriptive_peak_10": peaks10,
             "descriptive_peak_20": peaks20,
@@ -75,7 +77,7 @@ def audit_candidate_windows(ohlc_rows, exact_timestamps):
             "last_candidate_entry_open": last_entry,
             "real_labels": 0,
         }
-        if complete + immature + gaps != len(exact):
+        if complete + beyond_retained_end + gaps != len(exact):
             raise AssertionError("candidate accounting mismatch")
     return {
         "status": "descriptive_candidates_source_completeness_unverified",
