@@ -1389,7 +1389,7 @@
       "next": "Seek independent publisher digest/attestation or verifiable complete-interval source evidence using bounded requests; only then reconstruct labels and held-out baseline comparison."
     },
     "micro_price_relative_tolerance_20261031_15": {
-      "status": "EXACT_326_TESTS_VERIFIED_REAL_RETAINED_REPLAY_PENDING",
+      "status": "EXACT_326_TESTS_AND_SUBSTANTIVE_48_MARKET_REPLAY_VERIFIED_NO_PREDICTIVE_LABELS",
       "timestamp_utc": "2026-10-31T07:18:05Z",
       "research_commit": "e4818c971a95574c47f28c56ad5bee15b81c60ff",
       "test_workflow_main_commit": "21f30bb389ff68ab42b6839a3643123cb57b4aa3",
@@ -1412,7 +1412,30 @@
       "candidate_rule": "none validated",
       "production_applied": false,
       "source_authentication": "not_verified",
-      "next": "Pin existing scheduled reusable research workflow to e4818c9, rerun retained 48-market and four-trade evidence with zero archive download, verify exact 326 tests and substantive reconciliation. Continue independent Kraken source completeness investigation."
+      "next": "Investigate independently verifiable Kraken historical source completeness or bounded independent PostTrade API comparison for selected 2026Q2 intervals; never infer no-trade from 96,025 mutually absent intervals. Then produce only authenticated mature 1/6/24/48h labels and held-out comparisons.",
+      "verified_research_run_id": 41180097002,
+      "verified_research_job_id": 124475561566,
+      "verified_research_workflow_main_commit": "5c78deca32be0334a0a05afd2ced4210f0673f60",
+      "verified_research_tests": 326,
+      "reused_ohlc_markets": 48,
+      "reused_trade_markets": 4,
+      "real_exact_candidate_intervals": 5001,
+      "real_descriptive_complete_1h_windows": 77,
+      "real_point_in_time_feature_ready": 509,
+      "real_1h_early_descriptive_peaks": 7,
+      "real_6h_24h_48h_complete_descriptive_windows": 0,
+      "source_manifest_sha256": "9bff5774c8e53e5ffb43a29da71308b61ec84c8626204285efcf5eb019e6e9fb",
+      "trade_archive_full_sha256_verified": false,
+      "reconciliation_artifact_id": 13033889636,
+      "reconciliation_artifact_digest": "sha256:792362960d40dca2a502f47f633e8ce8834cd1e508919c680bb35e4a32b9749a",
+      "reconciliation_artifact_expires_at": "2026-11-30T07:19:02Z",
+      "verified_research_steps": [
+        "reused retained 48-market OHLC artifact",
+        "reused bounded four-market trades",
+        "performed strict trade/OHLC reconciliation and point-in-time descriptive audit",
+        "verified same official source revision, not source completeness",
+        "uploaded evidence/report artifacts"
+      ]
     }
   },
   "audit": {
