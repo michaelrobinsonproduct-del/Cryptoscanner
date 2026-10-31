@@ -146,6 +146,20 @@ class HistoricalRestProbeTests(unittest.TestCase):
                 compare_rest_bucket("DENTEUR", 300, self.expected,
                     opener=lambda *a, **kw: Response(make_page(rows)))
 
+    def test_malformed_after_end_trade_cannot_hide_in_successful_page(self):
+        rows = [list(x) for x in self.rows]
+        rows.append(["1", "1", 602, "bad", "l", ""])
+        with self.assertRaisesRegex(RuntimeError, "schema"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                opener=lambda *a, **kw: Response(make_page(rows)))
+
+    def test_duplicate_trade_id_after_end_rejected(self):
+        rows = [self.rows[0] + [10], self.rows[1] + [11],
+                self.rows[2] + [12], ["1", "1", 602, "b", "l", "", 12]]
+        with self.assertRaisesRegex(RuntimeError, "trade id"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                opener=lambda *a, **kw: Response(make_page(rows)))
+
     def test_source_schema_failure_does_not_claim_complete_interval(self):
         rows = [self.rows[0][:3], self.rows[-1]]
         with self.assertRaises(RuntimeError):
