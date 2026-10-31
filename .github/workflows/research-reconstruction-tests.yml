@@ -1,6 +1,9 @@
 name: Isolated Kraken Reconstruction Tests (Manual, Research Only)
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/research-reconstruction-tests.yml'
 permissions:
   contents: read
 concurrency:
@@ -13,18 +16,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 8aec95ce9a5468e1a4284d15211b94d4d6bc2e33
+          ref: 05660704b0daeecf6edc4f38071b4996ca904032
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Fail closed on exact research SHA and test presence
         run: |
-          test "$(git rev-parse HEAD)" = "8aec95ce9a5468e1a4284d15211b94d4d6bc2e33"
+          test "$(git rev-parse HEAD)" = "05660704b0daeecf6edc4f38071b4996ca904032"
           test -f research/reconstruct_forward_outcomes.py
           test -f research/test_reconstruct_forward_outcomes.py
           test -f research/test_inventory_kraken_archive.py
           test -z "$(git status --porcelain)"
       - name: Run all offline research fixtures
         run: |
+          python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v
