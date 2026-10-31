@@ -131,6 +131,17 @@ def reconcile(ohlc_artifact, trade_artifact, *, expected_ohlc_digest=None,
                     csv.reader(io.StringIO(ohlc_bytes.decode("utf-8", errors="strict")))]
             if len(ohlc) != ometa["retained_rows"] or len(ohlc) > 8000:
                 raise ValueError("OHLC retained row count mismatch")
+            # The original builder retains the final N *unfiltered* source
+            # rows. Check that contract before interpreting interior absent
+            # timestamps as documented no-trade candles. Never extrapolate
+            # before the first or after the last retained source observation.
+            if (type(ometa.get("source_rows")) is not int
+                    or ometa["source_rows"] < len(ohlc)
+                    or type(ometa.get("retained_first_open")) is not int
+                    or type(ometa.get("retained_last_open")) is not int
+                    or int(ohlc[0][0]) != ometa["retained_first_open"]
+                    or int(ohlc[-1][0]) != ometa["retained_last_open"]):
+                raise ValueError("OHLC retained source-tail provenance mismatch")
             diagnostic = diagnose(ohlc, parsed)
             _, buckets = aggregate(parsed)
             source = {int(row[0]): row for row in ohlc}
@@ -139,6 +150,13 @@ def reconcile(ohlc_artifact, trade_artifact, *, expected_ohlc_digest=None,
                          source[ts], records, independent_trade_source=True
                      )["status"] == "verified_open_boundary"}
             audit = audit_candidate_windows(ohlc, exact)
+            # Full-source gap metadata is comparable only when every source
+            # row was retained. Otherwise retained-tail gap counts are a
+            # separate bounded subset, not a replacement for source totals.
+            if ometa["source_rows"] == len(ohlc):
+                if (ometa.get("source_gap_events") != audit["ohlc_interior_gap_events"]
+                        or ometa.get("source_missing_intervals") != audit["ohlc_interior_missing_intervals"]):
+                    raise ValueError("OHLC full-retention gap metadata mismatch")
             candidate_windows = _candidate_windows(exact)
             if any(candidate_windows[str(h)] != audit["horizons"][str(h)]["candidate_full_future_windows"]
                    for h in HORIZONS):
@@ -152,6 +170,11 @@ def reconcile(ohlc_artifact, trade_artifact, *, expected_ohlc_digest=None,
                 "candidate_outcome_audit": audit,
                 "verified_complete_intervals": 0, "real_labels": 0,
                 "no_trade_or_source_gap_semantics": "unknown",
+                "ohlc_retained_interior_gap_events": audit["ohlc_interior_gap_events"],
+                "ohlc_retained_missing_no_trade_candidate_intervals": audit["ohlc_interior_missing_intervals"],
+                "ohlc_documented_no_trade_semantics_reference": audit["ohlc_gap_documentation_url"],
+                "ohlc_gap_semantics_authorize_labels": False,
+                "retained_source_tail_contract_verified": True,
             }
     return {"schema_version": 1,
             "status": "descriptive_candidate_outcomes_source_completeness_unverified",
