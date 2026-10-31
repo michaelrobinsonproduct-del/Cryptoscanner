@@ -31,5 +31,13 @@ class DiagnosticTests(unittest.TestCase):
         self.assertEqual(diagnose([], [])["real_labels"], 0)
 
 
+    def test_diagnostic_rejects_bool_candle_values_as_exact_match(self):
+        r = diagnose([(300, 100, 100, 100, 100, True, 1)],
+                     [(300, 100, 1, 0)])
+        self.assertEqual(r["exact_candidate_matches"], 0)
+        self.assertEqual(r["mismatch_counts"]["invalid_evidence"], 1)
+        self.assertEqual(r["real_labels"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
