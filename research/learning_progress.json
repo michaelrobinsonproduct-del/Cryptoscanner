@@ -4,10 +4,10 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": null,
-    "lease_expires_at": null,
+    "owner": "role00-source-20261031T1303",
+    "lease_expires_at": "2026-10-31T13:13:55.551Z",
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it.",
-    "last_acquired_at": "2026-10-31T13:00:54.765Z",
+    "last_acquired_at": "2026-10-31T13:03:55.551Z",
     "last_released_at": "2026-10-31T13:02:53.347Z"
   },
   "batches": {
