@@ -1,0 +1,146 @@
+name: Independent Public Paper Scan Health Monitor (read-only)
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/monitor.py'
+      - 'paper_pov/test_monitor.py'
+      - '.github/workflows/paper-monitor.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '27 * * * *'
+permissions:
+  contents: read
+concurrency:
+  group: paper-monitor-readonly-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact-source paper monitor failure-injection contracts
+        run: |
+          set -euo pipefail
+          echo "PAPER_MONITOR_EXACT_SHA=$(git rev-parse HEAD)"
+          python -m unittest paper_pov.test_monitor -v
+  monitor:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Collect independent scheduled-run and immutable ledger evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          mkdir -p paper_pov/monitor_output
+          : > /tmp/paper-monitor-errors.txt
+          if ! gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=50" > /tmp/paper-scans.json; then
+            echo SCAN_API_UNAVAILABLE >> /tmp/paper-monitor-errors.txt
+            echo '{"workflow_runs":[]}' > /tmp/paper-scans.json
+          fi
+          if ! gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-forward-audit.yml/runs?per_page=50" > /tmp/paper-audits.json; then
+            echo AUDIT_API_UNAVAILABLE >> /tmp/paper-monitor-errors.txt
+            echo '{"workflow_runs":[]}' > /tmp/paper-audits.json
+          fi
+          if git fetch --no-tags --depth=4 origin refs/heads/paper-proof-ledger; then
+            git rev-parse FETCH_HEAD > /tmp/paper-ledger-commit.txt
+            git log -1 --format=%s FETCH_HEAD > /tmp/paper-ledger-message.txt
+            if ! git show FETCH_HEAD:paper-ledger.json > /tmp/paper-monitor-ledger.json; then
+              echo LEDGER_READ_UNAVAILABLE >> /tmp/paper-monitor-errors.txt
+            fi
+            if ! git show 'FETCH_HEAD^:paper-ledger.json' > /tmp/paper-monitor-previous.json; then
+              echo PREVIOUS_READ_UNAVAILABLE >> /tmp/paper-monitor-errors.txt
+            fi
+          else
+            echo LEDGER_FETCH_UNAVAILABLE >> /tmp/paper-monitor-errors.txt
+          fi
+          python -m paper_pov.monitor \
+            --scan-runs /tmp/paper-scans.json \
+            --audit-runs /tmp/paper-audits.json \
+            --ledger /tmp/paper-monitor-ledger.json \
+            --previous /tmp/paper-monitor-previous.json \
+            --ledger-commit /tmp/paper-ledger-commit.txt \
+            --ledger-message /tmp/paper-ledger-message.txt \
+            --errors /tmp/paper-monitor-errors.txt \
+            --output paper_pov/monitor_output/monitor.json
+          (cd paper_pov/monitor_output && sha256sum monitor.json > SHA256SUMS)
+      - name: Preserve immutable checksummed monitoring evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: independent-paper-monitor-${{ github.run_id }}
+          path: |
+            paper_pov/monitor_output/monitor.json
+            paper_pov/monitor_output/SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
+      - name: Deduplicate, post and verify issue 34 alerts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ALERT_COUNT="$(python -c 'import json; print(len(json.load(open("paper_pov/monitor_output/monitor.json"))["alerts"]))')"
+          if [ "$ALERT_COUNT" -eq 0 ]; then
+            echo PAPER_MONITOR_HEALTHY_NO_ALERT
+            exit 0
+          fi
+          python - <<'PY' > /tmp/paper-monitor-comment.txt
+          import json,os
+          d=json.load(open("paper_pov/monitor_output/monitor.json"))
+          print("### Independent GitHub paper scanner alert — "+d["checked_at"])
+          print()
+          print("<!-- PAPER_MONITOR_ALERT:"+d["alert_fingerprint"]+" -->")
+          print("Alerts: "+", ".join(d["alerts"]))
+          print("Monitor run: https://github.com/"+os.environ["GITHUB_REPOSITORY"]+"/actions/runs/"+os.environ["GITHUB_RUN_ID"])
+          print("Exact monitor SHA: "+os.environ["GITHUB_SHA"])
+          print("Ledger generation: "+str(d["metrics"]["scans_persisted"]))
+          print("Latest paper as-of: "+str(d["metrics"]["latest_scan_as_of"]))
+          print("Matured labels: "+str(d["metrics"]["matured_labels"])+"; held-out lift: NOT MEASURED")
+          print("Paper only; no trades, production/Railway operations or DEX freshness gate.")
+          print("Issue comment readback verifies GitHub delivery only, not email/push receipt.")
+          PY
+          COMMENT_COUNT="$(gh api "repos/$GITHUB_REPOSITORY/issues/34" --jq '.comments')"
+          PAGE=$(( (COMMENT_COUNT + 99) / 100 ))
+          if [ "$PAGE" -lt 1 ]; then PAGE=1; fi
+          gh api "repos/$GITHUB_REPOSITORY/issues/34/comments?per_page=100&page=$PAGE" > /tmp/paper-monitor-recent.json
+          python - <<'PY' > /tmp/paper-monitor-duplicate.txt
+          import json,re
+          body=open("/tmp/paper-monitor-comment.txt").read()
+          marker=re.search(r"<!-- PAPER_MONITOR_ALERT:[0-9a-f]{16} -->",body).group()
+          comments=json.load(open("/tmp/paper-monitor-recent.json"))
+          print("yes" if any(marker in x.get("body","") for x in comments) else "no")
+          PY
+          if [ "$(cat /tmp/paper-monitor-duplicate.txt)" = yes ]; then
+            echo PAPER_MONITOR_ALERT_ALREADY_RECORDED
+            exit 0
+          fi
+          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/34/comments" -f body="$(cat /tmp/paper-monitor-comment.txt)" > /tmp/paper-monitor-post.json
+          COMMENT_ID="$(python -c 'import json;print(json.load(open("/tmp/paper-monitor-post.json"))["id"])')"
+          gh api "repos/$GITHUB_REPOSITORY/issues/comments/$COMMENT_ID" > /tmp/paper-monitor-readback.json
+          python - <<'PY'
+          import json
+          expected=open("/tmp/paper-monitor-comment.txt").read().rstrip("\n")
+          actual=json.load(open("/tmp/paper-monitor-readback.json"))["body"]
+          assert actual==expected, "Paper monitor issue alert readback failed"
+          print("PAPER_MONITOR_ISSUE_READBACK_VERIFIED")
+          PY
+          echo "::warning::Independent paper monitor raised $ALERT_COUNT verified issue alert(s)"
