@@ -1436,6 +1436,44 @@
         "verified same official source revision, not source completeness",
         "uploaded evidence/report artifacts"
       ]
+    },
+    "watchdog_90m_stall_20261031_30": {
+      "status": "EXACT_37_TEST_GITHUB_ACTIONS_VERIFIED_NO_PREDICTIVE_LABELS",
+      "timestamp_utc": "2026-10-31T07:28:23.658Z",
+      "research_code_commit": "24f6a1d461922706f8b449c0efee5bbc73e31f7a",
+      "main_workflow_commit": "11f3b0a5f1e441c03f26fbd8edcf136efcf4dece",
+      "verified_workflow_run_id": 41180689473,
+      "verified_workflow_job_id": 124477311459,
+      "verified_tests": 37,
+      "new_failure_injection_tests": 5,
+      "actual_workflow_conclusion": "success",
+      "actual_watchdog_status": "HEALTHY",
+      "actual_watchdog_delivery": "NO_ALERT",
+      "changes": [
+        "Add 90-minute substantive retained-evidence completion alert, independent of green CI or scheduled cadence",
+        "Prevent queued/in-progress retry from hiding two consecutive completed no-work research runs",
+        "Prevent queued/in-progress retry from hiding most recent completed unverified-green research run",
+        "Add five offline failure-injection tests for stale/recent evidence, queued retries and skipped/unverified green jobs",
+        "Verify exact pinned research code and 37/37 tests in real GitHub Actions; no production code changes"
+      ],
+      "last_substantive_research_run_id": 41180097002,
+      "last_substantive_research_run_status": "success",
+      "latest_research_evidence": "Retained 48 OHLC markets, four trade markets; 5001 matching candidate intervals, 509 descriptive feature-ready observations, 77 complete descriptive 1h windows and seven early 30% descriptive peaks; independent trade completeness unverified",
+      "genuine_predictive_labels": 0,
+      "held_out_lift": "not established",
+      "production_applied": false,
+      "railway_read_only_status": "Three known production services REMOVED; no active deployments observed",
+      "tasks_enabled": {
+        "15": true,
+        "30": true,
+        "00": true
+      },
+      "limitations": [
+        "Updated watchdog has been verified by push-triggered execution only; first scheduled execution of new 37-test pin still pending",
+        "Independent GitHub watchdog cannot directly verify ChatGPT task execution or user email/push delivery",
+        "No independent quarterly trade source completeness, hence zero authenticated forward labels and no promotion"
+      ],
+      "next": "Verify first genuinely scheduled run of updated 37-test watchdog, keep monitoring 90-minute evidence SLA; continue independent historical source provenance without full archive download"
     }
   },
   "audit": {
