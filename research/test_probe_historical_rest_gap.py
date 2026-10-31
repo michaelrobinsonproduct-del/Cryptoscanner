@@ -283,5 +283,69 @@ class BracketedGapTests(unittest.TestCase):
         self.assertEqual(r["status"], "abstain_ohlc_unverified")
         self.assertEqual(rest.call_count, 1)
 
+    def test_unexpected_top_level_member_rejected(self):
+        with zipfile.ZipFile(self.trades, "a") as archive:
+            archive.writestr("README.txt", "unrelated")
+        with self.assertRaises(ValueError):
+            select_bracketed_gap(self.trades, self.ohlc)
+
+    def test_hidden_nested_trade_member_rejected(self):
+        with zipfile.ZipFile(self.trades, "a") as archive:
+            archive.writestr("trades/nested/hidden.txt", "unrelated")
+        with self.assertRaises(ValueError):
+            select_bracketed_gap(self.trades, self.ohlc)
+
+    def test_duplicate_manifest_rejected(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with zipfile.ZipFile(self.trades, "a") as archive:
+                archive.writestr("manifest.json", "{}")
+                archive.writestr("manifest.json", "{}")
+        with self.assertRaises(ValueError):
+            select_bracketed_gap(self.trades, self.ohlc)
+
+    def test_oversized_manifest_rejected(self):
+        with zipfile.ZipFile(self.trades, "a") as archive:
+            archive.writestr("manifest.json", "x" * (128 * 1024 + 1))
+        with self.assertRaises(ValueError):
+            select_bracketed_gap(self.trades, self.ohlc)
+
+    def test_symlink_trade_member_rejected(self):
+        info = zipfile.ZipInfo("trades/ZZZUSD.csv")
+        info.create_system = 3
+        info.external_attr = 0o120777 << 16
+        with zipfile.ZipFile(self.trades, "a") as archive:
+            archive.writestr(info, "target.csv")
+        with self.assertRaises(ValueError):
+            select_bracketed_gap(self.trades, self.ohlc)
+
+    def test_unsupported_zip_compression_rejected(self):
+        with zipfile.ZipFile(self.trades, "a") as archive:
+            archive.writestr("trades/ZZZUSD.csv", "unrelated",
+                             compress_type=zipfile.ZIP_BZIP2)
+        with self.assertRaises(ValueError):
+            select_bracketed_gap(self.trades, self.ohlc)
+
+    def test_directory_member_rejected(self):
+        with zipfile.ZipFile(self.trades, "a") as archive:
+            archive.writestr("trades/", "")
+        with self.assertRaises(ValueError):
+            select_bracketed_gap(self.trades, self.ohlc)
+
+    @patch("probe_historical_rest_gap.load_ohlc_starts")
+    def test_normal_retained_manifest_member_allowed_without_source_claim(self, ohlc):
+        with zipfile.ZipFile(self.trades, "a") as archive:
+            archive.writestr("manifest.json", '{"source_archive_full_sha256_verified":false}')
+        ohlc.return_value = ({300, 900}, "digest")
+        market, start, _, _, _ = select_bracketed_gap(self.trades, self.ohlc)
+        self.assertEqual((market, start), ("BCHJPY", 300))
+
+    def test_manifest_only_has_no_trade_market(self):
+        with zipfile.ZipFile(self.trades, "w") as archive:
+            archive.writestr("manifest.json", "{}")
+        with self.assertRaises(ValueError):
+            select_bracketed_gap(self.trades, self.ohlc)
+
+
 if __name__ == "__main__":
     unittest.main()
