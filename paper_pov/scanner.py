@@ -59,7 +59,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         raise RuntimeError("Insufficient eligible Kraken USD universe")
     ticker = api("Ticker")
     quote_at = clock().astimezone(UTC)
-    if not isinstance(ticker, dict) or (quote_at - started).total_seconds() > 120:
+    if not isinstance(ticker, dict) or not 0 <= (quote_at - started).total_seconds() <= 120:
         raise RuntimeError("Ticker request stale")
     observations = []
     screened = []
@@ -113,20 +113,43 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     for item in selected:
         try:
             bars = api("OHLC?pair=" + urllib.parse.quote(item["pair"], safe="") + "&interval=5")
-            raw = next(v for k, v in bars.items() if k != "last")
+            # Kraken's response must identify exactly the requested market.
+            # Never accept an unrelated result via first-dictionary-value order.
+            if not isinstance(bars, dict) or set(bars) != {item["pair"], "last"}:
+                raise ValueError("OHLC response pair mismatch")
+            raw = bars[item["pair"]]
             if not isinstance(raw, list) or len(raw) < 14:
                 raise ValueError("insufficient completed OHLC")
             closed = raw[:-1][-13:]  # Kraken last candle is not committed
-            starts = [int(finite(c[0])) for c in closed]
+            starts, closes, volumes = [], [], []
+            for candle in closed:
+                if not isinstance(candle, (list, tuple)) or len(candle) != 8:
+                    raise ValueError("invalid OHLC row schema")
+                stamp = finite(candle[0])
+                if not stamp.is_integer() or int(stamp) % 300:
+                    raise ValueError("unaligned OHLC timestamp")
+                starts.append(int(stamp))
+                opn, high, low, close, vwap, volume = (
+                    finite(candle[i]) for i in (1, 2, 3, 4, 5, 6))
+                count = finite(candle[7])
+                if (min(opn, high, low, close, vwap, volume) <= 0
+                        or not count.is_integer() or count <= 0
+                        or low > min(opn, close, vwap)
+                        or high < max(opn, close, vwap)):
+                    raise ValueError("invalid or no-trade OHLC candle")
+                closes.append(close)
+                volumes.append(volume)
             if any(b - a != 300 for a, b in zip(starts, starts[1:])):
                 raise ValueError("OHLC interval gap")
-            age = (clock().astimezone(UTC).timestamp() - (starts[-1] + 300))
+            # A missing/duplicated uncommitted tail must not disguise a
+            # partially observed final completed candle.
+            tail = raw[-1]
+            if (not isinstance(tail, (list, tuple)) or len(tail) != 8
+                    or finite(tail[0]) != starts[-1] + 300):
+                raise ValueError("missing or invalid uncommitted OHLC tail")
+            age = clock().astimezone(UTC).timestamp() - (starts[-1] + 300)
             if not 0 <= age <= 600:
                 raise ValueError("stale or future completed OHLC")
-            closes = [finite(c[4]) for c in closed]
-            volumes = [finite(c[6]) for c in closed]
-            if any(x <= 0 for x in closes) or any(x <= 0 for x in volumes):
-                raise ValueError("zero-volume/no-trade or invalid OHLC")
             accel = sum(volumes[-6:]) / sum(volumes[-12:-6])
             move15 = 100 * (closes[-1] / closes[-4] - 1)
             challenger = round(item["baseline_score"] +
@@ -141,7 +164,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             abstentions.append({"pair": item["pair"], "reason": str(exc)[:100]})
         sleep(0.15)
     completed = clock().astimezone(UTC)
-    if (completed - quote_at).total_seconds() > 180:
+    if not 0 <= (completed - quote_at).total_seconds() <= 180:
         raise RuntimeError("Quote observations expired during OHLC screening")
     if not watch:
         raise RuntimeError("No fresh contiguous liquid OHLC candidates")
