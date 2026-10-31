@@ -102,5 +102,24 @@ class TradeBoundaryTests(unittest.TestCase):
             independent_trade_source=True)["status"], "verified_open_boundary")
 
 
+    def test_micro_price_mismatch_must_not_pass_absolute_tolerance(self):
+        # Old 1e-8 absolute floor would accept a 90% price mismatch.
+        candle = (300, 1e-8, 1e-8, 1e-8, 1e-8, 1e-12, 1)
+        trades = [(301, 1.9e-8, 1e-12, 0)]
+        self.assertEqual(verify_open_boundary(candle, trades,
+            independent_trade_source=True)["status"], "aggregation_mismatch")
+
+    def test_micro_volume_mismatch_must_not_pass_absolute_tolerance(self):
+        candle = (300, 1e-8, 1e-8, 1e-8, 1e-8, 1e-12, 1)
+        trades = [(301, 1e-8, 9e-9, 0)]
+        self.assertEqual(verify_open_boundary(candle, trades,
+            independent_trade_source=True)["status"], "aggregation_mismatch")
+
+    def test_exact_micro_price_and_volume_remain_eligible_for_boundary_only(self):
+        candle = (300, 1e-8, 1e-8, 1e-8, 1e-8, 1e-12, 1)
+        trades = [(301, 1e-8, 1e-12, 0)]
+        self.assertEqual(verify_open_boundary(candle, trades,
+            independent_trade_source=True)["status"], "verified_open_boundary")
+
 if __name__ == "__main__":
     unittest.main()
