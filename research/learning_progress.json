@@ -1784,7 +1784,7 @@
       ]
     },
     "role15_20261031_1118": {
-      "status": "EXACT_CODE_426_TESTS_VERIFIED_NEW_SOURCE_AUDIT_PENDING",
+      "status": "INDEPENDENT_BOTH_BRACKETING_BUCKETS_CORRELATED_NO_TRADE_COMPLETENESS_UNVERIFIED",
       "research_commit": "0ab31ba46b6d22a2b4159b86f300ebff9301dcbb",
       "research_test_workflow_commit": "39af4e223500a4b1bbd1392e004fa32b58563161",
       "exact_ci_run_id": 41196356707,
@@ -1797,12 +1797,30 @@
         "Require independent REST and SHA-checked OHLC corroboration of the following observed bucket, in addition to preceding observed bucket.",
         "Source interval completeness and no-trade proof remain unverified; zero genuine predictive labels."
       ],
-      "new_source_evidence_this_batch": 0,
+      "new_source_evidence_this_batch": "Two real bracketing BCHJPY 5m trade/REST/OHLC correspondences, not a certified no-trade interval",
       "verified_complete_trade_intervals": 0,
       "real_labels": 0,
       "held_out_lift": null,
       "production_applied": false,
-      "next": "Repin existing bounded REST gap research workflow to exact 426-test commit after lease release, inspect live source result and artifact; keep zero labels without independent source completeness."
+      "next": "Independent provenance review: prove REST cursor coverage and no-trade semantics without lookahead, or retain abstention; then mature 1/6/24/48h labels only if complete. No 9GB download.",
+      "gap_research_workflow_commit": "3eb142c5229d67ab1cab08458ea7619191c61a36",
+      "gap_source_run_id": 41196413857,
+      "gap_source_job_id": 124523373437,
+      "gap_source_run_url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41196413857",
+      "gap_source_artifact_id": 13040558182,
+      "gap_source_artifact_digest": "sha256:a45499093715497058f1276600be86f50bf26872b1cb7d6b71e8fea18be0c8a3",
+      "gap_source_artifact_expires_at": "2026-11-30T11:20:14Z",
+      "gap_source_market": "BCHJPY",
+      "gap_source_preceding_bucket_open": 1779741900,
+      "gap_source_missing_candidate_bucket_open": 1779742200,
+      "gap_source_following_bucket_open": 1779742500,
+      "gap_source_first_following_trade_timestamp": 1779742663.0656888,
+      "gap_source_first_following_bucket_after_end_timestamp": 1779742804.908696,
+      "gap_source_rest_pages": 2,
+      "gap_source_rest_bytes": 131599,
+      "gap_source_preceding_correlated": true,
+      "gap_source_following_correlated": true,
+      "gap_source_independent_complete_no_trade_intervals": 0
     }
   },
   "audit": {
@@ -1976,7 +1994,8 @@
       "2026-10-31T10:14:22.453Z Role15: initial exact CI 41191799719 failed 1/391 because preexisting unwitnessed-tail fixture used impossible cursors under new strict request-boundary gate. Corrected fixture only (no safety weakening) at research 0a9aa1e067281f4de6cf65c7bbd8dbd8356faa08; main isolated test workflow 5516d56c07319b73d784430084a94642778f5085 triggered. Final exact CI pending, no labels or production changes.",
       "2026-10-31T10:15:11.526Z Role15 independent verifier: final exact research commit 0a9aa1e067281f4de6cf65c7bbd8dbd8356faa08, test-only workflow main 5516d56c07319b73d784430084a94642778f5085, actual CI https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41191932765 job 124510309627 COMPLETED SUCCESS 391/391 tests (eight new REST duplicate JSON/source chronology/boolean/cursor boundary regressions). Earlier run 41191799719 failed 1/391 on unrealistic old synthetic pagination fixture, repaired without weakening gate. No historical source evidence newly acquired; 0 complete independent trade intervals, 0 genuine predictive labels, held-out lift unmeasured, no candidate rule, production unchanged by this batch. Next: independent source interval completeness, missing/no-trade semantics and mature forward labels; no full archive download.",
       "2026-10-31T10:35:02.447Z Role30: first genuinely scheduled 42-test watchdog run 41191999402 job 124510503826 completed SUCCESS, exact pinned f6c99fd, 42/42 tests, HEALTHY alerts=[], issue #34 comment 6542291630 read back. 0 new historical evidence, 0 verified real labels, held-out lift unmeasured, production unchanged. :20/:50 reporting tasks disabled; user push/email receipt unverified.",
-      "2026-10-31T11:19:48.168Z Role15: exact-code research 0ab31ba4, CI 41196356707 job 124523203171 426/426 passed, 14 new gap following-witness tests; distant historical REST after-gap witness identified and guarded, independent following observed bucket REST/OHLC check added. No new real source evidence or verified complete intervals, 0 labels/held-out lift, production unchanged. Bounded source rerun pending after lease release."
+      "2026-10-31T11:19:48.168Z Role15: exact-code research 0ab31ba4, CI 41196356707 job 124523203171 426/426 passed, 14 new gap following-witness tests; distant historical REST after-gap witness identified and guarded, independent following observed bucket REST/OHLC check added. No new real source evidence or verified complete intervals, 0 labels/held-out lift, production unchanged. Bounded source rerun pending after lease release.",
+      "2026-10-31T11:20:40.706Z Role15: source run 41196413857 job 124523373437 COMPLETED SUCCESS, exact 426/426 tests, 2 bounded Kraken REST pages 131599 bytes, BCHJPY 2026-05-25 preceding 20:45 and following 20:55 5m buckets independently matched retained trade/OHLC; gap 20:50 remains unverified no-trade. Artifact 13040558182 SHA256 a4549909... expires 2026-11-30. Zero verified complete intervals, zero genuine labels/held-out lift, no production change. Railway environment status all three services offline. Research lease released after checkpoint."
     ]
   }
 }
