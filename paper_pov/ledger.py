@@ -51,6 +51,84 @@ def verify(state):
     keys = [(o["prediction_id"], o["horizon_hours"]) for o in state["outcomes"]]
     if len(keys) != len(set(keys)):
         raise ValueError("Duplicate outcome")
+    # A checksum authenticates bytes, not the ledger's internal relationships.
+    # Reject partial, orphaned or re-sealed data before it can generate labels.
+    run_map = {}
+    for r in runs:
+        rid = r.get("id")
+        if not isinstance(rid, str) or len(rid) != 64 or any(c not in "0123456789abcdef" for c in rid):
+            raise ValueError("Invalid run identity")
+        if rid in run_map:
+            raise ValueError("Duplicate run IDs")
+        if not isinstance(r.get("source_sha"), str) or len(r["source_sha"]) != 40 or any(c not in "0123456789abcdef" for c in r["source_sha"]):
+            raise ValueError("Invalid run source SHA")
+        if not isinstance(r.get("report_sha256"), str) or len(r["report_sha256"]) != 64 or any(c not in "0123456789abcdef" for c in r["report_sha256"]):
+            raise ValueError("Invalid run report checksum")
+        if type(r.get("watch_count")) is not int or not 1 <= r["watch_count"] <= 12:
+            raise ValueError("Invalid run watch count")
+        if type(r.get("observation_count")) is not int or r["observation_count"] < r["watch_count"]:
+            raise ValueError("Invalid run observation count")
+        utc(r["as_of"])
+        run_map[rid] = r
+    prediction_counts = {rid: 0 for rid in run_map}
+    observation_counts = {rid: 0 for rid in run_map}
+    prediction_pairs = {rid: set() for rid in run_map}
+    observation_pairs = {rid: set() for rid in run_map}
+    prediction_ranks = {rid: set() for rid in run_map}
+    for p in state["predictions"]:
+        rid = p.get("run_id")
+        if rid not in run_map:
+            raise ValueError("Orphan paper prediction")
+        r = run_map[rid]
+        pair = p.get("pair")
+        if not isinstance(pair, str) or not pair or pair in prediction_pairs[rid]:
+            raise ValueError("Invalid or duplicate prediction market")
+        if utc(p["as_of"]) != utc(r["as_of"]):
+            raise ValueError("Prediction as-of mismatch")
+        expected = hashlib.sha256(("paper-v1|" + p["as_of"] + "|" + pair).encode()).hexdigest()
+        if p["prediction_id"] != expected:
+            raise ValueError("Prediction identity mismatch")
+        price = float(p["price"])
+        if not math.isfinite(price) or price <= 0:
+            raise ValueError("Invalid prediction price")
+        rank = p.get("rank")
+        if type(rank) is not int or not 1 <= rank <= r["watch_count"] or rank in prediction_ranks[rid]:
+            raise ValueError("Invalid prediction rank")
+        for key in ("baseline_score", "challenger_score"):
+            if not math.isfinite(float(p[key])):
+                raise ValueError("Invalid prediction score")
+        prediction_pairs[rid].add(pair)
+        prediction_ranks[rid].add(rank)
+        prediction_counts[rid] += 1
+    for o in state["observations"]:
+        rid = o.get("run_id")
+        if rid not in run_map:
+            raise ValueError("Orphan market observation")
+        pair = o.get("pair")
+        if not isinstance(pair, str) or not pair or pair in observation_pairs[rid]:
+            raise ValueError("Invalid or duplicate observation market")
+        at = utc(o["at"])
+        as_of = utc(run_map[rid]["as_of"])
+        if at > as_of or (as_of - at).total_seconds() > 180:
+            raise ValueError("Observation timestamp outside run")
+        price = float(o["price"])
+        if not math.isfinite(price) or price <= 0:
+            raise ValueError("Invalid observation price")
+        observation_pairs[rid].add(pair)
+        observation_counts[rid] += 1
+    for rid, r in run_map.items():
+        if prediction_counts[rid] != r["watch_count"] or prediction_ranks[rid] != set(range(1, r["watch_count"] + 1)):
+            raise ValueError("Prediction count/rank mismatch")
+        if observation_counts[rid] != r["observation_count"]:
+            raise ValueError("Observation count mismatch")
+        if not prediction_pairs[rid].issubset(observation_pairs[rid]):
+            raise ValueError("Prediction market lacks observed quote")
+    valid_predictions = set(ids)
+    for o in state["outcomes"]:
+        if o.get("prediction_id") not in valid_predictions or type(o.get("horizon_hours")) is not int or o["horizon_hours"] not in HORIZONS:
+            raise ValueError("Orphan or invalid paper outcome")
+        if o.get("status") not in ("ABSTAIN_GAP", "MATURED_OBSERVED"):
+            raise ValueError("Invalid paper outcome status")
     summary = state.get("archived", {})
     if not isinstance(summary, dict) or any(not isinstance(v, int) or v < 0 for v in summary.values()):
         raise ValueError("Invalid archive summary")
