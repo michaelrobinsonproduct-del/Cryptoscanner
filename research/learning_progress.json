@@ -109,6 +109,30 @@
         "railway_status": "three known production services latest deployments REMOVED; no active success",
         "report_tasks_status": ":20/:50 disabled",
         "next": "Obtain independently provider-authenticated complete trade interval or source-member attestation; do not promote synthetic/unknown gaps; no new source probe without distinct value."
+      },
+      "role00_revision_binding_20261031_1505": {
+        "observed_at_utc": "2026-10-31T15:05:38.338Z",
+        "status": "PROVENANCE_SAFETY_HARDENED_SOURCE_COMPLETENESS_BLOCKED",
+        "exact_research_commit": "af997719482d02789f9b7ab62d306a1e8ea98a91",
+        "workflow_main_commit": "e12058a130bf1e305e9e56059a77e0af990cc54e",
+        "ci_run_id": 41213119930,
+        "ci_job_id": 124572056620,
+        "ci_conclusion": "success",
+        "exact_code_tests_passed": 498,
+        "new_regression_tests": 6,
+        "initial_failed_ci_run_id": 41213065709,
+        "initial_failure": "One test fixture contained literal backslash-n instead of control character; corrected fixture. Initial run also expected 491 tests, actual 498. Final exact-code 498/498 success.",
+        "implementation": "Fail-closed revision binding on missing Last-Modified, malformed strong ETag, nonpositive source archive bytes, malformed manifest summary, unsafe market names; no source authentication inferred.",
+        "new_real_historical_observations": 0,
+        "independently_complete_intervals": 0,
+        "certified_no_trade_intervals": 0,
+        "real_labels": 0,
+        "held_out_lift": null,
+        "production_applied": false,
+        "full_archive_downloads": 0,
+        "blocker": "Provider-authenticated trade member completeness/row count or official bounded REST historical completeness attestation remains absent.",
+        "railway": "Read-only deployment listing 2026-10-31 ~15:05 UTC: all three known production services latest deployments REMOVED, no SUCCESS active deployment.",
+        "reporting_tasks": ":20 and :50 disabled; three learning tasks enabled"
       }
     },
     "2": {
