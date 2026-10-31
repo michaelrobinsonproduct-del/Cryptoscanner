@@ -167,6 +167,66 @@ class HistoricalRestProbeTests(unittest.TestCase):
                 opener=lambda *a, **kw: Response(make_page(rows)))
 
 
+    def test_duplicate_rest_last_json_key_rejected(self):
+        raw = ('{"error":[],"result":{"DENTEUR":' +
+               json.dumps(self.rows) +
+               ',"last":"1900000000000000000","last":"1900000000000000001"}}')
+        class Raw(Response):
+            def __init__(self): self.data = io.BytesIO(raw.encode())
+        with self.assertRaisesRegex(RuntimeError, "duplicate Kraken REST JSON key"):
+            compare_rest_bucket("DENTEUR", 300, self.expected, opener=lambda *a, **kw: Raw())
+
+    def test_duplicate_rest_market_json_key_rejected(self):
+        raw = ('{"error":[],"result":{"DENTEUR":' +
+               json.dumps(self.rows) + ',"DENTEUR":' +
+               json.dumps(self.rows) + ',"last":"1900000000000000000"}}')
+        class Raw(Response):
+            def __init__(self): self.data = io.BytesIO(raw.encode())
+        with self.assertRaisesRegex(RuntimeError, "duplicate Kraken REST JSON key"):
+            compare_rest_bucket("DENTEUR", 300, self.expected, opener=lambda *a, **kw: Raw())
+
+    def test_duplicate_rest_error_json_key_rejected(self):
+        raw = ('{"error":[],"error":[],"result":{"DENTEUR":' +
+               json.dumps(self.rows) + ',"last":"1900000000000000000"}}')
+        class Raw(Response):
+            def __init__(self): self.data = io.BytesIO(raw.encode())
+        with self.assertRaisesRegex(RuntimeError, "duplicate Kraken REST JSON key"):
+            compare_rest_bucket("DENTEUR", 300, self.expected, opener=lambda *a, **kw: Raw())
+
+    def test_rest_trade_before_requested_cursor_rejected(self):
+        rows = [["0.00001", "1", 299, "b", "l", ""]] + self.rows
+        with self.assertRaisesRegex(RuntimeError, "predates requested cursor"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(make_page(rows)))
+
+    def test_boolean_rest_numeric_fields_rejected(self):
+        for field in (0, 1, 2):
+            rows = [list(row) for row in self.rows]
+            rows[0][field] = True
+            with self.subTest(field=field), self.assertRaisesRegex(RuntimeError, "boolean"):
+                compare_rest_bucket("DENTEUR", 300, self.expected,
+                                    opener=lambda *a, **kw: Response(make_page(rows)))
+
+    def test_overlong_rest_cursor_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, "nonadvancing"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(make_page(self.rows, "9" * 30)))
+
+    def test_zero_prefixed_rest_cursor_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, "nonadvancing"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(make_page(self.rows, "0" + "1900000000000000000")))
+
+    def test_rest_trade_at_exact_bucket_open_is_valid_correspondence(self):
+        expected = [(300.0, 0.00001, 2, 0), (301.5, 0.000011, 3, 1)]
+        rows = [list(row) for row in self.rows]
+        rows[0][2] = 300.0
+        r = compare_rest_bucket("DENTEUR", 300, expected,
+                                opener=lambda *a, **kw: Response(make_page(rows)))
+        self.assertEqual(r["status"], "independent_rest_bucket_correlated")
+        self.assertEqual(r["real_labels"], 0)
+
+
 class RetainedHistoricalIntegrationTests(unittest.TestCase):
     def test_selects_bounded_bucket_from_retained_zip(self):
         import tempfile
