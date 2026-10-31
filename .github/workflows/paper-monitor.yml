@@ -31,18 +31,16 @@ jobs:
           echo "PAPER_MONITOR_EXACT_SHA=$(git rev-parse HEAD)"
           python -m unittest paper_pov.test_monitor -v
   monitor:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     needs: contracts
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
       actions: read
-      issues: write
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -93,6 +91,27 @@ jobs:
             paper_pov/monitor_output/SHA256SUMS
           retention-days: 90
           if-no-files-found: error
+  alert:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: monitor
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: independent-paper-monitor-${{ github.run_id }}
+          path: paper_pov/monitor_output
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify downloaded monitor evidence checksum
+        run: |
+          set -euo pipefail
+          (cd paper_pov/monitor_output && sha256sum -c SHA256SUMS)
       - name: Deduplicate, post and verify issue 34 alerts
         env:
           GH_TOKEN: ${{ github.token }}
