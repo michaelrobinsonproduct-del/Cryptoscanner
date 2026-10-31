@@ -26,20 +26,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 674c55eb22c9b1293b97ba29e07ca2ae904d2f8b
+          ref: aac76783c7bd5baf9bcccc059f1007e08b888605
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify immutable research code and 166 offline tests
+      - name: Verify immutable research code and at least 205 offline tests
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = '674c55eb22c9b1293b97ba29e07ca2ae904d2f8b'
+          test "$(git rev-parse HEAD)" = 'aac76783c7bd5baf9bcccc059f1007e08b888605'
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-tests.log
-          python -c 'import re; from pathlib import Path; s=Path("/tmp/research-tests.log").read_text(); m=re.search(r"^Ran (\d+) tests", s, re.M); assert m and int(m.group(1)) >= 166, "expected at least 166 pinned offline tests"; print("EXACT_PINNED_TEST_COUNT", m.group(1))'
+          python -c 'import re; from pathlib import Path; s=Path("/tmp/research-tests.log").read_text(); m=re.search(r"^Ran (\d+) tests", s, re.M); assert m and int(m.group(1))  >= 205, "expected at least 205 pinned offline tests"; print("EXACT_PINNED_TEST_COUNT", m.group(1))'
           grep -q '^OK$' /tmp/research-tests.log
       - name: Check cooperative research lease, active runs, and cached source evidence
         id: cache
@@ -145,19 +145,6 @@ jobs:
           print(json.dumps({'markets': report['markets'], 'real_labels': report['real_labels'],
                             'archive_downloads_this_run': report['archive_downloads_this_run']}, sort_keys=True))
           PY
-      - name: Audit bounded descriptive 30-percent OHLC peak windows (not validated labels)
-        if: steps.cache.outputs.skip == 'false'
-        shell: bash
-        run: |
-          set -euo pipefail
-          PYTHONPATH=research python research/analyze_reusable_ohlc_candidates.py --evidence research/output/reusable_ohlc_evidence.zip --expected-sha256 fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 > research/output/descriptive_ohlc_peak_audit.json
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          report=json.loads(Path('research/output/descriptive_ohlc_peak_audit.json').read_text())
-          assert report['real_labels'] == 0 and report['held_out_evaluation'] == 'not_authorized'
-          print(json.dumps({'markets':report['markets'],'real_labels':0,'status':report['status']},sort_keys=True))
-          PY
       - name: Reuse bounded trade evidence or capture it once if absent
         if: steps.cache.outputs.skip == 'false'
         shell: bash
@@ -183,7 +170,7 @@ jobs:
           fi
           test -s research/output/bounded_trade_probe_summary.json
           python -c 'import json; from pathlib import Path; r=json.loads(Path("research/output/bounded_trade_probe_summary.json").read_text()); assert r["real_labels"] == 0 and r["source_archive_full_sha256_verified"] is False and r["range_bytes_transferred"] <= 24*1024*1024; print("bounded trade evidence verified; no labels authorized")'
-      - name: Reconcile genuine retained trade and OHLC bytes (no predictive labels)
+      - name: Reconcile retained trades and audit gap-aware candidate outcomes (no labels)
         if: steps.cache.outputs.skip == 'false'
         shell: bash
         run: |
@@ -192,7 +179,7 @@ jobs:
             --ohlc research/output/reusable_ohlc_evidence.zip \
             --trades research/output/bounded_independent_trade_members.zip \
             > research/output/trade_ohlc_reconciliation.json
-          python -c 'import json; from pathlib import Path; r=json.loads(Path("research/output/trade_ohlc_reconciliation.json").read_text()); assert r["real_labels"] == 0 and r["held_out_evaluation"] == "not_authorized" and not r["source_trade_archive_sha256_verified"]; print(json.dumps({k: {"exact_candidates": v["exact_trade_ohlc_candidate_intervals"], "trade_buckets": v["trade_buckets"], "candidate_windows": v["candidate_contiguous_horizon_windows"]} for k,v in r["markets"].items()}, sort_keys=True))'
+          python -c 'import json; from pathlib import Path; r=json.loads(Path("research/output/trade_ohlc_reconciliation.json").read_text()); assert r["real_labels"] == 0 and r["held_out_evaluation"] == "not_authorized" and not r["source_trade_archive_sha256_verified"]; assert all(v["candidate_outcome_audit"]["real_labels"] == 0 and v["candidate_outcome_audit"]["held_out_evaluation"] == "not_authorized" for v in r["markets"].values()); print(json.dumps({k: {"exact_candidates": v["exact_trade_ohlc_candidate_intervals"], "candidate_outcomes": {h: {"windows": x["candidate_full_future_windows"], "descriptive_peak_30": x["descriptive_peak_30"], "immature": x["excluded_immature"], "missing": x["excluded_missing_exact_future"]} for h,x in v["candidate_outcome_audit"]["horizons"].items()}} for k,v in r["markets"].items()}, sort_keys=True))'
       - name: Upload retained trade-to-OHLC reconciliation report
         if: steps.cache.outputs.skip == 'false' && success()
         uses: actions/upload-artifact@v4
@@ -209,14 +196,6 @@ jobs:
           path: |
             research/output/bounded_independent_trade_members.zip
             research/output/bounded_trade_probe_summary.json
-          if-no-files-found: error
-          retention-days: 30
-      - name: Upload bounded descriptive peak audit
-        if: steps.cache.outputs.skip == 'false' && success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: kraken-descriptive-ohlc-peak-audit
-          path: research/output/descriptive_ohlc_peak_audit.json
           if-no-files-found: error
           retention-days: 30
       - name: Refresh reusable evidence artifact for future unattended runs
