@@ -8,6 +8,10 @@ import math
 STEP = 300
 HORIZONS = (1, 6, 24, 48)
 MAX_ROWS = 8000
+# Official Kraken OHLCVT documentation, updated 2026-10-12, states that
+# candles are emitted only for intervals with trades. This is a source
+# semantics reference, NOT independent authentication of retained bytes.
+SOURCE_GAP_DOCUMENTATION = "https://support.kraken.com/articles/360047124832-downloadable-historical-ohlcvt-open-high-low-close-volume-trades-data"
 
 
 def audit_candidate_windows(ohlc_rows, exact_timestamps):
@@ -40,6 +44,11 @@ def audit_candidate_windows(ohlc_rows, exact_timestamps):
     # The retained slice may end long before the present; missing future rows
     # are UNKNOWN beyond retained evidence, never claimed calendar-immature.
     last = max(source)
+    # Count only interior gaps between retained source observations. The
+    # retained slice's leading/trailing edges are UNKNOWN, never no-trade.
+    observed_times = sorted(source)
+    interior_gap_events = sum(b - a > STEP for a, b in zip(observed_times, observed_times[1:]))
+    interior_missing_intervals = sum((b - a) // STEP - 1 for a, b in zip(observed_times, observed_times[1:]))
     result = {}
     for hours in HORIZONS:
         n = hours * 12
@@ -83,7 +92,13 @@ def audit_candidate_windows(ohlc_rows, exact_timestamps):
         "status": "descriptive_candidates_source_completeness_unverified",
         "observation_timestamp_semantics": "candidate_candle_open_utc",
         "entry_as_of_offset_seconds": STEP,
-        "source_gap_or_no_trade_semantics": "unknown",
+        "source_gap_or_no_trade_semantics": "unknown_for_trade_completeness",
+        "ohlc_interior_gap_events": interior_gap_events,
+        "ohlc_interior_missing_intervals": interior_missing_intervals,
+        "ohlc_gap_documentation_url": SOURCE_GAP_DOCUMENTATION,
+        "ohlc_documented_semantics": "missing_candles_mean_no_trades_if_complete_source",
+        "ohlc_gap_semantics_authorize_labels": False,
+        "outside_retained_slice_semantics": "unknown",
         "candidate_exact_intervals": len(exact),
         "horizons": result,
         "real_labels": 0,
