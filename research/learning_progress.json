@@ -2202,7 +2202,8 @@
       "2026-10-31T12:16:09.876Z Role15: exact pinned research 008c8080 CI 41200248497 job 124534472000 COMPLETED SUCCESS 447/447 (7 new REST envelope/trade-ID regression tests). Independent primary b49a5a7 440/440 confirmed from actual logs. First scheduled updated watchdog 41200091074 51/51 HEALTHY alerts=[] lease=clear. Latest genuine source artifact 13040558182 digest a4549909..., no new source observations, no authenticated complete intervals, no real labels/held-out lift, no production changes. Railway 3 services no active SUCCESS deployments, :20/:50 result automations disabled; issue update pending.",
       "2026-10-31T12:28:36.167Z Role30: cross-stream failure masking fixed at 33cd577; workflow 7584a7f; actual push run 41201193448 job 124537172608 completed SUCCESS, 56/56 exact pinned watchdog tests and HEALTHY alerts=[] delivery=NO_ALERT lease=clear. Scheduled previous 51-test run 41200091074 success; new 56-test scheduled acceptance pending. 0 new source observations, 0 complete intervals, 0 labels, held-out lift not measured, production unchanged. :20/:50 disabled; Railway three services lack active deployments.",
       "2026-10-31T13:02:50.715Z Role00: implemented bounded OHLC-matched alternate gap selection with strict candidate index 0..3; seven new fail-closed tests; research exact commit c847aa0bdc69e0c3ef2c120108f1e905e2b21d40; GitHub Actions 41203753573 job 124544559923 SUCCESS, 459/459 tests. Initial workflow 41203720631 failed test-count grep only (459 tests OK); corrected exact count. No new REST evidence yet; 0 authenticated complete intervals/labels; held-out not measured; production untouched. Next: bounded alternate gap source run index1 only.",
-      "2026-10-31T13:03:58.438Z Role00: NEW BCHJPY May28 05:05/05:15 UTC REST/trade/OHLC bracket evidence around 05:10 candidate gap, 2 pages 131594 bytes, source run 41203801205 artifact 13044135604, 459/459 exact-code CI 41203753573. Candidate NOT verified no-trade; 0 authenticated complete intervals, 0 labels/lift; production untouched."
+      "2026-10-31T13:03:58.438Z Role00: NEW BCHJPY May28 05:05/05:15 UTC REST/trade/OHLC bracket evidence around 05:10 candidate gap, 2 pages 131594 bytes, source run 41203801205 artifact 13044135604, 459/459 exact-code CI 41203753573. Candidate NOT verified no-trade; 0 authenticated complete intervals, 0 labels/lift; production untouched.",
+      "2026-10-31T14:35:40Z Role30: exact research ddf6b7990b25720df8b21eeb69ec3062e1513f29; research-only main pin e7aee79c0080425cfa32cbb7813ce310115c8306; real GitHub Actions run 41210835534 job 124565264031 completed SUCCESS with 72/72 exact pinned watchdog tests, seven new fail-closed tests for job failures and interleaved per-stream no-progress. Live assessment HEALTHY alerts=[] while owned lease active; no new historical observations, 0 complete intervals, 0 real predictive labels, held-out unmeasured, production applied NO. Three learning tasks enabled; production :20/:50 reporting disabled; user push/email receipt unverified. First scheduled 72-test acceptance pending."
     ],
     "latest_role00_source_20261031": {
       "timestamp_utc": "2026-10-31T13:03:58.438Z",
@@ -2249,6 +2250,28 @@
       "production_applied": false,
       "source_completeness_gate": "BLOCKED",
       "notes": "Official Kraken docs explain no-trade candle semantics for complete archives but do not attest retained bounded source member completeness; fail closed. :20/:50 reporting tasks disabled and Railway services lack active deployments."
+    },
+    "latest_role30_reliability_20261031": {
+      "observed_at_utc": "2026-10-31T14:35:40Z",
+      "status": "WATCHDOG_JOB_FAILURE_AND_PER_STREAM_NO_WORK_ACCEPTED",
+      "research_final_commit": "ddf6b7990b25720df8b21eeb69ec3062e1513f29",
+      "main_research_only_workflow_commit": "e7aee79c0080425cfa32cbb7813ce310115c8306",
+      "ci_run_id": 41210835534,
+      "ci_job_id": 124565264031,
+      "ci_status": "success",
+      "exact_commit_tests_passed": 72,
+      "new_failure_injection_tests": 7,
+      "scheduled_72_test_run_verified": false,
+      "previous_scheduled_65_test_run_id": 41209457206,
+      "previous_scheduled_65_test_run_success": true,
+      "new_real_source_observations": 0,
+      "independently_complete_intervals": 0,
+      "real_labels": 0,
+      "held_out_lift": null,
+      "production_applied": false,
+      "alert_delivery_to_user_verified": false,
+      "production_report_tasks_20_50": "DISABLED",
+      "next": "Verify first actual scheduled 72-test watchdog, continue nonduplicative provider-authenticated source-completeness research; no label or promotion until provenance gate passes."
     }
   }
 }
