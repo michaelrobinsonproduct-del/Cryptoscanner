@@ -10,6 +10,34 @@ from pathlib import Path
 MAX_REPORT_BYTES = 32768
 
 
+
+def bounded_reuse_decision(trade, official):
+    """Fail closed on revision drift; permit ONE bounded recapture on metadata drift.
+
+    This does not authenticate a ZIP, relax verify(), or authorize labels.
+    An ETag mismatch is a source revision conflict, not a cache refresh.
+    """
+    if not isinstance(trade, dict) or not isinstance(official, dict):
+        return "abort_invalid_revision_evidence"
+    if (trade.get("source_url") != official.get("source_url") or
+            not isinstance(trade.get("source_url"), str) or
+            not trade["source_url"].startswith("https://assets.kraken.com/") or
+            type(trade.get("source_archive_bytes_expected")) is not int or
+            trade["source_archive_bytes_expected"] != official.get("source_expected_archive_bytes")):
+        return "abort_source_identity_mismatch"
+    tv, ov = trade.get("source_revision_validator"), official.get("source_revision_validator")
+    if not isinstance(tv, dict) or not isinstance(ov, dict):
+        return "abort_missing_revision_validator"
+    te, oe = tv.get("strong_etag"), ov.get("strong_etag")
+    if not isinstance(te, str) or not te or te.startswith("W/") or te != oe:
+        return "abort_source_revision_conflict"
+    if (not isinstance(tv.get("last_modified"), str) or not tv["last_modified"] or
+            not isinstance(ov.get("last_modified"), str) or not ov["last_modified"] or
+            tv["last_modified"] != ov["last_modified"]):
+        return "refresh_bounded_trade_once"
+    return "reuse"
+
+
 def verify(trade, official):
     result = {
         "status": "abstain_unverified_source_revision",
