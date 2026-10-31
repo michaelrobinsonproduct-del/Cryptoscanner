@@ -26,20 +26,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 74398f920074091995b9cc9088d0b3122fd057af
+          ref: ef9f9dda28bda9cfbb8b4641987f96348684657a
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify immutable research code and at least 225 offline tests
+      - name: Verify immutable research code and at least 228 offline tests
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = '74398f920074091995b9cc9088d0b3122fd057af'
+          test "$(git rev-parse HEAD)" = 'ef9f9dda28bda9cfbb8b4641987f96348684657a'
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-tests.log
-          python -c 'import re; from pathlib import Path; s=Path("/tmp/research-tests.log").read_text(); m=re.search(r"^Ran (\d+) tests", s, re.M); assert m and int(m.group(1))   >= 225, "expected at least 205 pinned offline tests"; print("EXACT_PINNED_TEST_COUNT", m.group(1))'
+          python -c 'import re; from pathlib import Path; s=Path("/tmp/research-tests.log").read_text(); m=re.search(r"^Ran (\d+) tests", s, re.M); assert m and int(m.group(1))    >= 228, "expected at least 205 pinned offline tests"; print("EXACT_PINNED_TEST_COUNT", m.group(1))'
           grep -q '^OK$' /tmp/research-tests.log
       - name: Check cooperative research lease, active runs, and cached source evidence
         id: cache
@@ -198,6 +198,7 @@ jobs:
           assert r['range_bytes_transferred'] <= 8*1024*1024
           print(json.dumps({'status':r['status'],'manifest_sha256':r['manifest_sha256'],
                             'manifest_top_level_keys':r['manifest_top_level_keys'],
+                            'manifest_schema_summary':r['manifest_schema_summary'],
                             'range_bytes_transferred':r['range_bytes_transferred']},sort_keys=True))
           PY
       - name: Upload bounded official trade manifest inspection
