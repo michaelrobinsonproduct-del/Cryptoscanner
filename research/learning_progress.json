@@ -1932,6 +1932,42 @@
       "production_applied": false,
       "blocker": "Historical trade interval completeness/no-trade provenance unverified; Batch1 gate remains blocked.",
       "next": "Verify first genuinely scheduled 56-test watchdog run, continue bounded provenance through :00/:15, do not promote or alter production."
+    },
+    "role30_20261031_1329": {
+      "status": "COMPLETION_ORDER_AND_ALERT_DELIVERY_WATCHDOG_VERIFIED_PROVENANCE_BLOCKED",
+      "checked_at_utc": "2026-10-31T13:29:07.840Z",
+      "research_commit": "09c897d2832c378e843dd8ddae0a7101a9eb1489",
+      "main_workflow_commit": "2aca5ed134c7152e4f8348dcfa3163d13a048b7f",
+      "run_id": 41205707551,
+      "job_id": 124550247148,
+      "run_event": "push",
+      "run_conclusion": "success",
+      "tests": "65/65 exact pinned committed watchdog failure-injection tests passed; 9 added; real GitHub job logs inspected",
+      "changes": [
+        "Fail closed on malformed/blank lease owner or orphaned expiry",
+        "Use actual completed-run update timestamps to detect late failures and two no-work completions instead of dispatch order",
+        "Use completion recency for 90-minute substantive-evidence check",
+        "Require remote issue title and recovered body readback, with injected failed delivery tests"
+      ],
+      "live_watchdog": "HEALTHY, alerts=[], delivery=NO_ALERT, lease=active (this Role30 owned cooperative lease), latest substantive source run 41203801205",
+      "scheduled_acceptance": "Prior 51/51 scheduled run 41200091074 succeeded; first 65-test scheduled run pending cron 47 UTC; do not claim scheduled acceptance.",
+      "tasks": {
+        "learning_00": "enabled, last start 13:04:40 UTC",
+        "learning_15": "enabled, last start 13:18:06 UTC",
+        "learning_30": "enabled, current run; previous start 12:29:01 UTC",
+        "reporting_20": "disabled",
+        "reporting_50": "disabled"
+      },
+      "railway": "2026-10-31 13:28 UTC read-only: production validation and collector latest deployment FAILED, autonomous runner null; no staged changes; no verified active deployment",
+      "latest_new_source_evidence": "Historical BCHJPY May 28 05:05/05:15 bracket candidate source run 41203801205 completed 13:03 UTC; source artifact 13044135604 expires 2026-11-30; missing 05:10 bucket remains UNKNOWN.",
+      "source_evidence_new_this_role30_batch": 0,
+      "independently_authenticated_complete_intervals": 0,
+      "verified_real_labels": 0,
+      "held_out_lift": "NOT MEASURED",
+      "qualified_rules": 0,
+      "production_applied": false,
+      "blocker": "No independent source-complete trade interval/no-trade attestation. Production :20/:50 reports disabled and Railway deployment state not healthy. User email/push delivery unverified.",
+      "next": "Verify first actual scheduled 65-test watchdog run after 13:47 UTC, continue only bounded source attestation through research workers; no production changes."
     }
   },
   "audit": {
