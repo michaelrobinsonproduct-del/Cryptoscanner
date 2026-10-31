@@ -59,7 +59,7 @@ class RetainedReconciliationTests(unittest.TestCase):
             self.assertEqual(audit["real_labels"], 0)
             self.assertEqual(audit["held_out_evaluation"], "not_authorized")
             self.assertEqual(audit["horizons"]["1"]["candidate_entries"], 1)
-            self.assertEqual(audit["horizons"]["1"]["excluded_immature"], 1)
+            self.assertEqual(audit["horizons"]["1"]["excluded_beyond_retained_end"], 1)
 
     def test_volume_mismatch_not_accepted(self):
         with tempfile.TemporaryDirectory() as root:
