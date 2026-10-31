@@ -2,6 +2,12 @@ name: Kraken Reusable Research Evidence (isolated)
 # Verified lease released: rerun bounded retained-evidence audit; production untouched.
 on:
   workflow_dispatch:
+    inputs:
+      reacquire_source:
+        description: 'Explicitly permit 9GB archive reacquisition only for documented evidence loss'
+        required: false
+        type: boolean
+        default: false
   push:
     paths:
       - '.github/workflows/research-reusable-evidence.yml'
@@ -44,7 +50,10 @@ jobs:
           set -euo pipefail
           # An owner string alone is not an active lease. Expired leases must not
           # permanently suppress research; malformed timestamps fail closed.
-          lease_active=$(gh api "repos/$GITHUB_REPOSITORY/contents/research/learning_progress.json?ref=research-learning-program-20261027" --jq '.content' | base64 -d | python -c '
+          # Bounded retry allows the committing worker to release its lease.
+          # Never override an occupied lease or a competing live research job.
+          for attempt in $(seq 1 12); do
+            lease_active=$(gh api "repos/$GITHUB_REPOSITORY/contents/research/learning_progress.json?ref=research-learning-program-20261027" --jq '.content' | base64 -d | python -c '
           import datetime as dt, json, sys
           state = json.load(sys.stdin)["concurrency"]
           owner = state.get("owner")
@@ -62,12 +71,17 @@ jobs:
               except (ValueError, TypeError):
                   print("true")
           ')
-          other_active=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?per_page=100" --jq '[.workflow_runs[] | select(.status != "completed" and (.id | tostring) != env.GITHUB_RUN_ID and (.name | test("Research|Learning|Historical"; "i")))] | length')
-          if [[ "$lease_active" != 'false' || "$other_active" != '0' ]]; then
-            echo 'skip=true' >> "$GITHUB_OUTPUT"
-            echo 'Research lease or another research workflow is active; no acquisition attempted.'
-            exit 0
-          fi
+            other_active=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?per_page=100" --jq '[.workflow_runs[] | select(.status != "completed" and (.id | tostring) != env.GITHUB_RUN_ID and (.name | test("Research|Learning|Historical"; "i")))] | length')
+            if [[ "$lease_active" == 'false' && "$other_active" == '0' ]]; then
+              break
+            fi
+            if [[ "$attempt" == '12' ]]; then
+              echo 'skip=true' >> "$GITHUB_OUTPUT"
+              echo 'Research lease or another research workflow remains active; bounded skip.'
+              exit 0
+            fi
+            sleep 10
+          done
           echo 'skip=false' >> "$GITHUB_OUTPUT"
           cached_run=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=kraken-reusable-ohlc-evidence&per_page=100" --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .workflow_run.id // empty')
           if [[ -n "$cached_run" ]]; then
@@ -75,6 +89,10 @@ jobs:
             echo "cached_run=$cached_run" >> "$GITHUB_OUTPUT"
           else
             echo 'reuse=false' >> "$GITHUB_OUTPUT"
+            if [[ "${{ inputs.reacquire_source }}" != 'true' ]]; then
+              echo 'No retained artifact: source reacquisition requires explicit opt-in and documented evidence gap.' >&2
+              exit 1
+            fi
           fi
       - name: Reuse retained source evidence (zero archive downloads)
         if: steps.cache.outputs.reuse == 'true' && steps.cache.outputs.skip == 'false'
@@ -88,7 +106,7 @@ jobs:
           gh run download "$CACHED_RUN" -R "$GITHUB_REPOSITORY" -n kraken-reusable-ohlc-evidence -D research/output
           test -s research/output/reusable_ohlc_evidence.zip
       - name: Acquire verified source ONCE and retain 48-market bounded evidence
-        if: steps.cache.outputs.reuse == 'false' && steps.cache.outputs.skip == 'false'
+        if: steps.cache.outputs.reuse == 'false' && steps.cache.outputs.skip == 'false' && inputs.reacquire_source == true
         shell: bash
         run: |
           set -euo pipefail
