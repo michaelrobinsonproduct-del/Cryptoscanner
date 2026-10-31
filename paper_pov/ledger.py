@@ -74,6 +74,7 @@ def verify(state):
     observation_counts = {rid: 0 for rid in run_map}
     prediction_pairs = {rid: set() for rid in run_map}
     observation_pairs = {rid: set() for rid in run_map}
+    observation_prices = {rid: {} for rid in run_map}
     prediction_ranks = {rid: set() for rid in run_map}
     for p in state["predictions"]:
         rid = p.get("run_id")
@@ -115,6 +116,7 @@ def verify(state):
         if not math.isfinite(price) or price <= 0:
             raise ValueError("Invalid observation price")
         observation_pairs[rid].add(pair)
+        observation_prices[rid][pair] = price
         observation_counts[rid] += 1
     for rid, r in run_map.items():
         if prediction_counts[rid] != r["watch_count"] or prediction_ranks[rid] != set(range(1, r["watch_count"] + 1)):
@@ -123,6 +125,11 @@ def verify(state):
             raise ValueError("Observation count mismatch")
         if not prediction_pairs[rid].issubset(observation_pairs[rid]):
             raise ValueError("Prediction market lacks observed quote")
+    # A re-sealed ledger must not be able to invent a different entry price
+    # from the actual client-observed ticker snapshot in the same run.
+    for p in state["predictions"]:
+        if float(p["price"]) != observation_prices[p["run_id"]][p["pair"]]:
+            raise ValueError("Prediction price differs from same-run observed quote")
     valid_predictions = set(ids)
     for o in state["outcomes"]:
         if o.get("prediction_id") not in valid_predictions or type(o.get("horizon_hours")) is not int or o["horizon_hours"] not in HORIZONS:
@@ -159,6 +166,18 @@ def advance(original, report, source_sha):
         raise ValueError("Duplicate market observation")
     if report.get("observed_markets") != len(observations):
         raise ValueError("Market observation count mismatch")
+    # Every watch entry is an as-of decision on a particular public ticker
+    # snapshot.  Refuse a report that attributes a different price or client
+    # observation time to that same market, even when both are individually fresh.
+    quote_by_pair = {o["pair"]: o for o in observations}
+    for p in watch:
+        quote = quote_by_pair.get(p["pair"])
+        if quote is None:
+            raise ValueError("Prediction market lacks observed quote")
+        if float(p["price"]) != float(quote["price"]):
+            raise ValueError("Prediction price differs from same-run observed quote")
+        if utc(p["quote_observed_at"]) != utc(quote["observed_at"]):
+            raise ValueError("Prediction quote timestamp differs from observed quote")
     report_hash = hashlib.sha256(canonical(report)).hexdigest()
     run_id = hashlib.sha256((source_sha + "|" + report_hash).encode()).hexdigest()
     state = {k: list(v) if isinstance(v, list) else
