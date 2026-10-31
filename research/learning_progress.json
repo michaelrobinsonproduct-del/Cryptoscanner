@@ -4,10 +4,9 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "learning-20261031T0159Z-00-provenance-1793411972605",
-    "lease_expires_at": "2026-10-31T02:44:32.605Z",
-    "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it.",
-    "acquired_at": "2026-10-31T01:59:32.605Z"
+    "owner": null,
+    "lease_expires_at": null,
+    "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
@@ -639,6 +638,42 @@
         "Daily evidence workflow is a descriptive audit and does not yet produce genuine predictive labels"
       ],
       "next": "Observe first actual scheduled watchdog run and test real issue alert delivery through controlled smoke test; keep provenance Batch 1 active."
+    },
+    "batch1_real_trade_reconciliation_20261031": {
+      "status": "CODE_COMMITTED_REMOTE_CI_RUNNING",
+      "research_commit": "674c55eb22c9b1293b97ba29e07ca2ae904d2f8b",
+      "workflow_main_commit": "3b4f492b202c43f925203567a7b089031c3a6fae",
+      "workflow_run_id": 41158132715,
+      "source_artifacts": {
+        "ohlc": {
+          "id": 13024232238,
+          "digest": "sha256:f69a0d1a8611ed10259f4884f4427c5e131c39d82c556dbe1602d1b7aa298b59"
+        },
+        "trades": {
+          "id": 13024222325,
+          "digest": "sha256:77db917e47c3c68ab187c1b9c9e1204399622b12b33943b6f825799775ec570f"
+        }
+      },
+      "local_source_diagnostics": {
+        "exact_candidate_intervals": 5001,
+        "by_market": {
+          "BCHJPY.csv": 121,
+          "CMETHETH.csv": 278,
+          "DENTEUR.csv": 2688,
+          "ELXEUR.csv": 1914
+        },
+        "candidate_contiguous_1h_windows": 77,
+        "candidate_contiguous_6h_windows": 0,
+        "candidate_contiguous_24h_windows": 0,
+        "candidate_contiguous_48h_windows": 0,
+        "source_trade_archive_sha256_verified": false,
+        "real_labels": 0
+      },
+      "verification": "Local independent retained-artifact byte comparison and digest match; new committed code awaits exact GitHub Actions test and reconciliation logs",
+      "tests_expected": 166,
+      "tests_verified_new_code": false,
+      "production_modified": false,
+      "next": "Inspect workflow 41158132715 exact pinned 166-test logs and real retained reconciliation report; fix only isolated defects; independently authenticate full trade archive and verify interval completeness before any labels."
     }
   },
   "audit": {
