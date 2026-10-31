@@ -14,6 +14,7 @@ from pathlib import Path
 
 from audit_trade_candidate_windows import audit_candidate_windows
 from audit_point_in_time_candidates import audit_point_in_time_candidates
+from assess_trade_interval_coverage import assess
 from diagnose_real_trade_candle_overlap import diagnose
 from match_historical_trades_to_ohlcvt import parse_member, aggregate
 from verify_trade_candle_provenance import verify_open_boundary
@@ -215,9 +216,13 @@ def reconcile(ohlc_artifact, trade_artifact, *, expected_ohlc_digest=None,
                         or ometa.get("source_missing_intervals") != audit["ohlc_interior_missing_intervals"]):
                     raise ValueError("OHLC full-retention gap metadata mismatch")
             candidate_windows = _candidate_windows(exact)
+            coverage = assess(ohlc, buckets, exact)
             if any(candidate_windows[str(h)] != audit["horizons"][str(h)]["candidate_full_future_windows"]
+                   or candidate_windows[str(h)] != coverage["horizons"][str(h)]["complete_descriptive_windows"]
                    for h in HORIZONS):
                 raise AssertionError("candidate window accounting disagrees")
+            if coverage["overlap"]["exact_candidate_intervals"] != len(exact):
+                raise AssertionError("source overlap and exact reconciliation disagree")
             reports[market] = {
                 "trade_rows": len(parsed), "trade_buckets": len(buckets),
                 "retained_ohlc_rows": len(ohlc),
@@ -226,6 +231,7 @@ def reconcile(ohlc_artifact, trade_artifact, *, expected_ohlc_digest=None,
                 "candidate_contiguous_horizon_windows": candidate_windows,
                 "candidate_outcome_audit": audit,
                 "point_in_time_feature_audit": feature_audit,
+                "trade_ohlc_coverage_census": coverage,
                 "verified_complete_intervals": 0, "real_labels": 0,
                 "no_trade_or_source_gap_semantics": "unknown",
                 "ohlc_retained_interior_gap_events": audit["ohlc_interior_gap_events"],
