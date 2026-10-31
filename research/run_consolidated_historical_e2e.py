@@ -105,6 +105,24 @@ def run(output, *, pair="0GEUR"):
         if trade_evidence["sha256_observed"] != TRADE_SHA256_OBSERVED:
             raise RuntimeError("trade archive identity changed since verified Phase 4")
         trade_meta = inspect_trades(trades_path)
+        # Inspect actual source schema before spending 9GB on the OHLC archive.
+        with zipfile.ZipFile(trades_path) as tz:
+            trade_schema = discover_schema(tz, candidate_trade_member(tz, pair))
+        if trade_schema["columns"] != [3, 3, 3] or not all(trade_schema["first_row_numeric"]):
+            report = {"status": "blocked_unknown_real_trade_schema",
+                      "trade_sha256_observed": trade_evidence["sha256_observed"],
+                      "trade_archive_bytes": trade_evidence["bytes"],
+                      "trade_csv_schema": trade_schema,
+                      "archive_downloads_this_run": {"trade": 1, "ohlc": 0},
+                      "real_labels": 0, "held_out_evaluation": "not_authorized",
+                      "production_modified": False}
+            payload = (json.dumps(report, sort_keys=True)+"\\n").encode()
+            if len(payload) > MAX_REPORT:
+                raise RuntimeError("report size cap")
+            output.parent.mkdir(parents=True, exist_ok=True)
+            with output.open("xb") as stream:
+                stream.write(payload)
+            return report
         ohlc_evidence = download_ohlc(ohlc_path, resources=ohlc_gate(tmp))
         if ohlc_evidence["sha256"] != EXPECTED_SHA256:
             raise RuntimeError("authenticated OHLC archive identity mismatch")
