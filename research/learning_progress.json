@@ -1386,6 +1386,32 @@
       "issue_comment_id": 6540450894,
       "blocker": "Quarterly historical trade source not independently authenticated as complete. CRC, ETag, exact OHLC reconciliation and 96,025 mutually absent intervals are insufficient for true labels.",
       "next": "Seek independent publisher digest/attestation or verifiable complete-interval source evidence using bounded requests; only then reconstruct labels and held-out baseline comparison."
+    },
+    "micro_price_relative_tolerance_20261031_15": {
+      "status": "EXACT_326_TESTS_VERIFIED_REAL_RETAINED_REPLAY_PENDING",
+      "timestamp_utc": "2026-10-31T07:18:05Z",
+      "research_commit": "e4818c971a95574c47f28c56ad5bee15b81c60ff",
+      "test_workflow_main_commit": "21f30bb389ff68ab42b6839a3643123cb57b4aa3",
+      "verified_test_run_id": 41180039291,
+      "verified_test_job_id": 124475399146,
+      "exact_tests_passed": 326,
+      "new_regression_tests": 6,
+      "changes": [
+        "Removed absolute 1e-8 price and volume tolerance floor which could falsely match micro-priced early movers or tiny volume; relative-only numeric tolerances now fail closed",
+        "Added micro-price 90% discrepancy, micro-volume orders-of-magnitude discrepancy, valid tiny-price/volume and comparison regression tests",
+        "Rejected zero-trade/zero-volume OHLC candles in retained source validator and descriptive candidate audit; added direct tests",
+        "No production code or deployment changes"
+      ],
+      "last_source_run_id": 41179409636,
+      "last_source_exact_candidates": 5001,
+      "last_source_complete_descriptive_1h_windows": 77,
+      "full_archive_downloads": 0,
+      "real_labels": 0,
+      "held_out_lift": null,
+      "candidate_rule": "none validated",
+      "production_applied": false,
+      "source_authentication": "not_verified",
+      "next": "Pin existing scheduled reusable research workflow to e4818c9, rerun retained 48-market and four-trade evidence with zero archive download, verify exact 326 tests and substantive reconciliation. Continue independent Kraken source completeness investigation."
     }
   },
   "audit": {
