@@ -22,6 +22,29 @@ MAX_TRANSFER = 8 * 1024 * 1024
 MAX_REPORT_BYTES = 32 * 1024
 
 
+def retained_trade_market_names(path):
+    """Use actual retained trade markets, not the first four requested pairs."""
+    path = Path(path)
+    if not path.is_file() or path.stat().st_size > 12 * 1024 * 1024:
+        raise ValueError("missing or oversized retained trade evidence")
+    with zipfile.ZipFile(path) as archive:
+        if archive.namelist().count("manifest.json") != 1:
+            raise ValueError("invalid retained trade manifest")
+        info = archive.getinfo("manifest.json")
+        if info.file_size > 128 * 1024 or info.flag_bits & 1:
+            raise ValueError("unsafe retained trade manifest")
+        obj = json.loads(archive.read(info))
+        markets = obj.get("markets") if isinstance(obj, dict) else None
+        if not isinstance(markets, dict) or not 1 <= len(markets) <= MAX_MARKETS:
+            raise ValueError("invalid retained trade market count")
+        for name in markets:
+            if (not isinstance(name, str) or not name.endswith(".csv")
+                    or "/" in name or "\\\\" in name or ".." in name
+                    or archive.namelist().count("trades/" + name) != 1):
+                raise ValueError("unsafe or missing retained trade market")
+        return sorted(markets)
+
+
 def inspect_archive(archive, wanted):
     """Inspect ZIP directory and manifest without reading any market CSV."""
     if not isinstance(wanted, (list, tuple)) or len(wanted) > MAX_MARKETS:
@@ -176,8 +199,9 @@ def inspect_archive(archive, wanted):
     }
 
 
-def probe(selection, *, opener=None, url=URL, expected_bytes=EXPECTED_BYTES):
-    wanted = _market_names(selection)[:MAX_MARKETS]
+def probe(selection, *, opener=None, url=URL, expected_bytes=EXPECTED_BYTES, retained_trade_evidence=None):
+    wanted = (retained_trade_market_names(retained_trade_evidence)
+              if retained_trade_evidence is not None else _market_names(selection)[:MAX_MARKETS])
     remote = RangeZipReader(url, expected_bytes=expected_bytes,
                             opener=opener, budget=MAX_TRANSFER)
     with zipfile.ZipFile(remote) as archive:
@@ -202,9 +226,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--selection", required=True)
     ap.add_argument("--output", required=True)
+    ap.add_argument("--retained-trades")
     args = ap.parse_args()
     selection = json.loads(Path(args.selection).read_text())
-    report = probe(selection)
+    report = probe(selection, retained_trade_evidence=args.retained_trades)
     payload = (json.dumps(report, sort_keys=True) + "\n").encode()
     if len(payload) > MAX_REPORT_BYTES:
         raise ValueError("manifest report exceeds cap")
