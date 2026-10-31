@@ -1732,7 +1732,7 @@
       ]
     },
     "role00_20261031_1100": {
-      "status": "GAP_CANDIDATE_CODE_VERIFIED_REAL_SOURCE_AUDIT_PENDING",
+      "status": "BOUNDED_REST_GAP_CANDIDATE_CORROBORATED_NOT_COMPLETE",
       "utc": "2026-10-31T11:02:30Z",
       "research_commit": "234710203f1038e56763026c3387b4bc1981c918",
       "code_changes": [
@@ -1747,16 +1747,41 @@
       "verified_tests": 412,
       "verified_test_run_id": 41195123654,
       "verified_test_job_id": 124519637561,
-      "exact_final_commit_tests": "412/412 passed actual GitHub Actions logs",
+      "exact_final_commit_tests": "412/412 passed in BOTH exact pinned CI and source workflow logs",
       "source_audit_workflow_commit": "efed6b76a3c0e1ffd2c00a9584b037b0ae1c3292",
       "source_audit_run": "PENDING",
-      "new_real_source_evidence": 0,
+      "new_real_source_evidence": 1,
       "verified_no_trade_intervals": 0,
       "genuine_labels": 0,
       "held_out_lift": null,
       "production_applied": false,
-      "blocker": "REST cursor correspondence cannot authenticate full historical trade completeness; gap candidate is never a verified no-trade interval.",
-      "next": "Inspect new isolated bounded gap evidence workflow and artifact; certify only genuinely authenticated intervals, otherwise abstain and advance independent source provenance."
+      "blocker": "Gap REST after-end witness at 2026-10-12 is distant; following 2026-05-25 20:55 retained bucket not separately source-attested. No official trade completeness proof, no predictive labels.",
+      "next": "Bounded source witness must match following retained bucket and validate complete adjacent coverage, then only genuine mature point-in-time outcomes. No production changes.",
+      "utc_verified": "2026-10-31T11:04:00Z",
+      "source_audit_run_id": 41195158364,
+      "source_audit_job_id": 124519736779,
+      "source_audit_workflow_conclusion": "COMPLETED_SUCCESS",
+      "source_audit_actual_steps_completed": true,
+      "new_real_source_evidence_type": "BCHJPY single bracketed REST empty-gap candidate; NOT certified no-trade",
+      "market": "BCHJPY",
+      "preceding_observed_bucket_utc": "2026-05-25T20:45:00Z",
+      "candidate_gap_utc": "2026-05-25T20:50:00Z",
+      "following_observed_bucket_utc": "2026-05-25T20:55:00Z",
+      "rest_bytes_transferred": 65797,
+      "rest_pages": 1,
+      "source_trade_artifact_sha256": "cab4f7c2cfe94f66d443c0ac0c09e1defbd975f0ac7201f770b9be3715107959",
+      "source_ohlc_artifact_sha256": "704513836ee4b35680fde0ff93a3bb3e8ed6e39469a7183afd89b1ddb01a52a2",
+      "rest_page_sha256": "de35347ea7165e7509c71e983bdcba3de530ed38794f321a6de9584d2e1e48dc",
+      "source_artifact_id": 13040720320,
+      "source_artifact_digest": "sha256:a0be48a70a08d1eaffd3eecccb7029e48b2a6ac35fb8b48a0b31056cfba51951",
+      "source_artifact_expires_at": "2026-11-30T11:02:25Z",
+      "independently_complete_intervals": 0,
+      "issue_comment_id": 6542556177,
+      "issue_comment_readback_verified": true,
+      "operational_alerts": [
+        "Railway three known services no active successful deployments",
+        "Kraken Results :20 and :50 automations disabled"
+      ]
     }
   },
   "audit": {
