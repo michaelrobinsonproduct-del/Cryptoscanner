@@ -4,11 +4,11 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "learning-role00-20261031T095830",
-    "lease_expires_at": "2026-10-31T10:23:30.929Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it.",
     "last_acquired_at": "2026-10-31T09:58:30.929Z",
-    "last_released_at": "2026-10-31T09:29:20.999Z"
+    "last_released_at": "2026-10-31T10:00:04.498Z"
   },
   "batches": {
     "1": {
@@ -1680,6 +1680,30 @@
         ":50"
       ],
       "next": "Observe first genuinely scheduled 42-test watchdog; continue historical trade completeness and provenance research without archive re-download or production changes."
+    },
+    "role00_20261031_0958": {
+      "status": "EXACT_COMMIT_CI_PENDING",
+      "utc": "2026-10-31T10:00:04.498Z",
+      "research_commit": "1e2856af86e2b1a7fe7f46c7273ce376c9beb109",
+      "main_workflow_commit": "2da04e0c7d49d408ebb176b5b1604388061b2d8e",
+      "code_changes": [
+        "Bound REST page trace to request/response cursor and page SHA",
+        "Reject REST cursors older than returned trade time",
+        "Validate REST trade side/order schema and unique trade IDs",
+        "Validate every REST row after end-of-bucket witness",
+        "Carry per-bucket cursor trace into 12-bucket source report",
+        "Add 10 adversarial offline regression tests",
+        "Correct mocked REST cursor to realistic nanosecond position"
+      ],
+      "expected_offline_tests": 378,
+      "verified_offline_tests": null,
+      "workflow_status": "PENDING",
+      "new_authenticated_complete_intervals": 0,
+      "genuine_labels": 0,
+      "held_out_lift": null,
+      "production_applied": false,
+      "source_downloads_9gb": 0,
+      "next": "Inspect actual GitHub Actions push-triggered exact-code test and bounded REST corroboration; if pass record evidence and advance only on provenance gate."
     }
   },
   "audit": {
