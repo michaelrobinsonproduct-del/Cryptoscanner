@@ -303,12 +303,25 @@ def read_git_state(repository, commit, full_replay=False):
     if has_manifest != has_snapshot:
         raise ValueError("Partially migrated Git ledger commit")
     if not has_manifest:
-        # A commit immediately after a packed writer may not silently downgrade
-        # to a stale legacy ledger by deleting both storage files.
-        ancestry = _git(repository, "rev-list", "--parents", "-n", "1", commit).decode().split()
-        for parent in ancestry[1:]:
-            if _git_has(repository, parent, MANIFEST) or _git_has(repository, parent, SNAPSHOT):
-                raise ValueError("Packed Git ledger was removed: unsafe downgrade")
+        # A legacy commit must never resurrect stale JSON after ANY packed
+        # ancestor, including after several commits with both packed files gone.
+        # Refuse incomplete history: a shallow boundary could hide migration.
+        ancestry = _git(repository, "rev-list", "--parents", "--missing=print",
+                        commit).decode().splitlines()
+        if not ancestry or any(line.startswith("?") for line in ancestry):
+            raise ValueError("Incomplete Git ancestry for legacy ledger")
+        shallow_path = Path(_git(repository, "rev-parse", "--git-path",
+                                 "shallow").decode().strip())
+        if not shallow_path.is_absolute():
+            shallow_path = Path(repository) / shallow_path
+        if shallow_path.exists():
+            shallow = set(shallow_path.read_text().splitlines())
+            if any(line.split()[0] in shallow for line in ancestry):
+                raise ValueError("Incomplete Git ancestry for legacy ledger")
+        touched = _git(repository, "log", "--full-history", "--format=%H",
+                       commit, "--", MANIFEST, SNAPSHOT).decode().strip()
+        if touched:
+            raise ValueError("Packed Git ledger was removed: unsafe downgrade")
         raw = _git(repository, "show", commit + ":paper-ledger.json")
         if len(raw) > storage.MAX_RAW_BYTES:
             raise ValueError("Legacy Git ledger exceeds bound")
