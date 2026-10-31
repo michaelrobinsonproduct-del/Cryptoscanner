@@ -4,11 +4,11 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "learning-role00-verify-20261031T100223",
-    "lease_expires_at": "2026-10-31T10:17:23.612Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it.",
     "last_acquired_at": "2026-10-31T10:02:23.612Z",
-    "last_released_at": "2026-10-31T10:01:23.179Z"
+    "last_released_at": "2026-10-31T10:02:49.251Z"
   },
   "batches": {
     "1": {
@@ -1682,7 +1682,7 @@
       "next": "Observe first genuinely scheduled 42-test watchdog; continue historical trade completeness and provenance research without archive re-download or production changes."
     },
     "role00_20261031_0958": {
-      "status": "CI_SECOND_RETRY_PENDING",
+      "status": "CURSOR_PROVENANCE_HARDENED_COMPLETE_SOURCE_STILL_BLOCKED",
       "utc": "2026-10-31T10:00:04.498Z",
       "research_commit": "e2a271a8412848a72d3dc95abcecd6bd06a73720",
       "main_workflow_commit": "d789c823f97aa1201ac64b1f47a2fb60b84723fc",
@@ -1696,21 +1696,40 @@
         "Correct mocked REST cursor to realistic nanosecond position"
       ],
       "expected_offline_tests": 383,
-      "verified_offline_tests": null,
-      "workflow_status": "PENDING_SECOND_RETRY",
+      "verified_offline_tests": 383,
+      "workflow_status": "COMPLETED_SUCCESS",
       "new_authenticated_complete_intervals": 0,
       "genuine_labels": 0,
       "held_out_lift": null,
       "production_applied": false,
       "source_downloads_9gb": 0,
-      "next": "Inspect exact 383-test CI run and bounded live REST evidence; fail closed on source mismatch.",
+      "next": "Bounded independent before/after REST witness across absent/no-trade intervals, with strict pagination and source revision; fail closed until authenticated complete windows. No production writes.",
       "initial_failed_run_id": 41190906224,
       "initial_failed_tests": "383 run, 9 failures 1 error from stale REST cursor fixtures",
       "failed_run_ids": [
         41190906224,
         41190977095
       ],
-      "failure_diagnosis": "Strict REST cursor and six-field schema validation exposed old unrealistic mocks; migrated all affected fixtures without weakening source gates."
+      "failure_diagnosis": "Strict REST cursor and six-field schema validation exposed old unrealistic mocks; migrated all affected fixtures without weakening source gates.",
+      "utc_verified": "2026-10-31T10:02:49.251Z",
+      "verified_run_id": 41191023888,
+      "verified_job_id": 124507668705,
+      "failure_recovered": true,
+      "existing_observed_buckets_recorroborated": 12,
+      "new_distinct_observed_buckets": 0,
+      "new_cursor_traces": 12,
+      "rest_window_bytes": 859463,
+      "rest_single_bucket_bytes": 65774,
+      "source_artifact_id": 13038453745,
+      "source_artifact_digest": "sha256:4cdfefd755d6c23bff928a7c7a1e3df465296f99b4c32d5083420b955e41ea09",
+      "source_artifact_expires_at": "2026-11-30T10:01:50Z",
+      "issue_comment_id": 6541998975,
+      "issue_comment_readback_verified": true,
+      "blockers": [
+        "REST three-way correspondences are not independently certified complete historical intervals",
+        "No authenticated absent/no-trade intervals; 1/6/24/48h mature predictive labels remain blocked",
+        "Railway production services have no active successful deployments; :20/:50 report tasks disabled"
+      ]
     }
   },
   "audit": {
@@ -1871,7 +1890,8 @@
       "Verified run 41151315621 passed exact pinned 151 tests, reused retained 48-market artifact with zero archive downloads, and uploaded bounded descriptive OHLC peak audit 13023570790. Counts of overlapping complete future OHLC windows and >=30% peaks: 1h 54007/328, 6h 22721/224, 24h 11150/85, 48h 9129/1. These are NOT validated labels or predictive signals: source timestamp semantics and independent trade completeness remain unverified. Production unchanged.",
       "2026-10-31 09:07 UTC Role00 verified GitHub Actions run 41187283901, 361/361 exact-code tests, 12 DENTEUR observed 5m three-way REST/trades/OHLC correspondences, 859463 REST bytes, zero authenticated complete historical intervals/labels/heldout lift, no production changes. Issue #34 comment 6541504997.",
       "2026-10-31 :15 verified exact-code 368/368 offline tests in run 41188248840 on research f4588baf; seven later-market corruption tests now prevent first valid window from bypassing validation of other retained trade members. Zero new historical evidence/labels/held-out lift; production unchanged.",
-      "2026-10-31 09:29 UTC Role30 watchdog downstream acceptance: exact pinned f6c99fd 42/42 tests passed in GitHub Actions run 41188839512, live assessment HEALTHY with owned lease active; no new historical labels or held-out lift. Separate :20/:50 reporting automations disabled. Production unchanged."
+      "2026-10-31 09:29 UTC Role30 watchdog downstream acceptance: exact pinned f6c99fd 42/42 tests passed in GitHub Actions run 41188839512, live assessment HEALTHY with owned lease active; no new historical labels or held-out lift. Separate :20/:50 reporting automations disabled. Production unchanged.",
+      "2026-10-31 10:02 UTC Role00 exact research e2a271a CI 41191023888 job 124507668705 383/383 tests passed; 12 existing DENTEUR observed REST cursor traces and one BCHJPY re-correlated, no new complete intervals, zero labels/heldout lift, production unchanged; issue #34 comment 6541998975."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
