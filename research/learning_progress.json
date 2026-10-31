@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "learning-20261031T0040Z-verify-report",
-    "lease_expires_at": "2026-10-31T01:05:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -537,7 +537,7 @@
       "next": "Inspect workflow run 41150641545 for exact 147-test CI. If skipped due held lease, next daily run retries. First unattended source acquisition must produce 48-market reusable evidence artifact; next unattended run must reuse artifact with zero 9GB archive downloads. Stop on any source or CI gate failure."
     },
     "reusable_peak_audit": {
-      "status": "CODE_COMMITTED_REMOTE_151_TEST_RUN_PENDING",
+      "status": "VERIFIED_151_TESTS_48_MARKET_DESCRIPTIVE_AUDIT_NO_LABELS",
       "research_commit": "efe34c22e27de93d2c13c8b6410ca5eb8a5d8013",
       "workflow_commit": "bc69a859857d2058ed4751f65348c71cbfe4a0b8",
       "workflow_run_id": 41151271477,
@@ -546,7 +546,34 @@
       "held_out_evaluation": "not_authorized",
       "source_archive_downloads_expected": 0,
       "production_modified": false,
-      "next": "Verify exact 151 tests and real descriptive audit artifact from unattended workflow. Source OHLC alone is not independent completeness evidence; do not promote descriptive 30% peaks as predictive labels."
+      "next": "Develop independently verified trade completeness and candle timestamp provenance for selected markets using bounded existing evidence, then authorize point-in-time 1/6/24/48h labels and chronological held-out baseline evaluation. Keep descriptive windows separate from labels.",
+      "verified_workflow_run_id": 41151315621,
+      "verified_workflow_commit": "b06ecce6ddf3a9c400b3b1a49ece4095caeb7b91",
+      "verified_tests": 151,
+      "artifact_id": 13023570790,
+      "artifact_digest": "sha256:4a8b3ead97075b66cf055abe7b6b33c96e1121ea5ead4227c4f3b0a9179eb2bb",
+      "source_evidence_artifact_id": 13022589728,
+      "source_evidence_digest": "sha256:65b052646eca5c319ff674f5a4e65b3f92aa2e28e90dc335017585f9eeab6245",
+      "markets": 48,
+      "descriptive_windows": {
+        "1": {
+          "complete": 54007,
+          "peak_30": 328
+        },
+        "6": {
+          "complete": 22721,
+          "peak_30": 224
+        },
+        "24": {
+          "complete": 11150,
+          "peak_30": 85
+        },
+        "48": {
+          "complete": 9129,
+          "peak_30": 1
+        }
+      },
+      "source_archive_downloads_observed": 0
     }
   },
   "audit": {
@@ -703,7 +730,8 @@
       "Added bounded offline source-period partition and contiguous candidate window analysis, six tests, pinned manual workflow. Existing summary cannot reveal unmatched-period split; no new source downloads or verified new CI. Production unchanged.",
       "Run 41149343294 passed 134/134, all 14595 unmatched OHLC rows precede trade archive period, max contiguous matching window 26 candles, no 6h+ candidate. Main workflow now defaults to no archive download; full acquisition opt-in. No production modifications.",
       "Automation Stagger A inspected real unexpired inventory artifact 12871991601 without any full archive download: 1713 Kraken 5m markets, 1677 eligible under bounded 577-row/64MiB screen, density cohorts 489/553/466/169. Inventory gap_intervals counts GAP EVENTS, not missing candle count; corrected independent accounting. Added exact-blob tested deterministic 48-market cohort selector (7 tests) and bounded SHA-verified reusable 48-market source evidence builder/replay inspector (6 tests), 13/13 local exact-code tests. Registered isolated daily/push GitHub Actions workflow on main with pinned research SHA, no production writer, archive once only if no reusable artifact; later daily runs refresh artifact without source download. New remote 147-test CI and actual source extraction pending. Production untouched.",
-      "Added bounded future-only 30% OHLC descriptive window audit for 48 retained markets, 4 offline regression tests and artifact upload in the single unattended research workflow. Results remain explicitly unverified descriptions; no labels or production writes. Remote exact 151-test run pending at checkpoint."
+      "Added bounded future-only 30% OHLC descriptive window audit for 48 retained markets, 4 offline regression tests and artifact upload in the single unattended research workflow. Results remain explicitly unverified descriptions; no labels or production writes. Remote exact 151-test run pending at checkpoint.",
+      "Verified run 41151315621 passed exact pinned 151 tests, reused retained 48-market artifact with zero archive downloads, and uploaded bounded descriptive OHLC peak audit 13023570790. Counts of overlapping complete future OHLC windows and >=30% peaks: 1h 54007/328, 6h 22721/224, 24h 11150/85, 48h 9129/1. These are NOT validated labels or predictive signals: source timestamp semantics and independent trade completeness remain unverified. Production unchanged."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
