@@ -99,5 +99,28 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "quote time"):
             ledger.advance(ledger.empty(), report, SHA)
 
+    def test_maturity_safe_50h_compaction_and_monotonic_totals(self):
+        state = ledger.advance(ledger.empty(), synthetic(0), SHA)
+        state = ledger.advance(state, synthetic(51 * 60), SHA)
+        score = ledger.scoreboard(state)
+        self.assertEqual(score["generation"], 2)
+        self.assertEqual(score["actual_scans"], 2)
+        self.assertEqual(score["immutable_predictions"], 24)
+        self.assertEqual(score["market_observations"], 50)
+        self.assertEqual(score["gap_abstentions"], 48)
+        self.assertEqual(len(state["runs"]), 1)
+        self.assertEqual(len(state["predictions"]), 12)
+        self.assertEqual(len(state["archive_index"]), 1)
+        self.assertEqual(state["archived"]["scans"], 1)
+        ledger.verify(state)
+
+    def test_compacted_archive_tampering_fails_closed(self):
+        state = ledger.advance(ledger.empty(), synthetic(0), SHA)
+        state = ledger.advance(state, synthetic(51 * 60), SHA)
+        state["archived"]["scans"] = 0
+        ledger.seal(state)
+        with self.assertRaisesRegex(ValueError, "generation/scan"):
+            ledger.verify(state)
+
 if __name__ == "__main__":
     unittest.main()
