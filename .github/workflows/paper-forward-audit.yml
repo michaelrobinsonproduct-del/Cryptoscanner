@@ -78,11 +78,11 @@ jobs:
               break
             fi
             git show "${COMMIT}:paper-ledger.json" > "/tmp/paper-chain/${COMMIT}.json"
-            printf '%s\\t%s\\n' "${COMMIT}" "/tmp/paper-chain/${COMMIT}.json" >> /tmp/paper-chain/manifest.tsv
+            printf '%s\t%s\n' "${COMMIT}" "/tmp/paper-chain/${COMMIT}.json" >> /tmp/paper-chain/manifest.tsv
           done < /tmp/paper-chain/commits.txt
-          python -m paper_eval.chain \\
-            --manifest /tmp/paper-chain/manifest.tsv \\
-            --tip "${LEDGER_COMMIT}" \\
+          python -m paper_eval.chain \
+            --manifest /tmp/paper-chain/manifest.tsv \
+            --tip "${LEDGER_COMMIT}" \
             --output paper_eval/output/chain-audit.json
           (cd paper_eval/output && sha256sum independent-audit.json transition-audit.json chain-audit.json > SHA256SUMS)
           echo "PAPER_AUDIT_LEDGER_COMMIT=${LEDGER_COMMIT}"
