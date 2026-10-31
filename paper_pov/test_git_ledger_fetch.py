@@ -12,12 +12,12 @@ CHECKPOINT = "b" * 40
 class BoundedFetchTests(unittest.TestCase):
     @patch.object(f, "_git")
     @patch.object(f.subprocess, "run")
-    def test_legacy_uses_depth64_without_checkpoint(self, run, git):
+    def test_legacy_uses_bounded_depth512_without_checkpoint(self, run, git):
         git.side_effect = [b"", (HEAD + "\n").encode(), b"legacy"]
         run.side_effect = [subprocess.CompletedProcess([], 1, b"", b"missing"),
                            subprocess.CompletedProcess([], 1, b"", b"missing")]
         self.assertEqual(f.fetch_bounded(), HEAD)
-        self.assertIn("--depth=64", git.call_args_list[0].args)
+        self.assertIn("--depth=512", git.call_args_list[0].args)
         self.assertNotIn("--unshallow", str(git.call_args_list))
 
     @patch.object(f, "_git")
