@@ -121,7 +121,7 @@ class AuditTests(unittest.TestCase):
         state["observations"].append(copy.deepcopy(state["observations"][0]))
         state["runs"][0]["observation_count"] += 1
         ledger.seal(state)
-        with self.assertRaisesRegex(ValueError, "Duplicate observation"):
+        with self.assertRaisesRegex(ValueError, "(?i)duplicate observation"):
             evaluate(state, 1, 1)
 
     def test_archived_scans_counted_without_inventing_old_labels(self):
