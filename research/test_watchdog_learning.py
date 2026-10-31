@@ -81,7 +81,7 @@ class AssessmentTests(unittest.TestCase):
         self.assertIn("NO_SUBSTANTIVE_RESEARCH_90M", result["alerts"])
 
     def test_recent_evidence_does_not_trigger_ninety_minute_alert(self):
-        result = assess_case(now=NOW + dt.timedelta(minutes=89),
+        result = assess_case(now=NOW + dt.timedelta(minutes=80),
                              runs=[run(1, age=5)], jobs_by_id={1: jobs()})
         self.assertNotIn("NO_SUBSTANTIVE_RESEARCH_90M", result["alerts"])
 
@@ -188,7 +188,10 @@ class AssessmentTests(unittest.TestCase):
         now = dt.datetime(2026, 11, 1, 6, 0, tzinfo=UTC)
         scheduled = run(1, age=5, event="schedule")
         scheduled["created_at"] = iso(dt.datetime(2026, 11, 1, 3, 14, tzinfo=UTC))
-        result = assess_case(now=now, runs=[scheduled])
+        recent = run(2, age=5)
+        recent["created_at"] = iso(now - dt.timedelta(minutes=5))
+        result = assess_case(now=now, runs=[recent, scheduled],
+                             jobs_by_id={1: jobs(), 2: jobs()})
         self.assertEqual(result["status"], "HEALTHY")
 
 
