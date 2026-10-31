@@ -46,7 +46,10 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
     seen = []
     digests = []
     prior_time = -1.0
+    seen_trade_ids = set()
+    page_trace = []
     for page in range(MAX_PAGES):
+        requested_since = cursor
         url = BASE + "?" + urllib.parse.urlencode({"pair": pair, "since": str(cursor), "count": 1000})
         req = urllib.request.Request(url, headers={"Accept-Encoding": "identity", "User-Agent": "Cryptoscanner-bounded-history/1.0"})
         with opener(req, timeout=15) as response:
@@ -71,10 +74,20 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
         rows = result[names[0]]
         if not rows:
             return {"status": "abstain_empty_historical_rest_page", "real_labels": 0}
+        page_first = None
+        page_last = None
         reached_after = False
         for row in rows:
-            if not isinstance(row, list) or len(row) < 3:
-                raise RuntimeError("invalid historical REST trade")
+            if (not isinstance(row, list) or len(row) not in (6, 7) or
+                    row[3] not in ("b", "s") or row[4] not in ("l", "m") or
+                    not isinstance(row[5], str)):
+                raise RuntimeError("invalid historical REST trade schema")
+            if len(row) == 7:
+                trade_id = row[6]
+                if (isinstance(trade_id, bool) or not isinstance(trade_id, (str, int)) or
+                        not str(trade_id) or str(trade_id) in seen_trade_ids):
+                    raise RuntimeError("duplicate or invalid REST trade id")
+                seen_trade_ids.add(str(trade_id))
             try:
                 t, price, volume = float(row[2]), float(row[0]), float(row[1])
             except (TypeError, ValueError) as exc:
@@ -83,6 +96,9 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
                     t < 0 or price <= 0 or volume <= 0 or t < prior_time):
                 raise RuntimeError("nonchronological or invalid historical REST trade")
             prior_time = t
+            if page_first is None:
+                page_first = t
+            page_last = t
             if t >= start + STEP:
                 reached_after = True
                 break
@@ -90,6 +106,21 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
                 seen.append((t, price, volume))
                 if len(seen) > MAX_EXPECTED_TRADES:
                     return {"status": "abstain_rest_bucket_over_cap", "real_labels": 0}
+        # Kraken's pagination token is a nanosecond time cursor. A cursor
+        # behind the latest returned trade cannot certify that intervening
+        # source rows were traversed; reject rather than infer completeness.
+        # Allow 10 microseconds for float conversion of source timestamps.
+        if cursor / 1_000_000_000 + 1e-5 < page_last:
+            raise RuntimeError("REST cursor predates returned trade")
+        page_trace.append({
+            "requested_since": str(requested_since),
+            "returned_last": str(cursor),
+            "rows": len(rows),
+            "first_trade_timestamp": page_first,
+            "last_inspected_timestamp": page_last,
+            "page_sha256": digests[-1],
+            "after_end_witness": reached_after,
+        })
         if reached_after:
             if not seen and page == 0 and float(rows[0][2]) >= start + STEP:
                 return {"status": "abstain_historical_range_unavailable", "real_labels": 0}
@@ -103,12 +134,14 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
             return {"status": "independent_rest_bucket_correlated" if equal else "abstain_rest_archive_disagreement",
                     "market": pair, "bucket_open": start, "archive_trades": len(expected),
                     "rest_trades": len(seen), "pages": page+1, "bytes_transferred": total,
-                    "rest_page_sha256": digests, "after_end_witness": True,
+                    "rest_page_sha256": digests, "rest_cursor_trace": page_trace,
+                    "after_end_witness": True,
                     "independent_quarterly_completeness_verified": False,
                     "no_trade_intervals_verified": 0, "real_labels": 0,
                     "production_modified": False}
     return {"status": "abstain_rest_pagination_or_history_limit", "market": pair,
             "bucket_open": start, "pages": MAX_PAGES, "bytes_transferred": total,
+            "rest_cursor_trace": page_trace,
             "independent_quarterly_completeness_verified": False,
             "real_labels": 0, "production_modified": False}
 
