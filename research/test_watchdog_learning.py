@@ -2,7 +2,7 @@
 import datetime as dt
 import unittest
 
-from watchdog_learning import assess, alert_issue, latest_due, lease_state, run_state, load_evidence_artifacts, UTC
+from watchdog_learning import assess, alert_issue, latest_due, lease_state, run_state, load_evidence_artifacts, GAP_WORKFLOW_NAME, UTC
 
 
 NOW = dt.datetime(2026, 10, 31, 2, 0, tzinfo=UTC)
@@ -221,6 +221,87 @@ class AssessmentTests(unittest.TestCase):
         result = assess_case(now=now, runs=[recent, scheduled],
                              jobs_by_id={1: jobs(), 2: jobs()})
         self.assertEqual(result["status"], "HEALTHY")
+
+
+
+def gap_run(identifier=10, *, age=5, status="completed", conclusion="success",
+            event="push"):
+    value = run(identifier, age=age, status=status, conclusion=conclusion,
+                event=event)
+    value["name"] = GAP_WORKFLOW_NAME
+    return value
+
+
+def gap_jobs(*, verify="success", reuse="success", inspect="success",
+             upload="success"):
+    return [{"steps": [
+        {"name": "Verify exact pinned code and fail-closed offline tests",
+         "conclusion": verify},
+        {"name": "Reuse bounded retained artifacts only when cooperative lease clear",
+         "conclusion": reuse},
+        {"name": "Independently inspect one retained gap against bounded REST (not a complete label)",
+         "conclusion": inspect},
+        {"name": "Retain bounded gap evidence for 30 days",
+         "conclusion": upload},
+    ]}]
+
+
+class BoundedSourceWatchdogTests(unittest.TestCase):
+    def test_complete_source_work_counts_as_evidence_not_labels(self):
+        self.assertEqual(run_state(gap_run(), gap_jobs()), "evidence_run")
+        self.assertFalse(assess_case()["real_predictive_labels_verified"])
+
+    def test_skipped_source_inspection_never_counts(self):
+        self.assertEqual(run_state(gap_run(), gap_jobs(inspect="skipped")),
+                         "skipped_no_work")
+
+    def test_skipped_source_upload_never_counts(self):
+        self.assertEqual(run_state(gap_run(), gap_jobs(upload="skipped")),
+                         "skipped_no_work")
+
+    def test_missing_source_step_logs_fail_closed(self):
+        self.assertEqual(run_state(gap_run(), []), "unverified_green")
+
+    def test_recent_bounded_source_prevents_false_ninety_minute_alert(self):
+        old = run(1, age=110)
+        result = assess(NOW, NOW - dt.timedelta(hours=3), [old],
+                        {1: jobs()}, [artifact(), artifact(name="kraken-bounded-independent-trade-members")],
+                        {"concurrency": {"owner": None}},
+                        [gap_run(10, age=5)], {10: gap_jobs()})
+        self.assertNotIn("NO_SUBSTANTIVE_RESEARCH_90M", result["alerts"])
+        self.assertEqual(result["latest_run"], 10)
+
+    def test_failed_bounded_source_run_alerts(self):
+        result = assess(NOW, CREATED, [run(1, age=30)], {1: jobs()},
+                        [artifact(), artifact(name="kraken-bounded-independent-trade-members")],
+                        {"concurrency": {"owner": None}},
+                        [gap_run(10, age=5, conclusion="failure")], {10: gap_jobs()})
+        self.assertIn("LATEST_RESEARCH_RUN_FAILED", result["alerts"])
+
+    def test_two_skipped_source_runs_trigger_no_progress(self):
+        result = assess(NOW, CREATED, [run(1, age=40)], {1: jobs()},
+                        [artifact(), artifact(name="kraken-bounded-independent-trade-members")],
+                        {"concurrency": {"owner": None}},
+                        [gap_run(10, age=5), gap_run(11, age=15)],
+                        {10: gap_jobs(inspect="skipped"), 11: gap_jobs(upload="skipped")})
+        self.assertIn("REPEATED_GREEN_NO_WORK", result["alerts"])
+
+    def test_source_schedule_cannot_satisfy_primary_daily_schedule(self):
+        now = dt.datetime(2026, 11, 1, 6, 0, tzinfo=UTC)
+        source = gap_run(10, event="schedule")
+        source["created_at"] = iso(dt.datetime(2026, 11, 1, 3, 14, tzinfo=UTC))
+        result = assess(now, CREATED, [], {},
+                        [artifact(), artifact(name="kraken-bounded-independent-trade-members")],
+                        {"concurrency": {"owner": None}},
+                        [source], {10: gap_jobs()})
+        self.assertIn("MISSED_DAILY_RESEARCH_SCHEDULE", result["alerts"])
+
+    def test_running_source_retry_cannot_hide_primary_failure(self):
+        result = assess(NOW, CREATED, [run(1, age=15, conclusion="failure")],
+                        {1: jobs()}, [artifact(), artifact(name="kraken-bounded-independent-trade-members")],
+                        {"concurrency": {"owner": None}},
+                        [gap_run(10, age=5, status="in_progress", conclusion=None)], {})
+        self.assertIn("LATEST_RESEARCH_RUN_FAILED", result["alerts"])
 
 
 class FakeAPI:
