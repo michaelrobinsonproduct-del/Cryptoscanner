@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: c847aa0bdc69e0c3ef2c120108f1e905e2b21d40
+          ref: 97c10caf7841c64c4e487d49e9a0a5d6baf816f0
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -26,11 +26,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = 'c847aa0bdc69e0c3ef2c120108f1e905e2b21d40'
+          test "$(git rev-parse HEAD)" = '97c10caf7841c64c4e487d49e9a0a5d6baf816f0'
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-gap-tests.log
-          grep -q 'Ran 459 tests' /tmp/research-gap-tests.log
+          grep -q 'Ran 467 tests' /tmp/research-gap-tests.log
           grep -q '^OK$' /tmp/research-gap-tests.log
       - name: Reuse bounded retained artifacts only when cooperative lease clear
         id: source
@@ -68,12 +68,13 @@ jobs:
           PYTHONPATH=research python research/probe_historical_rest_gap.py \
             --retained-trades research/output/bounded_independent_trade_members.zip \
             --ohlc research/output/reusable_ohlc_evidence.zip \
-            --candidate-index 1 \
+            --candidate-index 2 \
             --output research/output/historical_rest_gap_candidate_report.json
           python - <<'PY'
           import json
           from pathlib import Path
           r=json.loads(Path('research/output/historical_rest_gap_candidate_report.json').read_text())
+          assert r['candidate_index'] == 2
           assert r['real_labels'] == 0 and r['held_out_lift'] is None
           assert r['no_trade_intervals_verified'] == 0
           assert r['independent_complete_historical_intervals'] == 0
