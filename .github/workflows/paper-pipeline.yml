@@ -60,6 +60,24 @@ jobs:
           cp /tmp/paper-ledger-next.json paper_pov/output/ledger.json
           (cd paper_pov/output && sha256sum latest.json scoreboard.json ledger.json > SHA256SUMS)
           cp paper_pov/output/scoreboard.json /tmp/paper-scoreboard.json
+      - name: Cross-run nonregression and provenance acceptance
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from paper_pov.ledger import verify,scoreboard
+          before=verify(json.loads(Path("/tmp/paper-ledger-input.json").read_text()))
+          after=verify(json.loads(Path("/tmp/paper-ledger-next.json").read_text()))
+          score=scoreboard(after)
+          assert after["generation"]==before["generation"]+1
+          assert score["actual_scans"]==after["generation"]
+          assert score["immutable_predictions"]>=len(before["predictions"])
+          assert score["market_observations"]>=len(before["observations"])
+          assert after["runs"][-1]["source_sha"]==__import__("os").environ["GITHUB_SHA"]
+          assert score["held_out_lift"] is None and score["production_applied"] is False
+          print("PAPER_CROSS_RUN_VERIFIED",before["generation"],after["generation"],score["ledger_sha256"])
+          PY
       - name: Preserve independently downloadable checked artifact
         uses: actions/upload-artifact@v4
         with:
