@@ -1782,6 +1782,27 @@
         "Railway three known services no active successful deployments",
         "Kraken Results :20 and :50 automations disabled"
       ]
+    },
+    "role15_20261031_1118": {
+      "status": "EXACT_CODE_426_TESTS_VERIFIED_NEW_SOURCE_AUDIT_PENDING",
+      "research_commit": "0ab31ba46b6d22a2b4159b86f300ebff9301dcbb",
+      "research_test_workflow_commit": "39af4e223500a4b1bbd1392e004fa32b58563161",
+      "exact_ci_run_id": 41196356707,
+      "exact_ci_job_id": 124523203171,
+      "exact_tests_passed": 426,
+      "new_regression_tests": 14,
+      "findings": [
+        "Prior real BCHJPY gap REST response's last inspected timestamp was 2026-10-12, months after the May 25 gap; a distant witness is insufficient to authenticate the immediately following retained candle.",
+        "Fail closed when first REST after-gap witness is outside the immediate following five-minute bucket.",
+        "Require independent REST and SHA-checked OHLC corroboration of the following observed bucket, in addition to preceding observed bucket.",
+        "Source interval completeness and no-trade proof remain unverified; zero genuine predictive labels."
+      ],
+      "new_source_evidence_this_batch": 0,
+      "verified_complete_trade_intervals": 0,
+      "real_labels": 0,
+      "held_out_lift": null,
+      "production_applied": false,
+      "next": "Repin existing bounded REST gap research workflow to exact 426-test commit after lease release, inspect live source result and artifact; keep zero labels without independent source completeness."
     }
   },
   "audit": {
@@ -1954,7 +1975,8 @@
       "2026-10-31T10:12:23.521Z Role15: research c8f7e87e02d77248685a570e0cb390c2faba7690 REST JSON/cursor/chronology source-integrity hardening + eight tests; isolated test workflow main e97cbc53d03db894a5abdb7be26faa3e63cca21b triggered, exact 391-test CI PENDING. No new historical evidence, labels or production changes.",
       "2026-10-31T10:14:22.453Z Role15: initial exact CI 41191799719 failed 1/391 because preexisting unwitnessed-tail fixture used impossible cursors under new strict request-boundary gate. Corrected fixture only (no safety weakening) at research 0a9aa1e067281f4de6cf65c7bbd8dbd8356faa08; main isolated test workflow 5516d56c07319b73d784430084a94642778f5085 triggered. Final exact CI pending, no labels or production changes.",
       "2026-10-31T10:15:11.526Z Role15 independent verifier: final exact research commit 0a9aa1e067281f4de6cf65c7bbd8dbd8356faa08, test-only workflow main 5516d56c07319b73d784430084a94642778f5085, actual CI https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41191932765 job 124510309627 COMPLETED SUCCESS 391/391 tests (eight new REST duplicate JSON/source chronology/boolean/cursor boundary regressions). Earlier run 41191799719 failed 1/391 on unrealistic old synthetic pagination fixture, repaired without weakening gate. No historical source evidence newly acquired; 0 complete independent trade intervals, 0 genuine predictive labels, held-out lift unmeasured, no candidate rule, production unchanged by this batch. Next: independent source interval completeness, missing/no-trade semantics and mature forward labels; no full archive download.",
-      "2026-10-31T10:35:02.447Z Role30: first genuinely scheduled 42-test watchdog run 41191999402 job 124510503826 completed SUCCESS, exact pinned f6c99fd, 42/42 tests, HEALTHY alerts=[], issue #34 comment 6542291630 read back. 0 new historical evidence, 0 verified real labels, held-out lift unmeasured, production unchanged. :20/:50 reporting tasks disabled; user push/email receipt unverified."
+      "2026-10-31T10:35:02.447Z Role30: first genuinely scheduled 42-test watchdog run 41191999402 job 124510503826 completed SUCCESS, exact pinned f6c99fd, 42/42 tests, HEALTHY alerts=[], issue #34 comment 6542291630 read back. 0 new historical evidence, 0 verified real labels, held-out lift unmeasured, production unchanged. :20/:50 reporting tasks disabled; user push/email receipt unverified.",
+      "2026-10-31T11:19:48.168Z Role15: exact-code research 0ab31ba4, CI 41196356707 job 124523203171 426/426 passed, 14 new gap following-witness tests; distant historical REST after-gap witness identified and guarded, independent following observed bucket REST/OHLC check added. No new real source evidence or verified complete intervals, 0 labels/held-out lift, production unchanged. Bounded source rerun pending after lease release."
     ]
   }
 }
