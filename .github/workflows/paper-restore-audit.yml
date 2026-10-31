@@ -56,6 +56,7 @@ jobs:
           PY
           ARTIFACT_ID="$(cat /tmp/paper-artifact-id.txt)"
           curl --fail --silent --show-error --location --retry 2 \
+            --max-filesize 20000000 --max-time 120 --connect-timeout 15 \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" \
