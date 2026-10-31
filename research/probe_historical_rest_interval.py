@@ -198,14 +198,16 @@ def probe_retained(archive_path, *, opener=None, ohlc_artifact=None):
                 if 1 <= len(records) <= MAX_EXPECTED_TRADES:
                     try:
                         rest = compare_rest_bucket(market, start, records, opener=opener)
-                        return (corroborate_retained_ohlc(ohlc_artifact, market, start, records, rest)
-                                if ohlc_artifact is not None else rest)
                     except (OSError, RuntimeError, ValueError) as exc:
                         return {"status": "abstain_rest_transport_or_source_error",
                                 "error_type": type(exc).__name__, "market": market,
                                 "bucket_open": start, "real_labels": 0,
                                 "independent_quarterly_completeness_verified": False,
                                 "production_modified": False}
+                    # Artifact integrity errors must propagate and fail the job;
+                    # only genuine REST transport/source errors are abstentions.
+                    return (corroborate_retained_ohlc(ohlc_artifact, market, start, records, rest)
+                            if ohlc_artifact is not None else rest)
     return {"status": "abstain_no_bounded_retained_bucket", "real_labels": 0}
 
 
