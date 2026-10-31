@@ -6,6 +6,9 @@ import json
 import unittest
 import zlib
 import base64
+import tempfile
+from pathlib import Path
+from paper_pov import segmented_writer
 
 from paper_pov import ledger, segmented_storage as storage
 from paper_pov.test_ledger import synthetic, SHA
@@ -164,6 +167,31 @@ class StorageTests(unittest.TestCase):
         self.assertEqual(storage.replay_segments([segment]),
                          storage.unpack_snapshot(next_snapshot))
         self.assertFalse(score["production_applied"])
+
+    def test_atomic_transaction_staging_and_readback(self):
+        previous = storage.pack_snapshot(ledger.empty())
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "transaction"
+            manifest = segmented_writer.prepare(previous, synthetic(0), SHA, path)
+            self.assertEqual(manifest["generation"], 1)
+            self.assertEqual(segmented_writer.verify_prepared(previous, path), manifest)
+            with self.assertRaises(FileExistsError):
+                segmented_writer.prepare(previous, synthetic(0), SHA, path)
+            segment = path / manifest["segment_name"]
+            data = bytearray(segment.read_bytes())
+            data[-10] ^= 1
+            segment.write_bytes(data)
+            with self.assertRaises(ValueError):
+                segmented_writer.verify_prepared(previous, path)
+
+    def test_incomplete_transaction_rejected(self):
+        previous = storage.pack_snapshot(ledger.empty())
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "transaction"
+            manifest = segmented_writer.prepare(previous, synthetic(0), SHA, path)
+            (path / manifest["segment_name"]).unlink()
+            with self.assertRaises(ValueError):
+                segmented_writer.verify_prepared(previous, path)
 
 if __name__ == "__main__":
     unittest.main()
