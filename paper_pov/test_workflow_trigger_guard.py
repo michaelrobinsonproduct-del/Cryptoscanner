@@ -36,7 +36,7 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
     def test_dispatch_is_paper_only_and_has_no_second_writer(self):
         text = PIPELINE.read_text()
         self.assertIn("python -m paper_pov.scanner", text)
-        self.assertIn("PAPER_RESULTS_VERIFIED", (PIPELINE.parents[1] / "paper_pov/results_report.py").read_text())
+        self.assertIn("PAPER_RESULTS_VERIFIED", (PIPELINE.parents[2] / "paper_pov/results_report.py").read_text())
         self.assertNotIn("git push --force", text)
         self.assertNotIn("railway", text.lower())
 
