@@ -4,11 +4,11 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "learning-role00-fixtures-20261031T100103",
-    "lease_expires_at": "2026-10-31T10:21:03.691Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it.",
     "last_acquired_at": "2026-10-31T10:01:03.691Z",
-    "last_released_at": "2026-10-31T10:00:46.797Z"
+    "last_released_at": "2026-10-31T10:01:23.179Z"
   },
   "batches": {
     "1": {
@@ -1682,10 +1682,10 @@
       "next": "Observe first genuinely scheduled 42-test watchdog; continue historical trade completeness and provenance research without archive re-download or production changes."
     },
     "role00_20261031_0958": {
-      "status": "CI_RETRY_PENDING",
+      "status": "CI_SECOND_RETRY_PENDING",
       "utc": "2026-10-31T10:00:04.498Z",
-      "research_commit": "6ae16a8f430de922f3af34f8e9f4bfa6c34285d6",
-      "main_workflow_commit": "f9ccbb75166e4fcc919564b2b614e610f5591d45",
+      "research_commit": "e2a271a8412848a72d3dc95abcecd6bd06a73720",
+      "main_workflow_commit": "d789c823f97aa1201ac64b1f47a2fb60b84723fc",
       "code_changes": [
         "Bound REST page trace to request/response cursor and page SHA",
         "Reject REST cursors older than returned trade time",
@@ -1697,7 +1697,7 @@
       ],
       "expected_offline_tests": 383,
       "verified_offline_tests": null,
-      "workflow_status": "PENDING_RETRY",
+      "workflow_status": "PENDING_SECOND_RETRY",
       "new_authenticated_complete_intervals": 0,
       "genuine_labels": 0,
       "held_out_lift": null,
@@ -1705,7 +1705,12 @@
       "source_downloads_9gb": 0,
       "next": "Inspect exact 383-test CI run and bounded live REST evidence; fail closed on source mismatch.",
       "initial_failed_run_id": 41190906224,
-      "initial_failed_tests": "383 run, 9 failures 1 error from stale REST cursor fixtures"
+      "initial_failed_tests": "383 run, 9 failures 1 error from stale REST cursor fixtures",
+      "failed_run_ids": [
+        41190906224,
+        41190977095
+      ],
+      "failure_diagnosis": "Strict REST cursor and six-field schema validation exposed old unrealistic mocks; migrated all affected fixtures without weakening source gates."
     }
   },
   "audit": {
