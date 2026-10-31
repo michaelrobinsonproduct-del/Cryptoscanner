@@ -1184,7 +1184,7 @@
       "next": "Continue independent quarterly trade source authentication using retained SHA-verified OHLC and same-revision trade evidence; seek provider-published quarterly digest or bounded independent REST interval attestation where available; do not infer full trade completeness from CRC, ETag or exact matches. Once authenticated, produce real point-in-time 1/6/24/48-hour labels and held-out comparison. Next scheduled workflow uses pinned hardened code."
     },
     "retained_ohlc_provenance_contract_20261031_00": {
-      "status": "IMPLEMENTED_EXACT_COMMIT_CI_PENDING",
+      "status": "EXACT_PINNED_284_TESTS_AND_RETAINED_SOURCE_VALIDATION_VERIFIED_NO_LABELS",
       "research_commit": "4ea14933f26ba2cb5dbc2ea80164c00f4de2de6a",
       "workflow_main_commit": "3822fb47b8eb49070871b7d03d92b6fff69d5f11",
       "prior_verified_tests": 272,
@@ -1202,11 +1202,28 @@
       "held_out_improvement": "not_measured",
       "production_applied": false,
       "blockers": [
-        "Independent quarterly trade archive authentication and full trade interval completeness unverified",
-        "No genuine point-in-time 1/6/24/48-hour outcomes or held-out predictive uplift",
-        "Research workflow CI on new exact commit pending"
+        "Independent trade archive full-source authentication and complete interval coverage remain unverified",
+        "No genuine mature 1/6/24/48h point-in-time labels or chronological held-out predictive improvement",
+        "Railway production offline: all three services have no active deployment, confirmed read-only at 2026-10-31 06:04 UTC; restoration not authorized"
       ],
-      "next": "Inspect actual pinned GitHub Actions logs and retained-artifact audit; repair failing fixtures or implementation if needed, then record exact verified tests, release/verify lease and continue official trade completeness evidence."
+      "next": "Investigate independent provider-signed source checksum or bounded REST interval completeness evidence; use retained 48-market and trade artifacts, never repeat 9GB acquisition without explicit evidence gap. Do not authorize labels or predictive promotion until source proof; keep Railway unchanged.",
+      "verified_run_id": 41175038763,
+      "verified_job_id": 124460721220,
+      "verified_run_url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41175038763",
+      "verified_tests": 284,
+      "actual_archive_downloads": 0,
+      "actual_ohlc_markets_reused": 48,
+      "actual_trade_ohlc_candidate_matches": 5001,
+      "actual_candidate_1h_windows": 77,
+      "actual_descriptive_peak_30": 22,
+      "actual_real_labels": 0,
+      "actual_heldout_lift": null,
+      "workflow_status": "completed_success",
+      "reconciliation_artifact_id": 13032394344,
+      "reconciliation_artifact_digest": "sha256:bf5dc52b6c7428db763dd986213d2d074e119862a7c109af88482b6ddd309462",
+      "reusable_artifact_id": 13032543650,
+      "reusable_artifact_digest": "sha256:068223f1d920b36a9e9b0f190ffa1c870bf20f84f0b9c471df055c21b7423d38",
+      "artifact_expires_at": "2026-11-30T06:04:16Z"
     }
   },
   "audit": {
