@@ -170,6 +170,7 @@ def probe(selection, *, opener=None, url=URL, expected_bytes=EXPECTED_BYTES):
         "source_expected_archive_bytes": expected_bytes,
         "range_bytes_transferred": remote.transferred,
         "range_requests": remote.requests,
+        "source_revision_validator": remote.source_validator,
         "source_archive_full_sha256_verified": False,
         "independent_trade_interval_completeness_verified": False,
         "source_manifest_independently_authenticated": False,
