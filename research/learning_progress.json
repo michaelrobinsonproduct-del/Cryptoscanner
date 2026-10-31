@@ -1730,6 +1730,33 @@
         "No authenticated absent/no-trade intervals; 1/6/24/48h mature predictive labels remain blocked",
         "Railway production services have no active successful deployments; :20/:50 report tasks disabled"
       ]
+    },
+    "role00_20261031_1100": {
+      "status": "GAP_CANDIDATE_CODE_VERIFIED_REAL_SOURCE_AUDIT_PENDING",
+      "utc": "2026-10-31T11:02:30Z",
+      "research_commit": "234710203f1038e56763026c3387b4bc1981c918",
+      "code_changes": [
+        "Bound one-gap REST after-end witness without calling it authenticated no-trade",
+        "Reject observed-bucket mismatches, trade inside candidate gap, invalid cursors and malformed after-gap witness",
+        "Require source trade observations bracketing one gap and matching retained SHA-checked OHLC absence",
+        "Validate all selected trade members, even after first gap candidate",
+        "Reuse retained source artifacts in a new isolated research-only gap workflow; no 9GB download",
+        "Preserve 0 verified no-trade intervals, 0 labels, null held-out lift"
+      ],
+      "new_tests": 21,
+      "verified_tests": 412,
+      "verified_test_run_id": 41195123654,
+      "verified_test_job_id": 124519637561,
+      "exact_final_commit_tests": "412/412 passed actual GitHub Actions logs",
+      "source_audit_workflow_commit": "efed6b76a3c0e1ffd2c00a9584b037b0ae1c3292",
+      "source_audit_run": "PENDING",
+      "new_real_source_evidence": 0,
+      "verified_no_trade_intervals": 0,
+      "genuine_labels": 0,
+      "held_out_lift": null,
+      "production_applied": false,
+      "blocker": "REST cursor correspondence cannot authenticate full historical trade completeness; gap candidate is never a verified no-trade interval.",
+      "next": "Inspect new isolated bounded gap evidence workflow and artifact; certify only genuinely authenticated intervals, otherwise abstain and advance independent source provenance."
     }
   },
   "audit": {
