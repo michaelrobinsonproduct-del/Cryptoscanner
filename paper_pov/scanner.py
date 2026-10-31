@@ -74,18 +74,27 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                 finite(t["a"][0]), finite(t["o"]), finite(t["v"][1]))
             if min(price, bid, ask, op) <= 0 or ask < bid or volume < 0:
                 continue
-            move = 100 * (price / op - 1)
+            # Kraken Ticker 'o' is today's UTC opening price, NOT the
+            # rolling 24-hour opening price. Keep ranking arithmetic unchanged
+            # while reporting its actual time reference.
+            move_since_utc_open = 100 * (price / op - 1)
             spread = 10000 * (ask / bid - 1)
             notional = price * volume
+            # Individually finite ticker inputs can overflow in arithmetic.
+            # Never emit nonfinite market evidence or fail during JSON sealing.
+            if not all(map(math.isfinite, (move_since_utc_open, spread, notional))):
+                continue
             observations.append({"pair": pair, "symbol": name, "price": price,
                 "spread_bps": round(spread, 4), "notional_24h_usd": round(notional, 2),
                 "observed_at": quote_at.isoformat(), "source": "kraken_public_ticker_client_observed"})
-            if not (0.25 <= move <= 12 and spread <= 45 and notional >= 100000):
+            if not (0.25 <= move_since_utc_open <= 12 and spread <= 45 and notional >= 100000):
                 continue
-            baseline = round(min(45, move * 7) + min(25, notional / 150000)
+            baseline = round(min(45, move_since_utc_open * 7) + min(25, notional / 150000)
                              + max(0, 30 - spread / 2), 4)
             screened.append({"pair": pair, "symbol": name, "price": price,
-                "move24_pct": round(move, 4), "spread_bps": round(spread, 4),
+                "move_since_utc_open_pct": round(move_since_utc_open, 4),
+                "move_reference": "kraken_ticker_today_open_utc",
+                "spread_bps": round(spread, 4),
                 "notional_24h_usd": round(notional, 2), "baseline_score": baseline})
         except (KeyError, ValueError, TypeError, IndexError, ZeroDivisionError):
             continue
@@ -97,7 +106,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     selected = []
     seen = set()
     for candidates, limit in ((screened, 12),
-        (sorted(screened, key=lambda x: (x["move24_pct"], x["pair"])), 6),
+        (sorted(screened, key=lambda x: (x["move_since_utc_open_pct"], x["pair"])), 6),
         (sorted(screened, key=lambda x: (x["spread_bps"], x["pair"])), 6)):
         for item in candidates:
             if len(selected) >= max_ohlc:
@@ -152,6 +161,8 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                 raise ValueError("stale or future completed OHLC")
             accel = sum(volumes[-6:]) / sum(volumes[-12:-6])
             move15 = 100 * (closes[-1] / closes[-4] - 1)
+            if not all(map(math.isfinite, (accel, move15))):
+                raise ValueError("nonfinite OHLC derived metric")
             challenger = round(item["baseline_score"] +
                 max(-25, min(25, move15 * 5)) +
                 max(-15, min(15, (accel - 1) * 10)), 4)
@@ -180,6 +191,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     return {"schema": 1, "mode": "PAPER_ONLY", "buy_approved": False,
         "source": "Kraken public REST (ticker client-observed; OHLC completed)",
         "started_at": started.isoformat(), "as_of": as_of,
+        "ticker_move_reference": "kraken_ticker_today_open_utc",
         "eligible_pairs": len(eligible), "matched_tickers": matched,
         "observed_markets": len(observations), "ohlc_screened": len(selected),
         "watch": watch, "observations": observations, "abstentions": abstentions,
