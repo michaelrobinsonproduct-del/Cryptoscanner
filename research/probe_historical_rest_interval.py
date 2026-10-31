@@ -78,7 +78,9 @@ def compare_rest_bucket(pair, start, expected, *, opener=None, gap_buckets=0):
                 result[key] = value
             return result
         data = json.loads(raw, object_pairs_hook=unique_json_keys)
-        if not isinstance(data, dict) or data.get("error") or not isinstance(data.get("result"), dict):
+        if (not isinstance(data, dict) or set(data) != {"error", "result"} or
+                not isinstance(data["error"], list) or data["error"] or
+                not isinstance(data["result"], dict)):
             raise RuntimeError("Kraken historical REST error")
         result = data["result"]
         names = [name for name in result if name != "last"]
@@ -104,7 +106,7 @@ def compare_rest_bucket(pair, start, expected, *, opener=None, gap_buckets=0):
             if len(row) == 7:
                 trade_id = row[6]
                 if (isinstance(trade_id, bool) or not isinstance(trade_id, (str, int)) or
-                        not str(trade_id) or str(trade_id) in seen_trade_ids):
+                        not str(trade_id).strip() or str(trade_id) in seen_trade_ids):
                     raise RuntimeError("duplicate or invalid REST trade id")
                 seen_trade_ids.add(str(trade_id))
             if any(type(value) is bool for value in row[:3]):
