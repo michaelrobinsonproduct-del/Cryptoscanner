@@ -18,23 +18,35 @@ MAX_INTERVAL_TRADES = 20000
 STEP = 300
 
 
+HEADER = ("timestamp", "price", "volume", "type", "order_type", "misc", "trade_id")
+
+
 def parse_member(archive, name, *, schema_verified=False):
     if not schema_verified:
-        raise RuntimeError("real source CSV schema not yet verified")
+        raise RuntimeError("official header and source identity not verified")
     path = PurePosixPath(name)
-    if not name.endswith(".csv") or len(path.parts) != 1 or ".." in path.parts or "\\" in name:
+    if not name.endswith(".csv") or len(path.parts) != 1 or ".." in path.parts or "\\\\" in name:
         raise ValueError("unsafe trade member")
     matches = [x for x in archive.infolist() if x.filename == name]
     if len(matches) != 1 or matches[0].file_size > MAX_MEMBER_BYTES or matches[0].flag_bits & 1:
         raise ValueError("missing duplicate encrypted or oversized member")
-    records = []
+    records, seen_ids = [], set()
     with archive.open(matches[0]) as raw:
-        for row in csv.reader(io.TextIOWrapper(raw, encoding="utf-8", newline="", errors="strict")):
-            if len(records) >= MAX_ROWS or len(row) != 3:
+        reader = csv.reader(io.TextIOWrapper(raw, encoding="utf-8-sig", newline="", errors="strict"))
+        header = next(reader, None)
+        if header is None or tuple(x.strip() for x in header) != HEADER:
+            raise ValueError("unrecognized official Kraken historical trade CSV header")
+        for row in reader:
+            if len(records) >= MAX_ROWS or len(row) != 7:
                 raise ValueError("invalid trade CSV shape or row cap")
-            timestamp, price, volume = map(float, row)
+            timestamp, price, volume = map(float, row[:3])
             if not all(math.isfinite(x) for x in (timestamp, price, volume)) or timestamp < 0 or price <= 0 or volume <= 0:
                 raise ValueError("invalid trade CSV values")
+            if row[3] not in ("b", "s") or row[4] not in ("l", "m") or not row[6].strip():
+                raise ValueError("invalid trade direction, order type or id")
+            if row[6] in seen_ids:
+                raise ValueError("duplicate trade id")
+            seen_ids.add(row[6])
             records.append((timestamp, price, volume, len(records)))
     if not records:
         raise ValueError("empty trade CSV")
