@@ -48,6 +48,48 @@ def assess_case(runs=None, jobs_by_id=None, artifacts=None, lease=None,
 
 
 class AssessmentTests(unittest.TestCase):
+    def test_blank_conflicting_lease_owner_fails_closed(self):
+        self.assertIn("UNVERIFIABLE_LEASE_EXPIRY",
+            assess_case(lease={"owner": "  ", "lease_expires_at":
+                iso(NOW + dt.timedelta(minutes=10))})["alerts"])
+
+    def test_orphaned_lease_expiry_is_not_a_free_lease(self):
+        self.assertIn("UNVERIFIABLE_LEASE_EXPIRY",
+            assess_case(lease={"owner": None, "lease_expires_at":
+                iso(NOW + dt.timedelta(minutes=10))})["alerts"])
+
+    def test_foreign_live_owner_is_preserved_not_expired(self):
+        result = assess_case(lease={"owner": "different-live-worker",
+            "lease_expires_at": iso(NOW + dt.timedelta(minutes=10))})
+        self.assertEqual(result["lease"], "active")
+        self.assertNotIn("EXPIRED_RESEARCH_LEASE", result["alerts"])
+
+    def test_late_failing_older_dispatch_cannot_hide_behind_newer_green(self):
+        failed = run(1, age=30, conclusion="failure")
+        failed["updated_at"] = iso(NOW - dt.timedelta(minutes=1))
+        success = run(2, age=10)
+        success["updated_at"] = iso(NOW - dt.timedelta(minutes=5))
+        result = assess_case(runs=[success, failed],
+                             jobs_by_id={1: jobs(), 2: jobs()})
+        self.assertIn("LATEST_RESEARCH_RUN_FAILED", result["alerts"])
+
+    def test_completion_order_detects_two_late_skipped_batches(self):
+        skipped1, skipped2, green = run(1, age=30), run(2, age=20), run(3, age=10)
+        skipped1["updated_at"] = iso(NOW - dt.timedelta(minutes=1))
+        skipped2["updated_at"] = iso(NOW - dt.timedelta(minutes=2))
+        green["updated_at"] = iso(NOW - dt.timedelta(minutes=5))
+        result = assess_case(runs=[green, skipped2, skipped1],
+            jobs_by_id={1: jobs(verified="skipped"),
+                        2: jobs(upload="skipped"), 3: jobs()})
+        self.assertIn("REPEATED_GREEN_NO_WORK", result["alerts"])
+
+    def test_long_running_recently_completed_evidence_is_fresh(self):
+        completed = run(1, age=110)
+        completed["updated_at"] = iso(NOW - dt.timedelta(minutes=2))
+        result = assess_case(runs=[completed], jobs_by_id={1: jobs()},
+                             created=NOW - dt.timedelta(hours=4))
+        self.assertNotIn("NO_SUBSTANTIVE_RESEARCH_90M", result["alerts"])
+
     def test_healthy_evidence_run(self):
         result = assess_case()
         self.assertEqual(result["status"], "HEALTHY")
@@ -393,6 +435,40 @@ class ArtifactDiscoveryTests(unittest.TestCase):
 
 
 class AlertTests(unittest.TestCase):
+    def test_alert_readback_wrong_title_fails_delivery(self):
+        class WrongTitle(FakeAPI):
+            def call(self, path, *, method="GET", data=None):
+                result = super().call(path, method=method, data=data)
+                if path.startswith("/issues/") and method == "GET":
+                    return {**result, "title": "unexpected"}
+                return result
+        with self.assertRaisesRegex(RuntimeError, "write not verified"):
+            alert_issue(WrongTitle(), {"status": "ALERT",
+                "alerts": ["EXPIRED_RESEARCH_LEASE"], "latest_run": 1})
+
+    def test_recovery_readback_wrong_body_fails_delivery(self):
+        class WrongRecovery(FakeAPI):
+            def call(self, path, *, method="GET", data=None):
+                result = super().call(path, method=method, data=data)
+                if path.startswith("/issues/") and method == "GET" and result.get("state") == "closed":
+                    return {**result, "body": "not persisted"}
+                return result
+        api = WrongRecovery()
+        alert_issue(api, {"status": "ALERT",
+            "alerts": ["LATEST_RESEARCH_RUN_FAILED"], "latest_run": 1})
+        with self.assertRaisesRegex(RuntimeError, "recovery was not persisted"):
+            alert_issue(api, {"status": "HEALTHY"})
+
+    def test_alert_transport_failure_is_not_reported_as_delivered(self):
+        class FailingAPI(FakeAPI):
+            def call(self, path, *, method="GET", data=None):
+                if path == "/issues" and method == "POST":
+                    raise RuntimeError("issue delivery unavailable")
+                return super().call(path, method=method, data=data)
+        with self.assertRaisesRegex(RuntimeError, "issue delivery unavailable"):
+            alert_issue(FailingAPI(), {"status": "ALERT",
+                "alerts": ["NO_SUBSTANTIVE_RESEARCH_90M"], "latest_run": 1})
+
     def test_dry_run_never_writes(self):
         api = FakeAPI()
         self.assertEqual(alert_issue(api, {"status": "ALERT"}, dry_run=True), "DRY_RUN")
