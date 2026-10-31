@@ -1329,6 +1329,29 @@
       "revision_binding_status": "same_revision_and_directory_consistent_not_source_authenticated",
       "source_trade_archive_sha256_verified": false,
       "recovery_note": "Initial run 41175862810 failed closed on Last-Modified mismatch; next run 41176008483 passed all substantive steps with cache reuse and same-source revision binding. Bounded recapture fallback fixture-tested but not exercised live."
+    },
+    "watchdog_failure_visibility_20261031_30": {
+      "status": "EXACT_CODE_CI_VERIFIED_AND_REAL_ALERT_RECOVERY",
+      "timestamp_utc": "2026-10-31T06:36:40Z",
+      "research_code_commit": "bc52cd961f3dccb0a9b6ef766ef54c66f970885a",
+      "main_workflow_commit": "53a59744bd08a2ee51d3b6c51a564c382e1fcb0c",
+      "verified_run_id": 41177301758,
+      "verified_job_id": 124467399441,
+      "verified_tests": 32,
+      "actual_workflow_conclusion": "success",
+      "actual_watchdog_status": "HEALTHY",
+      "recovery_alert_issue": 37,
+      "alert_issue_state_verified": "closed",
+      "new_failure_injection_cases": [
+        "Queued/in-progress retry cannot hide latest completed failed research run",
+        "Newer completed successful run clears prior failed-run alert even with another queued retry"
+      ],
+      "research_new_evidence": "No new historical source evidence; reliability failure-visibility and alert recovery only",
+      "genuine_predictive_labels": 0,
+      "held_out_lift": "not established",
+      "production_applied": false,
+      "railway_read_only_status": "three known production services offline, no active deployments",
+      "next": "Observe first genuinely scheduled execution of updated 32-test watchdog and continue independent trade completeness; do not claim labels or production recovery."
     }
   },
   "audit": {
