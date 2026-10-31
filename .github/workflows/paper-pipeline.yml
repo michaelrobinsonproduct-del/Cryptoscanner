@@ -27,7 +27,7 @@ jobs:
       - name: Restore checksum-sealed existing ledger (never silently bootstrap)
         run: |
           set -euo pipefail
-          git fetch --no-tags origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          git fetch --no-tags --depth=512 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           git rev-parse refs/remotes/origin/paper-proof-ledger > /tmp/paper-base.sha
           # For segmented ledgers, fetch the exact immutable legacy checkpoint.
           BASE="$(cat /tmp/paper-base.sha)"
