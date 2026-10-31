@@ -1,6 +1,12 @@
 name: Consolidated Kraken Historical Learning (Manual Research Only)
 on:
   workflow_dispatch:
+    inputs:
+      full_source_download:
+        description: 'Download ~10.3 GB of archives (only when new source evidence is required)'
+        required: true
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -24,12 +30,13 @@ jobs:
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v
-      - name: One consolidated bounded real-source pipeline
+      - name: One consolidated bounded real-source pipeline (explicit opt-in only)
+        if: ${{ inputs.full_source_download == true }}
         run: |
           mkdir -p research/output
           python research/run_consolidated_historical_e2e.py --output research/output/consolidated_historical_report.json --pair 0GEUR
       - name: Upload one report only, never source archives
-        if: success()
+        if: ${{ success() && inputs.full_source_download == true }}
         uses: actions/upload-artifact@v4
         with:
           name: consolidated-historical-e2e-evidence
