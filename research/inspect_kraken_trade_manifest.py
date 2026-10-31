@@ -115,6 +115,39 @@ def inspect_archive(archive, wanted):
                     if str(k) in ("sha256", "rows", "first", "last", "min_ts",
                                   "max_ts", "size", "bytes", "checksum", "crc32")}
     summary["selected_file_entries"] = selected_entries
+    # A quarterly manifest is not a signed completeness statement. Nevertheless
+    # reconcile its bounded structural claims against the ZIP central directory.
+    listed = set()
+    if isinstance(files, dict):
+        listed = {k for k in files if isinstance(k, str)}
+    elif isinstance(files, list):
+        for entry in files:
+            if isinstance(entry, str):
+                listed.add(entry)
+            elif isinstance(entry, dict):
+                name = next((entry[k] for k in ("name", "file", "filename", "path")
+                             if isinstance(entry.get(k), str)), None)
+                if name:
+                    listed.add(name)
+    pair_count = obj.get("pairs")
+    structural = {
+        "manifest_file_count": len(files) if isinstance(files, (dict, list)) else None,
+        "manifest_pair_count": pair_count if type(pair_count) is int else None,
+        "file_count_matches_pair_count": (
+            len(files) == pair_count if isinstance(files, (dict, list))
+            and type(pair_count) is int else None),
+        "listed_selected_members": {name: name in listed for name in wanted},
+        "listed_selected_members_in_zip": {
+            name: name in by_name and name in listed for name in wanted},
+        "source_authenticated": False,
+        "complete_trade_intervals_verified": 0,
+    }
+    coverage = obj.get("coverage")
+    if isinstance(coverage, dict):
+        structural["coverage_fields"] = {
+            key: scalar(coverage[key]) for key in ("start", "end")
+            if key in coverage}
+    summary["structural_consistency"] = structural
     return {
         "status": "official_manifest_structurally_inspected_not_authenticated",
         "manifest_sha256": hashlib.sha256(raw).hexdigest(),
