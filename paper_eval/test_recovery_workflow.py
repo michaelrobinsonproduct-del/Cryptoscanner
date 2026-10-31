@@ -38,7 +38,8 @@ class RecoveryWorkflowTests(unittest.TestCase):
             self.assertNotIn(forbidden, self.workflow)
 
     def test_bounded_artifact_download_and_proof_retention(self):
-        for phrase in ("MAX_TOTAL_BYTES", "MAX_FILE_BYTES",
+        for phrase in ("--max-filesize 20000000", "--max-time 120",
+                       "--connect-timeout 15", "MAX_TOTAL_BYTES", "MAX_FILE_BYTES",
                        "stat.S_ISLNK", "Unsafe ZIP member",
                        "retention-days: 90", "if-no-files-found: error"):
             self.assertIn(phrase, self.workflow)
