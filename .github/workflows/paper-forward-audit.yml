@@ -25,6 +25,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # PR checks must execute the immutable PR head, not a synthetic merge.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
