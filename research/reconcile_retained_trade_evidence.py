@@ -13,6 +13,7 @@ from math import isfinite
 from pathlib import Path
 
 from audit_trade_candidate_windows import audit_candidate_windows
+from audit_point_in_time_candidates import audit_point_in_time_candidates
 from diagnose_real_trade_candle_overlap import diagnose
 from match_historical_trades_to_ohlcvt import parse_member, aggregate
 from verify_trade_candle_provenance import verify_open_boundary
@@ -205,6 +206,7 @@ def reconcile(ohlc_artifact, trade_artifact, *, expected_ohlc_digest=None,
                          source[ts], records, independent_trade_source=True
                      )["status"] == "verified_open_boundary"}
             audit = audit_candidate_windows(ohlc, exact)
+            feature_audit = audit_point_in_time_candidates(ohlc, exact)
             # Full-source gap metadata is comparable only when every source
             # row was retained. Otherwise retained-tail gap counts are a
             # separate bounded subset, not a replacement for source totals.
@@ -223,6 +225,7 @@ def reconcile(ohlc_artifact, trade_artifact, *, expected_ohlc_digest=None,
                 "mismatch_counts": diagnostic.get("mismatch_counts", {}),
                 "candidate_contiguous_horizon_windows": candidate_windows,
                 "candidate_outcome_audit": audit,
+                "point_in_time_feature_audit": feature_audit,
                 "verified_complete_intervals": 0, "real_labels": 0,
                 "no_trade_or_source_gap_semantics": "unknown",
                 "ohlc_retained_interior_gap_events": audit["ohlc_interior_gap_events"],
