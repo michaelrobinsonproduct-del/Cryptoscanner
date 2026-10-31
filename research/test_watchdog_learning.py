@@ -304,6 +304,44 @@ class BoundedSourceWatchdogTests(unittest.TestCase):
         self.assertIn("LATEST_RESEARCH_RUN_FAILED", result["alerts"])
 
 
+    def test_newer_source_success_cannot_hide_primary_failure(self):
+        result = assess(NOW, CREATED, [run(1, age=20, conclusion="failure")],
+                        {1: jobs()}, [artifact(), artifact(name="kraken-bounded-independent-trade-members")],
+                        {"concurrency": {"owner": None}},
+                        [gap_run(10, age=5)], {10: gap_jobs()})
+        self.assertIn("LATEST_RESEARCH_RUN_FAILED", result["alerts"])
+
+    def test_newer_primary_success_cannot_hide_source_failure(self):
+        result = assess(NOW, CREATED, [run(1, age=5)], {1: jobs()},
+                        [artifact(), artifact(name="kraken-bounded-independent-trade-members")],
+                        {"concurrency": {"owner": None}},
+                        [gap_run(10, age=20, conclusion="failure")], {10: gap_jobs()})
+        self.assertIn("LATEST_RESEARCH_RUN_FAILED", result["alerts"])
+
+    def test_newer_source_success_cannot_hide_primary_unverified_green(self):
+        result = assess(NOW, CREATED, [run(1, age=20)], {1: []},
+                        [artifact(), artifact(name="kraken-bounded-independent-trade-members")],
+                        {"concurrency": {"owner": None}},
+                        [gap_run(10, age=5)], {10: gap_jobs()})
+        self.assertIn("LATEST_GREEN_RUN_UNVERIFIED", result["alerts"])
+
+    def test_newer_primary_success_cannot_hide_source_unverified_green(self):
+        result = assess(NOW, CREATED, [run(1, age=5)], {1: jobs()},
+                        [artifact(), artifact(name="kraken-bounded-independent-trade-members")],
+                        {"concurrency": {"owner": None}},
+                        [gap_run(10, age=20)], {10: []})
+        self.assertIn("LATEST_GREEN_RUN_UNVERIFIED", result["alerts"])
+
+    def test_same_stream_recovery_clears_old_failure_despite_other_stream(self):
+        result = assess(NOW, CREATED,
+                        [run(1, age=20, conclusion="failure"), run(2, age=10)],
+                        {1: jobs(), 2: jobs()},
+                        [artifact(), artifact(name="kraken-bounded-independent-trade-members")],
+                        {"concurrency": {"owner": None}},
+                        [gap_run(10, age=5)], {10: gap_jobs()})
+        self.assertNotIn("LATEST_RESEARCH_RUN_FAILED", result["alerts"])
+
+
 class FakeAPI:
     def __init__(self):
         self.issues = {}
