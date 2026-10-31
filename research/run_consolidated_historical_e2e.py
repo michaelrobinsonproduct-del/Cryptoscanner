@@ -95,6 +95,38 @@ def analyze(ohlc_z, trade_z, *, pair="0GEUR", schema_attested=False):
     return result
 
 
+def reconstruct_verified_outcomes(ohlc_rows, trades, *, source_complete=False,
+                                  trade_timestamp_semantics_verified=False,
+                                  min_quote_volume=0):
+    """Gate real labels on source completeness AND exact independent matching.
+
+    Never interpolate no-trade intervals, assume trade order, or use future
+    liquidity for entry eligibility. All candidate horizons remain unverified
+    until the independent source completeness and timestamp gates are met.
+    """
+    report = {"status": "abstain_unverified_independent_source",
+              "real_labels": 0, "horizons": {},
+              "held_out_evaluation": "not_authorized"}
+    if not source_complete or not trade_timestamp_semantics_verified:
+        return report
+    matching = compare(ohlc_rows, trades, independently_complete=True)
+    report["comparison"] = matching
+    if matching["status"] != "exact_trade_candle_match":
+        report["status"] = "abstain_trade_ohlc_mismatch"
+        return report
+    if not ohlc_rows:
+        return report
+    rows = [Candle(int(r[0]), float(r[2]), float(r[4]), float(r[5])) for r in ohlc_rows]
+    result = reconstruct_as_of(rows, rows[0].timestamp + 300,
+                               source_timestamp_semantics="candle_open_utc",
+                               min_quote_volume=min_quote_volume)
+    report["status"] = result["status"]
+    report["horizons"] = result.get("horizons", {})
+    report["real_labels"] = sum(v.get("status") == "mature"
+                                for v in report["horizons"].values())
+    return report
+
+
 def run(output, *, pair="0GEUR"):
     output = Path(output)
     if output.exists():
