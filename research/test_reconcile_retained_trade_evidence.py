@@ -82,6 +82,18 @@ class RetainedReconciliationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 reconcile(o, t, expected_trade_digest="0"*64)
 
+    def test_unpacked_actions_inner_zip_reuse(self):
+        with tempfile.TemporaryDirectory() as root:
+            o, t = self.fixture(root)
+            oi, ti = Path(root)/"inner_o.zip", Path(root)/"inner_t.zip"
+            with zipfile.ZipFile(o) as z:
+                oi.write_bytes(z.read("reusable_ohlc_evidence.zip"))
+            with zipfile.ZipFile(t) as z:
+                ti.write_bytes(z.read("bounded_independent_trade_members.zip"))
+            r = reconcile(oi, ti)
+            self.assertEqual(r["markets"]["ABUSD.csv"]["exact_trade_ohlc_candidate_intervals"], 1)
+            self.assertEqual(r["real_labels"], 0)
+
     def test_missing_future_candles_cannot_create_candidate_windows(self):
         timestamps = {300 + i*300 for i in range(13)}
         self.assertEqual(_candidate_windows(timestamps)["1"], 1)
