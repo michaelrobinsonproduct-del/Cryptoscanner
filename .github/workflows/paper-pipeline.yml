@@ -109,6 +109,32 @@ jobs:
           git show refs/remotes/origin/paper-proof-ledger:paper-ledger.json > /tmp/paper-ledger-readback.json
           cmp /tmp/paper-ledger-next.json /tmp/paper-ledger-readback.json
           echo "PAPER_LEDGER_REMOTE_READBACK_VERIFIED $(git rev-parse HEAD)"
+      - name: Render verified UTC results after ledger remote readback
+        run: |
+          set -euo pipefail
+          LEDGER_COMMIT="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+          # Restore immutable scanner source locally; do not touch remote ledger.
+          git checkout --detach "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python -m paper_pov.results_report \
+            --scan paper_pov/output/latest.json \
+            --scoreboard paper_pov/output/scoreboard.json \
+            --run-id "$GITHUB_RUN_ID" \
+            --source-sha "$GITHUB_SHA" \
+            --ledger-commit "$LEDGER_COMMIT" \
+            --output-dir paper_pov/output/results
+          (cd paper_pov/output/results && sha256sum -c SHA256SUMS)
+          cat paper_pov/output/results/results.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve public human-readable paper results
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-paper-results-${{ github.run_id }}
+          path: |
+            paper_pov/output/results/results.md
+            paper_pov/output/results/results.json
+            paper_pov/output/results/SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
       - name: Publish actual scoreboard to issue 34 and verify comment readback
         env:
           GH_TOKEN: ${{ github.token }}
@@ -129,6 +155,7 @@ jobs:
             "Baseline/challenger: ranking recorded, unbiased evaluation PENDING; production applied: NO",
             "Ledger SHA256: "+s["ledger_sha256"],
             "Persistence: non-force push and exact remote readback VERIFIED; downloadable 90-day SHA256 artifact in run.",
+            "Readable UTC WATCH results: https://github.com/"+os.environ["GITHUB_REPOSITORY"]+"/actions/runs/"+os.environ["GITHUB_RUN_ID"]+" (job summary + checksummed artifact public-paper-results-"+os.environ["GITHUB_RUN_ID"]+").",
             "Stage 1: one scheduled scan/hour pending independent multi-run reliability acceptance; gaps over 45m abstain; no model promotion."
           ]
           Path("/tmp/paper-issue-comment.txt").write_text("\n\n".join(lines))
