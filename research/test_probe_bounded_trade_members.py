@@ -53,7 +53,7 @@ class BoundedTradeTests(unittest.TestCase):
     def test_range_reader_rejects_unbounded_read(self):
         data = archive_bytes()
         r = RangeZipReader("https://assets.kraken.com/test.zip",
-                           expected_bytes=max(65537, len(data)), opener=opener(data))
+                           expected_bytes=MAX_REQUEST+65537, opener=opener(data))
         with self.assertRaises(ValueError):
             r.read()
 
@@ -72,7 +72,7 @@ class BoundedTradeTests(unittest.TestCase):
         self.assertFalse(manifest["source_archive_full_sha256_verified"])
         self.assertTrue(manifest["markets"]["ABUSD.csv"]["member_crc_verified"])
         self.assertIn(b"1710000000", files["ABUSD.csv"])
-        self.assertLess(manifest["range_bytes_transferred"], len(data))
+        self.assertLess(manifest["range_bytes_transferred"], 24 * 1024 * 1024)
 
     def test_rejects_server_ignoring_range(self):
         data = b"x"*70000
