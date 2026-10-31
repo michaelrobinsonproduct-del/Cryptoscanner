@@ -78,21 +78,21 @@ def unpack_blob(data, kind):
 
 
 def pack_snapshot(state):
-    ledger.verify(state)
+    ledger.verify(state, MAX_RAW_BYTES)
     return pack_blob(state, SNAPSHOT_KIND)
 
 
 def unpack_snapshot(data):
     state = unpack_blob(data, SNAPSHOT_KIND)
-    ledger.verify(state)
+    ledger.verify(state, MAX_RAW_BYTES)
     return state
 
 
 def make_segment(before, after, report, source_sha):
     """Capture immutable input evidence and independently replay transition."""
-    ledger.verify(before)
-    ledger.verify(after)
-    replayed = ledger.advance(before, report, source_sha)
+    ledger.verify(before, MAX_RAW_BYTES)
+    ledger.verify(after, MAX_RAW_BYTES)
+    replayed = ledger.advance(before, report, source_sha, MAX_RAW_BYTES)
     if ledger.canonical(replayed) != ledger.canonical(after):
         raise ValueError("Segment does not replay to exact after-state")
     return pack_blob({
@@ -130,7 +130,7 @@ def replay_segments(segments, start=None):
             raise ValueError("Missing, duplicated or out-of-order segment")
         if segment["before_sha256"] != state["sha256"]:
             raise ValueError("Segment predecessor mismatch")
-        next_state = ledger.advance(state, segment["report"], segment["source_sha"])
+        next_state = ledger.advance(state, segment["report"], segment["source_sha"], MAX_RAW_BYTES)
         if next_state["sha256"] != segment["after_sha256"]:
             raise ValueError("Segment transition mismatch")
         state = next_state
@@ -153,3 +153,18 @@ def verify_manifest_chain(entries, segments, checkpoint=None):
         if entry != manifest_entry(data):
             raise ValueError("Segment manifest mismatch")
     return replay_segments(segments, start=checkpoint)
+
+
+def advance_segmented(snapshot_bytes, report, source_sha):
+    """One fail-closed pure transaction: old packed state -> new packed state + delta.
+
+    Both returned byte strings MUST be committed together with a non-force
+    single-writer Git push, followed by independent remote byte readback.
+    Caller must not publish the snapshot without its segment, or vice versa.
+    """
+    before = unpack_snapshot(snapshot_bytes)
+    after = ledger.advance(before, report, source_sha, MAX_RAW_BYTES)
+    packed = pack_snapshot(after)  # enforce the *actual* 12MB persisted limit
+    segment = make_segment(before, after, report, source_sha)
+    score = ledger.scoreboard(after, MAX_RAW_BYTES)
+    return packed, segment, score
