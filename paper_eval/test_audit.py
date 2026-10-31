@@ -123,6 +123,33 @@ class AuditTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Duplicate observation"):
             evaluate(state, 1, 1)
 
+    def test_archived_scans_counted_without_inventing_old_labels(self):
+        state = scenario()
+        old = state["runs"].pop(0)
+        old_predictions = [p for p in state["predictions"] if p["run_id"] == old["id"]]
+        old_ids = {p["prediction_id"] for p in old_predictions}
+        state["predictions"] = [p for p in state["predictions"] if p["run_id"] != old["id"]]
+        state["observations"] = [o for o in state["observations"] if o["run_id"] != old["id"]]
+        state["outcomes"] = [o for o in state["outcomes"] if o["prediction_id"] not in old_ids]
+        state["archived"] = {"scans": 1, "predictions": len(old_predictions),
+                             "observations": old["observation_count"],
+                             "matured_labels": 12, "gap_abstentions": 0,
+                             "observed_30pct_hits": 1}
+        state["archive_index"] = [old]
+        ledger.seal(state)
+        out = evaluate(state, 1, 1)
+        self.assertEqual(out["actual_scans"], 5)
+        self.assertEqual(out["active_scans_evaluated"], 4)
+        self.assertEqual(out["archived_scans_not_reconstructed"], 1)
+        self.assertEqual(out["comparable_runs"], 0)
+
+    def test_retained_run_missing_observations_rejected(self):
+        state = scenario(offsets=(0,))
+        state["observations"] = state["observations"][1:]
+        ledger.seal(state)
+        with self.assertRaisesRegex(ValueError, "Observation count mismatch"):
+            evaluate(state, 1, 1)
+
     def test_checksum_rejected_before_evaluation(self):
         state = scenario(offsets=(0,))
         state["predictions"][0]["price"] = 999
