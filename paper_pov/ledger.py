@@ -11,7 +11,9 @@ from pathlib import Path
 from .scanner import utc, atomic_json
 
 HORIZONS = (1, 6, 24, 48)
-MAX_BYTES = 2_000_000
+MAX_BYTES = 12_000_000
+RETENTION = dt.timedelta(hours=50)
+ARCHIVE_INDEX_RETENTION = dt.timedelta(days=30)
 MAX_DELAY = dt.timedelta(minutes=45)
 
 def canonical(data):
@@ -49,6 +51,13 @@ def verify(state):
     keys = [(o["prediction_id"], o["horizon_hours"]) for o in state["outcomes"]]
     if len(keys) != len(set(keys)):
         raise ValueError("Duplicate outcome")
+    summary = state.get("archived", {})
+    if not isinstance(summary, dict) or any(not isinstance(v, int) or v < 0 for v in summary.values()):
+        raise ValueError("Invalid archive summary")
+    if not isinstance(state.get("archive_index", []), list):
+        raise ValueError("Invalid archive index")
+    if state["generation"] != summary.get("scans", 0) + len(runs):
+        raise ValueError("Nonregressing generation/scan count mismatch")
     if len(canonical(state)) > MAX_BYTES:
         raise ValueError("Ledger capacity reached: archive/partition before proceeding")
     return state
@@ -74,7 +83,12 @@ def advance(original, report, source_sha):
         raise ValueError("Market observation count mismatch")
     report_hash = hashlib.sha256(canonical(report)).hexdigest()
     run_id = hashlib.sha256((source_sha + "|" + report_hash).encode()).hexdigest()
-    state = {k: list(v) if isinstance(v, list) else v for k, v in original.items()}
+    state = {k: list(v) if isinstance(v, list) else
+        (dict(v) if isinstance(v, dict) else v) for k, v in original.items()}
+    state.setdefault("archived", {"scans": 0, "predictions": 0,
+        "observations": 0, "matured_labels": 0,
+        "gap_abstentions": 0, "observed_30pct_hits": 0})
+    state.setdefault("archive_index", [])
     state["runs"].append({"id": run_id, "as_of": report["as_of"],
         "source_sha": source_sha, "report_sha256": report_hash,
         "watch_count": len(watch), "observation_count": len(observations)})
@@ -136,6 +150,32 @@ def advance(original, report, source_sha):
                     "return_pct": round(ret, 4), "observed_peak_pct": round(peak, 4),
                     "observed_30pct_hit": peak >= 30})
             existing.add(key)
+    # Compact only after all four 1/6/24/48h horizons have matured or abstained.
+    # Individual historical records remain in 90-day checksummed run artifacts;
+    # the Git branch retains the latest 50h and 30d run provenance index.
+    cutoff = as_of - RETENTION
+    old_runs = [r for r in state["runs"] if utc(r["as_of"]) < cutoff]
+    old_predictions = [p for p in state["predictions"] if utc(p["as_of"]) < cutoff]
+    old_ids = {p["prediction_id"] for p in old_predictions}
+    archived_outcomes = [o for o in state["outcomes"] if o["prediction_id"] in old_ids]
+    if any(sum((o["prediction_id"] == p["prediction_id"]) for o in archived_outcomes) != len(HORIZONS)
+           for p in old_predictions):
+        raise ValueError("Cannot archive prediction with immature or missing outcomes")
+    old_observations = [o for o in state["observations"] if utc(o["at"]) < cutoff]
+    summary = state["archived"]
+    summary["scans"] += len(old_runs)
+    summary["predictions"] += len(old_predictions)
+    summary["observations"] += len(old_observations)
+    summary["matured_labels"] += sum(o["status"] == "MATURED_OBSERVED" for o in archived_outcomes)
+    summary["gap_abstentions"] += sum(o["status"] == "ABSTAIN_GAP" for o in archived_outcomes)
+    summary["observed_30pct_hits"] += sum(o.get("observed_30pct_hit") is True for o in archived_outcomes)
+    state["archive_index"].extend(old_runs)
+    state["archive_index"] = [r for r in state["archive_index"]
+        if utc(r["as_of"]) >= as_of - ARCHIVE_INDEX_RETENTION]
+    state["runs"] = [r for r in state["runs"] if utc(r["as_of"]) >= cutoff]
+    state["predictions"] = [p for p in state["predictions"] if p["prediction_id"] not in old_ids]
+    state["observations"] = [o for o in state["observations"] if utc(o["at"]) >= cutoff]
+    state["outcomes"] = [o for o in state["outcomes"] if o["prediction_id"] not in old_ids]
     state["generation"] += 1
     seal(state)
     verify(state)
@@ -144,12 +184,14 @@ def advance(original, report, source_sha):
 def scoreboard(state):
     verify(state)
     outcomes = state["outcomes"]
-    return {"generation": state["generation"], "actual_scans": len(state["runs"]),
-        "immutable_predictions": len(state["predictions"]),
-        "market_observations": len(state["observations"]),
-        "matured_labels": sum(x["status"] == "MATURED_OBSERVED" for x in outcomes),
-        "gap_abstentions": sum(x["status"] == "ABSTAIN_GAP" for x in outcomes),
-        "observed_30pct_hits": sum(x.get("observed_30pct_hit") is True for x in outcomes),
+    archived = state.get("archived", {})
+    return {"generation": state["generation"],
+        "actual_scans": archived.get("scans", 0) + len(state["runs"]),
+        "immutable_predictions": archived.get("predictions", 0) + len(state["predictions"]),
+        "market_observations": archived.get("observations", 0) + len(state["observations"]),
+        "matured_labels": archived.get("matured_labels", 0) + sum(x["status"] == "MATURED_OBSERVED" for x in outcomes),
+        "gap_abstentions": archived.get("gap_abstentions", 0) + sum(x["status"] == "ABSTAIN_GAP" for x in outcomes),
+        "observed_30pct_hits": archived.get("observed_30pct_hits", 0) + sum(x.get("observed_30pct_hit") is True for x in outcomes),
         "held_out_lift": None, "production_applied": False,
         "ledger_sha256": state["sha256"]}
 
