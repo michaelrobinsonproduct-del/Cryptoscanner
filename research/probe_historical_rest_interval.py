@@ -55,6 +55,7 @@ def compare_rest_bucket(pair, start, expected, *, opener=None, gap_buckets=0):
     seen_trade_ids = set()
     page_trace = []
     gap_has_trades = False
+    first_after_end_trade_timestamp = None
     for page in range(MAX_PAGES):
         requested_since = cursor
         url = BASE + "?" + urllib.parse.urlencode({"pair": pair, "since": str(cursor), "count": 1000})
@@ -125,6 +126,8 @@ def compare_rest_bucket(pair, start, expected, *, opener=None, gap_buckets=0):
             page_last = t
             if t >= witness_end:
                 reached_after = True
+                if first_after_end_trade_timestamp is None:
+                    first_after_end_trade_timestamp = t
                 continue
             if t >= start + STEP:
                 gap_has_trades = True
@@ -147,6 +150,7 @@ def compare_rest_bucket(pair, start, expected, *, opener=None, gap_buckets=0):
             "last_inspected_timestamp": page_last,
             "page_sha256": digests[-1],
             "after_end_witness": reached_after,
+            "first_after_end_trade_timestamp": first_after_end_trade_timestamp,
         })
         if reached_after:
             if not seen and page == 0 and float(rows[0][2]) >= witness_end:
@@ -158,8 +162,14 @@ def compare_rest_bucket(pair, start, expected, *, opener=None, gap_buckets=0):
                 math.isclose(a[1], b[1], rel_tol=1e-9, abs_tol=0) and
                 math.isclose(a[2], b[2], rel_tol=1e-9, abs_tol=0)
                 for a, b in zip(seen, expected))
+            # A distant trade (possibly months later) is not a witness for
+            # the immediately following retained bucket. Never call that a
+            # corroborated empty gap, even when the preceding trades match.
+            following_near = bool(gap_buckets and first_after_end_trade_timestamp is not None
+                                  and first_after_end_trade_timestamp < witness_end + STEP)
             status = ("abstain_rest_archive_disagreement" if not equal else
                       "abstain_rest_gap_contains_trades" if gap_has_trades else
+                      "abstain_rest_gap_following_witness_distant" if gap_buckets and not following_near else
                       "independent_rest_gap_candidate_correlated_not_complete" if gap_buckets else
                       "independent_rest_bucket_correlated")
             return {"status": status,
@@ -168,7 +178,9 @@ def compare_rest_bucket(pair, start, expected, *, opener=None, gap_buckets=0):
                     "rest_page_sha256": digests, "rest_cursor_trace": page_trace,
                     "after_end_witness": True,
                     "witness_end": witness_end,
-                    "candidate_empty_gap_buckets": [start + STEP] if gap_buckets and equal and not gap_has_trades else [],
+                    "first_after_end_trade_timestamp": first_after_end_trade_timestamp,
+                    "following_bucket_witness_near": following_near,
+                    "candidate_empty_gap_buckets": [start + STEP] if gap_buckets and equal and not gap_has_trades and following_near else [],
                     "independent_complete_historical_intervals": 0,
                     "independent_quarterly_completeness_verified": False,
                     "no_trade_intervals_verified": 0, "real_labels": 0,
