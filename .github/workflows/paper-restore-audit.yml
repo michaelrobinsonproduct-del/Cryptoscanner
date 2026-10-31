@@ -1,0 +1,122 @@
+name: Role B one-shot public paper artifact recovery proof (read-only)
+on:
+  pull_request:
+    paths:
+      - 'paper_eval/recovery.py'
+      - 'paper_eval/test_recovery.py'
+      - 'paper_eval/test_recovery_workflow.py'
+      - '.github/workflows/paper-restore-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: paper-artifact-recovery-readonly
+  cancel-in-progress: false
+jobs:
+  recovery-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact-source synthetic recovery and paper contracts
+        run: |
+          set -euo pipefail
+          echo "PAPER_RECOVERY_SOURCE_SHA=$(git rev-parse HEAD)"
+          python -m unittest discover -s paper_eval -p 'test_*.py' -v
+          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+      - name: Independently recover latest successful scheduled public paper artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs" \
+            -f event=schedule -f status=success -f per_page=20 > /tmp/paper-scheduled-runs.json
+          python - <<'PY' > /tmp/paper-run-id.txt
+          import json
+          runs=json.load(open("/tmp/paper-scheduled-runs.json"))["workflow_runs"]
+          if not runs: raise ValueError("No successful genuine scheduled paper scan")
+          print(runs[0]["id"])
+          PY
+          RUN_ID="$(cat /tmp/paper-run-id.txt)"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" > /tmp/paper-artifacts.json
+          python - <<'PY' > /tmp/paper-artifact-id.txt
+          import json
+          run_id=open("/tmp/paper-run-id.txt").read().strip()
+          items=json.load(open("/tmp/paper-artifacts.json"))["artifacts"]
+          matches=[a for a in items if a["name"]=="public-paper-ledger-"+run_id and not a["expired"]]
+          if len(matches)!=1: raise ValueError("Missing or ambiguous unexpired scan artifact")
+          print(matches[0]["id"])
+          PY
+          ARTIFACT_ID="$(cat /tmp/paper-artifact-id.txt)"
+          curl --fail --silent --show-error --location --retry 2 \
+            --max-filesize 20000000 --max-time 120 --connect-timeout 15 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" \
+            -o /tmp/public-paper-bundle.zip
+          python - <<'PY'
+          import os,stat,zipfile
+          from pathlib import Path,PurePosixPath
+          from paper_eval.recovery import DATA_FILES, FILES, MAX_FILE_BYTES, MAX_TOTAL_BYTES
+          root=Path("/tmp/paper-restored");root.mkdir()
+          with zipfile.ZipFile("/tmp/public-paper-bundle.zip") as z:
+              entries=z.infolist()
+              if len(entries)!=len(FILES): raise ValueError("Unexpected ZIP member count")
+              names=[PurePosixPath(e.filename) for e in entries]
+              if {p.name for p in names}!=FILES or len({str(p.parent) for p in names})!=1:
+                  raise ValueError("Unexpected ZIP member paths")
+              if any(p.is_absolute() or ".." in p.parts for p in names):
+                  raise ValueError("Unsafe ZIP member path")
+              if sum(e.file_size for e in entries)>MAX_TOTAL_BYTES:
+                  raise ValueError("Oversized ZIP")
+              for e,p in zip(entries,names):
+                  if e.file_size>MAX_FILE_BYTES or stat.S_ISLNK(e.external_attr >> 16):
+                      raise ValueError("Unsafe ZIP member")
+                  (root/p.name).write_bytes(z.read(e))
+          PY
+          git fetch --no-tags --depth=40 origin refs/heads/paper-proof-ledger
+          : > /tmp/paper-matched-commit.txt
+          while IFS= read -r COMMIT; do
+            if git show "$COMMIT:paper-ledger.json" > /tmp/paper-git-ledger.json 2>/dev/null; then
+              if cmp -s /tmp/paper-restored/ledger.json /tmp/paper-git-ledger.json; then
+                printf '%s\n' "$COMMIT" > /tmp/paper-matched-commit.txt
+                break
+              fi
+            fi
+          done < <(git rev-list --first-parent --max-count=40 FETCH_HEAD)
+          test -s /tmp/paper-matched-commit.txt || { echo "NO_IMMUTABLE_GIT_LEDGER_MATCH"; exit 1; }
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from paper_eval.recovery import load_bundle,verify_bundle
+          from paper_pov.scanner import atomic_json
+          commit=Path("/tmp/paper-matched-commit.txt").read_text().strip()
+          proof=verify_bundle(load_bundle("/tmp/paper-restored"),
+              Path("/tmp/paper-git-ledger.json").read_bytes(),commit)
+          runs=json.loads(Path("/tmp/paper-scheduled-runs.json").read_text())["workflow_runs"]
+          run=next(r for r in runs if str(r["id"])==Path("/tmp/paper-run-id.txt").read_text().strip())
+          if run["event"]!="schedule" or run["conclusion"]!="success":
+              raise ValueError("Artifact source is not successful unattended schedule")
+          if proof["remote_git_bytes_match"] is not True:
+              raise ValueError("Independent immutable ledger readback mismatch")
+          if proof["source_sha"]!=run["head_sha"]:
+              raise ValueError("Artifact report source differs from scheduled workflow SHA")
+          proof["scheduled_run_id"]=run["id"]
+          proof["artifact_id"]=int(Path("/tmp/paper-artifact-id.txt").read_text())
+          atomic_json("/tmp/paper-recovery-proof.json",proof)
+          print("PAPER_REAL_ARTIFACT_RECOVERY_VERIFIED",json.dumps(proof,sort_keys=True))
+          PY
+      - name: Publish read-only SHA256 recovery proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-readonly-recovery-proof
+          path: /tmp/paper-recovery-proof.json
+          retention-days: 90
+          if-no-files-found: error
