@@ -51,12 +51,16 @@ def load_ohlc_starts(path, market):
     return {int(row[0]) for row in candles}, digest
 
 
-def select_bracketed_gap(trades_path, ohlc_path):
+def select_bracketed_gap(trades_path, ohlc_path, *, candidate_index=0):
     """Select one bounded single-gap candidate, validating ALL trade members."""
     path = Path(trades_path)
     if not path.is_file() or path.stat().st_size > MAX_TRADE_ARTIFACT:
         raise ValueError("missing or oversized retained trade evidence")
-    candidate = None
+    if type(candidate_index) is not int or not 0 <= candidate_index <= 3:
+        raise ValueError("candidate index must be a bounded integer 0..3")
+    # Validate every retained trade member before consulting the OHLC source.
+    # A malformed later market must not be hidden by an earlier candidate.
+    candidate_markets = []
     with zipfile.ZipFile(path) as archive:
         names = sorted(n for n in archive.namelist()
                        if n.startswith("trades/") and n.endswith(".csv"))
@@ -77,25 +81,33 @@ def select_bracketed_gap(trades_path, ohlc_path):
                 records = parse_member(z, market + ".csv", schema_verified=True)
             _, buckets = aggregate(records)
             starts = sorted(buckets)
+            gaps = []
             for start in starts:
-                if (candidate is None and start + 2 * STEP in buckets and
-                        start + STEP not in buckets and
+                if (start + 2 * STEP in buckets and start + STEP not in buckets and
                         1 <= len(buckets[start]) <= MAX_EXPECTED_TRADES and
                         1 <= len(buckets[start + 2 * STEP]) <= MAX_EXPECTED_TRADES):
-                    candidate = (market, start, buckets[start], buckets[start + 2 * STEP])
-    if candidate is None:
-        return None
-    market, start, expected, following = candidate
-    ohlc_starts, digest = load_ohlc_starts(ohlc_path, market)
-    if not (start in ohlc_starts and start + 2 * STEP in ohlc_starts and
-            start + STEP not in ohlc_starts):
-        return None
-    return market, start, expected, following, digest
+                    gaps.append(start)
+            if gaps:
+                candidate_markets.append((market, buckets, gaps))
+    # Index only gaps corroborated by both observed OHLC bracket candles.
+    # A candidate rejected by the OHLC evidence must not prevent examining
+    # a later bounded candidate; no missing interval is declared no-trade.
+    remaining = candidate_index
+    for market, buckets, gaps in candidate_markets:
+        ohlc_starts, digest = load_ohlc_starts(ohlc_path, market)
+        for start in gaps:
+            if (start in ohlc_starts and start + 2 * STEP in ohlc_starts and
+                    start + STEP not in ohlc_starts):
+                if remaining == 0:
+                    return (market, start, buckets[start],
+                            buckets[start + 2 * STEP], digest)
+                remaining -= 1
+    return None
 
-
-def audit_bracketed_gap(trades_path, ohlc_path, *, opener=None):
+def audit_bracketed_gap(trades_path, ohlc_path, *, opener=None, candidate_index=0):
     base = {
         "status": "abstain_no_bracketed_retained_gap",
+        "candidate_index": candidate_index,
         "candidate_empty_gap_buckets": [],
         "independent_complete_historical_intervals": 0,
         "independent_quarterly_completeness_verified": False,
@@ -105,7 +117,7 @@ def audit_bracketed_gap(trades_path, ohlc_path, *, opener=None):
         "production_modified": False,
         "source_trade_artifact_sha256": _bounded_sha256(trades_path, MAX_TRADE_ARTIFACT),
     }
-    selected = select_bracketed_gap(trades_path, ohlc_path)
+    selected = select_bracketed_gap(trades_path, ohlc_path, candidate_index=candidate_index)
     if selected is None:
         return base
     market, start, expected, following, ohlc_sha = selected
@@ -174,11 +186,14 @@ def main():
     parser.add_argument("--retained-trades", required=True)
     parser.add_argument("--ohlc", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--candidate-index", type=int, default=0,
+                        help="0..3: select an alternate OHLC-bracketed gap candidate")
     args = parser.parse_args()
     target = Path(args.output)
     if target.exists():
         raise FileExistsError("refuse historical gap report overwrite")
-    result = audit_bracketed_gap(args.retained_trades, args.ohlc)
+    result = audit_bracketed_gap(args.retained_trades, args.ohlc,
+                                 candidate_index=args.candidate_index)
     raw = (json.dumps(result, sort_keys=True) + "\n").encode()
     if len(raw) > 8192:
         raise ValueError("oversized historical gap report")
