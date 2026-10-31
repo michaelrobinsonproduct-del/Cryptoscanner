@@ -4,7 +4,7 @@ Trade timestamps must originate from independently captured, source-identified
 Kraken time-and-sales records, NOT derived from the OHLC file being checked.
 No network, trading, archive downloads, or production reads/writes.
 """
-from math import isfinite
+from math import isfinite, isclose
 
 STEP = 300
 
@@ -46,11 +46,16 @@ def verify_open_boundary(candle, trades, *, independent_trade_source=False):
     if any(t[0] < timestamp or t[0] >= timestamp + STEP or t[1] <= 0 or t[2] <= 0 for t in ordered):
         return {"status": "timestamp_boundary_mismatch"}
     prices = [t[1] for t in ordered]
-    if not (abs(prices[0] - opening) <= max(1e-8, abs(opening)*1e-9)
-            and abs(prices[-1] - close) <= max(1e-8, abs(close)*1e-9)
-            and abs(max(prices) - high) <= max(1e-8, abs(high)*1e-9)
-            and abs(min(prices) - low) <= max(1e-8, abs(low)*1e-9)
-            and abs(sum(t[2] for t in ordered) - volume) <= max(1e-8, abs(volume)*1e-8)):
+    # Never use an absolute 1e-8 tolerance: for micro-priced assets that
+    # can accept a 100% price discrepancy or orders-of-magnitude volume drift.
+    # Relative tolerance absorbs floating-point CSV arithmetic without
+    # manufacturing agreement for small early-mover prices or volumes.
+    if not (isclose(prices[0], opening, rel_tol=1e-9, abs_tol=0.0)
+            and isclose(prices[-1], close, rel_tol=1e-9, abs_tol=0.0)
+            and isclose(max(prices), high, rel_tol=1e-9, abs_tol=0.0)
+            and isclose(min(prices), low, rel_tol=1e-9, abs_tol=0.0)
+            and isclose(sum(t[2] for t in ordered), volume,
+                        rel_tol=1e-8, abs_tol=0.0)):
         return {"status": "aggregation_mismatch"}
     return {"status": "verified_open_boundary", "candle_open": timestamp,
             "candle_close_as_of": timestamp + STEP, "trades": len(ordered)}
