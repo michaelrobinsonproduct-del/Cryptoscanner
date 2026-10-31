@@ -44,7 +44,7 @@ class HistoricalWindowTests(unittest.TestCase):
         i = (start - 300) // 300
         return Response([[str(100+i), "1", start+1, "b", "l", ""],
                          [str(101+i), "1", start+301, "b", "l", ""]],
-                        int(args["since"][0]) + 1000000000)
+                        (start + 302) * 1000000000)
 
     @patch("probe_historical_rest_window.corroborate_retained_ohlc")
     def test_twelve_realistic_independent_rest_pages_correlate_but_not_labels(self, three):
@@ -55,6 +55,8 @@ class HistoricalWindowTests(unittest.TestCase):
         self.assertEqual(r["observed_buckets_correlated"], 12)
         self.assertEqual(r["rest_pages"], 12)
         self.assertEqual(len(r["rest_page_sha256"]), 12)
+        self.assertEqual(len(r["rest_cursor_traces"]), 12)
+        self.assertTrue(all(len(x["pages"]) == 1 for x in r["rest_cursor_traces"]))
         self.assertEqual(r["real_labels"], 0)
         self.assertEqual(r["independent_complete_historical_intervals"], 0)
         self.assertFalse(r["independent_quarterly_completeness_verified"])
