@@ -2,9 +2,10 @@
 import datetime as dt
 import hashlib
 import unittest
+from unittest import mock
 
 from paper_eval.capacity import capacity_report
-from paper_pov import ledger
+from paper_pov import ledger, segmented_storage as storage
 
 
 def fixture(scans=3, quotes=100):
@@ -91,6 +92,25 @@ class StorageForecastTests(unittest.TestCase):
         large = capacity_report(fixture(quotes=200))
         self.assertGreater(large["cadences"]["2"]["forecast_ledger_bytes"],
                            small["cadences"]["2"]["forecast_ledger_bytes"])
+
+    def test_packed_snapshot_is_lossless_and_not_cadence_authorization(self):
+        state = fixture()
+        report = capacity_report(state)
+        packed = storage.pack_snapshot(state)
+        self.assertEqual(report["candidate_packed_snapshot_bytes"], len(packed))
+        self.assertEqual(report["packed_snapshot_limit_bytes"], storage.MAX_PACKED_BYTES)
+        self.assertEqual(storage.unpack_snapshot(packed), state)
+        self.assertIs(report["stage2_authorized"], False)
+        self.assertIn("rehearsal", report["limitations"])
+
+    def test_large_logical_capacity_verified_without_weakening_packed_limit(self):
+        state = fixture()
+        with mock.patch.object(ledger, "verify", wraps=ledger.verify) as verifier:
+            capacity_report(state)
+            self.assertTrue(any(
+                call.args == (state, storage.MAX_RAW_BYTES)
+                for call in verifier.call_args_list))
+        self.assertEqual(storage.MAX_PACKED_BYTES, 12_000_000)
 
     def test_current_bytes_exact_canonical(self):
         s = fixture()
