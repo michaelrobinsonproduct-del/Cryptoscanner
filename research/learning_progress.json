@@ -1518,20 +1518,46 @@
       "next": "Extend bounded REST trade-to-retained source interval corroboration across contiguous 1h with independent start/end witnesses, strict rate/cursor limits, and no-trade unknown; gate genuine labels on independently complete authenticated source periods. Preserve production and avoid full archive reacquisition."
     },
     "role15_20261031_0815": {
-      "status": "THREE_WAY_SOURCE_VERIFICATION_CODE_STAGED_EXACT_CI_PENDING",
-      "utc": "2026-10-31T08:16:23.903Z",
+      "status": "ONE_REAL_REST_TRADE_OHLC_BUCKET_CORRELATED_QUARTER_COMPLETENESS_BLOCKED",
+      "utc": "2026-10-31T08:17:35.238Z",
       "research_code_commit": "41e322f46ef944aebe736bfe0adb7877f229903b",
+      "workflow_main_commit": "3ca23b05dbd5c518bacb6e1bd76cc7c541eec923",
+      "verified_run_id": 41183936460,
+      "verified_job_id": 124486872504,
+      "exact_code_tests": "351/351 passed in actual GitHub Actions logs",
       "new_tests": 8,
-      "expected_tests_at_least": 351,
+      "source_evidence": {
+        "market": "BCHJPY",
+        "bucket_open_utc": "2026-04-01T11:55:00Z",
+        "bucket_epoch": 1775044500,
+        "rest_trade_count": 1,
+        "retained_trade_count": 1,
+        "three_way_candle_correspondence": true,
+        "rest_after_end_witness": true,
+        "rest_pages": 1,
+        "rest_bytes": 65774,
+        "rest_response_sha256": "d42f4dfc92856f1ea437aa28cb81a8f481a70e4ab5ac7531ae03be7667d6c066",
+        "retained_ohlc_artifact_sha256": "704513836ee4b35680fde0ff93a3bb3e8ed6e39469a7183afd89b1ddb01a52a2",
+        "retained_ohlc_member_sha256": "142f107469a9f1068e8e9bcb3c4782662b6a191d78d0f8067caf8ddbf2abc74d",
+        "artifact_id": 13036585646,
+        "artifact_digest": "sha256:3b8a4c74f8948a6171fa3123e0a6c9b4993277ba6bad449cfdc0bafb03ddddd7",
+        "artifact_expires_at": "2026-11-30T08:16:59Z",
+        "independent_complete_historical_intervals": 0,
+        "independent_quarterly_completeness_verified": false
+      },
       "changes": [
-        "Bounded independent Kraken REST trade rows triangulated with SHA-checked retained OHLC source candle, fail closed on missing/mismatching candle or tampered manifest",
-        "Reject unexpected REST result pair identity rather than treating any result key as matching",
-        "Keep all quarterly completeness, mature predictive labels, held-out lift and production promotion gates closed"
+        "REST pair identity validation now rejects unrelated pair data",
+        "Retained OHLC source SHA/manifest/row/candle validated against independently corroborated REST and retained trade row",
+        "Malformed source and source disagreement fail closed, 8 added regression tests",
+        "All substantive retained evidence, REST, reconciliation, manifest, revision and artifact upload workflow steps succeeded; no full archive reacquisition"
       ],
-      "real_labels": 0,
+      "genuine_predictive_labels": 0,
       "held_out_lift": null,
+      "candidate_rule": "none independently qualified",
       "production_applied": false,
-      "next": "Pin exact research code in single existing workflow, pass retained OHLC artifact, run all 351+ tests and substantive real three-way check, inspect logs and artifacts; only then mark verified."
+      "full_archive_downloads": 0,
+      "blocker": "One independently corroborated observed bucket does not establish complete quarterly trades or 1/6/24/48h maturity and no-trade semantics. No held-out baseline comparison authorized.",
+      "next": "Expand bounded historical corroboration to contiguous eligible 1h/6h windows using official Kraken PostTrade from_ts/to_ts with strict pagination and independent completeness evidence; no missing/no-trade assumptions. Then independently certify mature forward outcomes before any challenger."
     }
   },
   "audit": {
