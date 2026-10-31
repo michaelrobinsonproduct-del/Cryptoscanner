@@ -271,6 +271,69 @@ def verify_checkpoint_origin(directory, git_repository):
     return commit
 
 
+def _git(repository, *args):
+    try:
+        return subprocess.run(
+            ["git", "-C", str(repository), *args], stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, timeout=30, check=True).stdout
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as exc:
+        raise ValueError("Required Git evidence unavailable") from exc
+
+
+def _git_has(repository, commit, path):
+    result = subprocess.run(
+        ["git", "-C", str(repository), "cat-file", "-e", commit + ":" + path],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+    return result.returncode == 0
+
+
+def read_git_state(repository, commit, full_replay=False):
+    """Read legacy or packed Git commit with the SAME verified ledger contract.
+
+    No remote access, no writer, and no fallback when a packed manifest or
+    snapshot is partially present. Supports mixed old/new commits in audits.
+    """
+    if not _hex(commit, 40):
+        raise ValueError("Git state requires an exact commit SHA")
+    resolved = _git(repository, "rev-parse", "--verify", commit + "^{commit}").decode().strip()
+    if resolved != commit:
+        raise ValueError("Git commit identity mismatch")
+    has_manifest = _git_has(repository, commit, MANIFEST)
+    has_snapshot = _git_has(repository, commit, SNAPSHOT)
+    if has_manifest != has_snapshot:
+        raise ValueError("Partially migrated Git ledger commit")
+    if not has_manifest:
+        raw = _git(repository, "show", commit + ":paper-ledger.json")
+        if len(raw) > storage.MAX_RAW_BYTES:
+            raise ValueError("Legacy Git ledger exceeds bound")
+        state = json.loads(raw)
+        ledger.verify(state, storage.MAX_RAW_BYTES)
+        return state, "legacy"
+    manifest_bytes = _git(repository, "show", commit + ":" + MANIFEST)
+    if len(manifest_bytes) > MAX_MANIFEST_BYTES:
+        raise ValueError("Git manifest exceeds bound")
+    manifest = json.loads(manifest_bytes)
+    _, _, entries = _check_manifest(manifest)
+    with tempfile.TemporaryDirectory(prefix="paper-git-read-") as temp:
+        root = Path(temp)
+        for path in (MANIFEST, SNAPSHOT, CHECKPOINT):
+            data = _git(repository, "show", commit + ":" + path)
+            limit = MAX_MANIFEST_BYTES if path == MANIFEST else (
+                storage.MAX_PACKED_BYTES if path == SNAPSHOT else storage.MAX_RAW_BYTES)
+            if len(data) > limit:
+                raise ValueError("Git storage blob exceeds bound")
+            _write(root / path, data)
+        for entry in entries:
+            path = _segment_path(entry["generation"])
+            data = _git(repository, "show", commit + ":" + path)
+            if len(data) > storage.MAX_PACKED_BYTES:
+                raise ValueError("Git segment exceeds bound")
+            _write(root / path, data)
+        state, _ = read_state(root, full_replay)
+        verify_checkpoint_origin(root, repository)
+        return state, "segmented"
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Stage/check paper Git storage; NEVER pushes")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -287,6 +350,11 @@ def main(argv=None):
     verify.add_argument("--directory", required=True)
     verify.add_argument("--full-replay", action="store_true")
     verify.add_argument("--git-repository", help="Require exact legacy Git commit readback")
+    export = sub.add_parser("export-git")
+    export.add_argument("--repository", required=True)
+    export.add_argument("--commit", required=True)
+    export.add_argument("--output", required=True)
+    export.add_argument("--full-replay", action="store_true")
     args = parser.parse_args(argv)
     if args.command == "migrate":
         m = stage_migration(_read(args.legacy_file, storage.MAX_RAW_BYTES),
@@ -296,6 +364,15 @@ def main(argv=None):
     elif args.command == "append":
         output = stage_append(args.previous, json.loads(
             _read(args.report_file, storage.MAX_RAW_BYTES)), args.source_sha, args.destination)
+    elif args.command == "export-git":
+        state, mode = read_git_state(args.repository, args.commit, args.full_replay)
+        target = Path(args.output)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists():
+            raise FileExistsError("Refuse to overwrite existing Git audit export")
+        _write(target, ledger.canonical(state))
+        output = {"generation": state["generation"], "ledger_sha256": state["sha256"],
+                  "mode": mode, "exported": True}
     else:
         state, manifest = read_state(args.directory, args.full_replay)
         if args.git_repository:
