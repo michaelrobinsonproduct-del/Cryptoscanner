@@ -1,0 +1,44 @@
+name: Independent Kraken Learning Watchdog (research only)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/research-learning-watchdog.yml'
+  schedule:
+    - cron: '47 * * * *'
+permissions:
+  contents: read
+  actions: read
+  issues: write
+concurrency:
+  group: independent-kraken-learning-watchdog
+  cancel-in-progress: false
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout immutable research watchdog code
+        uses: actions/checkout@v4
+        with:
+          ref: e4889f01d84f2e619fce1c3df5ef4f2bf904bfac
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify pinned code and watchdog failure-injection tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 'e4889f01d84f2e619fce1c3df5ef4f2bf904bfac'
+          python -m compileall -q research/watchdog_learning.py research/test_watchdog_learning.py
+          python -m unittest discover -s research -p 'test_watchdog_learning.py' -v 2>&1 | tee /tmp/watchdog-tests.log
+          grep -q 'Ran 20 tests' /tmp/watchdog-tests.log
+          grep -q '^OK$' /tmp/watchdog-tests.log
+      - name: Check independent research health and verify issue delivery on alerts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python research/watchdog_learning.py
