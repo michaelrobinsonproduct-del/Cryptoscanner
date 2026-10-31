@@ -12,6 +12,8 @@ import urllib.request
 
 UTC = dt.timezone.utc
 RESEARCH_WORKFLOW = "research-reusable-evidence.yml"
+GAP_WORKFLOW = "research-rest-gap-evidence.yml"
+GAP_WORKFLOW_NAME = "Bounded Kraken Historical REST Gap Evidence (isolated)"
 ALERT_TITLE = "[Learning Watchdog] Research attention required"
 EVIDENCE_ARTIFACT = "kraken-reusable-ohlc-evidence"
 TRADE_EVIDENCE_ARTIFACT = "kraken-bounded-independent-trade-members"
@@ -45,6 +47,23 @@ def run_state(run, jobs):
     if run.get("conclusion") != "success":
         return "failed"
     steps = [s for job in jobs for s in job.get("steps", [])]
+    # A real bounded REST source run is substantive provenance research, but
+    # never proof of complete intervals, real labels or predictive lift.
+    if run.get("name") == GAP_WORKFLOW_NAME:
+        required = (
+            "Verify exact pinned code and fail-closed offline tests",
+            "Reuse bounded retained artifacts only when cooperative lease clear",
+            "Independently inspect one retained gap against bounded REST (not a complete label)",
+            "Retain bounded gap evidence for 30 days",
+        )
+        selected = [next((step for step in steps if step.get("name") == name), None)
+                    for name in required]
+        if any(step is None for step in selected):
+            return "unverified_green"
+        if any(step.get("conclusion") == "skipped" for step in selected):
+            return "skipped_no_work"
+        return "evidence_run" if all(step.get("conclusion") == "success"
+                                     for step in selected) else "unverified_green"
     verified = next((s for s in steps if s.get("name") ==
                      "Verify and summarize retained evidence without labels"), None)
     cache = next((s for s in steps if s.get("name", "").startswith(
@@ -77,7 +96,8 @@ def latest_due(now, hour=3, minute=13, grace_minutes=120):
     return boundary
 
 
-def assess(now, workflow_created, runs, jobs_by_id, artifacts, checkpoint):
+def assess(now, workflow_created, runs, jobs_by_id, artifacts, checkpoint,
+           extra_runs=(), extra_jobs_by_id=None):
     """Evaluate only evidence-backed failures; don't mistake a daily cadence for a 90m stall."""
     alerts = []
     state = lease_state(checkpoint.get("concurrency", {}), now)
@@ -85,7 +105,10 @@ def assess(now, workflow_created, runs, jobs_by_id, artifacts, checkpoint):
         alerts.append("EXPIRED_RESEARCH_LEASE")
     if state == "unknown_active":
         alerts.append("UNVERIFIABLE_LEASE_EXPIRY")
-    runs = sorted(runs, key=lambda r: timestamp(r["created_at"]), reverse=True)
+    primary_runs = list(runs)
+    runs = sorted(primary_runs + list(extra_runs),
+                  key=lambda r: timestamp(r["created_at"]), reverse=True)
+    jobs_by_id = {**jobs_by_id, **(extra_jobs_by_id or {})}
     statuses = [(r, run_state(r, jobs_by_id.get(r["id"], []))) for r in runs]
     if not statuses and now - workflow_created > dt.timedelta(hours=2):
         alerts.append("NO_RESEARCH_RUNS")
@@ -113,7 +136,7 @@ def assess(now, workflow_created, runs, jobs_by_id, artifacts, checkpoint):
             alerts.append("NO_SUBSTANTIVE_RESEARCH_90M")
     due = latest_due(now)
     if due >= workflow_created:
-        scheduled = [r for r in runs if r.get("event") == "schedule" and
+        scheduled = [r for r in primary_runs if r.get("event") == "schedule" and
                      due <= timestamp(r["created_at"]) < due + dt.timedelta(days=1)]
         if not scheduled:
             alerts.append("MISSED_DAILY_RESEARCH_SCHEDULE")
@@ -235,11 +258,19 @@ def main():
     for r in runs[:8]:
         if r.get("status") == "completed":
             jobs[r["id"]] = api.call("/actions/runs/" + str(r["id"]) + "/jobs?per_page=30")["jobs"]
+    # Include bounded source evidence in the 90-minute progress gate.
+    extra_runs = api.call("/actions/workflows/" + GAP_WORKFLOW +
+                          "/runs?per_page=15")["workflow_runs"]
+    extra_jobs = {}
+    for r in extra_runs[:5]:
+        if r.get("status") == "completed":
+            extra_jobs[r["id"]] = api.call(
+                "/actions/runs/" + str(r["id"]) + "/jobs?per_page=30")["jobs"]
     artifacts = load_evidence_artifacts(api)
     state = api.call("/contents/research/learning_progress.json?ref=research-learning-program-20261027")
     checkpoint = json.loads(base64.b64decode(state["content"]))
     report = assess(dt.datetime.now(UTC), timestamp(workflow["created_at"]),
-                    runs, jobs, artifacts, checkpoint)
+                    runs, jobs, artifacts, checkpoint, extra_runs, extra_jobs)
     report["delivery"] = alert_issue(api, report, dry_run=args.dry_run)
     print(json.dumps(report, sort_keys=True))
     if report["status"] == "ALERT":
