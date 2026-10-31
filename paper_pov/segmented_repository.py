@@ -332,6 +332,12 @@ def read_git_state(repository, commit, full_replay=False):
             if old_state["generation"] != generation - offset:
                 raise ValueError("Missing, repeated or regressing legacy generation")
         genesis = ancestry[generation]
+        shallow_path = Path(_git(repository, "rev-parse", "--git-path",
+                                 "shallow").decode().strip())
+        if not shallow_path.is_absolute():
+            shallow_path = Path(repository) / shallow_path
+        if shallow_path.exists() and genesis in shallow_path.read_text().splitlines():
+            raise ValueError("Incomplete Git ancestry at legacy genesis")
         # The generation-zero commit must introduce the ledger. Git shallow
         # boundaries are not proof that a parent lacks an older ledger.
         commit_lines = _git(repository, "cat-file", "-p", genesis).decode().splitlines()
