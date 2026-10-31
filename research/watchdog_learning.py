@@ -30,10 +30,12 @@ def timestamp(value):
 
 def lease_state(concurrency, now):
     owner = concurrency.get("owner")
-    if not owner:
-        return "clear"
     expiry = concurrency.get("lease_expires_at")
-    if not expiry:
+    # A released lease must clear both fields. Never silently treat an orphan
+    # expiry or malformed/blank owner as a free cooperative lease.
+    if owner is None:
+        return "clear" if expiry is None else "unknown_active"
+    if not isinstance(owner, str) or not owner.strip() or not expiry:
         return "unknown_active"
     try:
         return "active" if timestamp(expiry) > now else "expired"
@@ -96,6 +98,11 @@ def latest_due(now, hour=3, minute=13, grace_minutes=120):
     return boundary
 
 
+def completion_timestamp(run):
+    """Use GitHub's completed-run update time, never the dispatch time, for recency."""
+    return timestamp(run.get("updated_at") or run["created_at"])
+
+
 def assess(now, workflow_created, runs, jobs_by_id, artifacts, checkpoint,
            extra_runs=(), extra_jobs_by_id=None):
     """Evaluate only evidence-backed failures; don't mistake a daily cadence for a 90m stall."""
@@ -115,7 +122,8 @@ def assess(now, workflow_created, runs, jobs_by_id, artifacts, checkpoint,
     # Do not allow a successful *different workflow* to conceal a failed or
     # unverified latest completed run. Only a newer completion in that same
     # workflow may clear its own failure. Queued retries never clear failures.
-    completed = [(r, s) for r, s in statuses if s != "running"]
+    completed = sorted(((r, s) for r, s in statuses if s != "running"),
+                       key=lambda pair: completion_timestamp(pair[0]), reverse=True)
     latest_by_workflow = []
     for stream in (primary_runs, extra_runs):
         stream_ids = {r["id"] for r in stream}
@@ -138,7 +146,7 @@ def assess(now, workflow_created, runs, jobs_by_id, artifacts, checkpoint,
     # not sufficient for the user-requested continuous-learning cadence.
     evidence_runs = [r for r, s in statuses if s == "evidence_run"]
     if now - workflow_created >= dt.timedelta(minutes=90):
-        if not evidence_runs or now - timestamp(evidence_runs[0]["created_at"]) >= dt.timedelta(minutes=90):
+        if not evidence_runs or now - max(completion_timestamp(r) for r in evidence_runs) >= dt.timedelta(minutes=90):
             alerts.append("NO_SUBSTANTIVE_RESEARCH_90M")
     due = latest_due(now)
     if due >= workflow_created:
@@ -220,7 +228,7 @@ def alert_issue(api, report, *, dry_run=False):
             api.call("/issues/" + str(existing["number"]), method="PATCH",
                      data={"state": "closed", "body": "Recovered: latest watchdog assessment HEALTHY."})
             verify = api.call("/issues/" + str(existing["number"]))
-            if verify.get("state") != "closed":
+            if verify.get("state") != "closed" or verify.get("body") != "Recovered: latest watchdog assessment HEALTHY.":
                 raise RuntimeError("alert issue recovery was not persisted")
             return "RECOVERED_CLOSED"
         return "NO_ALERT"
@@ -236,7 +244,8 @@ def alert_issue(api, report, *, dry_run=False):
         created = api.call("/issues", method="POST", data={"title": ALERT_TITLE, "body": body})
         number = created["number"]
     verify = api.call("/issues/" + str(number))
-    if verify.get("body") != body or verify.get("state") != "open":
+    if (verify.get("body") != body or verify.get("state") != "open"
+            or verify.get("title") != ALERT_TITLE):
         raise RuntimeError("alert issue write not verified")
     return "ISSUE_VERIFIED_" + str(number)
 
