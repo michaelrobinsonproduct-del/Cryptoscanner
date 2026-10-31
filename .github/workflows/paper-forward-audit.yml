@@ -1,0 +1,46 @@
+name: Independent Paper Forward Outcome Audit
+on:
+  push:
+    branches: [proof-outcome-eval-20261031]
+    paths:
+      - 'paper_eval/**'
+      - '.github/workflows/paper-forward-audit.yml'
+  pull_request:
+    paths:
+      - 'paper_eval/**'
+      - '.github/workflows/paper-forward-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: paper-forward-audit-ci
+  cancel-in-progress: false
+jobs:
+  synthetic-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact checkout and independently audited synthetic contracts
+        run: |
+          set -euo pipefail
+          echo "PAPER_FORWARD_AUDIT_SHA=$(git rev-parse HEAD)"
+          python -m unittest discover -s paper_eval -p 'test_*.py' -v
+          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+      - name: Fail closed on production or order execution imports
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          code=Path("paper_eval/audit.py").read_text()
+          assert "independent_held_out_lift" in code
+          assert '"production_applied": False' in code
+          for forbidden in ("api.kraken.com/0/private/", "AddOrder", "railway", "subprocess"):
+              assert forbidden not in code, forbidden
+          print("PAPER_FORWARD_AUDIT_STATIC_SAFETY_OK")
+          PY
