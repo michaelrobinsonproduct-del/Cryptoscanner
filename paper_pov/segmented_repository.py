@@ -350,7 +350,7 @@ def read_git_state(repository, commit, full_replay=False):
             if (_git_has(repository, parent, "paper-ledger.json") or
                     _git_has(repository, parent, MANIFEST) or
                     _git_has(repository, parent, SNAPSHOT)):
-                raise ValueError("Legacy genesis did not introduce ledger")
+                raise ValueError("Legacy genesis did not introduce ledger: unsafe downgrade")
         return state, "legacy"
     manifest_bytes = _git(repository, "show", commit + ":" + MANIFEST)
     if len(manifest_bytes) > MAX_MANIFEST_BYTES:
