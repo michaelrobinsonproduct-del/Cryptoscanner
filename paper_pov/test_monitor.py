@@ -91,8 +91,22 @@ class PaperMonitorTests(unittest.TestCase):
     def test_two_active_writers_detected(self):
         scans = payload(run(123, "2026-10-31T20:10:00Z"),
                         run(124, "2026-10-31T20:20:00Z", status="in_progress", conclusion=None),
-                        run(125, "2026-10-31T20:21:00Z", status="queued", conclusion=None))
+                        run(125, "2026-10-31T20:21:00Z", status="in_progress", conclusion=None))
         self.assertIn("PAPER_MULTIPLE_ACTIVE_EXECUTIONS", self.check(scans=scans)["alerts"])
+
+    def test_queued_scan_is_not_a_second_active_writer(self):
+        scans = payload(run(123, "2026-10-31T20:10:00Z"),
+                        run(124, "2026-10-31T20:20:00Z", status="in_progress", conclusion=None),
+                        run(125, "2026-10-31T20:21:00Z", status="queued", conclusion=None))
+        self.assertNotIn("PAPER_MULTIPLE_ACTIVE_EXECUTIONS", self.check(scans=scans)["alerts"])
+
+    def test_issue_write_token_only_in_scheduled_alert_job(self):
+        workflow = Path(".github/workflows/paper-monitor.yml").read_text()
+        monitor, alert = workflow.split("\n  alert:\n")
+        self.assertNotIn("issues: write", monitor)
+        self.assertIn("issues: write", alert)
+        self.assertIn("github.event_name == 'schedule'", alert)
+        self.assertIn("sha256sum -c SHA256SUMS", alert)
 
     def test_corrupted_resealed_ledger_fails_closed(self):
         state = fixture()
