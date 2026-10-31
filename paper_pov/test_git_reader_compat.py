@@ -21,9 +21,10 @@ class DualFormatReaderContracts(unittest.TestCase):
             with self.subTest(name=name):
                 workflow = (ROOT / ".github/workflows" / name).read_text()
                 self.assertIn("paper_pov.segmented_repository export-git", workflow)
-                self.assertIn("git fetch --no-tags --unshallow", workflow)
+                self.assertIn("paper_pov.git_ledger_fetch", workflow)
                 self.assertIn("contents: read", workflow)
                 self.assertNotIn("git push ", workflow)
+                self.assertNotIn("--unshallow", workflow)
                 self.assertNotIn("python -m paper_pov.scanner", workflow)
                 for output in outputs:
                     self.assertIn(output, workflow)

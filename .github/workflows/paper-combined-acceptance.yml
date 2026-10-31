@@ -43,8 +43,8 @@ jobs:
       - name: Independently verify latest real remote ledger without writing
         run: |
           set -euo pipefail
-          git fetch --no-tags --unshallow origin refs/heads/paper-proof-ledger
-          LEDGER_COMMIT="$(git rev-parse FETCH_HEAD)"
+          python -m paper_pov.git_ledger_fetch
+          LEDGER_COMMIT="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
           python -m paper_pov.segmented_repository export-git --repository . --commit "${LEDGER_COMMIT}" --output /tmp/public-paper-ledger.json
           mkdir -p paper_pov/acceptance
           LEDGER_COMMIT="$LEDGER_COMMIT" python - <<'PY'
