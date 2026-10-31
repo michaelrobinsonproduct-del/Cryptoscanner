@@ -13,7 +13,7 @@ class CandidateAuditTests(unittest.TestCase):
         h = r["horizons"]["1"]
         self.assertEqual(h["candidate_full_future_windows"], 1)
         self.assertEqual(h["descriptive_peak_30"], 1)
-        self.assertEqual(h["excluded_immature"], 12)
+        self.assertEqual(h["excluded_beyond_retained_end"], 12)
         self.assertEqual(r["real_labels"], 0)
         self.assertFalse(r["executable_fill_verified"])
 
@@ -42,10 +42,10 @@ class CandidateAuditTests(unittest.TestCase):
         h = audit_candidate_windows(rows, {r[0] for r in rows})["horizons"]["1"]
         self.assertEqual(h["excluded_missing_exact_future"], 1)
 
-    def test_immature_horizon_is_not_a_negative(self):
+    def test_beyond_retained_end_is_unknown_not_negative(self):
         rows = [candle(i*300) for i in range(12)]
         h = audit_candidate_windows(rows, {r[0] for r in rows})["horizons"]["1"]
-        self.assertEqual(h["excluded_immature"], 12)
+        self.assertEqual(h["excluded_beyond_retained_end"], 12)
         self.assertEqual(h["candidate_full_future_windows"], 0)
 
     def test_duplicate_and_out_of_order_source_abstain(self):
