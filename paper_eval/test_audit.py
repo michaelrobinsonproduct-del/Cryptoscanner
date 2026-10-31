@@ -26,6 +26,11 @@ def scenario(*, offsets=(0, 30, 60, 90, 120), gain=True):
             for o in report["observations"]:
                 if o["pair"] in (first_watch[0], missed):
                     o["price"] = 1.40
+            # Keep each synthetic watch decision tied to its own recorded
+            # same-run quote. This is a fixture repair, not a relaxed gate.
+            for p in report["watch"]:
+                if p["pair"] == first_watch[0]:
+                    p["price"] = 1.40
         state = ledger.advance(state, report, SHA)
     return state
 
@@ -102,11 +107,19 @@ class AuditTests(unittest.TestCase):
 
     def test_tampered_market_price_rejected(self):
         state = scenario()
-        for o in state["observations"]:
-            if o["at"] != state["runs"][0]["as_of"]:
-                o["price"] *= 1.05
-                break
+        # Change both the watched prediction and its same-run quote, so the
+        # stricter ledger identity gate still passes. The independent audit
+        # must then catch the forged historical peak against the old outcome.
+        initial = state["runs"][0]["id"]
+        pair = state["predictions"][0]["pair"]
+        quote = next(o for o in state["observations"]
+                     if o["run_id"] != initial and o["pair"] == pair)
+        quote["price"] *= 1.05
+        prediction = next(p for p in state["predictions"]
+                          if p["run_id"] == quote["run_id"] and p["pair"] == pair)
+        prediction["price"] = quote["price"]
         ledger.seal(state)
+        ledger.verify(state)  # The audit must provide the additional rejection.
         with self.assertRaisesRegex(ValueError, "(return|peak) disagrees"):
             evaluate(state, 1, 1)
 
