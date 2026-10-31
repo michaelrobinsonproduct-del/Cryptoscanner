@@ -17,6 +17,10 @@ class VerifierWorkflowTests(unittest.TestCase):
         self.assertIn("--after-commit", self.code)
         self.assertIn("git show", self.code)
 
+    def test_pull_request_checks_use_exact_immutable_head(self):
+        self.assertIn("github.event.pull_request.head.sha || github.sha", self.code)
+        self.assertIn("persist-credentials: false", self.code)
+
     def test_verifier_cannot_write_ledger_or_production(self):
         self.assertIn("permissions:\n  contents: read", self.code)
         self.assertIn("persist-credentials: false", self.code)

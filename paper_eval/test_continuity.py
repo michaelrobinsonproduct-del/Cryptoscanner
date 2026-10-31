@@ -42,8 +42,15 @@ class ContinuityTests(unittest.TestCase):
         before = ledger.advance(ledger.empty(), synthetic(0), SHA)
         # Separate JSON snapshots must not share nested Python dictionaries.
         after = copy.deepcopy(ledger.advance(before, synthetic(30), SHA))
-        after["observations"][0]["price"] *= 1.01
+        # Change a non-watch quote so the new same-run watch-price gate
+        # cannot short-circuit this independent history-mutation test.
+        first_run = before["runs"][0]["id"]
+        watched = {p["pair"] for p in before["predictions"] if p["run_id"] == first_run}
+        quote = next(o for o in after["observations"]
+                     if o["run_id"] == first_run and o["pair"] not in watched)
+        quote["price"] *= 1.01
         ledger.seal(after)
+        ledger.verify(after)  # Transition audit must catch the rewritten quote.
         with self.assertRaisesRegex(ValueError, "quote history"):
             verify_transition(before, after)
 
