@@ -121,5 +121,99 @@ class BoundedTradeTests(unittest.TestCase):
         self.assertEqual(files, {})
 
 
+    def test_strong_etag_pins_multiple_ranges_and_uses_if_range(self):
+        data = b"x"*70000
+        observed = []
+        def opener(request, timeout=None):
+            raw = request.get_header("Range")
+            start, end = (int(x) for x in raw[6:].split("-"))
+            observed.append(request.get_header("If-range"))
+            response = Response(data, start, end, len(data))
+            response.headers["ETag"] = '"kraken-v1"'
+            response.headers["Content-Length"] = str(end-start+1)
+            return response
+        reader = RangeZipReader("https://assets.kraken.com/test.zip",
+                                expected_bytes=len(data), opener=opener)
+        self.assertEqual(reader.read(10), b"x"*10)
+        self.assertEqual(reader.read(10), b"x"*10)
+        self.assertEqual(observed, [None, '"kraken-v1"'])
+        self.assertTrue(reader.source_validator["revision_pinned"])
+
+    def test_etag_drift_rejected_without_advancing_position(self):
+        data = b"x"*70000
+        calls = [0]
+        def opener(request, timeout=None):
+            start, end = (int(x) for x in request.get_header("Range")[6:].split("-"))
+            response = Response(data, start, end, len(data))
+            response.headers["ETag"] = '"v1"' if calls[0] == 0 else '"v2"'
+            calls[0] += 1
+            return response
+        reader = RangeZipReader("https://assets.kraken.com/test.zip",
+                                expected_bytes=len(data), opener=opener)
+        reader.read(5)
+        with self.assertRaisesRegex(RuntimeError, "ETag changed"):
+            reader.read(5)
+        self.assertEqual(reader.tell(), 5)
+        self.assertEqual(reader.transferred, 5)
+
+    def test_etag_disappearing_is_rejected(self):
+        data = b"x"*70000
+        calls = [0]
+        def opener(request, timeout=None):
+            start, end = (int(x) for x in request.get_header("Range")[6:].split("-"))
+            response = Response(data, start, end, len(data))
+            if calls[0] == 0:
+                response.headers["ETag"] = '"v1"'
+            calls[0] += 1
+            return response
+        reader = RangeZipReader("https://assets.kraken.com/test.zip",
+                                expected_bytes=len(data), opener=opener)
+        reader.read(5)
+        with self.assertRaisesRegex(RuntimeError, "ETag changed"):
+            reader.read(5)
+
+    def test_last_modified_pins_when_no_strong_etag(self):
+        data = b"x"*70000
+        seen = []
+        def opener(request, timeout=None):
+            start, end = (int(x) for x in request.get_header("Range")[6:].split("-"))
+            seen.append(request.get_header("If-range"))
+            response = Response(data, start, end, len(data))
+            response.headers["Last-Modified"] = "Thu, 01 Oct 2026 00:00:00 GMT"
+            return response
+        reader = RangeZipReader("https://assets.kraken.com/test.zip",
+                                expected_bytes=len(data), opener=opener)
+        reader.read(3)
+        reader.read(4)
+        self.assertEqual(seen, [None, "Thu, 01 Oct 2026 00:00:00 GMT"])
+        self.assertTrue(reader.source_validator["revision_pinned"])
+
+    def test_weak_etag_is_not_claimed_as_revision_pinning(self):
+        data = b"x"*70000
+        def opener(request, timeout=None):
+            start, end = (int(x) for x in request.get_header("Range")[6:].split("-"))
+            response = Response(data, start, end, len(data))
+            response.headers["ETag"] = 'W/"weak"'
+            return response
+        reader = RangeZipReader("https://assets.kraken.com/test.zip",
+                                expected_bytes=len(data), opener=opener)
+        reader.read(3)
+        reader.read(4)
+        self.assertFalse(reader.source_validator["revision_pinned"])
+
+    def test_content_length_mismatch_rejected(self):
+        data = b"x"*70000
+        def opener(request, timeout=None):
+            start, end = (int(x) for x in request.get_header("Range")[6:].split("-"))
+            response = Response(data, start, end, len(data))
+            response.headers["Content-Length"] = "999"
+            return response
+        reader = RangeZipReader("https://assets.kraken.com/test.zip",
+                                expected_bytes=len(data), opener=opener)
+        with self.assertRaisesRegex(RuntimeError, "response length"):
+            reader.read(3)
+
+
+
 if __name__ == "__main__":
     unittest.main()
