@@ -26,20 +26,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: d70ba5bf91133d8609716d3e27556df1213ebedf
+          ref: 674c55eb22c9b1293b97ba29e07ca2ae904d2f8b
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify immutable research code and 159 offline tests
+      - name: Verify immutable research code and 166 offline tests
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = 'd70ba5bf91133d8609716d3e27556df1213ebedf'
+          test "$(git rev-parse HEAD)" = '674c55eb22c9b1293b97ba29e07ca2ae904d2f8b'
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-tests.log
-          grep -q 'Ran 159 tests' /tmp/research-tests.log
+          grep -q 'Ran 166 tests' /tmp/research-tests.log
           grep -q '^OK$' /tmp/research-tests.log
       - name: Check cooperative research lease, active runs, and cached source evidence
         id: cache
@@ -158,23 +158,49 @@ jobs:
           assert report['real_labels'] == 0 and report['held_out_evaluation'] == 'not_authorized'
           print(json.dumps({'markets':report['markets'],'real_labels':0,'status':report['status']},sort_keys=True))
           PY
-      - name: Capture bounded official trade members for independent provenance (no full ZIP download)
+      - name: Reuse bounded trade evidence or capture it once if absent
+        if: steps.cache.outputs.skip == 'false'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CACHED_RUN: ${{ steps.cache.outputs.cached_run }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$CACHED_RUN" ]]; then
+            trade_count=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CACHED_RUN/artifacts" --jq '[.artifacts[] | select(.name == "kraken-bounded-independent-trade-members" and .expired == false)] | length')
+            if [[ "$trade_count" == '1' ]]; then
+              gh run download "$CACHED_RUN" -R "$GITHUB_REPOSITORY" -n kraken-bounded-independent-trade-members -D research/output
+            elif [[ "$trade_count" != '0' ]]; then
+              echo 'Ambiguous cached trade evidence' >&2
+              exit 1
+            fi
+          fi
+          if [[ ! -s research/output/bounded_independent_trade_members.zip ]]; then
+            PYTHONPATH=research python research/probe_bounded_trade_members.py \
+              --selection research/kraken_reusable_market_selection.json \
+              --output research/output/bounded_independent_trade_members.zip \
+              | tee research/output/bounded_trade_probe_summary.json
+          fi
+          test -s research/output/bounded_trade_probe_summary.json
+          python -c 'import json; from pathlib import Path; r=json.loads(Path("research/output/bounded_trade_probe_summary.json").read_text()); assert r["real_labels"] == 0 and r["source_archive_full_sha256_verified"] is False and r["range_bytes_transferred"] <= 24*1024*1024; print("bounded trade evidence verified; no labels authorized")'
+      - name: Reconcile genuine retained trade and OHLC bytes (no predictive labels)
         if: steps.cache.outputs.skip == 'false'
         shell: bash
         run: |
           set -euo pipefail
-          PYTHONPATH=research python research/probe_bounded_trade_members.py \
-            --selection research/kraken_reusable_market_selection.json \
-            --output research/output/bounded_independent_trade_members.zip \
-            | tee research/output/bounded_trade_probe_summary.json
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          r=json.loads(Path('research/output/bounded_trade_probe_summary.json').read_text())
-          assert r['real_labels'] == 0 and r['source_archive_full_sha256_verified'] is False
-          assert r['range_bytes_transferred'] <= 24*1024*1024
-          print('bounded source evidence only; historical labels remain gated')
-          PY
+          PYTHONPATH=research python research/reconcile_retained_trade_evidence.py \
+            --ohlc research/output/reusable_ohlc_evidence.zip \
+            --trades research/output/bounded_independent_trade_members.zip \
+            > research/output/trade_ohlc_reconciliation.json
+          python -c 'import json; from pathlib import Path; r=json.loads(Path("research/output/trade_ohlc_reconciliation.json").read_text()); assert r["real_labels"] == 0 and r["held_out_evaluation"] == "not_authorized" and not r["source_trade_archive_sha256_verified"]; print(json.dumps({k: {"exact_candidates": v["exact_trade_ohlc_candidate_intervals"], "trade_buckets": v["trade_buckets"], "candidate_windows": v["candidate_contiguous_horizon_windows"]} for k,v in r["markets"].items()}, sort_keys=True))'
+      - name: Upload retained trade-to-OHLC reconciliation report
+        if: steps.cache.outputs.skip == 'false' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kraken-trade-ohlc-reconciliation
+          path: research/output/trade_ohlc_reconciliation.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload bounded independent trade evidence and manifest
         if: steps.cache.outputs.skip == 'false' && success()
         uses: actions/upload-artifact@v4
