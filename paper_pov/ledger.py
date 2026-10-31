@@ -239,7 +239,10 @@ def advance(original, report, source_sha):
     if any(sum((o["prediction_id"] == p["prediction_id"]) for o in archived_outcomes) != len(HORIZONS)
            for p in old_predictions):
         raise ValueError("Cannot archive prediction with immature or missing outcomes")
-    old_observations = [o for o in state["observations"] if utc(o["at"]) < cutoff]
+    # Preserve quotes by owning run, not their slightly earlier client timestamp.
+    # Otherwise a retained run can lose a quote at the 50-hour boundary.
+    old_run_ids = {r["id"] for r in old_runs}
+    old_observations = [o for o in state["observations"] if o["run_id"] in old_run_ids]
     summary = state["archived"]
     summary["scans"] += len(old_runs)
     summary["predictions"] += len(old_predictions)
@@ -252,7 +255,7 @@ def advance(original, report, source_sha):
         if utc(r["as_of"]) >= as_of - ARCHIVE_INDEX_RETENTION]
     state["runs"] = [r for r in state["runs"] if utc(r["as_of"]) >= cutoff]
     state["predictions"] = [p for p in state["predictions"] if p["prediction_id"] not in old_ids]
-    state["observations"] = [o for o in state["observations"] if utc(o["at"]) >= cutoff]
+    state["observations"] = [o for o in state["observations"] if o["run_id"] not in old_run_ids]
     state["outcomes"] = [o for o in state["outcomes"] if o["prediction_id"] not in old_ids]
     state["generation"] += 1
     seal(state)
