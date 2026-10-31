@@ -1,0 +1,83 @@
+name: Paper Proof of Value (isolated, no production writes)
+on:
+  push:
+    branches: [proof-of-value-paper-20261031]
+    paths:
+      - 'paper_pov/**'
+      - '.github/workflows/paper-proof.yml'
+  pull_request:
+    paths:
+      - 'paper_pov/**'
+      - '.github/workflows/paper-proof.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: paper-proof-ci-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  offline-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact checkout and deterministic paper-only tests
+        run: |
+          set -euo pipefail
+          echo "PAPER_TEST_SHA=$(git rev-parse HEAD)"
+          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+      - name: Verify no production paths or secrets in proof branch changes
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          code=Path("paper_pov/scanner.py").read_text()
+          assert "api.kraken.com/0/public/" in code
+          assert "buy_approved" in code and "PAPER_ONLY" in code
+          assert "api.kraken.com/0/private/" not in code
+          print("PAPER_ONLY_STATIC_SAFETY_OK")
+          PY
+  live-paper-smoke:
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/proof-of-value-paper-20261031') || github.event_name == 'workflow_dispatch'
+    needs: offline-contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Bounded real public Kraken paper-only smoke (no history publish)
+        run: |
+          set -euo pipefail
+          echo "PAPER_LIVE_SOURCE_SHA=$(git rev-parse HEAD)"
+          python -m paper_pov.scanner
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("paper_pov/output/latest.json").read_text())
+          assert r["mode"]=="PAPER_ONLY" and r["buy_approved"] is False
+          assert r["production_applied"] is False and r["forward_labels"]==0
+          assert len(r["watch"])>0 and len(r["observations"])>=20
+          print("PAPER_LIVE_VERIFIED",r["as_of"],len(r["watch"]),len(r["observations"]))
+          PY
+          cd paper_pov/output
+          sha256sum latest.json > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-paper-smoke
+          path: |
+            paper_pov/output/latest.json
+            paper_pov/output/SHA256SUMS
+          retention-days: 30
+          if-no-files-found: warn

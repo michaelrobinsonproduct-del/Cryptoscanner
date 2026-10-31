@@ -1,0 +1,149 @@
+name: Public Kraken Paper POV (scheduled, isolated ledger)
+on:
+  push:
+    branches: [proof-of-value-paper-20261031]
+    paths: ['.github/workflows/paper-pipeline.yml']
+  workflow_dispatch:
+  schedule:
+    - cron: '9,39 * * * *'
+permissions:
+  contents: write
+  issues: write
+concurrency:
+  group: public-paper-proof-ledger-single-writer
+  cancel-in-progress: false
+jobs:
+  public-paper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact commit tests before any ledger mutation
+        run: |
+          set -euo pipefail
+          echo "PAPER_PIPELINE_SOURCE_SHA=$(git rev-parse HEAD)"
+          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+      - name: Restore checksum-sealed existing ledger (never silently bootstrap)
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          git rev-parse refs/remotes/origin/paper-proof-ledger > /tmp/paper-base.sha
+          git show refs/remotes/origin/paper-proof-ledger:paper-ledger.json > /tmp/paper-ledger-input.json
+          python - <<'PY'
+          import json
+          from paper_pov.ledger import verify
+          from pathlib import Path
+          state=verify(json.loads(Path("/tmp/paper-ledger-input.json").read_text()))
+          print("PAPER_RESTORED",state["generation"],len(state["runs"]),state["sha256"])
+          PY
+      - name: Real bounded public Kraken scan (paper only)
+        run: |
+          set -euo pipefail
+          python -m paper_pov.scanner
+      - name: Append immutable as-of records and only matured observed outcomes
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from paper_pov.ledger import update_file
+          from paper_pov.scanner import atomic_json
+          score=update_file("/tmp/paper-ledger-input.json",
+              "paper_pov/output/latest.json",os.environ["GITHUB_SHA"],
+              "/tmp/paper-ledger-next.json")
+          atomic_json("paper_pov/output/scoreboard.json",score)
+          print("PAPER_LEDGER_SCOREBOARD",json.dumps(score,sort_keys=True))
+          PY
+          cp /tmp/paper-ledger-next.json paper_pov/output/ledger.json
+          (cd paper_pov/output && sha256sum latest.json scoreboard.json ledger.json > SHA256SUMS)
+          cp paper_pov/output/scoreboard.json /tmp/paper-scoreboard.json
+      - name: Cross-run nonregression and provenance acceptance
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from paper_pov.ledger import verify,scoreboard
+          before=verify(json.loads(Path("/tmp/paper-ledger-input.json").read_text()))
+          after=verify(json.loads(Path("/tmp/paper-ledger-next.json").read_text()))
+          score=scoreboard(after)
+          assert after["generation"]==before["generation"]+1
+          assert score["actual_scans"]==after["generation"]
+          assert score["immutable_predictions"]>=len(before["predictions"])
+          assert score["market_observations"]>=len(before["observations"])
+          assert after["runs"][-1]["source_sha"]==__import__("os").environ["GITHUB_SHA"]
+          assert score["held_out_lift"] is None and score["production_applied"] is False
+          print("PAPER_CROSS_RUN_VERIFIED",before["generation"],after["generation"],score["ledger_sha256"])
+          PY
+      - name: Preserve independently downloadable checked artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-paper-ledger-${{ github.run_id }}
+          path: |
+            paper_pov/output/latest.json
+            paper_pov/output/ledger.json
+            paper_pov/output/scoreboard.json
+            paper_pov/output/SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
+      - name: Non-force, single-writer ledger push and remote readback
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/paper-base.sha)" || {
+            echo "LEDGER_CONCURRENT_UPDATE_ABORT"; exit 1;
+          }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -B paper-proof-ledger refs/remotes/origin/paper-proof-ledger
+          cp /tmp/paper-ledger-next.json paper-ledger.json
+          git add paper-ledger.json
+          git diff --cached --check
+          git commit -m "paper: immutable scan ${{ github.run_id }} source ${{ github.sha }}"
+          git push origin HEAD:refs/heads/paper-proof-ledger
+          git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+          git show refs/remotes/origin/paper-proof-ledger:paper-ledger.json > /tmp/paper-ledger-readback.json
+          cmp /tmp/paper-ledger-next.json /tmp/paper-ledger-readback.json
+          echo "PAPER_LEDGER_REMOTE_READBACK_VERIFIED $(git rev-parse HEAD)"
+      - name: Publish actual scoreboard to issue 34 and verify comment readback
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          s=json.loads(Path("/tmp/paper-scoreboard.json").read_text())
+          lines=[
+            "### Public paper POV — verified ledger run "+os.environ["GITHUB_RUN_ID"],
+            "UTC GitHub run: https://github.com/"+os.environ["GITHUB_REPOSITORY"]+"/actions/runs/"+os.environ["GITHUB_RUN_ID"],
+            "Exact source SHA: "+os.environ["GITHUB_SHA"],
+            "Actual scans persisted: "+str(s["actual_scans"])+"; generation: "+str(s["generation"]),
+            "Immutable predictions: "+str(s["immutable_predictions"])+"; market observations: "+str(s["market_observations"]),
+            "Matured observed labels: "+str(s["matured_labels"])+"; gap abstentions: "+str(s["gap_abstentions"]),
+            "Observed +30% hits: "+str(s["observed_30pct_hits"])+"; held-out lift: NOT MEASURED",
+            "Baseline/challenger: ranking recorded, unbiased evaluation PENDING; production applied: NO",
+            "Ledger SHA256: "+s["ledger_sha256"],
+            "Persistence: non-force push and exact remote readback VERIFIED; downloadable 90-day SHA256 artifact in run.",
+            "Next: verify unattended schedule, cross-run continuity and matured outcomes; no model promotion."
+          ]
+          Path("/tmp/paper-issue-comment.txt").write_text("\n\n".join(lines))
+          PY
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/34/comments" -f body="$(cat /tmp/paper-issue-comment.txt)" > /tmp/paper-comment-response.json
+          python - <<'PY' > /tmp/paper-comment-id.txt
+          import json
+          print(json.load(open("/tmp/paper-comment-response.json"))["id"])
+          PY
+          gh api "repos/${GITHUB_REPOSITORY}/issues/comments/$(cat /tmp/paper-comment-id.txt)" > /tmp/paper-comment-readback.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          expected=Path("/tmp/paper-issue-comment.txt").read_text()
+          actual=json.loads(Path("/tmp/paper-comment-readback.json").read_text())["body"]
+          assert actual==expected, "Issue scoreboard readback mismatch"
+          print("PAPER_ISSUE_READBACK_VERIFIED")
+          PY
