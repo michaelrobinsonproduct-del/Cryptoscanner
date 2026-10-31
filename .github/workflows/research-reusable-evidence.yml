@@ -26,20 +26,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: e4818c971a95574c47f28c56ad5bee15b81c60ff
+          ref: 8e80c76a8d2324075a7fcaf9d8fbc46faa51e41b
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify immutable research code and at least 326 offline tests
+      - name: Verify immutable research code and at least 338 offline tests
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = 'e4818c971a95574c47f28c56ad5bee15b81c60ff'
+          test "$(git rev-parse HEAD)" = '8e80c76a8d2324075a7fcaf9d8fbc46faa51e41b'
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-tests.log
-          python -c 'import re; from pathlib import Path; s=Path("/tmp/research-tests.log").read_text(); m=re.search(r"^Ran (\d+) tests", s, re.M); assert m and int(m.group(1))            >= 326, "expected at least 318 pinned offline tests"; print("EXACT_PINNED_TEST_COUNT", m.group(1))'
+          python -c 'import re; from pathlib import Path; s=Path("/tmp/research-tests.log").read_text(); m=re.search(r"^Ran (\d+) tests", s, re.M); assert m and int(m.group(1))             >= 338, "expected at least 338 pinned offline tests"; print("EXACT_PINNED_TEST_COUNT", m.group(1))'
           grep -q '^OK$' /tmp/research-tests.log
       - name: Check cooperative research lease, active runs, and cached source evidence
         id: cache
@@ -187,6 +187,30 @@ jobs:
           fi
           test -s research/output/bounded_trade_probe_summary.json
           python -c 'import json; from pathlib import Path; r=json.loads(Path("research/output/bounded_trade_probe_summary.json").read_text()); assert r["real_labels"] == 0 and r["source_archive_full_sha256_verified"] is False and r["range_bytes_transferred"] <= 24*1024*1024; print("bounded trade evidence verified; no labels authorized")'
+      - name: Corroborate one retained historical trade bucket via bounded independent Kraken REST (no labels)
+        if: steps.cache.outputs.skip == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=research python research/probe_historical_rest_interval.py \
+            --retained-trades research/output/bounded_independent_trade_members.zip \
+            --output research/output/historical_rest_bucket_report.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('research/output/historical_rest_bucket_report.json').read_text())
+          assert r['real_labels'] == 0 and r.get('independent_quarterly_completeness_verified') is not True
+          assert r.get('production_modified') is not True
+          print('HISTORICAL_REST_PROBE_FAIL_CLOSED', json.dumps(r, sort_keys=True))
+          PY
+      - name: Upload bounded independent REST bucket corroboration
+        if: steps.cache.outputs.skip == 'false' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kraken-historical-rest-bucket-corroboration
+          path: research/output/historical_rest_bucket_report.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Reconcile retained trades and audit closed-candle early-mover candidates (no labels)
         if: steps.cache.outputs.skip == 'false'
         shell: bash
