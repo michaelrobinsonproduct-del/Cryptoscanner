@@ -106,7 +106,8 @@ class HistoricalWindowTests(unittest.TestCase):
     def test_unsafe_member_path_rejected(self):
         with zipfile.ZipFile(self.path, "w") as z:
             z.writestr("trades/../../BCHJPY.csv", "invalid")
-        self.assertIsNone(select_observed_window(self.path))
+        with self.assertRaises(ValueError):
+            select_observed_window(self.path)
 
     def test_duplicate_member_rejected(self):
         import warnings
