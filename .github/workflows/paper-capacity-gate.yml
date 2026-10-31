@@ -1,0 +1,53 @@
+name: Role B one-shot paper storage capacity acceptance (read-only)
+on:
+  pull_request:
+    paths:
+      - 'paper_eval/capacity.py'
+      - 'paper_eval/test_capacity.py'
+      - '.github/workflows/paper-capacity-gate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: paper-capacity-readonly
+  cancel-in-progress: false
+jobs:
+  forecast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact-source tests without writes
+        run: |
+          set -euo pipefail
+          echo "PAPER_CAPACITY_SOURCE_SHA=$(git rev-parse HEAD)"
+          python -m unittest discover -s paper_eval -p 'test_*.py' -v
+          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+      - name: Independently size genuine public Git ledger
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin refs/heads/paper-proof-ledger
+          LEDGER_COMMIT="$(git rev-parse FETCH_HEAD)"
+          git show "${LEDGER_COMMIT}:paper-ledger.json" > /tmp/paper-capacity-ledger.json
+          mkdir -p paper_eval/output
+          python -m paper_eval.capacity \
+            --ledger /tmp/paper-capacity-ledger.json \
+            --ledger-commit "$LEDGER_COMMIT" \
+            --output paper_eval/output/storage-capacity.json
+          (cd paper_eval/output && sha256sum storage-capacity.json > STORAGE-SHA256SUMS)
+          echo "PAPER_CAPACITY_LEDGER_COMMIT=$LEDGER_COMMIT"
+      - name: Preserve checksum-sealed capacity evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-readonly-capacity-${{ github.run_id }}
+          path: |
+            paper_eval/output/storage-capacity.json
+            paper_eval/output/STORAGE-SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
