@@ -1,0 +1,125 @@
+name: Kraken Reusable Research Evidence (isolated)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/research-reusable-evidence.yml'
+  schedule:
+    - cron: '13 3 * * *'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: consolidated-kraken-research
+  cancel-in-progress: false
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 6e603b49d1824a3714b42418d18cb8df1b5acf1f
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify immutable research code and 147 offline tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = '6e603b49d1824a3714b42418d18cb8df1b5acf1f'
+          test -z "$(git status --porcelain)"
+          python -m compileall -q research
+          python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-tests.log
+          grep -q 'Ran 147 tests' /tmp/research-tests.log
+          grep -q '^OK$' /tmp/research-tests.log
+      - name: Check cooperative research lease, active runs, and cached source evidence
+        id: cache
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          lease_owner=$(gh api "repos/$GITHUB_REPOSITORY/contents/research/learning_progress.json?ref=research-learning-program-20261027" --jq '.content' | base64 -d | python -c 'import json,sys; print(json.load(sys.stdin)["concurrency"]["owner"] or "")')
+          other_active=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?per_page=100" --jq '[.workflow_runs[] | select(.status != "completed" and (.id | tostring) != env.GITHUB_RUN_ID and (.name | test("Research|Learning|Historical"; "i")))] | length')
+          if [[ -n "$lease_owner" || "$other_active" != '0' ]]; then
+            echo 'skip=true' >> "$GITHUB_OUTPUT"
+            echo 'Research lease or another research workflow is active; no acquisition attempted.'
+            exit 0
+          fi
+          echo 'skip=false' >> "$GITHUB_OUTPUT"
+          cached_run=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=kraken-reusable-ohlc-evidence&per_page=100" --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .workflow_run.id // empty')
+          if [[ -n "$cached_run" ]]; then
+            echo 'reuse=true' >> "$GITHUB_OUTPUT"
+            echo "cached_run=$cached_run" >> "$GITHUB_OUTPUT"
+          else
+            echo 'reuse=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Reuse retained source evidence (zero archive downloads)
+        if: steps.cache.outputs.reuse == 'true' && steps.cache.outputs.skip == 'false'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CACHED_RUN: ${{ steps.cache.outputs.cached_run }}
+        run: |
+          set -euo pipefail
+          mkdir -p research/output
+          gh run download "$CACHED_RUN" -R "$GITHUB_REPOSITORY" -n kraken-reusable-ohlc-evidence -D research/output
+          test -s research/output/reusable_ohlc_evidence.zip
+      - name: Acquire verified source ONCE and retain 48-market bounded evidence
+        if: steps.cache.outputs.reuse == 'false' && steps.cache.outputs.skip == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p research/output
+          PYTHONPATH=research python - <<'PY'
+          import json
+          import tempfile
+          from pathlib import Path
+          from inventory_kraken_archive import download_verified, resource_gate, EXPECTED_SHA256
+          from build_reusable_ohlc_evidence import build
+          with tempfile.TemporaryDirectory(prefix='kraken-reusable-source-') as temp:
+              archive = Path(temp) / 'verified_ohlc.zip'
+              verification = download_verified(archive, resources=resource_gate(Path(temp)))
+              if verification['sha256'] != EXPECTED_SHA256:
+                  raise RuntimeError('archive identity gate failed')
+              cohort = json.loads(Path('research/kraken_reusable_market_selection.json').read_text())
+              manifest = build(archive, cohort, 'research/output/reusable_ohlc_evidence.zip',
+                               expected_archive_sha256=EXPECTED_SHA256)
+              print(json.dumps({'source_verified': True, 'retained_markets': len(manifest['markets']),
+                                'real_labels': 0, 'production_modified': False}, sort_keys=True))
+          PY
+      - name: Verify and summarize retained evidence without labels
+        if: steps.cache.outputs.skip == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=research python - <<'PY'
+          import json
+          from pathlib import Path
+          from build_reusable_ohlc_evidence import inspect
+          from inventory_kraken_archive import EXPECTED_SHA256
+          report = inspect('research/output/reusable_ohlc_evidence.zip', expected_archive_sha256=EXPECTED_SHA256)
+          report['archive_downloads_this_run'] = 0 if '${{ steps.cache.outputs.reuse }}' == 'true' else 1
+          report['production_modified'] = False
+          Path('research/output/reusable_coverage_report.json').write_text(json.dumps(report, sort_keys=True) + '\n')
+          print(json.dumps({'markets': report['markets'], 'real_labels': report['real_labels'],
+                            'archive_downloads_this_run': report['archive_downloads_this_run']}, sort_keys=True))
+          PY
+      - name: Refresh reusable evidence artifact for future unattended runs
+        if: steps.cache.outputs.skip == 'false' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kraken-reusable-ohlc-evidence
+          path: research/output/reusable_ohlc_evidence.zip
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload bounded research coverage report
+        if: steps.cache.outputs.skip == 'false' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kraken-reusable-coverage-report
+          path: research/output/reusable_coverage_report.json
+          if-no-files-found: error
+          retention-days: 30
