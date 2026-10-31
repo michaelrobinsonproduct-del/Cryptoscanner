@@ -27,14 +27,22 @@ jobs:
       - name: Restore checksum-sealed existing ledger (never silently bootstrap)
         run: |
           set -euo pipefail
-          git fetch --no-tags origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          git fetch --no-tags --depth=512 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           git rev-parse refs/remotes/origin/paper-proof-ledger > /tmp/paper-base.sha
-          git show refs/remotes/origin/paper-proof-ledger:paper-ledger.json > /tmp/paper-ledger-input.json
+          # For segmented ledgers, fetch the exact immutable legacy checkpoint.
+          BASE="$(cat /tmp/paper-base.sha)"
+          if git cat-file -e "${BASE}:paper-segment-manifest.json" 2>/dev/null; then
+            CHECKPOINT="$(git show "${BASE}:paper-segment-manifest.json" | python -c 'import json,sys;print(json.load(sys.stdin)["checkpoint"]["git_commit"])')"
+            git cat-file -e "${CHECKPOINT}^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$CHECKPOINT"
+          fi
+          python -m paper_pov.segmented_repository export-git \
+            --repository . --commit "$BASE" --output /tmp/paper-ledger-input.json --full-replay
           python - <<'PY'
           import json
-          from paper_pov.ledger import verify
           from pathlib import Path
-          state=verify(json.loads(Path("/tmp/paper-ledger-input.json").read_text()))
+          from paper_pov.ledger import verify
+          from paper_pov.segmented_storage import MAX_RAW_BYTES
+          state=verify(json.loads(Path("/tmp/paper-ledger-input.json").read_text()),MAX_RAW_BYTES)
           print("PAPER_RESTORED",state["generation"],len(state["runs"]),state["sha256"])
           PY
       - name: Real bounded public Kraken scan (paper only)
@@ -44,17 +52,12 @@ jobs:
       - name: Append immutable as-of records and only matured observed outcomes
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import json,os
-          from pathlib import Path
-          from paper_pov.ledger import update_file
-          from paper_pov.scanner import atomic_json
-          score=update_file("/tmp/paper-ledger-input.json",
-              "paper_pov/output/latest.json",os.environ["GITHUB_SHA"],
-              "/tmp/paper-ledger-next.json")
-          atomic_json("paper_pov/output/scoreboard.json",score)
-          print("PAPER_LEDGER_SCOREBOARD",json.dumps(score,sort_keys=True))
-          PY
+          python -m paper_pov.segmented_live_writer stage \
+            --repository . --base "$(cat /tmp/paper-base.sha)" \
+            --report paper_pov/output/latest.json --source-sha "$GITHUB_SHA" \
+            --staged /tmp/paper-staged --next-ledger /tmp/paper-ledger-next.json \
+            --scoreboard paper_pov/output/scoreboard.json
+          echo "PAPER_LEDGER_SCOREBOARD $(cat paper_pov/output/scoreboard.json)"
           cp /tmp/paper-ledger-next.json paper_pov/output/ledger.json
           (cd paper_pov/output && sha256sum latest.json scoreboard.json ledger.json > SHA256SUMS)
           cp paper_pov/output/scoreboard.json /tmp/paper-scoreboard.json
@@ -65,9 +68,10 @@ jobs:
           import json
           from pathlib import Path
           from paper_pov.ledger import verify,scoreboard
-          before=verify(json.loads(Path("/tmp/paper-ledger-input.json").read_text()))
-          after=verify(json.loads(Path("/tmp/paper-ledger-next.json").read_text()))
-          score=scoreboard(after)
+          from paper_pov.segmented_storage import MAX_RAW_BYTES
+          before=verify(json.loads(Path("/tmp/paper-ledger-input.json").read_text()),MAX_RAW_BYTES)
+          after=verify(json.loads(Path("/tmp/paper-ledger-next.json").read_text()),MAX_RAW_BYTES)
+          score=scoreboard(after,MAX_RAW_BYTES)
           assert after["generation"]==before["generation"]+1
           assert score["actual_scans"]==after["generation"]
           assert score["immutable_predictions"]>=len(before["predictions"])
@@ -96,16 +100,22 @@ jobs:
           }
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # Save exact tested source and generated results outside Git checkout.
+          mkdir -p /tmp/paper-source-root
+          cp -a paper_pov /tmp/paper-source-root/paper_pov
+          cp -a paper_pov/output /tmp/paper-output
+          git clean -fdx
           git checkout -B paper-proof-ledger refs/remotes/origin/paper-proof-ledger
-          cp /tmp/paper-ledger-next.json paper-ledger.json
-          git add paper-ledger.json
+          PYTHONPATH=/tmp/paper-source-root python -m paper_pov.segmented_live_writer apply \
+            --repository . --base "$(cat /tmp/paper-base.sha)" --staged /tmp/paper-staged
           git diff --cached --check
-          git commit -m "paper: immutable scan ${{ github.run_id }} source ${{ github.sha }}"
+          git commit -m "paper: atomic packed scan ${{ github.run_id }} source ${{ github.sha }}"
           git push origin HEAD:refs/heads/paper-proof-ledger
           git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
-          git show refs/remotes/origin/paper-proof-ledger:paper-ledger.json > /tmp/paper-ledger-readback.json
-          cmp /tmp/paper-ledger-next.json /tmp/paper-ledger-readback.json
+          PYTHONPATH=/tmp/paper-source-root python -m paper_pov.segmented_live_writer verify-remote \
+            --repository . --base "$(cat /tmp/paper-base.sha)" \
+            --commit "$(git rev-parse HEAD)" --staged /tmp/paper-staged
           echo "PAPER_LEDGER_REMOTE_READBACK_VERIFIED $(git rev-parse HEAD)"
       - name: Render verified UTC results after ledger remote readback
         run: |
@@ -114,6 +124,8 @@ jobs:
           # Restore immutable scanner source locally; do not touch remote ledger.
           git checkout --detach "$GITHUB_SHA"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          mkdir -p paper_pov/output
+          cp -a /tmp/paper-output/. paper_pov/output/
           python -m paper_pov.results_report \
             --scan paper_pov/output/latest.json \
             --scoreboard paper_pov/output/scoreboard.json \

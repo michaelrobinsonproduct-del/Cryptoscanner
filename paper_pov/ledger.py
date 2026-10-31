@@ -28,7 +28,7 @@ def empty():
     return seal({"schema": 1, "generation": 0, "runs": [],
                  "predictions": [], "observations": [], "outcomes": []})
 
-def verify(state):
+def verify(state, capacity_bytes=MAX_BYTES):
     if not isinstance(state, dict) or state.get("schema") != 1:
         raise ValueError("Missing or incompatible ledger schema")
     if not isinstance(state.get("generation"), int) or state["generation"] < 0:
@@ -143,12 +143,14 @@ def verify(state):
         raise ValueError("Invalid archive index")
     if state["generation"] != summary.get("scans", 0) + len(runs):
         raise ValueError("Nonregressing generation/scan count mismatch")
-    if len(canonical(state)) > MAX_BYTES:
+    if type(capacity_bytes) is not int or not 0 < capacity_bytes <= 32_000_000:
+        raise ValueError("Invalid logical ledger capacity")
+    if len(canonical(state)) > capacity_bytes:
         raise ValueError("Ledger capacity reached: archive/partition before proceeding")
     return state
 
-def advance(original, report, source_sha):
-    verify(original)
+def advance(original, report, source_sha, capacity_bytes=MAX_BYTES):
+    verify(original, capacity_bytes)
     if not isinstance(source_sha, str) or len(source_sha) != 40 or any(c not in "0123456789abcdef" for c in source_sha):
         raise ValueError("Invalid immutable source commit SHA")
     if not isinstance(report, dict) or report.get("schema") != 1 or report.get("mode") != "PAPER_ONLY" or report.get("buy_approved") is not False or report.get("production_applied") is not False:
@@ -278,11 +280,11 @@ def advance(original, report, source_sha):
     state["outcomes"] = [o for o in state["outcomes"] if o["prediction_id"] not in old_ids]
     state["generation"] += 1
     seal(state)
-    verify(state)
+    verify(state, capacity_bytes)
     return state
 
-def scoreboard(state):
-    verify(state)
+def scoreboard(state, capacity_bytes=MAX_BYTES):
+    verify(state, capacity_bytes)
     outcomes = state["outcomes"]
     archived = state.get("archived", {})
     return {"generation": state["generation"],

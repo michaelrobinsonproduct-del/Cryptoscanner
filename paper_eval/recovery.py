@@ -10,7 +10,7 @@ import json
 import re
 from pathlib import Path
 
-from paper_pov import ledger
+from paper_pov import ledger, segmented_storage
 
 FILES = frozenset(("latest.json", "ledger.json", "scoreboard.json", "SHA256SUMS"))
 DATA_FILES = FILES - {"SHA256SUMS"}
@@ -81,8 +81,8 @@ def verify_bundle(bundle, expected_ledger, expected_commit):
         scoreboard = json.loads(bundle["scoreboard.json"])
     except (ValueError, UnicodeDecodeError) as exc:
         raise ValueError("Invalid artifact JSON") from exc
-    ledger.verify(state)
-    if scoreboard != ledger.scoreboard(state):
+    ledger.verify(state, segmented_storage.MAX_RAW_BYTES)
+    if scoreboard != ledger.scoreboard(state, segmented_storage.MAX_RAW_BYTES):
         raise ValueError("Artifact scoreboard disagrees with recovered ledger")
     if not state["runs"] or state["generation"] == 0:
         raise ValueError("Artifact has no recoverable latest scan")
@@ -129,7 +129,7 @@ def verify_bundle(bundle, expected_ledger, expected_commit):
         "ledger_sha256": state["sha256"],
         "source_sha": latest["source_sha"],
         "last_run_id": latest["id"],
-        "scans_recovered": ledger.scoreboard(state)["actual_scans"],
+        "scans_recovered": ledger.scoreboard(state, segmented_storage.MAX_RAW_BYTES)["actual_scans"],
         "latest_predictions_recovered": len(predictions),
         "latest_observations_recovered": len(observations),
         "manifest_members_verified": len(DATA_FILES),

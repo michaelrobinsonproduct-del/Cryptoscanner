@@ -26,7 +26,7 @@ class RecoveryWorkflowTests(unittest.TestCase):
     def test_genuine_scheduled_run_and_immutable_git_comparison(self):
         for phrase in ("event=schedule", "status=success",
                        "git rev-list --first-parent --max-count=40",
-                       "git show", "cmp -s",
+                       "paper_pov.segmented_repository export-git", "cmp -s",
                        "verify_bundle(load_bundle", "source_sha",
                        "head_sha", "remote_git_bytes_match"):
             self.assertIn(phrase, self.workflow)

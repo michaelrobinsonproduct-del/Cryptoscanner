@@ -43,9 +43,9 @@ jobs:
       - name: Independently verify latest real remote ledger without writing
         run: |
           set -euo pipefail
-          git fetch --no-tags origin refs/heads/paper-proof-ledger
-          LEDGER_COMMIT="$(git rev-parse FETCH_HEAD)"
-          git show "${LEDGER_COMMIT}:paper-ledger.json" > /tmp/public-paper-ledger.json
+          python -m paper_pov.git_ledger_fetch
+          LEDGER_COMMIT="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+          python -m paper_pov.segmented_repository export-git --repository . --commit "${LEDGER_COMMIT}" --output /tmp/public-paper-ledger.json
           mkdir -p paper_pov/acceptance
           LEDGER_COMMIT="$LEDGER_COMMIT" python - <<'PY'
           import datetime as dt
@@ -55,7 +55,8 @@ jobs:
           import subprocess
           from pathlib import Path
           from paper_pov.ledger import verify, canonical
-          state = verify(json.loads(Path("/tmp/public-paper-ledger.json").read_text()))
+          from paper_pov.segmented_storage import MAX_RAW_BYTES
+          state = verify(json.loads(Path("/tmp/public-paper-ledger.json").read_text()), MAX_RAW_BYTES)
           assert state["generation"] >= 4, "Remote ledger regressed below verified generation 4"
           runs = state["runs"]
           gaps = [round((dt.datetime.fromisoformat(b["as_of"]) -

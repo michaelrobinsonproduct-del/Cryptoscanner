@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 
 from .ledger import verify
+from .segmented_storage import MAX_RAW_BYTES
 
 UTC = dt.timezone.utc
 GRACE = dt.timedelta(minutes=35)
@@ -99,7 +100,7 @@ def evaluate(scan_payload, audit_payload, ledger, previous, ledger_commit,
     try:
         if not isinstance(ledger_commit, str) or not SHA40.fullmatch(ledger_commit):
             raise ValueError("Missing immutable ledger commit SHA")
-        state = verify(ledger)
+        state = verify(ledger, MAX_RAW_BYTES)
         if state["generation"] < 1 or not state["runs"]:
             raise ValueError("Missing persisted scans")
         last = state["runs"][-1]
@@ -125,7 +126,7 @@ def evaluate(scan_payload, audit_payload, ledger, previous, ledger_commit,
         if previous is None:
             alerts.append("PAPER_PREVIOUS_LEDGER_UNAVAILABLE")
         else:
-            old = verify(previous)
+            old = verify(previous, MAX_RAW_BYTES)
             if state["generation"] != old["generation"] + 1:
                 alerts.append("PAPER_LEDGER_GENERATION_NONCONTIGUOUS")
             if old["runs"] and (len(state["runs"]) < 2 or state["runs"][-2] != old["runs"][-1]):

@@ -12,7 +12,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from paper_eval.audit import _timeline, _validate
-from paper_pov import ledger
+from paper_pov import ledger, segmented_storage
 from paper_pov.scanner import atomic_json, utc
 
 
@@ -26,8 +26,8 @@ def _delta(before, after, key):
 
 def verify_transition(before, after):
     """Independently reconcile a single append, including a 50h compaction."""
-    ledger.verify(before)
-    ledger.verify(after)
+    ledger.verify(before, segmented_storage.MAX_RAW_BYTES)
+    ledger.verify(after, segmented_storage.MAX_RAW_BYTES)
     _validate(before)
     _validate(after)
     if after["generation"] != before["generation"] + 1:
@@ -116,11 +116,11 @@ def verify_transition(before, after):
         raise ValueError("Archived gap totals disagree with recorded quotes")
     if _delta(before, after, "observed_30pct_hits") != reconstructed_hits:
         raise ValueError("Archived sampled-hit totals disagree with recorded quotes")
-    if (ledger.scoreboard(after)["immutable_predictions"]
-            != ledger.scoreboard(before)["immutable_predictions"] + len(new_preds)):
+    if (ledger.scoreboard(after, segmented_storage.MAX_RAW_BYTES)["immutable_predictions"]
+            != ledger.scoreboard(before, segmented_storage.MAX_RAW_BYTES)["immutable_predictions"] + len(new_preds)):
         raise ValueError("Lifetime prediction totals regressed")
-    if (ledger.scoreboard(after)["market_observations"]
-            != ledger.scoreboard(before)["market_observations"] + len(new_quotes)):
+    if (ledger.scoreboard(after, segmented_storage.MAX_RAW_BYTES)["market_observations"]
+            != ledger.scoreboard(before, segmented_storage.MAX_RAW_BYTES)["market_observations"] + len(new_quotes)):
         raise ValueError("Lifetime observation totals regressed")
     return {
         "schema": 1, "mode": "READ_ONLY_PAPER_TRANSITION_AUDIT",

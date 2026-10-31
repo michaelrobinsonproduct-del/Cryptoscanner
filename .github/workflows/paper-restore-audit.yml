@@ -81,16 +81,18 @@ jobs:
                       raise ValueError("Unsafe ZIP member")
                   (root/p.name).write_bytes(z.read(e))
           PY
-          git fetch --no-tags --depth=40 origin refs/heads/paper-proof-ledger
+          python -m paper_pov.git_ledger_fetch
           : > /tmp/paper-matched-commit.txt
           while IFS= read -r COMMIT; do
-            if git show "$COMMIT:paper-ledger.json" > /tmp/paper-git-ledger.json 2>/dev/null; then
-              if cmp -s /tmp/paper-restored/ledger.json /tmp/paper-git-ledger.json; then
+            if git cat-file -e "$COMMIT:paper-ledger.json" 2>/dev/null || git cat-file -e "$COMMIT:paper-segment-manifest.json" 2>/dev/null; then
+              python -m paper_pov.segmented_repository export-git --repository . --commit "$COMMIT" --output "/tmp/paper-git-ledger-${COMMIT}.json"
+              if cmp -s /tmp/paper-restored/ledger.json "/tmp/paper-git-ledger-${COMMIT}.json"; then
+                cp "/tmp/paper-git-ledger-${COMMIT}.json" /tmp/paper-git-ledger.json
                 printf '%s\n' "$COMMIT" > /tmp/paper-matched-commit.txt
                 break
               fi
             fi
-          done < <(git rev-list --first-parent --max-count=40 FETCH_HEAD)
+          done < <(git rev-list --first-parent --max-count=40 refs/remotes/origin/paper-proof-ledger)
           test -s /tmp/paper-matched-commit.txt || { echo "NO_IMMUTABLE_GIT_LEDGER_MATCH"; exit 1; }
           python - <<'PY'
           import json

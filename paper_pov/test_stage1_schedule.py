@@ -37,7 +37,10 @@ class StageOneScheduleTests(unittest.TestCase):
                         text.index("Restore checksum-sealed existing ledger"))
         self.assertLess(text.index("Restore checksum-sealed existing ledger"),
                         text.index("Real bounded public Kraken scan"))
-        self.assertIn("git show refs/remotes/origin/paper-proof-ledger:paper-ledger.json", text)
+        self.assertIn("paper_pov.segmented_repository export-git", text)
+        self.assertIn("--full-replay", text)
+        self.assertIn("git fetch --no-tags --depth=512 origin refs/heads/paper-proof-ledger", text)
+        self.assertIn("paper_pov.segmented_live_writer stage", text)
         self.assertIn("PAPER_RESTORED", text)
 
     def test_nonforce_cas_remote_readback_and_artifact(self):
@@ -47,8 +50,17 @@ class StageOneScheduleTests(unittest.TestCase):
         self.assertIn('test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/paper-base.sha)"', text)
         self.assertIn("git push origin HEAD:refs/heads/paper-proof-ledger", text)
         self.assertNotIn("git push --force", text)
-        self.assertIn("cmp /tmp/paper-ledger-next.json /tmp/paper-ledger-readback.json", text)
+        self.assertIn("paper_pov.segmented_live_writer verify-remote", text)
+        self.assertIn("PAPER_LEDGER_REMOTE_READBACK_VERIFIED", text)
+        self.assertIn("paper_pov.segmented_live_writer apply", text)
         self.assertIn("retention-days: 90", text)
+
+    def test_only_main_schedule_or_manual_dispatch_can_write(self):
+        text = PIPELINE.read_text()
+        self.assertNotIn("  push:", text)
+        self.assertIn("github.ref == 'refs/heads/main'", text)
+        self.assertIn("github.event_name == 'schedule'", text)
+        self.assertIn("github.event_name == 'workflow_dispatch'", text)
 
     def test_do_not_weaken_forty_five_minute_gap_abstention(self):
         text = LEDGER.read_text()
