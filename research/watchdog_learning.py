@@ -80,14 +80,23 @@ def assess(now, workflow_created, runs, jobs_by_id, artifacts, checkpoint):
     completed = [(r, s) for r, s in statuses if s != "running"]
     if completed and completed[0][1] == "failed":
         alerts.append("LATEST_RESEARCH_RUN_FAILED")
-    if statuses and statuses[0][1] == "unverified_green":
+    # An in-progress retry cannot hide a completed green job without evidence.
+    if completed and completed[0][1] == "unverified_green":
         alerts.append("LATEST_GREEN_RUN_UNVERIFIED")
     for r, status in statuses:
         if status == "running" and now - timestamp(r["created_at"]) > dt.timedelta(minutes=120):
             alerts.append("RESEARCH_RUN_STALLED")
             break
-    if len(statuses) >= 2 and all(s == "skipped_no_work" for _, s in statuses[:2]):
+    # Count the two latest completed batches; queued retries do not erase skips.
+    if len(completed) >= 2 and all(s == "skipped_no_work" for _, s in completed[:2]):
         alerts.append("REPEATED_GREEN_NO_WORK")
+    # The 90-minute freshness gate applies to substantive evidence work, not
+    # merely a green CI/test job or a queued retry. A daily schedule alone is
+    # not sufficient for the user-requested continuous-learning cadence.
+    evidence_runs = [r for r, s in statuses if s == "evidence_run"]
+    if now - workflow_created >= dt.timedelta(minutes=90):
+        if not evidence_runs or now - timestamp(evidence_runs[0]["created_at"]) >= dt.timedelta(minutes=90):
+            alerts.append("NO_SUBSTANTIVE_RESEARCH_90M")
     due = latest_due(now)
     if due >= workflow_created:
         scheduled = [r for r in runs if r.get("event") == "schedule" and
