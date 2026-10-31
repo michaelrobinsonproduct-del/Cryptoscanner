@@ -26,20 +26,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: de270f21b6329a7b24454f6b86d9e3ff2759e158
+          ref: 4ebb1bc05cfdcea9ddf5da4e0495649a8e06041d
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify immutable research code and at least 242 offline tests
+      - name: Verify immutable research code and at least 252 offline tests
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = 'de270f21b6329a7b24454f6b86d9e3ff2759e158'
+          test "$(git rev-parse HEAD)" = '4ebb1bc05cfdcea9ddf5da4e0495649a8e06041d'
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-tests.log
-          python -c 'import re; from pathlib import Path; s=Path("/tmp/research-tests.log").read_text(); m=re.search(r"^Ran (\d+) tests", s, re.M); assert m and int(m.group(1))     >= 242, "expected at least 242 pinned offline tests"; print("EXACT_PINNED_TEST_COUNT", m.group(1))'
+          python -c 'import re; from pathlib import Path; s=Path("/tmp/research-tests.log").read_text(); m=re.search(r"^Ran (\d+) tests", s, re.M); assert m and int(m.group(1))      >= 252, "expected at least 242 pinned offline tests"; print("EXACT_PINNED_TEST_COUNT", m.group(1))'
           grep -q '^OK$' /tmp/research-tests.log
       - name: Check cooperative research lease, active runs, and cached source evidence
         id: cache
@@ -162,6 +162,23 @@ jobs:
               exit 1
             fi
           fi
+          # Legacy cached trade evidence predates strong revision validators.
+          # Re-capture only bounded official trade members when the retained
+          # source identity cannot be tied to the official manifest probe.
+          if [[ -s research/output/bounded_independent_trade_members.zip ]]; then
+            if ! python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('research/output/bounded_trade_probe_summary.json')
+          r=json.loads(p.read_text()) if p.is_file() else {}
+          v=r.get('source_revision_validator') or {}
+          assert isinstance(v.get('strong_etag'), str) and v['strong_etag'] and not v['strong_etag'].startswith('W/')
+          PY
+            then
+              echo 'Cached bounded trade evidence lacks strong source revision; refresh only bounded trade members.'
+              rm -f research/output/bounded_independent_trade_members.zip research/output/bounded_trade_probe_summary.json
+            fi
+          fi
           if [[ ! -s research/output/bounded_independent_trade_members.zip ]]; then
             PYTHONPATH=research python research/probe_bounded_trade_members.py \
               --selection research/kraken_reusable_market_selection.json \
@@ -187,6 +204,7 @@ jobs:
           set -euo pipefail
           PYTHONPATH=research python research/inspect_kraken_trade_manifest.py \
             --selection research/kraken_reusable_market_selection.json \
+            --retained-trades research/output/bounded_independent_trade_members.zip \
             --output research/output/official_trade_manifest_report.json
           python - <<'PY'
           import json
@@ -202,6 +220,33 @@ jobs:
                             'source_revision_validator':r['source_revision_validator'],
                             'range_bytes_transferred':r['range_bytes_transferred']},sort_keys=True))
           PY
+      - name: Verify same official source revision and actual retained market identities (not complete labels)
+        if: steps.cache.outputs.skip == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=research python research/verify_trade_revision_binding.py \
+            --trades research/output/bounded_trade_probe_summary.json \
+            --official research/output/official_trade_manifest_report.json \
+            --output research/output/trade_revision_binding.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('research/output/trade_revision_binding.json').read_text())
+          assert r['real_labels'] == 0 and r['complete_trade_intervals_verified'] == 0
+          assert r['source_trade_archive_sha256_verified'] is False
+          if not r['same_source_revision']:
+              raise RuntimeError('trade/manifest source revision not consistent: ' + r['status'])
+          print('BOUND_REVISION_CONSISTENT_NOT_SOURCE_AUTHENTICATED')
+          PY
+      - name: Upload bounded source revision binding report
+        if: steps.cache.outputs.skip == 'false' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kraken-trade-revision-binding
+          path: research/output/trade_revision_binding.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload bounded official trade manifest inspection
         if: steps.cache.outputs.skip == 'false' && success()
         uses: actions/upload-artifact@v4
