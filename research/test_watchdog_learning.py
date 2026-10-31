@@ -195,8 +195,8 @@ class AlertTests(unittest.TestCase):
                   "latest_run": 7}
         alert_issue(api, report)
         body = api.issues[11]["body"]
-        self.assertIn("\\n- EXPIRED_RESEARCH_LEASE", body)
-        self.assertNotIn("\\\\n", body)
+        self.assertIn("\n- EXPIRED_RESEARCH_LEASE", body)
+        self.assertNotIn("\\n", body)
 
     def test_existing_alert_on_second_page_is_reused(self):
         api = FakeAPI()
