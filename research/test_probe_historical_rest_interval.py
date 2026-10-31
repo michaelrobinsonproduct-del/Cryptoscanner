@@ -62,7 +62,7 @@ class HistoricalRestProbeTests(unittest.TestCase):
                 opener=lambda *a, **kw: Response(make_page(self.rows, error=["EGeneral:fail"])))
 
     def test_unwitnessed_tail_abstains(self):
-        cursor = ["9999999999999", "10000000000000", "10000000000001", "10000000000002"]
+        cursor = ["301500000000", "303500000000", "305500000000", "307500000000"]
         i = iter(range(4))
         def page(*a, **kw):
             j = next(i)
