@@ -49,3 +49,47 @@ jobs:
             "source_sha":__import__("os").popen("git rev-parse HEAD").read().strip(),
             "production_applied":False},sort_keys=True))
           PY
+      - name: Verify ACTUAL remote paper ledger read-only migration and Git provenance
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          git rev-parse refs/remotes/origin/paper-proof-ledger > /tmp/paper-storage-legacy-sha
+          LEGACY_SHA="$(cat /tmp/paper-storage-legacy-sha)"
+          git show "${LEGACY_SHA}:paper-ledger.json" > /tmp/paper-storage-real-ledger.json
+          python -m paper_pov.segmented_repository migrate \
+            --legacy-file /tmp/paper-storage-real-ledger.json \
+            --checkpoint-commit "$LEGACY_SHA" \
+            --destination /tmp/paper-storage-readonly
+          python -m paper_pov.segmented_repository verify \
+            --directory /tmp/paper-storage-readonly --full-replay --git-repository .
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          from paper_pov import ledger,segmented_repository as repo
+          before=Path("/tmp/paper-storage-real-ledger.json").read_bytes()
+          state,manifest=repo.read_state("/tmp/paper-storage-readonly",full_replay=True)
+          assert json.loads(before)==state
+          assert manifest["checkpoint"]["file_sha256"]==hashlib.sha256(before).hexdigest()
+          assert manifest["head"]["generation"]==state["generation"]
+          print("REAL_GIT_STORAGE_MIGRATION_VERIFIED",json.dumps({
+              "generation":state["generation"],"original_bytes":len(before),
+              "packed_bytes":(Path("/tmp/paper-storage-readonly")/repo.SNAPSHOT).stat().st_size,
+              "ledger_sha256":state["sha256"],"production_applied":False
+          },sort_keys=True))
+          PY
+          git fetch --no-tags origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/paper-storage-legacy-sha)" || {
+            echo "REAL_LEDGER_MOVED_DURING_PROBE"; exit 1;
+          }
+          (cd /tmp/paper-storage-readonly && sha256sum paper-ledger.checkpoint.json paper-ledger.packed.json paper-segment-manifest.json > SHA256SUMS)
+      - name: Preserve actual read-only storage migration evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-storage-readonly-${{ github.run_id }}
+          path: |
+            /tmp/paper-storage-readonly/paper-ledger.checkpoint.json
+            /tmp/paper-storage-readonly/paper-ledger.packed.json
+            /tmp/paper-storage-readonly/paper-segment-manifest.json
+            /tmp/paper-storage-readonly/SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
