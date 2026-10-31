@@ -91,6 +91,7 @@ class AuditTests(unittest.TestCase):
     def test_outcome_before_maturity_rejected(self):
         state = scenario()
         state["runs"] = state["runs"][:2]
+        state["generation"] = 2  # Synthetic truncated fixture, not a real ledger rollback.
         state["observations"] = [o for o in state["observations"]
                                  if o["run_id"] in {r["id"] for r in state["runs"]}]
         state["predictions"] = [p for p in state["predictions"]
