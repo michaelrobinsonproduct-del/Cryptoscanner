@@ -284,6 +284,56 @@ class HistoricalRestProbeTests(unittest.TestCase):
                                 gap_buckets=1)
 
 
+    def test_missing_rest_error_envelope_rejected(self):
+        payload = make_page(self.rows)
+        del payload["error"]
+        with self.assertRaisesRegex(RuntimeError, "REST error"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(payload))
+
+    def test_null_rest_error_envelope_rejected(self):
+        payload = make_page(self.rows)
+        payload["error"] = None
+        with self.assertRaisesRegex(RuntimeError, "REST error"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(payload))
+
+    def test_empty_string_rest_error_envelope_rejected(self):
+        payload = make_page(self.rows)
+        payload["error"] = ""
+        with self.assertRaisesRegex(RuntimeError, "REST error"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(payload))
+
+    def test_empty_object_rest_error_envelope_rejected(self):
+        payload = make_page(self.rows)
+        payload["error"] = {}
+        with self.assertRaisesRegex(RuntimeError, "REST error"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(payload))
+
+    def test_zero_rest_error_envelope_rejected(self):
+        payload = make_page(self.rows)
+        payload["error"] = 0
+        with self.assertRaisesRegex(RuntimeError, "REST error"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(payload))
+
+    def test_unexpected_rest_envelope_key_rejected(self):
+        payload = make_page(self.rows)
+        payload["unverified_source"] = "override"
+        with self.assertRaisesRegex(RuntimeError, "REST error"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(payload))
+
+    def test_whitespace_only_rest_trade_id_rejected(self):
+        rows = [self.rows[0] + ["  "], self.rows[1] + ["valid-id"],
+                self.rows[2] + ["later-id"]]
+        with self.assertRaisesRegex(RuntimeError, "trade id"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(make_page(rows)))
+
+
 class HistoricalGapCandidateTests(unittest.TestCase):
     """Synthetic source-page checks: a candidate empty gap is NOT source proof."""
 
