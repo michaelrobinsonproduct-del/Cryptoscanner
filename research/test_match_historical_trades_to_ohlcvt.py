@@ -41,6 +41,35 @@ class TradeMatchingTests(unittest.TestCase):
                     independently_complete=True)
         self.assertEqual(r["status"], "exact_trade_candle_match")
 
+    def test_empty_ohlc_cannot_be_verified_even_with_completeness_claim(self):
+        r = compare([], [(300,100,2,0)], independently_complete=True)
+        self.assertEqual(r, {"status": "missing_ohlc_evidence", "verified_intervals": 0})
+
+    def test_duplicate_ohlc_cannot_be_verified(self):
+        row = (300,100,101,100,101,5,2)
+        r = compare([row, row], [(300,100,2,0),(301,101,3,1)],
+                    independently_complete=True)
+        self.assertEqual(r["status"], "duplicate_ohlc_timestamp")
+        self.assertEqual(r["verified_intervals"], 0)
+
+    def test_unaligned_and_nonfinite_ohlc_timestamps_fail_closed(self):
+        for bad in (301, float("nan"), float("inf"), -300, True, 300.5):
+            with self.subTest(timestamp=bad):
+                r = compare([(bad,100,101,100,101,5,2)],
+                            [(300,100,2,0),(301,101,3,1)],
+                            independently_complete=True)
+                self.assertEqual(r["status"], "invalid_ohlc_timestamp")
+                self.assertEqual(r["verified_intervals"], 0)
+
+    def test_invalid_shape_fails_closed(self):
+        r = compare([(300,100,101)], [(300,100,2,0)], independently_complete=True)
+        self.assertEqual(r["status"], "invalid_ohlc_shape")
+
+    def test_comparison_resource_cap(self):
+        with self.assertRaises(ValueError):
+            compare([(300,100,100,100,100,1,1)]*250001, [(300,100,1,0)],
+                    independently_complete=True)
+
     def test_fixture_missing_trade_interval_fails(self):
         r = compare([(600,100,100,100,100,1,1)], [(300,100,1,0)], independently_complete=True)
         self.assertEqual(r["status"], "missing_trade_interval")
