@@ -30,7 +30,7 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           code = Path('paper_pov/scanner.py').read_text()
-          assert 'NO credentials or orders' in code
+          assert 'paper-only' in code.lower()
           assert 'def scan(' in code
           assert 'paper-proof-ledger' not in code
           print('ROLE_V_STATIC_PAPER_ONLY_OK')
