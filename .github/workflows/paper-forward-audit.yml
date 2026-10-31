@@ -10,6 +10,9 @@ on:
       - 'paper_eval/**'
       - '.github/workflows/paper-forward-audit.yml'
   workflow_dispatch:
+  # Independent evidence collection, not a second scanner or ledger writer.
+  schedule:
+    - cron: '21 * * * *'
 permissions:
   contents: read
 concurrency:
