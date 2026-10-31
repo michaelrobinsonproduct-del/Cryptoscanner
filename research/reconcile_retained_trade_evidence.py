@@ -28,13 +28,19 @@ def _open_inner(path, member, cap):
     if path.stat().st_size > cap:
         raise ValueError("outer artifact exceeds cap")
     with zipfile.ZipFile(path) as outer:
-        if outer.namelist() != [member]:
-            raise ValueError("unexpected outer artifact members")
-        info = outer.getinfo(member)
-        if info.file_size > cap or info.flag_bits & 1:
-            raise ValueError("unsafe inner archive")
-        payload = outer.read(info)
-    return zipfile.ZipFile(io.BytesIO(payload))
+        names = outer.namelist()
+        if names == [member]:
+            info = outer.getinfo(member)
+            if info.file_size > cap or info.flag_bits & 1:
+                raise ValueError("unsafe inner archive")
+            payload = outer.read(info)
+            return zipfile.ZipFile(io.BytesIO(payload))
+        if "manifest.json" in names and len(names) <= 65:
+            # GitHub CLI unpacks the outer Actions artifact to this inner ZIP.
+            # Retained member SHA checks still apply; this is not a GitHub
+            # artifact digest authentication claim.
+            return zipfile.ZipFile(path)
+    raise ValueError("unexpected artifact members")
 
 
 def _manifest(archive):
@@ -133,8 +139,8 @@ def reconcile(ohlc_artifact, trade_artifact, *, expected_ohlc_digest=None,
             "status": "exact_trade_ohlc_diagnostics_source_completeness_unverified",
             "source_ohlc_archive_sha256_in_retained_manifest": EXPECTED_SHA256,
             "source_trade_archive_sha256_verified": False,
-            "github_ohlc_artifact_sha256": o_digest,
-            "github_trade_artifact_sha256": t_digest,
+            "input_ohlc_zip_sha256": o_digest,
+            "input_trade_zip_sha256": t_digest,
             "markets": reports, "real_labels": 0,
             "held_out_evaluation": "not_authorized", "production_modified": False}
 
@@ -143,8 +149,8 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--ohlc", required=True)
     p.add_argument("--trades", required=True)
-    p.add_argument("--ohlc-digest", required=True)
-    p.add_argument("--trade-digest", required=True)
+    p.add_argument("--ohlc-digest")
+    p.add_argument("--trade-digest")
     a = p.parse_args()
     print(json.dumps(reconcile(a.ohlc, a.trades,
                                expected_ohlc_digest=a.ohlc_digest,
