@@ -13,14 +13,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 65483a26b0968c9dbcd479e09272d94df87b9ade
+          ref: 3799d929c614d33d83cfd5bc50c0b768a53c133e
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Verify pinned code and all offline tests before downloading
         run: |
-          test "$(git rev-parse HEAD)" = "65483a26b0968c9dbcd479e09272d94df87b9ade"
+          test "$(git rev-parse HEAD)" = "3799d929c614d33d83cfd5bc50c0b768a53c133e"
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v
