@@ -22,11 +22,25 @@ def verify_open_boundary(candle, trades, *, independent_trade_source=False):
         return {"status": "incomplete_evidence"}
     timestamp, opening, high, low, close, volume, count = candle
     values = [timestamp, opening, high, low, close, volume, count]
-    if any(not isinstance(x, (int, float)) or not isfinite(x) for x in values):
+    if any(isinstance(x, bool) or not isinstance(x, (int, float)) or not isfinite(x)
+           for x in values):
         return {"status": "invalid_evidence"}
-    if timestamp % STEP or count != len(trades) or count <= 0:
+    # A source candle is an opening-time 5-minute bucket, not an arbitrary
+    # point in time. Integer-valued floats are accepted from source CSVs.
+    if (timestamp < 0 or timestamp != int(timestamp) or timestamp % STEP or
+            count <= 0 or count != int(count) or count != len(trades) or
+            min(opening, high, low, close) <= 0 or
+            low > opening or opening > high or low > close or close > high or
+            volume <= 0):
         return {"status": "incomplete_evidence"}
-    if any(len(t) != 4 or any(not isinstance(v, (int, float)) or not isfinite(v) for v in t) for t in trades):
+    if any(len(t) != 4 or any(isinstance(v, bool) or
+            not isinstance(v, (int, float)) or not isfinite(v) for v in t)
+           for t in trades):
+        return {"status": "invalid_evidence"}
+    # Stable order is source-row order. Duplicate or fractional order values
+    # can silently invent the open/close of same-timestamp trades.
+    order_ids = [t[3] for t in trades]
+    if any(v < 0 or v != int(v) for v in order_ids) or len(set(order_ids)) != len(order_ids):
         return {"status": "invalid_evidence"}
     ordered = sorted(trades, key=lambda t: (t[0], t[3]))
     if any(t[0] < timestamp or t[0] >= timestamp + STEP or t[1] <= 0 or t[2] <= 0 for t in ordered):
