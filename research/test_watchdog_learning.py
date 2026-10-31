@@ -2,7 +2,7 @@
 import datetime as dt
 import unittest
 
-from watchdog_learning import assess, alert_issue, latest_due, lease_state, run_state, UTC
+from watchdog_learning import assess, alert_issue, latest_due, lease_state, run_state, load_evidence_artifacts, UTC
 
 
 NOW = dt.datetime(2026, 10, 31, 2, 0, tzinfo=UTC)
@@ -173,6 +173,29 @@ class FakeAPI:
                 self.writes += 1
             return self.issues[n].copy()
         raise AssertionError((path, method))
+
+
+class ArtifactDiscoveryTests(unittest.TestCase):
+    def test_both_evidence_families_queried_independently(self):
+        class API:
+            def __init__(self):
+                self.paths = []
+            def call(self, path):
+                self.paths.append(path)
+                return {"artifacts": [{"name": path.split("name=")[1].split("&")[0]}]}
+        api = API()
+        found = load_evidence_artifacts(api)
+        self.assertEqual({x["name"] for x in found}, {
+            "kraken-reusable-ohlc-evidence",
+            "kraken-bounded-independent-trade-members"})
+        self.assertEqual(len(api.paths), 2)
+
+    def test_missing_artifact_response_fails_closed(self):
+        class API:
+            def call(self, path):
+                return {"artifacts": []} if "kraken-reusable-ohlc-evidence" in path else {}
+        with self.assertRaisesRegex(RuntimeError, "missing evidence artifact"):
+            load_evidence_artifacts(API())
 
 
 class AlertTests(unittest.TestCase):
