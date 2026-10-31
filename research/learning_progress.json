@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-record-verified-e2e-20261031",
-    "lease_expires_at": "2026-10-31T08:00:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -417,7 +417,7 @@
       "artifact_digest": "sha256:a07288ba26654bd8d80f924efb9a810e304e6ee5e3f9a720a0d60395502d524f"
     },
     "official_trade_schema_fix": {
-      "status": "SYNTAX_ERROR_FIXED_PINNED_COMPILE_PREFLIGHT_CI_PENDING",
+      "status": "VERIFIED_123_TESTS_REAL_TRADE_AND_OHLC_PARSED_COMPLETENESS_BLOCKED",
       "starting_checkpoint": "63acf0e5428989bf5777177b1750e83865481a82",
       "research_commit": "63af4130a70930cf578165ab868670e2ebd3efc7",
       "workflow_commit": "c54c1e9b7b7fb310a55672e2a3aadba722845fc2",
@@ -430,10 +430,28 @@
       "heldout_patterns": "not_authorized",
       "independent_completeness_verified": false,
       "production_modified": false,
-      "next": "Run consolidated manual workflow once; inspect real header, timestamp units, matching diagnostics and 123 tests. Do not assert complete labels or predictive skill absent independent completeness.",
+      "next": "Prove independent per-interval completeness, exact OHLCVT matches and timestamp semantics; only then permit mature 1/6/24/48h labels and held-out evaluation. Avoid re-downloading both full archives for exploratory diagnostics.",
       "failed_run_id": 41148285147,
       "failed_job_id": 124378441458,
-      "fix_commit": "65483a26b0968c9dbcd479e09272d94df87b9ade"
+      "fix_commit": "65483a26b0968c9dbcd479e09272d94df87b9ade",
+      "verified_run_id": 41148408717,
+      "verified_job_id": 124378849933,
+      "verified_tests_this_commit": 123,
+      "trade_records_parsed": 15683,
+      "ohlc_rows_parsed": 19886,
+      "candidate_overlapping_candles": 5291,
+      "trade_first_timestamp": 1775001850.075295,
+      "trade_last_timestamp": 1782863291.7190592,
+      "real_header_verified": true,
+      "source_csv_schema_verified": true,
+      "archive_downloads_observed": {
+        "trade": 1,
+        "ohlc": 1
+      },
+      "ohlc_sha256_authenticated": "fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4",
+      "trade_sha256_observed": "4adddad07b0dbe11891a25137c1adfc11a9a5f63798680a6b88eae2b3a867cf9",
+      "artifact_id": 13022455105,
+      "artifact_digest": "sha256:f6c6b507463449ba16642482488ad4cfc672a382c5c1f3832cca1cee2959a076"
     }
   },
   "audit": {
@@ -583,7 +601,8 @@
       "Consolidated e2e redesign: single manual workflow pinned to research SHA, 120 expected offline tests, source archives retained together within one runner, trade-first schema gate avoids needless 9GB OHLC download if unknown, source identity checks and no fabricated labels. Real CI not executed, completeness/heldout remain blocked, production unchanged.",
       "Consolidated run 41147888805 job 124377163772 passed 120/120; real Kraken 0GEUR.csv first 3 rows each 7 nonnumeric columns; 3-column parser invalid. Fail-closed skipped 9GB OHLC download; 0 real labels, production unchanged.",
       "Kraken official docs identify historical trade CSV header timestamp,price,volume,type,order_type,misc,trade_id. Fixed 3-column assumption; added header/trade ID/order type validation, strict outcome gating and tests. Real run pending; production unchanged.",
-      "Run 41148285147 failed before downloads due to literal backslash-n in research/test_run_consolidated_historical_e2e.py. Fixed test syntax and added compileall preflight to manual workflow; real tests still pending. Production unchanged."
+      "Run 41148285147 failed before downloads due to literal backslash-n in research/test_run_consolidated_historical_e2e.py. Fixed test syntax and added compileall preflight to manual workflow; real tests still pending. Production unchanged.",
+      "Run 41148408717 job 124378849933 passed 123/123, parsed 15,683 real 0GEUR trades and 19,886 OHLC rows, found 5,291 overlapping intervals; source completeness unverified, exact matches and labels remain zero. Both archives downloaded once; production unchanged."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
