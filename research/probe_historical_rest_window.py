@@ -34,6 +34,7 @@ def select_observed_window(path, *, candles=WINDOW_CANDLES):
     path = Path(path)
     if not path.is_file() or path.stat().st_size > MAX_TRADE_ARTIFACT:
         raise ValueError("missing or oversized retained trade artifact")
+    candidate = None
     with zipfile.ZipFile(path) as archive:
         names = sorted(n for n in archive.namelist() if n.startswith("trades/") and n.endswith(".csv"))
         if not 1 <= len(names) <= 4 or len(names) != len(set(names)):
@@ -53,12 +54,17 @@ def select_observed_window(path, *, candles=WINDOW_CANDLES):
                 records = parse_member(z, market + ".csv", schema_verified=True)
             _, buckets = aggregate(records)
             starts = sorted(buckets)
-            for i in range(len(starts) - candles + 1):
-                window = starts[i:i+candles]
-                if (all(window[j] == window[0] + j * STEP for j in range(candles)) and
-                        all(1 <= len(buckets[t]) <= MAX_EXPECTED_TRADES for t in window)):
-                    return market, [(t, buckets[t]) for t in window]
-    return None
+            # Validate every selected retained member, including those after
+            # the first candidate. A malformed later market must not be
+            # hidden by an early successful window selection.
+            if candidate is None:
+                for i in range(len(starts) - candles + 1):
+                    window = starts[i:i+candles]
+                    if (all(window[j] == window[0] + j * STEP for j in range(candles)) and
+                            all(1 <= len(buckets[t]) <= MAX_EXPECTED_TRADES for t in window)):
+                        candidate = market, [(t, buckets[t]) for t in window]
+                        break
+    return candidate
 
 
 def corroborate_observed_window(trades_path, ohlc_path, *, opener=None,
