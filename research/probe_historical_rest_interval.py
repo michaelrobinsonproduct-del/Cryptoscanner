@@ -142,6 +142,13 @@ def compare_rest_bucket(pair, start, expected, *, opener=None, gap_buckets=0):
         # Allow 10 microseconds for float conversion of source timestamps.
         if cursor / 1_000_000_000 + 1e-5 < page_last:
             raise RuntimeError("REST cursor predates returned trade")
+        # The next REST cursor may be used to request another page. If it
+        # leaps beyond the last returned trade before an after-end witness,
+        # an unobserved range could be skipped without any error. A 1 ms
+        # tolerance covers float conversion of epoch seconds; this is only
+        # a fail-closed correspondence check, NOT source completeness proof.
+        if not reached_after and cursor > int(page_last * 1_000_000_000) + 1_000_000:
+            raise RuntimeError("REST cursor skips unobserved historical range")
         page_trace.append({
             "requested_since": str(requested_since),
             "returned_last": str(cursor),
