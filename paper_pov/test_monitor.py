@@ -83,6 +83,14 @@ class PaperMonitorTests(unittest.TestCase):
                             audits=payload(run(456, "2026-10-31T21:22:00Z")))
         self.assertIn("PAPER_SCAN_LATEST_SCHEDULED_FAILED", result["alerts"])
 
+    def test_queued_retry_cannot_hide_completed_failure(self):
+        scans = payload(run(123, "2026-10-31T20:10:00Z"),
+                        run(124, "2026-10-31T21:10:00Z", conclusion="failure"),
+                        run(125, "2026-10-31T21:20:00Z", status="queued", conclusion=None))
+        result = self.check(now="2026-10-31T21:27:00+00:00", scans=scans,
+                            audits=payload(run(456, "2026-10-31T21:22:00Z")))
+        self.assertIn("PAPER_SCAN_LATEST_SCHEDULED_FAILED", result["alerts"])
+
     def test_stuck_scheduled_job_alerts(self):
         scans = payload(run(123, "2026-10-31T20:10:00Z"),
                         run(124, "2026-10-31T19:10:00Z", status="in_progress", conclusion=None))
