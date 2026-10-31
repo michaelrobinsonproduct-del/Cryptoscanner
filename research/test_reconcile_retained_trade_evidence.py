@@ -6,7 +6,7 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from reconcile_retained_trade_evidence import reconcile, _candidate_windows
+from reconcile_retained_trade_evidence import reconcile, _candidate_windows, _validate_retained_ohlc
 from inventory_kraken_archive import EXPECTED_SHA256
 
 
@@ -30,7 +30,8 @@ class RetainedReconciliationTests(unittest.TestCase):
                   "retained_first_open": 600 if bad_tail else 300,
                   "retained_last_open": 300,
                   "source_gap_events": 1 if bad_gap else 0,
-                  "source_missing_intervals": 0}}}
+                  "source_missing_intervals": 0,
+                  "source_longest_contiguous": 1}}}
         tm = {"schema_version": 1, "source_archive_full_sha256_verified": False,
               "real_labels": 0, "markets": {"ABUSD.csv": {
                   "member_sha256": hashlib.sha256(trade).hexdigest(),
@@ -159,6 +160,96 @@ class RetainedReconciliationTests(unittest.TestCase):
             self.assertIn("support.kraken.com", m["ohlc_documented_no_trade_semantics_reference"])
             self.assertFalse(m["ohlc_gap_semantics_authorize_labels"])
             self.assertEqual(r["real_labels"], 0)
+
+
+    def _meta(self, *, rows=1, source_rows=None, gaps=0, missing=0,
+              longest=1, first=300, last=300):
+        return {"retained_rows": rows, "source_rows": rows if source_rows is None else source_rows,
+                "retained_first_open": first, "retained_last_open": last,
+                "source_gap_events": gaps, "source_missing_intervals": missing,
+                "source_longest_contiguous": longest}
+
+    def test_retained_ohlc_gap_and_contiguity_are_recomputed(self):
+        raw = b"300,100,101,100,101,5,2\\n900,100,101,100,101,5,2\\n"
+        rows, gaps = _validate_retained_ohlc(
+            raw, self._meta(rows=2, gaps=1, missing=1, last=900))
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(gaps, {"gap_events": 1, "missing_intervals": 1,
+                                "longest_contiguous": 1})
+
+    def test_retained_ohlc_duplicate_timestamp_abstains(self):
+        raw = b"300,100,101,100,101,5,2\\n300,100,101,100,101,5,2\\n"
+        with self.assertRaisesRegex(ValueError, "timestamp order"):
+            _validate_retained_ohlc(raw, self._meta(rows=2))
+
+    def test_retained_ohlc_reverse_timestamp_abstains(self):
+        raw = b"600,100,101,100,101,5,2\\n300,100,101,100,101,5,2\\n"
+        with self.assertRaisesRegex(ValueError, "timestamp order"):
+            _validate_retained_ohlc(raw, self._meta(rows=2))
+
+    def test_retained_ohlc_fractional_or_unaligned_timestamp_abstains(self):
+        for timestamp in ("300.5", "301", "-300"):
+            with self.subTest(timestamp=timestamp):
+                raw = (timestamp + ",100,101,100,101,5,2\\n").encode()
+                with self.assertRaisesRegex(ValueError, "timestamp order"):
+                    _validate_retained_ohlc(raw, self._meta())
+
+    def test_retained_ohlc_nonfinite_values_abstain(self):
+        for value in ("nan", "inf", "-inf"):
+            with self.subTest(value=value):
+                raw = ("300,100," + value + ",100,101,5,2\\n").encode()
+                with self.assertRaisesRegex(ValueError, "nonfinite"):
+                    _validate_retained_ohlc(raw, self._meta())
+
+    def test_retained_ohlc_invalid_bounds_and_negative_volume_abstain(self):
+        for raw in (b"300,100,99,100,101,5,2\\n",
+                    b"300,100,101,100,101,-1,2\\n",
+                    b"300,100,101,100,101,5,2.5\\n"):
+            with self.subTest(raw=raw):
+                with self.assertRaisesRegex(ValueError, "candle values"):
+                    _validate_retained_ohlc(raw, self._meta())
+
+    def test_retained_ohlc_wrong_column_count_abstains(self):
+        with self.assertRaisesRegex(ValueError, "column count"):
+            _validate_retained_ohlc(b"300,100,101,100,101,5\\n", self._meta())
+
+    def test_partial_source_tail_cannot_underreport_observed_gaps(self):
+        raw = b"300,100,101,100,101,5,2\\n900,100,101,100,101,5,2\\n"
+        with self.assertRaisesRegex(ValueError, "gap floor"):
+            _validate_retained_ohlc(
+                raw, self._meta(rows=2, source_rows=3, gaps=0, missing=0, last=900))
+
+    def test_source_longest_contiguous_cannot_underreport_retained_tail(self):
+        raw = b"300,100,101,100,101,5,2\\n600,100,101,100,101,5,2\\n"
+        with self.assertRaisesRegex(ValueError, "source-tail provenance"):
+            _validate_retained_ohlc(
+                raw, self._meta(rows=2, source_rows=3, longest=1, last=600))
+
+    def test_source_metadata_bool_or_fractional_counts_abstain(self):
+        for key, value in (("source_rows", True), ("source_gap_events", 1.5),
+                           ("source_longest_contiguous", False)):
+            with self.subTest(key=key):
+                meta = self._meta()
+                meta[key] = value
+                with self.assertRaisesRegex(ValueError, "metadata"):
+                    _validate_retained_ohlc(b"300,100,101,100,101,5,2\\n", meta)
+
+    def test_full_source_gap_and_longest_metadata_must_match(self):
+        raw = b"300,100,101,100,101,5,2\\n600,100,101,100,101,5,2\\n"
+        with self.assertRaisesRegex(ValueError, "gap metadata mismatch"):
+            _validate_retained_ohlc(
+                raw, self._meta(rows=2, gaps=0, missing=0, longest=1, last=600))
+
+    def test_reconciliation_reports_validation_without_authorizing_labels(self):
+        with tempfile.TemporaryDirectory() as root:
+            o, t = self.fixture(root)
+            result = reconcile(o, t)
+            market = result["markets"]["ABUSD.csv"]
+            self.assertTrue(market["retained_ohlc_structure_validated"])
+            self.assertTrue(market["retained_ohlc_gap_floor_verified"])
+            self.assertEqual(market["retained_ohlc_longest_contiguous"], 1)
+            self.assertEqual(result["real_labels"], 0)
+            self.assertEqual(result["held_out_evaluation"], "not_authorized")
 
 
 if __name__ == "__main__":
