@@ -106,5 +106,61 @@ class TradeManifestTests(unittest.TestCase):
         self.assertEqual(r["manifest_top_level_keys"], ["build"])
 
 
+    def test_manifest_string_file_list_crosschecks_zip(self):
+        manifest = {"files": ["DENTEUR.csv", "BCHJPY.csv"], "pairs": 2,
+                    "coverage": {"start": "2026-04-01", "end": "2026-06-30"}}
+        with archive([("MANIFEST.json", json.dumps(manifest)),
+                      ("DENTEUR.csv", b"trade-data")]) as z:
+            r = inspect_archive(z, ["DENTEUR.csv", "BCHJPY.csv"])
+        c = r["manifest_schema_summary"]["structural_consistency"]
+        self.assertTrue(c["file_count_matches_pair_count"])
+        self.assertTrue(c["listed_selected_members"]["DENTEUR.csv"])
+        self.assertTrue(c["listed_selected_members"]["BCHJPY.csv"])
+        self.assertTrue(c["listed_selected_members_in_zip"]["DENTEUR.csv"])
+        self.assertFalse(c["listed_selected_members_in_zip"]["BCHJPY.csv"])
+        self.assertEqual(c["coverage_fields"]["start"], "2026-04-01")
+        self.assertFalse(c["source_authenticated"])
+        self.assertEqual(c["complete_trade_intervals_verified"], 0)
+
+    def test_manifest_pair_count_mismatch_is_explicit_not_completeness(self):
+        manifest = {"files": ["DENTEUR.csv"], "pairs": 2}
+        with archive([("MANIFEST.json", json.dumps(manifest)),
+                      ("DENTEUR.csv", b"trade-data")]) as z:
+            r = inspect_archive(z, ["DENTEUR.csv"])
+        c = r["manifest_schema_summary"]["structural_consistency"]
+        self.assertFalse(c["file_count_matches_pair_count"])
+        self.assertFalse(c["source_authenticated"])
+
+    def test_manifest_dict_listing_crosschecks_zip(self):
+        manifest = {"files": {"DENTEUR.csv": {"rows": 100}}, "pairs": 1}
+        with archive([("MANIFEST.json", json.dumps(manifest)),
+                      ("DENTEUR.csv", b"trade-data")]) as z:
+            r = inspect_archive(z, ["DENTEUR.csv"])
+        c = r["manifest_schema_summary"]["structural_consistency"]
+        self.assertTrue(c["listed_selected_members_in_zip"]["DENTEUR.csv"])
+        self.assertTrue(c["file_count_matches_pair_count"])
+
+    def test_unknown_manifest_listing_does_not_claim_completeness(self):
+        manifest = {"files": None, "pairs": True, "coverage": ["unknown"]}
+        with archive([("MANIFEST.json", json.dumps(manifest)),
+                      ("DENTEUR.csv", b"trade-data")]) as z:
+            r = inspect_archive(z, ["DENTEUR.csv"])
+        c = r["manifest_schema_summary"]["structural_consistency"]
+        self.assertIsNone(c["file_count_matches_pair_count"])
+        self.assertIsNone(c["manifest_pair_count"])
+        self.assertFalse(c["listed_selected_members"]["DENTEUR.csv"])
+        self.assertFalse(c["source_authenticated"])
+
+    def test_manifest_list_dict_listing_crosschecks_zip(self):
+        manifest = {"files": [{"filename": "DENTEUR.csv", "rows": 2}], "pairs": 1}
+        with archive([("MANIFEST.json", json.dumps(manifest)),
+                      ("DENTEUR.csv", b"trade-data")]) as z:
+            r = inspect_archive(z, ["DENTEUR.csv"])
+        c = r["manifest_schema_summary"]["structural_consistency"]
+        self.assertTrue(c["listed_selected_members_in_zip"]["DENTEUR.csv"])
+        self.assertFalse(c["source_authenticated"])
+
+
+
 if __name__ == "__main__":
     unittest.main()
