@@ -1596,8 +1596,8 @@
       "next": "Keep watchdog scheduled; independently validate bounded complete historical intervals and mature outcomes; do not change production or reenable obsolete :20/:50 prompts without corrected safety requirements."
     },
     "role00_20261031_0904": {
-      "status": "CONTIGUOUS_OBSERVED_REST_WINDOW_IMPLEMENTED_CI_PENDING",
-      "utc": "2026-10-31T09:06:12.206Z",
+      "status": "VERIFIED_12_OBSERVED_BUCKETS_REST_OHLC_CORRELATED_NOT_COMPLETE",
+      "utc": "2026-10-31T09:07:58.240Z",
       "research_commit": "9195bac69b3c2e6c5b12a12796ebf10c5c33f330",
       "workflow_main_commit": "d03191c010eb52302b138bf1a06cc2e774c4d5f3",
       "changes": [
@@ -1611,8 +1611,28 @@
       "new_genuine_labels": 0,
       "held_out_lift": null,
       "production_applied": false,
-      "blocker": "Quarterly independent trade completeness and mature forward outcome labels unverified; exact final-commit CI pending.",
-      "next": "Inspect push-triggered workflow actual tests and 12-bucket observed REST report; only claim real corroborated buckets after logs; maintain fail-closed no-label status."
+      "blocker": "Independent quarterly trade completeness and no-trade semantics remain unproven; 12 observed bucket matches are not authenticated mature forward labels.",
+      "next": "Extend bounded independent historical REST corroboration to eligible 1/6h observed windows with explicit source completeness and missing-interval witnesses; abstain until authentic mature outcomes exist.",
+      "verified_run_id": 41187283901,
+      "verified_job_id": 124496663203,
+      "workflow_conclusion": "success",
+      "exact_final_commit_tests": "361/361 passed actual GitHub Actions logs",
+      "new_tests": 10,
+      "source_market": "DENTEUR",
+      "first_bucket_epoch": 1776419100,
+      "last_bucket_epoch": 1776422400,
+      "independent_rest_pages": 12,
+      "independent_rest_bytes": 859463,
+      "three_way_observed_bucket_correspondences": 12,
+      "independently_complete_historical_intervals": 0,
+      "independent_quarterly_trade_completeness_verified": false,
+      "real_labels": 0,
+      "full_9gb_archive_downloads": 0,
+      "evidence_artifact_id": 13037780376,
+      "evidence_artifact_digest": "sha256:200542c472269d19a85c1cef51a787faec7b08a4ce0ab5f990ff3d8bc4470eec",
+      "evidence_artifact_expires_at": "2026-11-30T09:06:36Z",
+      "issue_comment_id": 6541504997,
+      "issue_comment_readback_verified": true
     }
   },
   "audit": {
@@ -1770,7 +1790,8 @@
       "Run 41149343294 passed 134/134, all 14595 unmatched OHLC rows precede trade archive period, max contiguous matching window 26 candles, no 6h+ candidate. Main workflow now defaults to no archive download; full acquisition opt-in. No production modifications.",
       "Automation Stagger A inspected real unexpired inventory artifact 12871991601 without any full archive download: 1713 Kraken 5m markets, 1677 eligible under bounded 577-row/64MiB screen, density cohorts 489/553/466/169. Inventory gap_intervals counts GAP EVENTS, not missing candle count; corrected independent accounting. Added exact-blob tested deterministic 48-market cohort selector (7 tests) and bounded SHA-verified reusable 48-market source evidence builder/replay inspector (6 tests), 13/13 local exact-code tests. Registered isolated daily/push GitHub Actions workflow on main with pinned research SHA, no production writer, archive once only if no reusable artifact; later daily runs refresh artifact without source download. New remote 147-test CI and actual source extraction pending. Production untouched.",
       "Added bounded future-only 30% OHLC descriptive window audit for 48 retained markets, 4 offline regression tests and artifact upload in the single unattended research workflow. Results remain explicitly unverified descriptions; no labels or production writes. Remote exact 151-test run pending at checkpoint.",
-      "Verified run 41151315621 passed exact pinned 151 tests, reused retained 48-market artifact with zero archive downloads, and uploaded bounded descriptive OHLC peak audit 13023570790. Counts of overlapping complete future OHLC windows and >=30% peaks: 1h 54007/328, 6h 22721/224, 24h 11150/85, 48h 9129/1. These are NOT validated labels or predictive signals: source timestamp semantics and independent trade completeness remain unverified. Production unchanged."
+      "Verified run 41151315621 passed exact pinned 151 tests, reused retained 48-market artifact with zero archive downloads, and uploaded bounded descriptive OHLC peak audit 13023570790. Counts of overlapping complete future OHLC windows and >=30% peaks: 1h 54007/328, 6h 22721/224, 24h 11150/85, 48h 9129/1. These are NOT validated labels or predictive signals: source timestamp semantics and independent trade completeness remain unverified. Production unchanged.",
+      "2026-10-31 09:07 UTC Role00 verified GitHub Actions run 41187283901, 361/361 exact-code tests, 12 DENTEUR observed 5m three-way REST/trades/OHLC correspondences, 859463 REST bytes, zero authenticated complete historical intervals/labels/heldout lift, no production changes. Issue #34 comment 6541504997."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
