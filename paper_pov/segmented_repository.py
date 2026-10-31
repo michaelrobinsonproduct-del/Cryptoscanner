@@ -303,30 +303,48 @@ def read_git_state(repository, commit, full_replay=False):
     if has_manifest != has_snapshot:
         raise ValueError("Partially migrated Git ledger commit")
     if not has_manifest:
-        # A legacy commit must never resurrect stale JSON after ANY packed
-        # ancestor, including after several commits with both packed files gone.
-        # Refuse incomplete history: a shallow boundary could hide migration.
-        ancestry = _git(repository, "rev-list", "--parents", "--missing=print",
-                        commit).decode().splitlines()
-        if not ancestry or any(line.startswith("?") for line in ancestry):
-            raise ValueError("Incomplete Git ancestry for legacy ledger")
-        shallow_path = Path(_git(repository, "rev-parse", "--git-path",
-                                 "shallow").decode().strip())
-        if not shallow_path.is_absolute():
-            shallow_path = Path(repository) / shallow_path
-        if shallow_path.exists():
-            shallow = set(shallow_path.read_text().splitlines())
-            if any(line.split()[0] in shallow for line in ancestry):
-                raise ValueError("Incomplete Git ancestry for legacy ledger")
-        touched = _git(repository, "log", "--full-history", "--format=%H",
-                       commit, "--", MANIFEST, SNAPSHOT).decode().strip()
-        if touched:
-            raise ValueError("Packed Git ledger was removed: unsafe downgrade")
+        # Prove the ledger's OWN complete first-parent chain back to its
+        # generation-zero introduction, not unrelated (possibly shallow)
+        # repository history. Any packed ancestor on this chain is a fatal
+        # downgrade, even after many later legacy-only commits.
         raw = _git(repository, "show", commit + ":paper-ledger.json")
         if len(raw) > storage.MAX_RAW_BYTES:
             raise ValueError("Legacy Git ledger exceeds bound")
         state = json.loads(raw)
         ledger.verify(state, storage.MAX_RAW_BYTES)
+        generation = state["generation"]
+        if generation > 510:
+            raise ValueError("Legacy ancestry exceeds bounded verification limit")
+        ancestry = _git(repository, "rev-list", "--first-parent",
+                        "--max-count", str(generation + 2),
+                        commit).decode().splitlines()
+        if len(ancestry) < generation + 1 or ancestry[0] != commit:
+            raise ValueError("Incomplete paper ledger ancestry before genesis")
+        for offset, ancestor in enumerate(ancestry[:generation + 1]):
+            if _git_has(repository, ancestor, MANIFEST) or _git_has(
+                    repository, ancestor, SNAPSHOT):
+                raise ValueError("Packed Git ledger was removed: unsafe downgrade")
+            historical = _git(repository, "show", ancestor + ":paper-ledger.json")
+            if len(historical) > storage.MAX_RAW_BYTES:
+                raise ValueError("Historical Git ledger exceeds bound")
+            old_state = json.loads(historical)
+            ledger.verify(old_state, storage.MAX_RAW_BYTES)
+            if old_state["generation"] != generation - offset:
+                raise ValueError("Missing, repeated or regressing legacy generation")
+        genesis = ancestry[generation]
+        # The generation-zero commit must introduce the ledger. Git shallow
+        # boundaries are not proof that a parent lacks an older ledger.
+        commit_lines = _git(repository, "cat-file", "-p", genesis).decode().splitlines()
+        parents = [line.split()[1] for line in commit_lines if line.startswith("parent ")]
+        if len(parents) > 1:
+            raise ValueError("Legacy genesis has multiple parents")
+        if parents:
+            parent = parents[0]
+            _git(repository, "cat-file", "-e", parent + "^{commit}")
+            if (_git_has(repository, parent, "paper-ledger.json") or
+                    _git_has(repository, parent, MANIFEST) or
+                    _git_has(repository, parent, SNAPSHOT)):
+                raise ValueError("Legacy genesis did not introduce ledger")
         return state, "legacy"
     manifest_bytes = _git(repository, "show", commit + ":" + MANIFEST)
     if len(manifest_bytes) > MAX_MANIFEST_BYTES:
