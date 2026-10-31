@@ -1,7 +1,7 @@
 name: Independent Paper Forward Outcome Audit
 on:
   push:
-    branches: [proof-outcome-eval-20261031]
+    branches: [main, proof-outcome-main-integration-20261031]
     paths:
       - 'paper_eval/**'
       - '.github/workflows/paper-forward-audit.yml'
