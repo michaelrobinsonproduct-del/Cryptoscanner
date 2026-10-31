@@ -5,7 +5,7 @@ on:
     paths: ['.github/workflows/paper-pipeline.yml']
   workflow_dispatch:
   schedule:
-    - cron: '9,39 * * * *'
+    - cron: '9 * * * *'
 permissions:
   contents: write
   issues: write
@@ -129,7 +129,7 @@ jobs:
             "Baseline/challenger: ranking recorded, unbiased evaluation PENDING; production applied: NO",
             "Ledger SHA256: "+s["ledger_sha256"],
             "Persistence: non-force push and exact remote readback VERIFIED; downloadable 90-day SHA256 artifact in run.",
-            "Next: verify unattended schedule, cross-run continuity and matured outcomes; no model promotion."
+            "Stage 1: one scheduled scan/hour pending independent multi-run reliability acceptance; gaps over 45m abstain; no model promotion."
           ]
           Path("/tmp/paper-issue-comment.txt").write_text("\n\n".join(lines))
           PY
