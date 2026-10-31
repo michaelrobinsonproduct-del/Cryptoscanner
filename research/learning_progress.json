@@ -1558,6 +1558,42 @@
       "full_archive_downloads": 0,
       "blocker": "One independently corroborated observed bucket does not establish complete quarterly trades or 1/6/24/48h maturity and no-trade semantics. No held-out baseline comparison authorized.",
       "next": "Expand bounded historical corroboration to contiguous eligible 1h/6h windows using official Kraken PostTrade from_ts/to_ts with strict pagination and independent completeness evidence; no missing/no-trade assumptions. Then independently certify mature forward outcomes before any challenger."
+    },
+    "role30_20261031_0834": {
+      "status": "SCHEDULED_37_TEST_WATCHDOG_VERIFIED_PRODUCTION_REPORTING_DISABLED",
+      "utc": "2026-10-31T08:35:24.118Z",
+      "watchdog_run_id": 41184506258,
+      "watchdog_job_id": 124488535311,
+      "watchdog_event": "schedule",
+      "watchdog_conclusion": "success",
+      "watchdog_pinned_research_commit": "24f6a1d461922706f8b449c0efee5bbc73e31f7a",
+      "watchdog_tests_passed": 37,
+      "watchdog_assessment": "HEALTHY",
+      "watchdog_alerts": 0,
+      "github_alert_delivery_this_run": "NO_ALERT",
+      "chatgpt_tasks_enabled": {
+        "learning_00": true,
+        "learning_15": true,
+        "learning_30": true,
+        "reporting_20": false,
+        "reporting_50": false
+      },
+      "latest_substantive_research_run_id": 41183936460,
+      "latest_research_tests_passed": 351,
+      "source_three_way_correspondence_buckets": 1,
+      "complete_authenticated_historical_intervals": 0,
+      "genuine_predictive_labels": 0,
+      "held_out_lift": null,
+      "production_applied": false,
+      "railway_production_latest_deployments": {
+        "collector": "FAILED",
+        "autonomous_runner": "NONE",
+        "simple_validation": "FAILED"
+      },
+      "issue_comment_id": 6541213828,
+      "issue_comment_readback_verified": true,
+      "production_changes": 0,
+      "next": "Keep watchdog scheduled; independently validate bounded complete historical intervals and mature outcomes; do not change production or reenable obsolete :20/:50 prompts without corrected safety requirements."
     }
   },
   "audit": {
