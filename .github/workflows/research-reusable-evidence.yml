@@ -20,20 +20,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: efe34c22e27de93d2c13c8b6410ca5eb8a5d8013
+          ref: d70ba5bf91133d8609716d3e27556df1213ebedf
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify immutable research code and 151 offline tests
+      - name: Verify immutable research code and 159 offline tests
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = 'efe34c22e27de93d2c13c8b6410ca5eb8a5d8013'
+          test "$(git rev-parse HEAD)" = 'd70ba5bf91133d8609716d3e27556df1213ebedf'
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-tests.log
-          grep -q 'Ran 151 tests' /tmp/research-tests.log
+          grep -q 'Ran 159 tests' /tmp/research-tests.log
           grep -q '^OK$' /tmp/research-tests.log
       - name: Check cooperative research lease, active runs, and cached source evidence
         id: cache
