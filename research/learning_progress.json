@@ -1476,17 +1476,46 @@
       "next": "Verify first genuinely scheduled run of updated 37-test watchdog, keep monitoring 90-minute evidence SLA; continue independent historical source provenance without full archive download"
     },
     "role00_20261031_0805": {
-      "status": "REST_HISTORICAL_BUCKET_PROBE_IMPLEMENTED_CI_PENDING",
-      "utc": "2026-10-31T08:09:00Z",
-      "code_commit": "8e80c76a8d2324075a7fcaf9d8fbc46faa51e41b",
+      "status": "ONE_REAL_HISTORICAL_REST_BUCKET_CORROBORATED_QUARTER_COMPLETENESS_BLOCKED",
+      "utc": "2026-10-31T08:10:19Z",
+      "research_commit": "8e80c76a8d2324075a7fcaf9d8fbc46faa51e41b",
       "workflow_commit": "88fd2bb6d86aa59fe2530429e24b4e2f4b956afc",
-      "workflow_run_id": 41183376883,
-      "tests_local": "12/12 self-contained local fixtures passed",
-      "real_source_evidence": "pending live bounded REST probe; no new real evidence claimed",
-      "verified_labels": 0,
+      "verified_run_id": 41183376883,
+      "verified_job_id": 124485208576,
+      "exact_code_offline_tests": "343/343 passed in GitHub Actions job logs",
+      "new_offline_tests": 12,
+      "real_evidence": {
+        "source": "Kraken public Trades REST independent from retained Kraken historical ZIP",
+        "market": "BCHJPY",
+        "candle_open_utc": "2026-04-01T11:55:00Z",
+        "bucket_epoch": 1775044500,
+        "rest_trade_count": 1,
+        "retained_trade_count": 1,
+        "exact_bounded_trade_correspondence": true,
+        "after_end_witness": true,
+        "rest_pages": 1,
+        "rest_bytes": 65774,
+        "rest_response_sha256": "d42f4dfc92856f1ea437aa28cb81a8f481a70e4ab5ac7531ae03be7667d6c066",
+        "artifact_id": 13035624381,
+        "artifact_digest": "sha256:52ed262e1f98e6e548b5de5277fcbc9e8bde5bdb6b55fc8704fb15226ba6d4b1",
+        "artifact_expires_at": "2026-11-30T08:10:04Z",
+        "independent_quarterly_completeness_verified": false,
+        "independent_complete_historical_intervals": 0
+      },
+      "ohlc_markets_reused": 48,
+      "retained_trade_markets": 4,
+      "full_9gb_archive_downloads": 0,
+      "genuine_predictive_labels": 0,
       "held_out_lift": "not_measured",
+      "qualified_rule": "none",
       "production_applied": false,
-      "next": "Observe exact pinned 338-test workflow and real REST bucket report; only accept independently observed corroboration, no quarterly completeness claim; stop if CI fails."
+      "issue_comment_id": 6540995664,
+      "issue_comment_readback_verified": true,
+      "operational_alerts": [
+        "Railway production three known services lack active successful deployments (read-only confirmed 2026-10-31 08:10 UTC).",
+        ":20/:50 read-only reporting tasks disabled; saved prompts include obsolete 61-minute DEX freshness requirement; not automatically reenabled."
+      ],
+      "next": "Extend bounded REST trade-to-retained source interval corroboration across contiguous 1h with independent start/end witnesses, strict rate/cursor limits, and no-trade unknown; gate genuine labels on independently complete authenticated source periods. Preserve production and avoid full archive reacquisition."
     }
   },
   "audit": {
