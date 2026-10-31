@@ -1,0 +1,92 @@
+name: Bounded Kraken Historical REST Gap Evidence (isolated)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/research-rest-gap-evidence.yml'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: consolidated-kraken-research
+  cancel-in-progress: false
+jobs:
+  gap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 234710203f1038e56763026c3387b4bc1981c918
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact pinned code and fail-closed offline tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = '234710203f1038e56763026c3387b4bc1981c918'
+          test -z "$(git status --porcelain)"
+          python -m compileall -q research
+          python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-gap-tests.log
+          grep -q 'Ran 412 tests' /tmp/research-gap-tests.log
+          grep -q '^OK$' /tmp/research-gap-tests.log
+      - name: Reuse bounded retained artifacts only when cooperative lease clear
+        id: source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            owner=$(gh api "repos/$GITHUB_REPOSITORY/contents/research/learning_progress.json?ref=research-learning-program-20261027" --jq '.content' | base64 -d | python -c 'import json,sys; print(json.load(sys.stdin)["concurrency"].get("owner") or "")')
+            if [[ -z "$owner" ]]; then break; fi
+            if [[ "$attempt" == 24 ]]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              echo "Cooperative research lease occupied; no conflicting source audit"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          source_run=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=kraken-bounded-independent-trade-members&per_page=100" --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .workflow_run.id // empty')
+          test -n "$source_run"
+          pair=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$source_run/artifacts?per_page=100" --jq '[.artifacts[] | select(.expired == false and (.name == "kraken-bounded-independent-trade-members" or .name == "kraken-reusable-ohlc-evidence"))] | length')
+          test "$pair" = "2"
+          mkdir -p research/output
+          gh run download "$source_run" -R "$GITHUB_REPOSITORY" -n kraken-bounded-independent-trade-members -D research/output
+          gh run download "$source_run" -R "$GITHUB_REPOSITORY" -n kraken-reusable-ohlc-evidence -D research/output
+          test -s research/output/bounded_independent_trade_members.zip
+          test -s research/output/reusable_ohlc_evidence.zip
+          echo "SOURCE_RUN=$source_run"
+      - name: Independently inspect one retained gap against bounded REST (not a complete label)
+        if: steps.source.outputs.skip == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=research python research/probe_historical_rest_gap.py \
+            --retained-trades research/output/bounded_independent_trade_members.zip \
+            --ohlc research/output/reusable_ohlc_evidence.zip \
+            --output research/output/historical_rest_gap_candidate_report.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('research/output/historical_rest_gap_candidate_report.json').read_text())
+          assert r['real_labels'] == 0 and r['held_out_lift'] is None
+          assert r['no_trade_intervals_verified'] == 0
+          assert r['independent_complete_historical_intervals'] == 0
+          assert r['independent_quarterly_completeness_verified'] is False
+          assert r['production_modified'] is False
+          assert len(r['candidate_empty_gap_buckets']) <= 1
+          assert r.get('rest_bytes_transferred', 0) <= 2*1024*1024
+          print('RESEARCH_GAP_CANDIDATE_NOT_AUTHENTICATED', json.dumps(r, sort_keys=True))
+          PY
+      - name: Retain bounded gap evidence for 30 days
+        if: steps.source.outputs.skip == 'false' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kraken-historical-rest-gap-candidate
+          path: research/output/historical_rest_gap_candidate_report.json
+          if-no-files-found: error
+          retention-days: 30
