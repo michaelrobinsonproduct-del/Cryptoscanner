@@ -27,8 +27,8 @@ def jobs(*, verified="success", cache="success"):
          "conclusion": verified}]}]
 
 
-def artifact(expiry_days=25):
-    return {"name": "kraken-reusable-ohlc-evidence", "expired": False,
+def artifact(expiry_days=25, name="kraken-reusable-ohlc-evidence"):
+    return {"name": name, "expired": False,
             "expires_at": iso(NOW + dt.timedelta(days=expiry_days))}
 
 
@@ -36,7 +36,7 @@ def assess_case(runs=None, jobs_by_id=None, artifacts=None, lease=None,
                 now=NOW, created=CREATED):
     return assess(now, created, runs if runs is not None else [run()],
                   jobs_by_id if jobs_by_id is not None else {1: jobs()},
-                  artifacts if artifacts is not None else [artifact()],
+                  artifacts if artifacts is not None else [artifact(), artifact(name="kraken-bounded-independent-trade-members")],
                   {"concurrency": lease if lease is not None else {"owner": None}})
 
 
@@ -91,19 +91,45 @@ class AssessmentTests(unittest.TestCase):
             1: jobs(verified="skipped"), 2: jobs(verified="skipped")})
         self.assertIn("REPEATED_GREEN_NO_WORK", result["alerts"])
 
-    def test_repeated_skips_with_recent_real_work_are_not_failure(self):
+    def test_two_consecutive_skips_alert_even_if_prior_work_recent(self):
         result = assess_case(runs=[run(1, age=5), run(2, age=20), run(3, age=30)],
                              jobs_by_id={1: jobs(verified="skipped"),
                                          2: jobs(verified="skipped"), 3: jobs()})
-        self.assertEqual(result["status"], "HEALTHY")
+        self.assertIn("REPEATED_GREEN_NO_WORK", result["alerts"])
 
     def test_expired_artifact_alerts(self):
-        result = assess_case(artifacts=[artifact(expiry_days=-1)])
+        result = assess_case(artifacts=[artifact(expiry_days=-1), artifact(name="kraken-bounded-independent-trade-members")])
         self.assertIn("NO_RETAINED_RESEARCH_EVIDENCE", result["alerts"])
 
     def test_artifact_near_expiry_alerts(self):
-        result = assess_case(artifacts=[artifact(expiry_days=2)])
+        result = assess_case(artifacts=[artifact(expiry_days=2), artifact(name="kraken-bounded-independent-trade-members")])
         self.assertIn("RESEARCH_ARTIFACT_EXPIRING", result["alerts"])
+
+    def test_missing_trade_artifact_alerts(self):
+        result = assess_case(artifacts=[artifact()])
+        self.assertIn("NO_RETAINED_TRADE_EVIDENCE", result["alerts"])
+
+    def test_expiring_trade_artifact_alerts(self):
+        result = assess_case(artifacts=[artifact(),
+            artifact(expiry_days=1, name="kraken-bounded-independent-trade-members")])
+        self.assertIn("TRADE_ARTIFACT_EXPIRING", result["alerts"])
+
+    def test_malformed_artifact_metadata_alerts_instead_of_crashing(self):
+        broken = artifact()
+        broken["expires_at"] = "not-a-date"
+        result = assess_case(artifacts=[broken,
+            artifact(name="kraken-bounded-independent-trade-members")])
+        self.assertIn("MALFORMED_RESEARCH_ARTIFACT_METADATA", result["alerts"])
+        self.assertIn("NO_RETAINED_RESEARCH_EVIDENCE", result["alerts"])
+
+    def test_no_research_runs_after_activation_alerts(self):
+        result = assess_case(runs=[], jobs_by_id={},
+            now=CREATED + dt.timedelta(hours=3))
+        self.assertIn("NO_RESEARCH_RUNS", result["alerts"])
+
+    def test_unverified_green_latest_alerts(self):
+        result = assess_case(jobs_by_id={1: []})
+        self.assertIn("LATEST_GREEN_RUN_UNVERIFIED", result["alerts"])
 
     def test_missing_daily_schedule_after_grace(self):
         now = dt.datetime(2026, 11, 1, 6, 0, tzinfo=UTC)
@@ -129,8 +155,10 @@ class FakeAPI:
         self.writes = 0
 
     def call(self, path, *, method="GET", data=None):
-        if path == "/issues?state=open&per_page=100":
-            return [v.copy() for v in self.issues.values() if v["state"] == "open"]
+        if path.startswith("/issues?state=open&per_page=100&page="):
+            page = int(path.rsplit("=", 1)[-1])
+            open_issues = [v.copy() for v in self.issues.values() if v["state"] == "open"]
+            return open_issues[(page - 1) * 100:page * 100]
         if path == "/issues" and method == "POST":
             n = self.next_number
             self.next_number += 1
@@ -160,6 +188,38 @@ class AlertTests(unittest.TestCase):
         self.assertEqual(alert_issue(api, report), "ISSUE_VERIFIED_11")
         self.assertEqual(alert_issue(api, report), "ISSUE_VERIFIED_11")
         self.assertEqual(api.writes, 1)
+
+    def test_alert_body_contains_actual_newlines(self):
+        api = FakeAPI()
+        report = {"status": "ALERT", "alerts": ["EXPIRED_RESEARCH_LEASE"],
+                  "latest_run": 7}
+        alert_issue(api, report)
+        body = api.issues[11]["body"]
+        self.assertIn("\\n- EXPIRED_RESEARCH_LEASE", body)
+        self.assertNotIn("\\\\n", body)
+
+    def test_existing_alert_on_second_page_is_reused(self):
+        api = FakeAPI()
+        for n in range(100):
+            api.issues[n] = {"number": n, "title": "Unrelated", "body": "",
+                             "state": "open"}
+        api.issues[101] = {"number": 101, "title": "[Learning Watchdog] Research attention required",
+                           "body": "old", "state": "open"}
+        report = {"status": "ALERT", "alerts": ["EXPIRED_RESEARCH_LEASE"],
+                  "latest_run": 7}
+        self.assertEqual(alert_issue(api, report), "ISSUE_VERIFIED_101")
+        self.assertEqual(len(api.issues), 101)
+
+    def test_oversized_issue_listing_fails_closed(self):
+        api = FakeAPI()
+        for n in range(500):
+            api.issues[n] = {"number": n, "title": "Unrelated", "body": "",
+                             "state": "open"}
+        report = {"status": "ALERT", "alerts": ["EXPIRED_RESEARCH_LEASE"],
+                  "latest_run": 7}
+        with self.assertRaisesRegex(RuntimeError, "pagination"):
+            alert_issue(api, report)
+        self.assertEqual(api.writes, 0)
 
     def test_recovery_closes_verified_alert(self):
         api = FakeAPI()
