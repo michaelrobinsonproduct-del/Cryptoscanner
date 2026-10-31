@@ -99,7 +99,7 @@ class HistoricalWindowTests(unittest.TestCase):
             start = (int(args["since"][0]) + 1) // 1_000_000_000
             return Response([["999", "1", start+1, "b", "l", ""],
                              ["999", "1", start+301, "b", "l", ""]],
-                            int(args["since"][0]) + 1000000000)
+                            (start + 302) * 1000000000)
         r = corroborate_observed_window(self.path, "unused", opener=wrong)
         self.assertEqual(r["observed_buckets_correlated"], 0)
         self.assertEqual(r["status"], "abstain_rest_archive_disagreement")
