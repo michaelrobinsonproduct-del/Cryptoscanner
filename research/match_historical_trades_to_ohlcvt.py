@@ -77,10 +77,28 @@ def compare(archive_rows, trades, *, independently_complete=False):
     """Only verified complete source can be accepted; mismatch always abstains."""
     if not independently_complete:
         return {"status": "abstain_unverified_trade_completeness", "verified_intervals": 0}
+    # A caller's completeness assertion must never turn an empty, duplicated,
+    # unaligned or malformed OHLC selection into a verified comparison.
+    # This still does NOT authenticate the independent trade archive itself.
+    if not archive_rows:
+        return {"status": "missing_ohlc_evidence", "verified_intervals": 0}
+    if len(archive_rows) > MAX_ROWS or len(trades) > MAX_ROWS:
+        raise ValueError("comparison resource cap")
+    starts = []
+    for candle in archive_rows:
+        if len(candle) != 7:
+            return {"status": "invalid_ohlc_shape", "verified_intervals": 0}
+        timestamp = candle[0]
+        if (isinstance(timestamp, bool) or not isinstance(timestamp, (int, float))
+                or not math.isfinite(timestamp) or timestamp != int(timestamp)
+                or int(timestamp) < 0 or int(timestamp) % STEP):
+            return {"status": "invalid_ohlc_timestamp", "verified_intervals": 0}
+        starts.append(int(timestamp))
+    if len(set(starts)) != len(starts):
+        return {"status": "duplicate_ohlc_timestamp", "verified_intervals": 0}
     aggregated, buckets = aggregate(trades)
     verified = 0
-    for candle in archive_rows:
-        start = int(candle[0])
+    for candle, start in zip(archive_rows, starts):
         if start not in aggregated:
             return {"status": "missing_trade_interval", "verified_intervals": verified}
         result = verify_open_boundary(candle, buckets[start], independent_trade_source=True)
