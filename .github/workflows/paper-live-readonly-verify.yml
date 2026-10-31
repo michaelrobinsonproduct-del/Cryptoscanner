@@ -1,0 +1,63 @@
+name: Independent Paper Kraken Read-Only Live Probe
+on:
+  push:
+    branches: [proof-independent-verify-20261031]
+    paths:
+      - '.github/workflows/paper-live-readonly-verify.yml'
+permissions:
+  contents: read
+concurrency:
+  group: paper-independent-readonly-probe
+  cancel-in-progress: false
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 18473d9ee8d3381bbf92f05004d5f0173fb00088
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Confirm exact reviewed primary proof SHA
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "18473d9ee8d3381bbf92f05004d5f0173fb00088"
+          echo "READ_ONLY_PROOF_SHA=$(git rev-parse HEAD)"
+      - name: Execute actual public Kraken paper scan (no remote writer)
+        env:
+          PAPER_REPORT_PATH: paper_pov/output/latest.json
+        run: python paper_pov/scanner.py
+      - name: Verify fresh non-trading paper output and checksum
+        run: |
+          python - <<'PY'
+          import datetime as dt, hashlib, json, pathlib
+          path=pathlib.Path("paper_pov/output/latest.json")
+          raw=path.read_bytes()
+          r=json.loads(raw)
+          now=dt.datetime.now(dt.timezone.utc)
+          asof=dt.datetime.fromisoformat(r["as_of"])
+          assert asof.utcoffset()==dt.timedelta(0)
+          assert 0 <= (now-asof).total_seconds() <= 600
+          assert r["mode"]=="PAPER_ONLY" and r["buy_approved"] is False
+          assert r["production_applied"] is False
+          assert r["forward_labels"]==0 and r["held_out_lift"] is None
+          assert len(r["watch"])>0
+          assert len({x["prediction_id"] for x in r["watch"]})==len(r["watch"])
+          assert all(0<=x["ohlc_age_seconds"]<=600 for x in r["watch"])
+          assert all(dt.datetime.fromisoformat(x["quote_observed_at"])<=asof for x in r["watch"])
+          assert not any(x["symbol"].split("/")[0] in {"USDT","USDC","DAI","PYUSD","RLUSD","EURC","TUSD"} for x in r["watch"])
+          print("ACTUAL_PUBLIC_KRAKEN_PAPER_SCAN_VERIFIED",
+                "as_of",r["as_of"],"observed",r["observed_markets"],
+                "watch",len(r["watch"]),"abstentions",len(r["abstentions"]),
+                "sha256",hashlib.sha256(raw).hexdigest())
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: independent-kraken-paper-probe
+          path: paper_pov/output/latest.json
+          if-no-files-found: warn
+          retention-days: 30
