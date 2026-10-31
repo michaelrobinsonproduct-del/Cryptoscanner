@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 234710203f1038e56763026c3387b4bc1981c918
+          ref: 0ab31ba46b6d22a2b4159b86f300ebff9301dcbb
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -26,11 +26,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = '234710203f1038e56763026c3387b4bc1981c918'
+          test "$(git rev-parse HEAD)" = '0ab31ba46b6d22a2b4159b86f300ebff9301dcbb'
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-gap-tests.log
-          grep -q 'Ran 412 tests' /tmp/research-gap-tests.log
+          grep -q 'Ran 426 tests' /tmp/research-gap-tests.log
           grep -q '^OK$' /tmp/research-gap-tests.log
       - name: Reuse bounded retained artifacts only when cooperative lease clear
         id: source
@@ -80,6 +80,11 @@ jobs:
           assert r['production_modified'] is False
           assert len(r['candidate_empty_gap_buckets']) <= 1
           assert r.get('rest_bytes_transferred', 0) <= 2*1024*1024
+          assert r.get('following_rest_bytes_transferred', 0) <= 2*1024*1024
+          assert r.get('total_rest_bytes_transferred', 0) <= 4*1024*1024
+          if r['candidate_empty_gap_buckets']:
+              assert r.get('preceding_observed_candle_correlated') is True
+              assert r.get('following_observed_candle_correlated') is True
           print('RESEARCH_GAP_CANDIDATE_NOT_AUTHENTICATED', json.dumps(r, sort_keys=True))
           PY
       - name: Retain bounded gap evidence for 30 days
