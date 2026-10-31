@@ -82,7 +82,7 @@ def evaluate(scan_payload, audit_payload, ledger, previous, ledger_commit,
     alerts = ["PAPER_EVIDENCE_" + str(x) for x in collection_errors]
     scan_runs = assess_runs(scan_payload, now, 9, "PAPER_SCAN", alerts)
     assess_runs(audit_payload, now, 21, "PAPER_AUDIT", alerts)
-    active = [x for x in scan_runs if x.get("status") in ("queued", "in_progress", "waiting")]
+    active = [x for x in scan_runs if x.get("status") == "in_progress"]
     if len(active) > 1:
         alerts.append("PAPER_MULTIPLE_ACTIVE_EXECUTIONS")
     metrics = {
