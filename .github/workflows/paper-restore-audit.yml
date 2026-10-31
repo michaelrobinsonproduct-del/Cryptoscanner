@@ -4,6 +4,7 @@ on:
     paths:
       - 'paper_eval/recovery.py'
       - 'paper_eval/test_recovery.py'
+      - 'paper_eval/test_recovery_workflow.py'
       - '.github/workflows/paper-restore-audit.yml'
   workflow_dispatch:
 permissions:
