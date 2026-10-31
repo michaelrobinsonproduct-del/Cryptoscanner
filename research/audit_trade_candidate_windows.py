@@ -34,7 +34,7 @@ def audit_candidate_windows(ohlc_rows, exact_timestamps):
                 (previous is not None and t <= previous) or
                 min(opening, high, low, close) <= 0 or
                 low > opening or opening > high or low > close or close > high or
-                volume < 0 or count < 0 or count != int(count)):
+                volume <= 0 or count <= 0 or count != int(count)):
             raise ValueError("invalid OHLC chronology or values")
         source[int(t)] = row
         previous = t
