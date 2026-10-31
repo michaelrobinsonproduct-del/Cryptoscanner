@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-record-5291-matches-20261031",
-    "lease_expires_at": "2026-10-31T08:00:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -454,7 +454,7 @@
       "artifact_digest": "sha256:f6c6b507463449ba16642482488ad4cfc672a382c5c1f3832cca1cee2959a076"
     },
     "interval_diagnostics": {
-      "status": "BOUNDED_REAL_MATCH_DIAGNOSTICS_COMMITTED_CI_PENDING",
+      "status": "VERIFIED_128_TESTS_5291_EXACT_CANDIDATE_MATCHES_COMPLETENESS_PENDING",
       "starting_checkpoint": "da3fbb1555915396a848c2ed8545d00a03626182",
       "verified_prior_run": 41148408717,
       "verified_prior_tests": 123,
@@ -462,11 +462,22 @@
       "workflow_commit": "c8b93d2763569572a120227819c949f1b2a73223",
       "expected_tests": 128,
       "tests_verified_this_commit": 0,
-      "real_candidate_matches": "not_yet_measured",
+      "real_candidate_matches": 5291,
       "independent_completeness_verified": false,
       "real_labels": 0,
       "heldout_patterns": "not_authorized",
-      "next": "Execute manual workflow only if full dual archive acquisition is justified; new diagnostics report exact candidate matches, missing buckets, mismatch reasons. Existing artifact has aggregate counts only and cannot establish exact matches without reaccessing real trade rows."
+      "next": "Resolve 14595 OHLC-only intervals and prove independent trade coverage boundaries; distinguish trade archive period from longer OHLC history. Preserve source-identity and completeness gates; no labels without full evidence.",
+      "verified_run_id": 41148996221,
+      "verified_job_id": 124380747433,
+      "verified_tests_this_commit": 128,
+      "trade_intervals": 5291,
+      "ohlc_intervals": 19886,
+      "ohlc_intervals_without_trade_bucket": 14595,
+      "aggregation_mismatches": 0,
+      "trade_records_parsed": 15683,
+      "verified_complete_intervals": 0,
+      "artifact_id": 13022341683,
+      "artifact_digest": "sha256:a7b8ca113c3e1d986e548388415b0ae1592aa44aa249671efd982ffe74cbe197"
     }
   },
   "audit": {
@@ -618,7 +629,8 @@
       "Kraken official docs identify historical trade CSV header timestamp,price,volume,type,order_type,misc,trade_id. Fixed 3-column assumption; added header/trade ID/order type validation, strict outcome gating and tests. Real run pending; production unchanged.",
       "Run 41148285147 failed before downloads due to literal backslash-n in research/test_run_consolidated_historical_e2e.py. Fixed test syntax and added compileall preflight to manual workflow; real tests still pending. Production unchanged.",
       "Run 41148408717 job 124378849933 passed 123/123, parsed 15,683 real 0GEUR trades and 19,886 OHLC rows, found 5,291 overlapping intervals; source completeness unverified, exact matches and labels remain zero. Both archives downloaded once; production unchanged.",
-      "Added bounded offline per-interval exact trade/OHLC diagnostic and five regression tests. Prior run 41148408717 provided only aggregate report, not individual trade rows; real exact matches and completeness cannot be independently established from existing artifact. New CI not executed; no further archive downloads. Production unchanged."
+      "Added bounded offline per-interval exact trade/OHLC diagnostic and five regression tests. Prior run 41148408717 provided only aggregate report, not individual trade rows; real exact matches and completeness cannot be independently established from existing artifact. New CI not executed; no further archive downloads. Production unchanged.",
+      "Run 41148996221 job 124380747433 passed 128/128; 5291/5291 overlapping trade buckets exactly matched 0GEUR five-minute OHLCVT price/volume/count, 14595 OHLC rows had no trade bucket, zero completeness-certified intervals and zero labels. No production changes."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
