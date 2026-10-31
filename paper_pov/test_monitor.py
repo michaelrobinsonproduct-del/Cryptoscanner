@@ -65,15 +65,15 @@ class PaperMonitorTests(unittest.TestCase):
         self.assertNotIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])
 
     def test_two_missed_scheduled_slots_alert(self):
-        result = self.check(now="2026-10-31T22:27:00+00:00",
-                            audits=payload(run(456, "2026-10-31T22:22:00Z")))
+        result = self.check(now="2026-10-31T23:27:00+00:00",
+                            audits=payload(run(456, "2026-10-31T23:22:00Z")))
         self.assertIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])
 
     def test_manual_success_cannot_hide_two_missed_schedules(self):
         scans = payload(run(123, "2026-10-31T20:10:00Z"),
                         run(888, "2026-10-31T21:10:00Z", event="workflow_dispatch"))
-        result = self.check(now="2026-10-31T22:27:00+00:00", scans=scans,
-                            audits=payload(run(456, "2026-10-31T22:22:00Z")))
+        result = self.check(now="2026-10-31T23:27:00+00:00", scans=scans,
+                            audits=payload(run(456, "2026-10-31T23:22:00Z")))
         self.assertIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])
 
     def test_latest_scheduled_failure_alerts(self):
