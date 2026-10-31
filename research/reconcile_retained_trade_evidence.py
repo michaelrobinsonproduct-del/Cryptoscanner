@@ -1,0 +1,151 @@
+"""Offline, bounded reconciliation of retained Kraken trade/OHLC evidence.
+
+Candidate exact candle matches do not authenticate the full trade source, prove
+interval completeness, or authorize predictive labels.
+"""
+import argparse
+import csv
+import hashlib
+import io
+import json
+import zipfile
+from pathlib import Path
+
+from diagnose_real_trade_candle_overlap import diagnose
+from match_historical_trades_to_ohlcvt import parse_member, aggregate
+from verify_trade_candle_provenance import verify_open_boundary
+from inventory_kraken_archive import EXPECTED_SHA256
+
+MAX_OHLC_ARTIFACT = 80 * 1024 * 1024
+MAX_TRADE_ARTIFACT = 12 * 1024 * 1024
+MAX_MARKETS = 4
+STEP = 300
+HORIZONS = (1, 6, 24, 48)
+
+
+def _open_inner(path, member, cap):
+    path = Path(path)
+    if path.stat().st_size > cap:
+        raise ValueError("outer artifact exceeds cap")
+    with zipfile.ZipFile(path) as outer:
+        if outer.namelist() != [member]:
+            raise ValueError("unexpected outer artifact members")
+        info = outer.getinfo(member)
+        if info.file_size > cap or info.flag_bits & 1:
+            raise ValueError("unsafe inner archive")
+        payload = outer.read(info)
+    return zipfile.ZipFile(io.BytesIO(payload))
+
+
+def _manifest(archive):
+    if archive.namelist().count("manifest.json") != 1:
+        raise ValueError("missing or duplicate manifest")
+    if archive.getinfo("manifest.json").file_size > 128 * 1024:
+        raise ValueError("oversized manifest")
+    return json.loads(archive.read("manifest.json"))
+
+
+def _trade_zip(name, payload):
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as z:
+        z.writestr(name, payload)
+    return zipfile.ZipFile(io.BytesIO(buffer.getvalue()))
+
+
+def _candidate_windows(timestamps):
+    observed = set(timestamps)
+    return {str(h): sum(all(t + i * STEP in observed for i in range(1, h * 12 + 1))
+                        for t in observed) for h in HORIZONS}
+
+
+def reconcile(ohlc_artifact, trade_artifact, *, expected_ohlc_digest=None,
+              expected_trade_digest=None):
+    """Inspect genuine retained source bytes; all labels stay gated."""
+    o_path, t_path = Path(ohlc_artifact), Path(trade_artifact)
+    o_digest = hashlib.sha256(o_path.read_bytes()).hexdigest()
+    t_digest = hashlib.sha256(t_path.read_bytes()).hexdigest()
+    if (expected_ohlc_digest and o_digest != expected_ohlc_digest or
+            expected_trade_digest and t_digest != expected_trade_digest):
+        raise ValueError("GitHub artifact SHA256 mismatch")
+    with _open_inner(o_path, "reusable_ohlc_evidence.zip", MAX_OHLC_ARTIFACT) as candles, \
+         _open_inner(t_path, "bounded_independent_trade_members.zip", MAX_TRADE_ARTIFACT) as trades:
+        om, tm = _manifest(candles), _manifest(trades)
+        if (om.get("schema") != 1 or om.get("source_archive_sha256") != EXPECTED_SHA256
+                or om.get("independent_trade_completeness") is not False
+                or tm.get("schema_version") != 1
+                or tm.get("source_archive_full_sha256_verified") is not False
+                or tm.get("real_labels") != 0):
+            raise ValueError("untrusted evidence manifest")
+        markets = tm.get("markets")
+        if not isinstance(markets, dict) or not 1 <= len(markets) <= MAX_MARKETS:
+            raise ValueError("invalid trade cohort")
+        if (len(set(candles.namelist())) != len(candles.namelist()) or
+                len(set(trades.namelist())) != len(trades.namelist())):
+            raise ValueError("duplicate evidence member")
+        reports = {}
+        for market, meta in sorted(markets.items()):
+            if (not market.endswith(".csv") or "/" in market or "\\" in market
+                    or ".." in market):
+                raise ValueError("unsafe market name")
+            o_name = market.replace(".csv", "_5.csv")
+            if o_name not in om.get("markets", {}):
+                raise ValueError("trade market missing from OHLC cohort")
+            ti = trades.getinfo("trades/" + market)
+            if ti.file_size > 3 * 1024 * 1024 or ti.flag_bits & 1:
+                raise ValueError("unsafe trade member")
+            trade_bytes = trades.read(ti)
+            if (hashlib.sha256(trade_bytes).hexdigest() != meta.get("member_sha256")
+                    or len(trade_bytes) != meta.get("member_bytes")
+                    or meta.get("member_crc_verified") is not True):
+                raise ValueError("trade member SHA or size mismatch")
+            # Parser checks observed 7-column schema, unique IDs and timestamps.
+            # schema_verified=True is a parser precondition, NOT source attestation.
+            with _trade_zip(market, trade_bytes) as one:
+                parsed = parse_member(one, market, schema_verified=True)
+            oi = candles.getinfo("candles/" + o_name)
+            if oi.file_size > 64 * 1024 * 1024 or oi.flag_bits & 1:
+                raise ValueError("unsafe OHLC member")
+            ohlc_bytes = candles.read(oi)
+            ometa = om["markets"][o_name]
+            if hashlib.sha256(ohlc_bytes).hexdigest() != ometa["retained_sha256"]:
+                raise ValueError("OHLC retained member SHA mismatch")
+            ohlc = [tuple(float(v) for v in row) for row in
+                    csv.reader(io.StringIO(ohlc_bytes.decode("utf-8", errors="strict")))]
+            if len(ohlc) != ometa["retained_rows"] or len(ohlc) > 8000:
+                raise ValueError("OHLC retained row count mismatch")
+            diagnostic = diagnose(ohlc, parsed)
+            _, buckets = aggregate(parsed)
+            source = {int(row[0]): row for row in ohlc}
+            exact = {ts for ts, records in buckets.items()
+                     if ts in source and verify_open_boundary(
+                         source[ts], records, independent_trade_source=True
+                     )["status"] == "verified_open_boundary"}
+            reports[market] = {
+                "trade_rows": len(parsed), "trade_buckets": len(buckets),
+                "retained_ohlc_rows": len(ohlc),
+                "exact_trade_ohlc_candidate_intervals": len(exact),
+                "mismatch_counts": diagnostic.get("mismatch_counts", {}),
+                "candidate_contiguous_horizon_windows": _candidate_windows(exact),
+                "verified_complete_intervals": 0, "real_labels": 0,
+                "no_trade_or_source_gap_semantics": "unknown",
+            }
+    return {"schema_version": 1,
+            "status": "exact_trade_ohlc_diagnostics_source_completeness_unverified",
+            "source_ohlc_archive_sha256_in_retained_manifest": EXPECTED_SHA256,
+            "source_trade_archive_sha256_verified": False,
+            "github_ohlc_artifact_sha256": o_digest,
+            "github_trade_artifact_sha256": t_digest,
+            "markets": reports, "real_labels": 0,
+            "held_out_evaluation": "not_authorized", "production_modified": False}
+
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser()
+    p.add_argument("--ohlc", required=True)
+    p.add_argument("--trades", required=True)
+    p.add_argument("--ohlc-digest", required=True)
+    p.add_argument("--trade-digest", required=True)
+    a = p.parse_args()
+    print(json.dumps(reconcile(a.ohlc, a.trades,
+                               expected_ohlc_digest=a.ohlc_digest,
+                               expected_trade_digest=a.trade_digest), sort_keys=True))
