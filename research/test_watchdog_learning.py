@@ -48,6 +48,43 @@ def assess_case(runs=None, jobs_by_id=None, artifacts=None, lease=None,
 
 
 class AssessmentTests(unittest.TestCase):
+    def test_green_primary_with_failed_job_is_unverified(self):
+        broken = {**jobs()[0], "status": "completed", "conclusion": "failure"}
+        self.assertEqual(run_state(run(), [broken]), "unverified_green")
+
+    def test_green_primary_with_unfinished_job_is_unverified(self):
+        broken = {**jobs()[0], "status": "in_progress"}
+        self.assertEqual(run_state(run(), [broken]), "unverified_green")
+
+    def test_green_source_with_failed_job_is_unverified(self):
+        broken = {**gap_jobs()[0], "status": "completed", "conclusion": "failure"}
+        self.assertEqual(run_state(gap_run(), [broken]), "unverified_green")
+
+    def test_green_source_with_cancelled_job_is_unverified(self):
+        broken = {**gap_jobs()[0], "status": "completed", "conclusion": "cancelled"}
+        self.assertEqual(run_state(gap_run(), [broken]), "unverified_green")
+
+    def test_completed_successful_job_still_counts(self):
+        good = {**jobs()[0], "status": "completed", "conclusion": "success"}
+        self.assertEqual(run_state(run(), [good]), "evidence_run")
+
+    def test_primary_two_skips_not_masked_by_source_success(self):
+        result = assess(NOW, CREATED,
+                        [run(1, age=20), run(2, age=10)],
+                        {1: jobs(verified="skipped"), 2: jobs(upload="skipped")},
+                        [artifact(), artifact(name="kraken-bounded-independent-trade-members")],
+                        {"concurrency": {"owner": None}},
+                        [gap_run(10, age=5)], {10: gap_jobs()})
+        self.assertIn("REPEATED_GREEN_NO_WORK", result["alerts"])
+
+    def test_source_two_skips_not_masked_by_primary_success(self):
+        result = assess(NOW, CREATED, [run(1, age=5)], {1: jobs()},
+                        [artifact(), artifact(name="kraken-bounded-independent-trade-members")],
+                        {"concurrency": {"owner": None}},
+                        [gap_run(10, age=20), gap_run(11, age=10)],
+                        {10: gap_jobs(inspect="skipped"), 11: gap_jobs(upload="skipped")})
+        self.assertIn("REPEATED_GREEN_NO_WORK", result["alerts"])
+
     def test_blank_conflicting_lease_owner_fails_closed(self):
         self.assertIn("UNVERIFIABLE_LEASE_EXPIRY",
             assess_case(lease={"owner": "  ", "lease_expires_at":
