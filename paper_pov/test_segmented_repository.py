@@ -211,6 +211,13 @@ class GitRepositoryStorageTests(unittest.TestCase):
         git("add", "-A")
         git("commit", "-m", "legacy ledger")
         legacy_sha = git("rev-parse", "HEAD")
+        # A shallow checkout cannot establish that no packed ancestor exists.
+        shallow = self.root / "shallow-legacy"
+        subprocess.run(["git", "clone", "--quiet", "--depth", "1",
+                        gitdir.as_uri(), str(shallow)],
+                       capture_output=True, check=True)
+        with self.assertRaisesRegex(ValueError, "Incomplete Git ancestry"):
+            repo.read_git_state(shallow, legacy_sha)
         legacy_state, mode = repo.read_git_state(gitdir, legacy_sha)
         self.assertEqual(mode, "legacy")
         self.assertEqual(legacy_state["generation"], 0)
@@ -249,6 +256,14 @@ class GitRepositoryStorageTests(unittest.TestCase):
         git("commit", "-m", "simulate both packed files removed")
         with self.assertRaisesRegex(ValueError, "downgrade"):
             repo.read_git_state(gitdir, git("rev-parse", "HEAD"))
+        # The previous one-parent check missed a later legacy-only commit.
+        (gitdir / "harmless.txt").write_text("unrelated commit after deletion")
+        git("add", "harmless.txt")
+        git("commit", "-m", "second legacy-only commit after downgrade")
+        with self.assertRaisesRegex(ValueError, "downgrade"):
+            repo.read_git_state(gitdir, git("rev-parse", "HEAD"))
+        # Historical pre-migration commits must still remain readable.
+        self.assertEqual(repo.read_git_state(gitdir, legacy_sha)[1], "legacy")
 
     def test_cli_migrate_verify_and_append(self):
         legacy = self.root / "legacy.json"
