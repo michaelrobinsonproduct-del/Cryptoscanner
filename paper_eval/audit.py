@@ -9,7 +9,7 @@ import hashlib
 import math
 from collections import defaultdict
 
-from paper_pov import ledger
+from paper_pov import ledger, segmented_storage
 from paper_pov.scanner import utc
 
 HORIZONS = frozenset(ledger.HORIZONS)
@@ -42,7 +42,7 @@ def _timeline(pair, start, target, by_pair):
 
 
 def _validate(state):
-    ledger.verify(state)
+    ledger.verify(state, segmented_storage.MAX_RAW_BYTES)
     runs = state["runs"]
     run_map = {}
     for run in runs:

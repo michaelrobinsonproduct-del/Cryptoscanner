@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 from paper_eval.continuity import verify_transition
-from paper_pov import ledger
+from paper_pov import ledger, segmented_storage
 from paper_pov.scanner import atomic_json
 
 MAX_TRANSITIONS = 16
@@ -39,7 +39,7 @@ def verify_chain(entries, tip, max_transitions=MAX_TRANSITIONS):
     if len(set(commits)) != len(commits) or commits[0] != tip:
         raise ValueError("Duplicate commit or ledger tip mismatch")
     for entry in entries:
-        ledger.verify(entry["state"])
+        ledger.verify(entry["state"], segmented_storage.MAX_RAW_BYTES)
     latest = entries[0]["state"]
     oldest = entries[-1]["state"]
     # Every adjacent pair must be a genuine single append. A missing middle

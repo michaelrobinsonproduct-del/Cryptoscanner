@@ -81,10 +81,11 @@ jobs:
                       raise ValueError("Unsafe ZIP member")
                   (root/p.name).write_bytes(z.read(e))
           PY
-          git fetch --no-tags --depth=40 origin refs/heads/paper-proof-ledger
+          git fetch --no-tags --unshallow origin refs/heads/paper-proof-ledger
           : > /tmp/paper-matched-commit.txt
           while IFS= read -r COMMIT; do
-            if git show "$COMMIT:paper-ledger.json" > /tmp/paper-git-ledger.json 2>/dev/null; then
+            if git cat-file -e "$COMMIT:paper-ledger.json" 2>/dev/null || git cat-file -e "$COMMIT:paper-segment-manifest.json" 2>/dev/null; then
+              python -m paper_pov.segmented_repository export-git --repository . --commit "$COMMIT" --output /tmp/paper-git-ledger.json
               if cmp -s /tmp/paper-restored/ledger.json /tmp/paper-git-ledger.json; then
                 printf '%s\n' "$COMMIT" > /tmp/paper-matched-commit.txt
                 break

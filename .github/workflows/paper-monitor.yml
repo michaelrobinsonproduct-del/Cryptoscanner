@@ -60,13 +60,13 @@ jobs:
             echo AUDIT_API_UNAVAILABLE >> /tmp/paper-monitor-errors.txt
             echo '{"workflow_runs":[]}' > /tmp/paper-audits.json
           fi
-          if git fetch --no-tags --depth=4 origin refs/heads/paper-proof-ledger; then
+          if git fetch --no-tags --unshallow origin refs/heads/paper-proof-ledger; then
             git rev-parse FETCH_HEAD > /tmp/paper-ledger-commit.txt
             git log -1 --format=%s FETCH_HEAD > /tmp/paper-ledger-message.txt
-            if ! git show FETCH_HEAD:paper-ledger.json > /tmp/paper-monitor-ledger.json; then
+            if ! python -m paper_pov.segmented_repository export-git --repository . --commit "$(git rev-parse FETCH_HEAD)" --output /tmp/paper-monitor-ledger.json; then
               echo LEDGER_READ_UNAVAILABLE >> /tmp/paper-monitor-errors.txt
             fi
-            if ! git show 'FETCH_HEAD^:paper-ledger.json' > /tmp/paper-monitor-previous.json; then
+            if ! python -m paper_pov.segmented_repository export-git --repository . --commit "$(git rev-parse FETCH_HEAD^)" --output /tmp/paper-monitor-previous.json; then
               echo PREVIOUS_READ_UNAVAILABLE >> /tmp/paper-monitor-errors.txt
             fi
           else

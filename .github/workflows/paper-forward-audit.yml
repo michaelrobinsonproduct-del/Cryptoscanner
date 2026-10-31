@@ -52,11 +52,11 @@ jobs:
       - name: Independently fetch and audit current public ledger (read-only)
         run: |
           set -euo pipefail
-          git fetch --no-tags --depth=40 origin refs/heads/paper-proof-ledger
+          git fetch --no-tags --unshallow origin refs/heads/paper-proof-ledger
           LEDGER_COMMIT="$(git rev-parse FETCH_HEAD)"
-          git show "${LEDGER_COMMIT}:paper-ledger.json" > /tmp/public-paper-ledger.json
+          python -m paper_pov.segmented_repository export-git --repository . --commit "${LEDGER_COMMIT}" --output /tmp/public-paper-ledger.json
           BEFORE_COMMIT="$(git rev-parse "${LEDGER_COMMIT}^")"
-          git show "${BEFORE_COMMIT}:paper-ledger.json" > /tmp/public-paper-ledger-before.json
+          python -m paper_pov.segmented_repository export-git --repository . --commit "${BEFORE_COMMIT}" --output /tmp/public-paper-ledger-before.json
           mkdir -p paper_eval/output
           python -m paper_eval.report \
             --ledger /tmp/public-paper-ledger.json \
@@ -74,10 +74,10 @@ jobs:
           git rev-list --first-parent --max-count=17 "${LEDGER_COMMIT}" > /tmp/paper-chain/commits.txt
           : > /tmp/paper-chain/manifest.tsv
           while IFS= read -r COMMIT; do
-            if ! git cat-file -e "${COMMIT}:paper-ledger.json" 2>/dev/null; then
+            if ! git cat-file -e "${COMMIT}:paper-ledger.json" 2>/dev/null && ! git cat-file -e "${COMMIT}:paper-segment-manifest.json" 2>/dev/null; then
               break
             fi
-            git show "${COMMIT}:paper-ledger.json" > "/tmp/paper-chain/${COMMIT}.json"
+            python -m paper_pov.segmented_repository export-git --repository . --commit "${COMMIT}" --output "/tmp/paper-chain/${COMMIT}.json"
             printf '%s\t%s\n' "${COMMIT}" "/tmp/paper-chain/${COMMIT}.json" >> /tmp/paper-chain/manifest.tsv
           done < /tmp/paper-chain/commits.txt
           python -m paper_eval.chain \

@@ -10,6 +10,7 @@ from pathlib import Path
 
 from paper_eval.audit import evaluate
 from paper_pov.ledger import HORIZONS, canonical, verify
+from paper_pov.segmented_storage import MAX_RAW_BYTES
 from paper_pov.scanner import atomic_json
 
 
@@ -17,7 +18,7 @@ def report(state, ledger_commit):
     if not isinstance(ledger_commit, str) or len(ledger_commit) != 40 or any(
             c not in "0123456789abcdef" for c in ledger_commit):
         raise ValueError("Missing exact 40-character ledger commit SHA")
-    verify(state)
+    verify(state, MAX_RAW_BYTES)
     result = {
         "schema": 1,
         "mode": "READ_ONLY_PAPER_AUDIT",
