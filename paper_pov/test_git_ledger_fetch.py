@@ -13,7 +13,7 @@ class BoundedFetchTests(unittest.TestCase):
     @patch.object(f, "_git")
     @patch.object(f.subprocess, "run")
     def test_legacy_uses_depth64_without_checkpoint(self, run, git):
-        git.side_effect = [b"", (HEAD + "\\n").encode(), b"legacy"]
+        git.side_effect = [b"", (HEAD + "\n").encode(), b"legacy"]
         run.side_effect = [subprocess.CompletedProcess([], 1, b"", b"missing"),
                            subprocess.CompletedProcess([], 1, b"", b"missing")]
         self.assertEqual(f.fetch_bounded(), HEAD)
@@ -23,7 +23,7 @@ class BoundedFetchTests(unittest.TestCase):
     @patch.object(f, "_git")
     @patch.object(f.subprocess, "run")
     def test_segmented_fetches_exact_checkpoint_by_sha(self, run, git):
-        git.side_effect = [b"", (HEAD + "\\n").encode(), b"", b"checkpoint"]
+        git.side_effect = [b"", (HEAD + "\n").encode(), b"", b"checkpoint"]
         manifest = ('{"checkpoint":{"git_commit":"' + CHECKPOINT + '"}}').encode()
         run.return_value = subprocess.CompletedProcess([], 0, manifest, b"")
         self.assertEqual(f.fetch_bounded(), HEAD)
@@ -33,7 +33,7 @@ class BoundedFetchTests(unittest.TestCase):
     @patch.object(f, "_git")
     @patch.object(f.subprocess, "run")
     def test_malformed_segmented_checkpoint_fails_closed(self, run, git):
-        git.side_effect = [b"", (HEAD + "\\n").encode()]
+        git.side_effect = [b"", (HEAD + "\n").encode()]
         run.return_value = subprocess.CompletedProcess(
             [], 0, b'{"checkpoint":{"git_commit":"not-a-sha"}}', b"")
         with self.assertRaises(ValueError):
