@@ -1659,6 +1659,27 @@
       "production_applied": false,
       "blocker": "No independent complete trade intervals, no-trade semantics or certified forward outcome labels; test-only CI does not validate historical predictive performance",
       "next": "Primary worker should strengthen bounded REST pagination and source-completeness evidence, then certify only genuinely complete forward intervals; preserve no-label fail-closed behavior."
+    },
+    "role30_20261031_0925": {
+      "status": "WATCHDOG_42_TEST_EXACT_CODE_VERIFIED",
+      "observed_at_utc": "2026-10-31T09:29:00Z",
+      "pinned_research_commit": "f6c99fd46ce432f004ffdc6b3ece37f9625958cf",
+      "workflow_run_id": 41188839512,
+      "workflow_url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41188839512",
+      "tests_passed": 42,
+      "new_tests": 5,
+      "new_historical_evidence": 0,
+      "genuine_predictive_labels": 0,
+      "held_out_lift": "not established",
+      "production_applied": false,
+      "full_archive_downloads": 0,
+      "finding": "Fail-closed watchdog now requires downstream trade reconciliation, contiguous observed-window corroboration and artifact upload success before counting a green research job as substantive evidence. Skipped downstream steps count as no work; missing steps count as unverified green.",
+      "last_scheduled_watchdog_run_id": 41188162109,
+      "disabled_production_reporting_tasks": [
+        ":20",
+        ":50"
+      ],
+      "next": "Observe first genuinely scheduled 42-test watchdog; continue historical trade completeness and provenance research without archive re-download or production changes."
     }
   },
   "audit": {
@@ -1818,7 +1839,8 @@
       "Added bounded future-only 30% OHLC descriptive window audit for 48 retained markets, 4 offline regression tests and artifact upload in the single unattended research workflow. Results remain explicitly unverified descriptions; no labels or production writes. Remote exact 151-test run pending at checkpoint.",
       "Verified run 41151315621 passed exact pinned 151 tests, reused retained 48-market artifact with zero archive downloads, and uploaded bounded descriptive OHLC peak audit 13023570790. Counts of overlapping complete future OHLC windows and >=30% peaks: 1h 54007/328, 6h 22721/224, 24h 11150/85, 48h 9129/1. These are NOT validated labels or predictive signals: source timestamp semantics and independent trade completeness remain unverified. Production unchanged.",
       "2026-10-31 09:07 UTC Role00 verified GitHub Actions run 41187283901, 361/361 exact-code tests, 12 DENTEUR observed 5m three-way REST/trades/OHLC correspondences, 859463 REST bytes, zero authenticated complete historical intervals/labels/heldout lift, no production changes. Issue #34 comment 6541504997.",
-      "2026-10-31 :15 verified exact-code 368/368 offline tests in run 41188248840 on research f4588baf; seven later-market corruption tests now prevent first valid window from bypassing validation of other retained trade members. Zero new historical evidence/labels/held-out lift; production unchanged."
+      "2026-10-31 :15 verified exact-code 368/368 offline tests in run 41188248840 on research f4588baf; seven later-market corruption tests now prevent first valid window from bypassing validation of other retained trade members. Zero new historical evidence/labels/held-out lift; production unchanged.",
+      "2026-10-31 09:29 UTC Role30 watchdog downstream acceptance: exact pinned f6c99fd 42/42 tests passed in GitHub Actions run 41188839512, live assessment HEALTHY with owned lease active; no new historical labels or held-out lift. Separate :20/:50 reporting automations disabled. Production unchanged."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
