@@ -89,6 +89,7 @@ def corroborate_observed_window(trades_path, ohlc_path, *, opener=None,
     base.update(market=market, first_bucket_open=window[0][0],
                 last_bucket_open=window[-1][0], requested_observed_buckets=len(window))
     digests = []
+    cursor_traces = []
     pages = bytes_read = 0
     for i, (start, expected) in enumerate(window):
         if i and delay_seconds:
@@ -115,10 +116,12 @@ def corroborate_observed_window(trades_path, ohlc_path, *, opener=None,
                         rest_bytes_transferred=bytes_read)
             return base
         digests.extend(rest["rest_page_sha256"])
+        cursor_traces.append({"bucket_open": start, "pages": rest["rest_cursor_trace"]})
         base["observed_buckets_correlated"] += 1
     base.update(status="independent_rest_observed_window_correlated_not_complete",
                 rest_pages=pages, rest_bytes_transferred=bytes_read,
                 rest_page_sha256=digests,
+                rest_cursor_traces=cursor_traces,
                 timestamp_semantics="observed_open_boundary_only",
                 limitation="No independent quarterly completeness or no-trade proof; no forward labels")
     return base
