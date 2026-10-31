@@ -1,0 +1,164 @@
+"""Fail-closed paper ledger: immutable as-of predictions, delayed observed outcomes.
+
+No model promotion or production IO. This is a staging contract, not yet a
+30-day storage design; oversized state aborts rather than resetting history.
+"""
+import datetime as dt
+import hashlib
+import json
+import math
+from pathlib import Path
+from .scanner import utc, atomic_json
+
+HORIZONS = (1, 6, 24, 48)
+MAX_BYTES = 2_000_000
+MAX_DELAY = dt.timedelta(minutes=45)
+
+def canonical(data):
+    return json.dumps(data, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+
+def seal(state):
+    payload = {k: v for k, v in state.items() if k != "sha256"}
+    state["sha256"] = hashlib.sha256(canonical(payload)).hexdigest()
+    return state
+
+def empty():
+    return seal({"schema": 1, "generation": 0, "runs": [],
+                 "predictions": [], "observations": [], "outcomes": []})
+
+def verify(state):
+    if not isinstance(state, dict) or state.get("schema") != 1:
+        raise ValueError("Missing or incompatible ledger schema")
+    if not isinstance(state.get("generation"), int) or state["generation"] < 0:
+        raise ValueError("Invalid ledger generation")
+    if any(not isinstance(state.get(k), list) for k in ("runs", "predictions", "observations", "outcomes")):
+        raise ValueError("Invalid ledger collections")
+    digest = state.get("sha256")
+    if not isinstance(digest, str) or len(digest) != 64:
+        raise ValueError("Missing ledger checksum")
+    if seal(dict(state))["sha256"] != digest:
+        raise ValueError("Ledger checksum mismatch")
+    runs = state["runs"]
+    if len({x["id"] for x in runs}) != len(runs):
+        raise ValueError("Duplicate run IDs")
+    if any(utc(b["as_of"]) <= utc(a["as_of"]) for a, b in zip(runs, runs[1:])):
+        raise ValueError("Nonmonotonic run timestamps")
+    ids = [p["prediction_id"] for p in state["predictions"]]
+    if len(ids) != len(set(ids)):
+        raise ValueError("Duplicate immutable prediction ID")
+    keys = [(o["prediction_id"], o["horizon_hours"]) for o in state["outcomes"]]
+    if len(keys) != len(set(keys)):
+        raise ValueError("Duplicate outcome")
+    if len(canonical(state)) > MAX_BYTES:
+        raise ValueError("Ledger capacity reached: archive/partition before proceeding")
+    return state
+
+def advance(original, report, source_sha):
+    verify(original)
+    if not isinstance(source_sha, str) or len(source_sha) != 40 or any(c not in "0123456789abcdef" for c in source_sha):
+        raise ValueError("Invalid immutable source commit SHA")
+    if not isinstance(report, dict) or report.get("schema") != 1 or report.get("mode") != "PAPER_ONLY" or report.get("buy_approved") is not False or report.get("production_applied") is not False:
+        raise ValueError("Not an approved paper-only report")
+    as_of = utc(report["as_of"])
+    if original["runs"] and as_of <= utc(original["runs"][-1]["as_of"]):
+        raise ValueError("Out-of-order or duplicate scan; do not reset ledger")
+    if utc(report["started_at"]) > as_of or (as_of - utc(report["started_at"])).total_seconds() > 300:
+        raise ValueError("Invalid scan duration")
+    watch = report["watch"]
+    observations = report["observations"]
+    if not watch or not observations or len(watch) > 12 or len({x["pair"] for x in watch}) != len(watch):
+        raise ValueError("Empty, duplicate or oversized watch")
+    if len({x["pair"] for x in observations}) != len(observations):
+        raise ValueError("Duplicate market observation")
+    if report.get("observed_markets") != len(observations):
+        raise ValueError("Market observation count mismatch")
+    report_hash = hashlib.sha256(canonical(report)).hexdigest()
+    run_id = hashlib.sha256((source_sha + "|" + report_hash).encode()).hexdigest()
+    state = {k: list(v) if isinstance(v, list) else v for k, v in original.items()}
+    state["runs"].append({"id": run_id, "as_of": report["as_of"],
+        "source_sha": source_sha, "report_sha256": report_hash,
+        "watch_count": len(watch), "observation_count": len(observations)})
+    seen = set()
+    for p in watch:
+        price = float(p["price"])
+        if not math.isfinite(price) or price <= 0 or p["status"] != "PAPER_WATCH":
+            raise ValueError("Invalid paper prediction")
+        if utc(p["as_of"]) != as_of or not utc(p["quote_observed_at"]) <= as_of:
+            raise ValueError("Prediction as-of or quote time invalid")
+        if (as_of - utc(p["quote_observed_at"])).total_seconds() > 180:
+            raise ValueError("Stale prediction quote")
+        expected = hashlib.sha256(("paper-v1|" + report["as_of"] + "|" + p["pair"]).encode()).hexdigest()
+        if p["prediction_id"] != expected or expected in seen:
+            raise ValueError("Prediction identity mismatch")
+        seen.add(expected)
+        state["predictions"].append({"prediction_id": expected, "run_id": run_id,
+            "as_of": report["as_of"], "pair": p["pair"], "price": price,
+            "baseline_score": p["baseline_score"], "challenger_score": p["challenger_score"],
+            "rank": p["rank"]})
+    for o in observations:
+        price = float(o["price"])
+        at = utc(o["observed_at"])
+        if not math.isfinite(price) or price <= 0 or at > as_of or (as_of - at).total_seconds() > 180:
+            raise ValueError("Invalid or stale market observation")
+        state["observations"].append({"run_id": run_id, "at": o["observed_at"],
+            "pair": o["pair"], "price": price})
+    existing = {(x["prediction_id"], x["horizon_hours"]) for x in state["outcomes"]}
+    by_pair = {}
+    for o in state["observations"]:
+        by_pair.setdefault(o["pair"], []).append(o)
+    for p in state["predictions"]:
+        begin = utc(p["as_of"])
+        for hours in HORIZONS:
+            key = (p["prediction_id"], hours)
+            if key in existing:
+                continue
+            target = begin + dt.timedelta(hours=hours)
+            if as_of < target + MAX_DELAY:
+                continue  # Never use an immature horizon.
+            series = sorted((o for o in by_pair.get(p["pair"], [])
+                if begin < utc(o["at"]) <= target + MAX_DELAY), key=lambda o: o["at"])
+            anchors = [o for o in series if target <= utc(o["at"]) <= target + MAX_DELAY]
+            in_window = [o for o in series if utc(o["at"]) <= target]
+            timeline = [begin] + [utc(o["at"]) for o in in_window]
+            contiguous = bool(anchors) and bool(in_window) and all(
+                b - a <= MAX_DELAY for a, b in zip(timeline, timeline[1:]))
+            if not contiguous or utc(anchors[0]["at"]) - timeline[-1] > MAX_DELAY:
+                state["outcomes"].append({"prediction_id": p["prediction_id"],
+                    "horizon_hours": hours, "status": "ABSTAIN_GAP",
+                    "target_at": target.isoformat()})
+            else:
+                final = anchors[0]
+                ret = 100 * (final["price"] / p["price"] - 1)
+                peak = 100 * (max(x["price"] for x in in_window) / p["price"] - 1)
+                state["outcomes"].append({"prediction_id": p["prediction_id"],
+                    "horizon_hours": hours, "status": "MATURED_OBSERVED",
+                    "target_at": target.isoformat(), "observed_at": final["at"],
+                    "return_pct": round(ret, 4), "observed_peak_pct": round(peak, 4),
+                    "observed_30pct_hit": peak >= 30})
+            existing.add(key)
+    state["generation"] += 1
+    seal(state)
+    verify(state)
+    return state
+
+def scoreboard(state):
+    verify(state)
+    outcomes = state["outcomes"]
+    return {"generation": state["generation"], "actual_scans": len(state["runs"]),
+        "immutable_predictions": len(state["predictions"]),
+        "market_observations": len(state["observations"]),
+        "matured_labels": sum(x["status"] == "MATURED_OBSERVED" for x in outcomes),
+        "gap_abstentions": sum(x["status"] == "ABSTAIN_GAP" for x in outcomes),
+        "observed_30pct_hits": sum(x.get("observed_30pct_hit") is True for x in outcomes),
+        "held_out_lift": None, "production_applied": False,
+        "ledger_sha256": state["sha256"]}
+
+def update_file(input_path, report_path, source_sha, output_path):
+    source = Path(input_path)
+    if not source.is_file():
+        raise FileNotFoundError("Existing ledger absent; explicit bootstrap required")
+    state = json.loads(source.read_text())
+    report = json.loads(Path(report_path).read_text())
+    next_state = advance(state, report, source_sha)
+    atomic_json(output_path, next_state)
+    return scoreboard(next_state)
