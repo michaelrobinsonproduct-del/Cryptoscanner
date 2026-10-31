@@ -127,12 +127,10 @@ class StorageTests(unittest.TestCase):
 
 
     def test_100_half_hour_scans_1200_markets_measured_storage(self):
-        # Representative synthetic stress, NOT measured real Kraken growth.
-        # A raw 50-hour state may exceed 12MB while its sealed persisted
-        # snapshot must stay below 12MB. No evidence is discarded.
+        # 99 historical transitions, then the 100th through the packed writer.
+        # Avoid quadratic replays of synthetic history in this bounded CI test.
+        # These are synthetic stress measurements, NOT real Kraken outcomes.
         state = ledger.empty()
-        packed = storage.pack_snapshot(state)
-        final_segment = None
         for i in range(100):
             report = synthetic(i * 30)
             at = report["as_of"]
@@ -141,8 +139,12 @@ class StorageTests(unittest.TestCase):
                     "pair": "SYNTH%04dUSD" % n, "price": 1.01,
                     "observed_at": at})
             report["observed_markets"] = len(report["observations"])
-            packed, final_segment, score = storage.advance_segmented(
-                packed, report, SHA)
+            if i < 99:
+                state = ledger.advance(state, report, SHA, storage.MAX_RAW_BYTES)
+            else:
+                packed_before = storage.pack_snapshot(state)
+                packed, final_segment, score = storage.advance_segmented(
+                    packed_before, report, SHA)
         restored = storage.unpack_snapshot(packed)
         raw_size = len(ledger.canonical(restored))
         self.assertEqual(restored["generation"], 100)
