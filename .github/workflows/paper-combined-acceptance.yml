@@ -1,0 +1,92 @@
+name: Independent Combined Paper Ledger Acceptance (read only)
+on:
+  push:
+    branches: [proof-independent-combined-gate-20261031]
+    paths: ['paper_pov/**', '.github/workflows/paper-combined-acceptance.yml']
+  pull_request:
+    paths: ['paper_pov/**', '.github/workflows/paper-combined-acceptance.yml']
+permissions:
+  contents: read
+concurrency:
+  group: paper-independent-combined-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  combined-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact-source adversarial tests and paper-only safety
+        run: |
+          set -euo pipefail
+          echo "PAPER_COMBINED_SOURCE_SHA=$(git rev-parse HEAD)"
+          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+          python - <<'PY'
+          from pathlib import Path
+          ledger = Path("paper_pov/ledger.py").read_text()
+          scanner = Path("paper_pov/scanner.py").read_text()
+          assert 'o["run_id"] in old_run_ids' in ledger
+          assert 'o["run_id"] not in old_run_ids' in ledger
+          assert "Orphan market observation" in ledger
+          assert "Prediction count/rank mismatch" in ledger
+          assert "Observation count mismatch" in ledger
+          for forbidden in ("api.kraken.com/0/private/", "AddOrder", "railway"):
+              assert forbidden not in scanner, forbidden
+          print("PAPER_COMBINED_STATIC_PAPER_ONLY_OK")
+          PY
+      - name: Independently verify latest real remote ledger without writing
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin refs/heads/paper-proof-ledger
+          LEDGER_COMMIT="$(git rev-parse FETCH_HEAD)"
+          git show "${LEDGER_COMMIT}:paper-ledger.json" > /tmp/public-paper-ledger.json
+          mkdir -p paper_pov/acceptance
+          LEDGER_COMMIT="$LEDGER_COMMIT" python - <<'PY'
+          import datetime as dt
+          import hashlib
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+          from paper_pov.ledger import verify, canonical
+          state = verify(json.loads(Path("/tmp/public-paper-ledger.json").read_text()))
+          assert state["generation"] >= 4, "Remote ledger regressed below verified generation 4"
+          runs = state["runs"]
+          gaps = [round((dt.datetime.fromisoformat(b["as_of"]) -
+                          dt.datetime.fromisoformat(a["as_of"])).total_seconds() / 60, 3)
+                  for a, b in zip(runs, runs[1:])]
+          result = {
+              "mode": "READ_ONLY_INDEPENDENT_COMBINED_GATE",
+              "source_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+              "remote_ledger_commit": os.environ["LEDGER_COMMIT"],
+              "remote_ledger_sha256": state["sha256"],
+              "generation": state["generation"],
+              "active_runs": len(runs),
+              "active_predictions": len(state["predictions"]),
+              "active_observations": len(state["observations"]),
+              "matured_labels": sum(x["status"] == "MATURED_OBSERVED" for x in state["outcomes"]),
+              "gap_abstentions": sum(x["status"] == "ABSTAIN_GAP" for x in state["outcomes"]),
+              "run_gaps_minutes": gaps,
+              "held_out_lift": None,
+              "production_applied": False,
+              "scope": "Client-observed sampled quotes, not exchange-complete outcomes",
+          }
+          Path("paper_pov/acceptance/remote-check.json").write_bytes(canonical(result))
+          print("PAPER_COMBINED_REMOTE_LEDGER_VERIFIED", json.dumps(result, sort_keys=True))
+          PY
+          (cd paper_pov/acceptance && sha256sum remote-check.json > SHA256SUMS)
+      - name: Preserve independent checksum evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-combined-acceptance-${{ github.run_id }}
+          path: |
+            paper_pov/acceptance/remote-check.json
+            paper_pov/acceptance/SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
