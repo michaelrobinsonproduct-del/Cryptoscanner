@@ -60,7 +60,16 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
             raise RuntimeError("historical REST response budget exceeded")
         total += len(raw)
         digests.append(hashlib.sha256(raw).hexdigest())
-        data = json.loads(raw)
+        # A duplicate JSON key could silently replace source identity or cursor
+        # provenance in Python's default JSON decoder. Fail closed instead.
+        def unique_json_keys(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise RuntimeError("duplicate Kraken REST JSON key")
+                result[key] = value
+            return result
+        data = json.loads(raw, object_pairs_hook=unique_json_keys)
         if not isinstance(data, dict) or data.get("error") or not isinstance(data.get("result"), dict):
             raise RuntimeError("Kraken historical REST error")
         result = data["result"]
@@ -68,7 +77,9 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
         if names != [pair] or not isinstance(result[names[0]], list) or len(result[names[0]]) > 1000:
             raise RuntimeError("invalid historical REST page")
         next_cursor = result.get("last")
-        if not isinstance(next_cursor, str) or not next_cursor.isdigit() or int(next_cursor) <= cursor:
+        if (not isinstance(next_cursor, str) or not next_cursor.isdigit()
+                or len(next_cursor) > 20 or (len(next_cursor) > 1 and next_cursor.startswith("0"))
+                or int(next_cursor) <= cursor):
             raise RuntimeError("nonadvancing historical REST cursor")
         cursor = int(next_cursor)
         rows = result[names[0]]
@@ -88,6 +99,8 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
                         not str(trade_id) or str(trade_id) in seen_trade_ids):
                     raise RuntimeError("duplicate or invalid REST trade id")
                 seen_trade_ids.add(str(trade_id))
+            if any(type(value) is bool for value in row[:3]):
+                raise RuntimeError("boolean Kraken REST numeric field")
             try:
                 t, price, volume = float(row[2]), float(row[0]), float(row[1])
             except (TypeError, ValueError) as exc:
@@ -95,6 +108,10 @@ def compare_rest_bucket(pair, start, expected, *, opener=None):
             if (not all(math.isfinite(x) for x in (t, price, volume)) or
                     t < 0 or price <= 0 or volume <= 0 or t < prior_time):
                 raise RuntimeError("nonchronological or invalid historical REST trade")
+            # A historical page must not silently return records older than
+            # its requested nanosecond cursor (allow 1 microsecond float loss).
+            if t + 1e-6 < requested_since / 1_000_000_000:
+                raise RuntimeError("REST trade predates requested cursor")
             prior_time = t
             if page_first is None:
                 page_first = t
