@@ -162,5 +162,43 @@ class TradeManifestTests(unittest.TestCase):
 
 
 
+    def test_real_kraken_schema_scalar_file_count_matches_zip_csv(self):
+        manifest = {"files": 2, "pairs": 2, "rows": 20,
+                    "coverage": {"start": "2026-04-01", "end": "2026-06-30"}}
+        with archive([("MANIFEST.json", json.dumps(manifest)),
+                      ("DENTEUR.csv", b"data"), ("BCHJPY.csv", b"data")]) as z:
+            r = inspect_archive(z, ["DENTEUR.csv", "BCHJPY.csv"])
+        c = r["manifest_schema_summary"]["structural_consistency"]
+        self.assertEqual(c["manifest_file_count"], 2)
+        self.assertEqual(c["zip_csv_member_count"], 2)
+        self.assertTrue(c["file_count_matches_pair_count"])
+        self.assertTrue(c["manifest_file_count_matches_zip_csv_count"])
+        self.assertFalse(c["manifest_per_file_listing_available"])
+        self.assertIsNone(c["listed_selected_members"]["DENTEUR.csv"])
+        self.assertTrue(c["selected_members_present_in_zip"]["DENTEUR.csv"])
+        self.assertFalse(c["source_authenticated"])
+
+    def test_scalar_manifest_mismatch_is_reported_not_authenticated(self):
+        manifest = {"files": 1399, "pairs": 1399}
+        with archive([("MANIFEST.json", json.dumps(manifest)),
+                      ("DENTEUR.csv", b"data")]) as z:
+            r = inspect_archive(z, ["DENTEUR.csv"])
+        c = r["manifest_schema_summary"]["structural_consistency"]
+        self.assertFalse(c["manifest_file_count_matches_zip_csv_count"])
+        self.assertTrue(c["file_count_matches_pair_count"])
+        self.assertEqual(c["complete_trade_intervals_verified"], 0)
+
+    def test_invalid_negative_scalar_file_count_is_unknown(self):
+        manifest = {"files": -1, "pairs": 1}
+        with archive([("MANIFEST.json", json.dumps(manifest)),
+                      ("DENTEUR.csv", b"data")]) as z:
+            r = inspect_archive(z, ["DENTEUR.csv"])
+        c = r["manifest_schema_summary"]["structural_consistency"]
+        self.assertIsNone(c["manifest_file_count"])
+        self.assertIsNone(c["manifest_file_count_matches_zip_csv_count"])
+        self.assertIsNone(c["listed_selected_members"]["DENTEUR.csv"])
+
+
+
 if __name__ == "__main__":
     unittest.main()
