@@ -25,7 +25,7 @@ class DescriptiveAuditTests(unittest.TestCase):
             rows = [[str(i*300), "100", "131" if i == 1 else "100",
                      "100", "100", "10", "2"] for i in range(578)]
             stream = io.StringIO()
-            csv.writer(stream, lineterminator="\\n").writerows(rows)
+            csv.writer(stream, lineterminator="\n").writerows(rows)
             archive = p/"source.zip"
             with zipfile.ZipFile(archive, "w") as z:
                 z.writestr("TESTUSD_5.csv", stream.getvalue())
