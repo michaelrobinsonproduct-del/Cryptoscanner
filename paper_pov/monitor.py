@@ -64,7 +64,10 @@ def assess_runs(payload, now, minute, prefix, alerts):
         def successful_in(slot):
             return any(slot - dt.timedelta(minutes=5) <= instant(x["created_at"]) <= slot + RUN_WINDOW
                        for x in successes)
-        if all(not successful_in(slot) for slot in last_two):
+        # A newer successful scheduled execution resets the missed-slot streak.
+        # Do not report old missed slots after the next successful scan.
+        if all(not successful_in(slot) for slot in last_two) and (
+                not successes or instant(successes[0]["created_at"]) < last_two[-1]):
             alerts.append(prefix + "_TWO_MISSED_SLOTS")
     if not scheduled:
         alerts.append(prefix + "_NO_SCHEDULED_HISTORY")
