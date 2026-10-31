@@ -1182,6 +1182,31 @@
         "Held-out baseline lift and production release gates remain unverified"
       ],
       "next": "Continue independent quarterly trade source authentication using retained SHA-verified OHLC and same-revision trade evidence; seek provider-published quarterly digest or bounded independent REST interval attestation where available; do not infer full trade completeness from CRC, ETag or exact matches. Once authenticated, produce real point-in-time 1/6/24/48-hour labels and held-out comparison. Next scheduled workflow uses pinned hardened code."
+    },
+    "retained_ohlc_provenance_contract_20261031_00": {
+      "status": "IMPLEMENTED_EXACT_COMMIT_CI_PENDING",
+      "research_commit": "4ea14933f26ba2cb5dbc2ea80164c00f4de2de6a",
+      "workflow_main_commit": "3822fb47b8eb49070871b7d03d92b6fff69d5f11",
+      "prior_verified_tests": 272,
+      "added_regression_tests": 12,
+      "expected_tests": 284,
+      "implemented": [
+        "Independently parse and revalidate retained OHLC CSV column counts, finite numeric fields, 5-minute alignment and strictly increasing candle opens",
+        "Recheck OHLC bounds, nonnegative volume and integer trade count without trusting manifest SHA alone",
+        "Recompute retained-tail gap events, missing intervals and longest contiguous streak",
+        "Require source-tail metadata type/row count/first and last timestamps; reject false source gap floors and inconsistent full-retention counters",
+        "Expose fail-closed structure/gap-floor flags in reconciliation report, preserving zero genuine labels",
+        "Pin research exact commit in isolated push-trigger workflow with 284-test floor and reconciliation assertions"
+      ],
+      "real_historical_labels": 0,
+      "held_out_improvement": "not_measured",
+      "production_applied": false,
+      "blockers": [
+        "Independent quarterly trade archive authentication and full trade interval completeness unverified",
+        "No genuine point-in-time 1/6/24/48-hour outcomes or held-out predictive uplift",
+        "Research workflow CI on new exact commit pending"
+      ],
+      "next": "Inspect actual pinned GitHub Actions logs and retained-artifact audit; repair failing fixtures or implementation if needed, then record exact verified tests, release/verify lease and continue official trade completeness evidence."
     }
   },
   "audit": {
