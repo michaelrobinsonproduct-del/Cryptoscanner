@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-efficiency-checkpoint-20261031",
-    "lease_expires_at": "2026-10-31T08:00:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -480,20 +480,33 @@
       "artifact_digest": "sha256:a7b8ca113c3e1d986e548388415b0ae1592aa44aa249671efd982ffe74cbe197"
     },
     "coverage_boundaries": {
-      "status": "OFFLINE_COVERAGE_PARTITION_COMMITTED_CI_PENDING",
+      "status": "VERIFIED_134_TESTS_COVERAGE_PARTITION_COMPLETE",
       "starting_checkpoint": "200f28fd293fd73d93f0defd6b74a1f8feb93b70",
       "research_commit": "cedd88cce046b6458a67fcefd36a12fc18be8768",
       "workflow_commit": "8f41de3efe0539802ab85de51f38a959f054e78c",
       "added_tests": 6,
       "expected_tests": 134,
-      "verified_tests_this_commit": 0,
+      "verified_tests_this_commit": 134,
       "previous_verified_exact_candidate_matches": 5291,
       "unmatched_ohlc_rows_to_partition": 14595,
       "actual_partition": "not_yet_measured_from_raw_source",
       "independent_completeness_verified": false,
       "real_labels": 0,
       "heldout_patterns": "not_authorized",
-      "next": "Run manual workflow only when real source reacquisition justified. Analyze exact 14595 unmatched split into before/within/after source trade period and longest gap-free candidate run; no labels without independent completeness."
+      "next": "Run manual workflow only when real source reacquisition justified. Analyze exact 14595 unmatched split into before/within/after source trade period and longest gap-free candidate run; no labels without independent completeness.",
+      "verified_run_id": 41149343294,
+      "ohlc_before_trade_period": 14595,
+      "ohlc_within_trade_period_without_trade_bucket": 0,
+      "ohlc_after_trade_period": 0,
+      "longest_contiguous_matching_5m_buckets": 26,
+      "eligible_six_hour_windows": 0
+    },
+    "efficiency": {
+      "status": "WORKFLOW_DEFAULT_NO_DOWNLOAD_COMMITTED_UNTESTED",
+      "workflow_commit": "e204abfeeba63b0f175bd5dbf592a3d82bfdb3af",
+      "default_mode": "compile_and_offline_tests_only",
+      "full_download": "explicit_manual_opt_in",
+      "next": "Use small bounded authenticated reusable fixture from source only when safely permitted; broaden symbol selection with coverage density screening before any more full archive run; verify workflow no-download mode."
     }
   },
   "audit": {
@@ -647,7 +660,8 @@
       "Run 41148408717 job 124378849933 passed 123/123, parsed 15,683 real 0GEUR trades and 19,886 OHLC rows, found 5,291 overlapping intervals; source completeness unverified, exact matches and labels remain zero. Both archives downloaded once; production unchanged.",
       "Added bounded offline per-interval exact trade/OHLC diagnostic and five regression tests. Prior run 41148408717 provided only aggregate report, not individual trade rows; real exact matches and completeness cannot be independently established from existing artifact. New CI not executed; no further archive downloads. Production unchanged.",
       "Run 41148996221 job 124380747433 passed 128/128; 5291/5291 overlapping trade buckets exactly matched 0GEUR five-minute OHLCVT price/volume/count, 14595 OHLC rows had no trade bucket, zero completeness-certified intervals and zero labels. No production changes.",
-      "Added bounded offline source-period partition and contiguous candidate window analysis, six tests, pinned manual workflow. Existing summary cannot reveal unmatched-period split; no new source downloads or verified new CI. Production unchanged."
+      "Added bounded offline source-period partition and contiguous candidate window analysis, six tests, pinned manual workflow. Existing summary cannot reveal unmatched-period split; no new source downloads or verified new CI. Production unchanged.",
+      "Run 41149343294 passed 134/134, all 14595 unmatched OHLC rows precede trade archive period, max contiguous matching window 26 candles, no 6h+ candidate. Main workflow now defaults to no archive download; full acquisition opt-in. No production modifications."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
