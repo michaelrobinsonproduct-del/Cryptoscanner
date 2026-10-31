@@ -26,20 +26,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 1e2856af86e2b1a7fe7f46c7273ce376c9beb109
+          ref: 6ae16a8f430de922f3af34f8e9f4bfa6c34285d6
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify immutable research code and at least 378 offline tests
+      - name: Verify immutable research code and at least 383 offline tests
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = '1e2856af86e2b1a7fe7f46c7273ce376c9beb109'
+          test "$(git rev-parse HEAD)" = '6ae16a8f430de922f3af34f8e9f4bfa6c34285d6'
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-tests.log
-          python -c 'import re; from pathlib import Path; s=Path("/tmp/research-tests.log").read_text(); m=re.search(r"^Ran (\d+) tests", s, re.M); assert m and int(m.group(1))               >= 378, "expected at least 378 pinned offline tests"; print("EXACT_PINNED_TEST_COUNT", m.group(1))'
+          python -c 'import re; from pathlib import Path; s=Path("/tmp/research-tests.log").read_text(); m=re.search(r"^Ran (\d+) tests", s, re.M); assert m and int(m.group(1))               >= 383, "expected at least 383 pinned offline tests"; print("EXACT_PINNED_TEST_COUNT", m.group(1))'
           grep -q '^OK$' /tmp/research-tests.log
       - name: Check cooperative research lease, active runs, and cached source evidence
         id: cache
