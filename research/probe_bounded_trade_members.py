@@ -39,6 +39,16 @@ class RangeZipReader(io.RawIOBase):
         self.budget = budget
         self.transferred = 0
         self.requests = 0
+        # A byte-range ZIP reader must not silently splice different remote
+        # object revisions into a single apparently valid source archive.
+        self._etag = None
+        self._last_modified = None
+        self._validator_initialized = False
+
+    @property
+    def source_validator(self):
+        return {"strong_etag": self._etag, "last_modified": self._last_modified,
+                "revision_pinned": bool(self._etag or self._last_modified)}
 
     def readable(self):
         return True
@@ -70,11 +80,14 @@ class RangeZipReader(io.RawIOBase):
         if size > MAX_REQUEST or self.transferred + size > self.budget:
             raise ValueError("remote range request or total transfer cap")
         start, end = self.pos, self.pos + size - 1
-        req = urllib.request.Request(self.url, headers={
+        headers = {
             "Range": f"bytes={start}-{end}",
             "Accept-Encoding": "identity",
             "User-Agent": "Cryptoscanner-isolated-range-research/1.0",
-        })
+        }
+        if self._etag or self._last_modified:
+            headers["If-Range"] = self._etag or self._last_modified
+        req = urllib.request.Request(self.url, headers=headers)
         with self.opener(req, timeout=25) as response:
             if response.status != 206:
                 raise RuntimeError("source ignored byte-range request")
@@ -82,6 +95,25 @@ class RangeZipReader(io.RawIOBase):
                 raise RuntimeError("unexpected range content encoding")
             if response.headers.get("Content-Range") != f"bytes {start}-{end}/{self.size}":
                 raise RuntimeError("source range or total size changed")
+            length = response.headers.get("Content-Length")
+            if length is not None and (not length.isdecimal() or int(length) != size):
+                raise RuntimeError("source response length changed")
+            etag = response.headers.get("ETag")
+            # Weak ETags are not strong byte-identity validators.
+            strong_etag = etag if etag and not etag.lstrip().startswith("W/") else None
+            modified = response.headers.get("Last-Modified")
+            if self._validator_initialized:
+                if self._etag and strong_etag != self._etag:
+                    raise RuntimeError("remote source ETag changed or disappeared")
+                if self._last_modified and modified != self._last_modified:
+                    raise RuntimeError("remote source Last-Modified changed or disappeared")
+                if not self._etag and strong_etag:
+                    # Later validators cannot retroactively attest earlier ranges.
+                    raise RuntimeError("remote source validator appeared mid-read")
+            else:
+                self._etag = strong_etag
+                self._last_modified = modified
+                self._validator_initialized = True
             payload = response.read(size + 1)
         if len(payload) != size:
             raise RuntimeError("truncated or oversized range")
@@ -188,6 +220,7 @@ def collect(selection, *, opener=None, url=URL, expected_bytes=EXPECTED_BYTES,
         "source_member_crc_checked": bool(files),
         "range_requests": remote.requests,
         "range_bytes_transferred": remote.transferred,
+        "source_revision_validator": remote.source_validator,
         "selection_count": len(wanted), "retained_markets": len(files),
         "markets": summaries, "real_labels": 0,
         "held_out_evaluation": "not_authorized",
