@@ -295,6 +295,53 @@ class HistoricalGapCandidateTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "schema"):
             self.audit(rows)
 
+
+    def test_distant_october_like_witness_is_not_a_may_gap_certificate(self):
+        rows = self.before + [["0.000012", "1", 1791795122.2037888, "b", "l", ""]]
+        r = self.audit(rows)
+        self.assertEqual(r["status"], "abstain_rest_gap_following_witness_distant")
+        self.assertEqual(r["candidate_empty_gap_buckets"], [])
+        self.assertFalse(r["following_bucket_witness_near"])
+        self.assertEqual(r["first_after_end_trade_timestamp"], 1791795122.2037888)
+        self.assertEqual(r["real_labels"], 0)
+
+    def test_following_bucket_end_boundary_is_too_distant(self):
+        r = self.audit(self.before + [["0.000012", "1", 1200, "b", "l", ""]])
+        self.assertEqual(r["status"], "abstain_rest_gap_following_witness_distant")
+        self.assertEqual(r["candidate_empty_gap_buckets"], [])
+
+    def test_last_instant_of_following_bucket_is_near_but_not_certified(self):
+        r = self.audit(self.before + [["0.000012", "1", 1199.999, "b", "l", ""]])
+        self.assertEqual(r["status"], "independent_rest_gap_candidate_correlated_not_complete")
+        self.assertTrue(r["following_bucket_witness_near"])
+        self.assertEqual(r["no_trade_intervals_verified"], 0)
+
+    def test_first_after_end_timestamp_is_retained_in_cursor_trace(self):
+        r = self.audit(self.before + [self.after])
+        self.assertEqual(r["first_after_end_trade_timestamp"], 900)
+        self.assertEqual(r["rest_cursor_trace"][0]["first_after_end_trade_timestamp"], 900)
+        self.assertTrue(r["following_bucket_witness_near"])
+
+    def test_near_witness_then_distant_trade_remains_near(self):
+        rows = self.before + [self.after, ["0.000012", "1", 1791795122, "b", "l", ""]]
+        r = self.audit(rows)
+        self.assertEqual(r["status"], "independent_rest_gap_candidate_correlated_not_complete")
+        self.assertEqual(r["first_after_end_trade_timestamp"], 900)
+        self.assertEqual(r["real_labels"], 0)
+
+    def test_gap_trade_takes_precedence_over_distant_after_end_witness(self):
+        rows = self.before + [["0.000012", "1", 650, "s", "l", ""],
+                              ["0.000012", "1", 1200, "b", "l", ""]]
+        r = self.audit(rows)
+        self.assertEqual(r["status"], "abstain_rest_gap_contains_trades")
+        self.assertEqual(r["candidate_empty_gap_buckets"], [])
+
+    def test_default_observed_bucket_mode_does_not_require_near_gap_witness(self):
+        rows = self.before + [["0.000012", "1", 1791795122, "b", "l", ""]]
+        r = self.audit(rows, gap_buckets=0)
+        self.assertEqual(r["status"], "independent_rest_bucket_correlated")
+        self.assertEqual(r["real_labels"], 0)
+
     def test_nonadvancing_cursor_rejected_even_if_gap_looks_empty(self):
         with self.assertRaisesRegex(RuntimeError, "nonadvancing"):
             compare_rest_bucket(
