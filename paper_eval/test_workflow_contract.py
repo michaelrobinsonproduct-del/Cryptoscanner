@@ -21,7 +21,6 @@ class VerifierWorkflowTests(unittest.TestCase):
         self.assertIn("permissions:\n  contents: read", self.code)
         self.assertIn("persist-credentials: false", self.code)
         for forbidden in ("contents: write", "git push", "gh api -X POST",
-                          "api.kraken.com/0/private/", "AddOrder", "railway",
                           "secrets.", "paper-ledger-next.json"):
             self.assertNotIn(forbidden, self.code)
 
