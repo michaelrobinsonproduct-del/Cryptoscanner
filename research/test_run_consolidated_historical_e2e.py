@@ -2,7 +2,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
-from run_consolidated_historical_e2e import discover_schema, analyze, candidate_trade_member, run
+from run_consolidated_historical_e2e import discover_schema, analyze, candidate_trade_member, run, reconstruct_verified_outcomes
 
 
 class ConsolidatedEndToEndTests(unittest.TestCase):
@@ -42,6 +42,24 @@ class ConsolidatedEndToEndTests(unittest.TestCase):
             with zipfile.ZipFile(t) as tz:
                 with self.assertRaises(RuntimeError):
                     candidate_trade_member(tz,"XBTUSD")
+
+    def test_no_real_labels_without_independent_source(self):
+        rows = [(300, 100, 101, 100, 101, 5, 2)]
+        trades = [(300, 100, 2, 0), (301, 101, 3, 1)]
+        self.assertEqual(reconstruct_verified_outcomes(rows, trades)["real_labels"], 0)
+
+    def test_no_real_labels_without_timestamp_semantics(self):
+        rows = [(300, 100, 101, 100, 101, 5, 2)]
+        trades = [(300, 100, 2, 0), (301, 101, 3, 1)]
+        r = reconstruct_verified_outcomes(rows, trades, source_complete=True)
+        self.assertEqual(r["status"], "abstain_unverified_independent_source")
+
+    def test_exact_matching_does_not_create_immature_labels(self):
+        rows = [(300, 100, 101, 100, 101, 5, 2)]
+        trades = [(300, 100, 2, 0), (301, 101, 3, 1)]
+        r = reconstruct_verified_outcomes(rows, trades, source_complete=True,
+                                          trade_timestamp_semantics_verified=True)
+        self.assertEqual(r["real_labels"], 0)
 
     def test_output_never_overwrites(self):
         with tempfile.TemporaryDirectory() as d:
