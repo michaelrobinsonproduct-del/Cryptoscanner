@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 6ae16a8f430de922f3af34f8e9f4bfa6c34285d6
+          ref: e2a271a8412848a72d3dc95abcecd6bd06a73720
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -35,7 +35,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = '6ae16a8f430de922f3af34f8e9f4bfa6c34285d6'
+          test "$(git rev-parse HEAD)" = 'e2a271a8412848a72d3dc95abcecd6bd06a73720'
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-tests.log
