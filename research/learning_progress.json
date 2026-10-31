@@ -4,10 +4,9 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "learning-20261031T0204Z-00-fix-1793412166701",
-    "lease_expires_at": "2026-10-31T02:27:46.702Z",
-    "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it.",
-    "acquired_at": "2026-10-31T02:02:46.702Z"
+    "owner": null,
+    "lease_expires_at": null,
+    "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
     "1": {
@@ -641,9 +640,9 @@
       "next": "Observe first actual scheduled watchdog run and test real issue alert delivery through controlled smoke test; keep provenance Batch 1 active."
     },
     "batch1_real_trade_reconciliation_20261031": {
-      "status": "CODE_COMMITTED_REMOTE_CI_RUNNING",
+      "status": "CI_COUNT_GATE_FIXED_PENDING_REAL_RECONCILIATION",
       "research_commit": "674c55eb22c9b1293b97ba29e07ca2ae904d2f8b",
-      "workflow_main_commit": "3b4f492b202c43f925203567a7b089031c3a6fae",
+      "workflow_main_commit": "077a1f9b33bb635eb66652fbc4056fc59fffca7d",
       "workflow_run_id": 41158132715,
       "source_artifacts": {
         "ohlc": {
@@ -672,9 +671,14 @@
       },
       "verification": "Local independent retained-artifact byte comparison and digest match; new committed code awaits exact GitHub Actions test and reconciliation logs",
       "tests_expected": 166,
-      "tests_verified_new_code": false,
+      "tests_verified_new_code": true,
       "production_modified": false,
-      "next": "Inspect workflow 41158132715 exact pinned 166-test logs and real retained reconciliation report; fix only isolated defects; independently authenticate full trade archive and verify interval completeness before any labels."
+      "next": "Inspect follow-up workflow at main commit 077a1f9; verify exact 186 tests, cache reuse, real 4-market reconciliation and report artifact; no production changes.",
+      "failed_run_id": 41158132715,
+      "failed_run_reason": "Exact pinned research code ran 186/186 tests OK, but workflow brittle grep expected exactly 166; gate failed after tests. No reconciliation executed.",
+      "tests_verified_count": 186,
+      "tests_verified_run_id": 41158132715,
+      "tests_passed_but_workflow_failed": true
     }
   },
   "audit": {
