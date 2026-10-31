@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import tempfile
 
 from . import ledger, segmented_storage as storage
@@ -247,6 +248,29 @@ def stage_append(previous, report, source_sha, destination):
             shutil.rmtree(temporary)
 
 
+def verify_checkpoint_origin(directory, git_repository):
+    """Anchor legacy checkpoint bytes to the actual immutable Git commit.
+
+    This MUST run with a repository that has fetched the historical checkpoint
+    commit. It does not fetch or mutate Git and never trusts the SHA alone.
+    """
+    _, manifest = read_state(directory)
+    commit = manifest["checkpoint"]["git_commit"]
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(git_repository), "show",
+             commit + ":paper-ledger.json"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            timeout=30, check=True)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as exc:
+        raise ValueError("Legacy checkpoint Git commit unavailable") from exc
+    historical = result.stdout
+    if len(historical) > storage.MAX_RAW_BYTES or historical != _read(
+            Path(directory) / CHECKPOINT, storage.MAX_RAW_BYTES):
+        raise ValueError("Legacy checkpoint differs from immutable Git history")
+    return commit
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Stage/check paper Git storage; NEVER pushes")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -262,6 +286,7 @@ def main(argv=None):
     verify = sub.add_parser("verify")
     verify.add_argument("--directory", required=True)
     verify.add_argument("--full-replay", action="store_true")
+    verify.add_argument("--git-repository", help="Require exact legacy Git commit readback")
     args = parser.parse_args(argv)
     if args.command == "migrate":
         m = stage_migration(_read(args.legacy_file, storage.MAX_RAW_BYTES),
@@ -273,6 +298,8 @@ def main(argv=None):
             _read(args.report_file, storage.MAX_RAW_BYTES)), args.source_sha, args.destination)
     else:
         state, manifest = read_state(args.directory, args.full_replay)
+        if args.git_repository:
+            verify_checkpoint_origin(args.directory, args.git_repository)
         output = {"generation": state["generation"], "ledger_sha256": state["sha256"],
                   "segments": len(manifest["segments"]), "verified": True,
                   "full_replay": args.full_replay}
