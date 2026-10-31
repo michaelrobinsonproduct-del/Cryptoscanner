@@ -18,6 +18,7 @@ from .scanner import STABLE, atomic_json, utc
 SHA = re.compile(r"[0-9a-f]{40}")
 RUN = re.compile(r"[0-9]+")
 PAIR = re.compile(r"[A-Za-z0-9._/-]{1,64}")
+HORIZONS = (1, 6, 24, 48)
 
 
 def _number(value, label):
@@ -59,8 +60,15 @@ def render(scan, score, *, run_id, source_sha, ledger_commit):
                   "matured_labels", "gap_abstentions", "observed_30pct_hits"):
         if type(score.get(field)) is not int or score[field] < 0:
             raise ValueError("Invalid scoreboard " + field)
-    if score["actual_scans"] < score["generation"] or score["immutable_predictions"] < len(watches):
+    if score["actual_scans"] != score["generation"] or score["immutable_predictions"] < len(watches):
         raise ValueError("Inconsistent scoreboard")
+    if score["observed_30pct_hits"] > score["matured_labels"]:
+        raise ValueError("Observed hits exceed eligible matured labels")
+    for field in ("eligible_pairs", "observed_markets", "ohlc_screened"):
+        if type(scan.get(field)) is not int or scan[field] < 0:
+            raise ValueError("Invalid market coverage " + field)
+    if not len(observations) <= scan["eligible_pairs"] or not scan["ohlc_screened"] <= len(observations):
+        raise ValueError("Market coverage exceeds observed/eligible universe")
     if score["market_observations"] < len(observations):
         raise ValueError("Unpersisted observations")
     if not re.fullmatch(r"[0-9a-f]{64}", score.get("ledger_sha256", "")):
@@ -132,6 +140,12 @@ def render(scan, score, *, run_id, source_sha, ledger_commit):
                      f"{p['move_since_utc_open_pct']:+.2f}% | {p['move15_pct']:+.2f}% | "
                      f"{p['volume_accel']:.2f}x | {p['spread_bps']:.1f} | "
                      "NOT CALIBRATED / HIGH | WATCH |")
+    # The aggregate ledger count cannot be allocated to individual horizons
+    # without independent evidence. Never manufacture a per-horizon success.
+    horizon_status = ("NOT_MATURED_OR_INELIGIBLE" if score["matured_labels"] == 0
+                      else "PER_HORIZON_NOT_INDEPENDENTLY_VERIFIED")
+    horizons = {str(h): {"status": horizon_status, "verified_matured_count": None,
+                         "verified_hits": None} for h in HORIZONS}
     abstentions = scan.get("abstentions", [])
     if not isinstance(abstentions, list):
         raise ValueError("Invalid abstentions")
@@ -141,6 +155,10 @@ def render(scan, score, *, run_id, source_sha, ledger_commit):
         "**BUY:** none authorized. Scores are paper-only baseline/challenger rankings.",
         "",
         "## Learning and coverage",
+        "",
+        "| Forward horizon | Evidence status | Verified matured / hits |",
+        "|---|---|---|",
+        *[f"| {h}h | {horizon_status.replace(chr(95), chr(32))} | NOT VERIFIED |" for h in HORIZONS],
         "",
         f"- Persisted scans: {score['actual_scans']}; predictions: {score['immutable_predictions']}; "
         f"observations: {score['market_observations']}.",
@@ -156,7 +174,8 @@ def render(scan, score, *, run_id, source_sha, ledger_commit):
         "- DEX: NOT USED; no DEX freshness gate.",
         f"- OHLC screening abstentions: {len(abstentions)}; "
         "details in immutable scan JSON artifact.",
-        "- Storage: checksum-sealed ledger pushed non-force and read back before this report.",
+        "- Storage: checksum-sealed ledger pushed non-force and read back before this report. "
+        "Independent artifact recovery is NOT VERIFIED by this scan alone.",
         "- Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.",
         "",
     ])
@@ -171,6 +190,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit):
                "matured_labels": score["matured_labels"], "gap_abstentions": score["gap_abstentions"],
                "observed_30pct_hits": score["observed_30pct_hits"],
                "false_positives": None, "missed_movers": None, "held_out_lift": None,
+               "horizons": horizons, "storage_recovery_verified_this_run": False,
                "dex_freshness_gated": False, "production_applied": False, "buy_approved": False}
     return payload, "\n".join(lines)
 
