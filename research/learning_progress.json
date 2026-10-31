@@ -4,11 +4,11 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "role00-20261031T0904Z-contiguous-rest-window",
-    "lease_expires_at": "2026-10-31T09:29:51.620Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it.",
     "last_acquired_at": "2026-10-31T09:04:51.620Z",
-    "last_released_at": "2026-10-31T08:35:30.369Z"
+    "last_released_at": "2026-10-31T09:06:12.206Z"
   },
   "batches": {
     "1": {
@@ -1594,6 +1594,25 @@
       "issue_comment_readback_verified": true,
       "production_changes": 0,
       "next": "Keep watchdog scheduled; independently validate bounded complete historical intervals and mature outcomes; do not change production or reenable obsolete :20/:50 prompts without corrected safety requirements."
+    },
+    "role00_20261031_0904": {
+      "status": "CONTIGUOUS_OBSERVED_REST_WINDOW_IMPLEMENTED_CI_PENDING",
+      "utc": "2026-10-31T09:06:12.206Z",
+      "research_commit": "9195bac69b3c2e6c5b12a12796ebf10c5c33f330",
+      "workflow_main_commit": "d03191c010eb52302b138bf1a06cc2e774c4d5f3",
+      "changes": [
+        "Bounded 12-consecutive-observed-five-minute-bucket REST corroboration without inferring missing no-trade periods",
+        "Fail-closed source trade identity, timestamp, duplicate ID, resource, API, cursor and three-way OHLC checks using existing verified components",
+        "10 new offline failure-injection and synthetic independent REST response tests",
+        "Single existing research workflow pinned to exact code, new bounded evidence artifact with 30-day retention",
+        "No 9GB download; no production changes"
+      ],
+      "verified_tests": "PENDING_ACTUAL_GITHUB_ACTIONS_LOGS",
+      "new_genuine_labels": 0,
+      "held_out_lift": null,
+      "production_applied": false,
+      "blocker": "Quarterly independent trade completeness and mature forward outcome labels unverified; exact final-commit CI pending.",
+      "next": "Inspect push-triggered workflow actual tests and 12-bucket observed REST report; only claim real corroborated buckets after logs; maintain fail-closed no-label status."
     }
   },
   "audit": {
