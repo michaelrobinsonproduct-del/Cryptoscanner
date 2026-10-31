@@ -75,6 +75,36 @@ class AssessmentTests(unittest.TestCase):
         result = assess_case(runs=[run(1), run(2, conclusion="failure", age=10)])
         self.assertEqual(result["status"], "HEALTHY")
 
+    def test_no_substantive_learning_after_ninety_minutes(self):
+        result = assess_case(now=NOW + dt.timedelta(minutes=91),
+                             runs=[run(1, age=5)], jobs_by_id={1: jobs()})
+        self.assertIn("NO_SUBSTANTIVE_RESEARCH_90M", result["alerts"])
+
+    def test_recent_evidence_does_not_trigger_ninety_minute_alert(self):
+        result = assess_case(now=NOW + dt.timedelta(minutes=89),
+                             runs=[run(1, age=5)], jobs_by_id={1: jobs()})
+        self.assertNotIn("NO_SUBSTANTIVE_RESEARCH_90M", result["alerts"])
+
+    def test_running_retry_cannot_hide_ninety_minute_evidence_gap(self):
+        result = assess_case(now=NOW + dt.timedelta(minutes=95),
+                             runs=[run(1, status="in_progress", conclusion=None, age=2),
+                                   run(2, age=20)],
+                             jobs_by_id={2: jobs()})
+        self.assertIn("NO_SUBSTANTIVE_RESEARCH_90M", result["alerts"])
+
+    def test_running_retry_cannot_hide_two_completed_no_work_runs(self):
+        result = assess_case(runs=[run(1, status="queued", conclusion=None, age=1),
+                                   run(2, age=5), run(3, age=20)],
+                             jobs_by_id={2: jobs(verified="skipped"),
+                                         3: jobs(verified="skipped")})
+        self.assertIn("REPEATED_GREEN_NO_WORK", result["alerts"])
+
+    def test_running_retry_cannot_hide_unverified_completed_green(self):
+        result = assess_case(runs=[run(1, status="in_progress", conclusion=None, age=1),
+                                   run(2, age=5)],
+                             jobs_by_id={2: []})
+        self.assertIn("LATEST_GREEN_RUN_UNVERIFIED", result["alerts"])
+
     def test_expired_lease_alerts(self):
         result = assess_case(lease={"owner": "other", "lease_expires_at":
                                     iso(NOW - dt.timedelta(minutes=1))})
