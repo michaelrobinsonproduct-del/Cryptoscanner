@@ -158,7 +158,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit):
         "",
         "| Forward horizon | Evidence status | Verified matured / hits |",
         "|---|---|---|",
-        *[f"| {h}h | {horizon_status.replace(chr(95), chr(32))} | NOT VERIFIED |" for h in HORIZONS],
+        *[f"| {h}h | {horizon_status.replace('_', ' ')} | NOT VERIFIED |" for h in HORIZONS],
         "",
         f"- Persisted scans: {score['actual_scans']}; predictions: {score['immutable_predictions']}; "
         f"observations: {score['market_observations']}.",
