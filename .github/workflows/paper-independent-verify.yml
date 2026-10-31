@@ -1,0 +1,33 @@
+name: Independent Paper Scanner Contract CI
+on:
+  push:
+    branches: [proof-independent-verify-20261031]
+    paths:
+      - 'paper_verifier/**'
+      - '.github/workflows/paper-independent-verify.yml'
+  pull_request:
+    branches: [proof-of-value-paper-20261031]
+    paths:
+      - 'paper_verifier/**'
+      - '.github/workflows/paper-independent-verify.yml'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify immutable checkout
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          echo "EXACT_COMMIT=$GITHUB_SHA"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile contract code
+        run: python -m compileall -q paper_verifier
+      - name: Run fail-closed paper contract fixtures
+        run: |
+          cd paper_verifier
+          python -m unittest discover -p 'test_*.py' -v
