@@ -186,6 +186,17 @@ def alert_issue(api, report, *, dry_run=False):
     return "ISSUE_VERIFIED_" + str(number)
 
 
+def load_evidence_artifacts(api):
+    """Fetch both source families independently; an OHLC-only query is incomplete."""
+    artifacts = []
+    for name in (EVIDENCE_ARTIFACT, TRADE_EVIDENCE_ARTIFACT):
+        response = api.call("/actions/artifacts?name=" + name + "&per_page=50")
+        if not isinstance(response.get("artifacts"), list):
+            raise RuntimeError("missing evidence artifact response for " + name)
+        artifacts.extend(response["artifacts"])
+    return artifacts
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
@@ -198,10 +209,7 @@ def main():
     for r in runs[:8]:
         if r.get("status") == "completed":
             jobs[r["id"]] = api.call("/actions/runs/" + str(r["id"]) + "/jobs?per_page=30")["jobs"]
-    artifacts = []
-    for name in (EVIDENCE_ARTIFACT, TRADE_EVIDENCE_ARTIFACT):
-        artifacts.extend(api.call("/actions/artifacts?name=" + name +
-                                  "&per_page=50")["artifacts"])
+    artifacts = load_evidence_artifacts(api)
     state = api.call("/contents/research/learning_progress.json?ref=research-learning-program-20261027")
     checkpoint = json.loads(base64.b64decode(state["content"]))
     report = assess(dt.datetime.now(UTC), timestamp(workflow["created_at"]),
