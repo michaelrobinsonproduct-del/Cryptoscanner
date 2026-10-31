@@ -17,7 +17,8 @@ class ConsolidatedEndToEndTests(unittest.TestCase):
             t,o=self.archives(Path(d),"timestamp,price,volume,type,order_type,misc,trade_id\n300,100,2,b,l,,a\n301,101,3,s,m,,b\n302,102,4,b,l,,c\n")
             with zipfile.ZipFile(t) as z:
                 s=discover_schema(z,"0GEUR.csv")
-                self.assertEqual(s["columns"],[7,7,7])\n                self.assertTrue(s["official_header_match"])
+                self.assertEqual(s["columns"],[7,7,7])
+                self.assertTrue(s["official_header_match"])
 
     def test_non_three_column_schema_abstains(self):
         with tempfile.TemporaryDirectory() as d:
