@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "learning-20261031T0120Z-15-evidence",
-    "lease_expires_at": "2026-10-31T01:33:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -576,14 +576,44 @@
       "source_archive_downloads_observed": 0
     },
     "recovery_20261031_15": {
-      "status": "WORKFLOW_LEASE_WAIT_AND_ARCHIVE_GATES_STAGED_PENDING_REAL_RUN",
-      "prior_recovered_lease": "learning-20261031T0059Z-00-verified",
+      "status": "VERIFIED_BOUNDED_TRADE_EVIDENCE_NO_PREDICTIVE_LABELS",
       "workflow_commit": "06d0b55565469a8363e64462c48cad75c632e5bd",
-      "verified_predictive_labels": 0,
-      "held_out_improvement": "not_demonstrated",
+      "workflow_run_id": 41154739332,
+      "job_id": 124398939911,
+      "tests_passed": 159,
+      "source_evidence_markets_reused": 48,
+      "full_ohlc_archive_downloads": 0,
+      "trade_source_url": "https://assets.kraken.com/marketing/institutions/Kraken_Trades_2026Q2.zip",
+      "trade_archive_full_sha_verified": false,
+      "trade_members_crc_verified": 4,
+      "trade_markets": [
+        "BCHJPY.csv",
+        "CMETHETH.csv",
+        "DENTEUR.csv",
+        "ELXEUR.csv"
+      ],
+      "trade_rows": {
+        "BCHJPY.csv": 399,
+        "CMETHETH.csv": 1930,
+        "DENTEUR.csv": 10425,
+        "ELXEUR.csv": 5225
+      },
+      "trade_range_requests": 19,
+      "trade_bytes_transferred": 375148,
+      "trade_evidence_artifact_id": 13024222325,
+      "trade_evidence_artifact_bytes": 297782,
+      "trade_evidence_expires_at": "2026-11-30T01:19:09Z",
+      "reusable_ohlc_artifact_id": 13024232238,
+      "real_labels": 0,
+      "held_out_predictive_delta": null,
+      "candidate_rule": "none independently validated",
       "production_applied": false,
-      "workflow_run": "pending",
-      "next": "Inspect triggered research workflow actual steps; verify 159 tests, retained 48-market reuse, bounded official trade evidence and no 9GB reacquisition. Reject any unverified historical labels."
+      "limitations": [
+        "Bounded trade member CRC does not authenticate full source archive",
+        "No verified complete independent trade interval or OHLC timestamp semantics",
+        "No genuine point-in-time 1/6/24/48h outcomes or held-out predictive lift"
+      ],
+      "next": "Compare 4 retained independent trade members with matching reusable OHLC markets using strictly bounded source rows; validate 5-minute candle-open boundaries and trade completeness, then derive only genuinely eligible forward outcomes. Do not promote or redeploy."
     }
   },
   "audit": {
