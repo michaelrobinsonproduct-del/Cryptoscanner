@@ -68,7 +68,7 @@ jobs:
             "production_applied":False,
           }
           assert result["actual_scans"]>=8
-          assert result["matured_labels"]==0 or result["matured_labels"]>0
+          assert result["active_observations"]>=result["active_predictions"]
           Path("/tmp/paper-final/readback.json").write_bytes(ledger.canonical(result))
           print("ROLE_V_FINAL_REMOTE_READBACK",json.dumps(result,sort_keys=True))
           PY
