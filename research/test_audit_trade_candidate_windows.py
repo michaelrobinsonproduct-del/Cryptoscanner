@@ -122,5 +122,11 @@ class CandidateAuditTests(unittest.TestCase):
         self.assertEqual(r["horizons"]["48"]["excluded_beyond_retained_end"], 1)
 
 
+    def test_zero_trade_or_zero_volume_candle_cannot_be_a_candidate(self):
+        for row in ((0, 100, 100, 100, 100, 0, 1),
+                    (0, 100, 100, 100, 100, 1, 0)):
+            with self.subTest(row=row), self.assertRaisesRegex(ValueError, "values"):
+                audit_candidate_windows([row], {0})
+
 if __name__ == "__main__":
     unittest.main()
