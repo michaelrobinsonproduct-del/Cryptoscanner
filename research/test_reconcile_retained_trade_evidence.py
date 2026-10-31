@@ -55,6 +55,11 @@ class RetainedReconciliationTests(unittest.TestCase):
             self.assertEqual(m["verified_complete_intervals"], 0)
             self.assertEqual(r["real_labels"], 0)
             self.assertFalse(r["source_trade_archive_sha256_verified"])
+            audit = m["candidate_outcome_audit"]
+            self.assertEqual(audit["real_labels"], 0)
+            self.assertEqual(audit["held_out_evaluation"], "not_authorized")
+            self.assertEqual(audit["horizons"]["1"]["candidate_entries"], 1)
+            self.assertEqual(audit["horizons"]["1"]["excluded_immature"], 1)
 
     def test_volume_mismatch_not_accepted(self):
         with tempfile.TemporaryDirectory() as root:
@@ -99,6 +104,25 @@ class RetainedReconciliationTests(unittest.TestCase):
         self.assertEqual(_candidate_windows(timestamps)["1"], 1)
         self.assertEqual(_candidate_windows(timestamps)["48"], 0)
         self.assertEqual(_candidate_windows(timestamps - {900})["1"], 0)
+
+    def test_oversized_artifact_rejected_before_reading(self):
+        with tempfile.TemporaryDirectory() as root:
+            o, t = self.fixture(root)
+            with o.open("r+b") as stream:
+                stream.truncate(80 * 1024 * 1024 + 1)
+            with self.assertRaisesRegex(ValueError, "oversized input artifact"):
+                reconcile(o, t)
+
+    def test_report_never_converts_exact_match_to_predictive_label(self):
+        with tempfile.TemporaryDirectory() as root:
+            o, t = self.fixture(root)
+            report = reconcile(o, t)
+            self.assertEqual(report["real_labels"], 0)
+            self.assertEqual(report["held_out_evaluation"], "not_authorized")
+            m = report["markets"]["ABUSD.csv"]
+            self.assertEqual(m["candidate_outcome_audit"]["horizons"]["48"]["candidate_full_future_windows"], 0)
+            self.assertEqual(m["verified_complete_intervals"], 0)
+            self.assertEqual(m["no_trade_or_source_gap_semantics"], "unknown")
 
 
 if __name__ == "__main__":
