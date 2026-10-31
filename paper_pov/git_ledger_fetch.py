@@ -20,7 +20,10 @@ def _git(*args):
 
 
 def fetch_bounded():
-    _git("fetch", "--no-tags", "--depth=64", "origin",
+    # Fetch a bounded but sufficiently deep ledger ancestry so the legacy
+    # reader can prove no earlier packed migration was silently removed.
+    # A still-shallow ancestor fails closed in read_git_state.
+    _git("fetch", "--no-tags", "--depth=512", "origin",
          SOURCE_REF + ":" + REMOTE_REF)
     head = _git("rev-parse", REMOTE_REF).decode().strip()
     if not SHA.fullmatch(head):
