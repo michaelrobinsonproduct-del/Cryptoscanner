@@ -1,0 +1,38 @@
+name: Paper Ledger Integrity (isolated exact SHA)
+on:
+  push:
+    branches: [proof-ledger-integrity-role-a-20261031]
+    paths: ['paper_pov/**', '.github/workflows/paper-integrity-ci.yml']
+  pull_request:
+    paths: ['paper_pov/**', '.github/workflows/paper-integrity-ci.yml']
+permissions:
+  contents: read
+concurrency:
+  group: paper-ledger-integrity-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact committed paper tests (no Kraken call or ledger write)
+        run: |
+          set -euo pipefail
+          echo "PAPER_INTEGRITY_EXACT_SHA=$(git rev-parse HEAD)"
+          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+          python - <<'PY'
+          from pathlib import Path
+          code=Path("paper_pov/ledger.py").read_text()
+          assert "Orphan market observation" in code
+          assert "Prediction count/rank mismatch" in code
+          assert "Observation count mismatch" in code
+          assert "api.kraken.com/0/private/" not in Path("paper_pov/scanner.py").read_text()
+          print("PAPER_INTEGRITY_PAPER_ONLY_SAFETY_OK")
+          PY
