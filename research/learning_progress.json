@@ -1352,6 +1352,21 @@
       "production_applied": false,
       "railway_read_only_status": "three known production services offline, no active deployments",
       "next": "Observe first genuinely scheduled execution of updated 32-test watchdog and continue independent trade completeness; do not claim labels or production recovery."
+    },
+    "trade_interval_exclusion_census_20261031_00": {
+      "status": "IMPLEMENTED_LOCAL_TESTS_PASS_REMOTE_CI_PENDING",
+      "research_commit": "4f14e21c3c9be9a2f0961ec023c7e0e71c982be4",
+      "workflow_commit": "1525eb553b94217fe82a68b03eae47d72ad63d7f",
+      "local_new_tests_passed": 15,
+      "added_reconciliation_tests": 3,
+      "expected_total_offline_tests": 318,
+      "actual_remote_ci_verified": false,
+      "implementation": "New bounded trade/OHLC overlap partition and 1/6/24/48h forward exclusion census, integrated into retained four-market reconciliation; separates unknown no-trade gaps, OHLC-only, trade-only, nonmatching, source-tail exclusions; zero source-authentication or predictive claims.",
+      "full_archive_downloads": 0,
+      "real_labels": 0,
+      "held_out_lift": "not_measured",
+      "production_applied": false,
+      "next": "Verify exact-pinned GitHub workflow run and real retained report; close provenance only with independent authenticated source completeness, otherwise remain BLOCKED."
     }
   },
   "audit": {
