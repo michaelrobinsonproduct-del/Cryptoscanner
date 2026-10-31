@@ -252,5 +252,39 @@ class RetainedReconciliationTests(unittest.TestCase):
             self.assertEqual(result["held_out_evaluation"], "not_authorized")
 
 
+    def test_reconciled_coverage_census_has_conserved_exact_intervals(self):
+        with tempfile.TemporaryDirectory() as root:
+            o, t = self.fixture(root)
+            m = reconcile(o, t)["markets"]["ABUSD.csv"]
+            census = m["trade_ohlc_coverage_census"]
+            self.assertEqual(census["overlap"]["exact_candidate_intervals"], 1)
+            self.assertEqual(census["overlap"]["intervals_in_shared_observed_span"], 1)
+            self.assertEqual(census["horizons"]["1"]["complete_descriptive_windows"], 0)
+            self.assertEqual(census["horizons"]["1"]["excluded_beyond_ohlc_tail"], 1)
+            self.assertFalse(census["independent_trade_source_completeness_verified"])
+            self.assertEqual(census["verified_predictive_labels"], 0)
+
+    def test_aggregation_mismatch_is_reported_as_unverified_overlap(self):
+        with tempfile.TemporaryDirectory() as root:
+            o, t = self.fixture(root, bad_volume=True)
+            m = reconcile(o, t)["markets"]["ABUSD.csv"]
+            census = m["trade_ohlc_coverage_census"]
+            self.assertEqual(census["overlap"]["exact_candidate_intervals"], 0)
+            self.assertEqual(census["overlap"]["both_present_but_nonmatching"], 1)
+            self.assertEqual(census["horizons"]["48"]["candidate_entries"], 0)
+            self.assertEqual(m["real_labels"], 0)
+
+    def test_missing_trade_cannot_be_inferred_as_no_trade_from_ohlc(self):
+        with tempfile.TemporaryDirectory() as root:
+            o, t = self.fixture(root, missing_trade=True)
+            m = reconcile(o, t)["markets"]["ABUSD.csv"]
+            census = m["trade_ohlc_coverage_census"]
+            self.assertEqual(census["overlap"]["both_present_but_nonmatching"], 1)
+            self.assertEqual(census["no_trade_inference"],
+                             "not_authorized_for_unobserved_intervals")
+            self.assertFalse(census["retained_edges_complete"])
+            self.assertEqual(m["verified_complete_intervals"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
