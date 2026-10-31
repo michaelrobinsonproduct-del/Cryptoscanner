@@ -62,7 +62,25 @@ def select_bracketed_gap(trades_path, ohlc_path, *, candidate_index=0):
     # A malformed later market must not be hidden by an earlier candidate.
     candidate_markets = []
     with zipfile.ZipFile(path) as archive:
-        names = sorted(n for n in archive.namelist()
+        # A retained evidence ZIP is at most four trade CSVs plus one manifest.
+        # Do not silently ignore extra, duplicate, encrypted, linked or unusual
+        # entries: they can disguise an inconsistent retained source package.
+        infos = archive.infolist()
+        all_names = [info.filename for info in infos]
+        if (not 1 <= len(infos) <= 5 or len(all_names) != len(set(all_names))):
+            raise ValueError("duplicate or oversized retained evidence member list")
+        for info in infos:
+            name = info.filename
+            if (name != "manifest.json" and not
+                    (name.startswith("trades/") and name.endswith(".csv"))):
+                raise ValueError("unexpected retained evidence member")
+            mode = (info.external_attr >> 16) & 0o170000
+            if (info.is_dir() or mode == 0o120000 or info.flag_bits & 1 or
+                    info.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED)):
+                raise ValueError("unsafe retained evidence ZIP entry")
+            if name == "manifest.json" and info.file_size > 128 * 1024:
+                raise ValueError("oversized retained evidence manifest")
+        names = sorted(n for n in all_names
                        if n.startswith("trades/") and n.endswith(".csv"))
         if not 1 <= len(names) <= 4 or len(names) != len(set(names)):
             raise ValueError("invalid trade member selection")
