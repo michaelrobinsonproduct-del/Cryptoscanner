@@ -27,9 +27,9 @@ class BracketedGapTests(unittest.TestCase):
     @patch("probe_historical_rest_gap.load_ohlc_starts")
     def test_selects_single_gap_only_if_retained_ohlc_agrees(self, ohlc):
         ohlc.return_value = ({300, 900}, "digest")
-        market, start, records, digest = select_bracketed_gap(self.trades, self.ohlc)
-        self.assertEqual((market, start, len(records), digest),
-                         ("BCHJPY", 300, 1, "digest"))
+        market, start, records, following, digest = select_bracketed_gap(self.trades, self.ohlc)
+        self.assertEqual((market, start, len(records), len(following), digest),
+                         ("BCHJPY", 300, 1, 1, "digest"))
 
     @patch("probe_historical_rest_gap.load_ohlc_starts")
     def test_ohlc_candle_in_gap_disqualifies_candidate(self, ohlc):
@@ -74,10 +74,14 @@ class BracketedGapTests(unittest.TestCase):
     @patch("probe_historical_rest_gap.load_ohlc_starts")
     def test_three_way_candidate_never_claims_verified_no_trade(self, ohlc, rest, three):
         ohlc.return_value = ({300, 900}, "digest")
-        rest.return_value = {
-            "status": "independent_rest_gap_candidate_correlated_not_complete",
-            "pages": 1, "bytes_transferred": 120, "rest_cursor_trace": [{"page_sha256": "sha"}]}
-        three.return_value = {"three_way_candle_correspondence": True}
+        rest.side_effect = [
+            {"status": "independent_rest_gap_candidate_correlated_not_complete",
+             "following_bucket_witness_near": True, "pages": 1,
+             "bytes_transferred": 120, "rest_cursor_trace": [{"page_sha256": "sha"}]},
+            {"status": "independent_rest_bucket_correlated", "after_end_witness": True,
+             "pages": 1, "bytes_transferred": 100}]
+        three.return_value = {"status": "independent_rest_trade_ohlc_correlated",
+                              "three_way_candle_correspondence": True}
         result = audit_bracketed_gap(self.trades, self.ohlc)
         self.assertEqual(result["status"], "independent_rest_bracketed_gap_candidate_not_complete")
         self.assertEqual(result["candidate_empty_gap_buckets"], [600])
@@ -86,7 +90,10 @@ class BracketedGapTests(unittest.TestCase):
         self.assertEqual(result["real_labels"], 0)
         self.assertIsNone(result["held_out_lift"])
         self.assertFalse(result["production_modified"])
-        self.assertEqual(rest.call_args.kwargs["gap_buckets"], 1)
+        self.assertEqual(rest.call_args_list[0].kwargs["gap_buckets"], 1)
+        self.assertEqual(rest.call_args_list[1].args[1], 900)
+        self.assertTrue(result["following_observed_candle_correlated"])
+        self.assertEqual(result["total_rest_bytes_transferred"], 220)
 
     @patch("probe_historical_rest_gap.corroborate_retained_ohlc")
     @patch("probe_historical_rest_gap.compare_rest_bucket")
@@ -114,7 +121,8 @@ class BracketedGapTests(unittest.TestCase):
     @patch("probe_historical_rest_gap.load_ohlc_starts")
     def test_three_way_disagreement_rejects_gap_candidate(self, ohlc, rest, three):
         ohlc.return_value = ({300, 900}, "digest")
-        rest.return_value = {"status": "independent_rest_gap_candidate_correlated_not_complete"}
+        rest.return_value = {"status": "independent_rest_gap_candidate_correlated_not_complete",
+                             "following_bucket_witness_near": True}
         three.return_value = {"status": "abstain_rest_trade_ohlc_disagreement",
                               "three_way_candle_correspondence": False}
         result = audit_bracketed_gap(self.trades, self.ohlc)
@@ -122,6 +130,103 @@ class BracketedGapTests(unittest.TestCase):
         self.assertEqual(result["candidate_empty_gap_buckets"], [])
         self.assertEqual(result["no_trade_intervals_verified"], 0)
 
+
+    @patch("probe_historical_rest_gap.corroborate_retained_ohlc")
+    @patch("probe_historical_rest_gap.compare_rest_bucket")
+    @patch("probe_historical_rest_gap.load_ohlc_starts")
+    def test_missing_near_following_witness_abstains_before_second_rest(self, ohlc, rest, three):
+        ohlc.return_value = ({300, 900}, "digest")
+        rest.return_value = {"status": "independent_rest_gap_candidate_correlated_not_complete"}
+        r = audit_bracketed_gap(self.trades, self.ohlc)
+        self.assertEqual(r["status"], "abstain_rest_missing_near_following_witness")
+        self.assertEqual(rest.call_count, 1)
+        self.assertEqual(r["real_labels"], 0)
+        three.assert_not_called()
+
+    @patch("probe_historical_rest_gap.corroborate_retained_ohlc")
+    @patch("probe_historical_rest_gap.compare_rest_bucket")
+    @patch("probe_historical_rest_gap.load_ohlc_starts")
+    def test_following_rest_disagreement_rejects_candidate(self, ohlc, rest, three):
+        ohlc.return_value = ({300, 900}, "digest")
+        rest.side_effect = [
+            {"status": "independent_rest_gap_candidate_correlated_not_complete",
+             "following_bucket_witness_near": True},
+            {"status": "abstain_rest_archive_disagreement"}]
+        three.return_value = {"status": "independent_rest_trade_ohlc_correlated",
+                              "three_way_candle_correspondence": True}
+        r = audit_bracketed_gap(self.trades, self.ohlc)
+        self.assertEqual(r["status"], "abstain_following_rest_bucket_unverified")
+        self.assertEqual(r["candidate_empty_gap_buckets"], [])
+        self.assertEqual(three.call_count, 1)
+
+    @patch("probe_historical_rest_gap.corroborate_retained_ohlc")
+    @patch("probe_historical_rest_gap.compare_rest_bucket")
+    @patch("probe_historical_rest_gap.load_ohlc_starts")
+    def test_following_rest_requires_after_end_witness(self, ohlc, rest, three):
+        ohlc.return_value = ({300, 900}, "digest")
+        rest.side_effect = [
+            {"status": "independent_rest_gap_candidate_correlated_not_complete",
+             "following_bucket_witness_near": True},
+            {"status": "independent_rest_bucket_correlated", "after_end_witness": False}]
+        three.return_value = {"status": "independent_rest_trade_ohlc_correlated",
+                              "three_way_candle_correspondence": True}
+        r = audit_bracketed_gap(self.trades, self.ohlc)
+        self.assertEqual(r["status"], "abstain_following_rest_bucket_unverified")
+        self.assertEqual(r["real_labels"], 0)
+
+    @patch("probe_historical_rest_gap.corroborate_retained_ohlc")
+    @patch("probe_historical_rest_gap.compare_rest_bucket")
+    @patch("probe_historical_rest_gap.load_ohlc_starts")
+    def test_following_ohlc_mismatch_rejects_candidate(self, ohlc, rest, three):
+        ohlc.return_value = ({300, 900}, "digest")
+        rest.side_effect = [
+            {"status": "independent_rest_gap_candidate_correlated_not_complete",
+             "following_bucket_witness_near": True},
+            {"status": "independent_rest_bucket_correlated", "after_end_witness": True}]
+        three.side_effect = [
+            {"status": "independent_rest_trade_ohlc_correlated",
+             "three_way_candle_correspondence": True},
+            {"status": "abstain_rest_trade_ohlc_disagreement",
+             "three_way_candle_correspondence": False}]
+        r = audit_bracketed_gap(self.trades, self.ohlc)
+        self.assertEqual(r["status"], "abstain_following_rest_ohlc_disagreement")
+        self.assertEqual(r["candidate_empty_gap_buckets"], [])
+        self.assertEqual(r["real_labels"], 0)
+
+    @patch("probe_historical_rest_gap.corroborate_retained_ohlc")
+    @patch("probe_historical_rest_gap.compare_rest_bucket")
+    @patch("probe_historical_rest_gap.load_ohlc_starts")
+    def test_following_rest_transport_error_abstains(self, ohlc, rest, three):
+        ohlc.return_value = ({300, 900}, "digest")
+        rest.side_effect = [
+            {"status": "independent_rest_gap_candidate_correlated_not_complete",
+             "following_bucket_witness_near": True},
+            OSError("following page unavailable")]
+        three.return_value = {"status": "independent_rest_trade_ohlc_correlated",
+                              "three_way_candle_correspondence": True}
+        r = audit_bracketed_gap(self.trades, self.ohlc)
+        self.assertEqual(r["status"], "abstain_following_rest_transport_or_source_error")
+        self.assertEqual(r["following_error_type"], "OSError")
+        self.assertEqual(r["real_labels"], 0)
+
+    @patch("probe_historical_rest_gap.load_ohlc_starts")
+    def test_oversized_following_trade_bucket_never_selected(self, ohlc):
+        self.write_trades([301] + [901 + i * 0.001 for i in range(101)])
+        self.assertIsNone(select_bracketed_gap(self.trades, self.ohlc))
+        ohlc.assert_not_called()
+
+    @patch("probe_historical_rest_gap.corroborate_retained_ohlc")
+    @patch("probe_historical_rest_gap.compare_rest_bucket")
+    @patch("probe_historical_rest_gap.load_ohlc_starts")
+    def test_wrong_preceding_ohlc_status_cannot_pass_true_boolean(self, ohlc, rest, three):
+        ohlc.return_value = ({300, 900}, "digest")
+        rest.return_value = {"status": "independent_rest_gap_candidate_correlated_not_complete",
+                             "following_bucket_witness_near": True}
+        three.return_value = {"status": "abstain_ohlc_unverified",
+                              "three_way_candle_correspondence": True}
+        r = audit_bracketed_gap(self.trades, self.ohlc)
+        self.assertEqual(r["status"], "abstain_ohlc_unverified")
+        self.assertEqual(rest.call_count, 1)
 
 if __name__ == "__main__":
     unittest.main()
