@@ -26,20 +26,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 882366a1f10779cfebec13e54bdbc22cf0b46695
+          ref: 4f14e21c3c9be9a2f0961ec023c7e0e71c982be4
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify immutable research code and at least 300 offline tests
+      - name: Verify immutable research code and at least 318 offline tests
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = '882366a1f10779cfebec13e54bdbc22cf0b46695'
+          test "$(git rev-parse HEAD)" = '4f14e21c3c9be9a2f0961ec023c7e0e71c982be4'
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-tests.log
-          python -c 'import re; from pathlib import Path; s=Path("/tmp/research-tests.log").read_text(); m=re.search(r"^Ran (\d+) tests", s, re.M); assert m and int(m.group(1))          >= 300, "expected at least 300 pinned offline tests"; print("EXACT_PINNED_TEST_COUNT", m.group(1))'
+          python -c 'import re; from pathlib import Path; s=Path("/tmp/research-tests.log").read_text(); m=re.search(r"^Ran (\d+) tests", s, re.M); assert m and int(m.group(1))           >= 318, "expected at least 318 pinned offline tests"; print("EXACT_PINNED_TEST_COUNT", m.group(1))'
           grep -q '^OK$' /tmp/research-tests.log
       - name: Check cooperative research lease, active runs, and cached source evidence
         id: cache
@@ -197,6 +197,24 @@ jobs:
             --trades research/output/bounded_independent_trade_members.zip \
             > research/output/trade_ohlc_reconciliation.json
           python -c 'import json; from pathlib import Path; r=json.loads(Path("research/output/trade_ohlc_reconciliation.json").read_text()); assert r["real_labels"] == 0 and r["held_out_evaluation"] == "not_authorized" and not r["source_trade_archive_sha256_verified"]; assert all(v["candidate_outcome_audit"]["real_labels"] == 0 and v["candidate_outcome_audit"]["held_out_evaluation"] == "not_authorized" for v in r["markets"].values()); assert all(v["retained_source_tail_contract_verified"] and v["ohlc_gap_semantics_authorize_labels"] is False for v in r["markets"].values()); assert all(v["retained_ohlc_structure_validated"] and v["retained_ohlc_gap_floor_verified"] for v in r["markets"].values()); print(json.dumps({k: {"exact_candidates": v["exact_trade_ohlc_candidate_intervals"], "interior_ohlc_missing_no_trade_candidates": v["ohlc_retained_missing_no_trade_candidate_intervals"], "candidate_outcomes": {h: {"windows": x["candidate_full_future_windows"], "descriptive_peak_30": x["descriptive_peak_30"], "beyond_retained_end": x["excluded_beyond_retained_end"], "missing": x["excluded_missing_exact_future"]} for h,x in v["candidate_outcome_audit"]["horizons"].items()}} for k,v in r["markets"].items()}, sort_keys=True))'
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("research/output/trade_ohlc_reconciliation.json").read_text())
+          summary={}
+          for market, record in sorted(r["markets"].items()):
+              census=record["trade_ohlc_coverage_census"]
+              assert census["verified_predictive_labels"] == 0
+              assert census["independent_trade_source_completeness_verified"] is False
+              assert census["no_trade_inference"] == "not_authorized_for_unobserved_intervals"
+              assert census["overlap"]["exact_candidate_intervals"] == record["exact_trade_ohlc_candidate_intervals"]
+              for h, counts in census["horizons"].items():
+                  assert counts["verified_predictive_labels"] == 0
+                  assert counts["complete_descriptive_windows"] == record["candidate_contiguous_horizon_windows"][h]
+                  assert sum(v for k,v in counts.items() if k.startswith("excluded_") or k == "complete_descriptive_windows") == counts["candidate_entries"]
+              summary[market] = {"overlap":census["overlap"], "horizon_exclusions":census["horizons"]}
+          print("SOURCE_COVERAGE_UNAUTHENTICATED", json.dumps(summary, sort_keys=True))
+          PY
           python - <<'PY'
           import json
           from pathlib import Path
