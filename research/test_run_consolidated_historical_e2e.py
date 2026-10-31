@@ -14,14 +14,14 @@ class ConsolidatedEndToEndTests(unittest.TestCase):
 
     def test_schema_is_observed_not_assumed(self):
         with tempfile.TemporaryDirectory() as d:
-            t,o=self.archives(Path(d),"300,100,2\n301,101,3\n302,102,4\n")
+            t,o=self.archives(Path(d),"timestamp,price,volume,type,order_type,misc,trade_id\n300,100,2,b,l,,a\n301,101,3,s,m,,b\n302,102,4,b,l,,c\n")
             with zipfile.ZipFile(t) as z:
                 s=discover_schema(z,"0GEUR.csv")
-                self.assertEqual(s["columns"],[3,3,3])
+                self.assertEqual(s["columns"],[7,7,7])\n                self.assertTrue(s["official_header_match"])
 
     def test_non_three_column_schema_abstains(self):
         with tempfile.TemporaryDirectory() as d:
-            t,o=self.archives(Path(d),"300,100,2,extra\n301,101,3,extra\n302,102,4,extra\n")
+            t,o=self.archives(Path(d),"timestamp,price,volume,other\n300,100,2,extra\n301,101,3,extra\n")
             with zipfile.ZipFile(t) as tz, zipfile.ZipFile(o) as oz:
                 r=analyze(oz,tz)
                 self.assertEqual(r["status"],"abstain_unknown_trade_csv_schema")
@@ -29,7 +29,7 @@ class ConsolidatedEndToEndTests(unittest.TestCase):
 
     def test_candidate_match_cannot_claim_real_labels(self):
         with tempfile.TemporaryDirectory() as d:
-            t,o=self.archives(Path(d),"1770000300,100,2\n1770000301,101,3\n1770000302,102,4\n",
+            t,o=self.archives(Path(d),"timestamp,price,volume,type,order_type,misc,trade_id\n1770000300,100,2,b,l,,a\n1770000301,101,3,s,m,,b\n1770000302,102,4,b,l,,c\n",
                               "1770000300,100,102,100,102,9,3\n")
             with zipfile.ZipFile(t) as tz, zipfile.ZipFile(o) as oz:
                 r=analyze(oz,tz)
