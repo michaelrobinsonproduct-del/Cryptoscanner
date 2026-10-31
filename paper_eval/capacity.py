@@ -11,7 +11,7 @@ import math
 from collections import Counter
 from pathlib import Path
 
-from paper_pov import ledger
+from paper_pov import ledger, segmented_storage as storage
 from paper_pov.scanner import atomic_json
 
 RESERVE_FRACTION = 0.20
@@ -59,7 +59,8 @@ def _forecast(state, cadence, counts, sizes, limit):
 
 
 def capacity_report(state, *, max_bytes=ledger.MAX_BYTES):
-    ledger.verify(state)
+    ledger.verify(state, storage.MAX_RAW_BYTES)
+    packed_candidate = storage.pack_snapshot(state)
     if type(max_bytes) is not int or max_bytes <= 0:
         raise ValueError("Invalid ledger capacity")
     runs = state["runs"]
@@ -101,6 +102,9 @@ def capacity_report(state, *, max_bytes=ledger.MAX_BYTES):
         "ledger_generation": state["generation"],
         "ledger_sha256": state["sha256"],
         "current_ledger_bytes": len(ledger.canonical(state)),
+        "candidate_packed_snapshot_bytes": len(packed_candidate),
+        "packed_snapshot_limit_bytes": storage.MAX_PACKED_BYTES,
+        "candidate_packed_snapshot_headroom_bytes": storage.MAX_PACKED_BYTES - len(packed_candidate),
         "sampled_retained_runs": len(runs),
         "min_observations_in_sampled_run": min(per_run_obs.get(r["id"], 0)
                                                for r in runs),
@@ -115,6 +119,7 @@ def capacity_report(state, *, max_bytes=ledger.MAX_BYTES):
         "production_applied": False,
         "limitations": (
             "Conservative model from checksum-sealed client-observed paper records; "
+            "packed snapshot bytes are a lossless current-state rehearsal, not a future capacity forecast; "
             "not a future Kraken market-count guarantee, 30-day recovery proof, "
             "unattended reliability proof, or permission to increase scan cadence."
         ),
@@ -141,6 +146,7 @@ def main():
         "ledger_commit": args.ledger_commit,
         "generation": result["ledger_generation"],
         "current_bytes": result["current_ledger_bytes"],
+        "candidate_packed_bytes": result["candidate_packed_snapshot_bytes"],
         "hourly_forecast_bytes": result["cadences"]["1"]["forecast_ledger_bytes"],
         "twice_hourly_forecast_bytes": result["cadences"]["2"]["forecast_ledger_bytes"],
         "twice_hourly_storage_pass": result["stage2_storage_gate_pass"],
