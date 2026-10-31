@@ -47,15 +47,23 @@ jobs:
       - name: Independently fetch and audit current public ledger (read-only)
         run: |
           set -euo pipefail
-          git fetch --no-tags origin refs/heads/paper-proof-ledger
+          git fetch --no-tags --depth=3 origin refs/heads/paper-proof-ledger
           LEDGER_COMMIT="$(git rev-parse FETCH_HEAD)"
           git show "${LEDGER_COMMIT}:paper-ledger.json" > /tmp/public-paper-ledger.json
+          BEFORE_COMMIT="$(git rev-parse "${LEDGER_COMMIT}^")"
+          git show "${BEFORE_COMMIT}:paper-ledger.json" > /tmp/public-paper-ledger-before.json
           mkdir -p paper_eval/output
           python -m paper_eval.report \
             --ledger /tmp/public-paper-ledger.json \
             --ledger-commit "${LEDGER_COMMIT}" \
             --output paper_eval/output/independent-audit.json
-          (cd paper_eval/output && sha256sum independent-audit.json > SHA256SUMS)
+          python -m paper_eval.continuity \
+            --before /tmp/public-paper-ledger-before.json \
+            --after /tmp/public-paper-ledger.json \
+            --before-commit "${BEFORE_COMMIT}" \
+            --after-commit "${LEDGER_COMMIT}" \
+            --output paper_eval/output/transition-audit.json
+          (cd paper_eval/output && sha256sum independent-audit.json transition-audit.json > SHA256SUMS)
           echo "PAPER_AUDIT_LEDGER_COMMIT=${LEDGER_COMMIT}"
       - name: Preserve checked independent read-only audit artifact
         uses: actions/upload-artifact@v4
@@ -63,6 +71,7 @@ jobs:
           name: independent-paper-audit-${{ github.run_id }}
           path: |
             paper_eval/output/independent-audit.json
+            paper_eval/output/transition-audit.json
             paper_eval/output/SHA256SUMS
           retention-days: 90
           if-no-files-found: error
