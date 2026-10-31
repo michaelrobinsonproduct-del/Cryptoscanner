@@ -11,7 +11,7 @@ from inventory_kraken_archive import EXPECTED_SHA256
 
 
 class RetainedReconciliationTests(unittest.TestCase):
-    def fixture(self, root, *, bad_volume=False, duplicate_id=False, missing_trade=False):
+    def fixture(self, root, *, bad_volume=False, duplicate_id=False, missing_trade=False, bad_tail=False, bad_gap=False, bad_source_rows=False):
         candle = ('300,100,101,100,101,7,2\n' if bad_volume
                   else '300,100,101,100,101,5,2\n').encode()
         trade = ('timestamp,price,volume,type,order_type,misc,trade_id\n'
@@ -25,7 +25,12 @@ class RetainedReconciliationTests(unittest.TestCase):
               "independent_trade_completeness": False,
               "markets": {"ABUSD_5.csv": {
                   "retained_sha256": hashlib.sha256(candle).hexdigest(),
-                  "retained_rows": 1}}}
+                  "retained_rows": 1,
+                  "source_rows": 0 if bad_source_rows else 1,
+                  "retained_first_open": 600 if bad_tail else 300,
+                  "retained_last_open": 300,
+                  "source_gap_events": 1 if bad_gap else 0,
+                  "source_missing_intervals": 0}}}
         tm = {"schema_version": 1, "source_archive_full_sha256_verified": False,
               "real_labels": 0, "markets": {"ABUSD.csv": {
                   "member_sha256": hashlib.sha256(trade).hexdigest(),
@@ -123,6 +128,37 @@ class RetainedReconciliationTests(unittest.TestCase):
             self.assertEqual(m["candidate_outcome_audit"]["horizons"]["48"]["candidate_full_future_windows"], 0)
             self.assertEqual(m["verified_complete_intervals"], 0)
             self.assertEqual(m["no_trade_or_source_gap_semantics"], "unknown")
+
+
+    def test_retained_source_tail_timestamp_mismatch_abstains(self):
+        with tempfile.TemporaryDirectory() as root:
+            o, t = self.fixture(root, bad_tail=True)
+            with self.assertRaisesRegex(ValueError, "source-tail provenance"):
+                reconcile(o, t)
+
+    def test_full_retention_gap_metadata_mismatch_abstains(self):
+        with tempfile.TemporaryDirectory() as root:
+            o, t = self.fixture(root, bad_gap=True)
+            with self.assertRaisesRegex(ValueError, "gap metadata mismatch"):
+                reconcile(o, t)
+
+    def test_source_row_count_cannot_be_less_than_retained(self):
+        with tempfile.TemporaryDirectory() as root:
+            o, t = self.fixture(root, bad_source_rows=True)
+            with self.assertRaisesRegex(ValueError, "source-tail provenance"):
+                reconcile(o, t)
+
+    def test_report_documented_ohlc_gaps_do_not_unlock_trade_labels(self):
+        with tempfile.TemporaryDirectory() as root:
+            o, t = self.fixture(root)
+            r = reconcile(o, t)
+            m = r["markets"]["ABUSD.csv"]
+            self.assertTrue(m["retained_source_tail_contract_verified"])
+            self.assertEqual(m["ohlc_retained_interior_gap_events"], 0)
+            self.assertEqual(m["ohlc_retained_missing_no_trade_candidate_intervals"], 0)
+            self.assertIn("support.kraken.com", m["ohlc_documented_no_trade_semantics_reference"])
+            self.assertFalse(m["ohlc_gap_semantics_authorize_labels"])
+            self.assertEqual(r["real_labels"], 0)
 
 
 if __name__ == "__main__":
