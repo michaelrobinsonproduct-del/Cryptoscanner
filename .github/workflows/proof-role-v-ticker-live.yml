@@ -1,0 +1,87 @@
+name: Role V one-shot ticker-as-of live Kraken verification (read-only)
+on:
+  pull_request:
+    branches:
+      - proof-ticker-asof-rolea-20261031
+    paths:
+      - '.github/workflows/proof-role-v-ticker-live.yml'
+permissions:
+  contents: read
+concurrency:
+  group: role-v-ticker-live-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  live-ticker-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: a94c2c0e808fdfc83f85309a92268f35a645a274
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact paper source and all offline scanner contracts
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "a94c2c0e808fdfc83f85309a92268f35a645a274"
+          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+          python - <<'PY'
+          from pathlib import Path
+          source=Path("paper_pov/scanner.py").read_text()
+          assert 'move_since_utc_open_pct' in source
+          assert 'kraken_ticker_today_open_utc' in source
+          assert 'def scan(' in source
+          assert 'paper-proof-ledger' not in source
+          print("ROLE_V_TICKER_EXACT_SHA_PAPER_ONLY_OK")
+          PY
+      - name: One bounded real public Kraken scan without persistence or trading
+        env:
+          PAPER_REPORT_PATH: /tmp/role-v-ticker-live.json
+        run: |
+          set -euo pipefail
+          python -m paper_pov.scanner
+          python - <<'PY'
+          import datetime as dt
+          import json,math
+          from pathlib import Path
+          d=json.loads(Path("/tmp/role-v-ticker-live.json").read_text())
+          assert d["mode"]=="PAPER_ONLY"
+          assert d["production_applied"] is False and d["buy_approved"] is False
+          assert d["forward_labels"]==0 and d["held_out_lift"] is None
+          assert d["ticker_move_reference"]=="kraken_ticker_today_open_utc"
+          assert d["observed_markets"]>=20 and 1<=len(d["watch"])<=12
+          asof=dt.datetime.fromisoformat(d["as_of"])
+          ids=set()
+          for w in d["watch"]:
+              assert w["prediction_id"] not in ids
+              ids.add(w["prediction_id"])
+              assert w["as_of"]==d["as_of"]
+              assert w["move_reference"]=="kraken_ticker_today_open_utc"
+              assert "move_since_utc_open_pct" in w and "move24_pct" not in w
+              assert all(math.isfinite(float(w[k])) for k in
+                  ("price","move_since_utc_open_pct","baseline_score","challenger_score"))
+              quote=dt.datetime.fromisoformat(w["quote_observed_at"])
+              candle=dt.datetime.fromisoformat(w["ohlc_last_closed_at"])
+              assert 0<=(asof-quote).total_seconds()<=180
+              assert 0<=(asof-candle).total_seconds()<=600
+          print("ROLE_V_REAL_TICKER_ASOF_COMPATIBILITY",json.dumps({
+              "as_of":d["as_of"],"observed_markets":d["observed_markets"],
+              "ohlc_screened":d["ohlc_screened"],"fresh_watches":len(d["watch"]),
+              "abstentions":len(d["abstentions"]),
+              "source_sha":"a94c2c0e808fdfc83f85309a92268f35a645a274",
+              "ledger_writes":0,"trades":0,"production_applied":False},sort_keys=True))
+          PY
+          mkdir -p /tmp/role-v-ticker-artifact
+          cp /tmp/role-v-ticker-live.json /tmp/role-v-ticker-artifact/live-scan.json
+          (cd /tmp/role-v-ticker-artifact && sha256sum live-scan.json > SHA256SUMS)
+      - name: Preserve checked public paper-only evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: role-v-ticker-live-${{ github.run_id }}
+          path: |
+            /tmp/role-v-ticker-artifact/live-scan.json
+            /tmp/role-v-ticker-artifact/SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
