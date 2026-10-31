@@ -96,6 +96,63 @@ class HistoricalRestProbeTests(unittest.TestCase):
                 opener=lambda *a, **kw: Huge(make_page(self.rows)))
 
 
+    def test_rest_cursor_trace_has_verifiable_request_and_response(self):
+        r = compare_rest_bucket("DENTEUR", 300, self.expected,
+                                opener=lambda *a, **kw: Response(make_page(self.rows)))
+        trace = r["rest_cursor_trace"]
+        self.assertEqual(len(trace), 1)
+        self.assertEqual(trace[0]["requested_since"], "299999999999")
+        self.assertEqual(trace[0]["returned_last"], "9999999999999")
+        self.assertEqual(trace[0]["rows"], 3)
+        self.assertTrue(trace[0]["after_end_witness"])
+        self.assertEqual(trace[0]["page_sha256"], r["rest_page_sha256"][0])
+
+    def test_rest_cursor_behind_observed_trades_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, "cursor predates"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                opener=lambda *a, **kw: Response(make_page(self.rows, "300000000000")))
+
+    def test_duplicate_rest_trade_ids_rejected(self):
+        rows = [self.rows[0] + [42], self.rows[1] + [42], self.rows[2] + [43]]
+        with self.assertRaisesRegex(RuntimeError, "duplicate or invalid REST trade id"):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                opener=lambda *a, **kw: Response(make_page(rows)))
+
+    def test_unique_rest_trade_ids_preserve_correspondence(self):
+        rows = [row + [i + 1] for i, row in enumerate(self.rows)]
+        r = compare_rest_bucket("DENTEUR", 300, self.expected,
+            opener=lambda *a, **kw: Response(make_page(rows)))
+        self.assertEqual(r["status"], "independent_rest_bucket_correlated")
+        self.assertEqual(r["real_labels"], 0)
+
+    def test_invalid_rest_side_or_order_type_rejected(self):
+        for index, value in ((3, "x"), (4, "z")):
+            rows = [list(row) for row in self.rows]
+            rows[0][index] = value
+            with self.subTest(index=index), self.assertRaisesRegex(RuntimeError, "schema"):
+                compare_rest_bucket("DENTEUR", 300, self.expected,
+                    opener=lambda *a, **kw: Response(make_page(rows)))
+
+    def test_missing_rest_fields_rejected(self):
+        for row in (self.rows[0][:3], self.rows[0] + ["id", "extra"]):
+            with self.subTest(row=row), self.assertRaisesRegex(RuntimeError, "schema"):
+                compare_rest_bucket("DENTEUR", 300, self.expected,
+                    opener=lambda *a, **kw: Response(make_page([row, self.rows[-1]])))
+
+    def test_empty_or_boolean_rest_trade_id_rejected(self):
+        for trade_id in ("", True):
+            rows = [self.rows[0] + [trade_id], self.rows[-1] + [10]]
+            with self.subTest(trade_id=trade_id), self.assertRaisesRegex(RuntimeError, "trade id"):
+                compare_rest_bucket("DENTEUR", 300, self.expected,
+                    opener=lambda *a, **kw: Response(make_page(rows)))
+
+    def test_source_schema_failure_does_not_claim_complete_interval(self):
+        rows = [self.rows[0][:3], self.rows[-1]]
+        with self.assertRaises(RuntimeError):
+            compare_rest_bucket("DENTEUR", 300, self.expected,
+                opener=lambda *a, **kw: Response(make_page(rows)))
+
+
 class RetainedHistoricalIntegrationTests(unittest.TestCase):
     def test_selects_bounded_bucket_from_retained_zip(self):
         import tempfile
