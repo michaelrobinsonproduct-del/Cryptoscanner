@@ -4,8 +4,8 @@
   "production_unchanged": true,
   "concurrency": {
     "mechanism": "GitHub Contents API create-if-absent and blob-SHA optimistic updates",
-    "owner": "manual-schema-correction-20261031",
-    "lease_expires_at": "2026-10-31T08:00:00Z",
+    "owner": null,
+    "lease_expires_at": null,
     "rule": "A writer must atomically update this file using the current blob SHA to acquire an unexpired lease; re-read and confirm owner before any further writes; abort on mismatch. This is cooperative concurrency, not a guaranteed lock against actors that ignore it."
   },
   "batches": {
@@ -415,6 +415,22 @@
       "trade_sha256_observed": "4adddad07b0dbe11891a25137c1adfc11a9a5f63798680a6b88eae2b3a867cf9",
       "artifact_id": 13021239853,
       "artifact_digest": "sha256:a07288ba26654bd8d80f924efb9a810e304e6ee5e3f9a720a0d60395502d524f"
+    },
+    "official_trade_schema_fix": {
+      "status": "OFFICIAL_SEVEN_COLUMN_PARSER_AND_STRICT_OUTCOME_GATES_COMMITTED_CI_PENDING",
+      "starting_checkpoint": "63acf0e5428989bf5777177b1750e83865481a82",
+      "research_commit": "63af4130a70930cf578165ab868670e2ebd3efc7",
+      "workflow_commit": "6ed146a6544c7585b16d27c12ad8ec952194f331",
+      "official_schema": "timestamp,price,volume,type,order_type,misc,trade_id",
+      "source": "https://support.kraken.com/articles/360047543791-downloadable-historical-market-data-time-and-sales-",
+      "added_tests": 3,
+      "expected_tests": 123,
+      "tests_verified_this_commit": 0,
+      "real_labels": 0,
+      "heldout_patterns": "not_authorized",
+      "independent_completeness_verified": false,
+      "production_modified": false,
+      "next": "Run consolidated manual workflow once; inspect real header, timestamp units, matching diagnostics and 123 tests. Do not assert complete labels or predictive skill absent independent completeness."
     }
   },
   "audit": {
@@ -562,7 +578,8 @@
       "Phase 4 rerun 41147322957 job 124375355964: 108/108 tests passed; complete official Kraken trades ZIP 1,334,345,194 bytes, SHA256 4adddad0..., 1,401 safe metadata members, 5,232,276,401 uncompressed bytes. No independently published digest, CSV semantics, OHLCVT match or real labels yet. Production unchanged.",
       "Phase 5 added bounded trade CSV parser/aggregation and 7 fixture tests, added real ZIP first-row schema inspection in single full archive workflow; schema, completeness and real labels remain unverified. Production unchanged.",
       "Consolidated e2e redesign: single manual workflow pinned to research SHA, 120 expected offline tests, source archives retained together within one runner, trade-first schema gate avoids needless 9GB OHLC download if unknown, source identity checks and no fabricated labels. Real CI not executed, completeness/heldout remain blocked, production unchanged.",
-      "Consolidated run 41147888805 job 124377163772 passed 120/120; real Kraken 0GEUR.csv first 3 rows each 7 nonnumeric columns; 3-column parser invalid. Fail-closed skipped 9GB OHLC download; 0 real labels, production unchanged."
+      "Consolidated run 41147888805 job 124377163772 passed 120/120; real Kraken 0GEUR.csv first 3 rows each 7 nonnumeric columns; 3-column parser invalid. Fail-closed skipped 9GB OHLC download; 0 real labels, production unchanged.",
+      "Kraken official docs identify historical trade CSV header timestamp,price,volume,type,order_type,misc,trade_id. Fixed 3-column assumption; added header/trade ID/order type validation, strict outcome gating and tests. Real run pending; production unchanged."
     ],
     "blockers": [
       "Historical CSV inventory establishes genuine observations but not point-in-time feature provenance, complete pair-level usable year coverage, liquidity or 1/6/24/48h forward outcome labels.",
