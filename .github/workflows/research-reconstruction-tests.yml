@@ -16,14 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: c8f7e87e02d77248685a570e0cb390c2faba7690
+          ref: 0a9aa1e067281f4de6cf65c7bbd8dbd8356faa08
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Fail closed on exact research SHA and test presence
         run: |
-          test "$(git rev-parse HEAD)" = "c8f7e87e02d77248685a570e0cb390c2faba7690"
+          test "$(git rev-parse HEAD)" = "0a9aa1e067281f4de6cf65c7bbd8dbd8356faa08"
           test -f research/reconstruct_forward_outcomes.py
           test -f research/test_reconstruct_forward_outcomes.py
           test -f research/test_inventory_kraken_archive.py
