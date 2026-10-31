@@ -1,0 +1,86 @@
+name: Role V one-shot Kraken OHLC compatibility smoke (read-only)
+on:
+  pull_request:
+    branches:
+      - proof-ohlc-source-integrity-rolea-20261031
+    paths:
+      - .github/workflows/proof-role-v-live-ohlc-smoke.yml
+permissions:
+  contents: read
+concurrency:
+  group: role-v-readonly-ohlc-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  real-public-kraken:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: d7d2d90a29a6917ad1abdf6f08255421193cd4c0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact source and offline contracts before any live request
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "d7d2d90a29a6917ad1abdf6f08255421193cd4c0"
+          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+          python - <<'PY'
+          from pathlib import Path
+          code = Path('paper_pov/scanner.py').read_text()
+          assert 'NO credentials or orders' in code
+          assert 'def scan(' in code
+          assert 'paper-proof-ledger' not in code
+          print('ROLE_V_STATIC_PAPER_ONLY_OK')
+          PY
+      - name: One bounded fresh public Kraken scan (no ledger push)
+        env:
+          PAPER_REPORT_PATH: /tmp/role-v-live-ohlc.json
+        run: |
+          set -euo pipefail
+          python -m paper_pov.scanner
+          python - <<'PY'
+          import datetime as dt
+          import json
+          from pathlib import Path
+          data = json.loads(Path('/tmp/role-v-live-ohlc.json').read_text())
+          assert data['mode'] == 'PAPER_ONLY' and data['production_applied'] is False
+          assert data['buy_approved'] is False and data['forward_labels'] == 0
+          assert data['observed_markets'] >= 20
+          assert 1 <= len(data['watch']) <= 12
+          asof = dt.datetime.fromisoformat(data['as_of'])
+          ids = set()
+          for watch in data['watch']:
+              assert watch['prediction_id'] not in ids
+              ids.add(watch['prediction_id'])
+              assert watch['as_of'] == data['as_of']
+              quote = dt.datetime.fromisoformat(watch['quote_observed_at'])
+              candle = dt.datetime.fromisoformat(watch['ohlc_last_closed_at'])
+              assert 0 <= (asof - quote).total_seconds() <= 180
+              assert 0 <= (asof - candle).total_seconds() <= 600
+          print('ROLE_V_REAL_OHLC_COMPATIBILITY', json.dumps({
+              'as_of': data['as_of'],
+              'observed_markets': data['observed_markets'],
+              'ohlc_screened': data['ohlc_screened'],
+              'fresh_watches': len(data['watch']),
+              'abstentions': len(data['abstentions']),
+              'exact_source_sha': 'd7d2d90a29a6917ad1abdf6f08255421193cd4c0',
+              'ledger_writes': 0,
+              'trades': 0,
+              'production_applied': False
+          }, sort_keys=True))
+          PY
+          mkdir -p /tmp/role-v-artifact
+          cp /tmp/role-v-live-ohlc.json /tmp/role-v-artifact/live-scan.json
+          (cd /tmp/role-v-artifact && sha256sum live-scan.json > SHA256SUMS)
+      - name: Preserve read-only checked evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: role-v-live-ohlc-${{ github.run_id }}
+          path: |
+            /tmp/role-v-artifact/live-scan.json
+            /tmp/role-v-artifact/SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
