@@ -83,5 +83,12 @@ class TradeMatchingTests(unittest.TestCase):
         self.assertEqual(r["verified_intervals"], 0)
 
 
+    def test_micro_price_mismatch_is_not_exact_even_with_completeness_claim(self):
+        candle = (300, 1e-8, 1e-8, 1e-8, 1e-8, 1e-12, 1)
+        trade = [(301, 1.9e-8, 1e-12, 0)]
+        r = compare([candle], trade, independently_complete=True)
+        self.assertEqual(r["status"], "aggregation_mismatch")
+        self.assertEqual(r["verified_intervals"], 0)
+
 if __name__ == "__main__":
     unittest.main()
