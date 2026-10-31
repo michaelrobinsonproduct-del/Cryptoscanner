@@ -1,7 +1,7 @@
 name: Public Kraken Paper POV (scheduled, isolated ledger)
 on:
   push:
-    branches: [proof-of-value-paper-20261031]
+    branches: [main, proof-of-value-paper-20261031]
     paths: ['.github/workflows/paper-pipeline.yml']
   workflow_dispatch:
   schedule:
