@@ -11,8 +11,13 @@ import urllib.parse
 import urllib.request
 
 API = "https://api.kraken.com/0/public/"
+# Explicit fiat-pegged exclusions. Kraken's supported-stablecoins list includes
+# non-USD pegs (notably BRL1); do not filter by the token's USD price.
+# https://support.kraken.com/in/articles/stablecoins-supported-on-kraken
 STABLE = {"USD", "USDT", "USDC", "DAI", "PYUSD", "EURC", "RLUSD", "TUSD",
-          "USDD", "FDUSD", "USDE", "FRAX", "GUSD", "BUSD", "ZUSD", "EUR"}
+          "USDD", "FDUSD", "USDE", "FRAX", "GUSD", "BUSD", "ZUSD", "EUR",
+          "BRL1", "QCAD", "USDG", "USDQ", "USDS", "USDR", "USD1",
+          "EURQ", "EURR", "EUROP", "EURT", "TGBP"}
 UTC = dt.timezone.utc
 
 def utc(value):
