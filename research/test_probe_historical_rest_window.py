@@ -124,28 +124,28 @@ class HistoricalWindowTests(unittest.TestCase):
             archive.writestr("trades/" + market + ".csv", payload)
 
     def test_later_market_bad_header_cannot_hide_behind_first_window(self):
-        self.append_later_market("ZZZUSD", "invalid,header\\n1,2,3\\n")
+        self.append_later_market("ZZZUSD", "invalid,header\n1,2,3\n")
         with self.assertRaises(ValueError):
             select_observed_window(self.path)
 
     def test_later_market_duplicate_trade_ids_rejected(self):
         self.append_later_market(
-            "ZZZUSD", "timestamp,price,volume,type,order_type,misc,trade_id\\n"
-            "301,1,1,b,l,,same\\n601,1,1,s,m,,same\\n")
+            "ZZZUSD", "timestamp,price,volume,type,order_type,misc,trade_id\n"
+            "301,1,1,b,l,,same\n601,1,1,s,m,,same\n")
         with self.assertRaisesRegex(ValueError, "duplicate trade id"):
             select_observed_window(self.path)
 
     def test_later_market_out_of_order_trade_rows_rejected(self):
         self.append_later_market(
-            "ZZZUSD", "timestamp,price,volume,type,order_type,misc,trade_id\\n"
-            "601,1,1,b,l,,one\\n301,1,1,s,m,,two\\n")
+            "ZZZUSD", "timestamp,price,volume,type,order_type,misc,trade_id\n"
+            "601,1,1,b,l,,one\n301,1,1,s,m,,two\n")
         with self.assertRaisesRegex(ValueError, "out of order"):
             select_observed_window(self.path)
 
     def test_later_market_invalid_direction_rejected(self):
         self.append_later_market(
-            "ZZZUSD", "timestamp,price,volume,type,order_type,misc,trade_id\\n"
-            "301,1,1,x,l,,one\\n")
+            "ZZZUSD", "timestamp,price,volume,type,order_type,misc,trade_id\n"
+            "301,1,1,x,l,,one\n")
         with self.assertRaisesRegex(ValueError, "invalid trade direction"):
             select_observed_window(self.path)
 
@@ -155,14 +155,14 @@ class HistoricalWindowTests(unittest.TestCase):
             select_observed_window(self.path)
 
     def test_later_market_unsafe_identity_rejected(self):
-        self.append_later_market("ZZZ-USD", "invalid\\n")
+        self.append_later_market("ZZZ-USD", "invalid\n")
         with self.assertRaisesRegex(ValueError, "unsafe market identity"):
             select_observed_window(self.path)
 
     def test_valid_later_market_does_not_change_first_selection(self):
         self.append_later_market(
-            "ZZZUSD", "timestamp,price,volume,type,order_type,misc,trade_id\\n"
-            "301,1,1,b,l,,one\\n")
+            "ZZZUSD", "timestamp,price,volume,type,order_type,misc,trade_id\n"
+            "301,1,1,b,l,,one\n")
         selected = select_observed_window(self.path)
         self.assertEqual(selected[0], "BCHJPY")
         self.assertEqual(len(selected[1]), WINDOW_CANDLES)
