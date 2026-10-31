@@ -16,14 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 0a9aa1e067281f4de6cf65c7bbd8dbd8356faa08
+          ref: 4ffa21a682d9f722fe3a3ed556cad8bc8a4366b7
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Fail closed on exact research SHA and test presence
         run: |
-          test "$(git rev-parse HEAD)" = "0a9aa1e067281f4de6cf65c7bbd8dbd8356faa08"
+          test "$(git rev-parse HEAD)" = "4ffa21a682d9f722fe3a3ed556cad8bc8a4366b7"
           test -f research/reconstruct_forward_outcomes.py
           test -f research/test_reconstruct_forward_outcomes.py
           test -f research/test_inventory_kraken_archive.py
@@ -34,5 +34,5 @@ jobs:
           set -euo pipefail
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-tests.log
-          grep -q 'Ran 391 tests' /tmp/research-tests.log
+          grep -q 'Ran 401 tests' /tmp/research-tests.log
           grep -q '^OK$' /tmp/research-tests.log
