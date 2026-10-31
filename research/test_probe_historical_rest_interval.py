@@ -135,5 +135,113 @@ class RetainedHistoricalIntegrationTests(unittest.TestCase):
             self.assertEqual(r['real_labels'], 0)
 
 
+
+class ThreeWayHistoricalCorroborationTests(unittest.TestCase):
+    def setUp(self):
+        import hashlib
+        import tempfile
+        import zipfile
+        from pathlib import Path
+        from inventory_kraken_archive import EXPECTED_SHA256
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.trade_path = Path(self.temp.name) / "trades.zip"
+        self.ohlc_path = Path(self.temp.name) / "ohlc.zip"
+        with zipfile.ZipFile(self.trade_path, "w") as z:
+            z.writestr("trades/DENTEUR.csv", "fixture")
+        self.candle = "300,0.00001,0.000011,0.00001,0.000011,5,2\n"
+        self.meta = {
+            "source_rows": 1, "retained_rows": 1,
+            "retained_first_open": 300, "retained_last_open": 300,
+            "source_gap_events": 0, "source_missing_intervals": 0,
+            "source_longest_contiguous": 1,
+        }
+        self.source_sha = EXPECTED_SHA256
+        self.write_ohlc()
+
+    def write_ohlc(self):
+        import hashlib
+        import zipfile
+        meta = dict(self.meta, retained_sha256=hashlib.sha256(self.candle.encode()).hexdigest())
+        manifest = {"schema": 1, "source_archive_sha256": self.source_sha,
+                    "independent_trade_completeness": False, "real_labels": 0,
+                    "markets": {"DENTEUR_5.csv": meta}}
+        with zipfile.ZipFile(self.ohlc_path, "w") as z:
+            z.writestr("candles/DENTEUR_5.csv", self.candle)
+            z.writestr("manifest.json", json.dumps(manifest))
+
+    def run_probe(self, rows=None):
+        from unittest.mock import patch
+        from probe_historical_rest_interval import probe_retained
+        expected = [(300.1, 0.00001, 2, 0), (301.5, 0.000011, 3, 1)]
+        if rows is None:
+            rows = [["0.00001", "2", 300.1], ["0.000011", "3", 301.5],
+                    ["0.000011", "1", 601]]
+        with patch("probe_historical_rest_interval.parse_member", return_value=expected), \
+             patch("probe_historical_rest_interval.aggregate", return_value=({}, {300: expected})):
+            return probe_retained(self.trade_path, ohlc_artifact=self.ohlc_path,
+                                  opener=lambda *a, **kw: Response(make_page(rows)))
+
+    def test_real_three_way_correspondence_still_zero_labels(self):
+        r = self.run_probe()
+        self.assertEqual(r["status"], "independent_rest_trade_ohlc_correlated")
+        self.assertTrue(r["three_way_candle_correspondence"])
+        self.assertEqual(r["independent_complete_historical_intervals"], 0)
+        self.assertEqual(r["real_labels"], 0)
+        self.assertFalse(r["independent_quarterly_completeness_verified"])
+        self.assertEqual(r["timestamp_semantics"], "observed_open_boundary_for_this_bucket_only")
+
+    def test_ohlc_price_mismatch_abstains(self):
+        self.candle = "300,0.00001,0.000019,0.00001,0.000019,5,2\n"
+        self.write_ohlc()
+        r = self.run_probe()
+        self.assertEqual(r["status"], "abstain_rest_trade_ohlc_disagreement")
+        self.assertFalse(r["three_way_candle_correspondence"])
+
+    def test_ohlc_volume_mismatch_abstains(self):
+        self.candle = "300,0.00001,0.000011,0.00001,0.000011,50,2\n"
+        self.write_ohlc()
+        self.assertEqual(self.run_probe()["status"], "abstain_rest_trade_ohlc_disagreement")
+
+    def test_ohlc_bucket_missing_abstains(self):
+        self.candle = "600,0.00001,0.000011,0.00001,0.000011,5,2\n"
+        self.meta.update(retained_first_open=600, retained_last_open=600)
+        self.write_ohlc()
+        self.assertEqual(self.run_probe()["status"], "abstain_ohlc_bucket_missing")
+
+    def test_manifest_source_sha_mismatch_rejected(self):
+        self.source_sha = "0" * 64
+        self.write_ohlc()
+        with self.assertRaisesRegex(ValueError, "untrusted OHLC"):
+            self.run_probe()
+
+    def test_tampered_ohlc_member_sha_rejected(self):
+        import zipfile
+        self.write_ohlc()
+        with zipfile.ZipFile(self.ohlc_path, "r") as z:
+            m = json.loads(z.read("manifest.json"))
+        m["markets"]["DENTEUR_5.csv"]["retained_sha256"] = "0" * 64
+        with zipfile.ZipFile(self.ohlc_path, "w") as z:
+            z.writestr("candles/DENTEUR_5.csv", self.candle)
+            z.writestr("manifest.json", json.dumps(m))
+        with self.assertRaisesRegex(ValueError, "SHA256 mismatch"):
+            self.run_probe()
+
+    def test_rest_trade_disagreement_never_promotes_to_three_way(self):
+        rows = [["0.00002", "2", 300.1], ["0.000011", "3", 301.5],
+                ["0.000011", "1", 601]]
+        r = self.run_probe(rows)
+        self.assertEqual(r["status"], "abstain_rest_archive_disagreement")
+        self.assertFalse(r["three_way_candle_correspondence"])
+
+    def test_untrusted_rest_pair_identity_rejected(self):
+        expected = [(300.1, 0.00001, 2, 0)]
+        with self.assertRaisesRegex(RuntimeError, "invalid historical REST page"):
+            compare_rest_bucket("DENTEUR", 300, expected,
+                opener=lambda *a, **kw: Response(
+                    {"error": [], "result": {"OTHERPAIR": [["0.00001", "2", 300.1],
+                       ["0.00001", "1", 601]], "last": "9999999999999"}}))
+
+
 if __name__ == "__main__":
     unittest.main()
