@@ -286,5 +286,11 @@ class RetainedReconciliationTests(unittest.TestCase):
             self.assertEqual(m["verified_complete_intervals"], 0)
 
 
+    def test_retained_zero_trade_or_volume_candle_fails_closed(self):
+        for raw in (b"300,100,101,100,101,0,1\\n",
+                    b"300,100,101,100,101,1,0\\n"):
+            with self.subTest(raw=raw), self.assertRaisesRegex(ValueError, "candle values"):
+                _validate_retained_ohlc(raw, self._meta())
+
 if __name__ == "__main__":
     unittest.main()
