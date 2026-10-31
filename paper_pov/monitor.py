@@ -52,7 +52,9 @@ def assess_runs(payload, now, minute, prefix, alerts):
     successes = [x for x in scheduled if x.get("status") == "completed"
                  and x.get("conclusion") == "success"]
     latest_success_at = instant(successes[0]["created_at"]) if successes else None
-    if scheduled and scheduled[0].get("status") == "completed" and scheduled[0].get("conclusion") != "success":
+    completed = [x for x in scheduled if x.get("status") == "completed"]
+    # A newer queued run must never conceal a completed scheduled failure.
+    if completed and completed[0].get("conclusion") != "success":
         alerts.append(prefix + "_LATEST_SCHEDULED_FAILED")
     for run in scheduled:
         if run.get("status") in ("queued", "in_progress", "waiting") and now - instant(run["created_at"]) > STUCK:
