@@ -44,3 +44,25 @@ jobs:
               assert forbidden not in code, forbidden
           print("PAPER_FORWARD_AUDIT_STATIC_SAFETY_OK")
           PY
+      - name: Independently fetch and audit current public ledger (read-only)
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin refs/heads/paper-proof-ledger
+          LEDGER_COMMIT="$(git rev-parse FETCH_HEAD)"
+          git show "${LEDGER_COMMIT}:paper-ledger.json" > /tmp/public-paper-ledger.json
+          mkdir -p paper_eval/output
+          python -m paper_eval.report \
+            --ledger /tmp/public-paper-ledger.json \
+            --ledger-commit "${LEDGER_COMMIT}" \
+            --output paper_eval/output/independent-audit.json
+          (cd paper_eval/output && sha256sum independent-audit.json > SHA256SUMS)
+          echo "PAPER_AUDIT_LEDGER_COMMIT=${LEDGER_COMMIT}"
+      - name: Preserve checked independent read-only audit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: independent-paper-audit-${{ github.run_id }}
+          path: |
+            paper_eval/output/independent-audit.json
+            paper_eval/output/SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
