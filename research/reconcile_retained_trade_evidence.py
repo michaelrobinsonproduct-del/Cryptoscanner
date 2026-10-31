@@ -129,7 +129,7 @@ def reconcile(ohlc_artifact, trade_artifact, *, expected_ohlc_digest=None,
                 raise ValueError("OHLC retained member SHA mismatch")
             ohlc = [tuple(float(v) for v in row) for row in
                     csv.reader(io.StringIO(ohlc_bytes.decode("utf-8", errors="strict")))]
-            if len(ohlc) != ometa["retained_rows"] or len(ohlc) > 8000:
+            if not ohlc or len(ohlc) != ometa["retained_rows"] or len(ohlc) > 8000:
                 raise ValueError("OHLC retained row count mismatch")
             # The original builder retains the final N *unfiltered* source
             # rows. Check that contract before interpreting interior absent
