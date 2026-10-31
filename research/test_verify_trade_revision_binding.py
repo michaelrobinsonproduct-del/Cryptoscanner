@@ -143,7 +143,7 @@ class RevisionBindingTests(unittest.TestCase):
         self.assertFalse(verify(t, m)["same_source_revision"])
 
     def test_malformed_strong_etag_abstains_even_if_both_match(self):
-        for value in ("unquoted", 'W/"weak"', '""', '"bad\\nvalue"', '"bad"quote"'):
+        for value in ("unquoted", 'W/"weak"', '""', '"bad\nvalue"', '"bad"quote"'):
             with self.subTest(value=value):
                 t, m = reports()
                 t["source_revision_validator"]["strong_etag"] = value
