@@ -26,20 +26,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 9766995ef68bf47863a0dceeadbe55db076eb316
+          ref: 4ea14933f26ba2cb5dbc2ea80164c00f4de2de6a
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify immutable research code and at least 272 offline tests
+      - name: Verify immutable research code and at least 284 offline tests
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = '9766995ef68bf47863a0dceeadbe55db076eb316'
+          test "$(git rev-parse HEAD)" = '4ea14933f26ba2cb5dbc2ea80164c00f4de2de6a'
           test -z "$(git status --porcelain)"
           python -m compileall -q research
           python -m unittest discover -s research -p 'test_*.py' -v 2>&1 | tee /tmp/research-tests.log
-          python -c 'import re; from pathlib import Path; s=Path("/tmp/research-tests.log").read_text(); m=re.search(r"^Ran (\d+) tests", s, re.M); assert m and int(m.group(1))       >= 272, "expected at least 272 pinned offline tests"; print("EXACT_PINNED_TEST_COUNT", m.group(1))'
+          python -c 'import re; from pathlib import Path; s=Path("/tmp/research-tests.log").read_text(); m=re.search(r"^Ran (\d+) tests", s, re.M); assert m and int(m.group(1))        >= 284, "expected at least 272 pinned offline tests"; print("EXACT_PINNED_TEST_COUNT", m.group(1))'
           grep -q '^OK$' /tmp/research-tests.log
       - name: Check cooperative research lease, active runs, and cached source evidence
         id: cache
@@ -196,7 +196,7 @@ jobs:
             --ohlc research/output/reusable_ohlc_evidence.zip \
             --trades research/output/bounded_independent_trade_members.zip \
             > research/output/trade_ohlc_reconciliation.json
-          python -c 'import json; from pathlib import Path; r=json.loads(Path("research/output/trade_ohlc_reconciliation.json").read_text()); assert r["real_labels"] == 0 and r["held_out_evaluation"] == "not_authorized" and not r["source_trade_archive_sha256_verified"]; assert all(v["candidate_outcome_audit"]["real_labels"] == 0 and v["candidate_outcome_audit"]["held_out_evaluation"] == "not_authorized" for v in r["markets"].values()); assert all(v["retained_source_tail_contract_verified"] and v["ohlc_gap_semantics_authorize_labels"] is False for v in r["markets"].values()); print(json.dumps({k: {"exact_candidates": v["exact_trade_ohlc_candidate_intervals"], "interior_ohlc_missing_no_trade_candidates": v["ohlc_retained_missing_no_trade_candidate_intervals"], "candidate_outcomes": {h: {"windows": x["candidate_full_future_windows"], "descriptive_peak_30": x["descriptive_peak_30"], "beyond_retained_end": x["excluded_beyond_retained_end"], "missing": x["excluded_missing_exact_future"]} for h,x in v["candidate_outcome_audit"]["horizons"].items()}} for k,v in r["markets"].items()}, sort_keys=True))'
+          python -c 'import json; from pathlib import Path; r=json.loads(Path("research/output/trade_ohlc_reconciliation.json").read_text()); assert r["real_labels"] == 0 and r["held_out_evaluation"] == "not_authorized" and not r["source_trade_archive_sha256_verified"]; assert all(v["candidate_outcome_audit"]["real_labels"] == 0 and v["candidate_outcome_audit"]["held_out_evaluation"] == "not_authorized" for v in r["markets"].values()); assert all(v["retained_source_tail_contract_verified"] and v["ohlc_gap_semantics_authorize_labels"] is False for v in r["markets"].values()); assert all(v["retained_ohlc_structure_validated"] and v["retained_ohlc_gap_floor_verified"] for v in r["markets"].values()); print(json.dumps({k: {"exact_candidates": v["exact_trade_ohlc_candidate_intervals"], "interior_ohlc_missing_no_trade_candidates": v["ohlc_retained_missing_no_trade_candidate_intervals"], "candidate_outcomes": {h: {"windows": x["candidate_full_future_windows"], "descriptive_peak_30": x["descriptive_peak_30"], "beyond_retained_end": x["excluded_beyond_retained_end"], "missing": x["excluded_missing_exact_future"]} for h,x in v["candidate_outcome_audit"]["horizons"].items()}} for k,v in r["markets"].items()}, sort_keys=True))'
       - name: Inspect official quarterly trade MANIFEST via bounded HTTPS ranges (not source authentication)
         if: steps.cache.outputs.skip == 'false'
         shell: bash
