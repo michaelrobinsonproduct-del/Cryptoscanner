@@ -80,16 +80,17 @@ def select_bracketed_gap(trades_path, ohlc_path):
             for start in starts:
                 if (candidate is None and start + 2 * STEP in buckets and
                         start + STEP not in buckets and
-                        1 <= len(buckets[start]) <= MAX_EXPECTED_TRADES):
-                    candidate = (market, start, buckets[start])
+                        1 <= len(buckets[start]) <= MAX_EXPECTED_TRADES and
+                        1 <= len(buckets[start + 2 * STEP]) <= MAX_EXPECTED_TRADES):
+                    candidate = (market, start, buckets[start], buckets[start + 2 * STEP])
     if candidate is None:
         return None
-    market, start, expected = candidate
+    market, start, expected, following = candidate
     ohlc_starts, digest = load_ohlc_starts(ohlc_path, market)
     if not (start in ohlc_starts and start + 2 * STEP in ohlc_starts and
             start + STEP not in ohlc_starts):
         return None
-    return market, start, expected, digest
+    return market, start, expected, following, digest
 
 
 def audit_bracketed_gap(trades_path, ohlc_path, *, opener=None):
@@ -107,7 +108,7 @@ def audit_bracketed_gap(trades_path, ohlc_path, *, opener=None):
     selected = select_bracketed_gap(trades_path, ohlc_path)
     if selected is None:
         return base
-    market, start, expected, ohlc_sha = selected
+    market, start, expected, following, ohlc_sha = selected
     base.update(market=market, preceding_bucket_open=start,
                 candidate_gap_open=start + STEP, following_bucket_open=start + 2 * STEP,
                 retained_ohlc_artifact_sha256=ohlc_sha)
@@ -120,20 +121,50 @@ def audit_bracketed_gap(trades_path, ohlc_path, *, opener=None):
     base.update(rest_pages=rest.get("pages", 0),
                 rest_bytes_transferred=rest.get("bytes_transferred", 0),
                 rest_cursor_trace=rest.get("rest_cursor_trace", []))
-    if rest.get("status") != "independent_rest_gap_candidate_correlated_not_complete":
+    if (rest.get("status") != "independent_rest_gap_candidate_correlated_not_complete" or
+            rest.get("following_bucket_witness_near") is not True):
         base["status"] = rest.get("status", "abstain_rest_gap_unverified")
+        if base["status"] == "independent_rest_gap_candidate_correlated_not_complete":
+            base["status"] = "abstain_rest_missing_near_following_witness"
         return base
     # Reuse exact observed-candle SHA and boundary verification; do not turn
     # a candidate REST gap into an authenticated source-complete interval.
     observed = corroborate_retained_ohlc(
         ohlc_path, market, start, expected,
         dict(rest, status="independent_rest_bucket_correlated"))
-    if not observed.get("three_way_candle_correspondence"):
+    if (observed.get("status") != "independent_rest_trade_ohlc_correlated" or
+            observed.get("three_way_candle_correspondence") is not True):
         base["status"] = observed.get("status", "abstain_ohlc_mismatch")
+        return base
+    # Authenticate the *following* observed bucket independently. A distant
+    # after-end witness does not establish that this retained candle existed
+    # in the REST source, and neither side certifies the empty gap itself.
+    try:
+        next_rest = compare_rest_bucket(market, start + 2 * STEP, following, opener=opener)
+    except (OSError, RuntimeError, ValueError) as exc:
+        base.update(status="abstain_following_rest_transport_or_source_error",
+                    following_error_type=type(exc).__name__)
+        return base
+    base.update(following_rest_pages=next_rest.get("pages", 0),
+                following_rest_bytes_transferred=next_rest.get("bytes_transferred", 0),
+                following_rest_cursor_trace=next_rest.get("rest_cursor_trace", []))
+    if (next_rest.get("status") != "independent_rest_bucket_correlated" or
+            next_rest.get("after_end_witness") is not True):
+        base.update(status="abstain_following_rest_bucket_unverified",
+                    following_rest_status=next_rest.get("status", "unknown"))
+        return base
+    next_observed = corroborate_retained_ohlc(
+        ohlc_path, market, start + 2 * STEP, following, next_rest)
+    if (next_observed.get("status") != "independent_rest_trade_ohlc_correlated" or
+            next_observed.get("three_way_candle_correspondence") is not True):
+        base.update(status="abstain_following_rest_ohlc_disagreement",
+                    following_ohlc_status=next_observed.get("status", "unknown"))
         return base
     base.update(status="independent_rest_bracketed_gap_candidate_not_complete",
                 candidate_empty_gap_buckets=[start + STEP],
                 preceding_observed_candle_correlated=True,
+                following_observed_candle_correlated=True,
+                total_rest_bytes_transferred=base["rest_bytes_transferred"] + base["following_rest_bytes_transferred"],
                 limitation="REST observed gap candidate is NOT certified historical no-trade completeness")
     return base
 
