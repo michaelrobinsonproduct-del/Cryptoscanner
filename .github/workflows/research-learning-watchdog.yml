@@ -21,7 +21,7 @@ jobs:
       - name: Checkout immutable research watchdog code
         uses: actions/checkout@v4
         with:
-          ref: 09c897d2832c378e843dd8ddae0a7101a9eb1489
+          ref: ddf6b7990b25720df8b21eeb69ec3062e1513f29
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -30,10 +30,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = '09c897d2832c378e843dd8ddae0a7101a9eb1489'
+          test "$(git rev-parse HEAD)" = 'ddf6b7990b25720df8b21eeb69ec3062e1513f29'
           python -m compileall -q research/watchdog_learning.py research/test_watchdog_learning.py
           python -m unittest discover -s research -p 'test_watchdog_learning.py' -v 2>&1 | tee /tmp/watchdog-tests.log
-          grep -q 'Ran 65 tests' /tmp/watchdog-tests.log
+          grep -q 'Ran 72 tests' /tmp/watchdog-tests.log
           grep -q '^OK$' /tmp/watchdog-tests.log
       - name: Check independent research health and verify issue delivery on alerts
         env:
