@@ -132,14 +132,18 @@ def build(archive_path, cohort_report, output_path, *, expected_archive_sha256, 
         raise
 
 
-def inspect(path):
+def inspect(path, *, expected_archive_sha256):
     """Verify retained source-row hashes and count candidate horizon windows only."""
+    if Path(path).stat().st_size > MAX_ARTIFACT_BYTES:
+        raise ValueError("artifact byte cap")
     with zipfile.ZipFile(path) as source:
         infos = source.infolist()
         if len({x.filename for x in infos}) != len(infos) or "manifest.json" not in source.namelist():
             raise ValueError("duplicate or missing artifact manifest")
         manifest = json.loads(source.read("manifest.json"))
-        if manifest.get("schema") != 1 or manifest.get("real_labels") != 0 or manifest.get("independent_trade_completeness") is not False:
+        if (manifest.get("schema") != 1 or manifest.get("real_labels") != 0
+                or manifest.get("source_archive_sha256") != expected_archive_sha256
+                or manifest.get("independent_trade_completeness") is not False):
             raise ValueError("invalid evidence gate")
         markets = manifest.get("markets", {})
         if not 1 <= len(markets) <= MAX_MARKETS or len(infos) != len(markets) + 1:
@@ -148,7 +152,10 @@ def inspect(path):
         for name, meta in markets.items():
             if "/" in name or ".." in name or "\\" in name:
                 raise ValueError("unsafe retained member")
-            payload = source.read("candles/" + name)
+            info = source.getinfo("candles/" + name)
+            if info.file_size > MAX_MEMBER_BYTES:
+                raise ValueError("retained member uncompressed cap")
+            payload = source.read(info)
             if hashlib.sha256(payload).hexdigest() != meta["retained_sha256"]:
                 raise ValueError("retained source hash mismatch")
             if len(payload) > MAX_MEMBER_BYTES:
@@ -188,7 +195,7 @@ if __name__ == "__main__":
     parser.add_argument("--inspect")
     args = parser.parse_args()
     if args.inspect:
-        print(json.dumps(inspect(args.inspect), sort_keys=True))
+        print(json.dumps(inspect(args.inspect, expected_archive_sha256=args.expected_sha256), sort_keys=True))
     else:
         with open(args.cohort, encoding="utf-8") as stream:
             cohort = json.load(stream)
