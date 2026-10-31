@@ -52,7 +52,7 @@ jobs:
       - name: Independently fetch and audit current public ledger (read-only)
         run: |
           set -euo pipefail
-          git fetch --no-tags --depth=3 origin refs/heads/paper-proof-ledger
+          git fetch --no-tags --depth=40 origin refs/heads/paper-proof-ledger
           LEDGER_COMMIT="$(git rev-parse FETCH_HEAD)"
           git show "${LEDGER_COMMIT}:paper-ledger.json" > /tmp/public-paper-ledger.json
           BEFORE_COMMIT="$(git rev-parse "${LEDGER_COMMIT}^")"
@@ -68,7 +68,23 @@ jobs:
             --before-commit "${BEFORE_COMMIT}" \
             --after-commit "${LEDGER_COMMIT}" \
             --output paper_eval/output/transition-audit.json
-          (cd paper_eval/output && sha256sum independent-audit.json transition-audit.json > SHA256SUMS)
+          # Check up to 16 adjacent Git first-parent transitions, not merely
+          # the newest one. Missing ancestors fail closed unless the bound is hit.
+          mkdir -p /tmp/paper-chain
+          git rev-list --first-parent --max-count=17 "${LEDGER_COMMIT}" > /tmp/paper-chain/commits.txt
+          : > /tmp/paper-chain/manifest.tsv
+          while IFS= read -r COMMIT; do
+            if ! git cat-file -e "${COMMIT}:paper-ledger.json" 2>/dev/null; then
+              break
+            fi
+            git show "${COMMIT}:paper-ledger.json" > "/tmp/paper-chain/${COMMIT}.json"
+            printf '%s\t%s\n' "${COMMIT}" "/tmp/paper-chain/${COMMIT}.json" >> /tmp/paper-chain/manifest.tsv
+          done < /tmp/paper-chain/commits.txt
+          python -m paper_eval.chain \
+            --manifest /tmp/paper-chain/manifest.tsv \
+            --tip "${LEDGER_COMMIT}" \
+            --output paper_eval/output/chain-audit.json
+          (cd paper_eval/output && sha256sum independent-audit.json transition-audit.json chain-audit.json > SHA256SUMS)
           echo "PAPER_AUDIT_LEDGER_COMMIT=${LEDGER_COMMIT}"
       - name: Preserve checked independent read-only audit artifact
         uses: actions/upload-artifact@v4
@@ -77,6 +93,7 @@ jobs:
           path: |
             paper_eval/output/independent-audit.json
             paper_eval/output/transition-audit.json
+            paper_eval/output/chain-audit.json
             paper_eval/output/SHA256SUMS
           retention-days: 90
           if-no-files-found: error
