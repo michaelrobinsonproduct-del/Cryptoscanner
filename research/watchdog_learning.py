@@ -198,7 +198,10 @@ def main():
     for r in runs[:8]:
         if r.get("status") == "completed":
             jobs[r["id"]] = api.call("/actions/runs/" + str(r["id"]) + "/jobs?per_page=30")["jobs"]
-    artifacts = api.call("/actions/artifacts?name=" + EVIDENCE_ARTIFACT + "&per_page=50")["artifacts"]
+    artifacts = []
+    for name in (EVIDENCE_ARTIFACT, TRADE_EVIDENCE_ARTIFACT):
+        artifacts.extend(api.call("/actions/artifacts?name=" + name +
+                                  "&per_page=50")["artifacts"])
     state = api.call("/contents/research/learning_progress.json?ref=research-learning-program-20261027")
     checkpoint = json.loads(base64.b64decode(state["content"]))
     report = assess(dt.datetime.now(UTC), timestamp(workflow["created_at"]),
