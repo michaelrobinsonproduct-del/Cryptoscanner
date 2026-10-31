@@ -2,6 +2,7 @@
 import copy
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 import tempfile
 import unittest
@@ -163,6 +164,30 @@ class GitRepositoryStorageTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             repo.stage_append(root, report, SHA, self.root / "unsafe")
         self.assertFalse((self.root / "unsafe").exists())
+
+    def test_git_commit_checkpoint_provenance(self):
+        gitdir = self.root / "historical-git"
+        gitdir.mkdir()
+        def git(*args):
+            return subprocess.run(["git", "-C", str(gitdir), *args],
+                                  capture_output=True, check=True).stdout.decode().strip()
+        git("init")
+        git("config", "user.email", "paper@example.invalid")
+        git("config", "user.name", "Paper Test")
+        raw = ledger.canonical(ledger.empty())
+        (gitdir / "paper-ledger.json").write_bytes(raw)
+        git("add", "paper-ledger.json")
+        git("commit", "-m", "verified legacy checkpoint")
+        commit = git("rev-parse", "HEAD")
+        directory = self.root / "anchored"
+        repo.stage_migration(raw, commit, directory)
+        self.assertEqual(repo.verify_checkpoint_origin(directory, gitdir), commit)
+        repo.main(["verify", "--directory", str(directory),
+                   "--git-repository", str(gitdir), "--full-replay"])
+        bad = self.root / "unanchored"
+        repo.stage_migration(raw, "f" * 40, bad)
+        with self.assertRaises(ValueError):
+            repo.verify_checkpoint_origin(bad, gitdir)
 
     def test_cli_migrate_verify_and_append(self):
         legacy = self.root / "legacy.json"
