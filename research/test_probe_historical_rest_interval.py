@@ -179,7 +179,7 @@ class RetainedHistoricalIntegrationTests(unittest.TestCase):
             with zipfile.ZipFile(path, 'w') as z:
                 z.writestr('trades/DENTEUR.csv', 'fixture')
             expected = [(300.1, 0.00001, 2, 0), (301.5, 0.000011, 3, 1)]
-            rows = [["0.00001", "2", 300.1], ["0.000011", "3", 301.5], ["0.000011", "1", 601]]
+            rows = [["0.00001", "2", 300.1, "b", "l", ""], ["0.000011", "3", 301.5, "s", "m", ""], ["0.000011", "1", 601, "b", "m", ""]]
             with patch('probe_historical_rest_interval.parse_member', return_value=expected), \
                  patch('probe_historical_rest_interval.aggregate', return_value=({}, {300: expected})):
                 r = probe_retained(path, opener=lambda *a, **kw: Response(make_page(rows)))
@@ -246,8 +246,8 @@ class ThreeWayHistoricalCorroborationTests(unittest.TestCase):
         from probe_historical_rest_interval import probe_retained
         expected = [(300.1, 0.00001, 2, 0), (301.5, 0.000011, 3, 1)]
         if rows is None:
-            rows = [["0.00001", "2", 300.1], ["0.000011", "3", 301.5],
-                    ["0.000011", "1", 601]]
+            rows = [["0.00001", "2", 300.1, "b", "l", ""], ["0.000011", "3", 301.5, "s", "m", ""],
+                    ["0.000011", "1", 601, "b", "m", ""]]
         with patch("probe_historical_rest_interval.parse_member", return_value=expected), \
              patch("probe_historical_rest_interval.aggregate", return_value=({}, {300: expected})):
             return probe_retained(self.trade_path, ohlc_artifact=self.ohlc_path,
@@ -299,8 +299,8 @@ class ThreeWayHistoricalCorroborationTests(unittest.TestCase):
             self.run_probe()
 
     def test_rest_trade_disagreement_never_promotes_to_three_way(self):
-        rows = [["0.00002", "2", 300.1], ["0.000011", "3", 301.5],
-                ["0.000011", "1", 601]]
+        rows = [["0.00002", "2", 300.1, "b", "l", ""], ["0.000011", "3", 301.5, "s", "m", ""],
+                ["0.000011", "1", 601, "b", "m", ""]]
         r = self.run_probe(rows)
         self.assertEqual(r["status"], "abstain_rest_archive_disagreement")
         self.assertFalse(r["three_way_candle_correspondence"])
