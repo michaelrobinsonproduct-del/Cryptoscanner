@@ -19,6 +19,7 @@ from consolidated_historical_learning import read_member
 from match_historical_trades_to_ohlcvt import aggregate, compare, parse_member
 from reconstruct_forward_outcomes import Candle, reconstruct_as_of
 from diagnose_real_trade_candle_overlap import diagnose
+from analyze_kraken_coverage_boundaries import coverage
 
 TRADE_SHA256_OBSERVED = "4adddad07b0dbe11891a25137c1adfc11a9a5f63798680a6b88eae2b3a867cf9"
 MAX_SAMPLE_ROWS = 250000
@@ -93,6 +94,7 @@ def analyze(ohlc_z, trade_z, *, pair="0GEUR", schema_attested=False):
     result["candidate_overlapping_candles"] = len(matching)
     result["comparison"] = compare(matching, records, independently_complete=False)
     result["interval_diagnostics"] = diagnose(ohlc_rows, records)
+    result["coverage_boundaries"] = coverage(ohlc_rows, records)
     result["status"] = "candidate_trade_and_ohlc_overlap_completeness_not_attested"
     return result
 
