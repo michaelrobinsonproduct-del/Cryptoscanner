@@ -107,7 +107,7 @@ def _validate_retained_ohlc(payload, meta):
                 raise ValueError("invalid retained OHLC timestamp order")
             if (min(opening, high, low, close) <= 0 or
                     not low <= opening <= high or not low <= close <= high or
-                    volume < 0 or count < 0 or not count.is_integer()):
+                    volume <= 0 or count <= 0 or not count.is_integer()):
                 raise ValueError("invalid retained OHLC candle values")
             if previous is not None and timestamp > previous + STEP:
                 gaps += 1
