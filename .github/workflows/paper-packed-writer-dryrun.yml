@@ -48,7 +48,7 @@ jobs:
           set -euo pipefail
           python -m paper_pov.segmented_live_writer stage \
             --repository . --base "$(cat /tmp/paper-base.sha)" \
-            --report paper_pov/output/latest.json --source-sha "$GITHUB_SHA" \
+            --report paper_pov/output/latest.json --source-sha "$(git rev-parse HEAD)" \
             --staged /tmp/paper-staged --next-ledger /tmp/paper-dryrun-after.json \
             --scoreboard /tmp/paper-dryrun-score.json
           python -m paper_pov.segmented_repository verify \
