@@ -31,7 +31,8 @@ class ContinuityTests(unittest.TestCase):
 
     def test_resealed_mutation_of_retained_prediction_fails(self):
         before = ledger.advance(ledger.empty(), synthetic(0), SHA)
-        after = ledger.advance(before, synthetic(30), SHA)
+        # Separate JSON snapshots must not share nested Python dictionaries.
+        after = copy.deepcopy(ledger.advance(before, synthetic(30), SHA))
         after["predictions"][0]["baseline_score"] += 5
         ledger.seal(after)
         with self.assertRaisesRegex(ValueError, "Immutable prediction history"):
@@ -39,7 +40,8 @@ class ContinuityTests(unittest.TestCase):
 
     def test_resealed_mutation_of_retained_quote_fails(self):
         before = ledger.advance(ledger.empty(), synthetic(0), SHA)
-        after = ledger.advance(before, synthetic(30), SHA)
+        # Separate JSON snapshots must not share nested Python dictionaries.
+        after = copy.deepcopy(ledger.advance(before, synthetic(30), SHA))
         after["observations"][0]["price"] *= 1.01
         ledger.seal(after)
         with self.assertRaisesRegex(ValueError, "quote history"):
