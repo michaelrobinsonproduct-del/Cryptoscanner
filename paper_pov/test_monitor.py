@@ -39,7 +39,9 @@ class PaperMonitorTests(unittest.TestCase):
     def check(self, now="2026-10-31T20:27:00+00:00", scans=None, audits=None,
               ledger=None, previous=None, message=None, errors=()):
         if scans is None:
-            scans = payload(run(123, "2026-10-31T20:10:00Z"))
+            scans = payload(run(121, "2026-10-31T19:10:00Z"),
+                            run(122, "2026-10-31T19:40:00Z"),
+                            run(123, "2026-10-31T20:10:00Z"))
         if audits is None:
             audits = payload(run(456, "2026-10-31T20:22:00Z"))
         if ledger is None:
