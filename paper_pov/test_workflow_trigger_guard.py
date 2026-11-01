@@ -26,7 +26,7 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
 
     def test_twice_hourly_schedule_and_single_writer_unchanged(self):
         text = PIPELINE.read_text()
-        self.assertEqual(re.findall(r"(?m)^\s*-\s*cron:\s*['\"]([^'\"]+)['\"]", text), ["9,39 * * * *"])
+        self.assertEqual(re.findall(r"(?m)^\s*-\s*cron:\s*['\"]([^'\"]+)['\"]", text), ["9 * * * *", "39 * * * *"])
         self.assertIn("group: public-paper-proof-ledger-single-writer", text)
         self.assertIn("cancel-in-progress: false", text)
         self.assertEqual(text.count("git push origin HEAD:refs/heads/paper-proof-ledger"), 1)
