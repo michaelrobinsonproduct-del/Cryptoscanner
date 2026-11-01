@@ -84,6 +84,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit):
         quote_symbol = o.get("symbol")
         if (not isinstance(quote_symbol, str) or not PAIR.fullmatch(quote_symbol)
                 or quote_symbol.count("/") != 1 or not quote_symbol.endswith("/USD")
+                or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", quote_symbol[:-4])
                 or quote_symbol.split("/")[0].upper() in STABLE):
             raise ValueError("Invalid or excluded observed quote symbol")
         age = (as_of - _utc(o["observed_at"])).total_seconds()
