@@ -131,6 +131,62 @@ class OwnerFallbackTests(unittest.TestCase):
             self.assertEqual(decide(**f)["reason"],
                              "SHADOW_ALREADY_TRIGGERED_OR_IN_PROGRESS")
 
+    def test_skipped_unrelated_issue_comment_does_not_suppress_fallback(self):
+        f = fixture()
+        f["shadow_runs"]["workflow_runs"] = [{
+            "id": CURRENT_ID + 1, "name": gate.SHADOW,
+            "path": gate.SHADOW_PATH, "repository": {"full_name": gate.REPO},
+            "created_at": iso(-2), "event": "issue_comment",
+            "status": "completed", "conclusion": "skipped"}]
+        self.assertEqual(decide(**f)["action"], "RUN_SHADOW")
+        # Skipped unrelated comments may be interleaved with older native runs.
+        f["shadow_runs"]["workflow_runs"].append({
+            "id": CURRENT_ID + 2, "name": gate.SHADOW,
+            "path": gate.SHADOW_PATH, "repository": {"full_name": gate.REPO},
+            "created_at": iso(-8), "event": "workflow_run",
+            "status": "completed", "conclusion": "success"})
+        self.assertEqual(decide(**f)["action"], "RUN_SHADOW")
+
+    def test_live_or_actual_comment_fallback_still_blocks(self):
+        for status, conclusion in [
+            ("queued", None), ("in_progress", None),
+            ("completed", "success"), ("completed", "failure"),
+            ("completed", "cancelled")]:
+            f = fixture()
+            f["shadow_runs"]["workflow_runs"] = [{
+                "id": CURRENT_ID + 1, "name": gate.SHADOW,
+                "path": gate.SHADOW_PATH, "repository": {"full_name": gate.REPO},
+                "created_at": iso(-2), "event": "issue_comment",
+                "status": status, "conclusion": conclusion}]
+            self.assertEqual(decide(**f)["reason"],
+                             "SHADOW_ALREADY_TRIGGERED_OR_IN_PROGRESS")
+
+    def test_native_shadow_even_if_skipped_still_blocks(self):
+        f = fixture()
+        f["shadow_runs"]["workflow_runs"] = [{
+            "id": CURRENT_ID + 1, "name": gate.SHADOW,
+            "path": gate.SHADOW_PATH, "repository": {"full_name": gate.REPO},
+            "created_at": iso(-2), "event": "workflow_run",
+            "status": "completed", "conclusion": "skipped"}]
+        self.assertEqual(decide(**f)["reason"],
+                         "SHADOW_ALREADY_TRIGGERED_OR_IN_PROGRESS")
+
+    def test_unknown_shadow_event_fails_closed(self):
+        f = fixture()
+        f["shadow_runs"]["workflow_runs"] = [{
+            "id": CURRENT_ID + 1, "name": gate.SHADOW,
+            "path": gate.SHADOW_PATH, "repository": {"full_name": gate.REPO},
+            "created_at": iso(-2), "event": "workflow_dispatch",
+            "status": "completed", "conclusion": "success"}]
+        self.assertEqual(decide(**f)["reason"], "UNEXPECTED_SHADOW_EVENT")
+
+    def test_owner_comment_workflow_concurrency_is_unique(self):
+        from pathlib import Path
+        workflow = Path(".github/workflows/paper-legacy-shadow.yml").read_text()
+        self.assertIn("github.event.comment.id", workflow)
+        self.assertIn("github.event.workflow_run.id", workflow)
+        self.assertIn("cancel-in-progress: false", workflow)
+
     def test_current_fallback_excluded_from_shadow_history(self):
         f = fixture()
         f["shadow_runs"]["workflow_runs"] = [{
