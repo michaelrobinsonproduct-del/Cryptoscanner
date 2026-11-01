@@ -1,0 +1,58 @@
+name: Historical Kraken Aggregate Learning Audit (research only)
+on:
+  push:
+    branches: [research-roleb-historical-confounding-20261101]
+    paths:
+      - 'historical/aggregate_rule_audit.py'
+      - 'historical/test_aggregate_rule_audit.py'
+      - 'historical/evidence/**'
+      - '.github/workflows/historical-aggregate-audit-ci.yml'
+  pull_request:
+    paths:
+      - 'historical/aggregate_rule_audit.py'
+      - 'historical/test_aggregate_rule_audit.py'
+      - 'historical/evidence/**'
+      - '.github/workflows/historical-aggregate-audit-ci.yml'
+permissions:
+  contents: read
+jobs:
+  historical-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact-source historical confounding audit and regression tests
+        run: |
+          set -euo pipefail
+          echo "RESEARCH_SOURCE_SHA=$(git rev-parse HEAD)"
+          python -m unittest historical.test_aggregate_rule_audit -v
+          python -m historical.aggregate_rule_audit --output /tmp/historical-aggregate-audit.json
+          python - <<'PY'
+          import json
+          x=json.load(open('/tmp/historical-aggregate-audit.json'))
+          h=x['results']['holdout']
+          assert h['raw_trade2_vs_baseline_lift']>1.7
+          assert h['trade2_within_early_lift']<1.15
+          assert h['trade2_within_abs60_gt3_lift']<1.15
+          print('REAL_HISTORICAL_CONFOUNDING_VERIFIED',json.dumps({
+            'source_sha':x['source_original_blob_sha'],
+            'train_rows':x['results']['train']['groups']['baseline']['rows'],
+            'holdout_rows':h['groups']['baseline']['rows'],
+            'raw_trade2_lift':h['raw_trade2_vs_baseline_lift'],
+            'within_early_lift':h['trade2_within_early_lift'],
+            'within_extended_lift':h['trade2_within_abs60_gt3_lift']
+          },sort_keys=True))
+          PY
+      - name: Upload reproducible research report only
+        uses: actions/upload-artifact@v4
+        with:
+          name: historical-aggregate-confounding-evidence
+          path: /tmp/historical-aggregate-audit.json
+          if-no-files-found: error
+          retention-days: 30
