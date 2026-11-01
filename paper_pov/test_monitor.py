@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from paper_pov.ledger import empty, seal
-from paper_pov.monitor import UTC, evaluate, scheduled_slots
+from paper_pov.monitor import UTC, evaluate, matched_success_slots, scheduled_slots
 
 SHA = "a" * 40
 ASOF = "2026-10-31T20:11:00+00:00"
@@ -199,10 +199,17 @@ class PaperMonitorTests(unittest.TestCase):
         self.assertNotIn(dt.datetime(2026, 11, 1, 5, 9, tzinfo=UTC), slots)
 
     def test_one_scheduled_success_cannot_cover_both_halfhour_slots(self):
+        slots = [dt.datetime(2026, 10, 31, 23, m, tzinfo=UTC) for m in (39, 9)]
+        covered = matched_success_slots(
+            [run(124, "2026-10-31T23:40:00Z")], slots, multi_slot=True)
+        self.assertEqual(covered, {slots[0]})
+        self.assertNotIn(slots[1], covered)
+
+    def test_two_missing_halfhour_slots_alert_even_if_older_run_succeeded(self):
         scans = payload(run(123, "2026-10-31T20:10:00Z"),
                         run(124, "2026-10-31T22:40:00Z"))
-        result = self.check(now="2026-10-31T23:46:00+00:00", scans=scans,
-                            audits=payload(run(456, "2026-10-31T23:22:00Z")))
+        result = self.check(now="2026-11-01T00:46:00+00:00", scans=scans,
+                            audits=payload(run(456, "2026-11-01T00:22:00Z")))
         self.assertIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])
 
     def test_two_distinct_scheduled_runs_cover_two_halfhour_slots(self):
@@ -227,7 +234,9 @@ class PaperMonitorTests(unittest.TestCase):
         result = self.check(now="2026-11-01T00:16:00+00:00", scans=scans,
                             audits=payload(run(456, "2026-11-01T00:22:00Z")))
         self.assertNotIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])
-        self.assertEqual(len(scheduled_slots(dt.datetime(2026, 11, 1, 0, 16, tzinfo=UTC), (9, 39))) >= 2, True)
+        slots = scheduled_slots(dt.datetime(2026, 11, 1, 0, 16, tzinfo=UTC), (9, 39))[:2]
+        self.assertEqual(matched_success_slots(
+            [run(124, "2026-10-31T23:40:00Z")], slots, True), {slots[0]})
 
     def test_hourly_audit_schedule_remains_independent(self):
         audits = payload(run(456, "2026-10-31T20:22:00Z"))
