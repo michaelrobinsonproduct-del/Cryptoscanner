@@ -126,11 +126,18 @@ class PaperResultsContracts(unittest.TestCase):
             self.report(s, b)
 
     def test_reject_unattributed_or_excluded_observation_symbols(self):
-        for value in (None, "", "LTC/EUR", "USDT/USD", "XBT/USD/EXTRA", True):
+        for value in (None, "", "/USD", "./USD", "-/USD", "LTC/EUR", "USDT/USD", "XBT/USD/EXTRA", True):
             s, b = fixture()
             s["observations"][0]["symbol"] = value
             with self.subTest(symbol=value), self.assertRaisesRegex(ValueError, "observed quote symbol"):
                 self.report(s, b)
+
+    def test_reject_spoofed_empty_base_even_if_watch_and_quote_agree(self):
+        s, b = fixture()
+        s["observations"][0]["symbol"] = "/USD"
+        s["watch"][0]["symbol"] = "/USD"
+        with self.assertRaisesRegex(ValueError, "observed quote symbol"):
+            self.report(s, b)
 
     def test_reject_unsealed_ledger_and_unpersisted_counts(self):
         s, b = fixture()
