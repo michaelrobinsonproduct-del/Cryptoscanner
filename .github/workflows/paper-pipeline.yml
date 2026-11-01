@@ -190,11 +190,8 @@ jobs:
           set -euo pipefail
           # A failed ledger-push step can leave checkout on the ledger branch.
           # Recover the exact source SHA's reporting script, never execute ledger code.
-          if test -f paper_pov/failure_report.py; then
-            cp paper_pov/failure_report.py /tmp/paper-failure-report.py
-          else
-            git show "${GITHUB_SHA}:paper_pov/failure_report.py" > /tmp/paper-failure-report.py
-          fi
+          # Always load the immutable exact-source script even if checkout is on the ledger branch.
+          git show "${GITHUB_SHA}:paper_pov/failure_report.py" > /tmp/paper-failure-report.py
           python /tmp/paper-failure-report.py \
             --run-id "$GITHUB_RUN_ID" --source-sha "$GITHUB_SHA" \
             --output-dir /tmp/paper-failure-results

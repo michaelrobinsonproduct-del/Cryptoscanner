@@ -2,6 +2,8 @@
 import datetime as dt
 import hashlib
 import json
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
@@ -64,6 +66,42 @@ class FailureReportTests(unittest.TestCase):
         self.assertIn("cron: '9 * * * *'", text)
         self.assertNotIn("git push --force", text)
 
+
+    def test_controlled_failed_run_cli_produces_only_checksums_and_no_ledger(self):
+        # Exercise the exact CLI invoked by the failure() steps without starting a scan.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            out = root / "failed-results"
+            args = [sys.executable, str(ROOT / "paper_pov/failure_report.py"),
+                    "--run-id", "41263997201", "--source-sha", SHA,
+                    "--output-dir", str(out)]
+            result = subprocess.run(args, cwd=root, capture_output=True, text=True, check=False)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("PAPER_FAILED_RESULTS_RECORDED 41263997201", result.stdout)
+            self.assertEqual({p.name for p in root.iterdir()}, {"failed-results"})
+            self.assertEqual({p.name for p in out.iterdir()},
+                             {"results.json", "results.md", "SHA256SUMS"})
+            for line in (out / "SHA256SUMS").read_text().splitlines():
+                digest, name = line.split("  ")
+                self.assertEqual(hashlib.sha256((out / name).read_bytes()).hexdigest(), digest)
+            data = json.loads((out / "results.json").read_text())
+            self.assertEqual(data["status"], "FAILED_PAPER_ONLY")
+            self.assertTrue(data["ledger_may_have_been_committed"])
+            self.assertIsNone(data["ledger_generation"])
+            self.assertEqual(data["candidates"], [])
+            self.assertTrue(all(x["status"] == "NOT_VERIFIED"
+                                for x in data["horizons"].values()))
+            # Bad input must fail before any report or ledger file is created.
+            bad = subprocess.run(args[:3] + ["0"] + args[4:-1] + [str(root / "bad")],
+                                 cwd=root, capture_output=True, text=True, check=False)
+            self.assertNotEqual(bad.returncode, 0)
+            self.assertFalse((root / "bad").exists())
+
+    def test_failure_steps_are_conditional_and_use_exact_source(self):
+        text = WORKFLOW.read_text()
+        self.assertEqual(text.count("if: ${{ failure() }}"), 3)
+        self.assertIn('git show "${GITHUB_SHA}:paper_pov/failure_report.py"', text)
+        self.assertEqual(text.count("git push origin HEAD:refs/heads/paper-proof-ledger"), 1)
 
 if __name__ == "__main__":
     unittest.main()

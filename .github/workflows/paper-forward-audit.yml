@@ -4,10 +4,14 @@ on:
     branches: [main, proof-outcome-main-integration-20261031, proof-ledger-continuity-roleb-20261031]
     paths:
       - 'paper_eval/**'
+      - 'paper_pov/git_ledger_fetch.py'
+      - 'paper_pov/test_git_ledger_fetch.py'
       - '.github/workflows/paper-forward-audit.yml'
   pull_request:
     paths:
       - 'paper_eval/**'
+      - 'paper_pov/git_ledger_fetch.py'
+      - 'paper_pov/test_git_ledger_fetch.py'
       - '.github/workflows/paper-forward-audit.yml'
   workflow_dispatch:
   # Independent evidence collection, not a second scanner or ledger writer.
