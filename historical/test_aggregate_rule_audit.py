@@ -19,7 +19,7 @@ class AggregateRuleAuditTest(unittest.TestCase):
 
     def test_source_blob_is_exact_archived_model(self):
         data = SOURCE.read_bytes()
-        git_sha = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\\0" + data).hexdigest()
+        git_sha = hashlib.sha1(b"blob " + str(len(data)).encode() + bytes([0]) + data).hexdigest()
         self.assertEqual(git_sha, "7a082fdf394e06b5de6ceee50e09ade8c97b2b97")
 
     def test_holdout_stratification_and_missed_movers(self):
