@@ -1,0 +1,172 @@
+name: Owner-authenticated independent paper cadence (existing writer only)
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+  actions: write
+  issues: write
+# Shared controller mutex prevents simultaneous recovery/cadence dispatch decisions.
+concurrency:
+  group: public-paper-recovery-controller
+  cancel-in-progress: false
+jobs:
+  decide-and-wake-existing-writer:
+    if: >-
+      github.repository == 'michaelrobinsonproduct-del/Cryptoscanner' &&
+      github.ref == 'refs/heads/main' &&
+      github.event.action == 'created' &&
+      github.event.issue.number == 34 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.user.login == 'michaelrobinsonproduct-del' &&
+      github.event.comment.user.id == 336805669 &&
+      github.event.comment.author_association == 'OWNER' &&
+      github.event.sender.login == 'michaelrobinsonproduct-del' &&
+      github.event.sender.id == 336805669 &&
+      github.event.repository.default_branch == 'main' &&
+      github.event.comment.body == '/paper-cadence-heartbeat'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact-source adversarial cadence and recovery tests
+        run: |
+          set -euo pipefail
+          echo "PAPER_CADENCE_SOURCE_SHA=$(git rev-parse HEAD)"
+          python -m unittest paper_pov.test_cadence_wake paper_pov.test_recovery paper_pov.test_external_heartbeat_guard -v
+      - name: Collect current source, writer history and sealed ledger
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          MAIN_SHA="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          test "$(git rev-parse HEAD)" = "$MAIN_SHA" || { echo PAPER_CADENCE_MAIN_MOVED_ABORT; exit 1; }
+          printf '%s\n' "$MAIN_SHA" > /tmp/cadence-main.txt
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/cadence-runs.json
+          gh api --paginate "repos/$GITHUB_REPOSITORY/issues/34/comments?per_page=100" \
+            --jq '.[] | {body,created_at,user:{login:.user.login,id:.user.id}} | @json' > /tmp/cadence-comments.ndjson
+          git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          BASE="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+          echo "$BASE" > /tmp/cadence-ledger-commit.txt
+          git log -1 --format=%s "$BASE" > /tmp/cadence-ledger-message.txt
+          if git cat-file -e "$BASE:paper-segment-manifest.json" 2>/dev/null; then
+            CHECKPOINT="$(git show "$BASE:paper-segment-manifest.json" | python -c 'import json,sys;print(json.load(sys.stdin)["checkpoint"]["git_commit"])')"
+            git cat-file -e "$CHECKPOINT^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$CHECKPOINT"
+          fi
+          python -m paper_pov.segmented_repository export-git \
+            --repository . --commit "$BASE" --output /tmp/cadence-ledger.json --full-replay
+      - name: Fail-closed owner and cadence decision
+        run: |
+          set -euo pipefail
+          python -m paper_pov.cadence_wake \
+            --event "$GITHUB_EVENT_PATH" --repository "$GITHUB_REPOSITORY" \
+            --actor "$GITHUB_ACTOR" --ref "$GITHUB_REF" --event-name "$GITHUB_EVENT_NAME" \
+            --runs /tmp/cadence-runs.json --comments /tmp/cadence-comments.ndjson \
+            --ledger /tmp/cadence-ledger.json --ledger-commit /tmp/cadence-ledger-commit.txt \
+            --ledger-message /tmp/cadence-ledger-message.txt --main-sha /tmp/cadence-main.txt \
+            --output /tmp/cadence-decision.json
+          cat /tmp/cadence-decision.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Recheck CAS, deduplicate and dispatch EXISTING single writer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ACTION="$(python -c 'import json;print(json.load(open("/tmp/cadence-decision.json"))["action"])')"
+          if [ "$ACTION" = NO_DISPATCH ]; then
+            echo NO_DISPATCH > /tmp/cadence-status.txt
+            echo PAPER_CADENCE_NOT_DUE
+            exit 0
+          fi
+          test "$ACTION" = DISPATCH_EXISTING_WORKFLOW || exit 1
+          echo RECHECK_PENDING > /tmp/cadence-status.txt
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/cadence-runs-recheck.json
+          gh api --paginate "repos/$GITHUB_REPOSITORY/issues/34/comments?per_page=100" \
+            --jq '.[] | {body,created_at,user:{login:.user.login,id:.user.id}} | @json' > /tmp/cadence-comments-recheck.ndjson
+          git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/cadence-ledger-commit.txt)" || exit 1
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$(cat /tmp/cadence-main.txt)" || exit 1
+          python -m paper_pov.cadence_wake \
+            --event "$GITHUB_EVENT_PATH" --repository "$GITHUB_REPOSITORY" \
+            --actor "$GITHUB_ACTOR" --ref "$GITHUB_REF" --event-name "$GITHUB_EVENT_NAME" \
+            --runs /tmp/cadence-runs-recheck.json --comments /tmp/cadence-comments-recheck.ndjson \
+            --ledger /tmp/cadence-ledger.json --ledger-commit /tmp/cadence-ledger-commit.txt \
+            --ledger-message /tmp/cadence-ledger-message.txt --main-sha /tmp/cadence-main.txt \
+            --output /tmp/cadence-recheck.json
+          if [ "$(python -c 'import json;print(json.load(open("/tmp/cadence-recheck.json"))["action"])')" != DISPATCH_EXISTING_WORKFLOW ]; then
+            echo RECHECK_ABSTAIN > /tmp/cadence-status.txt
+            exit 0
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/cadence-runs-premarker.json
+          cmp -s /tmp/cadence-runs-recheck.json /tmp/cadence-runs-premarker.json || { echo PREMARKER_RUNS_CHANGED_ABORT > /tmp/cadence-status.txt; exit 1; }
+          git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/cadence-ledger-commit.txt)" || exit 1
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$(cat /tmp/cadence-main.txt)" || exit 1
+          python - <<'PY' > /tmp/cadence-marker.txt
+          import json,os
+          d=json.load(open("/tmp/cadence-recheck.json"))
+          print("### Independent PAPER cadence ATTEMPT — "+d["checked_at"])
+          print()
+          print("<!-- "+d["attempt_marker"]+" -->")
+          print("Verified UTC half-hour slot: "+d["target_slot"])
+          print("Durable ledger generation: "+str(d["ledger_generation"]))
+          print("Ledger commit: "+d["ledger_commit"])
+          print("Linked durable writer: "+str(d["anchor_run_id"]))
+          print("Controller: https://github.com/"+os.environ["GITHUB_REPOSITORY"]+"/actions/runs/"+os.environ["GITHUB_RUN_ID"])
+          print("This is ONLY an attempt to dispatch the EXISTING PAPER writer. No scan, ledger advancement or delivery is claimed until verified.")
+          PY
+          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/34/comments" -f body="$(cat /tmp/cadence-marker.txt)" > /tmp/cadence-post.json
+          ID="$(python -c 'import json;print(json.load(open("/tmp/cadence-post.json"))["id"])')"
+          gh api "repos/$GITHUB_REPOSITORY/issues/comments/$ID" > /tmp/cadence-readback.json
+          python - <<'PY'
+          import json
+          assert json.load(open("/tmp/cadence-readback.json"))["body"]==open("/tmp/cadence-marker.txt").read().rstrip("\n")
+          print("PAPER_CADENCE_ATTEMPT_READBACK_VERIFIED")
+          PY
+          echo ATTEMPT_MARKER_READBACK_VERIFIED > /tmp/cadence-status.txt
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/cadence-runs-final.json
+          cmp -s /tmp/cadence-runs-recheck.json /tmp/cadence-runs-final.json || { echo RUNS_CHANGED_ABORT > /tmp/cadence-status.txt; exit 1; }
+          git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/cadence-ledger-commit.txt)" || exit 1
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$(cat /tmp/cadence-main.txt)" || exit 1
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml" --jq '.state' | grep -Fx active
+          gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/dispatches" -f ref=main
+          echo DISPATCH_HTTP_ACCEPTED_EXECUTION_UNVERIFIED > /tmp/cadence-status.txt
+          echo PAPER_CADENCE_EXISTING_WRITER_DISPATCH_HTTP_ACCEPTED_NOT_EXECUTION_PROOF
+      - name: Preserve checksummed decision artifact
+        if: ${{ always() }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/cadence-artifact
+          if test -f /tmp/cadence-decision.json; then cp /tmp/cadence-decision.json /tmp/cadence-artifact/decision.json;
+          else echo '{"action":"BLOCKED","reason":"NO_DECISION_ARTIFACT"}' > /tmp/cadence-artifact/decision.json; fi
+          if test -f /tmp/cadence-recheck.json; then cp /tmp/cadence-recheck.json /tmp/cadence-artifact/recheck.json; fi
+          if test -f /tmp/cadence-status.txt; then cp /tmp/cadence-status.txt /tmp/cadence-artifact/execution_status.txt;
+          else echo UNKNOWN_OR_FAILED > /tmp/cadence-artifact/execution_status.txt; fi
+          (cd /tmp/cadence-artifact && sha256sum *.json execution_status.txt > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: paper-cadence-decision-${{ github.run_id }}
+          path: /tmp/cadence-artifact/
+          retention-days: 90
+          if-no-files-found: error
+      - name: Index controller failure without claiming scanner failure
+        if: ${{ failure() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### Independent PAPER cadence controller FAILED — $GITHUB_RUN_ID"
+            echo
+            echo "<!-- PAPER_CADENCE_CONTROLLER_FAILED:$GITHUB_RUN_ID -->"
+            echo "Run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "No scanner success, ledger advancement or delivery is claimed. A dispatch may have been accepted before a downstream failure."
+          } > /tmp/cadence-failure.txt
+          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/34/comments" -f body="$(cat /tmp/cadence-failure.txt)"
