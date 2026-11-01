@@ -36,9 +36,19 @@ def _utc(value):
     return utc(value)
 
 
-def render(scan, score, *, run_id, source_sha, ledger_commit, event):
+def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating_cron=None):
     if event not in ("schedule", "workflow_dispatch"):
         raise ValueError("Unverified GitHub trigger event")
+    # GitHub's event.schedule identifies the originating cron expression even
+    # when Actions queues or starts the job late. It does NOT prove punctuality.
+    if event == "schedule":
+        if originating_cron not in ("9 * * * *", "39 * * * *"):
+            raise ValueError("Missing or unverified originating scheduled cron")
+        scheduled_minute = int(originating_cron.split()[0])
+    else:
+        if originating_cron not in (None, ""):
+            raise ValueError("Manual dispatch cannot claim a scheduled cron")
+        scheduled_minute = None
     if not RUN.fullmatch(str(run_id)) or not SHA.fullmatch(source_sha) or not SHA.fullmatch(ledger_commit):
         raise ValueError("Missing immutable GitHub run/source/ledger identity")
     if scan.get("mode") != "PAPER_ONLY" or scan.get("buy_approved") is not False:
@@ -100,7 +110,10 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event):
         "**Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders",
         "",
         f"**UTC as-of:** {as_of.isoformat()}  ",
-        f"**GitHub trigger:** {'scheduled' if event == 'schedule' else 'manual dispatch'} (verified event={event}; exact cron slot NOT inferred)  ",
+        f"**GitHub trigger:** {'scheduled' if event == 'schedule' else 'manual dispatch'} (verified event={event}; "
+        + (f"originating cron={originating_cron}, intended UTC minute=:{scheduled_minute:02d}; "
+           if scheduled_minute is not None else "no scheduled slot; ")
+        + "actual start punctuality NOT verified)  ",
         f"**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/{run_id}  ",
         f"**Source SHA:** {source_sha}  ",
         f"**Ledger commit:** {ledger_commit}  ",
@@ -198,7 +211,10 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event):
     ])
     payload = {"schema": 1, "status": "SUCCESS_PAPER_ONLY", "run_id": str(run_id),
                "as_of": as_of.isoformat(), "source_sha": source_sha,
-               "github_event": event, "scheduled_slot_verified": False,
+               "github_event": event, "originating_cron": originating_cron or None,
+               "scheduled_slot_utc_minute": scheduled_minute,
+               "scheduled_slot_verified": scheduled_minute is not None,
+               "scheduled_start_punctuality_verified": False,
                "ledger_commit": ledger_commit, "ledger_generation": score["generation"],
                "ledger_sha256": score["ledger_sha256"], "remote_readback_verified": True,
                "eligible_pairs": scan["eligible_pairs"], "observed_markets": len(observations),
@@ -217,11 +233,14 @@ def main():
     p = argparse.ArgumentParser()
     for arg in ("scan", "scoreboard", "run-id", "source-sha", "ledger-commit", "output-dir", "event"):
         p.add_argument("--" + arg, required=True)
+    p.add_argument("--originating-cron", default=None,
+                   help="Exact github.event.schedule, empty for manual dispatch")
     a = p.parse_args()
     scan = json.loads(Path(a.scan).read_text())
     score = json.loads(Path(a.scoreboard).read_text())
     payload, markdown = render(scan, score, run_id=a.run_id,
-                               source_sha=a.source_sha, ledger_commit=a.ledger_commit, event=a.event)
+                               source_sha=a.source_sha, ledger_commit=a.ledger_commit,
+                               event=a.event, originating_cron=a.originating_cron)
     directory = Path(a.output_dir)
     directory.mkdir(parents=True, exist_ok=True)
     atomic_json(directory / "results.json", payload)
