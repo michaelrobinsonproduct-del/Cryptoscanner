@@ -189,6 +189,51 @@ class PaperMonitorTests(unittest.TestCase):
         slots = scheduled_slots(now, 9)
         self.assertEqual(slots[0].hour, 20)
 
+    def test_halfhour_slots_both_mature_with_35_minute_grace(self):
+        now = dt.datetime(2026, 11, 1, 5, 15, tzinfo=UTC)
+        slots = scheduled_slots(now, (9, 39))
+        self.assertEqual(slots[:3], [
+            dt.datetime(2026, 11, 1, 4, 39, tzinfo=UTC),
+            dt.datetime(2026, 11, 1, 4, 9, tzinfo=UTC),
+            dt.datetime(2026, 11, 1, 3, 39, tzinfo=UTC)])
+        self.assertNotIn(dt.datetime(2026, 11, 1, 5, 9, tzinfo=UTC), slots)
+
+    def test_one_scheduled_success_cannot_cover_both_halfhour_slots(self):
+        scans = payload(run(123, "2026-10-31T20:10:00Z"),
+                        run(124, "2026-10-31T22:40:00Z"))
+        result = self.check(now="2026-10-31T23:46:00+00:00", scans=scans,
+                            audits=payload(run(456, "2026-10-31T23:22:00Z")))
+        self.assertIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])
+
+    def test_two_distinct_scheduled_runs_cover_two_halfhour_slots(self):
+        scans = payload(run(123, "2026-10-31T20:10:00Z"),
+                        run(124, "2026-10-31T22:40:00Z"),
+                        run(125, "2026-10-31T23:10:00Z"))
+        result = self.check(now="2026-10-31T23:46:00+00:00", scans=scans,
+                            audits=payload(run(456, "2026-10-31T23:22:00Z")))
+        self.assertNotIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])
+
+    def test_manual_run_and_late_success_cannot_mask_two_missed_slots(self):
+        scans = payload(run(123, "2026-10-31T20:10:00Z"),
+                        run(124, "2026-10-31T23:40:00Z", event="workflow_dispatch"))
+        result = self.check(now="2026-10-31T23:46:00+00:00", scans=scans,
+                            audits=payload(run(456, "2026-10-31T23:22:00Z")))
+        self.assertIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])
+
+    def test_delayed_schedule_counts_at_most_one_halfhour_slot(self):
+        # 23:40 is too late for :09 and can only match :39, not both.
+        scans = payload(run(123, "2026-10-31T20:10:00Z"),
+                        run(124, "2026-10-31T23:40:00Z"))
+        result = self.check(now="2026-11-01T00:16:00+00:00", scans=scans,
+                            audits=payload(run(456, "2026-11-01T00:22:00Z")))
+        self.assertNotIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])
+        self.assertEqual(len(scheduled_slots(dt.datetime(2026, 11, 1, 0, 16, tzinfo=UTC), (9, 39))) >= 2, True)
+
+    def test_hourly_audit_schedule_remains_independent(self):
+        audits = payload(run(456, "2026-10-31T20:22:00Z"))
+        result = self.check(now="2026-10-31T23:27:00+00:00", audits=audits)
+        self.assertIn("PAPER_AUDIT_TWO_MISSED_SLOTS", result["alerts"])
+
     def test_workflow_is_readonly_and_alerts_only(self):
         workflow = Path(".github/workflows/paper-monitor.yml").read_text()
         self.assertIn("cron: '27 * * * *'", workflow)
