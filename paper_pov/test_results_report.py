@@ -64,6 +64,33 @@ class PaperResultsContracts(unittest.TestCase):
             with self.subTest(event=invalid), self.assertRaisesRegex(ValueError, "GitHub trigger"):
                 self.report(event=invalid)
 
+    def test_cli_writes_checked_event_attested_artifacts(self):
+        import hashlib
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from paper_pov.results_report import main
+        scan, score = fixture()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            scan_path, score_path, output = root / "scan.json", root / "score.json", root / "out"
+            scan_path.write_text(json.dumps(scan))
+            score_path.write_text(json.dumps(score))
+            argv = ["paper-results", "--scan", str(scan_path),
+                    "--scoreboard", str(score_path), "--run-id", "41235442591",
+                    "--source-sha", SHA, "--ledger-commit", LEDGER,
+                    "--event", "schedule", "--output-dir", str(output)]
+            with patch("sys.argv", argv):
+                main()
+            payload = json.loads((output / "results.json").read_text())
+            self.assertEqual(payload["github_event"], "schedule")
+            self.assertFalse(payload["scheduled_slot_verified"])
+            self.assertIn("GitHub trigger:** scheduled", (output / "results.md").read_text())
+            for line in (output / "SHA256SUMS").read_text().splitlines():
+                digest, filename = line.split("  ", 1)
+                self.assertEqual(hashlib.sha256((output / filename).read_bytes()).hexdigest(), digest)
+
     def test_realistic_report_is_readable_and_not_a_buy_signal(self):
         payload, md = self.report()
         self.assertEqual(payload["status"], "SUCCESS_PAPER_ONLY")
