@@ -110,6 +110,10 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
         if not isinstance(item, dict) or not isinstance(item.get("body"), str):
             return abstain("ISSUE_COMMENT_INVALID", True)
         if marker in item["body"]:
+            actor = item.get("user")
+            # Public issue comments are untrusted; only the Actions bot can deduplicate.
+            if not isinstance(actor, dict) or actor.get("login") != "github-actions[bot]" or actor.get("id") != 41898282:
+                continue
             try:
                 at = instant(item["created_at"])
             except (ValueError, TypeError, KeyError):
