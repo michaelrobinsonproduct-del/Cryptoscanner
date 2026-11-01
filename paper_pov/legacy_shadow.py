@@ -1,6 +1,7 @@
 """Read-only independent legacy-INSPIRED momentum/volume Kraken PAPER signals.
 
-Not the original legacy strategy. No baseline/challenger score reuse, trading,
+Adapted from the older rebuild_v2/scanner.py ticker/trade precursor, NOT
+the original September strategy. No baseline/challenger score reuse, trading,
 ledger writes, model promotion, or measured predictive-lift claim.
 """
 import datetime as dt
@@ -124,10 +125,12 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
             continue
         matched += 1
         try:
-            price, bid, ask, opening, volume = (
+            price, bid, ask, opening, volume, trades = (
                 _number(row["c"][0]), _number(row["b"][0]),
-                _number(row["a"][0]), _number(row["o"]), _number(row["v"][1]))
-            if min(price, bid, ask, opening) <= 0 or ask < bid or volume < 0:
+                _number(row["a"][0]), _number(row["o"]), _number(row["v"][1]),
+                _number(row["t"][1]))
+            if (min(price, bid, ask, opening) <= 0 or ask < bid or volume < 0
+                    or trades < 0 or not trades.is_integer()):
                 continue
             spread = 10000 * (ask / bid - 1)
             move = 100 * (price / opening - 1)
@@ -136,15 +139,20 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
                 continue
             valid += 1
             if 0.1 <= move <= 15 and spread <= 50 and notional >= 100000:
+                # Historical rebuild-v2-inspired precursor: opening move,
+                # trade count, dollar volume, and spread. No score reuse.
+                prelim = (min(48, max(0, move) * 12) + min(22, trades / 120)
+                          + min(15, notional / 250000) + max(0, 15 - spread * 2))
                 precursors.append({"pair": pair, "symbol": symbol, "price": price,
                                    "move_utc_open": move, "spread": spread,
-                                   "notional": notional})
+                                   "notional": notional, "trades_24h": int(trades),
+                                   "legacy_prelim": prelim})
         except (KeyError, TypeError, ValueError, IndexError, ZeroDivisionError, OverflowError):
             continue
     if (matched < max(20, math.ceil(len(eligible) * .8))
             or valid < max(20, math.ceil(matched * .8))):
         raise ValueError("Incomplete independent ticker universe")
-    precursors.sort(key=lambda x: (-x["move_utc_open"], x["spread"],
+    precursors.sort(key=lambda x: (-x["legacy_prelim"], x["spread"],
                                    -x["notional"], x["symbol"]))
     picks = []
     rejects = 0
@@ -157,13 +165,14 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
                 rejects += 1
                 continue
             cutoff = max(cutoff, closed_at)
-            # Distinct momentum/volume strategy, NOT current PAPER scoring.
-            score = max(0, min(100, 18 + min(25, item["move_utc_open"] * 4)
-                     + min(30, move15 * 8) + min(25, (accel - 1) * 15)
-                     + min(15, math.log10(max(1, item["notional"] / 100000)) * 8)
-                     - min(15, item["spread"] / 4)))
+            # Independent rebuild-v2-inspired precursor plus bounded fresh
+            # OHLC momentum/volume confirmation. NOT current PAPER score.
+            score = max(0, min(100, item["legacy_prelim"]
+                     + min(8, max(0, move15) * 3)
+                     + min(8, max(0, accel - 1) * 4)))
             picks.append({"symbol": item["symbol"], "price_usd": item["price"],
                           "legacy_score": round(score, 4),
+                          "trades_24h": item["trades_24h"],
                           "move15_pct": round(move15, 4),
                           "volume_accel": round(accel, 4),
                           "quote_observed_at": quote_at.isoformat(),
@@ -180,7 +189,7 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
     for rank, item in enumerate(picks, 1):
         item["rank"] = rank
     return {"schema": 1, "mode": "LEGACY_INSPIRED_SHADOW",
-            "strategy_name": "independent-early-momentum-volume-v1-not-original",
+            "strategy_name": "rebuild-v2-inspired-ticker-trades-ohlc-v1-not-original",
             "independent_execution": True, "production_applied": False,
             "buy_approved": False, "run_id": run_id,
             "trigger_paper_run_id": trigger_paper_run_id,
