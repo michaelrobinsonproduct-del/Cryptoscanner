@@ -142,6 +142,12 @@ class OverlapTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate"):
             execute(other=a)
 
+    def test_stablecoin_base_rejected(self):
+        a = shadow()
+        a["candidates"][0]["symbol"] = "USDT/USD"
+        with self.assertRaisesRegex(ValueError, "canonical"):
+            execute(other=a)
+
     def test_noncanonical_alias_rejected(self):
         a = shadow()
         a["candidates"][0]["symbol"] = "uni/usd"
