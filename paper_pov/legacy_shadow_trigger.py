@@ -103,8 +103,20 @@ def decide(event, paper_runs, shadow_runs, state, manifest, ledger_message,
         if (shadow.get("name") != SHADOW or shadow.get("path") != SHADOW_PATH
                 or shadow.get("repository", {}).get("full_name") != REPO):
             return _abstain("UNTRUSTED_SHADOW_RUN_HISTORY")
-        if stamp(shadow.get("created_at")) >= stamp(writer["created_at"]):
-            return _abstain("SHADOW_ALREADY_TRIGGERED_OR_IN_PROGRESS")
+        if stamp(shadow.get("created_at")) < stamp(writer["created_at"]):
+            continue
+        # GitHub emits a skipped issue_comment workflow run for every unrelated
+        # comment because this workflow listens to issue_comment: created.
+        # Such a run has executed no shadow job and cannot deduplicate a real
+        # authenticated fallback. Active/queued or non-skipped attempts still
+        # block, as does any native workflow_run after the writer.
+        if (shadow.get("event") == "issue_comment"
+                and shadow.get("status") == "completed"
+                and shadow.get("conclusion") == "skipped"):
+            continue
+        if shadow.get("event") not in ("workflow_run", "issue_comment"):
+            return _abstain("UNEXPECTED_SHADOW_EVENT")
+        return _abstain("SHADOW_ALREADY_TRIGGERED_OR_IN_PROGRESS")
     return {"action": "RUN_SHADOW", "trigger_paper_run_id": writer["id"],
             "writer_source_sha": writer["head_sha"],
             "ledger_generation": state["generation"],
