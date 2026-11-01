@@ -161,6 +161,20 @@ class PaperMonitorTests(unittest.TestCase):
         self.assertIn("github.event_name == 'schedule'", alert)
         self.assertIn("sha256sum -c SHA256SUMS", alert)
 
+    def test_monitor_upstream_failure_cannot_silently_skip_issue_alert(self):
+        workflow = Path(".github/workflows/paper-monitor.yml").read_text()
+        alert = workflow.split("\n  alert:\n", 1)[1]
+        self.assertIn("if: ${{ always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}", alert)
+        self.assertIn("if: ${{ always() && needs.monitor.result != 'success' }}", alert)
+        self.assertIn("PAPER_MONITOR_PIPELINE_FAILED", alert)
+        self.assertIn("PAPER_MONITOR_FAILURE_ISSUE_READBACK_VERIFIED", alert)
+        self.assertIn("PAPER_MONITOR_PIPELINE_FAILURE_ALREADY_RECORDED", alert)
+        self.assertIn("Scanner status, ledger integrity, freshness, outcomes and delivery are UNKNOWN", alert)
+        self.assertIn("echo \"::error::PAPER_MONITOR_PIPELINE_FAILED", alert)
+        self.assertIn("exit 1", alert)
+        self.assertNotIn("git push", alert)
+        self.assertNotIn("paper-proof-ledger-single-writer", alert)
+
     def test_corrupted_resealed_ledger_fails_closed(self):
         state = fixture()
         state["predictions"][0]["price"] = 200
