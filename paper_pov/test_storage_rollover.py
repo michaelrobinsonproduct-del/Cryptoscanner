@@ -74,6 +74,12 @@ class RolloverTests(unittest.TestCase):
                          storage.pack_snapshot(prior))
         self.assertLess(repo.active_storage_bytes(archived),
                         repo.active_storage_bytes(initial))
+        tampered = self.root / "tampered-packed-checkpoint"
+        shutil.copytree(archived, tampered)
+        path = tampered / repo.CHECKPOINT
+        path.write_bytes(path.read_bytes()[:-1])
+        with self.assertRaises(ValueError):
+            repo.read_state(tampered, full_replay=True)
         final = self.root / "final"
         repo.stage_append(archived, synthetic(150), SHA, final)
         paths = live.changed_paths(self.gitdir, base, final)
