@@ -74,18 +74,25 @@ def _candidates(rows, *, as_of, legacy):
     return out
 
 
-def compare(current, legacy_artifact_bytes, *, expected_ledger_sha256,
+def compare(current_artifact_bytes, legacy_artifact_bytes, *, expected_current_sha256,
+            expected_current_run_id, expected_ledger_sha256,
             expected_legacy_sha256, expected_legacy_run_id):
     """Return verified overlap, or fail closed. Expected values must come from
     independent remote readback, never from the untrusted legacy payload.
     """
     _sha(expected_ledger_sha256, 64)
+    _sha(expected_current_sha256, 64)
     _sha(expected_legacy_sha256, 64)
+    if not isinstance(current_artifact_bytes, bytes):
+        raise ValueError("Current artifact must be immutable bytes")
+    if hashlib.sha256(current_artifact_bytes).hexdigest() != expected_current_sha256:
+        raise ValueError("Current artifact digest mismatch")
     if not isinstance(legacy_artifact_bytes, bytes):
         raise ValueError("Shadow artifact must be immutable bytes")
     if hashlib.sha256(legacy_artifact_bytes).hexdigest() != expected_legacy_sha256:
         raise ValueError("Legacy artifact digest mismatch")
     try:
+        current = json.loads(current_artifact_bytes)
         shadow = json.loads(legacy_artifact_bytes)
     except (ValueError, UnicodeError) as exc:
         raise ValueError("Invalid shadow JSON") from exc
@@ -99,7 +106,8 @@ def compare(current, legacy_artifact_bytes, *, expected_ledger_sha256,
         raise ValueError("Current PAPER report not independently anchored")
     _sha(current.get("source_sha"), 40)
     _sha(current.get("ledger_commit"), 40)
-    if not isinstance(current.get("run_id"), str) or not RUN.fullmatch(current["run_id"]):
+    if (not isinstance(expected_current_run_id, str) or not RUN.fullmatch(expected_current_run_id)
+            or current.get("run_id") != expected_current_run_id):
         raise ValueError("Invalid PAPER run provenance")
     if (shadow.get("schema") != 1 or shadow.get("mode") != "LEGACY_INSPIRED_SHADOW"
             or shadow.get("independent_execution") is not True
