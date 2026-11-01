@@ -11,6 +11,8 @@ import json
 import math
 import re
 
+from .scanner import STABLE
+
 HEX40 = re.compile(r"[0-9a-f]{40}\Z")
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 RUN = re.compile(r"[0-9]+\Z")
@@ -51,7 +53,8 @@ def _candidates(rows, *, as_of, legacy):
         if not isinstance(item, dict):
             raise ValueError("Invalid candidate")
         symbol = item.get("symbol")
-        if not isinstance(symbol, str) or not SYMBOL.fullmatch(symbol) or symbol in out:
+        if (not isinstance(symbol, str) or not SYMBOL.fullmatch(symbol) or symbol in out
+                or symbol[:-4] in STABLE):
             raise ValueError("Ambiguous or duplicate canonical Kraken symbol")
         if item.get("rank") != i or type(item.get("rank")) is not int:
             raise ValueError("Invalid candidate ranking")
