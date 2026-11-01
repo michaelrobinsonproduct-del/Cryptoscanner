@@ -210,6 +210,49 @@ class OwnerFallbackTests(unittest.TestCase):
         f["paper_runs"]["workflow_runs"] *= 100
         self.assertEqual(decide(**f)["reason"], "DUPLICATE_OR_INVALID_WRITER_RUN_ID")
 
+    def test_completed_premerge_feature_branch_writer_is_not_a_live_writer(self):
+        f = fixture()
+        old = copy.deepcopy(f["paper_runs"]["workflow_runs"][0])
+        old.update(id=WRITER_ID - 1, head_branch="proof-of-value-paper-20261031",
+                   event="push", created_at=iso(-20), updated_at=iso(-19))
+        f["paper_runs"]["workflow_runs"].append(old)
+        self.assertEqual(decide(**f)["action"], "RUN_SHADOW")
+        # A historical branch run cannot be allowed to hide an active writer.
+        old.update(status="in_progress", conclusion=None)
+        self.assertEqual(decide(**f)["reason"], "ACTIVE_OR_AMBIGUOUS_WRITER")
+
+    def test_latest_writer_must_still_be_on_main(self):
+        f = fixture()
+        f["paper_runs"]["workflow_runs"][0]["head_branch"] = "proof-of-value-paper-20261031"
+        self.assertEqual(decide(**f)["reason"], "UNTRUSTED_WRITER_RUN_HISTORY")
+
+    def test_historical_writer_repository_and_workflow_identity_still_strict(self):
+        for field, value in (("name", "Other Workflow"),
+                             ("path", ".github/workflows/other.yml"),
+                             ("repository", {"full_name": "attacker/fork"})):
+            f = fixture()
+            old = copy.deepcopy(f["paper_runs"]["workflow_runs"][0])
+            old.update(id=WRITER_ID - 1, head_branch="old-feature",
+                       event="push", created_at=iso(-20), updated_at=iso(-19))
+            old[field] = value
+            f["paper_runs"]["workflow_runs"].append(old)
+            self.assertEqual(decide(**f)["reason"], "UNTRUSTED_WRITER_RUN_HISTORY")
+
+    def test_full_writer_page_with_completed_feature_branch_tail(self):
+        f = fixture()
+        latest = f["paper_runs"]["workflow_runs"][0]
+        for n in range(1, 100):
+            old = copy.deepcopy(latest)
+            old.update(id=WRITER_ID - n, created_at=iso(-7 - n),
+                       updated_at=iso(-3 - n))
+            if n >= 40:
+                old.update(head_branch="proof-of-value-paper-20261031", event="push")
+            f["paper_runs"]["workflow_runs"].append(old)
+        self.assertEqual(decide(**f)["action"], "RUN_SHADOW")
+        # A non-main historical run is safe only if it has truly finished.
+        f["paper_runs"]["workflow_runs"][-1]["status"] = "queued"
+        self.assertEqual(decide(**f)["reason"], "ACTIVE_OR_AMBIGUOUS_WRITER")
+
     def test_full_writer_page_with_unique_ordered_history_is_usable(self):
         f = fixture()
         latest = f["paper_runs"]["workflow_runs"][0]
