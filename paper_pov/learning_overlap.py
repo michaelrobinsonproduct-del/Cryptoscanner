@@ -119,6 +119,11 @@ def compare(current_artifact_bytes, legacy_artifact_bytes, *, expected_current_s
             or shadow.get("strategy_name") in (None, "", "baseline", "challenger")):
         raise ValueError("No independently identified legacy-inspired strategy")
     _sha(shadow.get("source_sha"), 40)
+    # Time proximity alone does not prove this shadow belongs to this PAPER run.
+    # Require the independent shadow execution to identify its actual trigger.
+    if (not isinstance(shadow.get("trigger_paper_run_id"), str)
+            or shadow["trigger_paper_run_id"] != current["run_id"]):
+        raise ValueError("Shadow trigger PAPER run provenance mismatch")
     if (not isinstance(expected_legacy_run_id, str) or not RUN.fullmatch(expected_legacy_run_id)
             or shadow.get("run_id") != expected_legacy_run_id
             or shadow["run_id"] == current["run_id"]):
