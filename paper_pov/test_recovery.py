@@ -131,6 +131,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("PAPER_RECOVERY_LEDGER_MOVED_ABORT", workflow)
         self.assertIn("PAPER_RECOVERY_RECHECK_ABORT", workflow)
+        self.assertIn("PAPER_RECOVERY_MAIN_CHANGED_ABORT", workflow)
         self.assertIn("PAPER_RECOVERY_ATTEMPT_READBACK_VERIFIED", workflow)
         self.assertEqual(workflow.count("--jq '.[] | {body,created_at} | @json'"), 2)
         self.assertIn("github.event.workflow_run.event == 'schedule'", workflow)
