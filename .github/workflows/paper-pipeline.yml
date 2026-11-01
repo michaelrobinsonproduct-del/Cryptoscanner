@@ -184,3 +184,68 @@ jobs:
           assert actual==expected, "Issue scoreboard readback mismatch"
           print("PAPER_ISSUE_READBACK_VERIFIED")
           PY
+      - name: Publish explicit failed-run paper results
+        if: ${{ failure() }}
+        run: |
+          set -euo pipefail
+          # A failed ledger-push step can leave checkout on the ledger branch.
+          # Recover the exact source SHA's reporting script, never execute ledger code.
+          # Always load the immutable exact-source script even if checkout is on the ledger branch.
+          git show "${GITHUB_SHA}:paper_pov/failure_report.py" > /tmp/paper-failure-report.py
+          python /tmp/paper-failure-report.py \
+            --run-id "$GITHUB_RUN_ID" --source-sha "$GITHUB_SHA" \
+            --output-dir /tmp/paper-failure-results
+          (cd /tmp/paper-failure-results && sha256sum -c SHA256SUMS)
+          cat /tmp/paper-failure-results/results.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve failed-run report artifact
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-paper-failure-${{ github.run_id }}
+          path: |
+            /tmp/paper-failure-results/results.md
+            /tmp/paper-failure-results/results.json
+            /tmp/paper-failure-results/SHA256SUMS
+          retention-days: 90
+          if-no-files-found: warn
+      - name: Index failed-run results in issue 34 with readback
+        if: ${{ failure() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # The independent paper monitor remains the fallback if this issue API call fails.
+          test -f /tmp/paper-failure-results/results.json
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=json.loads(Path("/tmp/paper-failure-results/results.json").read_text())
+          assert p["status"]=="FAILED_PAPER_ONLY"
+          lines=[
+            "### Public paper POV — FAILED run "+p["run_id"],
+            "UTC failure report: "+p["as_of"],
+            "GitHub run and failure logs: "+p["run_url"],
+            "Exact source SHA: "+p["source_sha"],
+            "No successful scan, freshness, eligible universe, WATCH results, ledger generation, "
+            "outcomes or recovery is claimed by this failure report.",
+            "The ledger MAY have been committed before a downstream step failed; "
+            "inspect remote history before retry. No automatic retry or second writer.",
+            "Checksummed failure report artifact: public-paper-failure-"+p["run_id"]+
+            " (90-day GitHub artifact, if upload succeeded).",
+            "Independent paper monitor remains responsible for missed-run alerts."
+          ]
+          Path("/tmp/paper-failure-issue.txt").write_text("\n\n".join(lines))
+          PY
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/34/comments" \
+            -f body="$(cat /tmp/paper-failure-issue.txt)" > /tmp/paper-failure-comment.json
+          python - <<'PY' > /tmp/paper-failure-comment-id.txt
+          import json
+          print(json.load(open("/tmp/paper-failure-comment.json"))["id"])
+          PY
+          gh api "repos/${GITHUB_REPOSITORY}/issues/comments/$(cat /tmp/paper-failure-comment-id.txt)" > /tmp/paper-failure-readback.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          assert json.loads(Path("/tmp/paper-failure-readback.json").read_text())["body"]==Path("/tmp/paper-failure-issue.txt").read_text()
+          print("PAPER_FAILURE_ISSUE_READBACK_VERIFIED")
+          PY
