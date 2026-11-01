@@ -39,12 +39,12 @@ jobs:
       - name: Validate immutable owner event and bounded freshness (fail closed)
         run: |
           set -euo pipefail
-          python -m paper_pov.external_heartbeat_guard \\
-            --event "$GITHUB_EVENT_PATH" \\
-            --repository "$GITHUB_REPOSITORY" \\
-            --actor "$GITHUB_ACTOR" \\
-            --ref "$GITHUB_REF" \\
-            --event-name "$GITHUB_EVENT_NAME" \\
+          python -m paper_pov.external_heartbeat_guard \
+            --event "$GITHUB_EVENT_PATH" \
+            --repository "$GITHUB_REPOSITORY" \
+            --actor "$GITHUB_ACTOR" \
+            --ref "$GITHUB_REF" \
+            --event-name "$GITHUB_EVENT_NAME" \
             --output "$RUNNER_TEMP/paper-owner-intent.json"
       - name: Dispatch existing fail-closed recovery controller only
         uses: actions/github-script@v7
