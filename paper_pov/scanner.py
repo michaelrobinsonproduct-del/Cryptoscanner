@@ -50,14 +50,22 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     started = clock().astimezone(UTC)
     pairs = api("AssetPairs")
     eligible = {}
+    online_usd_pairs = 0
+    excluded_stablecoin_pairs = 0
+    excluded_other_pairs = 0
     for key, meta in pairs.items():
         if not isinstance(meta, dict) or meta.get("status") != "online":
             continue
         name = meta.get("wsname", "")
         if not isinstance(name, str) or not name.endswith("/USD"):
             continue
+        online_usd_pairs += 1
         base = name.split("/")[0].upper()
-        if base in STABLE or base.endswith(".S") or base.endswith(".M"):
+        if base in STABLE:
+            excluded_stablecoin_pairs += 1
+            continue
+        if base.endswith(".S") or base.endswith(".M"):
+            excluded_other_pairs += 1
             continue
         eligible[key] = name
     if len(eligible) < 20:
@@ -197,7 +205,9 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         "source": "Kraken public REST (ticker client-observed; OHLC completed)",
         "started_at": started.isoformat(), "as_of": as_of,
         "ticker_move_reference": "kraken_ticker_today_open_utc",
-        "eligible_pairs": len(eligible), "matched_tickers": matched,
+        "eligible_pairs": len(eligible), "online_usd_pairs": online_usd_pairs,
+        "excluded_stablecoin_pairs": excluded_stablecoin_pairs,
+        "excluded_other_pairs": excluded_other_pairs, "matched_tickers": matched,
         "observed_markets": len(observations), "ohlc_screened": len(selected),
         "watch": watch, "observations": observations, "abstentions": abstentions,
         "forward_labels": 0, "held_out_lift": None, "production_applied": False}
