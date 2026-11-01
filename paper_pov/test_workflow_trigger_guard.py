@@ -24,9 +24,9 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         )
         self.assertEqual(text.count("if: github.ref == 'refs/heads/main'"), 1)
 
-    def test_stage_one_single_hourly_schedule_and_single_writer_unchanged(self):
+    def test_twice_hourly_schedule_and_single_writer_unchanged(self):
         text = PIPELINE.read_text()
-        self.assertEqual(re.findall(r"(?m)^\s*-\s*cron:\s*['\"]([^'\"]+)['\"]", text), ["9 * * * *"])
+        self.assertEqual(re.findall(r"(?m)^\s*-\s*cron:\s*['\"]([^'\"]+)['\"]", text), ["9,39 * * * *"])
         self.assertIn("group: public-paper-proof-ledger-single-writer", text)
         self.assertIn("cancel-in-progress: false", text)
         self.assertEqual(text.count("git push origin HEAD:refs/heads/paper-proof-ledger"), 1)
