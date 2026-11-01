@@ -3,7 +3,6 @@
 This event is deliberately NOT a second scanner or ledger writer.  The
 separately reviewed recovery controller owns all durable CAS and dispatch gates.
 """
-import re
 import unittest
 from pathlib import Path
 
