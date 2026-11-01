@@ -16,6 +16,8 @@ def fixture():
         "mode": "PAPER_ONLY", "buy_approved": False, "production_applied": False,
         "forward_labels": 0, "started_at": "2026-10-31T20:27:00+00:00",
         "as_of": NOW, "eligible_pairs": 620, "observed_markets": 2,
+        "online_usd_pairs": 632, "excluded_stablecoin_pairs": 10,
+        "excluded_other_pairs": 2,
         "ohlc_screened": 2, "abstentions": [{"pair": "XYZUSD", "reason": "gap"}],
         "observations": [
             {"pair": "XBTUSD", "symbol": "XBT/USD", "price": 71000.0, "observed_at": QUOTE},
@@ -153,6 +155,11 @@ class PaperResultsContracts(unittest.TestCase):
         self.assertIn("WATCH", md)
         self.assertIn("NOT CALIBRATED", md)
         self.assertIn("exchange-event freshness is NOT independently proven", md)
+        self.assertEqual(payload["online_usd_pairs"], 632)
+        self.assertEqual(payload["excluded_stablecoin_pairs"], 10)
+        self.assertEqual(payload["stablecoin_exclusion_count"], 10)
+        self.assertIn("stablecoin-base exclusions: 10", md)
+        self.assertIn("counted from this scan's online AssetPairs metadata", md)
 
     def test_reject_trading_authorization(self):
         s, b = fixture()
@@ -302,6 +309,21 @@ class PaperResultsContracts(unittest.TestCase):
             s[field] = bad
             with self.subTest(field=field, bad=bad), self.assertRaises(ValueError):
                 self.report(s, b)
+
+    def test_reject_missing_or_fabricated_exclusion_partition(self):
+        for field, bad in (("online_usd_pairs", 631),
+                           ("excluded_stablecoin_pairs", 11),
+                           ("excluded_other_pairs", -1),
+                           ("excluded_stablecoin_pairs", True),
+                           ("online_usd_pairs", None)):
+            s, b = fixture()
+            s[field] = bad
+            with self.subTest(field=field, bad=bad), self.assertRaises(ValueError):
+                self.report(s, b)
+        s, b = fixture()
+        del s["excluded_stablecoin_pairs"]
+        with self.assertRaises(ValueError):
+            self.report(s, b)
 
     def test_reject_nonregressing_but_wrong_scan_count(self):
         s, b = fixture()

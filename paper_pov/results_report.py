@@ -76,9 +76,13 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         raise ValueError("Inconsistent scoreboard")
     if score["observed_30pct_hits"] > score["matured_labels"]:
         raise ValueError("Observed hits exceed eligible matured labels")
-    for field in ("eligible_pairs", "observed_markets", "ohlc_screened"):
+    for field in ("eligible_pairs", "observed_markets", "ohlc_screened",
+                  "online_usd_pairs", "excluded_stablecoin_pairs", "excluded_other_pairs"):
         if type(scan.get(field)) is not int or scan[field] < 0:
             raise ValueError("Invalid market coverage " + field)
+    if (scan["online_usd_pairs"] != scan["eligible_pairs"] +
+            scan["excluded_stablecoin_pairs"] + scan["excluded_other_pairs"]):
+        raise ValueError("Kraken USD eligibility partition mismatch")
     if not len(observations) <= scan["eligible_pairs"] or not scan["ohlc_screened"] <= len(observations):
         raise ValueError("Market coverage exceeds observed/eligible universe")
     if score["market_observations"] < len(observations):
@@ -121,7 +125,10 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         "",
         f"**Freshness:** Kraken public ticker client-observed, max quote age {max(ages):.0f}s (limit 600s). "
         "Ticker exchange-event freshness is NOT independently proven.",
-        f"**Eligible Kraken USD pairs:** {scan['eligible_pairs']}; "
+        f"**Kraken online /USD pairs:** {scan['online_usd_pairs']}; "
+        f"stablecoin-base exclusions: {scan['excluded_stablecoin_pairs']}; "
+        f"other suffix exclusions: {scan['excluded_other_pairs']}; "
+        f"eligible pairs: {scan['eligible_pairs']}; "
         f"valid market observations: {len(observations)}; OHLC screened: {scan['ohlc_screened']}.",
         "",
         "## Top WATCH candidates — paper only",
@@ -199,8 +206,9 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         f"- Observed +30% hits: {score['observed_30pct_hits']} (sampled only; not a success-rate estimate).",
         "- False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.",
         "- Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.",
-        "- Stablecoin bases excluded by scanner policy: " + ", ".join(sorted(STABLE))
-        + ". Exact excluded count NOT RECORDED.",
+        f"- Online Kraken /USD stablecoin-base pairs excluded: {scan['excluded_stablecoin_pairs']} "
+        "(counted from this scan's online AssetPairs metadata, not inferred from price).",
+        "- Stablecoin base exclusions: " + ", ".join(sorted(STABLE)) + ".",
         "- DEX: NOT USED; no DEX freshness gate.",
         f"- OHLC screening abstentions: {len(abstentions)}; "
         "details in immutable scan JSON artifact.",
@@ -217,10 +225,15 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
                "scheduled_start_punctuality_verified": False,
                "ledger_commit": ledger_commit, "ledger_generation": score["generation"],
                "ledger_sha256": score["ledger_sha256"], "remote_readback_verified": True,
-               "eligible_pairs": scan["eligible_pairs"], "observed_markets": len(observations),
+               "eligible_pairs": scan["eligible_pairs"],
+               "online_usd_pairs": scan["online_usd_pairs"],
+               "excluded_stablecoin_pairs": scan["excluded_stablecoin_pairs"],
+               "excluded_other_pairs": scan["excluded_other_pairs"],
+               "observed_markets": len(observations),
                "max_client_quote_age_seconds": max(ages),
                "exchange_event_freshness_verified": False, "candidates": records,
-               "stablecoin_exclusion_count": None, "abstentions": len(abstentions),
+               "stablecoin_exclusion_count": scan["excluded_stablecoin_pairs"],
+               "abstentions": len(abstentions),
                "matured_labels": score["matured_labels"], "gap_abstentions": score["gap_abstentions"],
                "observed_30pct_hits": score["observed_30pct_hits"],
                "false_positives": None, "missed_movers": None, "held_out_lift": None,

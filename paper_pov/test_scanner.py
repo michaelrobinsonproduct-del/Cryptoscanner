@@ -49,6 +49,9 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(a["forward_labels"], 0)
         self.assertIsNone(a["held_out_lift"])
         self.assertEqual(a["observed_markets"], 25)
+        self.assertEqual(a["online_usd_pairs"], 25)
+        self.assertEqual(a["excluded_stablecoin_pairs"], 0)
+        self.assertEqual(a["excluded_other_pairs"], 0)
         self.assertEqual(len(a["watch"]), 12)
         self.assertEqual(len({x["prediction_id"] for x in a["watch"]}), 12)
         self.assertTrue(all(x["ohlc_age_seconds"] <= 600 for x in a["watch"]))
@@ -73,6 +76,11 @@ class PaperScanTests(unittest.TestCase):
     def test_stablecoin_is_excluded(self):
         result = run(stable=True)
         self.assertEqual(result["eligible_pairs"], 25)
+        self.assertEqual(result["online_usd_pairs"], 38)
+        self.assertEqual(result["excluded_stablecoin_pairs"], 13)
+        self.assertEqual(result["excluded_other_pairs"], 0)
+        self.assertEqual(result["online_usd_pairs"], result["eligible_pairs"] +
+                         result["excluded_stablecoin_pairs"] + result["excluded_other_pairs"])
         observed = {x["pair"] for x in result["observations"]}
         watched = {x["pair"] for x in result["watch"]}
         for base in ("USDT", "BRL1", "QCAD", "USDG", "USDQ", "USDS",
@@ -80,6 +88,20 @@ class PaperScanTests(unittest.TestCase):
             with self.subTest(stablecoin=base):
                 self.assertNotIn(base + "USD", observed)
                 self.assertNotIn(base + "USD", watched)
+
+    def test_suffix_exclusions_are_counted_separately_from_stablecoins(self):
+        def api(path):
+            data = fixture()(path)
+            if path == "AssetPairs":
+                data["STAKEDUSD"] = {"status": "online", "wsname": "XBT.S/USD"}
+                data["MARGINUSD"] = {"status": "online", "wsname": "XBT.M/USD"}
+                data["OFFLINEUSD"] = {"status": "cancel_only", "wsname": "USDT/USD"}
+            return data
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["eligible_pairs"], 25)
+        self.assertEqual(report["online_usd_pairs"], 27)
+        self.assertEqual(report["excluded_stablecoin_pairs"], 0)
+        self.assertEqual(report["excluded_other_pairs"], 2)
 
     def test_documented_fiat_pegs_are_explicitly_excluded(self):
         # The source-backed fixture catches omissions even if ranking changes.
