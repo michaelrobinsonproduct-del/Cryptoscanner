@@ -95,6 +95,19 @@ class RecoveryTests(unittest.TestCase):
         for item in (dict(scan(), head_branch="dev"), dict(scan(), event="pull_request")):
             self.assertEqual(decision(runs=[item])["action"], "BLOCKED")
 
+    def test_missing_main_branch_fails_closed(self):
+        for branch in (None, ""):
+            with self.subTest(branch=branch):
+                d = decision(runs=[dict(scan(), head_branch=branch)])
+                self.assertEqual((d["action"], d["reason"]), ("BLOCKED", "RUN_BRANCH_NOT_MAIN"))
+
+    def test_unknown_or_missing_run_status_fails_closed(self):
+        for status in (None, "unknown", "startup_failure"):
+            with self.subTest(status=status):
+                newer = scan(124, "2026-10-31T23:20:00Z", status=status, conclusion=None)
+                d = decision(runs=[scan(), newer])
+                self.assertEqual((d["action"], d["reason"]), ("BLOCKED", "RUN_STATUS_INVALID"))
+
     def test_missing_run_api_fails_closed(self):
         self.assertEqual(decide({"error": "rate limited"}, [], fixture(), COMMIT, MESSAGE, NOW)["action"], "BLOCKED")
 
