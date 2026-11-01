@@ -80,7 +80,19 @@ def stage(root, base, report, source_sha, destination):
             restored, _ = segments.read_state(initial, full_replay=True)
             if restored != before:
                 raise ValueError("Source segmented state mismatch")
-        info = segments.stage_append(initial, report, source_sha, destination)
+        try:
+            info = segments.stage_append(initial, report, source_sha, destination)
+        except ValueError as exc:
+            # A budget stop must never become a skipped scan or silent deletion.
+            # Only a verified packed predecessor can be rolled forward; its
+            # exact Git commit permanently retains the old immutable segments.
+            if mode != "segmented" or not (
+                    "archive rollover required" in str(exc) or
+                    "Segment archive count limit reached" in str(exc)):
+                raise
+            archived = Path(temp) / "archived-checkpoint"
+            segments.stage_rollover(initial, base, archived)
+            info = segments.stage_append(archived, report, source_sha, destination)
     after, manifest = segments.read_state(destination, full_replay=True)
     if after["generation"] != before["generation"] + 1:
         raise ValueError("Storage generation did not advance exactly once")
@@ -92,17 +104,40 @@ def stage(root, base, report, source_sha, destination):
 
 
 def changed_paths(root, base, staged):
-    """Exactly the atomic transaction files, not all historical segments."""
-    _, mode, _ = inventory(root, base)
+    """Exact atomic additions, modifications AND archived-segment deletions."""
+    before, mode, _ = inventory(root, base)
     state, manifest = segments.read_state(staged, full_replay=True)
+    if state["generation"] != before["generation"] + 1:
+        raise ValueError("Staged scan generation mismatch")
     new_segment = segments._segment_path(state["generation"])
     paths = [segments.MANIFEST, segments.SNAPSHOT, new_segment]
     if mode == "legacy":
+        if manifest["checkpoint"]["git_commit"] != base:
+            raise ValueError("Migration checkpoint must reference exact base")
         paths.append(segments.CHECKPOINT)
     else:
         old_checkpoint = show(root, base, segments.CHECKPOINT, storage.MAX_RAW_BYTES)
-        if old_checkpoint != (Path(staged) / segments.CHECKPOINT).read_bytes():
-            raise ValueError("Immutable checkpoint modified")
+        old_manifest = json.loads(show(root, base, segments.MANIFEST,
+                                       segments.MAX_MANIFEST_BYTES))
+        old_meta = old_manifest["checkpoint"]
+        new_meta = manifest["checkpoint"]
+        if new_meta == old_meta:
+            if old_checkpoint != (Path(staged) / segments.CHECKPOINT).read_bytes():
+                raise ValueError("Immutable checkpoint modified")
+        else:
+            # Rollover must anchor the full previous ledger, never an
+            # arbitrary older or unrelated commit. Every retired segment
+            # remains recoverable at the exact base commit in Git history.
+            if (not old_manifest["segments"] or
+                    new_meta["git_commit"] != base or
+                    new_meta["generation"] != before["generation"] or
+                    new_meta["ledger_sha256"] != before["sha256"] or
+                    (Path(staged) / segments.CHECKPOINT).read_bytes() !=
+                    ledger.canonical(before) or len(manifest["segments"]) != 1):
+                raise ValueError("Unverified archived checkpoint rollover")
+            paths.append(segments.CHECKPOINT)
+            paths.extend(segments._segment_path(e["generation"])
+                         for e in old_manifest["segments"])
     return sorted(paths)
 
 
@@ -121,24 +156,26 @@ def apply(root, base, staged):
     paths = changed_paths(root, base, staged)
     for path in paths:
         source = staged / path
-        data = segments._read(source, segments.MAX_MANIFEST_BYTES if path == segments.MANIFEST
-                              else storage.MAX_RAW_BYTES if path == segments.CHECKPOINT
-                              else storage.MAX_PACKED_BYTES)
         target = root / path
         if target.is_symlink() or any(p.is_symlink() for p in target.parents if p != root.parent):
             raise ValueError("Unsafe storage destination")
+        if not source.exists():
+            if not path.startswith(segments.SEGMENTS + "/") or not target.is_file():
+                raise ValueError("Unexpected archive deletion")
+            git(root, "rm", "--", path)
+            continue
+        data = segments._read(source, segments.MAX_MANIFEST_BYTES if path == segments.MANIFEST
+                              else storage.MAX_RAW_BYTES if path == segments.CHECKPOINT
+                              else storage.MAX_PACKED_BYTES)
         target.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(dir=target.parent, prefix=".paper-txn-",
                                          delete=False) as f:
             tmp = Path(f.name)
-            try:
-                f.write(data)
-                f.flush()
-                os.fsync(f.fileno())
-            finally:
-                pass
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
         os.replace(tmp, target)
-    git(root, "add", "--", *paths)
+    git(root, "add", "--", *[p for p in paths if (staged / p).exists()])
     actual = sorted(git(root, "diff", "--cached", "--name-only").decode().splitlines())
     if actual != paths:
         raise ValueError("Unexpected staged Git changes")
@@ -161,6 +198,11 @@ def verify_remote(root, base, new_commit, staged):
     if actual != paths:
         raise ValueError("Remote Git commit changed unexpected paths")
     for path in paths:
+        if not (staged / path).exists():
+            if not segments._git_has(root, base, path) or segments._git_has(
+                    root, new_commit, path):
+                raise ValueError("Archived segment deletion not verified")
+            continue
         local = segments._read(staged / path, segments.MAX_MANIFEST_BYTES if path == segments.MANIFEST
                                else storage.MAX_RAW_BYTES if path == segments.CHECKPOINT
                                else storage.MAX_PACKED_BYTES)
