@@ -112,7 +112,9 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
         return abstain("LEDGER_NOT_LINKED_TO_NEWEST_SUCCESS", True)
     if latest_asof < newest_at - dt.timedelta(minutes=2):
         return abstain("LEDGER_ASOF_BEFORE_RUN", True)
-    if now - newest_at < MIN_SUCCESS_AGE:
+    # A queued/delayed scan may finish long after GitHub created its run.
+    # Use the newer of start and immutable market as-of to avoid a rapid retry.
+    if now - max(newest_at, latest_asof) < MIN_SUCCESS_AGE:
         return abstain("RECENT_SUCCESS")
 
     matured = scheduled_slots(now, 9, 30)
