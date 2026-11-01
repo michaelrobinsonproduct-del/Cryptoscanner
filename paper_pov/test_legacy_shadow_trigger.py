@@ -207,7 +207,44 @@ class OwnerFallbackTests(unittest.TestCase):
         self.assertEqual(decide(**f)["reason"], "SHADOW_PAGINATION_AMBIGUITY")
         f = fixture()
         f["paper_runs"]["workflow_runs"] *= 100
-        self.assertEqual(decide(**f)["reason"], "EMPTY_OR_PAGINATION_AMBIGUITY")
+        self.assertEqual(decide(**f)["reason"], "DUPLICATE_OR_INVALID_WRITER_RUN_ID")
+
+    def test_full_writer_page_with_unique_ordered_history_is_usable(self):
+        f = fixture()
+        latest = f["paper_runs"]["workflow_runs"][0]
+        older = []
+        for n in range(1, 100):
+            run = copy.deepcopy(latest)
+            run["id"] = WRITER_ID - n
+            run["created_at"] = iso(-7 - n)
+            run["updated_at"] = iso(-3 - n)
+            older.append(run)
+        f["paper_runs"]["workflow_runs"].extend(older)
+        self.assertEqual(decide(**f)["action"], "RUN_SHADOW")
+        f["paper_runs"]["workflow_runs"][1], f["paper_runs"]["workflow_runs"][2] = (
+            f["paper_runs"]["workflow_runs"][2], f["paper_runs"]["workflow_runs"][1])
+        self.assertEqual(decide(**f)["reason"], "UNSORTED_WRITER_HISTORY")
+
+    def test_full_shadow_page_must_cover_entire_writer_window(self):
+        f = fixture()
+        latest_skipped = {
+            "id": CURRENT_ID + 1, "name": gate.SHADOW,
+            "path": gate.SHADOW_PATH, "repository": {"full_name": gate.REPO},
+            "created_at": iso(-2), "event": "issue_comment",
+            "status": "completed", "conclusion": "skipped"}
+        history = [latest_skipped]
+        for n in range(99):
+            old = copy.deepcopy(latest_skipped)
+            old["id"] = CURRENT_ID - 1 - n
+            old["created_at"] = iso(-8 - n)
+            history.append(old)
+        f["shadow_runs"]["workflow_runs"] = history
+        self.assertEqual(decide(**f)["action"], "RUN_SHADOW")
+        for old in history[1:]:
+            old["created_at"] = iso(-2)
+        self.assertEqual(decide(**f)["reason"], "SHADOW_PAGINATION_AMBIGUITY")
+        history[1]["created_at"] = iso(-1)
+        self.assertEqual(decide(**f)["reason"], "SHADOW_PAGINATION_AMBIGUITY")
 
     def test_invalid_clock_and_utc_timestamp_rejected(self):
         f = fixture()
