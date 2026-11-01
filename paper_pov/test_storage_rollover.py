@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from paper_pov import ledger, segmented_live_writer as live
+from paper_pov import segmented_storage as storage
 from paper_pov import segmented_repository as repo
 from paper_pov.test_ledger import synthetic, SHA
 
@@ -69,7 +70,10 @@ class RolloverTests(unittest.TestCase):
         self.assertEqual(new_manifest["segments"], [])
         self.assertEqual(new_manifest["checkpoint"]["git_commit"], base)
         self.assertEqual(new_manifest["checkpoint"]["generation"], 5)
-        self.assertEqual((archived / repo.CHECKPOINT).read_bytes(), ledger.canonical(prior))
+        self.assertEqual((archived / repo.CHECKPOINT).read_bytes(),
+                         storage.pack_snapshot(prior))
+        self.assertLess(repo.active_storage_bytes(archived),
+                        repo.active_storage_bytes(initial))
         final = self.root / "final"
         repo.stage_append(archived, synthetic(150), SHA, final)
         paths = live.changed_paths(self.gitdir, base, final)
