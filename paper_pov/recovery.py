@@ -67,8 +67,10 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
         for item in runs:
             if not isinstance(item, dict) or item.get("event") not in ("schedule", "workflow_dispatch"):
                 return abstain("RUN_EVENT_INVALID", True)
-            if item.get("head_branch") not in (None, "main"):
+            if item.get("head_branch") != "main":
                 return abstain("RUN_BRANCH_NOT_MAIN", True)
+            if item.get("status") not in ACTIVE and item.get("status") != "completed":
+                return abstain("RUN_STATUS_INVALID", True)
             at = instant(item["created_at"])
             if at > now + dt.timedelta(minutes=2):
                 return abstain("FUTURE_RUN_TIMESTAMP", True)
