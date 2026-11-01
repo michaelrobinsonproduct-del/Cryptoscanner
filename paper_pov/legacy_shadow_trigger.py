@@ -76,13 +76,18 @@ def decide(event, paper_runs, shadow_runs, state, manifest, ledger_message,
         return _abstain("UNSORTED_WRITER_HISTORY")
     if len(papers) > 1 and stamp(papers[0].get("created_at")) == stamp(papers[1].get("created_at")):
         return _abstain("AMBIGUOUS_LATEST_WRITER")
-    for run in papers:
+    # GitHub's workflow-specific history includes older successful push/PR
+    # executions from the pre-merge feature branch. They cannot supersede the
+    # newest sealed main writer; rejecting them forever starves the fallback.
+    # Keep immutable workflow/repository identity strict for EVERY history row,
+    # require the latest writer to be main, and abstain on ANY active writer.
+    for index, run in enumerate(papers):
         if (run.get("name") != PAPER or run.get("path") != PAPER_PATH
                 or run.get("repository", {}).get("full_name") != REPO
-                or run.get("head_branch") != "main"):
+                or (index == 0 and run.get("head_branch") != "main")):
             return _abstain("UNTRUSTED_WRITER_RUN_HISTORY")
     writer = papers[0]
-    if any(r.get("status") != "completed" for r in papers[:3]):
+    if any(r.get("status") != "completed" for r in papers):
         return _abstain("ACTIVE_OR_AMBIGUOUS_WRITER")
     if (writer.get("status") != "completed" or writer.get("conclusion") != "success"
             or writer.get("event") not in ("schedule", "workflow_dispatch")
