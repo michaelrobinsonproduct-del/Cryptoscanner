@@ -1,0 +1,76 @@
+name: Owner-authenticated external paper recovery wake (no ledger writes)
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: paper-owner-external-wake
+  cancel-in-progress: false
+jobs:
+  wake-existing-controller:
+    # GitHub's own cron is not a reliable independent recovery heartbeat.
+    # This path is activated only by an exact owner-authenticated comment
+    # posted to issue #34 by an external scheduler; never by issue text.
+    if: >-
+      github.repository == 'michaelrobinsonproduct-del/Cryptoscanner' &&
+      github.ref == 'refs/heads/main' &&
+      github.event.action == 'created' &&
+      github.event.issue.number == 34 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.user.login == 'michaelrobinsonproduct-del' &&
+      github.event.comment.user.id == 336805669 &&
+      github.event.comment.author_association == 'OWNER' &&
+      github.event.sender.login == 'michaelrobinsonproduct-del' &&
+      github.event.sender.id == 336805669 &&
+      github.event.repository.default_branch == 'main' &&
+      github.event.comment.body == '/paper-recovery-heartbeat'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate immutable owner event and bounded freshness (fail closed)
+        run: |
+          set -euo pipefail
+          python -m paper_pov.external_heartbeat_guard \
+            --event "$GITHUB_EVENT_PATH" \
+            --repository "$GITHUB_REPOSITORY" \
+            --actor "$GITHUB_ACTOR" \
+            --ref "$GITHUB_REF" \
+            --event-name "$GITHUB_EVENT_NAME" \
+            --output "$RUNNER_TEMP/paper-owner-intent.json"
+      - name: Dispatch existing fail-closed recovery controller only
+        uses: actions/github-script@v7
+        env:
+          INTENT_PATH: ${{ runner.temp }}/paper-owner-intent.json
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const intent = JSON.parse(fs.readFileSync(process.env.INTENT_PATH, 'utf8'));
+            if (intent.action !== 'REQUEST_EXISTING_RECOVERY_CONTROLLER_ONLY' ||
+                intent.workflow !== 'paper-recovery.yml' || intent.ref !== 'main' ||
+                intent.paper_only !== true || intent.issue !== 34) {
+              core.setFailed('PAPER_EXTERNAL_WAKE_INVALID_INTENT');
+              return;
+            }
+            const {owner, repo} = context.repo;
+            const workflow_id = 'paper-recovery.yml';
+            const {data: target} = await github.rest.actions.getWorkflow({
+              owner, repo, workflow_id
+            });
+            if (target.state !== 'active') {
+              core.setFailed('PAPER_RECOVERY_CONTROLLER_NOT_ACTIVE');
+              return;
+            }
+            await github.rest.actions.createWorkflowDispatch({
+              owner, repo, workflow_id, ref: 'main'
+            });
+            core.info('PAPER_EXTERNAL_WAKE_DISPATCH_ACCEPTED; recovery controller must independently recheck all safety gates');
