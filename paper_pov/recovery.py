@@ -76,9 +76,10 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
                 # The public workflow previously ran on push. Those historical
                 # completed runs are NOT scanner writers, and must not disable
                 # missed-slot recovery forever. Ignore ONLY an unambiguously
-                # old, completed, main-branch push predating the sealed ledger.
-                # Unknown, active, newer or non-main events still fail closed.
-                if (event == "push" and item.get("head_branch") == "main"
+                # old, completed, identified-branch push predating the sealed ledger.
+                # Unknown, active, newer or missing-branch events fail closed.
+                if (event == "push" and isinstance(item.get("head_branch"), str)
+                        and bool(item["head_branch"].strip())
                         and type(item.get("id")) is int and item["id"] > 0
                         and isinstance(item.get("head_sha"), str)
                         and SHA.fullmatch(item["head_sha"])
