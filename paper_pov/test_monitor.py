@@ -1,6 +1,10 @@
 """Offline failure-injection contracts for the independent paper-only monitor."""
 import datetime as dt
 import hashlib
+import os
+import subprocess
+import tempfile
+import textwrap
 import unittest
 from pathlib import Path
 
@@ -174,6 +178,57 @@ class PaperMonitorTests(unittest.TestCase):
         self.assertIn("exit 1", alert)
         self.assertNotIn("git push", alert)
         self.assertNotIn("paper-proof-ledger-single-writer", alert)
+
+    def test_upstream_monitor_failure_shell_posts_and_deduplicates_offline(self):
+        workflow = Path(".github/workflows/paper-monitor.yml").read_text()
+        section = workflow.split(
+            "      - name: Fail-closed upstream monitor failure alert (never runs scanner)\n", 1
+        )[1].split("      - uses: actions/download-artifact@v4", 1)[0]
+        body = section.split("        run: |\n", 1)[1]
+        script = "\n".join(line[10:] for line in body.splitlines()) + "\n"
+        with tempfile.TemporaryDirectory() as td:
+            stub = Path(td) / "gh"
+            stub.write_text(textwrap.dedent("""\
+                #!/usr/bin/env python3
+                import json, os, pathlib, sys
+                args=sys.argv[1:]
+                posted=pathlib.Path(os.environ["PAPER_TEST_GH_DIR"]) / "posted.txt"
+                path=next((x for x in args if x.startswith("repos/")), "")
+                if path.endswith("/issues/34") and "--jq" in args:
+                    print("1" if posted.exists() else "0")
+                elif "/issues/34/comments?" in path:
+                    print(json.dumps([{"body":posted.read_text()}] if posted.exists() else []))
+                elif "-X" in args and "POST" in args:
+                    body=next(x[5:] for x in args if x.startswith("body="))
+                    posted.write_text(body)
+                    print('{"id":123}')
+                elif path.endswith("/issues/comments/123"):
+                    print(json.dumps({"body":posted.read_text()}))
+                else:
+                    raise SystemExit("unexpected stub gh call: "+str(args))
+                """))
+            stub.chmod(0o755)
+            env = os.environ.copy()
+            env.update({
+                "PATH": td + os.pathsep + env.get("PATH", ""),
+                "PAPER_TEST_GH_DIR": td,
+                "GITHUB_REPOSITORY": "example/paper",
+                "GITHUB_RUN_ID": "123456",
+                "GITHUB_SHA": "a" * 40,
+                "MONITOR_UPSTREAM_RESULT": "failure",
+            })
+            first = subprocess.run(["bash", "-c", script], env=env,
+                                   capture_output=True, text=True, timeout=15)
+            self.assertEqual(first.returncode, 1, first.stderr)
+            self.assertIn("PAPER_MONITOR_FAILURE_ISSUE_READBACK_VERIFIED", first.stdout)
+            posted = (Path(td) / "posted.txt").read_text()
+            self.assertIn("PAPER_MONITOR_PIPELINE_FAILED:123456", posted)
+            self.assertIn("Scanner status, ledger integrity, freshness, outcomes and delivery are UNKNOWN", posted)
+            second = subprocess.run(["bash", "-c", script], env=env,
+                                    capture_output=True, text=True, timeout=15)
+            self.assertEqual(second.returncode, 1, second.stderr)
+            self.assertIn("PAPER_MONITOR_PIPELINE_FAILURE_ALREADY_RECORDED", second.stdout)
+            self.assertEqual((Path(td) / "posted.txt").read_text(), posted)
 
     def test_corrupted_resealed_ledger_fails_closed(self):
         state = fixture()
