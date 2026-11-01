@@ -172,8 +172,14 @@ def read_state(directory, full_replay=False):
     legacy_bytes = _read(root / CHECKPOINT, storage.MAX_RAW_BYTES)
     if sha(legacy_bytes) != checkpoint["file_sha256"]:
         raise ValueError("Checkpoint bytes changed")
-    legacy = json.loads(legacy_bytes)
-    ledger.verify(legacy, storage.MAX_RAW_BYTES)
+    checkpoint_payload = json.loads(legacy_bytes)
+    if isinstance(checkpoint_payload, dict) and checkpoint_payload.get("format") == storage.FORMAT:
+        # Rollover checkpoints are bounded packed snapshots. The initial
+        # legacy checkpoint remains byte-exact and unchanged.
+        legacy = storage.unpack_snapshot(legacy_bytes)
+    else:
+        legacy = checkpoint_payload
+        ledger.verify(legacy, storage.MAX_RAW_BYTES)
     if legacy["generation"] != checkpoint["generation"] or legacy["sha256"] != checkpoint["ledger_sha256"]:
         raise ValueError("Checkpoint identity changed")
     snapshot = _read(root / SNAPSHOT, storage.MAX_PACKED_BYTES)
@@ -286,9 +292,10 @@ def stage_rollover(previous, checkpoint_git_sha, destination):
     before, old = read_state(previous, full_replay=True)
     if not old["segments"]:
         raise ValueError("Refuse rollover without archived segment evidence")
-    checkpoint_bytes = ledger.canonical(before)
-    if len(checkpoint_bytes) > storage.MAX_RAW_BYTES:
-        raise ValueError("Rollover checkpoint exceeds raw storage limit")
+    # A raw checkpoint can exceed the entire 10MB active-tree budget once
+    # the 50h market observation window is populated. Store a second
+    # SHA-bound packed snapshot, not an unbounded raw ledger copy.
+    checkpoint_bytes = storage.pack_snapshot(before)
     snapshot = _read(Path(previous) / SNAPSHOT, storage.MAX_PACKED_BYTES)
     new = {"schema": SCHEMA,
            "checkpoint": {"git_commit": checkpoint_git_sha,
@@ -332,7 +339,7 @@ def verify_checkpoint_origin(directory, git_repository):
             raise ValueError("Partially archived checkpoint commit")
         if has_packed:
             state, mode = read_git_state(git_repository, commit, full_replay=True)
-            if mode != "segmented" or ledger.canonical(state) != checkpoint:
+            if mode != "segmented" or storage.unpack_snapshot(checkpoint) != state:
                 raise ValueError("Archived packed checkpoint differs from Git history")
         else:
             historical = _git(git_repository, "show", commit + ":paper-ledger.json")
