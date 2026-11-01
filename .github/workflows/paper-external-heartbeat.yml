@@ -1,0 +1,44 @@
+name: Owner-authenticated external paper recovery wake (no ledger writes)
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: paper-owner-external-wake
+  cancel-in-progress: false
+jobs:
+  wake-existing-controller:
+    # GitHub's own cron is not a reliable independent recovery heartbeat.
+    # This path is activated only by an exact owner-authenticated comment
+    # posted to issue #34 by an external scheduler; never by issue text.
+    if: >-
+      github.repository == 'michaelrobinsonproduct-del/Cryptoscanner' &&
+      github.ref == 'refs/heads/main' &&
+      github.event.action == 'created' &&
+      github.event.issue.number == 34 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.user.login == 'michaelrobinsonproduct-del' &&
+      github.event.comment.body == 'PAPER_RECOVERY_WAKE_V1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Dispatch existing fail-closed recovery controller only
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const {owner, repo} = context.repo;
+            const workflow_id = 'paper-recovery.yml';
+            const {data: target} = await github.rest.actions.getWorkflow({
+              owner, repo, workflow_id
+            });
+            if (target.state !== 'active') {
+              core.setFailed('PAPER_RECOVERY_CONTROLLER_NOT_ACTIVE');
+              return;
+            }
+            await github.rest.actions.createWorkflowDispatch({
+              owner, repo, workflow_id, ref: 'main'
+            });
+            core.info('PAPER_EXTERNAL_WAKE_DISPATCH_ACCEPTED; recovery controller must independently recheck all safety gates');
