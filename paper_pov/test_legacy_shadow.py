@@ -30,7 +30,7 @@ class FakeKraken:
                       for i in range(25)}
         self.pairs["USDTUSD"] = {"status": "online", "wsname": "USDT/USD"}
         self.tickers = {key: {"c": ["2"], "b": ["1.999"], "a": ["2.001"],
-                              "o": "1.9", "v": ["50000", "100000"]}
+                              "o": "1.9", "v": ["50000", "100000"], "t": ["500", "10000"]}
                         for key in self.pairs}
         self.rows = candle_rows()
         self.bad_ohlc = False
@@ -67,6 +67,7 @@ class LegacyShadowTests(unittest.TestCase):
         self.assertEqual(len(out["candidates"]), 12)
         self.assertEqual([x["rank"] for x in out["candidates"]], list(range(1, 13)))
         self.assertTrue(all(x["legacy_score"] > 0 for x in out["candidates"]))
+        self.assertTrue(all(x["trades_24h"] == 10000 for x in out["candidates"]))
         self.assertNotIn("USDT/USD", str(out["candidates"]))
         self.assertFalse(out["production_applied"])
         self.assertFalse(out["buy_approved"])
@@ -135,6 +136,12 @@ class LegacyShadowTests(unittest.TestCase):
         out = run(api)
         self.assertNotIn("C00/USD", [x["symbol"] for x in out["candidates"]])
         self.assertNotIn("C01/USD", [x["symbol"] for x in out["candidates"]])
+
+    def test_invalid_trade_count_excluded(self):
+        api = FakeKraken()
+        api.tickers["P00"]["t"] = ["0", "-1"]
+        out = run(api)
+        self.assertNotIn("C00/USD", [x["symbol"] for x in out["candidates"]])
 
     def test_naive_clock_rejected(self):
         with self.assertRaisesRegex(ValueError, "clock"):
