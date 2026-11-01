@@ -27,6 +27,7 @@ class ExternalHeartbeatContracts(unittest.TestCase):
             "github.ref == 'refs/heads/main'",
             "github.event.issue.number == 34",
             "github.event.comment.user.login == 'michaelrobinsonproduct-del'",
+            "github.event.comment.user.id == 336805669",
             "github.event.comment.body == 'PAPER_RECOVERY_WAKE_V1'",
         ):
             with self.subTest(guard=guard):
