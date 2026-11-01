@@ -109,6 +109,76 @@ def sampled_outcomes(state, evaluation_at, horizons=HORIZONS):
     return rows
 
 
+
+def sampled_mover_episode_clusters(rows, horizon_hours, threshold_pct):
+    """Group overlapping non-WATCH sampled windows; clusters are NOT independent events.
+
+    This is a descriptive deduplication of correlated entry windows, not a
+    reconstruction of exchange highs, executable opportunities or validated lift.
+    No future observations are introduced: input rows must already be matured.
+    """
+    if (not isinstance(rows, list) or type(horizon_hours) is not int
+            or horizon_hours not in HORIZONS or type(threshold_pct) is not int
+            or threshold_pct not in (20, 30)):
+        raise ValueError("Invalid sampled episode parameters")
+    key = f"observed_{threshold_pct}pct_hit"
+    by_pair = defaultdict(list)
+    seen = set()
+    for row in rows:
+        if row.get("horizon_hours") != horizon_hours:
+            continue
+        if (row.get("status") != "MATURED_OBSERVED"
+                or row.get("watch") is not False or row.get(key) is not True):
+            continue
+        pair = row.get("pair")
+        run_id = row.get("run_id")
+        peak = row.get("observed_peak_pct")
+        if (not isinstance(pair, str) or not pair
+                or not isinstance(run_id, str) or not run_id
+                or not isinstance(peak, (int, float)) or isinstance(peak, bool)
+                or not math.isfinite(peak) or peak < threshold_pct):
+            raise ValueError("Invalid sampled episode observation")
+        start = _aware(row["as_of"])
+        end = _aware(row["target_at"])
+        if end - start != dt.timedelta(hours=horizon_hours):
+            raise ValueError("Invalid sampled episode target")
+        identity = (pair, run_id)
+        if identity in seen:
+            raise ValueError("Duplicate sampled episode entry")
+        seen.add(identity)
+        by_pair[pair].append((start, end, peak))
+    clusters = []
+    for pair in sorted(by_pair):
+        current = None
+        for start, end, peak in sorted(by_pair[pair]):
+            if current is None or start > current["end"]:
+                if current is not None:
+                    clusters.append(current)
+                current = {"pair": pair, "start": start, "last_entry": start,
+                           "end": end, "windows": 1, "max_peak": peak}
+            else:
+                current["last_entry"] = start
+                current["end"] = max(current["end"], end)
+                current["windows"] += 1
+                current["max_peak"] = max(current["max_peak"], peak)
+        if current is not None:
+            clusters.append(current)
+    clusters.sort(key=lambda c: (-c["max_peak"], c["pair"], c["start"]))
+    examples = [{
+        "pair": c["pair"], "first_entry_as_of": c["start"].isoformat(),
+        "last_entry_as_of": c["last_entry"].isoformat(),
+        "last_target_at": c["end"].isoformat(),
+        "correlated_windows": c["windows"],
+        "max_sampled_peak_pct": c["max_peak"]
+    } for c in clusters[:20]]
+    return {"horizon_hours": horizon_hours, "threshold_pct": threshold_pct,
+            "raw_correlated_windows": sum(c["windows"] for c in clusters),
+            "overlap_cluster_count": len(clusters),
+            "clusters_not_independent": True,
+            "scope": "SAMPLED_QUOTES_OVERLAPPING_ENTRY_WINDOWS_ONLY",
+            "examples": examples}
+
+
 def coverage_summary(rows):
     """Overlapping market/run windows are correlated, not independent labels."""
     if not isinstance(rows, list):
@@ -218,6 +288,9 @@ def main(argv=None):
               "evaluation_as_of": as_of,
               "coverage": coverage_summary(rows),
               "sampled_nonwatch_1h_20pct_examples": misses[:20],
+              "sampled_nonwatch_overlap_clusters": {
+                  str(h): {str(t): sampled_mover_episode_clusters(rows, h, t)
+                           for t in (20, 30)} for h in HORIZONS},
               "shadow": shadow_rank_diagnostic(rows, state["runs"][0]["as_of"]),
               "held_out_lift": None, "production_applied": False}
     print(json.dumps(result, sort_keys=True, separators=(",", ":"), allow_nan=False))

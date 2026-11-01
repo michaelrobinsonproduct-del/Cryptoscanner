@@ -6,7 +6,8 @@ import unittest
 
 from paper_pov import ledger
 from paper_pov.learning_outcomes import (
-    sampled_outcomes, coverage_summary, shadow_rank_diagnostic)
+    sampled_outcomes, coverage_summary, shadow_rank_diagnostic,
+    sampled_mover_episode_clusters)
 
 UTC = dt.timezone.utc
 START = dt.datetime(2026, 10, 20, tzinfo=UTC)
@@ -184,6 +185,69 @@ if __name__ == "__main__":
     unittest.main()
 
 
+
+class SampledEpisodeClusterTests(unittest.TestCase):
+    @staticmethod
+    def row(pair, minute, peak=25, horizon=1, watch=False, status="MATURED_OBSERVED"):
+        start = START + dt.timedelta(minutes=minute)
+        return {"run_id": f"{pair}-{minute}", "pair": pair,
+                "as_of": start.isoformat(),
+                "target_at": (start + dt.timedelta(hours=horizon)).isoformat(),
+                "horizon_hours": horizon, "status": status, "watch": watch,
+                "observed_peak_pct": peak,
+                "observed_20pct_hit": peak >= 20,
+                "observed_30pct_hit": peak >= 30}
+
+    def test_overlapping_same_market_windows_cluster_but_distinct_markets_do_not(self):
+        rows = [self.row("AAAUSD", 0), self.row("AAAUSD", 30),
+                self.row("AAAUSD", 60, 35), self.row("AAAUSD", 180),
+                self.row("BBBUSD", 30, 31)]
+        original = copy.deepcopy(rows)
+        result = sampled_mover_episode_clusters(rows, 1, 20)
+        self.assertEqual(result["raw_correlated_windows"], 5)
+        self.assertEqual(result["overlap_cluster_count"], 3)
+        self.assertTrue(result["clusters_not_independent"])
+        self.assertEqual(result["scope"], "SAMPLED_QUOTES_OVERLAPPING_ENTRY_WINDOWS_ONLY")
+        self.assertEqual(sorted(e["correlated_windows"] for e in result["examples"]), [1, 1, 3])
+        self.assertEqual(rows, original)
+        self.assertEqual(result, sampled_mover_episode_clusters(list(reversed(rows)), 1, 20))
+
+    def test_thresholds_maturity_and_watch_exclusions(self):
+        rows = [self.row("AAAUSD", 0, 25),
+                self.row("AAAUSD", 30, 35),
+                self.row("BBBUSD", 0, 31, watch=True),
+                self.row("CCCUSD", 0, 50, status="IMMATURE")]
+        twenty = sampled_mover_episode_clusters(rows, 1, 20)
+        thirty = sampled_mover_episode_clusters(rows, 1, 30)
+        self.assertEqual((twenty["raw_correlated_windows"],
+                          twenty["overlap_cluster_count"]), (2, 1))
+        self.assertEqual((thirty["raw_correlated_windows"],
+                          thirty["overlap_cluster_count"]), (1, 1))
+        self.assertEqual(thirty["examples"][0]["max_sampled_peak_pct"], 35)
+
+    def test_horizons_are_separate_and_gap_boundary_is_not_merged(self):
+        rows = [self.row("AAAUSD", 0, 35, horizon=6),
+                self.row("AAAUSD", 360, 40, horizon=6),
+                self.row("AAAUSD", 721, 32, horizon=6),
+                self.row("AAAUSD", 0, 30, horizon=1)]
+        six = sampled_mover_episode_clusters(rows, 6, 30)
+        one = sampled_mover_episode_clusters(rows, 1, 30)
+        self.assertEqual((six["raw_correlated_windows"],
+                          six["overlap_cluster_count"]), (3, 2))
+        self.assertEqual(one["raw_correlated_windows"], 1)
+
+    def test_malformed_target_duplicate_or_invalid_parameters_fail_closed(self):
+        row = self.row("AAAUSD", 0, 30)
+        with self.assertRaisesRegex(ValueError, "Duplicate"):
+            sampled_mover_episode_clusters([row, dict(row)], 1, 20)
+        bad = dict(row, target_at=(START + dt.timedelta(hours=2)).isoformat())
+        with self.assertRaisesRegex(ValueError, "target"):
+            sampled_mover_episode_clusters([bad], 1, 20)
+        for h, t in ((0, 20), (1, 25), (True, 20), (1, True)):
+            with self.assertRaisesRegex(ValueError, "parameters"):
+                sampled_mover_episode_clusters([row], h, t)
+
+
 class OfflineCLIContractTests(unittest.TestCase):
     def test_cli_emits_deterministic_sealed_evidence_without_writing_ledger(self):
         import contextlib
@@ -205,6 +269,10 @@ class OfflineCLIContractTests(unittest.TestCase):
             self.assertEqual(report["source_ledger_sha256"], state["sha256"])
             self.assertEqual(report["evaluation_as_of"], state["runs"][-1]["as_of"])
             self.assertEqual(report["coverage"]["by_horizon"]["1"]["nonwatch_missed_20pct"], 1)
+            self.assertIn("sampled_nonwatch_overlap_clusters", report)
+            self.assertEqual(report["sampled_nonwatch_overlap_clusters"]["1"]["20"]["raw_correlated_windows"], 1)
+            self.assertEqual(report["sampled_nonwatch_overlap_clusters"]["1"]["20"]["overlap_cluster_count"], 1)
+            self.assertTrue(report["sampled_nonwatch_overlap_clusters"]["1"]["20"]["clusters_not_independent"])
             self.assertIsNone(report["held_out_lift"])
             self.assertFalse(report["production_applied"])
 
