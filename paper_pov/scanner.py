@@ -230,8 +230,9 @@ def main():
     report = scan()
     atomic_json(os.getenv("PAPER_REPORT_PATH", "paper_pov/output/latest.json"), report)
     print("PAPER_SCAN " + json.dumps({k: report[k] for k in (
-        "as_of", "eligible_pairs", "matched_tickers", "observed_markets",
-        "ohlc_screened", "forward_labels", "production_applied")}, sort_keys=True))
+        "as_of", "online_usd_pairs", "excluded_stablecoin_pairs",
+        "excluded_other_pairs", "eligible_pairs", "matched_tickers",
+        "observed_markets", "ohlc_screened", "forward_labels", "production_applied")}, sort_keys=True))
     print("PAPER_WATCH " + json.dumps([{"symbol": x["symbol"], "rank": x["rank"],
         "prediction_id": x["prediction_id"], "baseline_score": x["baseline_score"],
         "challenger_score": x["challenger_score"]} for x in report["watch"]]))
