@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "source": "Kraken 2026Q2 5m archive; historical/backfill.py",
+  "trained_at": "2026-10-10T06:23:17.328246+00:00",
+  "train_rows": 17523,
+  "holdout_rows": 4995,
+  "holdout_start": "2026-05-01",
+  "baseline_train": {
+    "rows": 17523,
+    "major_movers": 513,
+    "sampled_positive_rate": 0.02928
+  },
+  "baseline_holdout": {
+    "rows": 4995,
+    "major_movers": 182,
+    "sampled_positive_rate": 0.03644
+  },
+  "rules": {
+    "early_1h": {
+      "train": {
+        "rows": 17028,
+        "major_movers": 334,
+        "sampled_positive_rate": 0.01961
+      },
+      "holdout": {
+        "rows": 4697,
+        "major_movers": 99,
+        "sampled_positive_rate": 0.02108
+      },
+      "holdout_relative_lift": 0.578,
+      "eligible": false
+    },
+    "volume_2x": {
+      "train": {
+        "rows": 3846,
+        "major_movers": 104,
+        "sampled_positive_rate": 0.02704
+      },
+      "holdout": {
+        "rows": 1024,
+        "major_movers": 36,
+        "sampled_positive_rate": 0.03516
+      },
+      "holdout_relative_lift": 0.965,
+      "eligible": false
+    },
+    "trades_2x": {
+      "train": {
+        "rows": 1150,
+        "major_movers": 64,
+        "sampled_positive_rate": 0.05565
+      },
+      "holdout": {
+        "rows": 327,
+        "major_movers": 21,
+        "sampled_positive_rate": 0.06422
+      },
+      "holdout_relative_lift": 1.762,
+      "eligible": true
+    },
+    "early_volume": {
+      "train": {
+        "rows": 3722,
+        "major_movers": 68,
+        "sampled_positive_rate": 0.01827
+      },
+      "holdout": {
+        "rows": 953,
+        "major_movers": 18,
+        "sampled_positive_rate": 0.01889
+      },
+      "holdout_relative_lift": 0.518,
+      "eligible": false
+    },
+    "early_trades": {
+      "train": {
+        "rows": 1061,
+        "major_movers": 34,
+        "sampled_positive_rate": 0.03205
+      },
+      "holdout": {
+        "rows": 272,
+        "major_movers": 6,
+        "sampled_positive_rate": 0.02206
+      },
+      "holdout_relative_lift": 0.605,
+      "eligible": false
+    },
+    "volume_trades": {
+      "train": {
+        "rows": 933,
+        "major_movers": 49,
+        "sampled_positive_rate": 0.05252
+      },
+      "holdout": {
+        "rows": 277,
+        "major_movers": 17,
+        "sampled_positive_rate": 0.06137
+      },
+      "holdout_relative_lift": 1.684,
+      "eligible": true
+    }
+  },
+  "approved_rules": [
+    "trades_2x",
+    "volume_trades"
+  ],
+  "limitations": [
+    "Only systematic weekly/hourly controls used; temporal overlap and sampling variance remain",
+    "Overlapping anchors are correlated; holdout is chronological, not independent episodes",
+    "Archive ends June 2026; regime shift possible",
+    "No historical order-book or executable entry evidence",
+    "Research bonuses are bounded and never authorize buys"
+  ]
+}
