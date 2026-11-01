@@ -77,6 +77,20 @@ class PointInTimeOutcomeTests(unittest.TestCase):
         self.assertEqual(r["observed_peak_pct"], 0)
         self.assertFalse(r["observed_30pct_hit"])
 
+    def test_peak_includes_entry_when_every_followup_declines(self):
+        # Entry at 1.0 is itself a client-observed price at the start.
+        # A decline cannot produce a negative maximum return over [start,target].
+        prices = {(30, "BBBUSD"): 0.8, (60, "BBBUSD"): 0.7,
+                  (90, "BBBUSD"): 0.6, (120, "BBBUSD"): 0.5}
+        state = fixture([0, 30, 60, 90, 120], prices)
+        rows = sampled_outcomes(state, START + dt.timedelta(minutes=120), (1,))
+        result = select(rows)
+        self.assertEqual(result["status"], "MATURED_OBSERVED")
+        self.assertEqual(result["observed_peak_pct"], 0)
+        self.assertAlmostEqual(result["observed_terminal_pct"], -30)
+        self.assertFalse(result["observed_20pct_hit"])
+        self.assertFalse(result["observed_30pct_hit"])
+
     def test_gap_is_abstention_not_miss(self):
         state = fixture([0, 120])
         r = select(sampled_outcomes(state, START + dt.timedelta(minutes=120), (1,)))
