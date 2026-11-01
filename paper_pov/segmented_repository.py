@@ -274,26 +274,72 @@ def stage_append(previous, report, source_sha, destination):
             shutil.rmtree(temporary)
 
 
-def verify_checkpoint_origin(directory, git_repository):
-    """Anchor legacy checkpoint bytes to the actual immutable Git commit.
+def stage_rollover(previous, checkpoint_git_sha, destination):
+    """Losslessly rebase the active segment inventory onto an immutable Git head.
 
-    This MUST run with a repository that has fetched the historical checkpoint
-    commit. It does not fetch or mutate Git and never trusts the SHA alone.
+    The previous Git commit remains the archived segment inventory. This
+    stages only local files; the single writer MUST atomically commit deleted
+    old segments together with the replacement checkpoint and manifest.
+    """
+    if not _hex(checkpoint_git_sha, 40):
+        raise ValueError("Invalid rollover Git provenance")
+    before, old = read_state(previous, full_replay=True)
+    if not old["segments"]:
+        raise ValueError("Refuse rollover without archived segment evidence")
+    checkpoint_bytes = ledger.canonical(before)
+    if len(checkpoint_bytes) > storage.MAX_RAW_BYTES:
+        raise ValueError("Rollover checkpoint exceeds raw storage limit")
+    snapshot = _read(Path(previous) / SNAPSHOT, storage.MAX_PACKED_BYTES)
+    new = {"schema": SCHEMA,
+           "checkpoint": {"git_commit": checkpoint_git_sha,
+                          "generation": before["generation"],
+                          "ledger_sha256": before["sha256"],
+                          "file_sha256": sha(checkpoint_bytes)},
+           "head": {"generation": before["generation"],
+                    "ledger_sha256": before["sha256"],
+                    "snapshot_sha256": sha(snapshot)},
+           "segments": []}
+    temporary = _staging(destination)
+    try:
+        _write(temporary / CHECKPOINT, checkpoint_bytes)
+        _write(temporary / SNAPSHOT, snapshot)
+        _write(temporary / MANIFEST, _manifest_bytes(new))
+        restored, manifest = read_state(temporary, full_replay=True)
+        if restored != before or manifest != new:
+            raise ValueError("Rollover lost historical ledger state")
+        _enforce_active_budget(temporary)
+        _publish(temporary, destination)
+        return new
+    finally:
+        if temporary.exists():
+            shutil.rmtree(temporary)
+
+
+def verify_checkpoint_origin(directory, git_repository):
+    """Verify checkpoint bytes against the exact immutable ancestor Git commit.
+
+    Initial migration references a legacy JSON commit. A rollover references
+    the previous packed commit, whose complete historical chain is recursively
+    verified before its canonical ledger state can serve as a checkpoint.
     """
     _, manifest = read_state(directory)
     commit = manifest["checkpoint"]["git_commit"]
+    checkpoint = _read(Path(directory) / CHECKPOINT, storage.MAX_RAW_BYTES)
     try:
-        result = subprocess.run(
-            ["git", "-C", str(git_repository), "show",
-             commit + ":paper-ledger.json"],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            timeout=30, check=True)
+        has_packed = _git_has(git_repository, commit, MANIFEST)
+        has_snapshot = _git_has(git_repository, commit, SNAPSHOT)
+        if has_packed != has_snapshot:
+            raise ValueError("Partially archived checkpoint commit")
+        if has_packed:
+            state, mode = read_git_state(git_repository, commit, full_replay=True)
+            if mode != "segmented" or ledger.canonical(state) != checkpoint:
+                raise ValueError("Archived packed checkpoint differs from Git history")
+        else:
+            historical = _git(git_repository, "show", commit + ":paper-ledger.json")
+            if len(historical) > storage.MAX_RAW_BYTES or historical != checkpoint:
+                raise ValueError("Legacy checkpoint differs from immutable Git history")
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as exc:
-        raise ValueError("Legacy checkpoint Git commit unavailable") from exc
-    historical = result.stdout
-    if len(historical) > storage.MAX_RAW_BYTES or historical != _read(
-            Path(directory) / CHECKPOINT, storage.MAX_RAW_BYTES):
-        raise ValueError("Legacy checkpoint differs from immutable Git history")
+        raise ValueError("Checkpoint Git commit unavailable") from exc
     return commit
 
 
@@ -382,7 +428,11 @@ def read_git_state(repository, commit, full_replay=False):
     if len(manifest_bytes) > MAX_MANIFEST_BYTES:
         raise ValueError("Git manifest exceeds bound")
     manifest = json.loads(manifest_bytes)
-    _, _, entries = _check_manifest(manifest)
+    checkpoint, _, entries = _check_manifest(manifest)
+    origin = checkpoint["git_commit"]
+    if origin == commit:
+        raise ValueError("Checkpoint cannot point to its own commit")
+    _git(repository, "merge-base", "--is-ancestor", origin, commit)
     with tempfile.TemporaryDirectory(prefix="paper-git-read-") as temp:
         root = Path(temp)
         for path in (MANIFEST, SNAPSHOT, CHECKPOINT):
