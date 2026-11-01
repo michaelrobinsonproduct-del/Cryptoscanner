@@ -96,31 +96,14 @@ class RolloverTests(unittest.TestCase):
         self.assertEqual(state["observations"][:len(prior["observations"])],
                          prior["observations"])
 
-    def test_automatic_rollover_at_aggregate_budget_without_data_loss(self):
+    def test_automatic_rollover_at_segment_count_without_data_loss(self):
         base = self.build_history(6)
         prior, _ = repo.read_git_state(self.gitdir, base, full_replay=True)
-        manifest = json.loads(self.git("show", base + ":" + repo.MANIFEST))
-        initial = self.root / "initial"
-        initial.mkdir()
-        for path in [repo.CHECKPOINT, repo.SNAPSHOT, repo.MANIFEST] + [
-                repo._segment_path(e["generation"]) for e in manifest["segments"]]:
-            repo._write(initial / path, subprocess.run(
-                ["git", "-C", str(self.gitdir), "show", base + ":" + path],
-                check=True, capture_output=True).stdout)
-        normal = self.root / "normal"
-        repo.stage_append(initial, synthetic(180), SHA, normal)
-        rolled = self.root / "rolled"
-        repo.stage_rollover(initial, base, rolled)
-        compact = self.root / "compact"
-        repo.stage_append(rolled, synthetic(180), SHA, compact)
-        normal_size = repo.active_storage_bytes(normal)
-        compact_size = repo.active_storage_bytes(compact)
-        self.assertLess(compact_size, normal_size)
-        budget = (normal_size + compact_size) // 2
-        with patch.object(repo, "MAX_ACTIVE_TREE_BYTES", budget):
-            staged = self.root / "automatic"
+        with patch.object(repo, "MAX_SEGMENTS", 6):
+            staged = self.root / "automatic-count"
             state, info = live.stage(self.gitdir, base, synthetic(180), SHA, staged)
-            self.assertLessEqual(info["active_storage_bytes"], budget)
+            self.assertLessEqual(info["active_storage_bytes"],
+                                 repo.MAX_ACTIVE_TREE_BYTES)
             self.assertEqual(state["generation"], prior["generation"] + 1)
             self.assertEqual(state["predictions"][:len(prior["predictions"])],
                              prior["predictions"])
@@ -129,6 +112,23 @@ class RolloverTests(unittest.TestCase):
             self.assertIn(repo.CHECKPOINT, paths)
             self.assertIn(repo._segment_path(1), paths)
             self.assertIn(repo._segment_path(7), paths)
+
+    def test_automatic_rollover_when_active_budget_gate_is_reached(self):
+        base = self.build_history(3)
+        actual_gate = repo._enforce_active_budget
+        def simulated_budget(directory):
+            # A controlled near-limit fixture: >1 active segments would
+            # overflow, but the new archived checkpoint plus one scan fits.
+            if len(list((Path(directory) / repo.SEGMENTS).glob("*.json"))) > 1:
+                raise ValueError("Aggregate active paper ledger storage budget exceeded; archive rollover required")
+            return actual_gate(directory)
+        with patch.object(repo, "_enforce_active_budget", side_effect=simulated_budget):
+            staged = self.root / "automatic-budget"
+            state, _ = live.stage(self.gitdir, base, synthetic(90), SHA, staged)
+            self.assertEqual(state["generation"], 4)
+            self.assertEqual(len(repo.read_state(staged, True)[1]["segments"]), 1)
+            self.assertEqual(repo.read_state(staged, True)[1]["checkpoint"]["git_commit"],
+                             base)
 
     def test_corrupt_archive_and_false_origin_fail_closed(self):
         base = self.build_history(2)
