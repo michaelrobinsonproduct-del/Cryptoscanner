@@ -7,7 +7,7 @@ import unittest
 from paper_pov import ledger
 from paper_pov.learning_outcomes import (
     sampled_outcomes, coverage_summary, shadow_rank_diagnostic,
-    sampled_mover_episode_clusters)
+    sampled_mover_episode_clusters, gap_concentration_summary)
 
 UTC = dt.timezone.utc
 START = dt.datetime(2026, 10, 20, tzinfo=UTC)
@@ -281,6 +281,58 @@ class SampledEpisodeClusterTests(unittest.TestCase):
                 sampled_mover_episode_clusters([row], h, t)
 
 
+
+class GapConcentrationTests(unittest.TestCase):
+    def row(self, pair, run_id, horizon, reason=None):
+        row = {"pair": pair, "run_id": run_id, "horizon_hours": horizon,
+               "status": "ABSTAIN_GAP" if reason else "IMMATURE"}
+        if reason:
+            row["gap_reason"] = reason
+        return row
+
+    def test_ranked_market_gap_counts_reasons_horizons_and_ties(self):
+        from paper_pov.learning_outcomes import GAP_REASONS
+        rows = [
+            self.row("BBBUSD", "run1", 24, GAP_REASONS[0]),
+            self.row("BBBUSD", "run2", 24, GAP_REASONS[2]),
+            self.row("AAAUSD", "run1", 24, GAP_REASONS[1]),
+            self.row("AAAUSD", "run2", 24, GAP_REASONS[3]),
+            self.row("CCCUSD", "run1", 24, GAP_REASONS[0]),
+            self.row("AAAUSD", "run1", 1, GAP_REASONS[0]),
+            self.row("AAAUSD", "run3", 24),
+        ]
+        original = copy.deepcopy(rows)
+        report = gap_concentration_summary(rows, top_n=2)
+        twentyfour = report["by_horizon"]["24"]
+        self.assertEqual(twentyfour["gap_abstentions"], 5)
+        self.assertEqual(twentyfour["affected_markets"], 3)
+        self.assertEqual([x["pair"] for x in twentyfour["top_markets"]],
+                         ["AAAUSD", "BBBUSD"])
+        self.assertEqual(twentyfour["top_markets"][0]["gap_reason_counts"][GAP_REASONS[3]], 1)
+        self.assertEqual(report["by_horizon"]["1"]["gap_abstentions"], 1)
+        self.assertEqual(report["by_horizon"]["48"]["top_markets"], [])
+        self.assertTrue(report["not_independent_events"])
+        self.assertEqual(rows, original)
+        self.assertEqual(report, gap_concentration_summary(list(reversed(rows)), 2))
+
+    def test_duplicate_bad_reason_and_status_fail_closed(self):
+        from paper_pov.learning_outcomes import GAP_REASONS
+        row = self.row("AAAUSD", "run1", 24, GAP_REASONS[0])
+        with self.assertRaisesRegex(ValueError, "Duplicate"):
+            gap_concentration_summary([row, dict(row)])
+        with self.assertRaisesRegex(ValueError, "Unattributed"):
+            gap_concentration_summary([dict(row, gap_reason="UNKNOWN")])
+        with self.assertRaisesRegex(ValueError, "Unknown"):
+            gap_concentration_summary([dict(row, status="SKIPPED")])
+        with self.assertRaisesRegex(ValueError, "Unexpected"):
+            gap_concentration_summary([dict(row, status="IMMATURE")])
+        with self.assertRaisesRegex(ValueError, "identity"):
+            gap_concentration_summary([dict(row, horizon_hours=True)])
+        for top_n in (0, 21, True):
+            with self.assertRaisesRegex(ValueError, "parameters"):
+                gap_concentration_summary([row], top_n)
+
+
 class OfflineCLIContractTests(unittest.TestCase):
     def test_cli_emits_deterministic_sealed_evidence_without_writing_ledger(self):
         import contextlib
@@ -303,6 +355,10 @@ class OfflineCLIContractTests(unittest.TestCase):
             self.assertEqual(report["evaluation_as_of"], state["runs"][-1]["as_of"])
             self.assertEqual(report["coverage"]["by_horizon"]["1"]["nonwatch_missed_20pct"], 1)
             self.assertIn("sampled_nonwatch_overlap_clusters", report)
+            self.assertIn("gap_concentration", report)
+            self.assertTrue(report["gap_concentration"]["correlated_overlapping_windows"])
+            self.assertEqual(report["gap_concentration"]["by_horizon"]["1"]["gap_abstentions"],
+                             report["coverage"]["by_horizon"]["1"]["gap_abstentions"])
             self.assertEqual(report["sampled_nonwatch_overlap_clusters"]["1"]["20"]["raw_correlated_windows"], 1)
             self.assertEqual(report["sampled_nonwatch_overlap_clusters"]["1"]["20"]["overlap_cluster_count"], 1)
             self.assertTrue(report["sampled_nonwatch_overlap_clusters"]["1"]["20"]["clusters_not_independent"])

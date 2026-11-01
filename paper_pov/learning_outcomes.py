@@ -226,6 +226,60 @@ def coverage_summary(rows):
             "by_horizon": output}
 
 
+
+def gap_concentration_summary(rows, top_n=20):
+    """Rank sampled gap abstentions by market and horizon, not by independent events.
+
+    A concentration report helps diagnose missing 24h/48h coverage without
+    filling gaps, inventing observations, or implying independent opportunities.
+    The input must be point-in-time outcome rows from a sealed ledger.
+    """
+    if not isinstance(rows, list) or type(top_n) is not int or not 1 <= top_n <= 20:
+        raise ValueError("Invalid gap concentration parameters")
+    by_horizon = {h: defaultdict(lambda: {reason: 0 for reason in GAP_REASONS})
+                  for h in HORIZONS}
+    seen = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("Invalid gap concentration row")
+        h, pair, run_id = row.get("horizon_hours"), row.get("pair"), row.get("run_id")
+        if (type(h) is not int or h not in HORIZONS
+                or not isinstance(pair, str) or not pair
+                or not isinstance(run_id, str) or not run_id):
+            raise ValueError("Invalid gap concentration identity")
+        key = (h, pair, run_id)
+        if key in seen:
+            raise ValueError("Duplicate gap concentration row")
+        seen.add(key)
+        status = row.get("status")
+        if status == "ABSTAIN_GAP":
+            reason = row.get("gap_reason")
+            if reason not in GAP_REASONS:
+                raise ValueError("Unattributed gap concentration row")
+            by_horizon[h][pair][reason] += 1
+        elif status not in ("IMMATURE", "MATURED_OBSERVED"):
+            raise ValueError("Unknown gap concentration status")
+        elif "gap_reason" in row:
+            raise ValueError("Unexpected gap reason on non-gap row")
+    result = {}
+    for h in HORIZONS:
+        ranked = sorted(by_horizon[h].items(),
+                        key=lambda item: (-sum(item[1].values()), item[0]))
+        result[str(h)] = {
+            "gap_abstentions": sum(sum(counts.values()) for _, counts in ranked),
+            "affected_markets": len(ranked),
+            "top_markets": [
+                {"pair": pair, "gap_abstentions": sum(counts.values()),
+                 "gap_reason_counts": dict(counts)}
+                for pair, counts in ranked[:top_n]
+            ],
+        }
+    return {"scope": "SAMPLED_CLIENT_OBSERVED_GAP_COUNTS_ONLY",
+            "correlated_overlapping_windows": True,
+            "not_independent_events": True,
+            "by_horizon": result}
+
+
 def shadow_rank_diagnostic(rows, cutoff, horizon_hours=1, top_k=3,
                            embargo_hours=48, min_test_runs=8):
     """Frozen cutoff, identical WATCH cohorts, 48h embargo and test spacing.
@@ -309,6 +363,7 @@ def main(argv=None):
               "source_generation": state["generation"],
               "evaluation_as_of": as_of,
               "coverage": coverage_summary(rows),
+              "gap_concentration": gap_concentration_summary(rows),
               "sampled_nonwatch_1h_20pct_examples": misses[:20],
               "sampled_nonwatch_overlap_clusters": {
                   str(h): {str(t): sampled_mover_episode_clusters(rows, h, t)
