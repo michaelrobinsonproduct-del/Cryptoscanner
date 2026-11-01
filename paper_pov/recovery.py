@@ -79,6 +79,9 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
                 # old, completed, main-branch push predating the sealed ledger.
                 # Unknown, active, newer or non-main events still fail closed.
                 if (event == "push" and item.get("head_branch") == "main"
+                        and type(item.get("id")) is int and item["id"] > 0
+                        and isinstance(item.get("head_sha"), str)
+                        and SHA.fullmatch(item["head_sha"])
                         and item.get("status") == "completed"
                         and item.get("conclusion") in ("success", "failure", "cancelled")
                         and at < latest_asof - dt.timedelta(minutes=2)):
