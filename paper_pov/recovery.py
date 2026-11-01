@@ -17,8 +17,13 @@ MESSAGE = re.compile(r"paper: (?:immutable|atomic packed) scan ([1-9][0-9]*) sou
 SHA = re.compile(r"[0-9a-f]{40}")
 ACTIVE = frozenset(("queued", "in_progress", "waiting", "requested", "pending"))
 RECOVERY_MARKER = "PAPER_RECOVERY_ATTEMPT:"
+# The independent cadence controller also requests the EXISTING writer. Its
+# authenticated bot attempt must suppress recovery while GitHub is still
+# accepting/queuing that dispatch (before a writer run is visible).
+CADENCE_MARKER = "PAPER_CADENCE_ATTEMPT:"
 MIN_SUCCESS_AGE = dt.timedelta(minutes=45)
 RETRY_INTERVAL = dt.timedelta(minutes=90)
+CADENCE_RETRY_INTERVAL = dt.timedelta(minutes=45)
 
 
 def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
@@ -159,25 +164,35 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
         return abstain("DURABLE_SCAN_AFTER_MATURED_SLOT")
     result["missed_matured_slots"] = [matured[0].isoformat()]
 
-    marker = RECOVERY_MARKER + ledger_commit
+    # Both controllers share one GitHub concurrency mutex, but a successful
+    # workflow_dispatch API response can precede creation of its writer run.
+    # Check BOTH bot attempt markers on this exact sealed ledger generation.
+    # Never accept user-authored markers as evidence, and fail closed if a
+    # trusted marker's timestamp is malformed or in the future.
+    markers = (
+        (RECOVERY_MARKER + ledger_commit, RETRY_INTERVAL, "RECOVERY"),
+        (CADENCE_MARKER + ledger_commit, CADENCE_RETRY_INTERVAL, "CADENCE"),
+    )
     for item in comments:
         if not isinstance(item, dict) or not isinstance(item.get("body"), str):
             return abstain("ISSUE_COMMENT_INVALID", True)
-        if marker in item["body"]:
-            actor = item.get("user")
-            # Public issue comments are untrusted; only the Actions bot can deduplicate.
-            if not isinstance(actor, dict) or actor.get("login") != "github-actions[bot]" or actor.get("id") != 41898282:
+        actor = item.get("user")
+        if (not isinstance(actor, dict) or actor.get("login") != "github-actions[bot]"
+                or actor.get("id") != 41898282):
+            continue
+        for marker, interval, label in markers:
+            if marker not in item["body"]:
                 continue
             try:
                 at = instant(item["created_at"])
             except (ValueError, TypeError, KeyError):
-                return abstain("RECOVERY_MARKER_TIMESTAMP_INVALID", True)
+                return abstain(label + "_MARKER_TIMESTAMP_INVALID", True)
             if at > now + dt.timedelta(minutes=2):
-                return abstain("RECOVERY_MARKER_IN_FUTURE", True)
-            if now - at < RETRY_INTERVAL:
-                return abstain("RECOVERY_ALREADY_ATTEMPTED")
+                return abstain(label + "_MARKER_IN_FUTURE", True)
+            if now - at < interval:
+                return abstain(label + "_ALREADY_ATTEMPTED")
     result.update(action="DISPATCH_EXISTING_WORKFLOW", reason="MATURED_SLOT_MISSED",
-                  attempt_marker=marker,
+                  attempt_marker=RECOVERY_MARKER + ledger_commit,
                   decision_sha256=hashlib.sha256((ledger_commit + "|" + str(latest_id) + "|" +
                   "|".join(result["missed_matured_slots"])).encode()).hexdigest())
     return result
