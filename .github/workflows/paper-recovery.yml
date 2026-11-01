@@ -132,6 +132,11 @@ jobs:
           print('PAPER_RECOVERY_ATTEMPT_READBACK_VERIFIED')
           PY
           echo ATTEMPT_MARKER_READBACK_VERIFIED > /tmp/paper-recovery-status.txt
+          CURRENT_MAIN_SHA="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          test "$(git rev-parse HEAD)" = "$CURRENT_MAIN_SHA" || {
+            echo MAIN_CHANGED_ABORT > /tmp/paper-recovery-status.txt
+            echo PAPER_RECOVERY_MAIN_CHANGED_ABORT; exit 1;
+          }
           gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/dispatches" -f ref=main
           echo DISPATCH_HTTP_ACCEPTED_EXECUTION_UNVERIFIED > /tmp/paper-recovery-status.txt
           echo PAPER_EXISTING_WORKFLOW_DISPATCH_HTTP_ACCEPTED_NOT_EXECUTION_PROOF
