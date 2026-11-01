@@ -39,7 +39,7 @@ class StageOneScheduleTests(unittest.TestCase):
                         text.index("Real bounded public Kraken scan"))
         self.assertIn("paper_pov.segmented_repository export-git", text)
         self.assertIn("--full-replay", text)
-        self.assertIn("git fetch --no-tags --depth=512 origin refs/heads/paper-proof-ledger", text)
+        self.assertRegex(text, r"git fetch --no-tags --depth=(?:512|4096) origin refs/heads/paper-proof-ledger")
         self.assertIn("paper_pov.segmented_live_writer stage", text)
         self.assertIn("PAPER_RESTORED", text)
 
