@@ -60,9 +60,9 @@ class ExternalHeartbeatGuardTests(unittest.TestCase):
         self.assertNotIn("paper-pipeline.yml", json.dumps(intent))
 
     def test_exact_command_only_no_shell_or_scan_override(self):
-        for command in ("/paper-scan", "/paper-recovery", "/paper-recovery-heartbeat\n",
-                        " /paper-recovery-heartbeat", "/paper-recovery-heartbeat --ref evil",
-                        "/paper-recovery-heartbeat; echo unsafe", "x" + COMMAND, "",
+        for command in ("/paper-scan", "/paper-recovery", "PAPER_RECOVERY_WAKE_V1\n",
+                        " PAPER_RECOVERY_WAKE_V1", "PAPER_RECOVERY_WAKE_V1 --ref evil",
+                        "PAPER_RECOVERY_WAKE_V1; echo unsafe", "x" + COMMAND, "",
                         None, "/PAPER-RECOVERY-HEARTBEAT"):
             with self.subTest(command=command):
                 self.assert_rejected(lambda e: e["comment"].update(body=command))
