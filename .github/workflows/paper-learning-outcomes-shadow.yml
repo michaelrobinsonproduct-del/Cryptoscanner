@@ -55,7 +55,10 @@ jobs:
                 json.dumps(evidence["coverage"]["by_horizon"],sort_keys=True))
           PY
           (cd paper_pov/learning-evidence && sha256sum evaluation.json > SHA256SUMS)
-          test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$BASE"
+          git fetch --no-tags --depth=1 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$BASE" || {
+            echo "LEARNING_REMOTE_MOVED_ABSTAIN"; exit 1;
+          }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
