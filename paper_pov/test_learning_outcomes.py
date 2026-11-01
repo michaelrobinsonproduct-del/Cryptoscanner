@@ -105,6 +105,39 @@ class PointInTimeOutcomeTests(unittest.TestCase):
         r = select(sampled_outcomes(state, START + dt.timedelta(minutes=120), (1,)))
         self.assertEqual(r["status"], "ABSTAIN_GAP")
 
+    def test_four_distinct_gap_abstention_causes_are_not_mislabeled_misses(self):
+        cases = (
+            ([0, 120], "NO_POST_ENTRY_QUOTE_BEFORE_TARGET"),
+            ([0, 30, 120], "NO_TARGET_ANCHOR_WITHIN_45M"),
+            ([0, 60, 120], "INTERIOR_GAP_OVER_45M"),
+            ([0, 30, 90, 120], "TARGET_BRIDGE_OVER_45M"),
+        )
+        for offsets, expected in cases:
+            with self.subTest(reason=expected):
+                state = fixture(offsets)
+                original = copy.deepcopy(state)
+                rows = sampled_outcomes(state, START + dt.timedelta(minutes=120), (1,))
+                entry = select(rows)
+                self.assertEqual(entry["status"], "ABSTAIN_GAP")
+                self.assertEqual(entry["gap_reason"], expected)
+                self.assertNotIn("observed_peak_pct", entry)
+                self.assertNotIn("observed_20pct_hit", entry)
+                counts = coverage_summary(rows)["by_horizon"]["1"]
+                self.assertEqual(counts["gap_reason_counts"][expected], 3)
+                self.assertEqual(sum(counts["gap_reason_counts"].values()),
+                                 counts["gap_abstentions"])
+                self.assertEqual(state, original)
+
+    def test_gap_summary_rejects_unknown_or_missing_attribution(self):
+        state = fixture([0, 120])
+        rows = sampled_outcomes(state, START + dt.timedelta(minutes=120), (1,))
+        rows[0]["gap_reason"] = "UNKNOWN"
+        with self.assertRaisesRegex(ValueError, "Unattributed"):
+            coverage_summary(rows)
+        del rows[0]["gap_reason"]
+        with self.assertRaisesRegex(ValueError, "Unattributed"):
+            coverage_summary(rows)
+
     def test_no_future_lookahead_after_evaluation_time(self):
         state = fixture([0, 30, 60, 90, 120], {(120, "BBBUSD"): 1.8})
         rows = sampled_outcomes(state, START + dt.timedelta(minutes=105), (1,))
