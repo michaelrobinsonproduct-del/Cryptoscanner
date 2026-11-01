@@ -1,9 +1,11 @@
 """Recovery controller failure-injection contracts: never dispatch on ambiguity."""
 import datetime as dt
+import hashlib
 import unittest
 from pathlib import Path
 
 from paper_pov.monitor import UTC
+from paper_pov.ledger import seal
 from paper_pov.recovery import decide, RECOVERY_MARKER
 from paper_pov.test_monitor import fixture, run, SHA
 
@@ -53,6 +55,23 @@ class RecoveryTests(unittest.TestCase):
     def test_recent_success_does_not_dispatch(self):
         d = decision(now=dt.datetime(2026, 10, 31, 20, 50, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "RECENT_SUCCESS"))
+
+    def test_delayed_scan_asof_prevents_premature_retry(self):
+        # Run started 20:35, then produced immutable market data at 20:50.
+        # At 21:27, run creation is 52m old but market scan only 37m old.
+        state = fixture()
+        asof = "2026-10-31T20:50:00+00:00"
+        state["runs"][0]["as_of"] = asof
+        state["predictions"][0]["as_of"] = asof
+        state["predictions"][0]["prediction_id"] = hashlib.sha256(
+            ("paper-v1|" + asof + "|" + state["predictions"][0]["pair"]).encode()
+        ).hexdigest()
+        state["observations"][0]["at"] = "2026-10-31T20:49:50+00:00"
+        d = decision(runs=[scan(123, "2026-10-31T20:35:00Z")],
+                     ledger=seal(state),
+                     now=dt.datetime(2026, 10, 31, 21, 27, tzinfo=UTC))
+        self.assertEqual((d["action"], d["reason"]),
+                         ("NO_DISPATCH", "RECENT_SUCCESS"))
 
     def test_queued_or_running_existing_writer_prevents_dispatch(self):
         for status in ("queued", "in_progress", "waiting", "requested", "pending"):
