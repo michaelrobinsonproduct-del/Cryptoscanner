@@ -96,7 +96,9 @@ def sampled_outcomes(state, evaluation_at, horizons=HORIZONS):
             if not contiguous:
                 rows.append({**base, "status": "ABSTAIN_GAP"})
                 continue
-            peak = 100 * (max(p for _, p in within) / price - 1)
+            # The immutable same-run entry quote is part of the observed window.
+            # Excluding it misreports a falling market's peak as negative.
+            peak = 100 * (max([price] + [p for _, p in within]) / price - 1)
             final = 100 * (anchors[0][1] / price - 1)
             rows.append({**base, "status": "MATURED_OBSERVED",
                          "anchor_at": anchors[0][0].isoformat(),
