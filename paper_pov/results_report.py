@@ -36,7 +36,9 @@ def _utc(value):
     return utc(value)
 
 
-def render(scan, score, *, run_id, source_sha, ledger_commit):
+def render(scan, score, *, run_id, source_sha, ledger_commit, event):
+    if event not in ("schedule", "workflow_dispatch"):
+        raise ValueError("Unverified GitHub trigger event")
     if not RUN.fullmatch(str(run_id)) or not SHA.fullmatch(source_sha) or not SHA.fullmatch(ledger_commit):
         raise ValueError("Missing immutable GitHub run/source/ledger identity")
     if scan.get("mode") != "PAPER_ONLY" or scan.get("buy_approved") is not False:
@@ -98,6 +100,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit):
         "**Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders",
         "",
         f"**UTC as-of:** {as_of.isoformat()}  ",
+        f"**GitHub trigger:** {'scheduled' if event == 'schedule' else 'manual dispatch'} (verified event={event}; exact cron slot NOT inferred)  ",
         f"**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/{run_id}  ",
         f"**Source SHA:** {source_sha}  ",
         f"**Ledger commit:** {ledger_commit}  ",
@@ -195,6 +198,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit):
     ])
     payload = {"schema": 1, "status": "SUCCESS_PAPER_ONLY", "run_id": str(run_id),
                "as_of": as_of.isoformat(), "source_sha": source_sha,
+               "github_event": event, "scheduled_slot_verified": False,
                "ledger_commit": ledger_commit, "ledger_generation": score["generation"],
                "ledger_sha256": score["ledger_sha256"], "remote_readback_verified": True,
                "eligible_pairs": scan["eligible_pairs"], "observed_markets": len(observations),
@@ -211,13 +215,13 @@ def render(scan, score, *, run_id, source_sha, ledger_commit):
 
 def main():
     p = argparse.ArgumentParser()
-    for arg in ("scan", "scoreboard", "run-id", "source-sha", "ledger-commit", "output-dir"):
+    for arg in ("scan", "scoreboard", "run-id", "source-sha", "ledger-commit", "output-dir", "event"):
         p.add_argument("--" + arg, required=True)
     a = p.parse_args()
     scan = json.loads(Path(a.scan).read_text())
     score = json.loads(Path(a.scoreboard).read_text())
     payload, markdown = render(scan, score, run_id=a.run_id,
-                               source_sha=a.source_sha, ledger_commit=a.ledger_commit)
+                               source_sha=a.source_sha, ledger_commit=a.ledger_commit, event=a.event)
     directory = Path(a.output_dir)
     directory.mkdir(parents=True, exist_ok=True)
     atomic_json(directory / "results.json", payload)
