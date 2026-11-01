@@ -6,13 +6,24 @@ on:
       - 'paper_pov/test_learning_outcomes.py'
       - '.github/workflows/paper-learning-outcomes-shadow.yml'
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Public Kraken Paper POV (scheduled, isolated ledger)"]
+    types: [completed]
 permissions:
   contents: read
+  actions: read
 concurrency:
-  group: paper-learning-shadow-${{ github.ref }}
+  group: paper-learning-shadow-${{ github.event.workflow_run.id || github.ref }}
   cancel-in-progress: false
 jobs:
   sampled-outcome-evidence:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.repository == 'michaelrobinsonproduct-del/Cryptoscanner' &&
+       github.event.workflow_run.repository.full_name == 'michaelrobinsonproduct-del/Cryptoscanner' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       (github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -28,16 +39,45 @@ jobs:
           set -euo pipefail
           echo "LEARNING_EXACT_SOURCE_SHA=$(git rev-parse HEAD)"
           python -m unittest discover -s paper_pov -p 'test_*.py' -v
+      - name: Verify completed PAPER writer provenance against authenticated GitHub API
+        if: github.event_name == 'workflow_run'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PAPER_WRITER_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PAPER_WRITER_RUN_ID}" > /tmp/learning-writer-api.json
+          python -m paper_pov.learning_trigger verify-run \
+            --event "$GITHUB_EVENT_PATH" --api /tmp/learning-writer-api.json \
+            --repository "$GITHUB_REPOSITORY" --checkout-sha "$(git rev-parse HEAD)" \
+            > /tmp/learning-provenance.json
+          cat /tmp/learning-provenance.json
       - name: Fetch and verify immutable public PAPER ledger without writing
         run: |
           set -euo pipefail
           git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
-          BASE="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+          REMOTE_TIP="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+          BASE="$REMOTE_TIP"
+          if test "$GITHUB_EVENT_NAME" = workflow_run; then
+            git log --format='%H %s' refs/remotes/origin/paper-proof-ledger > /tmp/learning-ledger-commits.txt
+            BASE="$(python -m paper_pov.learning_trigger select-commit \
+              --provenance /tmp/learning-provenance.json \
+              --commits /tmp/learning-ledger-commits.txt)"
+            git merge-base --is-ancestor "$BASE" "$REMOTE_TIP"
+          fi
           echo "LEARNING_REMOTE_LEDGER_COMMIT=$BASE"
           CHECKPOINT="$(git show "${BASE}:paper-segment-manifest.json" | python -c 'import json,sys;print(json.load(sys.stdin)["checkpoint"]["git_commit"])')"
           git cat-file -e "${CHECKPOINT}^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$CHECKPOINT"
           python -m paper_pov.segmented_repository export-git \
             --repository . --commit "$BASE" --output /tmp/paper-learning-ledger.json --full-replay
+          if test "$GITHUB_EVENT_NAME" = workflow_run; then
+            git show "${BASE}:paper-segment-manifest.json" > /tmp/learning-manifest.json
+            python -m paper_pov.learning_trigger verify-ledger \
+              --provenance /tmp/learning-provenance.json \
+              --ledger /tmp/paper-learning-ledger.json \
+              --manifest /tmp/learning-manifest.json \
+              > /tmp/learning-verified-source.json
+          fi
           mkdir -p paper_pov/learning-evidence
           python -m paper_pov.learning_outcomes \
             --ledger /tmp/paper-learning-ledger.json > paper_pov/learning-evidence/evaluation.json
@@ -56,9 +96,14 @@ jobs:
           PY
           (cd paper_pov/learning-evidence && sha256sum evaluation.json > SHA256SUMS)
           git fetch --no-tags --depth=1 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
-          test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$BASE" || {
-            echo "LEARNING_REMOTE_MOVED_ABSTAIN"; exit 1;
+          git merge-base --is-ancestor "$BASE" refs/remotes/origin/paper-proof-ledger || {
+            echo "LEARNING_REMOTE_HISTORY_REWRITTEN_ABSTAIN"; exit 1;
           }
+          if test "$GITHUB_EVENT_NAME" != workflow_run; then
+            test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$BASE" || {
+              echo "LEARNING_REMOTE_MOVED_ABSTAIN"; exit 1;
+            }
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -66,5 +111,7 @@ jobs:
           path: |
             paper_pov/learning-evidence/evaluation.json
             paper_pov/learning-evidence/SHA256SUMS
+            /tmp/learning-provenance.json
+            /tmp/learning-verified-source.json
           retention-days: 90
           if-no-files-found: warn
