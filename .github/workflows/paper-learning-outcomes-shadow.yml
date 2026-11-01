@@ -14,6 +14,7 @@ on:
 permissions:
   contents: read
   actions: read
+  issues: read
 concurrency:
   group: paper-learning-shadow-${{ github.event.workflow_run.id || github.ref }}
   cancel-in-progress: false
