@@ -17,7 +17,7 @@ MESSAGE = re.compile(r"paper: (?:immutable|atomic packed) scan ([1-9][0-9]*) sou
 SHA = re.compile(r"[0-9a-f]{40}")
 ACTIVE = frozenset(("queued", "in_progress", "waiting", "requested", "pending"))
 RECOVERY_MARKER = "PAPER_RECOVERY_ATTEMPT:"
-MIN_SUCCESS_AGE = dt.timedelta(minutes=70)
+MIN_SUCCESS_AGE = dt.timedelta(minutes=45)
 RETRY_INTERVAL = dt.timedelta(minutes=90)
 
 
@@ -116,16 +116,18 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
         return abstain("RECENT_SUCCESS")
 
     matured = scheduled_slots(now, 9, 30)
-    if len(matured) < 2:
+    if not matured:
         return abstain("INSUFFICIENT_MATURED_SLOTS")
     scheduled_successes = [x for _, x in clean if x.get("event") == "schedule"
                            and x.get("status") == "completed" and x.get("conclusion") == "success"]
     matched = matched_scheduled_slots(scheduled_successes, now, 9, 30)
-    if matured[0] in matched or matured[1] in matched:
+    if matured[0] in matched:
         return abstain("MATURED_SLOT_COVERED")
-    if newest_at >= matured[1]:
-        return abstain("SUCCESS_AFTER_OLDER_MATURED_SLOT")
-    result["missed_matured_slots"] = [x.isoformat() for x in matured[:2]]
+    # A successful scheduled OR recovery-dispatched scan after the missing
+    # slot means we already have a newer durable scan; never double-dispatch.
+    if newest_at >= matured[0]:
+        return abstain("SUCCESS_AFTER_MATURED_SLOT")
+    result["missed_matured_slots"] = [matured[0].isoformat()]
 
     marker = RECOVERY_MARKER + ledger_commit
     for item in comments:
@@ -144,7 +146,7 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
                 return abstain("RECOVERY_MARKER_IN_FUTURE", True)
             if now - at < RETRY_INTERVAL:
                 return abstain("RECOVERY_ALREADY_ATTEMPTED")
-    result.update(action="DISPATCH_EXISTING_WORKFLOW", reason="TWO_MATURED_SLOTS_MISSED",
+    result.update(action="DISPATCH_EXISTING_WORKFLOW", reason="MATURED_SLOT_MISSED",
                   attempt_marker=marker,
                   decision_sha256=hashlib.sha256((ledger_commit + "|" + str(latest_id) + "|" +
                   "|".join(result["missed_matured_slots"])).encode()).hexdigest())
