@@ -16,7 +16,7 @@ class ExternalHeartbeatContracts(unittest.TestCase):
 
     def test_only_created_issue_comment_can_wake(self):
         s = self.workflow
-        self.assertRegex(s, r"(?m)^on:\n  issue_comment:\n    types: \[created\\]")
+        self.assertRegex(s, r"(?m)^on:\n  issue_comment:\n    types: \[created\]")
         self.assertIn("github.event.action == 'created'", s)
         self.assertIn("github.event.issue.pull_request == null", s)
 
