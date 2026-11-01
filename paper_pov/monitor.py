@@ -43,6 +43,24 @@ def scheduled_slots(now, minute):
                   reverse=True)[:12]
 
 
+def matched_success_slots(successes, slots, multi_slot):
+    """Return covered slots; a run never covers two half-hour slots."""
+    covered = set()
+    for run in successes:
+        created = instant(run["created_at"])
+        for slot in slots:
+            if multi_slot:
+                # Disjoint attribution. Delayed run's actual cron is unknown.
+                matches = slot <= created < slot + dt.timedelta(minutes=30)
+            else:
+                matches = slot - dt.timedelta(minutes=5) <= created <= slot + RUN_WINDOW
+            if matches:
+                covered.add(slot)
+                if multi_slot:
+                    break
+    return covered
+
+
 def assess_runs(payload, now, minute, prefix, alerts):
     if not isinstance(payload, dict) or not isinstance(payload.get("workflow_runs"), list):
         alerts.append(prefix + "_RUNS_UNAVAILABLE")
@@ -71,17 +89,8 @@ def assess_runs(payload, now, minute, prefix, alerts):
     if len(mature_slots) >= 2:
         last_two = mature_slots[:2]
         multi_slot = not isinstance(minute, int) and len(minute) > 1
-        def successful_in(slot):
-            if multi_slot:
-                # Disjoint 30-minute windows: one run can never satisfy two slots.
-                # A delayed GitHub run cannot prove which cron fired; this is
-                # conservative creation-time attribution, not trigger provenance.
-                return any(slot <= instant(x["created_at"]) < slot + dt.timedelta(minutes=30)
-                           for x in successes)
-            return any(slot - dt.timedelta(minutes=5) <= instant(x["created_at"]) <= slot + RUN_WINDOW
-                       for x in successes)
         # A late run outside these windows cannot erase two missing slots.
-        if all(not successful_in(slot) for slot in last_two):
+        if not matched_success_slots(successes, last_two, multi_slot):
             alerts.append(prefix + "_TWO_MISSED_SLOTS")
     if not scheduled:
         alerts.append(prefix + "_NO_SCHEDULED_HISTORY")
