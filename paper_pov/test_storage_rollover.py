@@ -214,6 +214,29 @@ class RolloverTests(unittest.TestCase):
                                       second_rollover).split(),
                              [second_rollover, second_archive])
 
+    def test_shallow_clone_missing_checkpoint_fails_closed_and_full_fetch_recovers(self):
+        """A shallow checkout cannot silently accept an absent archived origin."""
+        with patch.object(repo, "MAX_SEGMENTS", 3):
+            base = self.build_history(3)
+            base, _, _ = self.next_scan(base, 90)
+            base, _, _ = self.next_scan(base, 120)
+            base, _, _ = self.next_scan(base, 150)
+            final, _, _ = self.next_scan(base, 180)
+        expected, mode = repo.read_git_state(self.gitdir, final, full_replay=True)
+        self.assertEqual(mode, "segmented")
+        shallow = self.root / "shallow"
+        subprocess.run(["git", "clone", "--quiet", "--depth=1",
+                        "file://" + str(self.gitdir), str(shallow)],
+                       check=True, capture_output=True)
+        self.assertTrue((shallow / ".git" / "shallow").exists())
+        with self.assertRaises(ValueError):
+            repo.read_git_state(shallow, final, full_replay=True)
+        subprocess.run(["git", "-C", str(shallow), "fetch", "--quiet",
+                        "--unshallow", "origin"], check=True, capture_output=True)
+        recovered, kind = repo.read_git_state(shallow, final, full_replay=True)
+        self.assertEqual(kind, "segmented")
+        self.assertEqual(recovered, expected)
+
     def test_interrupted_rollover_apply_never_advances_git_ref(self):
         base = self.build_history(3)
         original, _ = repo.read_git_state(self.gitdir, base, full_replay=True)
