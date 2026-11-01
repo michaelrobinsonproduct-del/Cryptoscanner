@@ -15,6 +15,12 @@ from paper_pov.segmented_storage import MAX_RAW_BYTES
 
 HORIZONS = (1, 6, 24, 48)
 MAX_GAP = dt.timedelta(minutes=45)
+GAP_REASONS = (
+    "NO_POST_ENTRY_QUOTE_BEFORE_TARGET",
+    "NO_TARGET_ANCHOR_WITHIN_45M",
+    "INTERIOR_GAP_OVER_45M",
+    "TARGET_BRIDGE_OVER_45M",
+)
 UTC = dt.timezone.utc
 
 
@@ -94,7 +100,17 @@ def sampled_outcomes(state, evaluation_at, horizons=HORIZONS):
             if contiguous:
                 contiguous = anchors[0][0] - stamps[-1] <= MAX_GAP
             if not contiguous:
-                rows.append({**base, "status": "ABSTAIN_GAP"})
+                # Attribute abstention without imputing a price or a missing candle.
+                if not within:
+                    reason = GAP_REASONS[0]
+                elif not anchors:
+                    reason = GAP_REASONS[1]
+                elif any(b - a > MAX_GAP for a, b in zip(stamps, stamps[1:])):
+                    reason = GAP_REASONS[2]
+                else:
+                    reason = GAP_REASONS[3]
+                rows.append({**base, "status": "ABSTAIN_GAP",
+                             "gap_reason": reason})
                 continue
             # The immutable same-run entry quote is part of the observed window.
             # Excluding it misreports a falling market's peak as negative.
@@ -187,10 +203,16 @@ def coverage_summary(rows):
     for h in HORIZONS:
         sample = [r for r in rows if r["horizon_hours"] == h]
         mature = [r for r in sample if r["status"] == "MATURED_OBSERVED"]
+        gaps = [r for r in sample if r["status"] == "ABSTAIN_GAP"]
+        reasons = {reason: sum(r.get("gap_reason") == reason for r in gaps)
+                   for reason in GAP_REASONS}
+        if sum(reasons.values()) != len(gaps):
+            raise ValueError("Unattributed or unrecognized sampled gap abstention")
         output[str(h)] = {
             "market_run_windows": len(sample),
             "matured_observed": len(mature),
-            "gap_abstentions": sum(r["status"] == "ABSTAIN_GAP" for r in sample),
+            "gap_abstentions": len(gaps),
+            "gap_reason_counts": reasons,
             "immature": sum(r["status"] == "IMMATURE" for r in sample),
             "sampled_20pct_windows": sum(r["observed_20pct_hit"] for r in mature),
             "sampled_30pct_windows": sum(r["observed_30pct_hit"] for r in mature),
