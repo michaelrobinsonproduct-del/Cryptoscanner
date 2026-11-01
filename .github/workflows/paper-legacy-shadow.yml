@@ -3,6 +3,8 @@ on:
   workflow_run:
     workflows: ["Public Kraken Paper POV (scheduled, isolated ledger)"]
     types: [requested]
+  issue_comment:
+    types: [created]
 permissions:
   contents: read
   actions: read
@@ -45,6 +47,101 @@ jobs:
           name: independent-legacy-shadow-${{ github.run_id }}
           path: |
             paper_pov/output/legacy-shadow.json
+            paper_pov/output/LEGACY_SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
+  owner-shadow-fallback:
+    # Separate read-only fallback; never dispatches the PAPER writer.
+    if: >-
+      github.repository == 'michaelrobinsonproduct-del/Cryptoscanner' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'issue_comment' &&
+      github.event.action == 'created' &&
+      github.event.issue.number == 34 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/paper-legacy-shadow-heartbeat' &&
+      github.event.comment.user.login == 'michaelrobinsonproduct-del' &&
+      github.event.comment.user.id == 336805669 &&
+      github.event.comment.author_association == 'OWNER' &&
+      github.event.sender.login == 'michaelrobinsonproduct-del' &&
+      github.event.sender.id == 336805669
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    concurrency:
+      group: legacy-shadow-owner-fallback
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact fallback and strategy tests
+        run: |
+          set -euo pipefail
+          python -m unittest paper_pov.test_legacy_shadow_trigger paper_pov.test_legacy_shadow -v
+      - name: Collect authenticated writer/shadow runs and sealed ledger
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          MAIN_SHA="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          test "$(git rev-parse HEAD)" = "$MAIN_SHA" || { echo SHADOW_MAIN_MOVED_ABSTAIN; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/shadow-paper-runs.json
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-legacy-shadow.yml/runs?per_page=100" > /tmp/shadow-shadow-runs.json
+          git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          BASE="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+          git log -1 --format=%s "$BASE" > /tmp/shadow-ledger-message.txt
+          git show "$BASE:paper-segment-manifest.json" > /tmp/shadow-manifest.json
+          CHECKPOINT="$(python -c 'import json;print(json.load(open("/tmp/shadow-manifest.json"))["checkpoint"]["git_commit"])')"
+          git cat-file -e "$CHECKPOINT^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$CHECKPOINT"
+          python -m paper_pov.segmented_repository export-git \
+            --repository . --commit "$BASE" --output /tmp/shadow-ledger.json --full-replay
+          echo "$BASE" > /tmp/shadow-ledger-commit.txt
+      - name: Fail-closed owner command, deduplication and ledger verification
+        id: verify
+        run: |
+          set -euo pipefail
+          python -m paper_pov.legacy_shadow_trigger \
+            --event "$GITHUB_EVENT_PATH" \
+            --paper-runs /tmp/shadow-paper-runs.json \
+            --shadow-runs /tmp/shadow-shadow-runs.json \
+            --ledger /tmp/shadow-ledger.json \
+            --manifest /tmp/shadow-manifest.json \
+            --ledger-message /tmp/shadow-ledger-message.txt \
+            --repository "$GITHUB_REPOSITORY" --current-run-id "$GITHUB_RUN_ID" \
+            --checkout-sha "$(git rev-parse HEAD)" --output /tmp/shadow-fallback-decision.json
+          cat /tmp/shadow-fallback-decision.json >> "$GITHUB_STEP_SUMMARY"
+          ACTION="$(python -c 'import json;print(json.load(open("/tmp/shadow-fallback-decision.json"))["action"])')"
+          if test "$ACTION" = RUN_SHADOW; then
+            echo "eligible=true" >> "$GITHUB_OUTPUT"
+            echo "trigger_run_id=$(python -c 'import json;print(json.load(open("/tmp/shadow-fallback-decision.json"))["trigger_paper_run_id"])')" >> "$GITHUB_OUTPUT"
+          else
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "SHADOW_OWNER_FALLBACK_ABSTAIN"
+          fi
+      - name: Independently sample Kraken after trusted completed writer
+        if: steps.verify.outputs.eligible == 'true'
+        env:
+          PAPER_SHADOW_RUN_ID: ${{ github.run_id }}
+          PAPER_TRIGGER_RUN_ID: ${{ steps.verify.outputs.trigger_run_id }}
+        run: |
+          set -euo pipefail
+          export PAPER_SHADOW_SOURCE_SHA="$(git rev-parse HEAD)"
+          python -m paper_pov.legacy_shadow
+          cp /tmp/shadow-fallback-decision.json paper_pov/output/owner-fallback-provenance.json
+          (cd paper_pov/output && sha256sum -c LEGACY_SHA256SUMS && sha256sum owner-fallback-provenance.json >> LEGACY_SHA256SUMS)
+          (cd paper_pov/output && sha256sum -c LEGACY_SHA256SUMS)
+      - name: Preserve independent checksummed fallback evidence
+        if: steps.verify.outputs.eligible == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: independent-legacy-shadow-${{ github.run_id }}
+          path: |
+            paper_pov/output/legacy-shadow.json
+            paper_pov/output/owner-fallback-provenance.json
             paper_pov/output/LEGACY_SHA256SUMS
           retention-days: 90
           if-no-files-found: error
