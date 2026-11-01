@@ -124,7 +124,7 @@ jobs:
             echo "Source SHA: $GITHUB_SHA"
             echo "PAPER_MONITOR_PIPELINE_FAILED: independent monitoring did not complete."
             echo "Scanner status, ledger integrity, freshness, outcomes and delivery are UNKNOWN from this monitor run."
-            echo "No scanner dispatch, second writer, trading, Railway or scoring action was taken."
+            echo "No scanner dispatch, second writer, trading, production infrastructure or scoring action was taken."
           } > /tmp/paper-monitor-upstream-alert.txt
           COUNT="$(gh api "repos/$GITHUB_REPOSITORY/issues/34" --jq '.comments')"
           PAGE=$(( (COUNT + 99) / 100 ))
