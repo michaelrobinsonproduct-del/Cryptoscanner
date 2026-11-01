@@ -133,7 +133,7 @@ def changed_paths(root, base, staged):
                     new_meta["generation"] != before["generation"] or
                     new_meta["ledger_sha256"] != before["sha256"] or
                     (Path(staged) / segments.CHECKPOINT).read_bytes() !=
-                    ledger.canonical(before) or len(manifest["segments"]) != 1):
+                    storage.pack_snapshot(before) or len(manifest["segments"]) != 1):
                 raise ValueError("Unverified archived checkpoint rollover")
             paths.append(segments.CHECKPOINT)
             paths.extend(segments._segment_path(e["generation"])
