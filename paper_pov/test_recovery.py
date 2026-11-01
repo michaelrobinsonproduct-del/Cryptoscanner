@@ -118,6 +118,8 @@ class RecoveryTests(unittest.TestCase):
             dict(scan(122, "2026-10-31T18:00:00Z"), event="push", head_branch="dev"),
             dict(scan(122, "2026-10-31T18:00:00Z"), event="pull_request"),
             dict(scan(122, "2026-10-31T18:00:00Z"), event="push", conclusion=None),
+            dict(scan(122, "2026-10-31T18:00:00Z"), event="push", id=None),
+            dict(scan(122, "2026-10-31T18:00:00Z"), event="push", head_sha="bad"),
         ]
         for item in variants:
             with self.subTest(item=item):
