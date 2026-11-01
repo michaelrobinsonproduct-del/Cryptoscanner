@@ -63,20 +63,42 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
     if not runs:
         return abstain("NO_RUN_HISTORY", True)
     clean = []
+    ignored_legacy_push = []
     try:
         for item in runs:
-            if not isinstance(item, dict) or item.get("event") not in ("schedule", "workflow_dispatch"):
+            if not isinstance(item, dict):
+                return abstain("RUN_METADATA_INVALID", True)
+            at = instant(item["created_at"])
+            if at > now + dt.timedelta(minutes=2):
+                return abstain("FUTURE_RUN_TIMESTAMP", True)
+            event = item.get("event")
+            if event not in ("schedule", "workflow_dispatch"):
+                # The public workflow previously ran on push. Those historical
+                # completed runs are NOT scanner writers, and must not disable
+                # missed-slot recovery forever. Ignore ONLY an unambiguously
+                # old, completed, identified-branch push predating the sealed ledger.
+                # Unknown, active, newer or missing-branch events fail closed.
+                if (event == "push" and isinstance(item.get("head_branch"), str)
+                        and bool(item["head_branch"].strip())
+                        and type(item.get("id")) is int and item["id"] > 0
+                        and isinstance(item.get("head_sha"), str)
+                        and SHA.fullmatch(item["head_sha"])
+                        and item.get("status") == "completed"
+                        and item.get("conclusion") in ("success", "failure", "cancelled")
+                        and at < latest_asof - dt.timedelta(minutes=2)):
+                    ignored_legacy_push.append(item.get("id"))
+                    continue
+                result["invalid_run_id"] = item.get("id")
+                result["invalid_run_event"] = event
                 return abstain("RUN_EVENT_INVALID", True)
             if item.get("head_branch") != "main":
                 return abstain("RUN_BRANCH_NOT_MAIN", True)
             if item.get("status") not in ACTIVE and item.get("status") != "completed":
                 return abstain("RUN_STATUS_INVALID", True)
-            at = instant(item["created_at"])
-            if at > now + dt.timedelta(minutes=2):
-                return abstain("FUTURE_RUN_TIMESTAMP", True)
             clean.append((at, item))
     except (ValueError, TypeError, KeyError, OverflowError):
         return abstain("RUN_METADATA_INVALID", True)
+    result["ignored_historical_push_run_ids"] = ignored_legacy_push
     clean.sort(key=lambda pair: pair[0], reverse=True)
     if any(x.get("status") in ACTIVE for _, x in clean):
         return abstain("SCANNER_ACTIVE_OR_QUEUED")
