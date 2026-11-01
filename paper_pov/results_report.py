@@ -79,6 +79,14 @@ def render(scan, score, *, run_id, source_sha, ledger_commit):
         pair = o.get("pair")
         if not isinstance(pair, str) or not PAIR.fullmatch(pair) or pair in quotes:
             raise ValueError("Invalid or duplicate observed pair")
+        # The public WATCH label must be tied to the same-run Kraken ticker
+        # symbol, not merely a matching pair key, price, and quote timestamp.
+        quote_symbol = o.get("symbol")
+        if (not isinstance(quote_symbol, str) or not PAIR.fullmatch(quote_symbol)
+                or quote_symbol.count("/") != 1 or not quote_symbol.endswith("/USD")
+                or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", quote_symbol[:-4])
+                or quote_symbol.split("/")[0].upper() in STABLE):
+            raise ValueError("Invalid or excluded observed quote symbol")
         age = (as_of - _utc(o["observed_at"])).total_seconds()
         if not 0 <= age <= 600 or _number(o["price"], "quote price") <= 0:
             raise ValueError("Stale, future, or invalid quote")
@@ -120,6 +128,8 @@ def render(scan, score, *, run_id, source_sha, ledger_commit):
         quote = quotes.get(pair)
         if quote is None or _number(p["price"], "watch price") != _number(quote["price"], "quote price"):
             raise ValueError("Prediction price lacks same-run quote provenance")
+        if symbol != quote["symbol"]:
+            raise ValueError("Prediction symbol differs from same-run observed quote")
         if _utc(p["quote_observed_at"]) != _utc(quote["observed_at"]):
             raise ValueError("Prediction quote timestamp mismatch")
         if _number(p["ohlc_age_seconds"], "OHLC age") < 0 or p["ohlc_age_seconds"] > 600:

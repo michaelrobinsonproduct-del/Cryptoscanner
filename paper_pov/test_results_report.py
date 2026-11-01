@@ -18,8 +18,8 @@ def fixture():
         "as_of": NOW, "eligible_pairs": 620, "observed_markets": 2,
         "ohlc_screened": 2, "abstentions": [{"pair": "XYZUSD", "reason": "gap"}],
         "observations": [
-            {"pair": "XBTUSD", "price": 71000.0, "observed_at": QUOTE},
-            {"pair": "ETHUSD", "price": 4000.0, "observed_at": QUOTE},
+            {"pair": "XBTUSD", "symbol": "XBT/USD", "price": 71000.0, "observed_at": QUOTE},
+            {"pair": "ETHUSD", "symbol": "ETH/USD", "price": 4000.0, "observed_at": QUOTE},
         ],
         "watch": [],
     }
@@ -111,6 +111,32 @@ class PaperResultsContracts(unittest.TestCase):
         s, b = fixture()
         s["watch"][0]["symbol"] = "USDT/USD"
         with self.assertRaises(ValueError):
+            self.report(s, b)
+
+    def test_reject_symbol_spoofing_even_with_matching_pair_price_and_quote_time(self):
+        # The old reporter trusted WATCH symbol independently of its observed
+        # Kraken quote; a spoofed non-stable label could misidentify a coin.
+        s, b = fixture()
+        s["watch"][0]["symbol"] = "LTC/USD"
+        with self.assertRaisesRegex(ValueError, "symbol differs"):
+            self.report(s, b)
+        s, b = fixture()
+        s["observations"][0]["symbol"] = "LTC/USD"
+        with self.assertRaisesRegex(ValueError, "symbol differs"):
+            self.report(s, b)
+
+    def test_reject_unattributed_or_excluded_observation_symbols(self):
+        for value in (None, "", "/USD", "./USD", "-/USD", "LTC/EUR", "USDT/USD", "XBT/USD/EXTRA", True):
+            s, b = fixture()
+            s["observations"][0]["symbol"] = value
+            with self.subTest(symbol=value), self.assertRaisesRegex(ValueError, "observed quote symbol"):
+                self.report(s, b)
+
+    def test_reject_spoofed_empty_base_even_if_watch_and_quote_agree(self):
+        s, b = fixture()
+        s["observations"][0]["symbol"] = "/USD"
+        s["watch"][0]["symbol"] = "/USD"
+        with self.assertRaisesRegex(ValueError, "observed quote symbol"):
             self.report(s, b)
 
     def test_reject_unsealed_ledger_and_unpersisted_counts(self):
