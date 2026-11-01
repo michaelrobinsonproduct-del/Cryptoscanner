@@ -6,20 +6,25 @@ on:
       - 'paper_pov/test_learning_outcomes.py'
       - '.github/workflows/paper-learning-outcomes-shadow.yml'
   workflow_dispatch:
+  issue_comment:
+    types: [created]
   workflow_run:
     workflows: ["Public Kraken Paper POV (scheduled, isolated ledger)"]
     types: [completed]
 permissions:
   contents: read
   actions: read
+  issues: read
 concurrency:
-  group: paper-learning-shadow-${{ github.event.workflow_run.id || github.ref }}
+  group: paper-learning-shadow-${{ github.event.workflow_run.id || github.event.comment.id || github.run_id }}
   cancel-in-progress: false
 jobs:
   sampled-outcome-evidence:
     if: >-
-      github.event_name != 'workflow_run' ||
-      (github.repository == 'michaelrobinsonproduct-del/Cryptoscanner' &&
+      github.event_name == 'pull_request' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.repository == 'michaelrobinsonproduct-del/Cryptoscanner' &&
        github.event.workflow_run.repository.full_name == 'michaelrobinsonproduct-del/Cryptoscanner' &&
        github.event.workflow_run.head_branch == 'main' &&
        github.event.workflow_run.conclusion == 'success' &&
@@ -119,3 +124,141 @@ jobs:
             paper_pov/learning-evidence/verified-source.json
           retention-days: 90
           if-no-files-found: warn
+
+  owner-learning-fallback:
+    if: >-
+      github.repository == 'michaelrobinsonproduct-del/Cryptoscanner' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'issue_comment' &&
+      github.event.action == 'created' &&
+      github.event.issue.number == 34 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/paper-learning-heartbeat' &&
+      github.event.comment.user.login == 'michaelrobinsonproduct-del' &&
+      github.event.comment.user.id == 336805669 &&
+      github.event.comment.author_association == 'OWNER' &&
+      github.event.sender.login == 'michaelrobinsonproduct-del' &&
+      github.event.sender.id == 336805669
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact main and offline fail-closed learning tests
+        run: |
+          set -euo pipefail
+          echo "PAPER_LEARNING_FALLBACK_SHA=$(git rev-parse HEAD)"
+          python -m unittest paper_pov.test_learning_fallback paper_pov.test_learning_outcomes paper_pov.test_learning_trigger -v
+      - name: Collect authenticated writer, learning, owner commands and immutable ledger
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          MAIN_SHA="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          test "$(git rev-parse HEAD)" = "$MAIN_SHA" || { echo LEARNING_MAIN_MOVED_ABORT; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/learning-fallback-writers.json
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-learning-outcomes-shadow.yml/runs?per_page=100" > /tmp/learning-fallback-runs.json
+          gh api --paginate "repos/$GITHUB_REPOSITORY/issues/34/comments?per_page=100" \
+            --jq '.[] | {id,body,created_at,user:{login:.user.login,id:.user.id}} | @json' > /tmp/learning-fallback-comments.ndjson
+          git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          BASE="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+          printf '%s\n' "$BASE" > /tmp/learning-fallback-ledger-commit.txt
+          git log -1 --format=%s "$BASE" > /tmp/learning-fallback-ledger-message.txt
+          git show "$BASE:paper-segment-manifest.json" > /tmp/learning-fallback-manifest.json
+          CHECKPOINT="$(python -c 'import json;print(json.load(open("/tmp/learning-fallback-manifest.json"))["checkpoint"]["git_commit"])')"
+          git cat-file -e "$CHECKPOINT^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$CHECKPOINT"
+          python -m paper_pov.segmented_repository export-git \
+            --repository . --commit "$BASE" --output /tmp/learning-fallback-ledger.json --full-replay
+      - name: Verify exact owner command, latest durable writer and no automatic learning
+        id: verify
+        run: |
+          set -euo pipefail
+          python -m paper_pov.learning_fallback \
+            --event "$GITHUB_EVENT_PATH" \
+            --paper-runs /tmp/learning-fallback-writers.json \
+            --learning-runs /tmp/learning-fallback-runs.json \
+            --comments /tmp/learning-fallback-comments.ndjson \
+            --ledger /tmp/learning-fallback-ledger.json \
+            --manifest /tmp/learning-fallback-manifest.json \
+            --ledger-message /tmp/learning-fallback-ledger-message.txt \
+            --ledger-commit /tmp/learning-fallback-ledger-commit.txt \
+            --repository "$GITHUB_REPOSITORY" --current-run-id "$GITHUB_RUN_ID" \
+            --checkout-sha "$(git rev-parse HEAD)" \
+            --output /tmp/learning-fallback-decision.json
+          cat /tmp/learning-fallback-decision.json >> "$GITHUB_STEP_SUMMARY"
+          ACTION="$(python -c 'import json;print(json.load(open("/tmp/learning-fallback-decision.json"))["action"])')"
+          if test "$ACTION" = RUN_READ_ONLY_LEARNING; then
+            echo "eligible=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo PAPER_LEARNING_OWNER_FALLBACK_ABSTAIN
+          fi
+      - name: Recheck live API, sealed ledger and source SHA before research
+        id: recheck
+        if: steps.verify.outputs.eligible == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/learning-fallback-writers2.json
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-learning-outcomes-shadow.yml/runs?per_page=100" > /tmp/learning-fallback-runs2.json
+          gh api --paginate "repos/$GITHUB_REPOSITORY/issues/34/comments?per_page=100" \
+            --jq '.[] | {id,body,created_at,user:{login:.user.login,id:.user.id}} | @json' > /tmp/learning-fallback-comments2.ndjson
+          git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          if test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" != "$(cat /tmp/learning-fallback-ledger-commit.txt)" ||
+             test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" != "$(git rev-parse HEAD)"; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo PAPER_LEARNING_SOURCE_MOVED_ABSTAIN
+            exit 0
+          fi
+          python -m paper_pov.learning_fallback \
+            --event "$GITHUB_EVENT_PATH" \
+            --paper-runs /tmp/learning-fallback-writers2.json \
+            --learning-runs /tmp/learning-fallback-runs2.json \
+            --comments /tmp/learning-fallback-comments2.ndjson \
+            --ledger /tmp/learning-fallback-ledger.json \
+            --manifest /tmp/learning-fallback-manifest.json \
+            --ledger-message /tmp/learning-fallback-ledger-message.txt \
+            --ledger-commit /tmp/learning-fallback-ledger-commit.txt \
+            --repository "$GITHUB_REPOSITORY" --current-run-id "$GITHUB_RUN_ID" \
+            --checkout-sha "$(git rev-parse HEAD)" \
+            --output /tmp/learning-fallback-recheck.json
+          if cmp -s /tmp/learning-fallback-decision.json /tmp/learning-fallback-recheck.json &&
+             test "$(python -c 'import json;print(json.load(open("/tmp/learning-fallback-recheck.json"))["action"])')" = RUN_READ_ONLY_LEARNING; then
+            echo "eligible=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo PAPER_LEARNING_RECHECK_ABSTAIN
+          fi
+      - name: Produce pinned, checksummed read-only outcome evidence
+        if: steps.recheck.outputs.eligible == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p paper_pov/learning-evidence
+          python -m paper_pov.learning_outcomes \
+            --ledger /tmp/learning-fallback-ledger.json > paper_pov/learning-evidence/evaluation.json
+          cp /tmp/learning-fallback-recheck.json paper_pov/learning-evidence/owner-fallback-provenance.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          e=json.loads(Path("paper_pov/learning-evidence/evaluation.json").read_text())
+          p=json.loads(Path("paper_pov/learning-evidence/owner-fallback-provenance.json").read_text())
+          assert e["mode"]=="READ_ONLY_OFFLINE_LEARNING" and e["production_applied"] is False
+          assert e["held_out_lift"] is None
+          assert e["source_generation"]==p["ledger_generation"]
+          assert e["source_ledger_sha256"]==p["ledger_sha256"]
+          print("PAPER_LEARNING_OWNER_FALLBACK_VERIFIED",p["writer_run_id"],p["ledger_generation"])
+          PY
+          (cd paper_pov/learning-evidence && sha256sum *.json > SHA256SUMS && sha256sum -c SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        if: steps.recheck.outputs.eligible == 'true'
+        with:
+          name: paper-learning-owner-${{ github.run_id }}
+          path: paper_pov/learning-evidence/
+          retention-days: 90
+          if-no-files-found: error
