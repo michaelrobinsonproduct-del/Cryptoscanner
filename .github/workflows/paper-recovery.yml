@@ -112,7 +112,7 @@ jobs:
           print('### Paper scanner missed-slot recovery ATTEMPT — '+d['checked_at'])
           print()
           print('<!-- '+d['attempt_marker']+' -->')
-          print('Two matured UTC slots missing: '+', '.join(d['missed_matured_slots']))
+          print('Matured UTC scan slot(s) missing: '+', '.join(d['missed_matured_slots']))
           print('Verified immutable ledger generation: '+str(d['ledger_generation']))
           print('Ledger commit: '+d['ledger_commit'])
           print('Last linked successful run: '+str(d['latest_run_id']))
