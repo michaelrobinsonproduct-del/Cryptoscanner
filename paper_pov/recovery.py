@@ -192,7 +192,7 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
             if now - at < interval:
                 return abstain(label + "_ALREADY_ATTEMPTED")
     result.update(action="DISPATCH_EXISTING_WORKFLOW", reason="MATURED_SLOT_MISSED",
-                  attempt_marker=marker,
+                  attempt_marker=RECOVERY_MARKER + ledger_commit,
                   decision_sha256=hashlib.sha256((ledger_commit + "|" + str(latest_id) + "|" +
                   "|".join(result["missed_matured_slots"])).encode()).hexdigest())
     return result
