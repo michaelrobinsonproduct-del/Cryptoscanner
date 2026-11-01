@@ -17,12 +17,12 @@ MESSAGE = re.compile(r"paper: (?:immutable|atomic packed) scan ([1-9][0-9]*) sou
 SHA = re.compile(r"[0-9a-f]{40}")
 ACTIVE = frozenset(("queued", "in_progress", "waiting", "requested", "pending"))
 RECOVERY_MARKER = "PAPER_RECOVERY_ATTEMPT:"
-MIN_SUCCESS_AGE = dt.timedelta(minutes=70)
+MIN_SUCCESS_AGE = dt.timedelta(minutes=45)
 RETRY_INTERVAL = dt.timedelta(minutes=90)
 
 
 def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
-    """Only verified two-missed-slot evidence can authorize a request."""
+    """Only verified missed-slot and durable-ledger evidence authorize a request."""
     result = {"schema": 1, "paper_only": True, "action": "BLOCKED",
               "reason": "UNVALIDATED", "checked_at": now.astimezone(UTC).isoformat(),
               "ledger_commit": ledger_commit, "latest_run_id": None,
@@ -106,26 +106,58 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
     if not completed:
         return abstain("NO_COMPLETED_SCANNER_RUN", True)
     newest_at, newest = completed[0]
-    if newest.get("conclusion") != "success":
-        return abstain("LATEST_SCANNER_RUN_FAILED", True)
-    if str(newest.get("id")) != str(latest_id) or newest.get("head_sha") != latest_record["source_sha"]:
-        return abstain("LEDGER_NOT_LINKED_TO_NEWEST_SUCCESS", True)
-    if latest_asof < newest_at - dt.timedelta(minutes=2):
+    # The sealed ledger identifies the durable writer. A later failed run may
+    # have stopped before its push; a failure after its push is itself sealed.
+    # Neither situation justifies a permanent retry dead end.
+    anchors = [(at, item) for at, item in completed if type(item.get("id")) is int
+               and item["id"] == latest_id]
+    if len(anchors) != 1:
+        return abstain("LEDGER_RUN_NOT_FOUND_OR_DUPLICATE", True)
+    anchor_at, anchor = anchors[0]
+    if anchor.get("head_sha") != latest_record["source_sha"]:
+        return abstain("LEDGER_NOT_LINKED_TO_RUN_SOURCE", True)
+    if anchor.get("conclusion") not in ("success", "failure"):
+        return abstain("LEDGER_ANCHOR_CONCLUSION_INVALID", True)
+    if latest_asof < anchor_at - dt.timedelta(minutes=2):
         return abstain("LEDGER_ASOF_BEFORE_RUN", True)
-    if now - newest_at < MIN_SUCCESS_AGE:
-        return abstain("RECENT_SUCCESS")
+    for at, item in completed:
+        if item is anchor:
+            continue
+        if item.get("conclusion") not in ("success", "failure", "cancelled"):
+            return abstain("RUN_CONCLUSION_INVALID", True)
+        # GitHub timestamps have second resolution. Distinct runs created in
+        # the same second cannot be ordered against the durable ledger anchor.
+        # Never infer that an unlinked success/failure/cancellation is older.
+        if at == anchor_at:
+            return abstain("RUN_CREATED_AT_TIE_AMBIGUOUS", True)
+        if at > anchor_at:
+            # Only completed failed attempts may follow a durable anchor.
+            # A newer unlinked success or ambiguous cancellation must block.
+            if (item.get("conclusion") != "failure" or
+                    type(item.get("id")) is not int or item["id"] <= 0 or
+                    not isinstance(item.get("head_sha"), str) or
+                    not SHA.fullmatch(item["head_sha"])):
+                return abstain("NEWER_RUN_NOT_DURABLY_RECONCILED", True)
+    result["latest_completed_run_id"] = newest.get("id")
+    result["latest_completed_conclusion"] = newest.get("conclusion")
+    result["durable_anchor_conclusion"] = anchor.get("conclusion")
+    # Bounded retries: the latest failed attempt must also age >=45 minutes.
+    if now - max(newest_at, latest_asof) < MIN_SUCCESS_AGE:
+        return abstain("RECENT_ATTEMPT")
 
     matured = scheduled_slots(now, 9, 30)
-    if len(matured) < 2:
+    if not matured:
         return abstain("INSUFFICIENT_MATURED_SLOTS")
     scheduled_successes = [x for _, x in clean if x.get("event") == "schedule"
                            and x.get("status") == "completed" and x.get("conclusion") == "success"]
     matched = matched_scheduled_slots(scheduled_successes, now, 9, 30)
-    if matured[0] in matched or matured[1] in matched:
+    if matured[0] in matched:
         return abstain("MATURED_SLOT_COVERED")
-    if newest_at >= matured[1]:
-        return abstain("SUCCESS_AFTER_OLDER_MATURED_SLOT")
-    result["missed_matured_slots"] = [x.isoformat() for x in matured[:2]]
+    # A successful scheduled OR recovery-dispatched scan after the missing
+    # slot means we already have a newer durable scan; never double-dispatch.
+    if max(anchor_at, latest_asof) >= matured[0]:
+        return abstain("DURABLE_SCAN_AFTER_MATURED_SLOT")
+    result["missed_matured_slots"] = [matured[0].isoformat()]
 
     marker = RECOVERY_MARKER + ledger_commit
     for item in comments:
@@ -144,7 +176,7 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
                 return abstain("RECOVERY_MARKER_IN_FUTURE", True)
             if now - at < RETRY_INTERVAL:
                 return abstain("RECOVERY_ALREADY_ATTEMPTED")
-    result.update(action="DISPATCH_EXISTING_WORKFLOW", reason="TWO_MATURED_SLOTS_MISSED",
+    result.update(action="DISPATCH_EXISTING_WORKFLOW", reason="MATURED_SLOT_MISSED",
                   attempt_marker=marker,
                   decision_sha256=hashlib.sha256((ledger_commit + "|" + str(latest_id) + "|" +
                   "|".join(result["missed_matured_slots"])).encode()).hexdigest())

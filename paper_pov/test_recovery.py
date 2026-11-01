@@ -1,9 +1,11 @@
 """Recovery controller failure-injection contracts: never dispatch on ambiguity."""
 import datetime as dt
+import hashlib
 import unittest
 from pathlib import Path
 
 from paper_pov.monitor import UTC
+from paper_pov.ledger import seal
 from paper_pov.recovery import decide, RECOVERY_MARKER
 from paper_pov.test_monitor import fixture, run, SHA
 
@@ -28,22 +30,54 @@ def decision(runs=None, comments=None, ledger=None, now=NOW, commit=COMMIT, mess
 
 
 class RecoveryTests(unittest.TestCase):
-    def test_two_matured_slots_and_verified_ledger_permit_same_workflow_request(self):
+    def test_one_matured_slot_and_verified_ledger_permit_same_workflow_request(self):
         d = decision()
         self.assertEqual(d["action"], "DISPATCH_EXISTING_WORKFLOW")
-        self.assertEqual(d["reason"], "TWO_MATURED_SLOTS_MISSED")
+        self.assertEqual(d["reason"], "MATURED_SLOT_MISSED")
         self.assertEqual(d["latest_run_id"], 123)
         self.assertEqual(d["ledger_generation"], 1)
-        self.assertEqual(len(d["missed_matured_slots"]), 2)
+        self.assertEqual(len(d["missed_matured_slots"]), 1)
         self.assertEqual(d["attempt_marker"], RECOVERY_MARKER + COMMIT)
 
-    def test_no_dispatch_with_only_one_matured_missed_slot(self):
+    def test_one_matured_missed_slot_recovers_after_35_minute_grace(self):
         d = decision(now=dt.datetime(2026, 10, 31, 21, 27, tzinfo=UTC))
-        self.assertEqual(d["action"], "NO_DISPATCH")
+        self.assertEqual((d["action"], d["reason"]),
+                         ("DISPATCH_EXISTING_WORKFLOW", "MATURED_SLOT_MISSED"))
+        self.assertEqual(d["missed_matured_slots"], ["2026-10-31T20:39:00+00:00"])
+
+    def test_newer_durable_manual_success_prevents_redundant_recovery(self):
+        # At 21:13 the 20:39 slot is not mature; the latest matured slot
+        # is 20:09, already followed by a verified 20:10 recovery scan.
+        d = decision(runs=[scan(event="workflow_dispatch")],
+                     now=dt.datetime(2026, 10, 31, 21, 13, tzinfo=UTC))
+        self.assertEqual((d["action"], d["reason"]),
+                         ("NO_DISPATCH", "DURABLE_SCAN_AFTER_MATURED_SLOT"))
+
+    def test_scheduled_success_covers_matured_slot(self):
+        d = decision(now=dt.datetime(2026, 10, 31, 21, 13, tzinfo=UTC))
+        self.assertEqual((d["action"], d["reason"]),
+                         ("NO_DISPATCH", "MATURED_SLOT_COVERED"))
 
     def test_recent_success_does_not_dispatch(self):
-        d = decision(now=dt.datetime(2026, 10, 31, 21, 0, tzinfo=UTC))
-        self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "RECENT_SUCCESS"))
+        d = decision(now=dt.datetime(2026, 10, 31, 20, 50, tzinfo=UTC))
+        self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "RECENT_ATTEMPT"))
+
+    def test_delayed_scan_asof_prevents_premature_retry(self):
+        # Run started 20:35, then produced immutable market data at 20:50.
+        # At 21:27, run creation is 52m old but market scan only 37m old.
+        state = fixture()
+        asof = "2026-10-31T20:50:00+00:00"
+        state["runs"][0]["as_of"] = asof
+        state["predictions"][0]["as_of"] = asof
+        state["predictions"][0]["prediction_id"] = hashlib.sha256(
+            ("paper-v1|" + asof + "|" + state["predictions"][0]["pair"]).encode()
+        ).hexdigest()
+        state["observations"][0]["at"] = "2026-10-31T20:49:50+00:00"
+        d = decision(runs=[scan(123, "2026-10-31T20:35:00Z")],
+                     ledger=seal(state),
+                     now=dt.datetime(2026, 10, 31, 21, 27, tzinfo=UTC))
+        self.assertEqual((d["action"], d["reason"]),
+                         ("NO_DISPATCH", "RECENT_ATTEMPT"))
 
     def test_queued_or_running_existing_writer_prevents_dispatch(self):
         for status in ("queued", "in_progress", "waiting", "requested", "pending"):
@@ -52,13 +86,68 @@ class RecoveryTests(unittest.TestCase):
                                               status=status, conclusion=None)])
                 self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "SCANNER_ACTIVE_OR_QUEUED"))
 
-    def test_newest_failed_scan_blocks_unattended_recovery(self):
+    def test_failed_before_ledger_write_can_recover_after_cooldown(self):
         d = decision(runs=[scan(), scan(124, "2026-10-31T22:10:00Z", conclusion="failure")])
-        self.assertEqual((d["action"], d["reason"]), ("BLOCKED", "LATEST_SCANNER_RUN_FAILED"))
+        self.assertEqual((d["action"], d["reason"]), ("DISPATCH_EXISTING_WORKFLOW", "MATURED_SLOT_MISSED"))
+        self.assertEqual(d["latest_run_id"], 123)
+        self.assertEqual(d["latest_completed_run_id"], 124)
+        self.assertEqual(d["latest_completed_conclusion"], "failure")
+
+    def test_recent_failed_attempt_must_cool_down(self):
+        d = decision(runs=[scan(), scan(124, "2026-10-31T23:00:00Z", conclusion="failure")])
+        self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "RECENT_ATTEMPT"))
+
+    def test_failed_after_ledger_push_is_durable_anchor(self):
+        # GitHub reports failure after remote ledger push (e.g. artifact
+        # publishing failed). Sealed ledger links that failed run exactly.
+        d = decision(runs=[scan(conclusion="failure")])
+        self.assertEqual((d["action"], d["reason"]), ("DISPATCH_EXISTING_WORKFLOW", "MATURED_SLOT_MISSED"))
+        self.assertEqual(d["durable_anchor_conclusion"], "failure")
+
+    def test_recent_durable_failed_run_suppresses_duplicate_scan(self):
+        d = decision(runs=[scan(conclusion="failure")],
+                     now=dt.datetime(2026, 10, 31, 20, 50, tzinfo=UTC))
+        self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "RECENT_ATTEMPT"))
+
+    def test_cancelled_or_ambiguous_newer_run_blocks(self):
+        for conclusion in ("cancelled", None, "skipped", "timed_out"):
+            with self.subTest(conclusion=conclusion):
+                d = decision(runs=[scan(), scan(124, "2026-10-31T22:10:00Z", conclusion=conclusion)])
+                self.assertEqual(d["action"], "BLOCKED")
+
+    def test_newer_failed_run_requires_valid_source_identity(self):
+        for bad in (None, "not-a-sha", ""):
+            with self.subTest(bad=bad):
+                d = decision(runs=[scan(), dict(scan(124, "2026-10-31T22:10:00Z",
+                                                   conclusion="failure"), head_sha=bad)])
+                self.assertEqual((d["action"], d["reason"]),
+                                 ("BLOCKED", "NEWER_RUN_NOT_DURABLY_RECONCILED"))
+
+    def test_multiple_old_failed_attempts_bounded_by_latest_attempt(self):
+        d = decision(runs=[scan(), scan(124, "2026-10-31T21:00:00Z", conclusion="failure"),
+                           scan(125, "2026-10-31T22:10:00Z", conclusion="failure")])
+        self.assertEqual(d["action"], "DISPATCH_EXISTING_WORKFLOW")
+
+    def test_newer_failed_attempt_with_corrupt_ledger_still_blocks(self):
+        state = fixture()
+        state["predictions"][0]["price"] = 999.0
+        d = decision(runs=[scan(), scan(124, "2026-10-31T22:10:00Z", conclusion="failure")],
+                     ledger=state)
+        self.assertEqual((d["action"], d["reason"]), ("BLOCKED", "LEDGER_INVALID"))
+
+    def test_distinct_equal_second_run_cannot_be_ordered_against_durable_anchor(self):
+        # GitHub created_at timestamps have only second precision. A separate
+        # run with the anchor's timestamp is NOT proof it predates the anchor.
+        for conclusion in ("success", "failure", "cancelled"):
+            with self.subTest(conclusion=conclusion):
+                other = scan(124, "2026-10-31T20:10:00Z", conclusion=conclusion)
+                d = decision(runs=[scan(), other])
+                self.assertEqual((d["action"], d["reason"]),
+                                 ("BLOCKED", "RUN_CREATED_AT_TIE_AMBIGUOUS"))
 
     def test_newer_success_without_ledger_readback_blocks(self):
         d = decision(runs=[scan(), scan(124, "2026-10-31T22:10:00Z")])
-        self.assertEqual((d["action"], d["reason"]), ("BLOCKED", "LEDGER_NOT_LINKED_TO_NEWEST_SUCCESS"))
+        self.assertEqual((d["action"], d["reason"]), ("BLOCKED", "NEWER_RUN_NOT_DURABLY_RECONCILED"))
 
     def test_same_ledger_recent_recovery_attempt_prevents_duplicate(self):
         d = decision(comments=[{"body": "<!-- " + RECOVERY_MARKER + COMMIT + " -->",
@@ -98,7 +187,7 @@ class RecoveryTests(unittest.TestCase):
 
     def test_source_run_mismatch_fails_closed(self):
         d = decision(runs=[dict(scan(), head_sha="f"*40)])
-        self.assertEqual((d["action"], d["reason"]), ("BLOCKED", "LEDGER_NOT_LINKED_TO_NEWEST_SUCCESS"))
+        self.assertEqual((d["action"], d["reason"]), ("BLOCKED", "LEDGER_NOT_LINKED_TO_RUN_SOURCE"))
 
     def test_historical_completed_push_ci_is_not_a_scanner_run(self):
         # GitHub's real workflow history contains five old push-triggered CI
@@ -111,7 +200,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(d["action"], "DISPATCH_EXISTING_WORKFLOW")
         self.assertEqual(d["latest_run_id"], 123)
         self.assertEqual(d["ignored_historical_push_run_ids"], [122, 121])
-        self.assertEqual(len(d["missed_matured_slots"]), 2)
+        self.assertEqual(len(d["missed_matured_slots"]), 1)
 
     def test_untrusted_push_events_never_enable_recovery(self):
         variants = [
