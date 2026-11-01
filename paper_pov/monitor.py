@@ -56,7 +56,9 @@ def matched_scheduled_slots(successes, now, minute, cadence_minutes):
     for run in successes:
         started = instant(run["created_at"])
         eligible = [slot for slot in candidates
-                    if slot - dt.timedelta(minutes=5) <= started <= slot + RUN_WINDOW]
+                    if (slot <= started <= slot + RUN_WINDOW
+                        if cadence_minutes == 30 else
+                        slot - dt.timedelta(minutes=5) <= started <= slot + RUN_WINDOW)]
         if eligible:
             nearest = min(eligible, key=lambda slot: (abs((started - slot).total_seconds()), -slot.timestamp()))
             matched.add(nearest)
