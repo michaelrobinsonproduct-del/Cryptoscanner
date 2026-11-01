@@ -187,3 +187,40 @@ def shadow_rank_diagnostic(rows, cutoff, horizon_hours=1, top_k=3,
                    "baseline_sampled_precision": counts["baseline"] / total,
                    "challenger_sampled_precision": counts["challenger"] / total})
     return result
+
+
+def main(argv=None):
+    """Reproducible local/CI artifact from an already verified sealed ledger.
+
+    No network calls, implicit wall-clock maturity, ledger mutation, or tuning.
+    Evaluation is frozen at the newest durable run's own as-of timestamp.
+    """
+    import argparse
+    import json
+    from pathlib import Path
+    parser = argparse.ArgumentParser(description="Offline sampled-quote PAPER learning audit")
+    parser.add_argument("--ledger", required=True, help="Already verified exported sealed ledger JSON")
+    args = parser.parse_args(argv)
+    state = json.loads(Path(args.ledger).read_bytes())
+    if not state.get("runs"):
+        raise ValueError("No durable runs")
+    as_of = state["runs"][-1]["as_of"]
+    rows = sampled_outcomes(state, as_of)
+    misses = sorted((r for r in rows if r["horizon_hours"] == 1
+                     and r["status"] == "MATURED_OBSERVED"
+                     and not r["watch"] and r["observed_20pct_hit"]),
+                    key=lambda r: (-r["observed_peak_pct"], r["as_of"], r["pair"]))
+    result = {"schema": 1, "mode": "READ_ONLY_OFFLINE_LEARNING",
+              "source_ledger_sha256": state["sha256"],
+              "source_generation": state["generation"],
+              "evaluation_as_of": as_of,
+              "coverage": coverage_summary(rows),
+              "sampled_nonwatch_1h_20pct_examples": misses[:20],
+              "shadow": shadow_rank_diagnostic(rows, state["runs"][0]["as_of"]),
+              "held_out_lift": None, "production_applied": False}
+    print(json.dumps(result, sort_keys=True, separators=(",", ":"), allow_nan=False))
+    return result
+
+
+if __name__ == "__main__":
+    main()
