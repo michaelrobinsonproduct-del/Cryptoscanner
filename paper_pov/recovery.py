@@ -125,6 +125,11 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
             continue
         if item.get("conclusion") not in ("success", "failure", "cancelled"):
             return abstain("RUN_CONCLUSION_INVALID", True)
+        # GitHub timestamps have second resolution. Distinct runs created in
+        # the same second cannot be ordered against the durable ledger anchor.
+        # Never infer that an unlinked success/failure/cancellation is older.
+        if at == anchor_at:
+            return abstain("RUN_CREATED_AT_TIE_AMBIGUOUS", True)
         if at > anchor_at:
             # Only completed failed attempts may follow a durable anchor.
             # A newer unlinked success or ambiguous cancellation must block.
