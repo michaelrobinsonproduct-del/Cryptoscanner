@@ -94,7 +94,11 @@ jobs:
                 evidence["source_generation"], evidence["source_ledger_sha256"],
                 json.dumps(evidence["coverage"]["by_horizon"],sort_keys=True))
           PY
-          (cd paper_pov/learning-evidence && sha256sum evaluation.json > SHA256SUMS)
+          if test "$GITHUB_EVENT_NAME" = workflow_run; then
+            cp /tmp/learning-provenance.json paper_pov/learning-evidence/trigger-provenance.json
+            cp /tmp/learning-verified-source.json paper_pov/learning-evidence/verified-source.json
+          fi
+          (cd paper_pov/learning-evidence && sha256sum *.json > SHA256SUMS && sha256sum -c SHA256SUMS)
           git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           git merge-base --is-ancestor "$BASE" refs/remotes/origin/paper-proof-ledger || {
             echo "LEARNING_REMOTE_HISTORY_REWRITTEN_ABSTAIN"; exit 1;
@@ -111,7 +115,7 @@ jobs:
           path: |
             paper_pov/learning-evidence/evaluation.json
             paper_pov/learning-evidence/SHA256SUMS
-            /tmp/learning-provenance.json
-            /tmp/learning-verified-source.json
+            paper_pov/learning-evidence/trigger-provenance.json
+            paper_pov/learning-evidence/verified-source.json
           retention-days: 90
           if-no-files-found: warn
