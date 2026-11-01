@@ -30,7 +30,7 @@ jobs:
       - name: Authenticate actual public Git ledger and its immutable checkpoint
         run: |
           set -euo pipefail
-          git fetch --no-tags origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           git rev-parse refs/remotes/origin/paper-proof-ledger > /tmp/paper-base.sha
           BASE="$(cat /tmp/paper-base.sha)"
           if git cat-file -e "${BASE}:paper-segment-manifest.json" 2>/dev/null; then
@@ -69,10 +69,81 @@ jobs:
                 Path("/tmp/paper-staged/paper-ledger.packed.json").stat().st_size,
                 after["sha256"])
           PY
-          git fetch --no-tags origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/paper-base.sha)" || {
             echo "DRYRUN_REMOTE_MOVED_ABSTAIN"; exit 1;
           }
+      - name: Rehearse REAL Git ledger archival rollover in disposable local commit ONLY
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import subprocess
+          import tempfile
+          from paper_pov import ledger, segmented_live_writer as live
+          from paper_pov import segmented_repository as repo, segmented_storage as storage
+
+          def git(*args):
+              return subprocess.run(["git", *args], check=True,
+                                    capture_output=True).stdout.decode().strip()
+
+          base=Path("/tmp/paper-base.sha").read_text().strip()
+          source=git("rev-parse", "HEAD")
+          before,mode,paths=live.inventory(".",base)
+          if mode!="segmented":
+              raise ValueError("Actual packed ledger required for rollover rehearsal")
+          report=json.loads(Path("paper_pov/output/latest.json").read_bytes())
+          with tempfile.TemporaryDirectory(prefix="paper-rollover-rehearsal-") as temp:
+              root=Path(temp)
+              initial=root/"initial"
+              initial.mkdir()
+              for path in paths:
+                  limit=(repo.MAX_MANIFEST_BYTES if path==repo.MANIFEST else
+                         storage.MAX_RAW_BYTES if path==repo.CHECKPOINT else
+                         storage.MAX_PACKED_BYTES)
+                  repo._write(initial/path,live.show(".",base,path,limit))
+              archived=root/"archived"
+              repo.stage_rollover(initial,base,archived)
+              staged=root/"staged"
+              repo.stage_append(archived,report,source,staged)
+              expected=ledger.advance(before,report,source,storage.MAX_RAW_BYTES)
+              after,manifest=repo.read_state(staged,full_replay=True)
+              assert after==expected
+              assert manifest["checkpoint"]["git_commit"]==base
+              assert manifest["checkpoint"]["generation"]==before["generation"]
+              assert len(manifest["segments"])==1
+              assert repo.active_storage_bytes(staged)<repo.active_storage_bytes(initial), (
+                  "Rollover did not reduce real active Git storage")
+              repo.verify_checkpoint_origin(staged,".")
+              old_manifest=json.loads(live.show(".",base,repo.MANIFEST,repo.MAX_MANIFEST_BYTES))
+              old_paths=[repo._segment_path(e["generation"]) for e in old_manifest["segments"]]
+              changed=live.changed_paths(".",base,staged)
+              assert old_paths and all(p in changed for p in old_paths)
+              worktree=root/"git-worktree"
+              git("worktree","add","--detach",str(worktree),base)
+              try:
+                  live.apply(worktree,base,staged)
+                  git("-C",str(worktree),"-c","user.name=Paper Test",
+                      "-c","user.email=paper@example.invalid",
+                      "commit","-m","local-only archive rollover rehearsal")
+                  commit=git("-C",str(worktree),"rev-parse","HEAD")
+                  parents=git("-C",str(worktree),"rev-list","--parents","-n","1",commit).split()
+                  assert parents==[commit,base]
+                  assert sorted(git("-C",str(worktree),"diff","--name-only",
+                                    base,commit).splitlines())==changed
+                  recovered,kind=repo.read_git_state(worktree,commit,full_replay=True)
+                  assert kind=="segmented" and recovered==after
+                  for path in old_paths:
+                      assert repo._git_has(worktree,base,path)
+                      assert not repo._git_has(worktree,commit,path)
+              finally:
+                  git("worktree","remove","--force",str(worktree))
+              print("PAPER_REAL_ARCHIVE_ROLLOVER_OK",
+                    before["generation"],after["generation"],
+                    len(old_paths),repo.active_storage_bytes(initial),
+                    repo.active_storage_bytes(staged),after["sha256"])
+          PY
       - name: Upload bounded SHA256 evidence, NO remote write
         run: |
           set -euo pipefail
