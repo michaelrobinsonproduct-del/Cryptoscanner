@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from paper_pov.ledger import empty, seal
-from paper_pov.monitor import UTC, evaluate, scheduled_slots
+from paper_pov.monitor import UTC, evaluate, scheduled_slots, matched_scheduled_slots
 
 SHA = "a" * 40
 ASOF = "2026-10-31T20:11:00+00:00"
@@ -74,6 +74,51 @@ class PaperMonitorTests(unittest.TestCase):
                         run(888, "2026-10-31T21:10:00Z", event="workflow_dispatch"))
         result = self.check(now="2026-10-31T23:27:00+00:00", scans=scans,
                             audits=payload(run(456, "2026-10-31T23:22:00Z")))
+        self.assertIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])
+
+    def test_half_hour_mature_slots_preserve_35_minute_grace(self):
+        now = dt.datetime(2026, 10, 31, 21, 57, tzinfo=UTC)
+        slots = scheduled_slots(now, 9, 30)
+        self.assertEqual([(x.hour, x.minute) for x in slots[:3]],
+                         [(21, 9), (20, 39), (20, 9)])
+        self.assertEqual((scheduled_slots(now, 21)[0].hour,
+                          scheduled_slots(now, 21)[0].minute), (21, 21))
+
+    def test_two_consecutive_half_hour_scan_slots_missed(self):
+        result = self.check(now="2026-10-31T21:57:00+00:00",
+                            audits=payload(run(456, "2026-10-31T21:22:00Z")))
+        self.assertIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])
+
+    def test_valid_39_slot_prevents_false_two_missed_alert(self):
+        scans = payload(run(123, "2026-10-31T20:10:00Z"),
+                        run(124, "2026-10-31T20:40:00Z"))
+        result = self.check(now="2026-10-31T21:57:00+00:00", scans=scans,
+                            audits=payload(run(456, "2026-10-31T21:22:00Z")))
+        self.assertNotIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])
+
+    def test_delayed_single_scan_cannot_cover_two_slots(self):
+        late = run(123, "2026-10-31T20:53:00Z")
+        matched = matched_scheduled_slots([late],
+                    dt.datetime(2026, 10, 31, 21, 27, tzinfo=UTC), 9, 30)
+        self.assertIn(dt.datetime(2026, 10, 31, 20, 39, tzinfo=UTC), matched)
+        self.assertNotIn(dt.datetime(2026, 10, 31, 20, 9, tzinfo=UTC), matched)
+        self.assertEqual(len(matched), 1)
+
+    def test_run_before_09_cannot_be_attributed_to_future_09_slot(self):
+        # A scheduled run created at 05:08 cannot originate from 05:09.
+        # The old nearest-slot rule assigned it to the future 05:09 slot.
+        early = run(124, "2026-11-01T05:08:00Z")
+        matched = matched_scheduled_slots(
+            [early], dt.datetime(2026, 11, 1, 5, 47, tzinfo=UTC), 9, 30)
+        self.assertEqual(matched, {dt.datetime(2026, 11, 1, 4, 39, tzinfo=UTC)})
+        self.assertNotIn(dt.datetime(2026, 11, 1, 5, 9, tzinfo=UTC), matched)
+
+    def test_queued_39_slot_cannot_hide_two_missed_slots(self):
+        scans = payload(run(123, "2026-10-31T20:10:00Z"),
+                        run(124, "2026-10-31T20:40:00Z",
+                            status="queued", conclusion=None))
+        result = self.check(now="2026-10-31T21:57:00+00:00", scans=scans,
+                            audits=payload(run(456, "2026-10-31T21:22:00Z")))
         self.assertIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])
 
     def test_latest_scheduled_failure_alerts(self):
@@ -191,7 +236,7 @@ class PaperMonitorTests(unittest.TestCase):
 
     def test_workflow_is_readonly_and_alerts_only(self):
         workflow = Path(".github/workflows/paper-monitor.yml").read_text()
-        self.assertIn("cron: '27 * * * *'", workflow)
+        self.assertIn("cron: '27,57 * * * *'", workflow)
         self.assertIn("issues: write", workflow)
         self.assertIn("contents: read", workflow)
         self.assertIn("persist-credentials: false", workflow)
