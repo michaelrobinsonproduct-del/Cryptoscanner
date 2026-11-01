@@ -31,9 +31,16 @@ def instant(value):
 
 
 def scheduled_slots(now, minute):
-    current = now.astimezone(UTC).replace(minute=minute, second=0, microsecond=0)
-    return [current - dt.timedelta(hours=i) for i in range(6)
-            if current - dt.timedelta(hours=i) + GRACE <= now]
+    """Return mature UTC slots; accept an hourly minute or a multi-slot cadence."""
+    now = now.astimezone(UTC)
+    minutes = (minute,) if isinstance(minute, int) else tuple(minute)
+    if not minutes or any(type(m) is not int or not 0 <= m < 60 for m in minutes):
+        raise ValueError("Invalid scheduled minute")
+    hour = now.replace(minute=0, second=0, microsecond=0)
+    candidates = (hour - dt.timedelta(hours=i) + dt.timedelta(minutes=m)
+                  for i in range(7) for m in minutes)
+    return sorted((slot for slot in candidates if slot + GRACE <= now),
+                  reverse=True)[:12]
 
 
 def assess_runs(payload, now, minute, prefix, alerts):
@@ -52,7 +59,6 @@ def assess_runs(payload, now, minute, prefix, alerts):
     scheduled.sort(key=lambda x: instant(x["created_at"]), reverse=True)
     successes = [x for x in scheduled if x.get("status") == "completed"
                  and x.get("conclusion") == "success"]
-    latest_success_at = instant(successes[0]["created_at"]) if successes else None
     completed = [x for x in scheduled if x.get("status") == "completed"]
     # A newer queued run must never conceal a completed scheduled failure.
     if completed and completed[0].get("conclusion") != "success":
@@ -64,13 +70,18 @@ def assess_runs(payload, now, minute, prefix, alerts):
     mature_slots = scheduled_slots(now, minute)
     if len(mature_slots) >= 2:
         last_two = mature_slots[:2]
+        multi_slot = not isinstance(minute, int) and len(minute) > 1
         def successful_in(slot):
+            if multi_slot:
+                # Disjoint 30-minute windows: one run can never satisfy two slots.
+                # A delayed GitHub run cannot prove which cron fired; this is
+                # conservative creation-time attribution, not trigger provenance.
+                return any(slot <= instant(x["created_at"]) < slot + dt.timedelta(minutes=30)
+                           for x in successes)
             return any(slot - dt.timedelta(minutes=5) <= instant(x["created_at"]) <= slot + RUN_WINDOW
                        for x in successes)
-        # A newer successful scheduled execution resets the missed-slot streak.
-        # Do not report old missed slots after the next successful scan.
-        if all(not successful_in(slot) for slot in last_two) and (
-                not successes or instant(successes[0]["created_at"]) < last_two[-1]):
+        # A late run outside these windows cannot erase two missing slots.
+        if all(not successful_in(slot) for slot in last_two):
             alerts.append(prefix + "_TWO_MISSED_SLOTS")
     if not scheduled:
         alerts.append(prefix + "_NO_SCHEDULED_HISTORY")
@@ -83,7 +94,7 @@ def evaluate(scan_payload, audit_payload, ledger, previous, ledger_commit,
         raise ValueError("Monitor clock must be timezone aware")
     now = now.astimezone(UTC)
     alerts = ["PAPER_EVIDENCE_" + str(x) for x in collection_errors]
-    scan_runs = assess_runs(scan_payload, now, 9, "PAPER_SCAN", alerts)
+    scan_runs = assess_runs(scan_payload, now, (9, 39), "PAPER_SCAN", alerts)
     assess_runs(audit_payload, now, 21, "PAPER_AUDIT", alerts)
     active = [x for x in scan_runs if x.get("status") == "in_progress"]
     if len(active) > 1:
@@ -154,7 +165,8 @@ def evaluate(scan_payload, audit_payload, ledger, previous, ledger_commit,
         "checked_at": now.isoformat(), "status": "ALERT" if alerts else "HEALTHY",
         "alerts": alerts, "alert_fingerprint": fingerprint, "metrics": metrics,
         "limitations": ["Client-observed ticker timestamps are not exchange trade-event timestamps",
-                        "Hourly paper scans ordinarily abstain under the unchanged 45-minute gap gate",
+                        "Twice-hourly paper scans may abstain under the unchanged 45-minute gap gate",
+                        "GitHub run creation times cannot prove which delayed cron slot fired",
                         "No unbiased held-out predictive improvement is established",
                         "GitHub issue delivery/readback does not prove email or push delivery"],
     }
