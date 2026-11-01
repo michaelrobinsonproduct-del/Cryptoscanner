@@ -4,17 +4,20 @@ on:
     branches: [research-roleb-historical-confounding-20261101]
     paths:
       - 'historical/aggregate_rule_audit.py'
+      - 'historical/strict_ranker_research.py'
       - 'historical/test_aggregate_rule_audit.py'
       - 'historical/evidence/**'
       - '.github/workflows/historical-aggregate-audit-ci.yml'
   pull_request:
     paths:
       - 'historical/aggregate_rule_audit.py'
+      - 'historical/strict_ranker_research.py'
       - 'historical/test_aggregate_rule_audit.py'
       - 'historical/evidence/**'
       - '.github/workflows/historical-aggregate-audit-ci.yml'
 permissions:
   contents: read
+  actions: read
 jobs:
   historical-audit:
     runs-on: ubuntu-latest
@@ -54,5 +57,49 @@ jobs:
         with:
           name: historical-aggregate-confounding-evidence
           path: /tmp/historical-aggregate-audit.json
+          if-no-files-found: error
+          retention-days: 30
+  strict-historical-ranker-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install bounded offline research dependencies
+        run: python -m pip install 'numpy==2.3.5' 'pandas==2.2.3' 'scikit-learn==1.8.0'
+      - name: Restore exact retained strict 2026Q2 historical controls (read only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p historical/input
+          gh run download 38029912468 -R "$GITHUB_REPOSITORY" -n kraken-historical-derived -D historical/input
+          test -s historical/input/research_training.ndjson
+      - name: Execute exact-head research ranker and check untouched test result
+        run: |
+          set -euo pipefail
+          echo "STRICT_RESEARCH_SOURCE_SHA=$(git rev-parse HEAD)"
+          python -m py_compile historical/strict_ranker_research.py
+          python historical/strict_ranker_research.py historical/input/research_training.ndjson --output /tmp/strict-ranker-replay.json
+          python - <<'PY'
+          import json
+          s=json.load(open('/tmp/strict-ranker-replay.json'))
+          assert s['source_sha256']=='766683bae34744d825f0ee68335fd2e474ccc77d77849e46b2e4a8ecaf81778c'
+          assert s['split_counts']=={'train':8080,'val':2777,'test':3288,'embargo':338}
+          assert s['selected_on_validation']=='logistic'
+          assert s['test']['logistic']['hits30']==51
+          assert s['test']['prior60_abs']['hits30']==41
+          assert s['test']['logistic']['positive_pairdays']==12
+          assert s['test']['prior60_abs']['positive_pairdays']==13
+          print('STRICT_HISTORICAL_RANKER_REPLAY_VERIFIED',s['source_sha256'],s['selected_on_validation'],s['test']['logistic']['hits30'],s['test']['prior60_abs']['hits30'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: strict-historical-30pct-ranker-replay
+          path: /tmp/strict-ranker-replay.json
           if-no-files-found: error
           retention-days: 30
