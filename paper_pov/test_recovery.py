@@ -100,6 +100,36 @@ class RecoveryTests(unittest.TestCase):
         d = decision(runs=[dict(scan(), head_sha="f"*40)])
         self.assertEqual((d["action"], d["reason"]), ("BLOCKED", "LEDGER_NOT_LINKED_TO_NEWEST_SUCCESS"))
 
+    def test_historical_completed_main_push_is_not_a_scanner_run(self):
+        # GitHub's real workflow history contains five old push-triggered CI
+        # runs and later successful schedule runs. Legacy CI must not block
+        # recovery when a newer immutable scheduled scan anchors the ledger.
+        legacy = dict(scan(122, "2026-10-31T18:00:00Z"), event="push")
+        d = decision(runs=[legacy, scan()])
+        self.assertEqual(d["action"], "DISPATCH_EXISTING_WORKFLOW")
+        self.assertEqual(d["latest_run_id"], 123)
+        self.assertEqual(d["ignored_historical_push_run_ids"], [122])
+        self.assertEqual(len(d["missed_matured_slots"]), 2)
+
+    def test_untrusted_push_events_never_enable_recovery(self):
+        variants = [
+            dict(scan(124, "2026-10-31T22:00:00Z"), event="push"),
+            dict(scan(122, "2026-10-31T18:00:00Z"), event="push", status="in_progress", conclusion=None),
+            dict(scan(122, "2026-10-31T18:00:00Z"), event="push", head_branch="dev"),
+            dict(scan(122, "2026-10-31T18:00:00Z"), event="pull_request"),
+            dict(scan(122, "2026-10-31T18:00:00Z"), event="push", conclusion=None),
+        ]
+        for item in variants:
+            with self.subTest(item=item):
+                d = decision(runs=[scan(), item])
+                self.assertEqual((d["action"], d["reason"]), ("BLOCKED", "RUN_EVENT_INVALID"))
+
+    def test_historical_push_malformed_or_future_timestamp_fails_closed(self):
+        for when in ("not-a-date", "2026-11-02T23:00:00Z"):
+            with self.subTest(when=when):
+                d = decision(runs=[scan(), dict(scan(122, when), event="push")])
+                self.assertEqual(d["action"], "BLOCKED")
+
     def test_non_main_branch_or_invalid_event_fails_closed(self):
         for item in (dict(scan(), head_branch="dev"), dict(scan(), event="pull_request")):
             self.assertEqual(decision(runs=[item])["action"], "BLOCKED")
