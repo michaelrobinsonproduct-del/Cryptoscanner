@@ -102,8 +102,8 @@ def render(scan, score, *, run_id, source_sha, ledger_commit):
         "",
         "## Top WATCH candidates — paper only",
         "",
-        "| # | Symbol | Price USD | Since UTC open | 15m move | Volume accel | Spread bps | Confidence / risk | Status |",
-        "|---:|---|---:|---:|---:|---:|---:|---|---|",
+        "| # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | Confidence / risk | Status |",
+        "|---:|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|",
     ]
     records = []
     seen = set()
@@ -135,10 +135,14 @@ def render(scan, score, *, run_id, source_sha, ledger_commit):
                         "move15_pct": p["move15_pct"], "volume_accel": p["volume_accel"],
                         "spread_bps": p["spread_bps"], "baseline_score": p["baseline_score"],
                         "challenger_score": p["challenger_score"],
+                        "quote_observed_at": quote["observed_at"],
+                        "ohlc_age_seconds": p["ohlc_age_seconds"],
                         "prediction_id": p["prediction_id"]})
         lines.append(f"| {index} | {symbol} | {price:.8g} | "
+                     f"{p['challenger_score']:.3f} | {p['baseline_score']:.3f} | "
                      f"{p['move_since_utc_open_pct']:+.2f}% | {p['move15_pct']:+.2f}% | "
                      f"{p['volume_accel']:.2f}x | {p['spread_bps']:.1f} | "
+                     f"{_utc(quote['observed_at']).isoformat()} | "
                      "NOT CALIBRATED / HIGH | WATCH |")
     # The aggregate ledger count cannot be allocated to individual horizons
     # without independent evidence. Never manufacture a per-horizon success.
@@ -152,7 +156,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit):
     lines.extend([
         "",
         "**Confidence:** uncalibrated research heuristics, NOT validated probabilities. "
-        "**BUY:** none authorized. Scores are paper-only baseline/challenger rankings.",
+        "**BUY:** none authorized. Numerical baseline/challenger scores are uncalibrated paper-only ranking values, not probabilities or validated improvement.",
         "",
         "## Learning and coverage",
         "",

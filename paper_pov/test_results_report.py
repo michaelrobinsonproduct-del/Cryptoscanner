@@ -59,6 +59,15 @@ class PaperResultsContracts(unittest.TestCase):
         self.assertIsNone(payload["held_out_lift"])
         self.assertIsNone(payload["missed_movers"])
         self.assertIn("XBT/USD", md)
+        self.assertIn("Challenger score", md)
+        self.assertIn("Baseline score", md)
+        self.assertIn("| 1 | XBT/USD | 71000 | 34.000 | 30.000 |", md)
+        self.assertIn("2026-10-31T20:29:00+00:00", md)
+        self.assertEqual(payload["candidates"][0]["challenger_score"], 34.0)
+        self.assertEqual(payload["candidates"][0]["baseline_score"], 30.0)
+        self.assertEqual(payload["candidates"][0]["quote_observed_at"], QUOTE)
+        self.assertEqual(payload["candidates"][0]["ohlc_age_seconds"], 200)
+        self.assertIn("not probabilities or validated improvement", md)
         self.assertIn("NOT MATURED", md)
         self.assertIn("WATCH", md)
         self.assertIn("NOT CALIBRATED", md)
@@ -119,6 +128,15 @@ class PaperResultsContracts(unittest.TestCase):
         s["watch"][0]["volume_accel"] = float("inf")
         with self.assertRaises(ValueError):
             self.report(s, b)
+
+    def test_reject_nonfinite_scores_before_publication(self):
+        for key, value in (("baseline_score", float("nan")),
+                           ("challenger_score", float("inf")),
+                           ("challenger_score", True)):
+            s, b = fixture()
+            s["watch"][0][key] = value
+            with self.subTest(key=key, value=str(value)), self.assertRaises(ValueError):
+                self.report(s, b)
 
     def test_reject_duplicate_predictions_and_noncontiguous_ranks(self):
         s, b = fixture()
