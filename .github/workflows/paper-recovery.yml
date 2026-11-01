@@ -106,6 +106,24 @@ jobs:
             echo RECHECK_ABORT > /tmp/paper-recovery-status.txt
             echo PAPER_RECOVERY_RECHECK_ABORT; exit 0;
           }
+          # Pre-marker CAS: abort WITHOUT a 90-minute recovery marker when
+          # state has already changed. Preserve the independent post-marker
+          # CAS below to catch races while the marker is being published.
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/paper-recovery-runs-premarker.json
+          cmp -s /tmp/paper-recovery-runs-recheck.json /tmp/paper-recovery-runs-premarker.json || {
+            echo PREMARKER_RUNS_CHANGED_ABORT > /tmp/paper-recovery-status.txt
+            echo PAPER_RECOVERY_PREMARKER_RUNS_CHANGED_ABORT; exit 1;
+          }
+          git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/paper-recovery-ledger-commit.txt)" || {
+            echo PREMARKER_LEDGER_MOVED_ABORT > /tmp/paper-recovery-status.txt
+            echo PAPER_RECOVERY_PREMARKER_LEDGER_MOVED_ABORT; exit 1;
+          }
+          PREMARKER_MAIN_SHA="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          test "$(git rev-parse HEAD)" = "$PREMARKER_MAIN_SHA" || {
+            echo PREMARKER_MAIN_CHANGED_ABORT > /tmp/paper-recovery-status.txt
+            echo PAPER_RECOVERY_PREMARKER_MAIN_CHANGED_ABORT; exit 1;
+          }
           python - <<'PY' > /tmp/paper-recovery-issue.txt
           import json,os
           d=json.load(open('/tmp/paper-recovery-recheck.json'))
