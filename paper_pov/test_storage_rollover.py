@@ -166,5 +166,84 @@ class RolloverTests(unittest.TestCase):
         self.assertEqual(self.git("rev-parse", "HEAD"), base)
 
 
+    def test_two_consecutive_rollovers_preserve_all_prior_git_evidence(self):
+        # Force two distinct archival boundaries without relaxing the segment
+        # limit for any historical ancestor during recursive verification.
+        base = self.build_history(3)
+        first_archive = base
+        original, _ = repo.read_git_state(self.gitdir, first_archive,
+                                          full_replay=True)
+        with patch.object(repo, "MAX_SEGMENTS", 3):
+            first_rollover, _, changed = self.next_scan(base, 90)
+            self.assertIn(repo._segment_path(1), changed)
+            self.assertIn(repo.CHECKPOINT, changed)
+            base, _, _ = self.next_scan(first_rollover, 120)
+            base, _, _ = self.next_scan(base, 150)
+            second_archive = base
+            second_rollover, _, changed = self.next_scan(base, 180)
+            self.assertIn(repo._segment_path(4), changed)
+            self.assertIn(repo.CHECKPOINT, changed)
+            final, mode = repo.read_git_state(self.gitdir, second_rollover,
+                                              full_replay=True)
+            self.assertEqual(mode, "segmented")
+            self.assertEqual(final["generation"], 7)
+            self.assertEqual(final["predictions"][:len(original["predictions"])],
+                             original["predictions"])
+            self.assertEqual(final["observations"][:len(original["observations"])],
+                             original["observations"])
+            latest_manifest = json.loads(self.git(
+                "show", second_rollover + ":" + repo.MANIFEST))
+            self.assertEqual(latest_manifest["checkpoint"]["git_commit"],
+                             second_archive)
+            self.assertEqual(len(latest_manifest["segments"]), 1)
+            first, _ = repo.read_git_state(self.gitdir, first_archive,
+                                           full_replay=True)
+            intermediate, _ = repo.read_git_state(self.gitdir, first_rollover,
+                                                  full_replay=True)
+            self.assertEqual(first, original)
+            self.assertEqual(intermediate["generation"], 4)
+            for generation in range(1, 4):
+                path = repo._segment_path(generation)
+                self.assertTrue(repo._git_has(self.gitdir, first_archive, path))
+                self.assertFalse(repo._git_has(self.gitdir, second_rollover, path))
+            self.assertTrue(repo._git_has(self.gitdir, second_archive,
+                                          repo._segment_path(4)))
+            self.assertFalse(repo._git_has(self.gitdir, second_rollover,
+                                           repo._segment_path(4)))
+            self.assertEqual(self.git("rev-list", "--parents", "-n", "1",
+                                      second_rollover).split(),
+                             [second_rollover, second_archive])
+
+    def test_interrupted_rollover_apply_never_advances_git_ref(self):
+        base = self.build_history(3)
+        original, _ = repo.read_git_state(self.gitdir, base, full_replay=True)
+        with patch.object(repo, "MAX_SEGMENTS", 3):
+            staged = self.root / "interrupted-rollover"
+            live.stage(self.gitdir, base, synthetic(90), SHA, staged)
+            self.assertIn(repo._segment_path(1),
+                          live.changed_paths(self.gitdir, base, staged))
+            previous_ref = self.git("rev-parse", live.REMOTE_REF)
+            real_git = live.git
+
+            def interrupted_git(root, *args):
+                if args and args[0] == "rm":
+                    raise ValueError("injected archived-segment deletion failure")
+                return real_git(root, *args)
+
+            with patch.object(live, "git", side_effect=interrupted_git):
+                with self.assertRaisesRegex(ValueError, "injected archived"):
+                    live.apply(self.gitdir, base, staged)
+            self.assertEqual(self.git("rev-parse", "HEAD"), base)
+            self.assertEqual(self.git("rev-parse", live.REMOTE_REF),
+                             previous_ref)
+            # A failed local staging operation is never pushed. Restoring the
+            # disposable fixture must recover the exact previous ledger.
+            self.git("reset", "--hard", base)
+            self.assertFalse(self.git("status", "--porcelain"))
+            recovered, _ = repo.read_git_state(self.gitdir, base,
+                                               full_replay=True)
+            self.assertEqual(recovered, original)
+
+
 if __name__ == "__main__":
     unittest.main()
