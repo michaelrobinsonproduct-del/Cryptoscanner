@@ -10,6 +10,7 @@ from paper_pov.test_monitor import fixture, run, SHA
 NOW = dt.datetime(2026, 10, 31, 23, 27, tzinfo=UTC)
 COMMIT = "d" * 40
 MESSAGE = "paper: immutable scan 123 source " + SHA
+BOT = {"login": "github-actions[bot]", "id": 41898282}
 
 
 def scan(run_id=123, when="2026-10-31T20:10:00Z", **kwargs):
@@ -61,18 +62,26 @@ class RecoveryTests(unittest.TestCase):
 
     def test_same_ledger_recent_recovery_attempt_prevents_duplicate(self):
         d = decision(comments=[{"body": "<!-- " + RECOVERY_MARKER + COMMIT + " -->",
-                                "created_at": "2026-10-31T23:15:00Z"}])
+                                "created_at": "2026-10-31T23:15:00Z", "user": BOT}])
         self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "RECOVERY_ALREADY_ATTEMPTED"))
 
     def test_old_attempt_permits_bounded_retry(self):
         d = decision(comments=[{"body": RECOVERY_MARKER + COMMIT,
-                                "created_at": "2026-10-31T21:00:00Z"}])
+                                "created_at": "2026-10-31T21:00:00Z", "user": BOT}])
         self.assertEqual(d["action"], "DISPATCH_EXISTING_WORKFLOW")
 
     def test_malformed_recovery_marker_fails_closed(self):
         d = decision(comments=[{"body": RECOVERY_MARKER + COMMIT,
-                                "created_at": "not-a-date"}])
+                                "created_at": "not-a-date", "user": BOT}])
         self.assertEqual((d["action"], d["reason"]), ("BLOCKED", "RECOVERY_MARKER_TIMESTAMP_INVALID"))
+
+    def test_public_comment_cannot_spoof_recovery_attempt(self):
+        for actor in (None, {"login": "github-actions[bot]", "id": 999},
+                      {"login": "attacker", "id": 41898282}):
+            with self.subTest(actor=actor):
+                d = decision(comments=[{"body": RECOVERY_MARKER + COMMIT,
+                                        "created_at": "not-a-date", "user": actor}])
+                self.assertEqual(d["action"], "DISPATCH_EXISTING_WORKFLOW")
 
     def test_missing_issue_comments_fails_closed(self):
         self.assertEqual(decision(comments="missing")["action"], "BLOCKED")
@@ -133,7 +142,8 @@ class RecoveryTests(unittest.TestCase):
         self.assertIn("PAPER_RECOVERY_RECHECK_ABORT", workflow)
         self.assertIn("PAPER_RECOVERY_MAIN_CHANGED_ABORT", workflow)
         self.assertIn("PAPER_RECOVERY_ATTEMPT_READBACK_VERIFIED", workflow)
-        self.assertEqual(workflow.count("--jq '.[] | {body,created_at} | @json'"), 2)
+        self.assertEqual(workflow.count("--jq '.[] | {body,created_at,user:{login:.user.login,id:.user.id}} | @json'"), 2)
+        self.assertIn("PAPER_RECOVERY_RUNS_CHANGED_ABORT", workflow)
         self.assertIn("github.event.workflow_run.event == 'schedule'", workflow)
         self.assertIn("github.event.workflow_run.head_branch == 'main'", workflow)
         self.assertIn("github.event.workflow_run.conclusion == 'success'", workflow)
