@@ -20,7 +20,9 @@ class BoundedFetchTests(unittest.TestCase):
                            subprocess.CompletedProcess([], 1, b"", b"missing")]
         self.assertEqual(f.fetch_bounded(), HEAD)
         self.assertIn("--depth=512", git.call_args_list[0].args)
-        self.assertNotIn(    @patch.object(f, "_checkpoint_needs_fetch", return_value=False)
+        self.assertNotIn("--unshallow", str(git.call_args_list))
+
+    @patch.object(f, "_checkpoint_needs_fetch", return_value=False)
     @patch.object(f, "_git")
     @patch.object(f.subprocess, "run")
     def test_segmented_preserves_already_fetched_legacy_ancestry(self, run, git, needs):
@@ -60,8 +62,6 @@ class BoundedFetchTests(unittest.TestCase):
             self.assertTrue(f._checkpoint_needs_fetch(CHECKPOINT))
             shallow.write_text(HEAD + "\n")
             self.assertFalse(f._checkpoint_needs_fetch(CHECKPOINT))
-
-  [c.args for c in git.call_args_list])
 
     @patch.object(f, "_git")
     @patch.object(f.subprocess, "run")
