@@ -2,8 +2,8 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 7341,
-      "evaluated": 6942,
+      "matured_snapshots": 7353,
+      "evaluated": 6954,
       "coverage_pct": 94.6,
       "unresolved": 399,
       "no_observation_in_window": 399
@@ -36,7 +36,7 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 6942,
+      "samples": 6954,
       "average_delay_hours": 0.452
     },
     {
@@ -57,17 +57,17 @@
   ],
   "unresolved_1h_snapshots": 399,
   "rank_comparison": {
-    "historical_ranked_samples": 7077,
-    "mean_base_minus_early_rank": 1.76
+    "historical_ranked_samples": 7089,
+    "mean_base_minus_early_rank": 1.75
   },
-  "newly_discovered_outside_base_top12": 4,
+  "newly_discovered_outside_base_top12": 1,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 6894,
-      "early_scored_avg_return_pct": -0.051,
-      "all_selected_avg_return_pct": -0.051,
-      "early_score_above_base_avg_return_pct": -0.068
+      "samples": 6906,
+      "early_scored_avg_return_pct": -0.052,
+      "all_selected_avg_return_pct": -0.052,
+      "early_score_above_base_avg_return_pct": -0.069
     },
     {
       "hours": 3,
@@ -92,8 +92,8 @@
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 26341,
-    "positive": 10894,
+    "evaluated": 26353,
+    "positive": 10898,
     "average_return_pct": -0.437
   },
   "missed_breakout_examples": [
@@ -123,16 +123,6 @@
       "next_scan_gain_pct": 70.93
     },
     {
-      "pair": "TUSD",
-      "observed_at": "2026-10-24T23:50:41.029185+00:00",
-      "next_scan_gain_pct": 62.23
-    },
-    {
-      "pair": "KEEPUSD",
-      "observed_at": "2026-10-24T23:50:41.029185+00:00",
-      "next_scan_gain_pct": 58.83
-    },
-    {
       "pair": "ZEUSUSD",
       "observed_at": "2026-10-28T14:48:27.218795+00:00",
       "next_scan_gain_pct": 51.58
@@ -146,14 +136,24 @@
       "pair": "PIPEUSD",
       "observed_at": "2026-10-28T09:43:03.019149+00:00",
       "next_scan_gain_pct": 46.39
+    },
+    {
+      "pair": "FORESTUSD",
+      "observed_at": "2026-10-25T10:22:54.069051+00:00",
+      "next_scan_gain_pct": 45.02
+    },
+    {
+      "pair": "MFUSD",
+      "observed_at": "2026-10-29T22:35:14.131699+00:00",
+      "next_scan_gain_pct": 43.73
     }
   ],
-  "unselected_gainers_5pct_observations": 917,
-  "market_observations": 390390,
-  "market_price_coverage": 614,
-  "feature_rows": 7245,
-  "snapshots": 7365,
-  "outcomes": 26341,
+  "unselected_gainers_5pct_observations": 918,
+  "market_observations": 391005,
+  "market_price_coverage": 615,
+  "feature_rows": 7257,
+  "snapshots": 7377,
+  "outcomes": 26353,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
