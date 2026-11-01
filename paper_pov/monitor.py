@@ -180,7 +180,7 @@ def evaluate(scan_payload, audit_payload, ledger, previous, ledger_commit,
         "checked_at": now.isoformat(), "status": "ALERT" if alerts else "HEALTHY",
         "alerts": alerts, "alert_fingerprint": fingerprint, "metrics": metrics,
         "limitations": ["Client-observed ticker timestamps are not exchange trade-event timestamps",
-                        "Hourly paper scans ordinarily abstain under the unchanged 45-minute gap gate",
+                        "Any observed market gap over 45 minutes abstains; GitHub cron execution can be delayed",
                         "No unbiased held-out predictive improvement is established",
                         "GitHub issue delivery/readback does not prove email or push delivery"],
     }
