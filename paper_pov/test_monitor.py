@@ -138,6 +138,31 @@ class PaperMonitorTests(unittest.TestCase):
         self.assertIn("PAPER_LEDGER_RUN_UNLINKED",
                       self.check(message="paper: immutable scan 999 source " + SHA)["alerts"])
 
+    def test_real_packed_commit_format_is_accepted_without_disabling_provenance(self):
+        # The live writer uses "atomic packed", while legacy commits use "immutable".
+        result = self.check(message="paper: atomic packed scan 123 source " + SHA)
+        self.assertEqual(result["status"], "HEALTHY")
+        self.assertNotIn("PAPER_LEDGER_SOURCE_UNLINKED", result["alerts"])
+        self.assertNotIn("PAPER_LEDGER_RUN_UNLINKED", result["alerts"])
+
+    def test_packed_commit_wrong_source_fails_closed(self):
+        result = self.check(message="paper: atomic packed scan 123 source " + "b" * 40)
+        self.assertIn("PAPER_LEDGER_SOURCE_UNLINKED", result["alerts"])
+
+    def test_packed_commit_wrong_run_fails_closed(self):
+        result = self.check(message="paper: atomic packed scan 999 source " + SHA)
+        self.assertIn("PAPER_LEDGER_RUN_UNLINKED", result["alerts"])
+
+    def test_packed_commit_malformed_or_untrusted_format_fails_closed(self):
+        for message in (
+            "paper: atomic packed scan 0 source " + SHA,
+            "paper: atomic packed scan 123 source " + SHA + " trailing",
+            "paper: atomic packed scan 123 source " + SHA.upper(),
+            "paper: unverified scan 123 source " + SHA,
+        ):
+            with self.subTest(message=message):
+                self.assertIn("PAPER_LEDGER_SOURCE_UNLINKED", self.check(message=message)["alerts"])
+
     def test_malformed_git_history_metadata_detected(self):
         self.assertIn("PAPER_LEDGER_SOURCE_UNLINKED",
                       self.check(message="untrusted commit")["alerts"])

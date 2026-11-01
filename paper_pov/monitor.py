@@ -18,7 +18,7 @@ GRACE = dt.timedelta(minutes=35)
 RUN_WINDOW = dt.timedelta(minutes=55)
 STUCK = dt.timedelta(minutes=45)
 SHA40 = re.compile(r"[0-9a-f]{40}")
-COMMIT_MESSAGE = re.compile(r"paper: immutable scan ([0-9]+) source ([0-9a-f]{40})")
+COMMIT_MESSAGE = re.compile(r"paper: (?:immutable|atomic packed) scan ([1-9][0-9]*) source ([0-9a-f]{40})")
 
 
 def instant(value):
