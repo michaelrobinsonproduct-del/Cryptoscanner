@@ -46,7 +46,9 @@ def execute(main=None, other=None, *, digest=None, run_id="5678"):
     main = current() if main is None else main
     other = shadow() if other is None else other
     data = json.dumps(other, sort_keys=True).encode()
-    return compare(main, data, expected_ledger_sha256=SHA64,
+    current_data = json.dumps(main, sort_keys=True).encode()
+    return compare(current_data, data, expected_current_sha256=hashlib.sha256(current_data).hexdigest(),
+                   expected_current_run_id="1234", expected_ledger_sha256=SHA64,
                    expected_legacy_sha256=digest or hashlib.sha256(data).hexdigest(),
                    expected_legacy_run_id=run_id)
 
@@ -69,6 +71,16 @@ class OverlapTests(unittest.TestCase):
     def test_digest_mismatch(self):
         with self.assertRaisesRegex(ValueError, "digest"):
             execute(digest="0" * 64)
+
+    def test_current_digest_mismatch(self):
+        a = current()
+        data = json.dumps(a, sort_keys=True).encode()
+        b = json.dumps(shadow(), sort_keys=True).encode()
+        with self.assertRaisesRegex(ValueError, "Current artifact digest"):
+            compare(data, b, expected_current_sha256="0" * 64,
+                    expected_current_run_id="1234", expected_ledger_sha256=SHA64,
+                    expected_legacy_sha256=hashlib.sha256(b).hexdigest(),
+                    expected_legacy_run_id="5678")
 
     def test_unsealed_current(self):
         a = current()
