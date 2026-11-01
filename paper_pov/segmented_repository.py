@@ -23,6 +23,10 @@ MANIFEST = "paper-segment-manifest.json"
 SEGMENTS = "paper-segments"
 MAX_MANIFEST_BYTES = 8_000_000
 MAX_SEGMENTS = 30_000
+# Aggregate active Git-tree budget, including immutable checkpoint and segments.
+# The per-object 12 MB packed bound is NOT an aggregate ledger limit.
+# Reserve 2 MB of headroom; fail closed before any new ledger commit.
+MAX_ACTIVE_TREE_BYTES = 10_000_000
 
 
 def sha(data):
@@ -88,6 +92,24 @@ def _segment_path(generation):
     if type(generation) is not int or not 1 <= generation <= 99_999_999:
         raise ValueError("Invalid segment generation")
     return SEGMENTS + "/segment-%08d.json" % generation
+
+
+def active_storage_bytes(directory):
+    """Count every active storage file, not only the compressed snapshot."""
+    total = 0
+    for path in Path(directory).rglob("*"):
+        if path.is_symlink():
+            raise ValueError("Linked storage file is prohibited")
+        if path.is_file():
+            total += path.stat().st_size
+    return total
+
+
+def _enforce_active_budget(directory):
+    total = active_storage_bytes(directory)
+    if total > MAX_ACTIVE_TREE_BYTES:
+        raise ValueError("Aggregate active paper ledger storage budget exceeded; archive rollover required")
+    return total
 
 
 def _manifest_bytes(manifest):
@@ -205,6 +227,7 @@ def stage_migration(legacy_bytes, checkpoint_git_sha, destination):
         result, _ = read_state(temporary, full_replay=True)
         if result != legacy:
             raise ValueError("Migration is not lossless")
+        _enforce_active_budget(temporary)
         _publish(temporary, destination)
         return manifest
     finally:
@@ -239,8 +262,11 @@ def stage_append(previous, report, source_sha, destination):
         result, manifest = read_state(temporary)
         if result != after or manifest != new:
             raise ValueError("Staged transaction failed verification")
+        active_bytes = _enforce_active_budget(temporary)
         _publish(temporary, destination)
-        return {"generation": after["generation"], "ledger_sha256": after["sha256"],
+        return {"generation": after["generation"], "active_storage_bytes": active_bytes,
+                "active_storage_budget_bytes": MAX_ACTIVE_TREE_BYTES,
+                "ledger_sha256": after["sha256"],
                 "segment_path": _segment_path(after["generation"]),
                 "snapshot_sha256": sha(packed), "scoreboard": score}
     finally:
