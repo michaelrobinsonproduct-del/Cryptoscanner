@@ -78,9 +78,11 @@ jobs:
           set -euo pipefail
           ACTION="$(python -c 'import json;print(json.load(open("/tmp/paper-recovery-decision.json"))["action"])')"
           if [ "$ACTION" = NO_DISPATCH ]; then
+            echo NO_DISPATCH > /tmp/paper-recovery-status.txt
             echo PAPER_RECOVERY_NOT_NEEDED
             exit 0
           fi
+          echo RECHECK_PENDING > /tmp/paper-recovery-status.txt
           test "$ACTION" = DISPATCH_EXISTING_WORKFLOW || {
             echo PAPER_RECOVERY_UNSAFE_ACTION; exit 1;
           }
@@ -89,6 +91,7 @@ jobs:
             --jq '.[] | {body,created_at}' > /tmp/paper-recovery-comments-recheck.ndjson
           git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/paper-recovery-ledger-commit.txt)" || {
+            echo LEDGER_MOVED_ABORT > /tmp/paper-recovery-status.txt
             echo PAPER_RECOVERY_LEDGER_MOVED_ABORT; exit 1;
           }
           python -m paper_pov.recovery \
@@ -99,6 +102,7 @@ jobs:
             --ledger-message /tmp/paper-recovery-ledger-message.txt \
             --output /tmp/paper-recovery-recheck.json
           test "$(python -c 'import json;print(json.load(open("/tmp/paper-recovery-recheck.json"))["action"])')" = DISPATCH_EXISTING_WORKFLOW || {
+            echo RECHECK_ABORT > /tmp/paper-recovery-status.txt
             echo PAPER_RECOVERY_RECHECK_ABORT; exit 0;
           }
           python - <<'PY' > /tmp/paper-recovery-issue.txt
@@ -126,7 +130,9 @@ jobs:
           assert actual==expected, 'Recovery attempt marker readback mismatch'
           print('PAPER_RECOVERY_ATTEMPT_READBACK_VERIFIED')
           PY
+          echo ATTEMPT_MARKER_READBACK_VERIFIED > /tmp/paper-recovery-status.txt
           gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/dispatches" -f ref=main
+          echo DISPATCH_HTTP_ACCEPTED_EXECUTION_UNVERIFIED > /tmp/paper-recovery-status.txt
           echo PAPER_EXISTING_WORKFLOW_DISPATCH_HTTP_ACCEPTED_NOT_EXECUTION_PROOF
           echo "Requested existing paper workflow; scan success and persistence remain UNVERIFIED" >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve checksummed decision evidence
@@ -139,7 +145,15 @@ jobs:
           else
             echo '{"action":"BLOCKED","reason":"NO_DECISION_ARTIFACT"}' > /tmp/paper-recovery-artifact/decision.json
           fi
-          (cd /tmp/paper-recovery-artifact && sha256sum decision.json > SHA256SUMS)
+          if test -f /tmp/paper-recovery-recheck.json; then
+            cp /tmp/paper-recovery-recheck.json /tmp/paper-recovery-artifact/recheck.json
+          fi
+          if test -f /tmp/paper-recovery-status.txt; then
+            cp /tmp/paper-recovery-status.txt /tmp/paper-recovery-artifact/execution_status.txt
+          else
+            echo UNKNOWN_OR_FAILED > /tmp/paper-recovery-artifact/execution_status.txt
+          fi
+          (cd /tmp/paper-recovery-artifact && sha256sum *.json execution_status.txt > SHA256SUMS)
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
