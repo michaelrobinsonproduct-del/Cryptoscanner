@@ -104,6 +104,15 @@ class PaperMonitorTests(unittest.TestCase):
         self.assertNotIn(dt.datetime(2026, 10, 31, 20, 9, tzinfo=UTC), matched)
         self.assertEqual(len(matched), 1)
 
+    def test_run_before_09_cannot_be_attributed_to_future_09_slot(self):
+        # A scheduled run created at 05:08 cannot originate from 05:09.
+        # The old nearest-slot rule assigned it to the future 05:09 slot.
+        early = run(124, "2026-11-01T05:08:00Z")
+        matched = matched_scheduled_slots(
+            [early], dt.datetime(2026, 11, 1, 5, 47, tzinfo=UTC), 9, 30)
+        self.assertEqual(matched, {dt.datetime(2026, 11, 1, 4, 39, tzinfo=UTC)})
+        self.assertNotIn(dt.datetime(2026, 11, 1, 5, 9, tzinfo=UTC), matched)
+
     def test_queued_39_slot_cannot_hide_two_missed_slots(self):
         scans = payload(run(123, "2026-10-31T20:10:00Z"),
                         run(124, "2026-10-31T20:40:00Z",
