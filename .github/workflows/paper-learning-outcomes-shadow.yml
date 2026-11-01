@@ -95,7 +95,7 @@ jobs:
                 json.dumps(evidence["coverage"]["by_horizon"],sort_keys=True))
           PY
           (cd paper_pov/learning-evidence && sha256sum evaluation.json > SHA256SUMS)
-          git fetch --no-tags --depth=1 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           git merge-base --is-ancestor "$BASE" refs/remotes/origin/paper-proof-ledger || {
             echo "LEARNING_REMOTE_HISTORY_REWRITTEN_ABSTAIN"; exit 1;
           }
