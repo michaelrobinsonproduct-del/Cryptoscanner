@@ -1,0 +1,202 @@
+name: Paper missed-slot recovery controller (dispatch existing writer only)
+on:
+  workflow_run:
+    workflows:
+      - Independent Public Paper Scan Health Monitor (read-only)
+      - Independent Paper Forward Outcome Audit
+    types: [completed]
+  workflow_dispatch:
+  schedule:
+    - cron: '18,48 * * * *'
+permissions:
+  contents: read
+  actions: write
+  issues: write
+concurrency:
+  group: public-paper-recovery-controller
+  cancel-in-progress: false
+jobs:
+  decide-and-request:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.event == 'schedule' &&
+       github.event.workflow_run.conclusion == 'success'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact recovery contracts before any API write
+        run: |
+          set -euo pipefail
+          echo "PAPER_RECOVERY_SOURCE_SHA=$(git rev-parse HEAD)"
+          python -m unittest paper_pov.test_recovery -v
+      - name: Gather current main, run, issue and immutable ledger evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          MAIN_SHA="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          test "$(git rev-parse HEAD)" = "$MAIN_SHA" || {
+            echo PAPER_RECOVERY_SOURCE_CHANGED_ABORT; exit 1;
+          }
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/paper-recovery-runs.json
+          gh api --paginate "repos/$GITHUB_REPOSITORY/issues/34/comments?per_page=100" \
+            --jq '.[] | {body,created_at,user:{login:.user.login,id:.user.id}} | @json' > /tmp/paper-recovery-comments.ndjson
+          git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          BASE="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+          echo "$BASE" > /tmp/paper-recovery-ledger-commit.txt
+          git log -1 --format=%s "$BASE" > /tmp/paper-recovery-ledger-message.txt
+          if git cat-file -e "${BASE}:paper-segment-manifest.json" 2>/dev/null; then
+            CHECKPOINT="$(git show "${BASE}:paper-segment-manifest.json" | python -c 'import json,sys;print(json.load(sys.stdin)["checkpoint"]["git_commit"])')"
+            git cat-file -e "${CHECKPOINT}^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$CHECKPOINT"
+          fi
+          python -m paper_pov.segmented_repository export-git \
+            --repository . --commit "$BASE" --output /tmp/paper-recovery-ledger.json --full-replay
+      - name: Fail-closed decision using newest live API and verified ledger
+        run: |
+          set -euo pipefail
+          python -m paper_pov.recovery \
+            --runs /tmp/paper-recovery-runs.json \
+            --comments /tmp/paper-recovery-comments.ndjson \
+            --ledger /tmp/paper-recovery-ledger.json \
+            --ledger-commit /tmp/paper-recovery-ledger-commit.txt \
+            --ledger-message /tmp/paper-recovery-ledger-message.txt \
+            --output /tmp/paper-recovery-decision.json
+          cat /tmp/paper-recovery-decision.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Deduplicate attempt and request EXISTING single-writer workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ACTION="$(python -c 'import json;print(json.load(open("/tmp/paper-recovery-decision.json"))["action"])')"
+          if [ "$ACTION" = NO_DISPATCH ]; then
+            echo NO_DISPATCH > /tmp/paper-recovery-status.txt
+            echo PAPER_RECOVERY_NOT_NEEDED
+            exit 0
+          fi
+          echo RECHECK_PENDING > /tmp/paper-recovery-status.txt
+          test "$ACTION" = DISPATCH_EXISTING_WORKFLOW || {
+            echo PAPER_RECOVERY_UNSAFE_ACTION; exit 1;
+          }
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/paper-recovery-runs-recheck.json
+          gh api --paginate "repos/$GITHUB_REPOSITORY/issues/34/comments?per_page=100" \
+            --jq '.[] | {body,created_at,user:{login:.user.login,id:.user.id}} | @json' > /tmp/paper-recovery-comments-recheck.ndjson
+          git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/paper-recovery-ledger-commit.txt)" || {
+            echo LEDGER_MOVED_ABORT > /tmp/paper-recovery-status.txt
+            echo PAPER_RECOVERY_LEDGER_MOVED_ABORT; exit 1;
+          }
+          python -m paper_pov.recovery \
+            --runs /tmp/paper-recovery-runs-recheck.json \
+            --comments /tmp/paper-recovery-comments-recheck.ndjson \
+            --ledger /tmp/paper-recovery-ledger.json \
+            --ledger-commit /tmp/paper-recovery-ledger-commit.txt \
+            --ledger-message /tmp/paper-recovery-ledger-message.txt \
+            --output /tmp/paper-recovery-recheck.json
+          test "$(python -c 'import json;print(json.load(open("/tmp/paper-recovery-recheck.json"))["action"])')" = DISPATCH_EXISTING_WORKFLOW || {
+            echo RECHECK_ABORT > /tmp/paper-recovery-status.txt
+            echo PAPER_RECOVERY_RECHECK_ABORT; exit 0;
+          }
+          python - <<'PY' > /tmp/paper-recovery-issue.txt
+          import json,os
+          d=json.load(open('/tmp/paper-recovery-recheck.json'))
+          print('### Paper scanner missed-slot recovery ATTEMPT — '+d['checked_at'])
+          print()
+          print('<!-- '+d['attempt_marker']+' -->')
+          print('Two matured UTC slots missing: '+', '.join(d['missed_matured_slots']))
+          print('Verified immutable ledger generation: '+str(d['ledger_generation']))
+          print('Ledger commit: '+d['ledger_commit'])
+          print('Last linked successful run: '+str(d['latest_run_id']))
+          print('Controller: https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/actions/runs/'+os.environ['GITHUB_RUN_ID'])
+          print('One recovery request for the EXISTING paper-pipeline workflow; this is NOT proof a new scan ran or delivered results.')
+          print('Single existing non-cancelling writer mutex remains authoritative. No second scanner, ledger mutation, trading, paid services or production changes by this controller.')
+          PY
+          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/34/comments" \
+            -f body="$(cat /tmp/paper-recovery-issue.txt)" > /tmp/paper-recovery-post.json
+          ID="$(python -c 'import json;print(json.load(open("/tmp/paper-recovery-post.json"))["id"])')"
+          gh api "repos/$GITHUB_REPOSITORY/issues/comments/$ID" > /tmp/paper-recovery-readback.json
+          python - <<'PY'
+          import json
+          expected=open('/tmp/paper-recovery-issue.txt').read().rstrip('\n')
+          actual=json.load(open('/tmp/paper-recovery-readback.json'))['body']
+          assert actual==expected, 'Recovery attempt marker readback mismatch'
+          print('PAPER_RECOVERY_ATTEMPT_READBACK_VERIFIED')
+          PY
+          echo ATTEMPT_MARKER_READBACK_VERIFIED > /tmp/paper-recovery-status.txt
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/paper-recovery-runs-final.json
+          cmp -s /tmp/paper-recovery-runs-recheck.json /tmp/paper-recovery-runs-final.json || {
+            echo RUNS_CHANGED_ABORT > /tmp/paper-recovery-status.txt
+            echo PAPER_RECOVERY_RUNS_CHANGED_ABORT; exit 1;
+          }
+          git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/paper-recovery-ledger-commit.txt)" || {
+            echo LEDGER_MOVED_ABORT > /tmp/paper-recovery-status.txt
+            echo PAPER_RECOVERY_LEDGER_MOVED_ABORT; exit 1;
+          }
+          CURRENT_MAIN_SHA="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          test "$(git rev-parse HEAD)" = "$CURRENT_MAIN_SHA" || {
+            echo MAIN_CHANGED_ABORT > /tmp/paper-recovery-status.txt
+            echo PAPER_RECOVERY_MAIN_CHANGED_ABORT; exit 1;
+          }
+          gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/dispatches" -f ref=main
+          echo DISPATCH_HTTP_ACCEPTED_EXECUTION_UNVERIFIED > /tmp/paper-recovery-status.txt
+          echo PAPER_EXISTING_WORKFLOW_DISPATCH_HTTP_ACCEPTED_NOT_EXECUTION_PROOF
+          echo "Requested existing paper workflow; scan success and persistence remain UNVERIFIED" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve checksummed decision evidence
+        if: ${{ always() }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/paper-recovery-artifact
+          if test -f /tmp/paper-recovery-decision.json; then
+            cp /tmp/paper-recovery-decision.json /tmp/paper-recovery-artifact/decision.json
+          else
+            echo '{"action":"BLOCKED","reason":"NO_DECISION_ARTIFACT"}' > /tmp/paper-recovery-artifact/decision.json
+          fi
+          if test -f /tmp/paper-recovery-recheck.json; then
+            cp /tmp/paper-recovery-recheck.json /tmp/paper-recovery-artifact/recheck.json
+          fi
+          if test -f /tmp/paper-recovery-status.txt; then
+            cp /tmp/paper-recovery-status.txt /tmp/paper-recovery-artifact/execution_status.txt
+          else
+            echo UNKNOWN_OR_FAILED > /tmp/paper-recovery-artifact/execution_status.txt
+          fi
+          (cd /tmp/paper-recovery-artifact && sha256sum *.json execution_status.txt > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: paper-recovery-decision-${{ github.run_id }}
+          path: /tmp/paper-recovery-artifact/
+          retention-days: 90
+          if-no-files-found: error
+      - name: Index controller failure without claiming scanner failure
+        if: ${{ failure() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### Paper recovery controller FAILED — $GITHUB_RUN_ID"
+            echo
+            echo "<!-- PAPER_RECOVERY_CONTROLLER_FAILED:$GITHUB_RUN_ID -->"
+            echo "Run/logs: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "No scanner failure, new ledger generation, recovery success, or fresh market data is claimed."
+            echo "A dispatch MAY have been accepted before a later step failed; inspect runs before retry."
+          } > /tmp/paper-recovery-failure.txt
+          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/34/comments" \
+            -f body="$(cat /tmp/paper-recovery-failure.txt)" > /tmp/paper-recovery-failure-post.json
+          ID="$(python -c 'import json;print(json.load(open("/tmp/paper-recovery-failure-post.json"))["id"])')"
+          gh api "repos/$GITHUB_REPOSITORY/issues/comments/$ID" > /tmp/paper-recovery-failure-readback.json
+          python - <<'PY'
+          import json
+          assert json.load(open('/tmp/paper-recovery-failure-readback.json'))['body']==open('/tmp/paper-recovery-failure.txt').read().rstrip('\n')
+          print('PAPER_RECOVERY_CONTROLLER_FAILURE_READBACK_VERIFIED')
+          PY
