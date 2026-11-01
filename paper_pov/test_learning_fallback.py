@@ -2,6 +2,7 @@
 import copy
 import datetime as dt
 import unittest
+from pathlib import Path
 
 from paper_pov.learning_fallback import COMMAND, REPO, decide
 from paper_pov.test_learning_outcomes import fixture, START
@@ -91,6 +92,17 @@ class OwnerLearningFallbackTests(unittest.TestCase):
         self.assertEqual(decide(**args)["reason"], "LEARNING_HISTORY_TRUNCATED")
         args["learning_runs"][0]["created_at"] = iso(560)
         self.assertEqual(decide(**args)["action"], "RUN_READ_ONLY_LEARNING")
+
+    def test_owner_comment_concurrency_not_starved_by_unrelated_comments(self):
+        # GitHub Actions keeps at most one pending workflow per concurrency
+        # group. An unrelated issue_comment must not evict the owner command.
+        workflow = (Path(__file__).resolve().parent.parent /
+                    ".github/workflows/paper-learning-outcomes-shadow.yml").read_text()
+        self.assertIn(
+            "group: paper-learning-shadow-${{ github.event.workflow_run.id || github.event.comment.id || github.run_id }}",
+            workflow,
+        )
+        self.assertIn("cancel-in-progress: false", workflow)
 
     def test_corrupt_manifest_or_ledger_fails_closed(self):
         args = case()
