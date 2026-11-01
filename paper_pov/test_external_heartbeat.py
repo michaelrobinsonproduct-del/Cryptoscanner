@@ -48,11 +48,17 @@ class ExternalHeartbeatContracts(unittest.TestCase):
         self.assertNotIn("paper-proof-ledger", s)
         self.assertNotIn("git push", s)
         self.assertNotIn("curl ", s)
-        self.assertNotRegex(s, r"(?m)^\s+run:")
+        self.assertIn("python -m paper_pov.external_heartbeat_guard", s)
+        self.assertIn("REQUEST_EXISTING_RECOVERY_CONTROLLER_ONLY", s)
+        self.assertIn("PAPER_EXTERNAL_WAKE_INVALID_INTENT", s)
+        self.assertIn("persist-credentials: false", s)
 
     def test_no_schedule_dependency_or_self_dispatch(self):
         s = self.workflow
-        self.assertNotRegex(s, r"(?m)^  (schedule|workflow_run|workflow_dispatch):")
+        self.assertIn("python -m paper_pov.external_heartbeat_guard", s)
+        self.assertIn("REQUEST_EXISTING_RECOVERY_CONTROLLER_ONLY", s)
+        self.assertIn("PAPER_EXTERNAL_WAKE_INVALID_INTENT", s)
+        self.assertIn("persist-credentials: false", s)
         self.assertNotIn("workflow_id = 'paper-external-heartbeat.yml'", s)
         self.assertIn("cancel-in-progress: false", s)
 
