@@ -121,6 +121,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertIn("PAPER_RECOVERY_ATTEMPT_READBACK_VERIFIED", workflow)
         self.assertIn("github.event.workflow_run.event == 'schedule'", workflow)
         self.assertIn("github.event.workflow_run.head_branch == 'main'", workflow)
+        self.assertIn("github.event.workflow_run.conclusion == 'success'", workflow)
         self.assertNotIn("git push", workflow)
         self.assertNotIn("railway", workflow.lower())
 
