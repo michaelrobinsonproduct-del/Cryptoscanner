@@ -2,32 +2,32 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 7365,
-      "evaluated": 6966,
+      "matured_snapshots": 7377,
+      "evaluated": 6978,
       "coverage_pct": 94.6,
       "unresolved": 399,
       "no_observation_in_window": 399
     },
     {
       "hours": 3,
-      "matured_snapshots": 7329,
-      "evaluated": 6565,
+      "matured_snapshots": 7353,
+      "evaluated": 6589,
       "coverage_pct": 89.6,
       "unresolved": 764,
       "no_observation_in_window": 764
     },
     {
       "hours": 6,
-      "matured_snapshots": 7293,
-      "evaluated": 6555,
+      "matured_snapshots": 7305,
+      "evaluated": 6567,
       "coverage_pct": 89.9,
       "unresolved": 738,
       "no_observation_in_window": 738
     },
     {
       "hours": 24,
-      "matured_snapshots": 7053,
-      "evaluated": 6339,
+      "matured_snapshots": 7065,
+      "evaluated": 6351,
       "coverage_pct": 89.9,
       "unresolved": 714,
       "no_observation_in_window": 714
@@ -36,64 +36,64 @@
   "outcome_lag_hours_by_horizon": [
     {
       "hours": 1,
-      "samples": 6966,
-      "average_delay_hours": 0.452
+      "samples": 6978,
+      "average_delay_hours": 0.453
     },
     {
       "hours": 3,
-      "samples": 6565,
+      "samples": 6589,
       "average_delay_hours": 0.379
     },
     {
       "hours": 6,
-      "samples": 6555,
+      "samples": 6567,
       "average_delay_hours": 0.377
     },
     {
       "hours": 24,
-      "samples": 6339,
-      "average_delay_hours": 0.356
+      "samples": 6351,
+      "average_delay_hours": 0.355
     }
   ],
   "unresolved_1h_snapshots": 399,
   "rank_comparison": {
-    "historical_ranked_samples": 7101,
+    "historical_ranked_samples": 7113,
     "mean_base_minus_early_rank": 1.75
   },
-  "newly_discovered_outside_base_top12": 2,
+  "newly_discovered_outside_base_top12": 1,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
-      "samples": 6918,
-      "early_scored_avg_return_pct": -0.052,
-      "all_selected_avg_return_pct": -0.052,
-      "early_score_above_base_avg_return_pct": -0.068
+      "samples": 6930,
+      "early_scored_avg_return_pct": -0.051,
+      "all_selected_avg_return_pct": -0.051,
+      "early_score_above_base_avg_return_pct": -0.067
     },
     {
       "hours": 3,
-      "samples": 6565,
-      "early_scored_avg_return_pct": -0.233,
-      "all_selected_avg_return_pct": -0.233,
-      "early_score_above_base_avg_return_pct": -0.221
+      "samples": 6589,
+      "early_scored_avg_return_pct": -0.235,
+      "all_selected_avg_return_pct": -0.235,
+      "early_score_above_base_avg_return_pct": -0.222
     },
     {
       "hours": 6,
-      "samples": 6555,
+      "samples": 6567,
       "early_scored_avg_return_pct": -0.446,
       "all_selected_avg_return_pct": -0.446,
       "early_score_above_base_avg_return_pct": -0.477
     },
     {
       "hours": 24,
-      "samples": 6339,
-      "early_scored_avg_return_pct": -1.064,
-      "all_selected_avg_return_pct": -1.064,
-      "early_score_above_base_avg_return_pct": -1.061
+      "samples": 6351,
+      "early_scored_avg_return_pct": -1.063,
+      "all_selected_avg_return_pct": -1.063,
+      "early_score_above_base_avg_return_pct": -1.059
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 26425,
-    "positive": 10929,
+    "evaluated": 26485,
+    "positive": 10953,
     "average_return_pct": -0.436
   },
   "missed_breakout_examples": [
@@ -148,12 +148,12 @@
       "next_scan_gain_pct": 43.73
     }
   ],
-  "unselected_gainers_5pct_observations": 921,
-  "market_observations": 391620,
-  "market_price_coverage": 615,
-  "feature_rows": 7269,
-  "snapshots": 7389,
-  "outcomes": 26425,
+  "unselected_gainers_5pct_observations": 922,
+  "market_observations": 392234,
+  "market_price_coverage": 614,
+  "feature_rows": 7281,
+  "snapshots": 7401,
+  "outcomes": 26485,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
