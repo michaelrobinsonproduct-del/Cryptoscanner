@@ -132,6 +132,7 @@ jobs:
             --run-id "$GITHUB_RUN_ID" \
             --source-sha "$GITHUB_SHA" \
             --ledger-commit "$LEDGER_COMMIT" \
+            --event "$GITHUB_EVENT_NAME" \
             --output-dir paper_pov/output/results
           (cd paper_pov/output/results && sha256sum -c SHA256SUMS)
           cat paper_pov/output/results/results.md >> "$GITHUB_STEP_SUMMARY"
@@ -166,7 +167,7 @@ jobs:
             "Ledger SHA256: "+s["ledger_sha256"],
             "Persistence: non-force push and exact remote readback VERIFIED; downloadable 90-day SHA256 artifact in run.",
             "Readable UTC WATCH results: https://github.com/"+os.environ["GITHUB_REPOSITORY"]+"/actions/runs/"+os.environ["GITHUB_RUN_ID"]+" (job summary + checksummed artifact public-paper-results-"+os.environ["GITHUB_RUN_ID"]+").",
-            "Stage 1: one scheduled scan/hour pending independent multi-run reliability acceptance; gaps over 45m abstain; no model promotion."
+            "Configured GitHub schedule: :09 and :39 UTC in ONE workflow with ONE writer; unattended slot reliability NOT YET ACCEPTED. Gaps over 45m abstain; no model promotion."
           ]
           Path("/tmp/paper-issue-comment.txt").write_text("\n\n".join(lines))
           PY
