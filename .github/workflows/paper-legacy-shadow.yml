@@ -1,0 +1,50 @@
+name: Independent legacy-inspired PAPER shadow (read only)
+on:
+  workflow_run:
+    workflows: ["Public Kraken Paper POV (scheduled, isolated ledger)"]
+    types: [requested]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: independent-legacy-shadow-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+jobs:
+  independent-shadow:
+    if: >-
+      github.repository == 'michaelrobinsonproduct-del/Cryptoscanner' &&
+      github.event.workflow_run.repository.full_name == 'michaelrobinsonproduct-del/Cryptoscanner' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      (github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify independent strategy tests
+        run: |
+          set -euo pipefail
+          python -m unittest paper_pov.test_legacy_shadow -v
+      - name: Independently sample Kraken and score shadow WATCH
+        env:
+          PAPER_SHADOW_RUN_ID: ${{ github.run_id }}
+          PAPER_TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          export PAPER_SHADOW_SOURCE_SHA="$(git rev-parse HEAD)"
+          python -m paper_pov.legacy_shadow
+          (cd paper_pov/output && sha256sum -c LEGACY_SHA256SUMS)
+      - name: Preserve immutable read-only shadow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: independent-legacy-shadow-${{ github.run_id }}
+          path: |
+            paper_pov/output/legacy-shadow.json
+            paper_pov/output/LEGACY_SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
