@@ -95,8 +95,26 @@ class CadenceWakeTests(unittest.TestCase):
         self.assertEqual(slot_at(dt.datetime(2026, 11, 1, 11, 29, tzinfo=UTC)).minute, 0)
 
     def test_stale_external_command_window_abstains(self):
-        d = decision(now=dt.datetime(2026, 10, 31, 23, 21, tzinfo=UTC))
+        d = decision(now=dt.datetime(2026, 10, 31, 23, 29, 1, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "CADENCE_SLOT_TOO_LATE"))
+
+    def test_external_worker_at_25_past_is_within_half_hour(self):
+        d = decision(now=dt.datetime(2026, 10, 31, 23, 25, tzinfo=UTC))
+        self.assertEqual(d["action"], "DISPATCH_EXISTING_WORKFLOW")
+
+    def test_workflow_contract_is_existing_single_writer_only(self):
+        from pathlib import Path
+        workflow = (Path(__file__).resolve().parents[1] /
+                    ".github/workflows/paper-cadence-wake.yml").read_text()
+        self.assertIn("issue_comment:", workflow)
+        self.assertIn("github.event.comment.body == '/paper-cadence-heartbeat'", workflow)
+        self.assertIn("group: public-paper-recovery-controller", workflow)
+        self.assertIn("actions/workflows/paper-pipeline.yml/dispatches", workflow)
+        self.assertIn("paper_pov.cadence_wake", workflow)
+        self.assertNotIn("python -m paper_pov.scanner", workflow)
+        self.assertNotIn("git push", workflow)
+        self.assertNotIn("schedule:", workflow)
+        self.assertNotIn("paper-proof-ledger:refs/heads", workflow)
 
     def test_new_durable_scan_covers_slot(self):
         # The sealed run was recorded after 23:00 and must not be duplicated.
