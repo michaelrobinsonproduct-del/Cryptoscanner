@@ -93,7 +93,10 @@ def assess_runs(payload, now, minute, prefix, alerts, cadence_minutes=60):
         matched = matched_scheduled_slots(successes, now, minute, cadence_minutes)
         # Two distinct matured consecutive slots must not be satisfied by one
         # delayed run, a manual dispatch, or a queued/failed execution.
-        if all(slot not in matched for slot in mature_slots[:2]):
+        if all(slot not in matched for slot in mature_slots[:2]) and (
+                not successes or instant(successes[0]["created_at"]) < mature_slots[1]):
+            # A newer completed scheduled run resets the missed-slot streak,
+            # even if its nearest slot has not yet passed the grace period.
             alerts.append(prefix + "_TWO_MISSED_SLOTS")
     if not scheduled:
         alerts.append(prefix + "_NO_SCHEDULED_HISTORY")
