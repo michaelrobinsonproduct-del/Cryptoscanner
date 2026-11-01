@@ -63,14 +63,24 @@ def decide(event, paper_runs, shadow_runs, state, manifest, ledger_message,
     if not isinstance(shadow_runs, dict) or not isinstance(shadow_runs.get("workflow_runs"), list):
         raise ValueError("Missing authoritative shadow runs")
     papers = paper_runs["workflow_runs"]
-    if not papers or len(papers) >= 100:
+    if not papers:
         return _abstain("EMPTY_OR_PAGINATION_AMBIGUITY")
+    # GitHub's first page is newest-first. A full 100-run page is valid for
+    # finding the latest writer if its ordering and identities are unambiguous.
+    if (len({r.get("id") for r in papers}) != len(papers)
+            or any(type(r.get("id")) is not int for r in papers)):
+        return _abstain("DUPLICATE_OR_INVALID_WRITER_RUN_ID")
+    if any(stamp(papers[i].get("created_at")) <
+           stamp(papers[i + 1].get("created_at"))
+           for i in range(len(papers) - 1)):
+        return _abstain("UNSORTED_WRITER_HISTORY")
+    if len(papers) > 1 and stamp(papers[0].get("created_at")) == stamp(papers[1].get("created_at")):
+        return _abstain("AMBIGUOUS_LATEST_WRITER")
     for run in papers:
         if (run.get("name") != PAPER or run.get("path") != PAPER_PATH
                 or run.get("repository", {}).get("full_name") != REPO
                 or run.get("head_branch") != "main"):
             return _abstain("UNTRUSTED_WRITER_RUN_HISTORY")
-    papers.sort(key=lambda r: stamp(r.get("created_at")), reverse=True)
     writer = papers[0]
     if any(r.get("status") != "completed" for r in papers[:3]):
         return _abstain("ACTIVE_OR_AMBIGUOUS_WRITER")
@@ -96,7 +106,14 @@ def decide(event, paper_runs, shadow_runs, state, manifest, ledger_message,
         return _abstain("SEALED_LEDGER_SOURCE_OR_SHA_MISMATCH")
     shadows = shadow_runs["workflow_runs"]
     if len(shadows) >= 100:
-        return _abstain("SHADOW_PAGINATION_AMBIGUITY")
+        # A full page is safe only if the oldest included run predates this
+        # writer: all relevant post-writer runs must then be on page one.
+        if (any(stamp(shadows[i].get("created_at")) <
+                stamp(shadows[i + 1].get("created_at"))
+                for i in range(len(shadows) - 1))
+                or stamp(shadows[-1].get("created_at")) >=
+                stamp(writer["created_at"])):
+            return _abstain("SHADOW_PAGINATION_AMBIGUITY")
     for shadow in shadows:
         if shadow.get("id") == current_run_id:
             continue
