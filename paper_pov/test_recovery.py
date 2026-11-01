@@ -28,21 +28,34 @@ def decision(runs=None, comments=None, ledger=None, now=NOW, commit=COMMIT, mess
 
 
 class RecoveryTests(unittest.TestCase):
-    def test_two_matured_slots_and_verified_ledger_permit_same_workflow_request(self):
+    def test_one_matured_slot_and_verified_ledger_permit_same_workflow_request(self):
         d = decision()
         self.assertEqual(d["action"], "DISPATCH_EXISTING_WORKFLOW")
-        self.assertEqual(d["reason"], "TWO_MATURED_SLOTS_MISSED")
+        self.assertEqual(d["reason"], "MATURED_SLOT_MISSED")
         self.assertEqual(d["latest_run_id"], 123)
         self.assertEqual(d["ledger_generation"], 1)
-        self.assertEqual(len(d["missed_matured_slots"]), 2)
+        self.assertEqual(len(d["missed_matured_slots"]), 1)
         self.assertEqual(d["attempt_marker"], RECOVERY_MARKER + COMMIT)
 
-    def test_no_dispatch_with_only_one_matured_missed_slot(self):
+    def test_one_matured_missed_slot_recovers_after_35_minute_grace(self):
         d = decision(now=dt.datetime(2026, 10, 31, 21, 27, tzinfo=UTC))
-        self.assertEqual(d["action"], "NO_DISPATCH")
+        self.assertEqual((d["action"], d["reason"]),
+                         ("DISPATCH_EXISTING_WORKFLOW", "MATURED_SLOT_MISSED"))
+        self.assertEqual(d["missed_matured_slots"], ["2026-10-31T20:39:00+00:00"])
+
+    def test_success_after_matured_slot_does_not_duplicate_scan(self):
+        d = decision(runs=[scan(123, "2026-10-31T20:50:00Z")],
+                     now=dt.datetime(2026, 10, 31, 21, 27, tzinfo=UTC))
+        self.assertEqual((d["action"], d["reason"]),
+                         ("NO_DISPATCH", "SUCCESS_AFTER_MATURED_SLOT"))
+
+    def test_before_slot_grace_no_recovery(self):
+        d = decision(now=dt.datetime(2026, 10, 31, 21, 13, tzinfo=UTC))
+        self.assertEqual((d["action"], d["reason"]),
+                         ("NO_DISPATCH", "SUCCESS_AFTER_MATURED_SLOT"))
 
     def test_recent_success_does_not_dispatch(self):
-        d = decision(now=dt.datetime(2026, 10, 31, 21, 0, tzinfo=UTC))
+        d = decision(now=dt.datetime(2026, 10, 31, 20, 50, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "RECENT_SUCCESS"))
 
     def test_queued_or_running_existing_writer_prevents_dispatch(self):
