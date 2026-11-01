@@ -29,6 +29,7 @@ def current():
 def shadow():
     return {"schema": 1, "mode": "LEGACY_INSPIRED_SHADOW",
             "independent_execution": True, "run_id": "5678",
+            "trigger_paper_run_id": "1234",
             "source_sha": "c" * 40, "strategy_name": "legacy-inspired-separate-v1",
             "production_applied": False, "buy_approved": False,
             "as_of": "2026-11-01T16:00:15Z",
@@ -105,6 +106,24 @@ class OverlapTests(unittest.TestCase):
         a["run_id"] = "1234"
         with self.assertRaisesRegex(ValueError, "execution"):
             execute(other=a, run_id="1234")
+
+    def test_missing_originating_paper_run_rejected(self):
+        a = shadow()
+        del a["trigger_paper_run_id"]
+        with self.assertRaisesRegex(ValueError, "trigger PAPER run provenance"):
+            execute(other=a)
+
+    def test_different_originating_paper_run_rejected(self):
+        a = shadow()
+        a["trigger_paper_run_id"] = "9999"
+        with self.assertRaisesRegex(ValueError, "trigger PAPER run provenance"):
+            execute(other=a)
+
+    def test_noncanonical_originating_run_type_rejected(self):
+        a = shadow()
+        a["trigger_paper_run_id"] = 1234
+        with self.assertRaisesRegex(ValueError, "trigger PAPER run provenance"):
+            execute(other=a)
 
     def test_future_features_rejected(self):
         a = shadow()
