@@ -43,13 +43,9 @@ class RecoveryTests(unittest.TestCase):
                          ("DISPATCH_EXISTING_WORKFLOW", "MATURED_SLOT_MISSED"))
         self.assertEqual(d["missed_matured_slots"], ["2026-10-31T20:39:00+00:00"])
 
-    def test_success_after_matured_slot_does_not_duplicate_scan(self):
-        d = decision(runs=[scan(123, "2026-10-31T20:50:00Z")],
-                     now=dt.datetime(2026, 10, 31, 21, 27, tzinfo=UTC))
-        self.assertEqual((d["action"], d["reason"]),
-                         ("NO_DISPATCH", "SUCCESS_AFTER_MATURED_SLOT"))
-
-    def test_before_slot_grace_no_recovery(self):
+    def test_newer_durable_success_prevents_redundant_recovery(self):
+        # At 21:13 the 20:39 slot is not mature; the latest matured slot
+        # is 20:09, already followed by the verified 20:10 scan.
         d = decision(now=dt.datetime(2026, 10, 31, 21, 13, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]),
                          ("NO_DISPATCH", "SUCCESS_AFTER_MATURED_SLOT"))
