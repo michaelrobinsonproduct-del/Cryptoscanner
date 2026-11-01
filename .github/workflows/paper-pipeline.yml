@@ -2,7 +2,8 @@ name: Public Kraken Paper POV (scheduled, isolated ledger)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '9,39 * * * *'
+    - cron: '9 * * * *'
+    - cron: '39 * * * *'
 permissions:
   contents: write
   issues: write
@@ -19,6 +20,28 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Fail-closed originating schedule provenance (no ledger writes)
+        env:
+          PAPER_GITHUB_EVENT: ${{ github.event_name }}
+          PAPER_CRON_EXPRESSION: ${{ github.event.schedule }}
+        run: |
+          set -euo pipefail
+          case "$PAPER_GITHUB_EVENT" in
+            schedule)
+              case "$PAPER_CRON_EXPRESSION" in
+                '9 * * * *'|'39 * * * *') ;;
+                *) echo "PAPER_UNRECOGNIZED_ORIGINATING_CRON"; exit 1 ;;
+              esac
+              ;;
+            workflow_dispatch)
+              test -z "$PAPER_CRON_EXPRESSION" || {
+                echo "PAPER_MANUAL_WITH_SCHEDULE_PAYLOAD"; exit 1;
+              }
+              ;;
+            *) echo "PAPER_UNRECOGNIZED_GITHUB_EVENT"; exit 1 ;;
+          esac
+          echo "PAPER_VERIFIED_GITHUB_EVENT=$PAPER_GITHUB_EVENT"
+          echo "PAPER_VERIFIED_ORIGINATING_CRON=${PAPER_CRON_EXPRESSION:-MANUAL_DISPATCH}"
       - name: Exact commit tests before any ledger mutation
         run: |
           set -euo pipefail
