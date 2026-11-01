@@ -50,7 +50,7 @@ jobs:
           }
           gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/paper-recovery-runs.json
           gh api --paginate "repos/$GITHUB_REPOSITORY/issues/34/comments?per_page=100" \
-            --jq '.[] | {body,created_at} | @json' > /tmp/paper-recovery-comments.ndjson
+            --jq '.[] | {body,created_at,user:{login:.user.login,id:.user.id}} | @json' > /tmp/paper-recovery-comments.ndjson
           git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           BASE="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
           echo "$BASE" > /tmp/paper-recovery-ledger-commit.txt
@@ -89,7 +89,7 @@ jobs:
           }
           gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/paper-recovery-runs-recheck.json
           gh api --paginate "repos/$GITHUB_REPOSITORY/issues/34/comments?per_page=100" \
-            --jq '.[] | {body,created_at} | @json' > /tmp/paper-recovery-comments-recheck.ndjson
+            --jq '.[] | {body,created_at,user:{login:.user.login,id:.user.id}} | @json' > /tmp/paper-recovery-comments-recheck.ndjson
           git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/paper-recovery-ledger-commit.txt)" || {
             echo LEDGER_MOVED_ABORT > /tmp/paper-recovery-status.txt
@@ -132,6 +132,16 @@ jobs:
           print('PAPER_RECOVERY_ATTEMPT_READBACK_VERIFIED')
           PY
           echo ATTEMPT_MARKER_READBACK_VERIFIED > /tmp/paper-recovery-status.txt
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/paper-recovery-runs-final.json
+          cmp -s /tmp/paper-recovery-runs-recheck.json /tmp/paper-recovery-runs-final.json || {
+            echo RUNS_CHANGED_ABORT > /tmp/paper-recovery-status.txt
+            echo PAPER_RECOVERY_RUNS_CHANGED_ABORT; exit 1;
+          }
+          git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/paper-recovery-ledger-commit.txt)" || {
+            echo LEDGER_MOVED_ABORT > /tmp/paper-recovery-status.txt
+            echo PAPER_RECOVERY_LEDGER_MOVED_ABORT; exit 1;
+          }
           CURRENT_MAIN_SHA="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
           test "$(git rev-parse HEAD)" = "$CURRENT_MAIN_SHA" || {
             echo MAIN_CHANGED_ABORT > /tmp/paper-recovery-status.txt
