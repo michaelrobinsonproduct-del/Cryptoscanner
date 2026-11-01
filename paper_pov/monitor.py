@@ -30,13 +30,40 @@ def instant(value):
     return parsed.astimezone(UTC)
 
 
-def scheduled_slots(now, minute):
-    current = now.astimezone(UTC).replace(minute=minute, second=0, microsecond=0)
-    return [current - dt.timedelta(hours=i) for i in range(6)
-            if current - dt.timedelta(hours=i) + GRACE <= now]
+def scheduled_slots(now, minute, cadence_minutes=60):
+    """Matured UTC slots, newest first. Scanner :09/:39; audit remains hourly."""
+    if cadence_minutes not in (30, 60) or not 0 <= minute < 30:
+        raise ValueError("Unsupported monitor cadence")
+    clock = now.astimezone(UTC)
+    current = clock.replace(minute=minute, second=0, microsecond=0)
+    if current > clock:
+        current -= dt.timedelta(hours=1)
+    if cadence_minutes == 30 and clock - current >= dt.timedelta(minutes=30):
+        current += dt.timedelta(minutes=30)
+    interval = dt.timedelta(minutes=cadence_minutes)
+    return [slot for i in range(12 if cadence_minutes == 30 else 6)
+            if (slot := current - i * interval) + GRACE <= clock]
 
 
-def assess_runs(payload, now, minute, prefix, alerts):
+def matched_scheduled_slots(successes, now, minute, cadence_minutes):
+    """Assign each successful scheduled run to at most ONE nearby expected slot.
+
+    GitHub's run API has created_at but not the originating cron slot; closest
+    compatible slot is a conservative approximation, not proof of punctuality.
+    """
+    candidates = scheduled_slots(now + GRACE, minute, cadence_minutes)
+    matched = set()
+    for run in successes:
+        started = instant(run["created_at"])
+        eligible = [slot for slot in candidates
+                    if slot - dt.timedelta(minutes=5) <= started <= slot + RUN_WINDOW]
+        if eligible:
+            nearest = min(eligible, key=lambda slot: (abs((started - slot).total_seconds()), -slot.timestamp()))
+            matched.add(nearest)
+    return matched
+
+
+def assess_runs(payload, now, minute, prefix, alerts, cadence_minutes=60):
     if not isinstance(payload, dict) or not isinstance(payload.get("workflow_runs"), list):
         alerts.append(prefix + "_RUNS_UNAVAILABLE")
         return []
@@ -61,16 +88,12 @@ def assess_runs(payload, now, minute, prefix, alerts):
         if run.get("status") in ("queued", "in_progress", "waiting") and now - instant(run["created_at"]) > STUCK:
             alerts.append(prefix + "_SCHEDULED_STUCK")
             break
-    mature_slots = scheduled_slots(now, minute)
+    mature_slots = scheduled_slots(now, minute, cadence_minutes)
     if len(mature_slots) >= 2:
-        last_two = mature_slots[:2]
-        def successful_in(slot):
-            return any(slot - dt.timedelta(minutes=5) <= instant(x["created_at"]) <= slot + RUN_WINDOW
-                       for x in successes)
-        # A newer successful scheduled execution resets the missed-slot streak.
-        # Do not report old missed slots after the next successful scan.
-        if all(not successful_in(slot) for slot in last_two) and (
-                not successes or instant(successes[0]["created_at"]) < last_two[-1]):
+        matched = matched_scheduled_slots(successes, now, minute, cadence_minutes)
+        # Two distinct matured consecutive slots must not be satisfied by one
+        # delayed run, a manual dispatch, or a queued/failed execution.
+        if all(slot not in matched for slot in mature_slots[:2]):
             alerts.append(prefix + "_TWO_MISSED_SLOTS")
     if not scheduled:
         alerts.append(prefix + "_NO_SCHEDULED_HISTORY")
@@ -83,7 +106,7 @@ def evaluate(scan_payload, audit_payload, ledger, previous, ledger_commit,
         raise ValueError("Monitor clock must be timezone aware")
     now = now.astimezone(UTC)
     alerts = ["PAPER_EVIDENCE_" + str(x) for x in collection_errors]
-    scan_runs = assess_runs(scan_payload, now, 9, "PAPER_SCAN", alerts)
+    scan_runs = assess_runs(scan_payload, now, 9, "PAPER_SCAN", alerts, cadence_minutes=30)
     assess_runs(audit_payload, now, 21, "PAPER_AUDIT", alerts)
     active = [x for x in scan_runs if x.get("status") == "in_progress"]
     if len(active) > 1:
