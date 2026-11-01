@@ -1,4 +1,4 @@
-"""Stage-1 paper execution safety: one GitHub writer, one hourly slot, no relaxed labels.
+"""Stage-1 paper execution safety: one GitHub writer, two hourly slots, no relaxed labels.
 
 These tests are deterministic and make no network calls. They guard the
 requested stage gate, not the predictive value of the paper scanner.
@@ -13,10 +13,10 @@ LEDGER = ROOT / "paper_pov/ledger.py"
 
 
 class StageOneScheduleTests(unittest.TestCase):
-    def test_only_one_hourly_scheduled_execution_before_acceptance(self):
+    def test_two_hourly_scheduled_executions_after_acceptance(self):
         text = PIPELINE.read_text()
         crons = re.findall(r"(?m)^\s*-\s*cron:\s*['\"]([^'\"]+)['\"]\s*$", text)
-        self.assertEqual(crons, ["9 * * * *"])
+        self.assertEqual(crons, ["9,39 * * * *"])
 
     def test_global_non_cancelling_single_writer_mutex(self):
         text = PIPELINE.read_text()

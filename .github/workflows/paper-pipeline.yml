@@ -2,7 +2,7 @@ name: Public Kraken Paper POV (scheduled, isolated ledger)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '9 * * * *'
+    - cron: '9,39 * * * *'
 permissions:
   contents: write
   issues: write
