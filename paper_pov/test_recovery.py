@@ -45,12 +45,18 @@ class RecoveryTests(unittest.TestCase):
                          ("DISPATCH_EXISTING_WORKFLOW", "MATURED_SLOT_MISSED"))
         self.assertEqual(d["missed_matured_slots"], ["2026-10-31T20:39:00+00:00"])
 
-    def test_newer_durable_success_prevents_redundant_recovery(self):
+    def test_newer_durable_manual_success_prevents_redundant_recovery(self):
         # At 21:13 the 20:39 slot is not mature; the latest matured slot
-        # is 20:09, already followed by the verified 20:10 scan.
-        d = decision(now=dt.datetime(2026, 10, 31, 21, 13, tzinfo=UTC))
+        # is 20:09, already followed by a verified 20:10 recovery scan.
+        d = decision(runs=[scan(event="workflow_dispatch")],
+                     now=dt.datetime(2026, 10, 31, 21, 13, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]),
                          ("NO_DISPATCH", "SUCCESS_AFTER_MATURED_SLOT"))
+
+    def test_scheduled_success_covers_matured_slot(self):
+        d = decision(now=dt.datetime(2026, 10, 31, 21, 13, tzinfo=UTC))
+        self.assertEqual((d["action"], d["reason"]),
+                         ("NO_DISPATCH", "MATURED_SLOT_COVERED"))
 
     def test_recent_success_does_not_dispatch(self):
         d = decision(now=dt.datetime(2026, 10, 31, 20, 50, tzinfo=UTC))
@@ -139,7 +145,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(d["action"], "DISPATCH_EXISTING_WORKFLOW")
         self.assertEqual(d["latest_run_id"], 123)
         self.assertEqual(d["ignored_historical_push_run_ids"], [122, 121])
-        self.assertEqual(len(d["missed_matured_slots"]), 2)
+        self.assertEqual(len(d["missed_matured_slots"]), 1)
 
     def test_untrusted_push_events_never_enable_recovery(self):
         variants = [
