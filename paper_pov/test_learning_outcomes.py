@@ -168,3 +168,43 @@ class PointInTimeOutcomeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OfflineCLIContractTests(unittest.TestCase):
+    def test_cli_emits_deterministic_sealed_evidence_without_writing_ledger(self):
+        import contextlib
+        import io
+        import json
+        from pathlib import Path
+        import tempfile
+        from paper_pov.learning_outcomes import main
+        state = fixture([0, 30, 60, 90, 120], {(60, "BBBUSD"): 1.25})
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root) / "sealed.json"
+            raw = ledger.canonical(state)
+            path.write_bytes(raw)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                report = main(["--ledger", str(path)])
+            self.assertEqual(path.read_bytes(), raw)
+            self.assertEqual(json.loads(out.getvalue()), report)
+            self.assertEqual(report["source_ledger_sha256"], state["sha256"])
+            self.assertEqual(report["evaluation_as_of"], state["runs"][-1]["as_of"])
+            self.assertEqual(report["coverage"]["by_horizon"]["1"]["nonwatch_missed_20pct"], 1)
+            self.assertIsNone(report["held_out_lift"])
+            self.assertFalse(report["production_applied"])
+
+    def test_cli_refuses_resealed_or_tampered_evidence(self):
+        import contextlib
+        import io
+        from pathlib import Path
+        import tempfile
+        from paper_pov.learning_outcomes import main
+        state = fixture([0, 30, 60, 90, 120])
+        state["observations"][0]["price"] = 99
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root) / "tampered.json"
+            path.write_bytes(ledger.canonical(state))
+            with contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaisesRegex(ValueError, "checksum"):
+                    main(["--ledger", str(path)])
