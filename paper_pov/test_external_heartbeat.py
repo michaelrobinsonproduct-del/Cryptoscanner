@@ -28,7 +28,11 @@ class ExternalHeartbeatContracts(unittest.TestCase):
             "github.event.issue.number == 34",
             "github.event.comment.user.login == 'michaelrobinsonproduct-del'",
             "github.event.comment.user.id == 336805669",
-            "github.event.comment.body == 'PAPER_RECOVERY_WAKE_V1'",
+            "github.event.comment.author_association == 'OWNER'",
+            "github.event.sender.login == 'michaelrobinsonproduct-del'",
+            "github.event.sender.id == 336805669",
+            "github.event.repository.default_branch == 'main'",
+            "github.event.comment.body == '/paper-recovery-heartbeat'",
         ):
             with self.subTest(guard=guard):
                 self.assertIn(guard, s)
