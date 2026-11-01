@@ -50,7 +50,7 @@ jobs:
           }
           gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/paper-recovery-runs.json
           gh api --paginate "repos/$GITHUB_REPOSITORY/issues/34/comments?per_page=100" \
-            --jq '.[] | {body,created_at}' > /tmp/paper-recovery-comments.ndjson
+            --jq '.[] | {body,created_at} | @json' > /tmp/paper-recovery-comments.ndjson
           git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           BASE="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
           echo "$BASE" > /tmp/paper-recovery-ledger-commit.txt
@@ -89,7 +89,7 @@ jobs:
           }
           gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/paper-recovery-runs-recheck.json
           gh api --paginate "repos/$GITHUB_REPOSITORY/issues/34/comments?per_page=100" \
-            --jq '.[] | {body,created_at}' > /tmp/paper-recovery-comments-recheck.ndjson
+            --jq '.[] | {body,created_at} | @json' > /tmp/paper-recovery-comments-recheck.ndjson
           git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/paper-recovery-ledger-commit.txt)" || {
             echo LEDGER_MOVED_ABORT > /tmp/paper-recovery-status.txt
