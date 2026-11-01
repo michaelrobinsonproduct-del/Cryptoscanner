@@ -30,7 +30,7 @@ jobs:
       - name: Authenticate actual public Git ledger and its immutable checkpoint
         run: |
           set -euo pipefail
-          git fetch --no-tags origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           git rev-parse refs/remotes/origin/paper-proof-ledger > /tmp/paper-base.sha
           BASE="$(cat /tmp/paper-base.sha)"
           if git cat-file -e "${BASE}:paper-segment-manifest.json" 2>/dev/null; then
@@ -69,7 +69,7 @@ jobs:
                 Path("/tmp/paper-staged/paper-ledger.packed.json").stat().st_size,
                 after["sha256"])
           PY
-          git fetch --no-tags origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/paper-base.sha)" || {
             echo "DRYRUN_REMOTE_MOVED_ABSTAIN"; exit 1;
           }
