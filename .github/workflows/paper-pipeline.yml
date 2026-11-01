@@ -141,6 +141,8 @@ jobs:
             --commit "$(git rev-parse HEAD)" --staged /tmp/paper-staged
           echo "PAPER_LEDGER_REMOTE_READBACK_VERIFIED $(git rev-parse HEAD)"
       - name: Render verified UTC results after ledger remote readback
+        env:
+          PAPER_ORIGINATING_CRON: ${{ github.event.schedule }}
         run: |
           set -euo pipefail
           LEDGER_COMMIT="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
@@ -156,6 +158,7 @@ jobs:
             --source-sha "$GITHUB_SHA" \
             --ledger-commit "$LEDGER_COMMIT" \
             --event "$GITHUB_EVENT_NAME" \
+            --originating-cron "$PAPER_ORIGINATING_CRON" \
             --output-dir paper_pov/output/results
           (cd paper_pov/output/results && sha256sum -c SHA256SUMS)
           cat paper_pov/output/results/results.md >> "$GITHUB_STEP_SUMMARY"
