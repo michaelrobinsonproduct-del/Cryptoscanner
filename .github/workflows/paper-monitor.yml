@@ -92,7 +92,7 @@ jobs:
           retention-days: 90
           if-no-files-found: error
   alert:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: ${{ always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
     needs: monitor
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -101,6 +101,57 @@ jobs:
       actions: read
       issues: write
     steps:
+      - name: Fail-closed upstream monitor failure alert (never runs scanner)
+        if: ${{ always() && needs.monitor.result != 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MONITOR_UPSTREAM_RESULT: ${{ needs.monitor.result }}
+        run: |
+          set -euo pipefail
+          case "$MONITOR_UPSTREAM_RESULT" in
+            failure|cancelled|skipped) ;;
+            *) echo "PAPER_MONITOR_UNEXPECTED_UPSTREAM_STATUS"; exit 1 ;;
+          esac
+          # This fallback must not claim a scan failed or invent ledger metrics.
+          # It runs even when the monitor artifact was never produced.
+          MARKER="<!-- PAPER_MONITOR_PIPELINE_FAILED:$GITHUB_RUN_ID -->"
+          {
+            echo "### Independent paper monitor pipeline FAILED — run $GITHUB_RUN_ID"
+            echo
+            echo "$MARKER"
+            echo "Upstream monitor job result: $MONITOR_UPSTREAM_RESULT"
+            echo "Run/logs: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "Source SHA: $GITHUB_SHA"
+            echo "PAPER_MONITOR_PIPELINE_FAILED: independent monitoring did not complete."
+            echo "Scanner status, ledger integrity, freshness, outcomes and delivery are UNKNOWN from this monitor run."
+            echo "No scanner dispatch, second writer, trading, production infrastructure or scoring action was taken."
+          } > /tmp/paper-monitor-upstream-alert.txt
+          COUNT="$(gh api "repos/$GITHUB_REPOSITORY/issues/34" --jq '.comments')"
+          PAGE=$(( (COUNT + 99) / 100 ))
+          if [ "$PAGE" -lt 1 ]; then PAGE=1; fi
+          gh api "repos/$GITHUB_REPOSITORY/issues/34/comments?per_page=100&page=$PAGE" > /tmp/paper-monitor-upstream-recent.json
+          if ! python - "$MARKER" <<'PY'
+          import json,sys
+          comments=json.load(open("/tmp/paper-monitor-upstream-recent.json"))
+          sys.exit(0 if any(sys.argv[1] in x.get("body","") for x in comments) else 1)
+          PY
+          then
+            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/34/comments" \
+              -f body="$(cat /tmp/paper-monitor-upstream-alert.txt)" > /tmp/paper-monitor-upstream-post.json
+            ID="$(python -c 'import json;print(json.load(open("/tmp/paper-monitor-upstream-post.json"))["id"])')"
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$ID" > /tmp/paper-monitor-upstream-readback.json
+            python - <<'PY'
+          import json
+          expected=open("/tmp/paper-monitor-upstream-alert.txt").read().rstrip("\n")
+          actual=json.load(open("/tmp/paper-monitor-upstream-readback.json"))["body"]
+          assert actual==expected, "Monitor pipeline failure issue readback mismatch"
+          print("PAPER_MONITOR_FAILURE_ISSUE_READBACK_VERIFIED")
+          PY
+          else
+            echo "PAPER_MONITOR_PIPELINE_FAILURE_ALREADY_RECORDED"
+          fi
+          echo "::error::PAPER_MONITOR_PIPELINE_FAILED ($MONITOR_UPSTREAM_RESULT)"
+          exit 1
       - uses: actions/download-artifact@v4
         with:
           name: independent-paper-monitor-${{ github.run_id }}
