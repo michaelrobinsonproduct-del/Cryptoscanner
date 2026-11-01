@@ -113,6 +113,8 @@ jobs:
               assert manifest["checkpoint"]["git_commit"]==base
               assert manifest["checkpoint"]["generation"]==before["generation"]
               assert len(manifest["segments"])==1
+              assert repo.active_storage_bytes(staged)<repo.active_storage_bytes(initial), (
+                  "Rollover did not reduce real active Git storage")
               repo.verify_checkpoint_origin(staged,".")
               old_manifest=json.loads(live.show(".",base,repo.MANIFEST,repo.MAX_MANIFEST_BYTES))
               old_paths=[repo._segment_path(e["generation"]) for e in old_manifest["segments"]]
