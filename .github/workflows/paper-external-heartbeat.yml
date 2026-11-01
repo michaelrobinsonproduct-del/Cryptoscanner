@@ -20,6 +20,7 @@ jobs:
       github.event.issue.number == 34 &&
       github.event.issue.pull_request == null &&
       github.event.comment.user.login == 'michaelrobinsonproduct-del' &&
+      github.event.comment.user.id == 336805669 &&
       github.event.comment.body == 'PAPER_RECOVERY_WAKE_V1'
     runs-on: ubuntu-latest
     timeout-minutes: 3
