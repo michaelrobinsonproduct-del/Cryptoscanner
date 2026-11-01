@@ -46,23 +46,61 @@ def fixture():
 
 
 class PaperResultsContracts(unittest.TestCase):
-    def report(self, scan=None, score=None, event="schedule"):
+    def report(self, scan=None, score=None, event="schedule", cron="9 * * * *"):
         s, b = fixture()
+        if event == "workflow_dispatch" and cron == "9 * * * *":
+            cron = None
         return render(s if scan is None else scan, b if score is None else score,
-                      run_id="41235442591", source_sha=SHA, ledger_commit=LEDGER, event=event)
+                      run_id="41235442591", source_sha=SHA, ledger_commit=LEDGER,
+                      event=event, originating_cron=cron)
 
     def test_github_event_provenance_is_explicit_and_fail_closed(self):
         scheduled, scheduled_md = self.report(event="schedule")
         self.assertEqual(scheduled["github_event"], "schedule")
-        self.assertFalse(scheduled["scheduled_slot_verified"])
+        self.assertTrue(scheduled["scheduled_slot_verified"])
+        self.assertEqual(scheduled["originating_cron"], "9 * * * *")
+        self.assertEqual(scheduled["scheduled_slot_utc_minute"], 9)
+        self.assertFalse(scheduled["scheduled_start_punctuality_verified"])
         self.assertIn("GitHub trigger:** scheduled", scheduled_md)
-        self.assertIn("exact cron slot NOT inferred", scheduled_md)
+        self.assertIn("intended UTC minute=:09", scheduled_md)
+        self.assertIn("punctuality NOT verified", scheduled_md)
         manual, manual_md = self.report(event="workflow_dispatch")
         self.assertEqual(manual["github_event"], "workflow_dispatch")
+        self.assertFalse(manual["scheduled_slot_verified"])
+        self.assertIsNone(manual["scheduled_slot_utc_minute"])
         self.assertIn("GitHub trigger:** manual dispatch", manual_md)
         for invalid in (None, "", "push", "pull_request", "schedule:39", True):
             with self.subTest(event=invalid), self.assertRaisesRegex(ValueError, "GitHub trigger"):
                 self.report(event=invalid)
+
+    def test_both_exact_crons_and_missing_or_spoofed_attribution(self):
+        for cron, minute in (("9 * * * *", 9), ("39 * * * *", 39)):
+            with self.subTest(cron=cron):
+                payload, md = self.report(cron=cron)
+                self.assertTrue(payload["scheduled_slot_verified"])
+                self.assertEqual(payload["scheduled_slot_utc_minute"], minute)
+                self.assertEqual(payload["originating_cron"], cron)
+                self.assertIn(f"intended UTC minute=:{minute:02d}", md)
+                self.assertFalse(payload["scheduled_start_punctuality_verified"])
+        for bad in (None, "", "9,39 * * * *", "10 * * * *",
+                    "39 * * * *; echo spoof", "9 * * * *\\n39 * * * *", True):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "originating scheduled cron"):
+                self.report(cron=bad)
+        with self.assertRaisesRegex(ValueError, "Manual dispatch cannot claim"):
+            self.report(event="workflow_dispatch", cron="39 * * * *")
+
+    def test_single_writer_workflow_passes_github_schedule_as_data(self):
+        from pathlib import Path
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github/workflows/paper-pipeline.yml").read_text()
+        self.assertIn("PAPER_ORIGINATING_CRON: ${{ github.event.schedule }}", workflow)
+        self.assertIn('--originating-cron "$PAPER_ORIGINATING_CRON"', workflow)
+        self.assertIn("- cron: '9 * * * *'", workflow)
+        self.assertIn("- cron: '39 * * * *'", workflow)
+        self.assertIn("group: public-paper-proof-ledger-single-writer", workflow)
+        self.assertIn("cancel-in-progress: false", workflow)
+        self.assertIn("git push origin HEAD:refs/heads/paper-proof-ledger", workflow)
+        self.assertNotIn("git push --force", workflow)
 
     def test_cli_writes_checked_event_attested_artifacts(self):
         import hashlib
@@ -80,13 +118,16 @@ class PaperResultsContracts(unittest.TestCase):
             argv = ["paper-results", "--scan", str(scan_path),
                     "--scoreboard", str(score_path), "--run-id", "41235442591",
                     "--source-sha", SHA, "--ledger-commit", LEDGER,
-                    "--event", "schedule", "--output-dir", str(output)]
+                    "--event", "schedule", "--originating-cron", "39 * * * *",
+                    "--output-dir", str(output)]
             with patch("sys.argv", argv):
                 main()
             payload = json.loads((output / "results.json").read_text())
             self.assertEqual(payload["github_event"], "schedule")
-            self.assertFalse(payload["scheduled_slot_verified"])
-            self.assertIn("GitHub trigger:** scheduled", (output / "results.md").read_text())
+            self.assertTrue(payload["scheduled_slot_verified"])
+            self.assertEqual(payload["scheduled_slot_utc_minute"], 39)
+            self.assertFalse(payload["scheduled_start_punctuality_verified"])
+            self.assertIn("intended UTC minute=:39", (output / "results.md").read_text())
             for line in (output / "SHA256SUMS").read_text().splitlines():
                 digest, filename = line.split("  ", 1)
                 self.assertEqual(hashlib.sha256((output / filename).read_bytes()).hexdigest(), digest)
