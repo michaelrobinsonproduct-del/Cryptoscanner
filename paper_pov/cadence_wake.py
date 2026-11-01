@@ -24,7 +24,7 @@ WORKFLOW = "paper-pipeline.yml"
 MARKER = "PAPER_CADENCE_ATTEMPT:"
 MIN_SCAN_SPACING = dt.timedelta(minutes=25)
 CADENCE = dt.timedelta(minutes=30)
-MAX_SLOT_LATENESS = dt.timedelta(minutes=20)
+MAX_SLOT_LATENESS = dt.timedelta(minutes=29)
 RETRY_INTERVAL = dt.timedelta(minutes=45)
 RECOVERY_RETRY_INTERVAL = dt.timedelta(minutes=90)
 BOT = {"login": "github-actions[bot]", "id": 41898282}
