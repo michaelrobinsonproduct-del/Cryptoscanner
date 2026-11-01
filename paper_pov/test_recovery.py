@@ -135,6 +135,16 @@ class RecoveryTests(unittest.TestCase):
                      ledger=state)
         self.assertEqual((d["action"], d["reason"]), ("BLOCKED", "LEDGER_INVALID"))
 
+    def test_distinct_equal_second_run_cannot_be_ordered_against_durable_anchor(self):
+        # GitHub created_at timestamps have only second precision. A separate
+        # run with the anchor's timestamp is NOT proof it predates the anchor.
+        for conclusion in ("success", "failure", "cancelled"):
+            with self.subTest(conclusion=conclusion):
+                other = scan(124, "2026-10-31T20:10:00Z", conclusion=conclusion)
+                d = decision(runs=[scan(), other])
+                self.assertEqual((d["action"], d["reason"]),
+                                 ("BLOCKED", "RUN_CREATED_AT_TIE_AMBIGUOUS"))
+
     def test_newer_success_without_ledger_readback_blocks(self):
         d = decision(runs=[scan(), scan(124, "2026-10-31T22:10:00Z")])
         self.assertEqual((d["action"], d["reason"]), ("BLOCKED", "NEWER_RUN_NOT_DURABLY_RECONCILED"))
