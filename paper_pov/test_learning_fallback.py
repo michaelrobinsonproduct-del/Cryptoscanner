@@ -82,6 +82,16 @@ class OwnerLearningFallbackTests(unittest.TestCase):
             mutate(args)
             self.assertEqual(decide(**args)["action"], "ABSTAIN")
 
+    def test_truncated_learning_history_abstains_instead_of_claiming_no_native_run(self):
+        args = case()
+        args["learning_runs"] = [
+            {"id": i + 1, "event": "pull_request", "created_at": iso(569)}
+            for i in range(100)
+        ]
+        self.assertEqual(decide(**args)["reason"], "LEARNING_HISTORY_TRUNCATED")
+        args["learning_runs"][0]["created_at"] = iso(560)
+        self.assertEqual(decide(**args)["action"], "RUN_READ_ONLY_LEARNING")
+
     def test_corrupt_manifest_or_ledger_fails_closed(self):
         args = case()
         args["manifest"]["head"]["ledger_sha256"] = "0" * 64
