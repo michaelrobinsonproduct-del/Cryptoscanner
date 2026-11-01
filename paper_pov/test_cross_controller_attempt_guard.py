@@ -23,6 +23,11 @@ def bot_attempt(at="2026-10-31T23:15:00Z", *, commit=COMMIT, actor=None):
 
 
 class CrossControllerAttemptGuardTests(unittest.TestCase):
+    def test_recovery_dispatch_still_writes_original_recovery_marker(self):
+        d = decision()
+        self.assertEqual(d["action"], "DISPATCH_EXISTING_WORKFLOW")
+        self.assertEqual(d["attempt_marker"], RECOVERY_MARKER + COMMIT)
+
     def test_recent_cadence_bot_attempt_blocks_recovery_for_same_ledger(self):
         d = decision(comments=[bot_attempt()])
         self.assertEqual((d["action"], d["reason"]),
