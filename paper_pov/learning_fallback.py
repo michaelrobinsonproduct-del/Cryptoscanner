@@ -102,6 +102,11 @@ def decide(event, paper_runs, learning_runs, comments, state, manifest,
         return abstain("DUPLICATE_OR_MISSING_OWNER_COMMAND")
     if not (completed <= stamp(exact_commands[0]["created_at"]) <= now):
         return abstain("OWNER_COMMAND_TIME_INVALID")
+    # The API returns at most 100 runs. Never infer absence of a native
+    # workflow_run if the visible page does not reach this writer's start.
+    if (len(learning_runs) >= 100 and
+            min(stamp(item["created_at"]) for item in learning_runs) > started):
+        return abstain("LEARNING_HISTORY_TRUNCATED")
     for learning in learning_runs:
         if type(learning.get("id")) is not int:
             raise ValueError("Untrusted learning run ID")
