@@ -97,7 +97,8 @@ class OwnerFallbackTests(unittest.TestCase):
         newer = copy.deepcopy(f["paper_runs"]["workflow_runs"][0])
         newer.update(id=WRITER_ID + 1, created_at=iso(-2),
                      status="in_progress", conclusion=None)
-        f["paper_runs"]["workflow_runs"].append(newer)
+        # GitHub returns newest-first; the active writer must be first.
+        f["paper_runs"]["workflow_runs"].insert(0, newer)
         self.assertEqual(decide(**f)["reason"], "ACTIVE_OR_AMBIGUOUS_WRITER")
 
     def test_writer_source_and_id_must_match_latest_commit(self):
