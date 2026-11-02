@@ -126,6 +126,18 @@ class GapRecoveryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Subnanosecond"):
             audit(self.state, END, [s])
 
+    def test_numeric_json_nanosecond_timestamp_does_not_float_round(self):
+        s = source()
+        page = s["pages"][0]
+        raw = base64.b64decode(page["response_b64"])
+        original = str(int((START + dt.timedelta(minutes=20)).timestamp()))
+        raw = raw.replace(('"' + original + '"').encode(),
+                          (original + '.000000001').encode(), 1)
+        page["response_b64"] = base64.b64encode(raw).decode()
+        page["response_sha256"] = hashlib.sha256(raw).hexdigest()
+        report = audit(self.state, END, [s])
+        self.assertIn(".000000001+00:00", report["source_coverage"]["AAAUSD"]["first_trade_utc"])
+
     def test_uncovered_trade_window_remains_missing(self):
         s = source(offsets=(20, 30))
         report = audit(self.state, END, [s])
