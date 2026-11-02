@@ -65,7 +65,9 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
              "per_page": MAX_PAGE})
         response = get(path)
         rows = response.get("workflow_runs") if isinstance(response, dict) else None
-        if not isinstance(rows, list) or len(rows) >= MAX_PAGE:
+        total = response.get("total_count") if isinstance(response, dict) else None
+        if (not isinstance(rows, list) or len(rows) >= MAX_PAGE or
+                type(total) is not int or total != len(rows)):
             raise ValueError("truncated or malformed workflow run page")
         for row in rows:
             if not isinstance(row, dict) or type(row.get("id")) is not int:
@@ -84,7 +86,9 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
             continue
         response = get(base + "/runs/" + str(rid) + "/jobs?per_page=100")
         job_rows = response.get("jobs") if isinstance(response, dict) else None
-        if not isinstance(job_rows, list) or len(job_rows) >= MAX_PAGE:
+        job_total = response.get("total_count") if isinstance(response, dict) else None
+        if (not isinstance(job_rows, list) or len(job_rows) >= MAX_PAGE or
+                type(job_total) is not int or job_total != len(job_rows)):
             raise ValueError("truncated or malformed job page")
         jobs[str(rid)] = job_rows
         matching = [j for j in job_rows if isinstance(j, dict)

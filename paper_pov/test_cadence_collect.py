@@ -34,10 +34,12 @@ def fixture(native=None, dispatched=None, jobs=True):
     def get(path, text=False):
         calls.append((path, text))
         if "workflows/paper-pipeline.yml/runs?" in path:
-            return {"workflow_runs": native if "event=schedule" in path else dispatched}
+            rows = native if "event=schedule" in path else dispatched
+            return {"workflow_runs": rows, "total_count": len(rows)}
         if "/runs/" in path and "/jobs?" in path:
             rid = int(path.split("/runs/")[1].split("/")[0])
-            return {"jobs": [job(rid)] if jobs else []}
+            rows = [job(rid)] if jobs else []
+            return {"jobs": rows, "total_count": len(rows)}
         if "/jobs/" in path and "/logs" in path and text:
             jid = int(path.split("/jobs/")[1].split("/")[0])
             return log("schedule", "9 * * * *") if jid == 101 else log(
@@ -113,6 +115,26 @@ class CadenceCollectorTests(unittest.TestCase):
         get, _ = fixture(native=[row(i, "schedule") for i in range(1, 101)])
         with self.assertRaisesRegex(ValueError, "truncated"):
             collect(get, "owner/repo", NOW)
+
+    def test_server_reported_extra_run_page_abstains_instead_of_undercount(self):
+        get, _ = fixture()
+        def altered(path, text=False):
+            response = get(path, text)
+            if "/workflows/" in path:
+                response["total_count"] += 1
+            return response
+        with self.assertRaisesRegex(ValueError, "truncated"):
+            collect(altered, "owner/repo", NOW)
+
+    def test_server_reported_extra_job_page_abstains_instead_of_certifying(self):
+        get, _ = fixture()
+        def altered(path, text=False):
+            response = get(path, text)
+            if "/runs/" in path and "/jobs?" in path:
+                response["total_count"] += 1
+            return response
+        with self.assertRaisesRegex(ValueError, "truncated"):
+            collect(altered, "owner/repo", NOW)
 
     def test_invalid_repo_or_unbounded_parameters_fail_before_network(self):
         get, calls = fixture()
