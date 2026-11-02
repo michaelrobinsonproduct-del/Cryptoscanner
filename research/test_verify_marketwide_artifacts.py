@@ -35,9 +35,17 @@ def fixture(directory):
                                    "watch_abstain_gap","watch_matured",
                                    "watch_false_positive_20","watch_false_positive_30",
                                    "missed_20","missed_30")},
-        "movers": 0, "watch_positive_20": 0, "watch_positive": 0},
+        "movers": 0, "watch_positive_20": 0, "watch_positive": 0,
+        **{k: 0 for k in ("abstain_conflicting_quotes", "abstain_future_entry_quotes",
+                         "abstain_no_future_observation", "abstain_missing_horizon_anchor",
+                         "abstain_stale_entry", "abstain_discontinuous_path",
+                         "watch_abstain_conflicting_quotes", "watch_abstain_future_entry_quotes",
+                         "watch_abstain_no_future_observation", "watch_abstain_missing_horizon_anchor",
+                         "watch_abstain_stale_entry", "watch_abstain_discontinuous_path")}},
         "unique_mover_episodes_20": 0, "unique_mover_episodes": 0,
         "watch_captured_episodes_20": 0, "watch_captured_episodes": 0,
+        "watch_first_entry_episodes_20": 0, "watch_late_only_episodes_20": 0,
+        "watch_first_entry_episodes_30": 0, "watch_late_only_episodes_30": 0,
         "missed_mover_episodes_20": 0, "missed_mover_episodes_30": 0}
     outcomes = {"horizons": {h: dict(window) for h in ("1","6","24","48")},
                 "observed_run_count": 51, "observed_entry_count": 30872,
@@ -159,6 +167,33 @@ class ArtifactContractTests(unittest.TestCase):
         write_json(self.base / FILES[2], p)
         reseal(self.base)
         with self.assertRaisesRegex(ValueError, "nonfinite research JSON"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def reseal_episode_change(self, mutate):
+        e = json.loads((self.base / FILES[1]).read_text())
+        mutate(e["horizons"]["1"])
+        write_json(self.base / FILES[1], e)
+        p = json.loads((self.base / FILES[2]).read_text())
+        p["episode_report_sha256"] = digest(self.base / FILES[1])
+        write_json(self.base / FILES[2], p)
+        reseal(self.base)
+
+    def test_resealed_late_watch_claim_cannot_forge_first_entry_capture(self):
+        self.reseal_episode_change(lambda h: h.update(
+            watch_first_entry_episodes_30=1))
+        with self.assertRaisesRegex(ValueError, "first-entry versus late WATCH"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_gap_reason_cannot_disagree_with_unknown_denominator(self):
+        self.reseal_episode_change(lambda h: h["coverage"].update(
+            abstain_no_future_observation=1))
+        with self.assertRaisesRegex(ValueError, "gap-reason partition"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_watch_gap_reason_cannot_exceed_market_reason(self):
+        self.reseal_episode_change(lambda h: h["coverage"].update(
+            watch_abstain_stale_entry=1))
+        with self.assertRaisesRegex(ValueError, "gap-reason partition"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
     def test_workflow_only_uploads_after_successful_verification(self):
