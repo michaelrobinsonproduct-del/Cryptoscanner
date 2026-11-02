@@ -8,6 +8,7 @@ import datetime as dt
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -17,6 +18,46 @@ from paper_pov.cadence_provenance import audit, timestamp
 WORKFLOW = "paper-pipeline.yml"
 MAX_PAGE = 100
 MAX_LOG_BYTES = 4 * 1024 * 1024
+
+
+# Log markers are writer claims, not independent remote-storage verification.
+READBACK_MARKER = re.compile(
+    r"^(\d{4}-\d{2}-\d{2}T[^ ]+Z) PAPER_LEDGER_REMOTE_READBACK_VERIFIED ([0-9a-f]{40})$")
+RESULTS_MARKER = re.compile(
+    r"^(\d{4}-\d{2}-\d{2}T[^ ]+Z) PAPER_RESULTS_VERIFIED (\d+) (\d+) (\d+)$")
+
+
+def delivery_log_claim(log, run_id, started, finished):
+    """Bound results/readback log claims to the authentic writer job.
+
+    Test output can contain PAPER_RESULTS_VERIFIED for *other* run IDs.
+    Such fixture claims are ignored. Duplicate current-run claims abstain.
+    No result here verifies remote bytes, artifacts, or user delivery.
+    """
+    readbacks, results = [], []
+    for line in log.splitlines():
+        match = READBACK_MARKER.fullmatch(line)
+        if match:
+            readbacks.append(match.groups())
+        match = RESULTS_MARKER.fullmatch(line)
+        if match and match.group(2) == str(run_id):
+            results.append(match.groups())
+    if len(readbacks) != 1 or len(results) != 1:
+        return {"delivery_log_claim_status": "UNVERIFIED"}
+    try:
+        rt, commit = readbacks[0]
+        st, _, generation, watch = results[0]
+        rt, st = timestamp(rt), timestamp(st)
+        if not started <= rt <= st <= finished or int(generation) < 1 or int(watch) < 0:
+            raise ValueError("incoherent delivery log claim")
+    except (ValueError, TypeError, OverflowError):
+        return {"delivery_log_claim_status": "UNVERIFIED"}
+    return {"delivery_log_claim_status": "MATCHED_LOG_MARKERS_NOT_REMOTE_BYTES",
+            "claimed_ledger_commit": commit, "claimed_generation": int(generation),
+            "claimed_watch_count": int(watch),
+            "remote_ledger_bytes_verified": False,
+            "results_artifact_sha256_verified": False,
+            "results_delivery_verified": False}
 
 
 def github_reader(token, api_url="https://api.github.com"):
@@ -119,6 +160,7 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
         raw = get(base + "/jobs/" + str(writer["id"]) + "/logs", text=True)
         logs[str(rid)] = raw
         evidence.append({"run_id": rid, "job_id": matching[0]["id"],
+                         **delivery_log_claim(raw, rid, started, finished),
                          # The API client decodes text with replacement. This
                          # digest is of the audited decoded log, NOT original
                          # transport bytes or a GitHub-attested log digest.

@@ -3,7 +3,7 @@ import io
 import unittest
 from unittest.mock import patch
 
-from paper_pov.cadence_collect import collect, github_reader
+from paper_pov.cadence_collect import collect, github_reader, delivery_log_claim
 
 SHA = "a" * 40
 NOW = "2026-11-02T03:20:00Z"
@@ -67,6 +67,35 @@ class CadenceCollectorTests(unittest.TestCase):
         self.assertTrue(all("created=%3E%3D2026-11-01T03%3A20%3A00Z" in path
                             for path in workflow_queries))
         self.assertEqual(sum("jobs/" in path and "/logs" in path for path, _ in calls), 2)
+
+    def test_delivery_log_claim_requires_matching_run_and_job_time(self):
+        base = log("schedule", "9 * * * *")
+        readback = ("2026-11-02T03:10:30Z PAPER_LEDGER_REMOTE_READBACK_VERIFIED " + SHA + "\n")
+        result = ("2026-11-02T03:10:40Z PAPER_RESULTS_VERIFIED 1 51 11\n")
+        def get(path, text=False):
+            upstream, _ = fixture(native=[row(1, "schedule")], dispatched=[])
+            value = upstream(path, text)
+            return base + readback + result if "/logs" in path else value
+        evidence = collect(get, "owner/repo", NOW)["evidence"][0]
+        self.assertEqual(evidence["delivery_log_claim_status"],
+                         "MATCHED_LOG_MARKERS_NOT_REMOTE_BYTES")
+        self.assertEqual((evidence["claimed_generation"], evidence["claimed_watch_count"]), (51, 11))
+        self.assertFalse(evidence["remote_ledger_bytes_verified"])
+        self.assertFalse(evidence["results_delivery_verified"])
+
+    def test_delivery_log_claim_rejects_wrong_run_duplicate_and_reversed_order(self):
+        start = __import__("datetime").datetime.fromisoformat("2026-11-02T03:10:04+00:00")
+        end = __import__("datetime").datetime.fromisoformat("2026-11-02T03:11:00+00:00")
+        readback = "2026-11-02T03:10:30Z PAPER_LEDGER_REMOTE_READBACK_VERIFIED " + SHA + "\n"
+        good = "2026-11-02T03:10:40Z PAPER_RESULTS_VERIFIED 1 51 11\n"
+        for payload in (readback + good.replace(" 1 51", " 2 51"),
+                        readback + good + good,
+                        readback + good + readback,
+                        good.replace("03:10:40", "03:10:20") + readback,
+                        "echo PAPER_LEDGER_REMOTE_READBACK_VERIFIED " + SHA + "\n" + good):
+            with self.subTest(payload=payload):
+                self.assertEqual(delivery_log_claim(payload, 1, start, end)
+                                 ["delivery_log_claim_status"], "UNVERIFIED")
 
     def test_no_writer_job_abstains_not_fabricates_native_success(self):
         get, _ = fixture(jobs=False)
