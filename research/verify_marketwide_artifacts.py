@@ -177,7 +177,7 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
         pair_keys = ("eligible","matured","immature","abstain_gap","watch_eligible",
                      "watch_matured","watch_immature","watch_abstain_gap",
                      "movers_20","movers","watch_positive_20","watch_positive")
-        reason_keys = ("conflicting_quotes","future_entry_quotes","no_future_observation",
+        reason_keys = ("conflicting_quotes","future_entry_quotes","outcome_provenance","no_future_observation",
                        "missing_horizon_anchor","stale_entry","discontinuous_path")
         def natural(value):
             return type(value) is int and value >= 0
@@ -425,6 +425,7 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
         # Mutually exclusive gap reasons must reconcile with BOTH market and
         # WATCH unknown outcomes. A resealed report cannot fabricate reasons.
         reasons = ("abstain_conflicting_quotes", "abstain_future_entry_quotes",
+                   "abstain_outcome_provenance",
                    "abstain_no_future_observation", "abstain_missing_horizon_anchor",
                    "abstain_stale_entry", "abstain_discontinuous_path")
         if (any(not isinstance(coverage.get(k), int) or isinstance(coverage.get(k), bool)

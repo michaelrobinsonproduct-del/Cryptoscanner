@@ -250,12 +250,12 @@ def analyze(state):
     for hours in HORIZONS:
         positives, negatives, negatives20, cases, cases20 = [], [], [], [], []
         coverage = {"eligible": 0, "immature": 0, "abstain_gap": 0,
-                    "abstain_conflicting_quotes": 0, "abstain_future_entry_quotes": 0,
+                    "abstain_conflicting_quotes": 0, "abstain_future_entry_quotes": 0, "abstain_outcome_provenance": 0,
                     "abstain_no_future_observation": 0, "abstain_missing_horizon_anchor": 0,
                     "abstain_stale_entry": 0, "abstain_discontinuous_path": 0,
                     "matured": 0,
                     "watch_eligible": 0, "watch_immature": 0, "watch_abstain_gap": 0,
-                    "watch_abstain_conflicting_quotes": 0, "watch_abstain_future_entry_quotes": 0,
+                    "watch_abstain_conflicting_quotes": 0, "watch_abstain_future_entry_quotes": 0, "watch_abstain_outcome_provenance": 0,
                     "watch_abstain_no_future_observation": 0,
                     "watch_abstain_missing_horizon_anchor": 0,
                     "watch_abstain_stale_entry": 0, "watch_abstain_discontinuous_path": 0,
@@ -268,7 +268,7 @@ def analyze(state):
                      "watch_eligible", "watch_matured", "watch_immature",
                      "watch_abstain_gap", "movers_20", "movers",
                      "watch_positive_20", "watch_positive")
-        gap_reason_keys = ("conflicting_quotes", "future_entry_quotes",
+        gap_reason_keys = ("conflicting_quotes", "future_entry_quotes", "outcome_provenance",
                            "no_future_observation", "missing_horizon_anchor",
                            "stale_entry", "discontinuous_path")
         per_pair = {pair: {**{key: 0 for key in pair_keys},
@@ -329,6 +329,24 @@ def analyze(state):
                         pair_counts["watch_abstain_gap"] += 1
                         coverage["watch_abstain_conflicting_quotes"] += 1
                         pair_counts["watch_gap_reasons"]["conflicting_quotes"] += 1
+                    continue
+                # A later scan cannot retroactively supply a horizon quote. A
+                # quote event after its originating scan is likewise impossible.
+                # Preserve the first-observed provenance gate for outcome labels,
+                # separately from B's ambiguity and Decimal threshold checks.
+                if any(runs[future_rid] < quote_at or
+                       runs[future_rid] > target + MAX_GAP
+                       for quote_at, _, future_rid in future
+                       if start < quote_at <= target + MAX_GAP):
+                    coverage["abstain_gap"] += 1
+                    pair_counts["abstain_gap"] += 1
+                    coverage["abstain_outcome_provenance"] += 1
+                    pair_counts["gap_reasons"]["outcome_provenance"] += 1
+                    if selected:
+                        coverage["watch_abstain_gap"] += 1
+                        pair_counts["watch_abstain_gap"] += 1
+                        coverage["watch_abstain_outcome_provenance"] += 1
+                        pair_counts["watch_gap_reasons"]["outcome_provenance"] += 1
                     continue
                 # One mutually exclusive primary reason for every unknown label.
                 reason = None
@@ -510,6 +528,7 @@ def analyze(state):
                    for v in list(first_coverage_20.values())+list(first_coverage_30.values()))
         assert coverage["eligible"]==coverage["matured"]+coverage["abstain_gap"]+coverage["immature"]
         gap_reasons = ("abstain_conflicting_quotes", "abstain_future_entry_quotes",
+                       "abstain_outcome_provenance",
                        "abstain_no_future_observation", "abstain_missing_horizon_anchor",
                        "abstain_stale_entry", "abstain_discontinuous_path")
         assert coverage["abstain_gap"] == sum(coverage[k] for k in gap_reasons)

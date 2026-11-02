@@ -620,6 +620,7 @@ class EpisodeTests(unittest.TestCase):
         with patch("paper_pov.ledger.verify",return_value=None):
             report=analyze(fixture())
         keys=("abstain_conflicting_quotes","abstain_future_entry_quotes",
+               "abstain_outcome_provenance",
               "abstain_no_future_observation","abstain_missing_horizon_anchor",
               "abstain_stale_entry","abstain_discontinuous_path")
         for horizon in report["horizons"].values():
@@ -643,6 +644,7 @@ class EpisodeTests(unittest.TestCase):
         self.assertGreater(c["abstain_stale_entry"],0)
         self.assertEqual(c["abstain_gap"],sum(c[k] for k in (
             "abstain_conflicting_quotes","abstain_future_entry_quotes",
+               "abstain_outcome_provenance",
             "abstain_no_future_observation","abstain_missing_horizon_anchor",
             "abstain_stale_entry","abstain_discontinuous_path")))
 
@@ -660,6 +662,7 @@ class EpisodeTests(unittest.TestCase):
         with patch("paper_pov.ledger.verify",return_value=None):
             c=analyze(state)["horizons"]["1"]["coverage"]
         keys=("abstain_conflicting_quotes","abstain_future_entry_quotes",
+               "abstain_outcome_provenance",
               "abstain_no_future_observation","abstain_missing_horizon_anchor",
               "abstain_stale_entry","abstain_discontinuous_path")
         self.assertEqual(c["watch_abstain_gap"],sum(c["watch_"+k] for k in keys))
@@ -1329,6 +1332,47 @@ class EpisodeTests(unittest.TestCase):
         self.assertEqual(lagged_return_diagnostic(
             series, times, 2, 30, run_decisions=decisions),
             (None, "conflicting_anchor"))
+
+    def test_later_scan_backdated_quote_abstains_instead_of_fabricating_mover(self):
+        state = fixture()
+        state["observations"] = [o for o in state["observations"]
+                                 if not (o["pair"] == "AAAUSD" and o["run_id"] == "90")]
+        state["runs"].append({"id": "late", "as_of": iso(480)})
+        state["observations"].append(
+            {"run_id": "late", "at": iso(90), "pair": "AAAUSD", "price": 135})
+        state["predictions"].append({"run_id": "30", "pair": "AAAUSD"})
+        with patch("paper_pov.ledger.verify", return_value=None):
+            one = analyze(state)["horizons"]["1"]
+        c = one["coverage"]
+        self.assertGreaterEqual(c["abstain_outcome_provenance"], 1)
+        self.assertGreaterEqual(c["watch_abstain_outcome_provenance"], 1)
+        self.assertFalse(any(r["pair"] == "AAAUSD" and r["run_id"] == "30"
+                             for r in one["mover_cases"]))
+        self.assertEqual(c["abstain_gap"],
+                         sum(c["abstain_" + reason] for reason in
+                             one["pair_coverage"]["gap_reason_totals"]))
+
+    def test_quote_event_after_its_scan_decision_abstains_from_outcome(self):
+        state = fixture()
+        state["observations"] = [o for o in state["observations"]
+                                 if not (o["pair"] == "AAAUSD" and o["run_id"] == "90")]
+        for o in state["observations"]:
+            if o["pair"] == "AAAUSD" and o["run_id"] == "60":
+                o["at"] = iso(90)
+                o["price"] = 135
+        state["predictions"].append({"run_id": "30", "pair": "AAAUSD"})
+        with patch("paper_pov.ledger.verify", return_value=None):
+            one = analyze(state)["horizons"]["1"]
+        self.assertGreaterEqual(one["coverage"]["watch_abstain_outcome_provenance"], 1)
+        self.assertFalse(any(r["pair"] == "AAAUSD" and r["run_id"] == "30"
+                             for r in one["mover_cases"]))
+
+    def test_valid_scan_observed_future_quote_still_counts_mover(self):
+        with patch("paper_pov.ledger.verify", return_value=None):
+            one = analyze(fixture())["horizons"]["1"]
+        self.assertTrue(any(r["pair"] == "AAAUSD" and r["run_id"] == "30"
+                            for r in one["mover_cases"]))
+        self.assertEqual(one["coverage"]["abstain_outcome_provenance"], 0)
 
 if __name__=="__main__":
     unittest.main()

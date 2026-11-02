@@ -54,9 +54,11 @@ def fixture(directory):
             "watch":{"eligible":584,"matured":0,"unknown":584,"mature_fraction":0.0},
             "nonwatch":{"eligible":30288,"matured":0,"unknown":30288,"mature_fraction":0.0}},
         **{k: 0 for k in ("abstain_conflicting_quotes", "abstain_future_entry_quotes",
+                         "abstain_outcome_provenance",
                          "abstain_no_future_observation", "abstain_missing_horizon_anchor",
                          "abstain_stale_entry", "abstain_discontinuous_path",
                          "watch_abstain_conflicting_quotes", "watch_abstain_future_entry_quotes",
+                         "watch_abstain_outcome_provenance",
                          "watch_abstain_no_future_observation", "watch_abstain_missing_horizon_anchor",
                          "watch_abstain_stale_entry", "watch_abstain_discontinuous_path")}},
         "pair_coverage":{"observed_pairs":1,"pairs_with_gap":0,
@@ -64,7 +66,7 @@ def fixture(directory):
                       "abstain_gap":0,"watch_eligible":584,"watch_matured":0,
                       "watch_immature":584,"watch_abstain_gap":0,
                       "movers_20":0,"movers":0,"watch_positive_20":0,"watch_positive":0},
-            "gap_reason_totals":{k:0 for k in ("conflicting_quotes","future_entry_quotes",
+            "gap_reason_totals":{k:0 for k in ("conflicting_quotes","future_entry_quotes","outcome_provenance",
                  "no_future_observation","missing_horizon_anchor","stale_entry","discontinuous_path")},
             "top_gap_pairs":[],"top_gap_pairs_limit":10,
             "scope":"observed PAPER pairs only; no inferred unobserved markets"},
@@ -299,6 +301,18 @@ class ArtifactContractTests(unittest.TestCase):
         self.reseal_episode_change(lambda h: h["coverage"].update(
             watch_abstain_stale_entry=1))
         with self.assertRaisesRegex(ValueError, "gap.reason partition"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_new_outcome_provenance_reason_cannot_invent_unknowns(self):
+        self.reseal_episode_change(lambda h: h["coverage"].update(
+            abstain_outcome_provenance=1))
+        with self.assertRaisesRegex(ValueError, "per-pair coverage conservation"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_new_watch_outcome_provenance_reason_cannot_invent_watch_gaps(self):
+        self.reseal_episode_change(lambda h: h["coverage"].update(
+            watch_abstain_outcome_provenance=1))
+        with self.assertRaisesRegex(ValueError, "selection gap reason partition"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
     def test_resealed_first_entry_recall_cannot_be_fabricated(self):
