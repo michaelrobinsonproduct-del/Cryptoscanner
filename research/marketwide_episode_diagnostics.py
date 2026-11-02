@@ -140,6 +140,9 @@ def cluster_episodes(cases, hours):
             if case["watch"] and episodes[-1]["first_watch_decision_at"] is None:
                 episodes[-1]["first_watch_decision_at"] = t.isoformat()
             episodes[-1]["watch_captured"] |= case["watch"]
+            # Same-decision observations are unordered; WATCH is first-entry.
+            if case["watch"] and t == timestamp(episodes[-1]["first_decision_at"]):
+                episodes[-1]["first_entry_watch"] = True
         else:
             episodes.append({"pair":case["pair"],"first_entry_at":case["entry_at"],
                              "first_decision_at":t.isoformat(),
@@ -330,6 +333,20 @@ def analyze(state):
                             for e in episodes20]
         episode_features_20 = {key:summarize_feature(first_entries_20,key)
                                for key in ("30m","60m","180m")}
+        # Coverage is based only on the FIRST decision in each mover episode.
+        # Later entries must never backfill missing pre-entry features.
+        def first_entry_coverage(distributions, total):
+            return {lag:{"episodes":total,
+                         "with_asof_feature":stats["n"],
+                         "without_asof_feature":total-stats["n"],
+                         "distinct_covered_pairs":stats["distinct_pairs"],
+                         "covered_fraction":stats["n"]/total if total else None}
+                    for lag,stats in distributions.items()}
+        first_coverage_20 = first_entry_coverage(episode_features_20,len(episodes20))
+        first_coverage_30 = first_entry_coverage(episode_features,len(episodes))
+        assert all(v["with_asof_feature"]+v["without_asof_feature"]==v["episodes"]
+                   and 0 <= v["distinct_covered_pairs"] <= v["with_asof_feature"]
+                   for v in list(first_coverage_20.values())+list(first_coverage_30.values()))
         assert coverage["eligible"]==coverage["matured"]+coverage["abstain_gap"]+coverage["immature"]
         gap_reasons = ("abstain_conflicting_quotes", "abstain_future_entry_quotes",
                        "abstain_no_future_observation", "abstain_missing_horizon_anchor",
@@ -358,9 +375,11 @@ def analyze(state):
             "missed_mover_episodes_30":len(episodes)-episode_watch_count,
             "watch_captured_episodes_20":episode_watch_count_20,
             "watch_first_entry_episodes_20":first_watch_count_20,
+            "watch_first_entry_recall_20":first_watch_count_20/len(episodes20) if episodes20 else None,
             "watch_late_only_episodes_20":episode_watch_count_20-first_watch_count_20,
             "watch_episode_recall_wilson_95_naive_20":wilson(episode_watch_count_20,len(episodes20)),
             "episode_first_entry_feature_distributions_20":episode_features_20,
+            "episode_first_entry_feature_coverage_20":first_coverage_20,
             "watch_episode_recall_20":(sum(e["watch_captured"] for e in episodes20)/len(episodes20)
                                       if episodes20 else None),
             "watch_recall_20":(coverage["watch_positive_20"]/coverage["movers_20"]
@@ -370,10 +389,12 @@ def analyze(state):
             "episodes":episodes,"mover_cases":cases,
             "watch_captured_episodes":episode_watch_count,
             "watch_first_entry_episodes_30":first_watch_count,
+            "watch_first_entry_recall_30":first_watch_count/len(episodes) if episodes else None,
             "watch_late_only_episodes_30":episode_watch_count-first_watch_count,
             "watch_episode_recall_30":episode_watch_count/len(episodes) if episodes else None,
             "watch_episode_recall_wilson_95_naive":wilson(episode_watch_count,len(episodes)),
             "episode_first_entry_feature_distributions":episode_features,
+            "episode_first_entry_feature_coverage_30":first_coverage_30,
             "episode_first_lag_60m":{"n":len(episode_first_lags),
                 "mean":sum(episode_first_lags)/len(episode_first_lags) if episode_first_lags else None},
             "watch_recall_30":coverage["watch_positive"]/coverage["movers"] if coverage["movers"] else None,
