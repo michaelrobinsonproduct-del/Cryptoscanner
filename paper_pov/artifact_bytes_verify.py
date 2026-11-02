@@ -86,7 +86,11 @@ def verify_pair(ledger_zip, ledger_digest, results_zip, results_digest,
     except (UnicodeError, json.JSONDecodeError, KeyError, TypeError) as exc:
         raise ValueError("invalid original PAPER JSON") from exc
     generation = state["generation"]
-    if (type(generation) is not int or generation < 0 or
+    if (type(generation) is not int or generation < 1 or
+            not state["runs"] or
+            state["runs"][-1]["as_of"] != result.get("as_of") or
+            type(result.get("observed_markets")) is not int or
+            result["observed_markets"] != state["runs"][-1]["observation_count"] or
             type(score.get("generation")) is not int or score["generation"] != generation or
             score.get("ledger_sha256") != state["sha256"] or
             result.get("ledger_sha256") != state["sha256"] or

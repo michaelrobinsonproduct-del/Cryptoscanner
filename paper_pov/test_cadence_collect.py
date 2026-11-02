@@ -72,15 +72,30 @@ class CadenceCollectorTests(unittest.TestCase):
         from pathlib import Path
         import tempfile
 
-        state = ledger.empty()
-        score = {"generation": 0, "ledger_sha256": state["sha256"]}
-        latest = {"mode": "PAPER_ONLY", "buy_approved": False,
-                  "as_of": "2026-11-02T03:10:00+00:00"}
+        as_of = "2026-11-02T03:10:00+00:00"
+        pair = "X/USD"
+        prediction_id = hashlib.sha256(("paper-v1|" + as_of + "|" + pair).encode()).hexdigest()
+        ledger_run_id = "d" * 64
+        state = ledger.seal({
+            "schema": 1, "generation": 1,
+            "runs": [{"id": ledger_run_id, "as_of": as_of, "source_sha": SHA,
+                      "report_sha256": "c" * 64, "watch_count": 1,
+                      "observation_count": 1}],
+            "predictions": [{"prediction_id": prediction_id, "run_id": ledger_run_id,
+                             "as_of": as_of, "pair": pair, "price": 1.0,
+                             "baseline_score": 1, "challenger_score": 2, "rank": 1}],
+            "observations": [{"run_id": ledger_run_id, "at": as_of,
+                              "pair": pair, "price": 1.0}],
+            "outcomes": []})
+        ledger.verify(state)
+        score = {"generation": 1, "ledger_sha256": state["sha256"]}
+        latest = {"mode": "PAPER_ONLY", "buy_approved": False, "as_of": as_of}
         result = {"run_id": "1", "source_sha": SHA, "ledger_commit": "b" * 40,
-                  "ledger_generation": 0, "ledger_sha256": state["sha256"],
+                  "ledger_generation": 1, "ledger_sha256": state["sha256"],
                   "status": "SUCCESS_PAPER_ONLY", "remote_readback_verified": True,
                   "buy_approved": False, "exchange_event_freshness_verified": False,
-                  "as_of": latest["as_of"], "max_client_quote_age_seconds": 7.61}
+                  "as_of": as_of, "observed_markets": 1,
+                  "max_client_quote_age_seconds": 7.61}
 
         def archive(members):
             payload = {name: (json.dumps(value).encode() if not isinstance(value, bytes)
@@ -136,6 +151,31 @@ class CadenceCollectorTests(unittest.TestCase):
             wrong, digest = archive({"results.md": b"PAPER", "results.json":
                                      {**result, "max_client_quote_age_seconds": 601}})
             check(c=wrong, d=digest)
+
+        # An empty sealed ledger cannot authenticate a successful scan.
+        empty = ledger.empty()
+        l0, d0 = archive({"latest.json": latest,
+                          "scoreboard.json": {"generation": 0, "ledger_sha256": empty["sha256"]},
+                          "ledger.json": empty})
+        r0, rd0 = archive({"results.md": b"PAPER", "results.json":
+                            {**result, "ledger_generation": 0, "ledger_sha256": empty["sha256"]}})
+        with self.assertRaisesRegex(ValueError, "identity"):
+            check(a=l0, b=d0, c=r0, d=rd0)
+
+        # A prior ledger cannot authenticate a different scan timestamp.
+        shifted = "2026-11-02T03:12:00+00:00"
+        lwrong, ldwrong = archive({"latest.json": {**latest, "as_of": shifted},
+                                   "scoreboard.json": score, "ledger.json": state})
+        rwrong, rdwrong = archive({"results.md": b"PAPER", "results.json":
+                                   {**result, "as_of": shifted}})
+        with self.assertRaisesRegex(ValueError, "identity"):
+            check(a=lwrong, b=ldwrong, c=rwrong, d=rdwrong)
+
+        # Sealed results cannot invent a different market observation count.
+        rwrong, rdwrong = archive({"results.md": b"PAPER", "results.json":
+                                   {**result, "observed_markets": 2}})
+        with self.assertRaisesRegex(ValueError, "identity"):
+            check(c=rwrong, d=rdwrong)
 
     def test_readonly_collects_native_dispatch_and_sha_bound_log_index(self):
         get, calls = fixture()
