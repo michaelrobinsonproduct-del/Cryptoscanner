@@ -378,5 +378,75 @@ class EpisodeTests(unittest.TestCase):
         json.dumps(report,allow_nan=False)
 
 
+    def test_duplicate_exact_lag_anchor_conflict_abstains(self):
+        # bisect_right selects the last of the two zero-minute quotes.
+        # The earlier contradictory quote must still invalidate the feature.
+        series=[(BASE,100,"first"),(BASE,200,"second"),
+                (BASE+dt.timedelta(minutes=30),125,"middle"),
+                (BASE+dt.timedelta(minutes=60),150,"entry")]
+        times=[x[0] for x in series]
+        self.assertIsNone(lagged_return(series,times,3,60))
+        # Identical repeated quotes do not create artificial abstentions;
+        # the intermediate quote ensures the 45-minute coverage gate passes.
+        series[1]=(BASE,100,"second")
+        self.assertAlmostEqual(lagged_return(series,times,3,60),0.5)
+
+
+    def test_watch_false_positives_require_matured_labels(self):
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(fixture())["horizons"]["1"]
+        cov=one["coverage"]
+        self.assertGreater(cov["watch_matured"],0)
+        self.assertEqual(cov["watch_false_positive_30"],
+                         cov["watch_matured"]-cov["watch_positive"])
+        self.assertEqual(cov["watch_false_positive_20"],
+                         cov["watch_matured"]-cov["watch_positive_20"])
+        self.assertGreaterEqual(cov["watch_false_positive_30"],0)
+        self.assertLessEqual(cov["watch_false_positive_30"],cov["watch_matured"])
+        self.assertEqual(cov["eligible"],
+                         cov["matured"]+cov["immature"]+cov["abstain_gap"])
+
+
+    def test_episode_first_20pct_features_are_not_30pct_evidence(self):
+        state=fixture()
+        for o in state["observations"]:
+            if o["pair"]=="AAAUSD" and o["price"]==135:
+                o["price"]=125
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        self.assertEqual(one["unique_mover_episodes"],0)
+        self.assertGreater(one["unique_mover_episodes_20"],0)
+        self.assertIsNone(one["watch_episode_recall_wilson_95_naive"])
+        self.assertIsNotNone(one["watch_episode_recall_wilson_95_naive_20"])
+        for lag in ("30m","60m","180m"):
+            stats=one["episode_first_entry_feature_distributions_20"][lag]
+            self.assertLessEqual(stats["distinct_pairs"],stats["n"])
+            self.assertLessEqual(stats["n"],one["unique_mover_episodes_20"])
+            self.assertEqual(set(stats),
+                             {"n","distinct_pairs","mean","positive_fraction",
+                              "median","min","max"})
+
+
+
+    def test_chronological_20pct_readiness_uses_20pct_labels(self):
+        state=fixture()
+        for obs in state["observations"]:
+            if obs["pair"]=="AAAUSD" and obs["price"]==135:
+                obs["price"]=125
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        twenty=one["chronological_readiness_20"]
+        thirty=one["chronological_readiness"]
+        self.assertEqual(twenty["cutoff"],thirty["cutoff"])
+        self.assertEqual(twenty["embargo_hours"],thirty["embargo_hours"])
+        self.assertEqual(twenty["train"]["matured_cases"],
+                         thirty["train"]["matured_cases"])
+        self.assertGreater(twenty["train"]["positive_cases"],
+                           thirty["train"]["positive_cases"])
+        self.assertFalse(twenty["model_evaluation_ready"])
+        self.assertEqual(twenty["status"],
+                         "DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER")
+
+
 if __name__=="__main__":
     unittest.main()
