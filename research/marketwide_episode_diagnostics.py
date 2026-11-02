@@ -26,38 +26,43 @@ def wilson(successes, trials, z=1.96):
     return [max(0, center-radius), min(1, center+radius)]
 
 
-def lagged_return(series, times, index, minutes, conflicting_times=()):
-    """As-of return only if an older quote and continuous coverage exist."""
+def lagged_return_diagnostic(series, times, index, minutes, conflicting_times=()):
+    """As-of finite price return and mutually exclusive missingness reason.
+
+    Preserve exact Decimal arithmetic and all historical quote-conflict checks.
+    Missing anchors are never backfilled by a later observation.
+    """
     at, entry, _ = series[index]
     target = at - dt.timedelta(minutes=minutes)
     j = bisect.bisect_right(times, target, hi=index) - 1
-    if j < 0 or target - times[j] > MAX_GAP:
-        return None
-    # bisect_right selects the last equal-time anchor. Inspect ALL equal-time
-    # predecessors; the immediately preceding one may agree while an earlier
-    # quote conflicts. No arbitrary price may define an as-of feature.
+    if j < 0:
+        return None, "no_prior_anchor"
+    if target - times[j] > MAX_GAP:
+        return None, "stale_prior_anchor"
     first_anchor = bisect.bisect_left(times, times[j], hi=j)
     if any(series[k][1] != series[j][1] for k in range(first_anchor, j)):
-        return None
+        return None, "conflicting_anchor"
     if any(times[k] == times[k+1] and series[k][1] != series[k+1][1]
            for k in range(j, index)):
-        return None
-    # A past feature is not reliable when the retained quotes disagree at
-    # any timestamp used to construct its lookback window.
+        return None, "conflicting_history"
     if bisect.bisect_left(conflicting_times, times[j]) < bisect.bisect_right(conflicting_times, at):
-        return None
+        return None, "conflicting_history"
     segment = times[j:index+1]
     if any(b-a > MAX_GAP for a,b in zip(segment, segment[1:])):
-        return None
-    # Convert to a finite display statistic only after exact decimal division;
-    # extreme but valid quote ratios must not become JSON Infinity/NaN.
+        return None, "discontinuous_history"
     value = entry / series[j][1] - 1
     try:
         display = float(value)
     except (OverflowError, ValueError):
-        return None
-    return display if math.isfinite(display) else None
+        return None, "nonfinite_return"
+    if not math.isfinite(display):
+        return None, "nonfinite_return"
+    return display, "covered"
 
+
+def lagged_return(series, times, index, minutes, conflicting_times=()):
+    """Backward-compatible value-only API; no lookahead or imputation."""
+    return lagged_return_diagnostic(series, times, index, minutes, conflicting_times)[0]
 
 
 def chronological_readiness(records, runs, hours, positive_key="hit_30"):
@@ -153,6 +158,7 @@ def cluster_episodes(cases, hours):
                              "first_watch_decision_at":t.isoformat() if case["watch"] else None,
                              "first_lagged_60m":case["lagged_returns"]["60m"],
                              "first_lagged_returns":dict(case["lagged_returns"]),
+                             "first_lagged_reasons":dict(case.get("lagged_return_reasons", {})),
                              "first_peak_observed_return":case["peak_observed_return"]})
     return episodes
 
@@ -274,9 +280,11 @@ def analyze(state):
                     if selected:
                         coverage["watch_positive"] += 1
                 lag = {}
+                lag_reasons = {}
                 for minutes in (30,60,180):
-                    value = lagged_return(series,times,i,minutes,conflicts)
+                    value, reason = lagged_return_diagnostic(series,times,i,minutes,conflicts)
                     lag[str(minutes)+"m"] = value
+                    lag_reasons[str(minutes)+"m"] = reason
                     if value is not None:
                         coverage["feature_"+str(minutes)+"m"] += 1
                 if hit and lag["60m"] is not None:
@@ -285,7 +293,8 @@ def analyze(state):
                           "peak_observed_return":round(peak,8) if peak is not None else None,
                           "entry_quote_age_minutes":(start-at).total_seconds()/60,
                           "hit_20":hit20,"hit_30":hit,
-                          "watch":selected,"lagged_returns":lag}
+                          "watch":selected,"lagged_returns":lag,
+                          "lagged_return_reasons":lag_reasons}
                 if hit20:
                     cases20.append(record)
                 else:
@@ -333,17 +342,25 @@ def analyze(state):
                             for e in episodes20]
         episode_features_20 = {key:summarize_feature(first_entries_20,key)
                                for key in ("30m","60m","180m")}
-        # Coverage is based only on the FIRST decision in each mover episode.
-        # Later entries must never backfill missing pre-entry features.
-        def first_entry_coverage(distributions, total):
-            return {lag:{"episodes":total,
-                         "with_asof_feature":stats["n"],
-                         "without_asof_feature":total-stats["n"],
-                         "distinct_covered_pairs":stats["distinct_pairs"],
-                         "covered_fraction":stats["n"]/total if total else None}
-                    for lag,stats in distributions.items()}
-        first_coverage_20 = first_entry_coverage(episode_features_20,len(episodes20))
-        first_coverage_30 = first_entry_coverage(episode_features,len(episodes))
+        # Attribute first-entry missingness without using later surge entries.
+        def first_entry_coverage(distributions, episode_rows):
+            result = {}
+            for lag,stats in distributions.items():
+                reasons = defaultdict(int)
+                for episode in episode_rows:
+                    if episode["first_lagged_returns"][lag] is None:
+                        reasons[episode["first_lagged_reasons"][lag]] += 1
+                total = len(episode_rows)
+                result[lag] = {"episodes":total,
+                               "with_asof_feature":stats["n"],
+                               "without_asof_feature":total-stats["n"],
+                               "missing_reasons":dict(sorted(reasons.items())),
+                               "distinct_covered_pairs":stats["distinct_pairs"],
+                               "covered_fraction":stats["n"]/total if total else None}
+                assert sum(reasons.values()) == result[lag]["without_asof_feature"]
+            return result
+        first_coverage_20 = first_entry_coverage(episode_features_20,episodes20)
+        first_coverage_30 = first_entry_coverage(episode_features,episodes)
         assert all(v["with_asof_feature"]+v["without_asof_feature"]==v["episodes"]
                    and 0 <= v["distinct_covered_pairs"] <= v["with_asof_feature"]
                    for v in list(first_coverage_20.values())+list(first_coverage_30.values()))
@@ -363,6 +380,11 @@ def analyze(state):
                                         if coverage["eligible"] else None)
         coverage["distinct_matured_pairs"] = len({r["pair"] for r in positives+negatives})
         coverage["distinct_positive_pairs"] = len({r["pair"] for r in positives})
+        # Overlapping matured WATCH nonhits are not independent negative bets.
+        nonhit_windows_20 = cluster_episodes([r for r in negatives20 if r["watch"]],hours)
+        nonhit_windows_30 = cluster_episodes([r for r in negatives if r["watch"]],hours)
+        assert len(nonhit_windows_20) <= sum(r["watch"] for r in negatives20)
+        assert len(nonhit_windows_30) <= sum(r["watch"] for r in negatives)
         # Only matured, non-abstained WATCH cases can be labeled nonhits.
         coverage["watch_false_positive_30"] = coverage["watch_matured"] - coverage["watch_positive"]
         coverage["watch_false_positive_20"] = coverage["watch_matured"] - coverage["watch_positive_20"]
@@ -371,6 +393,10 @@ def analyze(state):
         output[str(hours)] = {"coverage":coverage,"unique_mover_episodes":len(episodes),
             "unique_mover_pairs":len({e["pair"] for e in episodes}),
             "unique_mover_episodes_20":len(episodes20),
+            "watch_nonhit_windows_20":len(nonhit_windows_20),
+            "watch_nonhit_windows_30":len(nonhit_windows_30),
+            "watch_nonhit_distinct_pairs_20":len({e["pair"] for e in nonhit_windows_20}),
+            "watch_nonhit_distinct_pairs_30":len({e["pair"] for e in nonhit_windows_30}),
             "missed_mover_episodes_20":len(episodes20)-episode_watch_count_20,
             "missed_mover_episodes_30":len(episodes)-episode_watch_count,
             "watch_captured_episodes_20":episode_watch_count_20,
@@ -415,6 +441,7 @@ def analyze(state):
     return {"status":"DESCRIPTIVE_ONLY_NO_HELD_OUT_LIFT",
             "limitations":["Sampled PAPER ticker prices, not intrabar highs or complete Kraken history",
                            "Repeated pair/time entries and overlapping horizons are dependent",
+                           "WATCH nonhit windows are descriptive, not independent negative trials",
                            "Wilson intervals assume independence and must NOT be used as model confidence",
                            "Only lagged price returns are available; no authenticated pre-entry volume, spread or order-book features",
                            "No predictive challenger was trained or tested"],
