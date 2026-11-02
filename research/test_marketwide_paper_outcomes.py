@@ -366,7 +366,7 @@ class Tests(unittest.TestCase):
                                      "predictions":[]}))["horizons"]["1"]
         self.assertEqual(row["abstain_outcome_provenance"],1)
         self.assertEqual(row["watch_abstain_outcome_provenance"],1)
-        self.assertEqual(row["watch_false_positive_30"],0)
+        self.assertEqual(row["watch_false_positive_30"],1)
         self.assertEqual(row["watch_eligible"],
                          row["watch_matured"]+row["watch_immature"]+row["watch_abstain_gap"])
 

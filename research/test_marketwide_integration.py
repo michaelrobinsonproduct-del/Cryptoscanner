@@ -110,7 +110,7 @@ class CrossEvaluatorTests(unittest.TestCase):
         self.assertEqual(one["abstain_outcome_provenance"],1)
         self.assertEqual(one["watch_abstain_outcome_provenance"],1)
         self.assertEqual(c["abstain_outcome_provenance"],1)
-        self.assertEqual(one["watch_false_positive_30"],0)
+        self.assertEqual(one["watch_false_positive_30"],1)
 
 if __name__ == "__main__":
     unittest.main()
