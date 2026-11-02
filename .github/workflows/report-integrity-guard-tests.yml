@@ -1,0 +1,21 @@
+name: Report Integrity Guard Tests
+on:
+  push:
+    branches:
+      - fix/report-integrity-guard-v1
+    paths:
+      - 'evaluation/report-integrity-guard.mjs'
+      - 'evaluation/report-integrity-guard.test.mjs'
+      - '.github/workflows/report-integrity-guard-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  guard-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Run isolated report reconciliation tests
+        run: bun test evaluation/report-integrity-guard.test.mjs

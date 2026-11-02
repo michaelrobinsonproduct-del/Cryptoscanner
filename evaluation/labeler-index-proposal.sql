@@ -1,0 +1,12 @@
+-- EXPERIMENT ONLY: review and benchmark in a nonproduction database before applying.
+-- Existing partial index (observed_at,id) is not selected in observed EXPLAIN plans.
+-- A covering index might reduce heap reads if an index-driven plan is selected,
+-- but it is not guaranteed to improve the query. Measure with EXPLAIN (ANALYZE, BUFFERS).
+-- CREATE INDEX CONCURRENTLY IF NOT EXISTS kraken_labeler_observation_cover_idx
+-- ON public.kraken_candidate_observations (observed_at, id)
+-- INCLUDE (pair, observed_price)
+-- WHERE observed_price > 0 AND pair IS NOT NULL;
+-- Rollback (only if created):
+-- DROP INDEX CONCURRENTLY IF EXISTS public.kraken_labeler_observation_cover_idx;
+-- Note: CREATE INDEX CONCURRENTLY cannot run inside a transaction block.
+-- Preserve oldest/newest selection and retry semantics; benchmark result equivalence.
