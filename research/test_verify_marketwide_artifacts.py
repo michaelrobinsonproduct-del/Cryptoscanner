@@ -47,6 +47,7 @@ def fixture(directory):
         "watch_first_entry_episodes_20": 0, "watch_late_only_episodes_20": 0,
         "watch_first_entry_episodes_30": 0, "watch_late_only_episodes_30": 0,
         "missed_mover_episodes_20": 0, "missed_mover_episodes_30": 0,
+        "episodes": [],
         "watch_first_entry_recall_20": None, "watch_first_entry_recall_30": None,
         **{"episode_first_entry_feature_distributions" + suffix:
            {lag: {"n": 0, "distinct_pairs": 0} for lag in ("30m","60m","180m")}
@@ -220,6 +221,19 @@ class ArtifactContractTests(unittest.TestCase):
         self.reseal_episode_change(lambda h: h["episode_first_entry_feature_distributions"]["30m"].update(
             distinct_pairs=1))
         with self.assertRaisesRegex(ValueError, "first-entry feature coverage"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_phantom_episode_row_is_rejected(self):
+        self.reseal_episode_change(lambda h: h["episodes"].append({
+            "pair": "AAAUSD", "watch_captured": True,
+            "first_entry_watch": True, "first_decision_at": "2026-11-02T00:00:00+00:00",
+            "first_watch_decision_at": "2026-11-02T00:00:00+00:00"}))
+        with self.assertRaisesRegex(ValueError, "episode-row inventory"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_missing_episode_rows_are_rejected(self):
+        self.reseal_episode_change(lambda h: h.pop("episodes"))
+        with self.assertRaisesRegex(ValueError, "episode-row inventory"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
     def test_workflow_only_uploads_after_successful_verification(self):
