@@ -133,6 +133,10 @@ def cluster_episodes(cases, hours):
             if case["watch"] and episodes[-1]["first_watch_decision_at"] is None:
                 episodes[-1]["first_watch_decision_at"] = decision_at
             episodes[-1]["watch_captured"] |= case["watch"]
+            # Same-decision observations have no meaningful within-scan order.
+            # A WATCH at the first decision is first-entry capture, not late.
+            if (t == timestamp(episodes[-1]["first_decision_at"]) and case["watch"]):
+                episodes[-1]["first_entry_watch"] = True
         else:
             episodes.append({"pair":case["pair"],"first_entry_at":case["entry_at"],
                              "first_decision_at":decision_at,
