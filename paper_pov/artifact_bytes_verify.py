@@ -4,11 +4,13 @@ This is NOT a GitHub downloader, a remote-ledger readback, a delivery receipt,
 or exchange-event freshness proof. The caller must separately authenticate
 the ZIP source and expected GitHub-reported digest.
 """
+import argparse
 import hashlib
 import io
 import json
 import re
 import zipfile
+from pathlib import Path
 
 from paper_pov import ledger
 
@@ -117,3 +119,35 @@ def verify_pair(ledger_zip, ledger_digest, results_zip, results_digest,
             "exchange_event_freshness_verified": False,
             "remote_ledger_readback_independently_verified": False,
             "results_delivery_verified": False}
+
+def main():
+    """One-command local, bounded verification of independently acquired ZIPs.
+
+    Does not contact GitHub, write the ledger, or assert remote readback.
+    """
+    parser = argparse.ArgumentParser(description="Read-only PAPER artifact byte proof")
+    parser.add_argument("--ledger-zip", required=True)
+    parser.add_argument("--ledger-digest", required=True)
+    parser.add_argument("--results-zip", required=True)
+    parser.add_argument("--results-digest", required=True)
+    parser.add_argument("--run-id", required=True, type=int)
+    parser.add_argument("--source-sha", required=True)
+    parser.add_argument("--ledger-commit", required=True)
+    args = parser.parse_args()
+
+    def bounded_read(name):
+        path = Path(name)
+        if not 0 < path.stat().st_size <= MAX_ARCHIVE_BYTES:
+            raise ValueError("oversized original artifact ZIP")
+        return path.read_bytes()
+
+    proof = verify_pair(
+        bounded_read(args.ledger_zip), args.ledger_digest,
+        bounded_read(args.results_zip), args.results_digest,
+        run_id=args.run_id, source_sha=args.source_sha,
+        ledger_commit=args.ledger_commit)
+    print("PAPER_ARTIFACT_BYTES_READONLY " + json.dumps(proof, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()
