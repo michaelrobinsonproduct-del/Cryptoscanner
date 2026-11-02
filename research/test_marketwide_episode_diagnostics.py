@@ -550,5 +550,36 @@ class EpisodeTests(unittest.TestCase):
         self.assertLessEqual(one["watch_first_entry_episodes_20"],
                              one["watch_captured_episodes_20"])
 
+
+    def test_gap_reasons_partition_all_abstentions(self):
+        with patch("paper_pov.ledger.verify",return_value=None):
+            report=analyze(fixture())
+        keys=("abstain_conflicting_quotes","abstain_future_entry_quotes",
+              "abstain_no_future_observation","abstain_missing_horizon_anchor",
+              "abstain_stale_entry","abstain_discontinuous_path")
+        for horizon in report["horizons"].values():
+            c=horizon["coverage"]
+            self.assertEqual(c["abstain_gap"],sum(c[k] for k in keys))
+            self.assertEqual(c["eligible"],c["matured"]+c["immature"]+c["abstain_gap"])
+
+    def test_missing_anchor_and_stale_entry_are_not_false_positives(self):
+        state=fixture()
+        # Remove the exact 60m maturity anchor and the 90m fallback for AAA.
+        state["observations"]=[o for o in state["observations"] if not
+            (o["pair"]=="AAAUSD" and o["run_id"] in ("60","90"))]
+        # BBB's run-0 quote predates the decision by more than 45 minutes.
+        for o in state["observations"]:
+            if o["pair"]=="BBBUSD" and o["run_id"]=="0":
+                o["at"]=iso(-50)
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        c=one["coverage"]
+        self.assertGreater(c["abstain_missing_horizon_anchor"],0)
+        self.assertGreater(c["abstain_stale_entry"],0)
+        self.assertEqual(c["abstain_gap"],sum(c[k] for k in (
+            "abstain_conflicting_quotes","abstain_future_entry_quotes",
+            "abstain_no_future_observation","abstain_missing_horizon_anchor",
+            "abstain_stale_entry","abstain_discontinuous_path")))
+
 if __name__=="__main__":
     unittest.main()

@@ -167,7 +167,10 @@ def analyze(state):
     for hours in HORIZONS:
         positives, negatives, negatives20, cases, cases20 = [], [], [], [], []
         coverage = {"eligible": 0, "immature": 0, "abstain_gap": 0,
-                    "abstain_conflicting_quotes": 0, "abstain_future_entry_quotes": 0, "matured": 0,
+                    "abstain_conflicting_quotes": 0, "abstain_future_entry_quotes": 0,
+                    "abstain_no_future_observation": 0, "abstain_missing_horizon_anchor": 0,
+                    "abstain_stale_entry": 0, "abstain_discontinuous_path": 0,
+                    "matured": 0,
                     "watch_eligible": 0, "watch_immature": 0, "watch_abstain_gap": 0,
                     "watch_matured": 0, "watch_positive": 0, "movers": 0,
                     "watch_positive_20": 0, "movers_20": 0,
@@ -214,10 +217,21 @@ def analyze(state):
                         coverage["watch_abstain_gap"] += 1
                     coverage["abstain_conflicting_quotes"] += 1
                     continue
-                if (not before or not anchors or start-at > MAX_GAP
-                    or any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
-                    or anchors[0][0]-timeline[-1] > MAX_GAP):
+                # One mutually exclusive primary reason per unknown label;
+                # retain abstain_gap as the conservative aggregate.
+                reason = None
+                if not before:
+                    reason = "abstain_no_future_observation"
+                elif not anchors:
+                    reason = "abstain_missing_horizon_anchor"
+                elif start-at > MAX_GAP:
+                    reason = "abstain_stale_entry"
+                elif (any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
+                      or anchors[0][0]-timeline[-1] > MAX_GAP):
+                    reason = "abstain_discontinuous_path"
+                if reason is not None:
                     coverage["abstain_gap"] += 1
+                    coverage[reason] += 1
                     if selected:
                         coverage["watch_abstain_gap"] += 1
                     continue
@@ -300,6 +314,10 @@ def analyze(state):
             key:summarize_feature(first_entries_20,key)
             for key in ("30m","60m","180m")}
         assert coverage["eligible"]==coverage["matured"]+coverage["abstain_gap"]+coverage["immature"]
+        assert coverage["abstain_gap"] == sum(coverage[k] for k in (
+            "abstain_conflicting_quotes", "abstain_future_entry_quotes",
+            "abstain_no_future_observation", "abstain_missing_horizon_anchor",
+            "abstain_stale_entry", "abstain_discontinuous_path"))
         assert coverage["movers"]==len(positives)
         assert coverage["movers_20"]==len(cases20)
         assert coverage["matured"]==len(cases20)+len(negatives20)
