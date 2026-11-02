@@ -455,6 +455,17 @@ class CurrentSemanticReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"cannot authorize"):
             apply_semantic_review(matrix,[self.row()],self.MAIN)
 
+    def test_missing_or_invalid_source_blob_cannot_validate_disposition(self):
+        for blob in (None,"bad"):
+            matrix=self.matrix()
+            if blob is None:
+                matrix["prs"][0].pop("source_blob_sha")
+            else:
+                matrix["prs"][0]["source_blob_sha"]=blob
+            with self.subTest(blob=blob):
+                with self.assertRaisesRegex(ValueError,"source blob SHA"):
+                    apply_semantic_review(matrix,[self.row()],self.MAIN)
+
     def test_malformed_source_head_and_schema_fail_closed(self):
         matrix=self.matrix()
         matrix["prs"][0]["head_sha"]="short"
