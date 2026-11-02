@@ -130,6 +130,8 @@ def cluster_episodes(cases, hours):
             episodes[-1]["entry_cases"] += 1
             episodes[-1]["last_entry_at"] = case["entry_at"]
             episodes[-1]["last_decision_at"] = decision_at
+            if case["watch"] and episodes[-1]["first_watch_decision_at"] is None:
+                episodes[-1]["first_watch_decision_at"] = decision_at
             episodes[-1]["watch_captured"] |= case["watch"]
         else:
             episodes.append({"pair":case["pair"],"first_entry_at":case["entry_at"],
@@ -137,6 +139,8 @@ def cluster_episodes(cases, hours):
                              "last_decision_at":decision_at,
                              "last_entry_at":case["entry_at"],"entry_cases":1,
                              "watch_captured":case["watch"],
+                             "first_entry_watch":bool(case["watch"]),
+                             "first_watch_decision_at":decision_at if case["watch"] else None,
                              "first_lagged_60m":case["lagged_returns"]["60m"],
                              "first_lagged_returns":dict(case["lagged_returns"]),
                              "first_peak_observed_return":case["peak_observed_return"]})
@@ -263,6 +267,10 @@ def analyze(state):
         episodes20 = cluster_episodes(cases20,hours)
         episode_watch_count = sum(e["watch_captured"] for e in episodes)
         episode_watch_count_20 = sum(e["watch_captured"] for e in episodes20)
+        # Any-later WATCH is not equivalent to detecting the FIRST qualifying
+        # entry. These are descriptive entry opportunities, not surge onset.
+        first_watch_count = sum(e["first_entry_watch"] for e in episodes)
+        first_watch_count_20 = sum(e["first_entry_watch"] for e in episodes20)
         episode_first_lags = [e["first_lagged_60m"] for e in episodes
                               if e["first_lagged_60m"] is not None]
         # Descriptive only: features cannot be backfilled for most first observations.
@@ -311,6 +319,8 @@ def analyze(state):
             "unique_mover_pairs":len({e["pair"] for e in episodes}),
             "unique_mover_episodes_20":len(episodes20),
             "watch_captured_episodes_20":episode_watch_count_20,
+            "watch_first_entry_episodes_20":first_watch_count_20,
+            "watch_late_only_episodes_20":episode_watch_count_20-first_watch_count_20,
             "missed_mover_episodes_20":len(episodes20)-episode_watch_count_20,
             "missed_mover_episodes_30":len(episodes)-episode_watch_count,
             "watch_episode_recall_wilson_95_naive_20":wilson(episode_watch_count_20,len(episodes20)),
@@ -323,6 +333,8 @@ def analyze(state):
                                   if coverage["watch_matured"] else None),
             "episodes":episodes,"mover_cases":cases,
             "watch_captured_episodes":episode_watch_count,
+            "watch_first_entry_episodes_30":first_watch_count,
+            "watch_late_only_episodes_30":episode_watch_count-first_watch_count,
             "watch_episode_recall_30":episode_watch_count/len(episodes) if episodes else None,
             "watch_episode_recall_wilson_95_naive":wilson(episode_watch_count,len(episodes)),
             "episode_first_entry_feature_distributions":episode_features,
