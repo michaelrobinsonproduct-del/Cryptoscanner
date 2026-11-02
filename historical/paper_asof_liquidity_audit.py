@@ -38,6 +38,46 @@ def lag(times, prices, i, pair, minutes, tolerance):
     return min(prior)[1] if prior else None
 
 
+
+def evaluate_rankings(scores, eval_times, watch, labels, top_k=12):
+    """Freeze selections from as-of features BEFORE consulting future outcomes.
+
+    A selected candidate with an unavailable forward path stays selected and
+    counts as an abstention. Never condition the candidate universe on labels.
+    """
+    names = ["momentum_1h", "volatility_3h", "volatility_direction",
+             "liquidity_adjusted_volatility", "actual_paper_watch"]
+    outcomes = {}
+    for name in names:
+        selected = []
+        selected_by_time = {}
+        for i in eval_times:
+            pool = [p for j, p in scores if j == i]
+            chosen = (sorted(watch.get(i, set()) & set(pool))
+                      if name == "actual_paper_watch"
+                      else sorted(pool, key=lambda p: (-scores[i, p][name], p))[:top_k])
+            selected_by_time[str(i)] = chosen
+            selected.extend((i, p, labels.get((i, p))) for p in chosen)
+        labeled = [(i, p, v) for i, p, v in selected if v is not None]
+        hits30 = sum(v >= 30 for _, _, v in labeled)
+        outcomes[name] = {
+            "picks": len(selected),
+            "labeled_picks": len(labeled),
+            "missing_forward_label_picks": len(selected) - len(labeled),
+            "positive_windows": {str(th): sum(v >= th for _, _, v in labeled)
+                                 for th in (5, 10, 20, 30)},
+            "sampled_precision_on_labeled_30": round(hits30 / len(labeled), 6)
+                                               if labeled else None,
+            "distinct_positive_markets_30": sorted(
+                {p for _, p, v in labeled if v >= 30}),
+            "selected_pairs_by_time": selected_by_time,
+            "missing_label_examples": [
+                {"index": i, "pair": p} for i, p, v in selected if v is None
+            ][:12],
+        }
+    return outcomes
+
+
 def analyze(directory):
     source = verified_zip(directory / "paper-ledger-latest.zip")
     ledger = json.loads(source["ledger.json"])
@@ -70,7 +110,7 @@ def analyze(directory):
         source_runs.append({"run_id": action_id, "as_of": latest["as_of"],
                             "report_sha256": runs[i]["report_sha256"]})
 
-    labels, valid_times = {}, []
+    labels = {}
     for i in RUN_IDS:
         target = times[i] + dt.timedelta(hours=6)
         if times[-1] < target + dt.timedelta(minutes=45):
@@ -87,14 +127,11 @@ def analyze(directory):
             if any(pair not in prices[j] for j in inside + [anchor[0]]):
                 continue
             labels[i, pair] = 100 * (max(prices[j][pair] for j in inside) / entry - 1)
-        valid_times.append(i)
 
     scores = {}
-    for i in valid_times:
+    for i in RUN_IDS:
         for pair, quote in snapshots[i].items():
             if quote["spread_bps"] > 45 or quote["notional_24h_usd"] < 100000:
-                continue
-            if (i, pair) not in labels:
                 continue
             p1 = lag(times, prices, i, pair, 60, 30)
             p2 = lag(times, prices, i, pair, 120, 35)
@@ -117,23 +154,13 @@ def analyze(directory):
                   - 0.02 * quote["spread_bps"],
             }
 
-    eval_times = [i for i in valid_times if sum(j == i for j, _ in scores) >= 12]
-    names = ["momentum_1h", "volatility_3h", "volatility_direction",
-             "liquidity_adjusted_volatility", "actual_paper_watch"]
-    outcomes = {}
-    for name in names:
-        selected = []
-        for i in eval_times:
-            pool = [p for j, p in scores if j == i]
-            chosen = ((watch[i] & set(pool)) if name == "actual_paper_watch"
-                      else set(sorted(pool, key=lambda p: (-scores[i, p][name], p))[:12]))
-            selected.extend((i, p, labels[i, p]) for p in chosen)
-        outcomes[name] = {
-            "picks": len(selected),
-            "positive_windows": {str(th): sum(v >= th for _, _, v in selected)
-                                 for th in (5, 10, 20, 30)},
-            "distinct_positive_markets_30": sorted({p for _, p, v in selected if v >= 30}),
-        }
+    # Time eligibility depends only on as-of features and elapsed maturity,
+    # never on whether any selected market happens to have a future label.
+    eval_times = [i for i in RUN_IDS
+                  if times[-1] >= times[i] + dt.timedelta(hours=6, minutes=45)
+                  and sum(j == i for j, _ in scores) >= 12]
+    outcomes = evaluate_rankings(scores, eval_times, watch, labels)
+
     positives = [{"index": i, "pair": pair, "peak_pct": round(value, 3),
                   "notional_usd": snapshots[i][pair]["notional_24h_usd"],
                   "spread_bps": snapshots[i][pair]["spread_bps"]}
