@@ -185,6 +185,15 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
     max_creation_gap = max((int((b - a).total_seconds()) for a, b in
                             zip(creation_times, creation_times[1:])), default=None)
     latest_age = int((now - creation_times[-1]).total_seconds()) if creation_times else None
+    # Distinguish absence of any authenticated attempt from an attempted scan
+    # that failed after starting. Neither is proof of durable persistence.
+    attempts = sorted(native + dispatched + native_failed + dispatch_failed,
+                      key=lambda r: r["created_at"])
+    attempt_times = [timestamp(r["created_at"]) for r in attempts]
+    latest_attempt_age = (int((now - attempt_times[-1]).total_seconds())
+                          if attempt_times else None)
+    max_attempt_gap = max((int((b - a).total_seconds()) for a, b in
+                           zip(attempt_times, attempt_times[1:])), default=None)
     queue_samples = [r["writer_job_queue_seconds"] for r in successful
                      if "writer_job_queue_seconds" in r]
     evidence.sort(key=lambda r: (r.get("created_at", ""), str(r.get("run_id"))))
@@ -199,6 +208,12 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
             "last_verified_successful_run_created_at": successful[-1]["created_at"] if successful else None,
             "seconds_since_last_verified_successful_run_creation": latest_age,
             "max_verified_successful_run_creation_gap_seconds": max_creation_gap,
+            "verified_attempt_run_creation_count": len(attempts),
+            "last_verified_attempt_created_at": attempts[-1]["created_at"] if attempts else None,
+            "seconds_since_last_verified_attempt_creation": latest_attempt_age,
+            "max_verified_attempt_run_creation_gap_seconds": max_attempt_gap,
+            "over_45m_since_verified_attempt_creation": (latest_attempt_age > 2700
+                                                          if latest_attempt_age is not None else None),
             "writer_job_queue_sample_count": len(queue_samples),
             "max_verified_writer_job_queue_seconds": max(queue_samples, default=None),
             "over_45m_since_verified_successful_run_creation": latest_age > 2700 if latest_age is not None else None,
@@ -209,6 +224,7 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
             "runs": evidence,
             "limitations": ["Only the canonical main-branch PAPER writer workflow is counted; foreign workflow markers abstain",
                             "A completed failed workflow is an attempt, not a successful scan",
+                            "Attempt cadence includes authenticated failed executions but is not persisted scan cadence",
                             "A cron expression identifies a minute, not an hour; reported lateness is only a lower bound",
                             "Creation gaps are observational and cannot certify missed cron slots or persisted ledger generations",
                             "Created-at is not the job's completion time",
