@@ -128,7 +128,7 @@ jobs:
           print('RESEARCH_PROVENANCE',json.dumps(evidence,sort_keys=True))
           PY
           (cd /tmp && sha256sum marketwide-outcomes.json marketwide-episodes.json marketwide-provenance.json > marketwide-SHA256SUMS && sha256sum -c marketwide-SHA256SUMS)
-          python -m research.verify_marketwide_artifacts --directory /tmp --expected-head "$(git rev-parse HEAD)"
+          python -m research.verify_marketwide_artifacts --directory /tmp --expected-head "$(git rev-parse HEAD)" --expected-ledger-commit "$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
 
       # A failed replay/checksum must not publish an apparently valid research artifact.
       - uses: actions/upload-artifact@v4
