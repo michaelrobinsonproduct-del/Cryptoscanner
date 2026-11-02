@@ -204,6 +204,10 @@ def analyze(state):
         assert coverage["eligible"]==coverage["matured"]+coverage["abstain_gap"]+coverage["immature"]
         assert coverage["movers"]==len(positives)
         assert coverage["movers_20"]==len(cases20)
+        coverage["matured_fraction"] = (coverage["matured"]/coverage["eligible"]
+                                        if coverage["eligible"] else None)
+        coverage["distinct_matured_pairs"] = len({r["pair"] for r in positives+negatives})
+        coverage["distinct_positive_pairs"] = len({r["pair"] for r in positives})
         output[str(hours)] = {"coverage":coverage,"unique_mover_episodes":len(episodes),
             "unique_mover_pairs":len({e["pair"] for e in episodes}),
             "unique_mover_episodes_20":len(episodes20),
@@ -239,6 +243,10 @@ def analyze(state):
                            "Only lagged price returns are available; no authenticated pre-entry volume, spread or order-book features",
                            "No predictive challenger was trained or tested"],
             "source":{"ledger_sha256":state["sha256"],"generation":state["generation"],
+                      "source_authenticated":False,
+                      "complete_market_history":False,
+                      "eligible_for_model_promotion":False,
+                      "data_scope":"SHA-verified PAPER snapshot ledger, not exchange-authenticated full history",
                       "runs":len(state["runs"]),"observations":len(state["observations"])},
             "horizons":output}
 
