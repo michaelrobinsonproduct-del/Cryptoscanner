@@ -13,7 +13,7 @@ SHA = "a" * 40
 def run(rid=1, when="2026-11-01T19:10:01Z", event="schedule", sha=SHA):
     return {"id": rid, "created_at": when, "event": event, "head_sha": sha,
             "path": ".github/workflows/paper-pipeline.yml", "head_branch": "main",
-            "status": "completed", "conclusion": "success"}
+            "status": "completed", "conclusion": "success", "run_attempt": 1}
 
 def log(event="schedule", cron="39 * * * *", sha=SHA):
     return ("2026-11-01T19:10:06Z PAPER_VERIFIED_GITHUB_EVENT=" + event + "\n"
@@ -257,6 +257,23 @@ class CadenceProvenanceTests(unittest.TestCase):
                 self.assertIsNone(result["seconds_since_last_verified_attempt_creation"])
                 self.assertIsNone(result["max_verified_attempt_run_creation_gap_seconds"])
                 self.assertIsNone(result["over_45m_since_verified_attempt_creation"])
+
+    def test_rerun_keeps_schedule_event_but_is_not_unattended(self):
+        for attempt in (2, 3, 0, True, None):
+            with self.subTest(attempt=attempt):
+                candidate = {**run(), "run_attempt": attempt}
+                result = self.check([candidate])
+                self.assertEqual(result["verified_native_count"], 0)
+                self.assertEqual(result["verified_attempt_run_creation_count"], 0)
+                self.assertEqual(result["runs"][0]["classification"],
+                                 "MISSING_OR_RERUN_ATTEMPT_PROVENANCE")
+
+    def test_missing_run_attempt_is_not_original_schedule_proof(self):
+        candidate = run()
+        del candidate["run_attempt"]
+        result = self.check([candidate])
+        self.assertEqual(result["verified_native_count"], 0)
+        self.assertEqual(result["unverified_or_ambiguous_count"], 1)
 
     def test_no_false_ledger_or_trade_claims(self):
         result = self.check()
