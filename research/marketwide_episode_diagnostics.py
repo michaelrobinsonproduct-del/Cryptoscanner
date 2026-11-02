@@ -26,10 +26,12 @@ def wilson(successes, trials, z=1.96):
     return [max(0, center-radius), min(1, center+radius)]
 
 
-def lagged_return_diagnostic(series, times, index, minutes):
+def lagged_return_diagnostic(series, times, index, minutes, run_decisions=None):
     """Point-in-time feature and mutually exclusive reason for missingness.
 
     Never interpolate or use a later observation to repair a missing anchor.
+    A quote first recorded in a later scan is not known at this decision,
+    even when its exchange-event timestamp predates the decision.
     """
     at, entry, _ = series[index]
     target = at - dt.timedelta(minutes=minutes)
@@ -38,6 +40,11 @@ def lagged_return_diagnostic(series, times, index, minutes):
         return None, "no_prior_anchor"
     if target - times[j] > MAX_GAP:
         return None, "stale_prior_anchor"
+    if run_decisions is not None:
+        entry_decision = run_decisions[series[index][2]]
+        if any(run_decisions[series[k][2]] > entry_decision
+               for k in range(j, index)):
+            return None, "future_scan_observation"
     # The last quote at an anchor cannot conceal an earlier contradictory
     # same-timestamp price, even if several subsequent duplicates agree.
     first_anchor = bisect.bisect_left(times, times[j], hi=j)
@@ -381,7 +388,7 @@ def analyze(state):
                 lag = {}
                 lag_reasons = {}
                 for minutes in (30,60,180):
-                    value, reason = lagged_return_diagnostic(series,times,i,minutes)
+                    value, reason = lagged_return_diagnostic(series,times,i,minutes,runs)
                     lag[str(minutes)+"m"] = value
                     lag_reasons[str(minutes)+"m"] = reason
                     if value is not None:
