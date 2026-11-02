@@ -36,7 +36,7 @@ def _utc(value):
 
 
 def _decimal(value):
-    if not isinstance(value, (str, int, float)) or isinstance(value, bool):
+    if not isinstance(value, (str, int, float, Decimal)) or isinstance(value, bool):
         raise ValueError("Invalid trade decimal type")
     try:
         number = Decimal(str(value))
@@ -101,7 +101,7 @@ def _verify_page(page, pair, expected_since, evaluation_at):
     retrieved = _utc(page.get("retrieved_at"))
     if retrieved > evaluation_at:
         raise ValueError("Source acquired after evaluation cutoff")
-    payload = json.loads(raw)
+    payload = json.loads(raw, parse_float=Decimal)
     if not isinstance(payload, dict) or payload.get("error") != [] or not isinstance(payload.get("result"), dict):
         raise ValueError("Kraken API error or malformed response")
     result = payload["result"]
