@@ -1,5 +1,6 @@
 """Synthetic contract tests; no predictive claims from fixtures."""
 import datetime as dt
+import json
 import unittest
 from unittest.mock import patch
 
@@ -224,6 +225,17 @@ class EpisodeTests(unittest.TestCase):
             self.assertLessEqual(cohort["distinct_pairs"],cohort["n"])
 
 
+
+    def test_extreme_price_ratio_never_emits_nonfinite_json(self):
+        state=fixture()
+        for o in state["observations"]:
+            if o["pair"]=="AAAUSD":
+                o["price"]=1e-300 if o["run_id"]=="0" else 1e300
+        with patch("paper_pov.ledger.verify",return_value=None):
+            report=analyze(state)
+        self.assertGreater(report["horizons"]["1"]["coverage"]["movers"],0)
+        self.assertIsNone(report["horizons"]["1"]["mover_cases"][0]["peak_observed_return"])
+        json.dumps(report,allow_nan=False)
 
     def test_episode_clusters_by_decision_not_stale_quote_time(self):
         # Decisions are exactly 60m apart, but the first quote is 3m old.
