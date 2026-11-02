@@ -128,10 +128,10 @@
     {
       "number": 40,
       "head_sha": "9c66e45b2a7d674e60fc47c761d44788f9bb15c5",
-      "classification": "unknown",
+      "classification": "conflicting",
       "source_path": "paper_eval/audit.py",
       "source_blob_sha": "9c4a659e4be6b7886c03ba1fe50ea34d0143e0c4",
-      "reason": "Distinct isolated sampled forward-outcome evaluator; semantic parity against #122/#125/#126 and live consumers not established.",
+      "reason": "Exact PR #40 head 9c66e45b2a7d674e60fc47c761d44788f9bb15c5: .github/workflows/paper-forward-audit.yml reads only git show ${LEDGER_COMMIT}:paper-ledger.json and paper_eval/audit.py verifies that raw object. Current sealed ledger ref 690540dee528da64018227dfbbba304312da885d also contains paper-segment-manifest.json and paper-segments; PR #40 never verifies or replays those segments. This is a materially different raw-only evidence contract from PR #122 segmented full-market evaluator; do not merge/retire without adapter and parity proof.",
       "release_authorized": false,
       "cleanup_authorized": false
     },
