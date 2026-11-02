@@ -94,7 +94,29 @@ def assess(inventory, responses):
                                  "legacy_deletion": c["block_deletion"]},
                       "restriction": "No workflow execution, external credential use, production activation or deletion from this audit; isolate read-only tests only."})
     verified = sum(x["source"]["status"] == "VERIFIED_EXACT_HEAD_SOURCE" for x in cases)
+    # Scope decisions are deliberately narrower than full-audit certification.
+    # Unknown external consumers block deletion, not unrelated GET-only tests.
+    scope_matrix = [
+        {"scope": "isolated_read_only_integration", "decision": "CONDITIONAL_PREPARE_TEST_ONLY",
+         "blocking_findings": [], "owner": "B/V",
+         "acceptance": "B concurrence plus independent V exact-head no-write review; never merge or deploy"},
+        {"scope": "production_activation", "decision": "BLOCKED",
+         "blocking_findings": sorted(set(x["kind"] for x in cases)),
+         "owner": "D/B/V",
+         "acceptance": "Prove one writer, source-authenticated native/manual execution and credential-backed write isolation"},
+        {"scope": "legacy_deletion", "decision": "BLOCKED",
+         "blocking_findings": ["UNKNOWN_DEPLOYED_CONSUMERS", "BRANCH_PINNED_LEGACY_HISTORY"] +
+                              sorted(set(x["kind"] for x in cases)),
+         "owner": "C/V",
+         "acceptance": "Attest deployed iOS/Bun, Supabase/pg_cron, Railway and simple-history consumers before any deletion"},
+    ]
+    unverified = [{"pr": x["pr"], "path": x["path"], "status": x["source"]["status"],
+                   "expected_head_sha": x["expected_head_sha"],
+                   "expected_blob_sha": x["expected_blob_sha"]}
+                  for x in cases if x["source"]["status"] != "VERIFIED_EXACT_HEAD_SOURCE"]
     return {"schema": "cryptoscanner-bounded-source-audit-v1",
+            "scope_matrix": scope_matrix,
+            "unverified_source_cases": unverified,
             "main_sha": inventory["main_sha"], "ledger_sha_read_only": inventory["ledger_sha"],
             "audit_checkout_sha": inventory["checkout_sha"],
             "source_cases": cases, "source_verified": verified,
@@ -104,14 +126,18 @@ def assess(inventory, responses):
             "independent_b_v_concurrence": "REQUIRED_NOT_INFERRED",
             "full_audit_certified": False, "cleanup_authorized": False,
             "production_mutation_authorized": False,
-            "finite_blockers": [
+            "finite_blockers": (
+                ([{"scope": "source_evidence", "owner": "C",
+                   "condition": "Resolve exact PR-head/blob drift or inaccessible GitHub Contents evidence",
+                   "acceptance": "Re-fetch immutable PR head and Contents blob, independently match SHA and required tokens",
+                   "cases": unverified}] if unverified else []) + [
                 {"scope": "isolated_read_only_integration", "owner": "B/V",
                  "condition": "Exact-head combined draft with GET-only tests and explicit independent B/V concurrence; no merge"},
                 {"scope": "production_activation", "owner": "D/B/V",
                  "condition": "Actual native/manual writer proof, single-writer isolation, credential write-surface and runtime consumer attestation"},
                 {"scope": "legacy_deletion", "owner": "C/V",
                  "condition": "Deployed iOS/Bun/Supabase/pg_cron and branch-pinned history consumers independently resolved"},
-            ]}
+            ])}
 
 def github_get_contents(pr, path, head):
     if not re.fullmatch(r"[0-9a-f]{40}", str(head)):
