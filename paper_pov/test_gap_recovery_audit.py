@@ -175,6 +175,7 @@ class GapRecoveryTests(unittest.TestCase):
         self.assertEqual(captures, [])
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]["source_sha256"], hashlib.sha256(raw).hexdigest())
+        self.assertEqual(base64.b64decode(errors[0]["raw_response_b64"]), raw)
         self.assertEqual(errors[0]["response_last"], str(s["start_since_ns"]))
         self.assertIn("cursor", errors[0]["reason"])
 
