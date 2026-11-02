@@ -154,6 +154,19 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
                                  "classification": "UNKNOWN_WORKFLOW_CONCLUSION"})
                 continue
             successful = run["conclusion"] == "success"
+            # A successful workflow with a known failed/skipped canonical writer
+            # is not a successful PAPER execution, even if supplied logs match.
+            # Partial legacy job fixtures remain unverified, not attested.
+            if isinstance(jobs, dict):
+                canonical = [j for j in jobs.get(str(rid), [])
+                             if isinstance(j, dict) and j.get("name") == "public-paper"
+                             and type(j.get("run_id")) is int and j["run_id"] == rid]
+                if len(canonical) == 1 and successful and (
+                        ("conclusion" in canonical[0] and canonical[0]["conclusion"] != "success") or
+                        ("status" in canonical[0] and canonical[0]["status"] != "completed")):
+                    evidence.append({"run_id": rid, "created_at": created.isoformat(),
+                                     "classification": "WRITER_JOB_NOT_SUCCESSFUL"})
+                    continue
             queue_seconds = writer_job_queue_seconds(jobs, rid, created, now)
             # If authentic job metadata is present, a log marker from before
             # the writer job began (or from the future) cannot certify this run.

@@ -152,6 +152,19 @@ class CadenceProvenanceTests(unittest.TestCase):
         self.assertIsNone(result["max_verified_successful_run_creation_gap_seconds"])
         self.assertIsNone(result["seconds_since_last_verified_successful_run_creation"])
 
+    def test_green_workflow_with_known_failed_writer_never_counts_as_scan(self):
+        for conclusion, status in (("failure", "completed"),
+                                   ("skipped", "completed"),
+                                   ("success", "in_progress")):
+            with self.subTest(conclusion=conclusion, status=status):
+                jobs = {"1": [{"run_id": 1, "name": "public-paper",
+                               "started_at": "2026-11-01T19:10:04Z",
+                               "status": status, "conclusion": conclusion}]}
+                report = self.check(jobs=jobs)
+                self.assertEqual(report["verified_native_count"], 0)
+                self.assertEqual(report["runs"][0]["classification"],
+                                 "WRITER_JOB_NOT_SUCCESSFUL")
+
     def test_authenticated_writer_job_queue_separates_from_cron_lateness(self):
         jobs = {"1": [{"run_id": 1, "name": "public-paper",
                         "started_at": "2026-11-01T19:10:04Z"}]}

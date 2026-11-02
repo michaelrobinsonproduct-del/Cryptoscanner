@@ -47,7 +47,8 @@ def github_reader(token, api_url="https://api.github.com"):
 def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
     """Return a reproducible audit plus SHA256 evidence index; no writes."""
     if not isinstance(repo, str) or len(repo.split("/")) != 2 or any(
-            not part or not all(c.isalnum() or c in "-_." for c in part)
+            not part or part in (".", "..") or
+            not all(c.isalnum() or c in "-_." for c in part)
             for part in repo.split("/")):
         raise ValueError("invalid repository name")
     now = timestamp(checked_at)
@@ -74,6 +75,8 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
         for row in rows:
             if not isinstance(row, dict) or type(row.get("id")) is not int:
                 raise ValueError("invalid run row")
+            if row.get("event") != event:
+                raise ValueError("workflow run event query mismatch")
             if row["id"] in seen:
                 raise ValueError("duplicate run across event queries")
             seen.add(row["id"])

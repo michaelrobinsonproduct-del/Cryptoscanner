@@ -103,6 +103,16 @@ class CadenceCollectorTests(unittest.TestCase):
                 self.assertEqual(result["report"]["verified_native_count"], 0)
                 self.assertFalse(any("/logs" in path for path, _ in calls))
 
+    def test_event_query_mismatch_abstains_before_cadence_metrics(self):
+        get, _ = fixture()
+        def changed(path, text=False):
+            response = get(path, text)
+            if "event=schedule" in path:
+                response["workflow_runs"][0]["event"] = "workflow_dispatch"
+            return response
+        with self.assertRaisesRegex(ValueError, "event query mismatch"):
+            collect(changed, "owner/repo", NOW)
+
     def test_duplicate_event_run_ids_fail_closed(self):
         get, _ = fixture(dispatched=[row(1, "workflow_dispatch")])
         with self.assertRaisesRegex(ValueError, "duplicate"):
@@ -157,7 +167,8 @@ class CadenceCollectorTests(unittest.TestCase):
 
     def test_invalid_repo_or_unbounded_parameters_fail_before_network(self):
         get, calls = fixture()
-        for repo in ("owner", "owner/repo/other", "owner/repo?x=1"):
+        for repo in ("owner", "owner/repo/other", "owner/repo?x=1",
+                     "../repo", "owner/..", "./repo"):
             with self.subTest(repo=repo), self.assertRaises(ValueError):
                 collect(get, repo, NOW)
         with self.assertRaises(ValueError):
