@@ -4,6 +4,7 @@ on:
     paths:
       - 'audit_tools/full_scanner_inventory.py'
       - 'audit_tools/test_full_scanner_inventory.py'
+      - 'audit_tools/external_runtime_20261102.json'
       - 'audit_tools/pr_triage_20261102.json'
       - '.github/workflows/full-scanner-inventory.yml'
   workflow_dispatch:
@@ -45,8 +46,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python audit_tools/full_scanner_inventory.py
+      - name: Include verified external runtime snapshot
+        run: |
+          python - <<'PY'
+          import json,shutil
+          p="audit_tools/external_runtime_20261102.json"
+          x=json.load(open(p))
+          assert x["schema"]=="cryptoscanner-external-runtime-audit-v1"
+          assert x["supabase"]["deployed_edge_functions"]==27
+          assert x["railway"]["active_deployments"]==0
+          shutil.copy2(p,"audit-evidence/external-runtime.json")
+          PY
       - name: SHA256 evidence
-        run: (cd audit-evidence && sha256sum scanner-inventory.json scanner-inventory.md > SHA256SUMS && sha256sum -c SHA256SUMS)
+        run: (cd audit-evidence && sha256sum scanner-inventory.json scanner-inventory.md external-runtime.json > SHA256SUMS && sha256sum -c SHA256SUMS)
       - uses: actions/upload-artifact@v4
         with:
           name: scanner-full-inventory-${{ github.run_id }}
