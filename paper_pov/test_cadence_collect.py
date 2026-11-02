@@ -264,6 +264,55 @@ class CadenceCollectorTests(unittest.TestCase):
                                  "UNVERIFIED_REMOTE_REF_UNAVAILABLE")
                 self.assertFalse(proof.get("remote_ledger_bytes_verified", False))
 
+    def test_remote_ref_requires_source_authenticated_writer_not_just_log_claim(self):
+        marker = ("2026-11-02T03:10:30Z PAPER_LEDGER_REMOTE_READBACK_VERIFIED " +
+                  SHA + "\n2026-11-02T03:10:40Z PAPER_RESULTS_VERIFIED 1 52 5\n")
+        for tamper in ("source", "event"):
+            with self.subTest(tamper=tamper):
+                upstream, calls = fixture(native=[row(1, "schedule")], dispatched=[])
+                def altered(path, text=False):
+                    value = upstream(path, text)
+                    if "/logs" in path:
+                        provenance = log("schedule", "9 * * * *")
+                        if tamper == "source":
+                            provenance = provenance.replace(
+                                "PAPER_PIPELINE_SOURCE_SHA=" + SHA,
+                                "PAPER_PIPELINE_SOURCE_SHA=" + "b" * 40)
+                        else:
+                            provenance = provenance.replace(
+                                "PAPER_VERIFIED_GITHUB_EVENT=schedule",
+                                "PAPER_VERIFIED_GITHUB_EVENT=workflow_dispatch")
+                        return provenance + marker
+                    return value
+                proof = collect(altered, "owner/repo", NOW)
+                self.assertEqual(proof["report"]["verified_native_count"], 0)
+                self.assertEqual(proof["evidence"][0]["delivery_log_claim_status"],
+                                 "MATCHED_LOG_MARKERS_NOT_REMOTE_BYTES")
+                self.assertEqual(proof["current_remote_ref_evidence"]["status"],
+                                 "UNVERIFIED_NO_SOURCE_AUTHENTICATED_LOG_CLAIM")
+                self.assertFalse(any("/git/ref/" in path for path, _ in calls))
+
+    def test_remote_ref_uses_latest_authenticated_not_latest_unverified_claim(self):
+        upstream, _ = fixture()
+        def altered(path, text=False):
+            value = upstream(path, text)
+            if "/jobs/101/logs" in path:
+                return value + (
+                    "2026-11-02T03:10:30Z PAPER_LEDGER_REMOTE_READBACK_VERIFIED " +
+                    SHA + "\n2026-11-02T03:10:40Z PAPER_RESULTS_VERIFIED 1 52 5\n")
+            if "/jobs/102/logs" in path:
+                return value.replace("PAPER_PIPELINE_SOURCE_SHA=" + SHA,
+                                     "PAPER_PIPELINE_SOURCE_SHA=" + "b" * 40) + (
+                    "2026-11-02T03:10:30Z PAPER_LEDGER_REMOTE_READBACK_VERIFIED " +
+                    "b" * 40 + "\n2026-11-02T03:10:40Z PAPER_RESULTS_VERIFIED 2 52 5\n")
+            return value
+        proof = collect(altered, "owner/repo", NOW)
+        self.assertEqual(proof["report"]["verified_native_count"], 1)
+        self.assertEqual(proof["report"]["verified_dispatch_count"], 0)
+        self.assertEqual(proof["current_remote_ref_evidence"]["claimed_run_id"], 1)
+        self.assertEqual(proof["current_remote_ref_evidence"]["status"],
+                         "MATCHED_CURRENT_REF_SHA_NOT_LEDGER_BYTES")
+
     def test_delivery_log_claim_rejects_wrong_run_duplicate_and_reversed_order(self):
         start = __import__("datetime").datetime.fromisoformat("2026-11-02T03:10:04+00:00")
         end = __import__("datetime").datetime.fromisoformat("2026-11-02T03:11:00+00:00")
