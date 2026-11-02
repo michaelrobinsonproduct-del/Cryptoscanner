@@ -66,9 +66,12 @@ def analyze(state):
                     continue
                 end = bisect.bisect_right(times, target+MAX_GAP, lo=i+1)
                 future = series[i+1:end]
-                before = [(t,p) for t,p,_ in future if at < t <= target]
+                # The PAPER decision is the immutable run as_of, not its
+                # up-to-three-minute-old quote. A price move before the
+                # decision is NOT a valid future mover.
+                before = [(t,p) for t,p,_ in future if start < t <= target]
                 anchors = [(t,p) for t,p,_ in future if target <= t <= target+MAX_GAP]
-                timeline = [at] + [t for t,_ in before]
+                timeline = [start] + [t for t,_ in before]
                 if (not before or not anchors or start-at > MAX_GAP
                     or any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
                     or anchors[0][0]-timeline[-1] > MAX_GAP):
