@@ -96,6 +96,20 @@ def freeze(inventory, semantic, bounded, gate, graph, writes, runtime):
         live_row, review = live_by_id[number], reviewed_by_id[number]
         if review.get("head_sha") != live_row.get("head_sha"):
             raise ValueError("Semantic decision uses a different PR head: " + str(number))
+        # Cross-check the semantic decision against the same immutable PR-files
+        # inventory. A forged review_valid flag is not source identity evidence.
+        if review.get("review_valid") is True:
+            source_path = review.get("source_path")
+            source_blob = review.get("source_blob_sha")
+            comparisons = live_row.get("file_blob_comparisons")
+            if not isinstance(comparisons, list):
+                raise ValueError("Current semantic source blob mismatch: " + str(number))
+            matches = [entry for entry in comparisons
+                       if isinstance(entry, dict) and entry.get("path") == source_path]
+            if (len(matches) != 1 or not isinstance(source_blob, str) or
+                    len(source_blob) != 40 or
+                    matches[0].get("pr_blob_sha") != source_blob):
+                raise ValueError("Current semantic source blob mismatch: " + str(number))
         valid = review.get("review_valid") is True and review.get("classification") in VALID
         disposition = review["classification"] if valid else "unknown"
         if disposition == "unknown":
