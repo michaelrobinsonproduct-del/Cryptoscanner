@@ -61,6 +61,64 @@ def fixture(native=None, dispatched=None, jobs=True):
 
 
 class CadenceCollectorTests(unittest.TestCase):
+
+    def test_original_artifact_zip_byte_verifier_accepts_only_sealed_identity(self):
+        import hashlib
+        import json
+        import zipfile
+        from paper_pov import ledger
+        from paper_pov.artifact_bytes_verify import verify_pair
+
+        state = ledger.empty()
+        score = {"generation": 0, "ledger_sha256": state["sha256"]}
+        latest = {"mode": "PAPER_ONLY", "buy_approved": False,
+                  "as_of": "2026-11-02T03:10:00+00:00"}
+        result = {"run_id": "1", "source_sha": SHA, "ledger_commit": "b" * 40,
+                  "ledger_generation": 0, "ledger_sha256": state["sha256"],
+                  "status": "SUCCESS_PAPER_ONLY", "remote_readback_verified": True,
+                  "buy_approved": False, "exchange_event_freshness_verified": False,
+                  "as_of": latest["as_of"], "max_client_quote_age_seconds": 7.61}
+
+        def archive(members):
+            payload = {name: (json.dumps(value).encode() if not isinstance(value, bytes)
+                              else value) for name, value in members.items()}
+            sums = "".join(hashlib.sha256(value).hexdigest() + "  " + name + "\\n"
+                           for name, value in payload.items())
+            payload["SHA256SUMS"] = sums.encode()
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, "w") as z:
+                for name, value in payload.items():
+                    z.writestr(name, value)
+            raw = buffer.getvalue()
+            return raw, "sha256:" + hashlib.sha256(raw).hexdigest()
+
+        lzip, ldigest = archive({"latest.json": latest, "scoreboard.json": score,
+                                 "ledger.json": state})
+        rzip, rdigest = archive({"results.md": b"PAPER", "results.json": result})
+        def check(a=lzip, b=ldigest, c=rzip, d=rdigest):
+            return verify_pair(a, b, c, d, run_id=1, source_sha=SHA,
+                               ledger_commit="b" * 40)
+        proof = check()
+        self.assertTrue(proof["artifact_zip_bytes_independently_verified"])
+        self.assertEqual(proof["internal_sha256_verified"], 5)
+        self.assertFalse(proof["remote_ledger_readback_independently_verified"])
+        self.assertFalse(proof["results_delivery_verified"])
+        with self.assertRaisesRegex(ValueError, "ZIP SHA256"):
+            check(a=lzip + b"tamper")
+        with self.assertRaisesRegex(ValueError, "identity"):
+            check(c=archive({"results.md": b"PAPER", "results.json":
+                             {**result, "source_sha": "c" * 40}})[0],
+                  d=archive({"results.md": b"PAPER", "results.json":
+                             {**result, "source_sha": "c" * 40}})[1])
+        with self.assertRaisesRegex(ValueError, "missing, extra or duplicate"):
+            wrong, digest = archive({"results.md": b"PAPER", "results.json": result,
+                                     "extra.txt": b"unexpected"})
+            check(c=wrong, d=digest)
+        with self.assertRaisesRegex(ValueError, "stale"):
+            wrong, digest = archive({"results.md": b"PAPER", "results.json":
+                                     {**result, "max_client_quote_age_seconds": 601}})
+            check(c=wrong, d=digest)
+
     def test_readonly_collects_native_dispatch_and_sha_bound_log_index(self):
         get, calls = fixture()
         result = collect(get, "owner/repo", NOW)
