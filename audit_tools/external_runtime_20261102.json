@@ -127,7 +127,49 @@
         ]
       }
     ],
-    "cleanup_authorized": false
+    "cleanup_authorized": false,
+    "source_review": {
+      "attempted": 27,
+      "fetched": 26,
+      "failed": [
+        {
+          "function": "kraken-gateway",
+          "reason": "connector returned UNAVAILABLE; source consumer graph unknown"
+        }
+      ],
+      "scope": "Static direct .from/.rpc references in deployed function source; dynamic table names, remote function calls, invocations and database cron NOT certified",
+      "additional_direct_table_consumers": [
+        {
+          "function": "kraken-mover-census",
+          "tables": [
+            "kraken_candidate_observations",
+            "kraken_mover_census"
+          ],
+          "writes_possible": true
+        },
+        {
+          "function": "kraken-census-reconstructor",
+          "tables": [
+            "kraken_census_reconstruction_queue",
+            "kraken_miss_learning"
+          ],
+          "rpc": [
+            "enqueue_kraken_census_misses"
+          ],
+          "writes_possible": true
+        },
+        {
+          "function": "kraken-upstream-intelligence",
+          "tables": [
+            "kraken_early_radar_events",
+            "kraken_upstream_signals",
+            "kraken_specialist_scores"
+          ],
+          "writes_possible": true
+        }
+      ],
+      "other_functions": "21 additional deployed source files inspected; no static direct .from table references extracted, which does not establish absence of remote or dynamic consumers"
+    }
   },
   "safety": "Read-only observations; no deployment, secret access, scoring, trading, ledger writes or cleanup. Full consumer/runtime audit incomplete."
 }
