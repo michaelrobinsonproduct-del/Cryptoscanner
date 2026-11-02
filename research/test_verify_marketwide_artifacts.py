@@ -21,8 +21,13 @@ def digest(path):
 
 def fixture(directory):
     base = Path(directory)
+    # Fully populated but synthetic fixture: source-bound key counts match
+    # the displayed 30,872 PAPER rows and 584 WATCH predictions.
     ledger = {"sha256": LEDGER_SHA, "generation": 51,
-              "observations":[{"pair":"SYNTHETICUSD"}]}
+              "observations":[{"pair":"SYNTHETICUSD","run_id":str(i)}
+                              for i in range(30872)],
+              "predictions":[{"pair":"SYNTHETICUSD","run_id":str(i)}
+                             for i in range(584)]}
     window = {"eligible": 30872, "matured": 0, "immature": 30872,
               "abstain_gap": 0, "movers_20": 0, "movers_30": 0,
               "watch_eligible": 584, "watch_immature": 584,
@@ -37,6 +42,17 @@ def fixture(directory):
                                    "watch_false_positive_20","watch_false_positive_30",
                                    "missed_20","missed_30")},
         "movers": 0, "watch_positive_20": 0, "watch_positive": 0,
+        "matured_negative_20":0, "matured_negative_30":0,
+        "false_positive_rate_20":None, "false_positive_rate_30":None,
+        "false_positive_rate_wilson_95_naive_20":None,
+        "false_positive_rate_wilson_95_naive_30":None,
+        "watch_precision_all_entries_bounds":{
+            "scope":"observed PAPER WATCH entries; unknown outcomes unresolved",
+            "unknown":584,"20":{"lower":0.0,"upper":1.0},
+            "30":{"lower":0.0,"upper":1.0}},
+        "selection_maturity":{
+            "watch":{"eligible":584,"matured":0,"unknown":584,"mature_fraction":0.0},
+            "nonwatch":{"eligible":30288,"matured":0,"unknown":30288,"mature_fraction":0.0}},
         **{k: 0 for k in ("abstain_conflicting_quotes", "abstain_future_entry_quotes",
                          "abstain_no_future_observation", "abstain_missing_horizon_anchor",
                          "abstain_stale_entry", "abstain_discontinuous_path",
@@ -102,6 +118,15 @@ def fixture(directory):
     episodes = {"horizons": {h: json.loads(json.dumps(episode_window)) for h in ("1","6","24","48")},
                 "source": {"ledger_sha256": LEDGER_SHA, "generation": 51,
                            "runs": 51, "observations": 30872,
+                           "prediction_bindings":{
+                               "prediction_rows":584,"unique_prediction_keys":584,
+                               "duplicate_prediction_keys":0,
+                               "observation_rows":30872,"unique_observation_keys":30872,
+                               "duplicate_observation_keys":0,
+                               "bound_prediction_keys":584,"unbound_prediction_keys":0,
+                               "unbound_examples":[],"unbound_examples_limit":10,
+                               "binding_complete":True,
+                               "scope":"observed PAPER pair/run keys only; not all eligible Kraken markets"},
                            "source_authenticated": False,
                            "complete_market_history": False,
                            "eligible_for_model_promotion": False}}
@@ -381,6 +406,48 @@ class ArtifactContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"per-pair coverage conservation"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
+
+
+    def test_resealed_prediction_binding_cannot_claim_orphan_or_duplicate(self):
+        self.reseal_episode_change(lambda h: None)
+        path = self.base / FILES[1]
+        data = json.loads(path.read_text())
+        data["source"]["prediction_bindings"]["duplicate_prediction_keys"] = 1
+        write_json(path, data)
+        reseal(self.base)
+        with self.assertRaisesRegex(ValueError, "source-sealed prediction"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_unknown_watch_precision_upper_is_rejected(self):
+        self.reseal_episode_change(lambda h:
+            h["coverage"]["watch_precision_all_entries_bounds"]["30"].update(upper=0.5))
+        with self.assertRaisesRegex(ValueError, "unknown WATCH precision"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_matured_negative_denominator_is_rejected(self):
+        self.reseal_episode_change(lambda h:
+            h["coverage"].update(matured_negative_30=1))
+        with self.assertRaisesRegex(ValueError, "matured-negative false-positive-rate"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_false_positive_rate_is_rejected(self):
+        self.reseal_episode_change(lambda h:
+            h["coverage"].update(false_positive_rate_20=0.25))
+        with self.assertRaisesRegex(ValueError, "matured-negative false-positive-rate"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_ledger_orphan_rejected_even_with_resealed_provenance(self):
+        ledger_path = self.base / LEDGER
+        ledger = json.loads(ledger_path.read_text())
+        ledger["predictions"][0]["pair"] = "ORPHANUSD"
+        write_json(ledger_path, ledger)
+        provenance_path = self.base / FILES[2]
+        provenance = json.loads(provenance_path.read_text())
+        provenance["verified_ledger_export_sha256"] = digest(ledger_path)
+        write_json(provenance_path, provenance)
+        reseal(self.base)
+        with self.assertRaisesRegex(ValueError, "source-sealed prediction"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
 if __name__ == "__main__":
     unittest.main()

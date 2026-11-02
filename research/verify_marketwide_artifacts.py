@@ -63,9 +63,37 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
             or not row["pair"] for row in observations)):
         raise ValueError("invalid ledger observed-pair inventory")
     observed_pair_names = {row["pair"] for row in observations}
+    predictions = ledger.get("predictions")
+    if (not isinstance(predictions, list) or
+        any(not isinstance(row, dict) or not isinstance(row.get("run_id"), str)
+            or not isinstance(row.get("pair"), str) or not row["pair"]
+            for row in observations + (predictions if isinstance(predictions, list) else []))):
+        raise ValueError("invalid sealed PAPER prediction/observation binding inventory")
+    observed_keys = {(row["run_id"], row["pair"]) for row in observations}
+    prediction_keys = {(row["run_id"], row["pair"]) for row in predictions}
+    unbound = prediction_keys - observed_keys
+    expected_bindings = {
+        "prediction_rows": len(predictions),
+        "unique_prediction_keys": len(prediction_keys),
+        "duplicate_prediction_keys": len(predictions) - len(prediction_keys),
+        "observation_rows": len(observations),
+        "unique_observation_keys": len(observed_keys),
+        "duplicate_observation_keys": len(observations) - len(observed_keys),
+        "bound_prediction_keys": len(prediction_keys & observed_keys),
+        "unbound_prediction_keys": len(unbound),
+        "unbound_examples": [{"run_id": rid, "pair": pair}
+                             for rid, pair in sorted(unbound)[:10]],
+        "unbound_examples_limit": 10,
+        "binding_complete": (not unbound and len(prediction_keys) == len(predictions)
+                             and len(observed_keys) == len(observations)),
+        "scope": "observed PAPER pair/run keys only; not all eligible Kraken markets"}
     outcomes = load_strict_json((base / FILES[0]))
     episodes = load_strict_json((base / FILES[1]))
     provenance = load_strict_json((base / FILES[2]))
+    if (episodes.get("source", {}).get("prediction_bindings") != expected_bindings
+        or not expected_bindings["binding_complete"]
+        or len(observations) != outcomes.get("observed_entry_count")):
+        raise ValueError("invalid source-sealed prediction/observation bindings")
     if provenance.get("research_source_commit") != expected_head:
         raise ValueError("source head mismatch")
     if provenance.get("paper_ledger_branch_commit") != expected_ledger_commit:
@@ -106,6 +134,44 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
         window = outcomes["horizons"][horizon]
         episode = episodes["horizons"][horizon]
         coverage = episode["coverage"]
+        if coverage.get("watch_eligible") != len(predictions):
+            raise ValueError("WATCH denominator differs from sealed predictions: " + horizon)
+        unknown = coverage["watch_immature"] + coverage["watch_abstain_gap"]
+        total_watch = coverage["watch_eligible"]
+        expected_bounds = {
+            "scope": "observed PAPER WATCH entries; unknown outcomes unresolved",
+            "unknown": unknown,
+            "20": {"lower": coverage["watch_positive_20"] / total_watch if total_watch else None,
+                   "upper": (coverage["watch_positive_20"] + unknown) / total_watch if total_watch else None},
+            "30": {"lower": coverage["watch_positive"] / total_watch if total_watch else None,
+                   "upper": (coverage["watch_positive"] + unknown) / total_watch if total_watch else None}}
+        nonwatch = {key: coverage[key] - coverage["watch_" + key]
+                    for key in ("eligible", "matured", "immature", "abstain_gap")}
+        expected_selection = {
+            "watch": {"eligible": total_watch, "matured": coverage["watch_matured"],
+                      "unknown": unknown,
+                      "mature_fraction": coverage["watch_matured"] / total_watch if total_watch else None},
+            "nonwatch": {"eligible": nonwatch["eligible"], "matured": nonwatch["matured"],
+                         "unknown": nonwatch["immature"] + nonwatch["abstain_gap"],
+                         "mature_fraction": nonwatch["matured"] / nonwatch["eligible"]
+                                            if nonwatch["eligible"] else None}}
+        if (coverage.get("watch_precision_all_entries_bounds") != expected_bounds
+            or coverage.get("selection_maturity") != expected_selection
+            or total_watch != coverage["watch_matured"] + unknown
+            or nonwatch["eligible"] != nonwatch["matured"] +
+               nonwatch["immature"] + nonwatch["abstain_gap"]):
+            raise ValueError("invalid unknown WATCH precision/selection denominators: " + horizon)
+        for suffix, mover, positive in (("20", "movers_20", "watch_positive_20"),
+                                        ("30", "movers", "watch_positive")):
+            negatives = coverage["matured"] - coverage[mover]
+            false_positives = coverage["watch_matured"] - coverage[positive]
+            if (negatives < 0 or false_positives < 0 or false_positives > negatives
+                or coverage.get("matured_negative_" + suffix) != negatives
+                or coverage.get("false_positive_rate_" + suffix) != (
+                    false_positives / negatives if negatives else None)
+                or coverage.get("false_positive_rate_wilson_95_naive_" + suffix) !=
+                   wilson(false_positives, negatives)):
+                raise ValueError("invalid matured-negative false-positive-rate evidence: " + horizon)
         # Reconciles all observed pairs, not hypothetical missing exchange markets.
         pair = episode.get("pair_coverage")
         pair_keys = ("eligible","matured","immature","abstain_gap","watch_eligible",
