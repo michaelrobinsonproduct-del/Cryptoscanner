@@ -135,6 +135,12 @@ def build_consumer_graph(workflows, runtime, checkout_sha, main_sha, workflow_so
     def edge(source,target,kind,evidence,observed_runtime=False):
         edges.append({"source":source,"target":target,"kind":kind,
                       "evidence":evidence,"observed_runtime":observed_runtime})
+    names=collections.defaultdict(list)
+    paths={w["path"] for w in workflows}
+    for w in workflows:
+        if w.get("name"):
+            names[w["name"]].append(w["path"])
+    orchestration_unknowns=[]
     for w in workflows:
         source="github-workflow:"+w["path"]
         for script in w["scripts"]:
@@ -152,6 +158,25 @@ def build_consumer_graph(workflows, runtime, checkout_sha, main_sha, workflow_so
         for ref in w.get("branch_references",{}).get("branch_ref_mentions",[]):
             edge(source,"github-ref:"+ref,"static_branch_ref_mention",
                  workflow_evidence)
+        orchestration=w.get("orchestration",{})
+        for name in orchestration.get("workflow_run_names",[]):
+            matched=names.get(name,[])
+            if len(matched)==1:
+                edge(source,"github-workflow:"+matched[0],"workflow_run_subscription",workflow_evidence)
+            else:
+                edge(source,"github-workflow-name:"+name,"unresolved_workflow_run_name",workflow_evidence)
+                orchestration_unknowns.append("Workflow_run name not uniquely mapped: "+w["path"]+" -> "+name)
+        for target in orchestration.get("dispatch_workflows",[]):
+            if target.startswith(".github/workflows/"):
+                target=target[len(".github/workflows/"):]
+            dest=".github/workflows/"+target
+            if dest in paths:
+                edge(source,"github-workflow:"+dest,"explicit_workflow_dispatch_post",workflow_evidence)
+            else:
+                edge(source,"github-workflow-path:"+target,"unresolved_dispatch_target",workflow_evidence)
+                orchestration_unknowns.append("Dispatch target absent from main: "+w["path"]+" -> "+target)
+        orchestration_unknowns.extend("Unresolved orchestration in "+w["path"]+": "+x
+                                      for x in orchestration.get("unresolved",[]))
     sb=runtime.get("supabase",{})
     for item in sb.get("sample_source_consumers",[])+sb.get("source_review",{}).get("additional_direct_table_consumers",[]):
         source="supabase-edge:"+item["function"]
@@ -178,12 +203,12 @@ def build_consumer_graph(workflows, runtime, checkout_sha, main_sha, workflow_so
     return {"schema":"cryptoscanner-consumer-graph-v1",
             "audit_checkout_sha":checkout_sha,"remote_main_sha":main_sha,
             "external_snapshot_utc":runtime["snapshot_utc"],
-            "scope":"Partial static references only; not deployed caller reachability, pg_cron, dynamic references, or invocation evidence",
+            "scope":"Static source, workflow_run subscriptions and explicit POST dispatches only; not deployed caller reachability, pg_cron, dynamic references, or invocation evidence",
             "edges":sorted(edges,key=lambda e:(e["source"],e["target"],e["kind"])),
             "unknowns":["Supabase invocation/pg_cron and database schema",
                         "iOS client deployment and users",
                         "Bun external callers and Railway retained storage consumers",
-                        "GitHub workflow dynamic shell dispatch and branch-pinned consumers"]+dynamic_checkouts,
+                        "GitHub workflow dynamic shell dispatch and branch-pinned consumers"]+dynamic_checkouts+sorted(set(orchestration_unknowns)),
             "cleanup_authorized":False}
 
 
@@ -221,9 +246,88 @@ def workflow_branch_references(source):
 
 
 
+
+def workflow_orchestration_references(source):
+    """Static workflow_run subscriptions and explicit POST dispatches only."""
+    if not isinstance(source,str):
+        raise ValueError("Workflow source must be text")
+    lines=source.splitlines()
+    subscribed=[]; dispatched=[]; unresolved=[]
+    for i,line in enumerate(lines):
+        if not re.match(r"^on:\s*(?:#.*)?$",line):
+            continue
+        end=next((j for j in range(i+1,len(lines))
+                  if lines[j].strip() and not lines[j].lstrip().startswith("#")
+                  and not lines[j][0].isspace()),len(lines))
+        for j in range(i+1,end):
+            if not re.match(r"^  workflow_run:\s*(?:#.*)?$",lines[j]):
+                continue
+            stop=next((k for k in range(j+1,end)
+                       if lines[k].strip() and not lines[k].lstrip().startswith("#")
+                       and len(lines[k])-len(lines[k].lstrip())<=2),end)
+            for k in range(j+1,stop):
+                m=re.match(r"^(\s*)workflows:\s*(.*?)\s*$",lines[k])
+                if not m:
+                    continue
+                raw=m.group(2).split(" #",1)[0].strip()
+                if raw.startswith("["):
+                    try:
+                        names=ast.literal_eval(raw)
+                    except (SyntaxError,ValueError):
+                        unresolved.append("Unparseable workflow_run list: "+raw); continue
+                    if not isinstance(names,(list,tuple)):
+                        unresolved.append("Invalid workflow_run list: "+raw); continue
+                elif raw:
+                    names=[raw.strip("'\"")]
+                else:
+                    names=[]
+                    indent=len(m.group(1))
+                    for z in range(k+1,stop):
+                        item=lines[z]
+                        if not item.strip() or item.lstrip().startswith("#"):
+                            continue
+                        if len(item)-len(item.lstrip())<=indent:
+                            break
+                        mm=re.match(r"^\s+-\s+(.+?)\s*$",item)
+                        if mm:
+                            names.append(mm.group(1).split(" #",1)[0].strip().strip("'\""))
+                        else:
+                            unresolved.append("Unparsed workflow_run item: "+item.strip())
+                for name in names:
+                    if isinstance(name,str) and name and "$" not in name:
+                        subscribed.append(name)
+                    else:
+                        unresolved.append("Dynamic workflow_run name: "+str(name))
+    for line in lines:
+        cmdline=line.strip()
+        if cmdline.startswith("#") or not re.match(r"^(?:gh\s+api|gh\s+workflow\s+run|curl\s+)",cmdline):
+            continue
+        direct=re.match(r"^gh\s+workflow\s+run\s+([^\s\"']+)",cmdline)
+        if direct:
+            if "$" in direct.group(1):
+                unresolved.append("Dynamic gh workflow run: "+cmdline[:160])
+            else:
+                dispatched.append(direct.group(1))
+            continue
+        if not re.search(r"(?:-X|--method)\s+POST\b",cmdline,re.I):
+            continue
+        if "actions/workflows/" not in cmdline or "/dispatches" not in cmdline:
+            continue
+        m=re.search(r"actions/workflows/([^/\s\"']+)/dispatches\b",cmdline)
+        if m and "$" not in m.group(1):
+            dispatched.append(m.group(1))
+        else:
+            unresolved.append("Dynamic/unparsed workflow dispatch: "+cmdline[:160])
+    return {"workflow_run_names":sorted(set(subscribed)),
+            "dispatch_workflows":sorted(set(dispatched)),
+            "unresolved":sorted(set(unresolved))}
+
+
 def inventory_workflow_source(path,source):
     """Parse a workflow's exact supplied source, independent of checkout location."""
-    return {"path":path,"schedule_cron":re.findall(r"cron:\s*([^\n]+)",source),
+    return {"path":path,"name":next((m.group(1).strip().strip("\'\"") for m in re.finditer(r"^name:\\s*(.+)$",source,re.M)),None),
+            "orchestration":workflow_orchestration_references(source),
+            "schedule_cron":re.findall(r"cron:\s*([^\n]+)",source),
             "has_dispatch":"workflow_dispatch:" in source,
             "has_schedule":bool(re.search(r"^\s*schedule:",source,re.M)),
             "writes_contents":bool(re.search(r"contents:\s*write",source)),
