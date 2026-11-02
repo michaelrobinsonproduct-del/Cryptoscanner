@@ -122,12 +122,15 @@ def reconcile_pr_snapshot(triage, pr_rows, current_main_sha, fetch_pr=gh):
                        "classification_basis":"GitHub merged_at, NOT semantic equivalence of any other PR" if current.get("merged_at") else "Closed without merge; semantic outcome unknown"})
     return closed
 
-def build_consumer_graph(workflows, runtime, checkout_sha, main_sha):
+def build_consumer_graph(workflows, runtime, checkout_sha, main_sha, workflow_source="audit_checkout"):
     """Evidence-scoped dependency edges, not a certification of live invocation.
 
     Workflow edges come from the audit checkout. External edges come from a
     dated deployed-source snapshot and are explicitly NOT invocation proof.
     """
+    if workflow_source not in ("audit_checkout","remote_main"):
+        raise ValueError("Unrecognized workflow source provenance")
+    workflow_evidence=workflow_source+":"+(main_sha if workflow_source=="remote_main" else checkout_sha)
     edges=[]
     def edge(source,target,kind,evidence,observed_runtime=False):
         edges.append({"source":source,"target":target,"kind":kind,
@@ -136,19 +139,19 @@ def build_consumer_graph(workflows, runtime, checkout_sha, main_sha):
         source="github-workflow:"+w["path"]
         for script in w["scripts"]:
             edge(source,"repo-script:"+script,"invokes_script",
-                 "audit_checkout:"+checkout_sha)
+                 workflow_evidence)
         for module in w["python_modules"]:
             edge(source,"python-module:"+module,"invokes_module",
-                 "audit_checkout:"+checkout_sha)
+                 workflow_evidence)
         if w["ledger_ref"]:
             edge(source,"github-ref:paper-proof-ledger","mentions_ledger_ref",
-                 "audit_checkout:"+checkout_sha)
+                 workflow_evidence)
         for ref in w.get("branch_references",{}).get("checkout_refs",[]):
             edge(source,"github-ref:"+ref,"explicit_checkout_ref",
-                 "audit_checkout:"+checkout_sha)
+                 workflow_evidence)
         for ref in w.get("branch_references",{}).get("branch_ref_mentions",[]):
             edge(source,"github-ref:"+ref,"static_branch_ref_mention",
-                 "audit_checkout:"+checkout_sha)
+                 workflow_evidence)
     sb=runtime.get("supabase",{})
     for item in sb.get("sample_source_consumers",[])+sb.get("source_review",{}).get("additional_direct_table_consumers",[]):
         source="supabase-edge:"+item["function"]
@@ -217,6 +220,19 @@ def workflow_branch_references(source):
             "unresolved_checkout_refs":sorted(set(unresolved))}
 
 
+
+def inventory_workflow_source(path,source):
+    """Parse a workflow's exact supplied source, independent of checkout location."""
+    return {"path":path,"schedule_cron":re.findall(r"cron:\s*([^\n]+)",source),
+            "has_dispatch":"workflow_dispatch:" in source,
+            "has_schedule":bool(re.search(r"^\s*schedule:",source,re.M)),
+            "writes_contents":bool(re.search(r"contents:\s*write",source)),
+            "ledger_ref":"paper-proof-ledger" in source,
+            "python_modules":sorted(set(re.findall(r"python\s+-m\s+([A-Za-z0-9_.]+)",source))),
+            "scripts":sorted(set(re.findall(r"(?:python|bun|node)\s+([A-Za-z0-9_./-]+\.(?:py|ts|mjs))",source))),
+            "branch_references":workflow_branch_references(source)}
+
+
 def main():
     tracked=cmd("git","ls-files")
     if not tracked["ok"]:
@@ -233,22 +249,25 @@ def main():
                 if isinstance(n,ast.Import):
                     for alias in n.names:imports[alias.name].append(f)
         except (SyntaxError,UnicodeError):pass
-    workflow_inventory=[]
-    for p in workflows:
-        s=pathlib.Path(p).read_text()
-        workflow_inventory.append({"path":p,"schedule_cron":re.findall(r"cron:\s*([^\n]+)",s),
-          "has_dispatch":"workflow_dispatch:" in s,"has_schedule":bool(re.search(r"^\s*schedule:",s,re.M)),
-          "writes_contents":bool(re.search(r"contents:\s*write",s)),
-          "ledger_ref":"paper-proof-ledger" in s,
-          "python_modules":sorted(set(re.findall(r"python\s+-m\s+([A-Za-z0-9_.]+)",s))),
-          "scripts":sorted(set(re.findall(r"(?:python|bun|node)\s+([A-Za-z0-9_./-]+\.(?:py|ts|mjs))",s))),
-          "branch_references":workflow_branch_references(s)})
+    workflow_inventory=[inventory_workflow_source(p,pathlib.Path(p).read_text()) for p in workflows]
     triage=json.loads((ROOT/"audit_tools/pr_triage_20261102.json").read_text())
     triage_by_number={p["number"]:p for p in triage["prs"]}
     main_ref=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/git/ref/heads/main")
     main_sha=main_ref.get("object",{}).get("sha") if isinstance(main_ref,dict) else None
     main_blobs=remote_main_blobs(main_sha)
     main_files=set(main_blobs)
+    main_workflows=sorted(p for p in main_files if p.startswith(".github/workflows/") and p.endswith((".yml",".yaml")))
+    # Fetch only into the ephemeral audit runner, never push or mutate a remote ref.
+    fetched=cmd("git","fetch","--no-tags","--depth=1","origin","refs/heads/main")
+    if not fetched["ok"] or not cmd("git","cat-file","-e",main_sha+"^{commit}")["ok"]:
+        raise RuntimeError("Exact remote main source unavailable: "+fetched["error"])
+    main_workflow_inventory=[]
+    for path in main_workflows:
+        blob=cmd("git","rev-parse",main_sha+":"+path)
+        source=cmd("git","show",main_sha+":"+path)
+        if not blob["ok"] or blob["output"].strip()!=main_blobs[path] or not source["ok"]:
+            raise RuntimeError("Remote main workflow source/blob mismatch: "+path)
+        main_workflow_inventory.append(inventory_workflow_source(path,source["output"]))
     prs=gh_pages("repos/michaelrobinsonproduct-del/Cryptoscanner/pulls?state=open")
     pr_rows=[]
     if isinstance(prs,list):
@@ -296,7 +315,7 @@ def main():
         "files":files,"checkout_files":files,"main_files":sorted(main_files),
         "main_blob_shas":main_blobs,
         "main_workflows":sorted(p for p in main_files if p.startswith(".github/workflows/") and p.endswith((".yml",".yaml"))),
-        "workflow_inventory":workflow_inventory,"python_imports":dict(imports),
+        "workflow_inventory":workflow_inventory,"main_workflow_inventory":main_workflow_inventory,"python_imports":dict(imports),
         "package_scripts":package.get("scripts",{}),"legacy_files":legacy_files,
         "triage_snapshot_main_sha":triage.get("main_sha"),
         "triage_snapshot_main_matches":triage.get("main_sha")==main_ref.get("object",{}).get("sha"),
@@ -313,7 +332,7 @@ def main():
         "run_scope":"latest 30 repository-wide GitHub Actions runs, not complete history",
         "branch_scope":"all branches across every API page, fail-closed if incomplete"}
     out=ROOT/"audit-evidence";out.mkdir(exist_ok=True)
-    graph=build_consumer_graph(workflow_inventory,external_runtime,data["checkout_sha"],data["main_sha"])
+    graph=build_consumer_graph(main_workflow_inventory,external_runtime,data["checkout_sha"],data["main_sha"],workflow_source="remote_main")
     (out/"consumer-graph.json").write_text(json.dumps(graph,indent=2,sort_keys=True)+"\n")
     (out/"scanner-inventory.json").write_text(json.dumps(data,indent=2,sort_keys=True)+"\n")
     lines=["# Scanner runtime and legacy inventory (read-only)","",
