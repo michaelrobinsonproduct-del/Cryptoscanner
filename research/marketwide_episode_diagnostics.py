@@ -237,27 +237,40 @@ def analyze(state):
                     "watch_positive_20": 0, "movers_20": 0,
                     "feature_30m": 0, "feature_60m": 0, "feature_180m": 0,
                     "mover_feature_60m": 0}
+        # Per-observed-pair denominators. No inferred unobserved Kraken markets.
+        pair_keys = ("eligible", "matured", "immature", "abstain_gap",
+                     "watch_eligible", "watch_matured", "watch_immature",
+                     "watch_abstain_gap", "movers_20", "movers",
+                     "watch_positive_20", "watch_positive")
+        per_pair = {pair: {key: 0 for key in pair_keys} for pair in by_pair}
         for pair, series in by_pair.items():
+            pair_counts = per_pair[pair]
             series.sort()
             times = [s[0] for s in series]
             for i, (at, entry, rid) in enumerate(series):
                 coverage["eligible"] += 1
+                pair_counts["eligible"] += 1
                 selected = (rid,pair) in watches
                 if selected:
                     coverage["watch_eligible"] += 1
+                    pair_counts["watch_eligible"] += 1
                 start = runs[rid]
                 target = start + dt.timedelta(hours=hours)
                 if latest is None or latest < target + MAX_GAP:
                     coverage["immature"] += 1
+                    pair_counts["immature"] += 1
                     if selected:
                         coverage["watch_immature"] += 1
+                        pair_counts["watch_immature"] += 1
                     continue
                 # A quote observed after its own scan decision is not an
                 # executable as-of entry, even if it is otherwise fresh.
                 if at > start:
                     coverage["abstain_gap"] += 1
+                    pair_counts["abstain_gap"] += 1
                     if selected:
                         coverage["watch_abstain_gap"] += 1
+                        pair_counts["watch_abstain_gap"] += 1
                         coverage["watch_abstain_future_entry_quotes"] += 1
                     coverage["abstain_future_entry_quotes"] += 1
                     continue
@@ -275,8 +288,10 @@ def analyze(state):
                     or any(t in conflicting_times[pair] for t,_ in before)
                     or any(t in conflicting_times[pair] for t,_ in anchors)):
                     coverage["abstain_gap"] += 1
+                    pair_counts["abstain_gap"] += 1
                     if selected:
                         coverage["watch_abstain_gap"] += 1
+                        pair_counts["watch_abstain_gap"] += 1
                         coverage["watch_abstain_conflicting_quotes"] += 1
                     coverage["abstain_conflicting_quotes"] += 1
                     continue
@@ -294,14 +309,18 @@ def analyze(state):
                     reason = "abstain_discontinuous_path"
                 if reason is not None:
                     coverage["abstain_gap"] += 1
+                    pair_counts["abstain_gap"] += 1
                     coverage[reason] += 1
                     if selected:
                         coverage["watch_abstain_gap"] += 1
+                        pair_counts["watch_abstain_gap"] += 1
                         coverage["watch_" + reason] += 1
                     continue
                 coverage["matured"] += 1
+                pair_counts["matured"] += 1
                 if selected:
                     coverage["watch_matured"] += 1
+                    pair_counts["watch_matured"] += 1
                 peak_price = max(p for _,p in before)
                 peak = peak_price/entry - 1
                 # Convert the source's finite decimal price representation,
@@ -311,12 +330,16 @@ def analyze(state):
                 hit = Decimal(str(peak_price)) >= Decimal(str(entry))*Decimal('1.30')
                 if hit20:
                     coverage["movers_20"] += 1
+                    pair_counts["movers_20"] += 1
                     if selected:
                         coverage["watch_positive_20"] += 1
+                        pair_counts["watch_positive_20"] += 1
                 if hit:
                     coverage["movers"] += 1
+                    pair_counts["movers"] += 1
                     if selected:
                         coverage["watch_positive"] += 1
+                        pair_counts["watch_positive"] += 1
                 lag = {}
                 lag_reasons = {}
                 for minutes in (30,60,180):
@@ -342,6 +365,23 @@ def analyze(state):
                     cases.append(record)
                 else:
                     negatives.append(record)
+        # Conservation holds over every observed pair, not merely the top-N
+        # display. The bounded list is descriptive coverage triage, not an
+        # invented list of missing/unseen exchange markets.
+        pair_totals = {key: sum(row[key] for row in per_pair.values())
+                       for key in pair_keys}
+        assert all(pair_totals[key] == coverage[key] for key in pair_keys)
+        assert all(row["eligible"] == row["matured"] + row["immature"] +
+                   row["abstain_gap"] and
+                   row["watch_eligible"] == row["watch_matured"] +
+                   row["watch_immature"] + row["watch_abstain_gap"]
+                   for row in per_pair.values())
+        top_gap_pairs = [
+            {"pair":pair, **per_pair[pair]}
+            for pair in sorted(per_pair,
+                               key=lambda p: (-per_pair[p]["abstain_gap"], p))
+            if per_pair[pair]["abstain_gap"] > 0
+        ][:10]
         # Repeated overlapping entry/horizon labels are not independent movers.
         # Cluster same-pair positives whose entry times fall within one horizon.
         episodes = cluster_episodes(cases,hours)
@@ -438,13 +478,21 @@ def analyze(state):
         coverage["watch_false_positive_20"] = coverage["watch_matured"] - coverage["watch_positive_20"]
         coverage["missed_20"] = coverage["movers_20"] - coverage["watch_positive_20"]
         coverage["missed_30"] = coverage["movers"] - coverage["watch_positive"]
-        output[str(hours)] = {"coverage":coverage,"unique_mover_episodes":len(episodes),
+        output[str(hours)] = {"coverage":coverage,
+            "pair_coverage":{"observed_pairs":len(per_pair),
+                             "pairs_with_gap":sum(v["abstain_gap"] > 0 for v in per_pair.values()),
+                             "totals":pair_totals,
+                             "top_gap_pairs":top_gap_pairs,
+                             "top_gap_pairs_limit":10,
+                             "scope":"observed PAPER pairs only; no inferred unobserved markets"},
+            "unique_mover_episodes":len(episodes),
             "unique_mover_pairs":len({e["pair"] for e in episodes}),
             "unique_mover_episodes_20":len(episodes20),
             "watch_captured_episodes_20":episode_watch_count_20,
             "watch_first_entry_episodes_20":first_watch_count_20,
             "watch_late_only_episodes_20":episode_watch_count_20-first_watch_count_20,
             "watch_first_entry_recall_20":first_watch_count_20/len(episodes20) if episodes20 else None,
+            "watch_first_entry_recall_wilson_95_naive_20":wilson(first_watch_count_20,len(episodes20)),
             "watch_nonhit_windows_20":len(nonhit_windows_20),
             "watch_nonhit_windows_30":len(nonhit_windows_30),
             "watch_nonhit_distinct_pairs_20":len({e["pair"] for e in nonhit_windows_20}),
@@ -467,6 +515,7 @@ def analyze(state):
             "watch_first_entry_episodes_30":first_watch_count,
             "watch_late_only_episodes_30":episode_watch_count-first_watch_count,
             "watch_first_entry_recall_30":first_watch_count/len(episodes) if episodes else None,
+            "watch_first_entry_recall_wilson_95_naive_30":wilson(first_watch_count,len(episodes)),
             "watch_episode_recall_30":episode_watch_count/len(episodes) if episodes else None,
             "watch_episode_recall_wilson_95_naive":wilson(episode_watch_count,len(episodes)),
             "episode_first_entry_feature_distributions":episode_features,

@@ -811,5 +811,73 @@ class EpisodeTests(unittest.TestCase):
             self.assertEqual(reasons["60m"]["missing_reasons"],{"reason_unavailable":1})
             self.assertEqual(reasons["60m"]["with_asof_feature"],0)
 
+
+    def test_per_pair_coverage_conserves_all_mature_gap_immature_and_watch_counts(self):
+        state=fixture()
+        state["predictions"].append({"run_id":"0","pair":"AAAUSD"})
+        state["observations"]=[o for o in state["observations"] if not
+            (o["run_id"] in ("60","90") and o["pair"]=="AAAUSD")]
+        with patch("paper_pov.ledger.verify",return_value=None):
+            horizons=analyze(state)["horizons"]
+        keys=("eligible","matured","immature","abstain_gap","watch_eligible",
+              "watch_matured","watch_immature","watch_abstain_gap","movers_20",
+              "movers","watch_positive_20","watch_positive")
+        observed={o["pair"] for o in state["observations"]}
+        for report in horizons.values():
+            c=report["coverage"]
+            p=report["pair_coverage"]
+            self.assertEqual(p["observed_pairs"],len(observed))
+            self.assertEqual(set(p["totals"]),set(keys))
+            for key in keys:
+                self.assertEqual(p["totals"][key],c[key])
+            self.assertLessEqual(len(p["top_gap_pairs"]),10)
+            self.assertTrue(all(row["pair"] in observed and row["abstain_gap"]>0
+                                for row in p["top_gap_pairs"]))
+            self.assertEqual(p["top_gap_pairs"],
+                             sorted(p["top_gap_pairs"],
+                                    key=lambda row:(-row["abstain_gap"],row["pair"])))
+        self.assertGreater(horizons["1"]["pair_coverage"]["pairs_with_gap"],0)
+
+    def test_pair_gap_rank_ties_use_stable_names_and_never_invent_pairs(self):
+        state=fixture()
+        # Two observed pairs with the same sparse pattern must tie by name.
+        state["observations"]=[
+            {"run_id":rid,"at":iso(int(rid)),"pair":pair,"price":100}
+            for pair in ("ZZZUSD","CCCUSD")
+            for rid in ("0","480")]
+        state["predictions"]=[]
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]["pair_coverage"]
+        self.assertEqual(one["observed_pairs"],2)
+        self.assertEqual(one["pairs_with_gap"],2)
+        self.assertEqual([r["pair"] for r in one["top_gap_pairs"]],
+                         ["CCCUSD","ZZZUSD"])
+        self.assertEqual(one["totals"]["eligible"],4)
+        self.assertEqual(one["totals"]["abstain_gap"],2)
+        self.assertEqual(one["totals"]["immature"],2)
+
+    def test_first_entry_recall_uncertainty_uses_episode_not_case_denominator(self):
+        state=fixture()
+        with patch("paper_pov.ledger.verify",return_value=None):
+            horizons=analyze(state)["horizons"]
+        for report in horizons.values():
+            for threshold in (20,30):
+                suffix="_20" if threshold==20 else ""
+                total=report["unique_mover_episodes"+suffix]
+                first=report["watch_first_entry_episodes_"+str(threshold)]
+                self.assertEqual(report["watch_first_entry_recall_wilson_95_naive_"+str(threshold)],
+                                 wilson(first,total))
+                if total==0:
+                    self.assertIsNone(report["watch_first_entry_recall_wilson_95_naive_"+str(threshold)])
+        # Late WATCH may capture an episode but cannot count as first entry.
+        state["predictions"].append({"run_id":"30","pair":"AAAUSD"})
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        self.assertLessEqual(one["watch_first_entry_episodes_30"],
+                             one["watch_captured_episodes"])
+        self.assertEqual(one["watch_first_entry_recall_wilson_95_naive_30"],
+                         wilson(one["watch_first_entry_episodes_30"],
+                                one["unique_mover_episodes"]))
+
 if __name__=="__main__":
     unittest.main()
