@@ -194,6 +194,26 @@ class CadenceProvenanceTests(unittest.TestCase):
             self.assertEqual(report["max_verified_writer_job_queue_seconds"], 3)
             self.assertFalse(report["runs"][0]["durable_ledger_verified"])
 
+    def test_latest_native_vs_dispatch_source_drift_is_explicit(self):
+        other = "b" * 40
+        rows = [run(1, "2026-11-01T19:10:01Z"),
+                run(2, "2026-11-01T19:40:01Z", event="workflow_dispatch", sha=other)]
+        logs = {"1": log(), "2": log(event="workflow_dispatch",
+                                     cron="MANUAL_DISPATCH", sha=other)}
+        result = self.check(rows, logs)
+        self.assertEqual(result["latest_native_source_sha"], SHA)
+        self.assertEqual(result["latest_dispatch_source_sha"], other)
+        self.assertIs(result["latest_cross_event_source_sha_equal"], False)
+        self.assertNotIn("manual_parity_verified", result)
+
+    def test_equal_cross_event_sha_is_not_results_parity(self):
+        rows = [run(), run(2, "2026-11-01T19:40:01Z", event="workflow_dispatch")]
+        logs = {"1": log(), "2": log(event="workflow_dispatch",
+                                     cron="MANUAL_DISPATCH")}
+        result = self.check(rows, logs)
+        self.assertIs(result["latest_cross_event_source_sha_equal"], True)
+        self.assertNotIn("manual_parity_verified", result)
+
     def test_no_false_ledger_or_trade_claims(self):
         result = self.check()
         self.assertNotIn("ledger_verified", result)
