@@ -17,8 +17,8 @@ def log(event="schedule", cron="39 * * * *", sha=SHA):
 NOW = "2026-11-02T03:20:00Z"
 
 class CadenceProvenanceTests(unittest.TestCase):
-    def check(self, rows=None, logs=None):
-        return audit(rows if rows is not None else [run()], logs if logs is not None else {"1": log()}, NOW)
+    def check(self, rows=None, logs=None, jobs=None):
+        return audit(rows if rows is not None else [run()], logs if logs is not None else {"1": log()}, NOW, jobs=jobs)
 
     def test_actual_late_39_slot_is_not_misattributed_to_09_slot(self):
         result = self.check()
@@ -145,6 +145,30 @@ class CadenceProvenanceTests(unittest.TestCase):
         self.assertIsNone(result["over_45m_since_verified_successful_run_creation"])
         self.assertIsNone(result["max_verified_successful_run_creation_gap_seconds"])
         self.assertIsNone(result["seconds_since_last_verified_successful_run_creation"])
+
+    def test_authenticated_writer_job_queue_separates_from_cron_lateness(self):
+        jobs = {"1": [{"run_id": 1, "name": "public-paper",
+                        "started_at": "2026-11-01T19:10:04Z"}]}
+        result = self.check(jobs=jobs)
+        self.assertEqual(result["writer_job_queue_sample_count"], 1)
+        self.assertEqual(result["max_verified_writer_job_queue_seconds"], 3)
+        self.assertEqual(result["runs"][0]["minimum_lateness_seconds"], 1861)
+        self.assertEqual(result["runs"][0]["writer_job_queue_seconds"], 3)
+
+    def test_untrusted_or_ambiguous_job_timing_abstains(self):
+        for candidates in (None, [], [{"run_id": 999, "name": "public-paper",
+                                        "started_at": "2026-11-01T19:10:04Z"}],
+                           [{"run_id": 1, "name": "other",
+                             "started_at": "2026-11-01T19:10:04Z"}],
+                           [{"run_id": 1, "name": "public-paper",
+                             "started_at": "2026-11-01T19:09:59Z"}],
+                           [{"run_id": 1, "name": "public-paper",
+                             "started_at": "2026-11-01T19:10:04Z"}] * 2):
+            with self.subTest(candidates=candidates):
+                result = self.check(jobs={"1": candidates})
+                self.assertEqual(result["writer_job_queue_sample_count"], 0)
+                self.assertIsNone(result["max_verified_writer_job_queue_seconds"])
+                self.assertNotIn("writer_job_queue_seconds", result["runs"][0])
 
     def test_no_false_ledger_or_trade_claims(self):
         result = self.check()
