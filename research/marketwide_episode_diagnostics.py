@@ -209,6 +209,30 @@ def analyze(state):
     runs = {r["id"]: timestamp(r["as_of"]) for r in state["runs"]}
     latest = max(runs.values(), default=None)
     watches = {(p["run_id"], p["pair"]) for p in state["predictions"]}
+    # Diagnose whether the verified PAPER predictions can actually be bound
+    # to observed pair/run snapshots. Never silently infer missing markets.
+    # This is bounded descriptive integrity metadata, not source authentication.
+    observed_keys = {(o["run_id"], o["pair"]) for o in state["observations"]}
+    unbound = watches - observed_keys
+    prediction_bindings = {
+        "prediction_rows": len(state["predictions"]),
+        "unique_prediction_keys": len(watches),
+        "duplicate_prediction_keys": len(state["predictions"]) - len(watches),
+        "observation_rows": len(state["observations"]),
+        "unique_observation_keys": len(observed_keys),
+        "duplicate_observation_keys": len(state["observations"]) - len(observed_keys),
+        "bound_prediction_keys": len(watches & observed_keys),
+        "unbound_prediction_keys": len(unbound),
+        "unbound_examples": [
+            {"run_id":rid, "pair":pair}
+            for rid,pair in sorted(unbound)[:10]],
+        "unbound_examples_limit": 10,
+        "binding_complete": (not unbound and
+                             len(watches) == len(state["predictions"]) and
+                             len(observed_keys) == len(state["observations"])),
+        "scope": "observed PAPER pair/run keys only; not all eligible Kraken markets"}
+    assert (prediction_bindings["bound_prediction_keys"] +
+            prediction_bindings["unbound_prediction_keys"] == len(watches))
     by_pair = defaultdict(list)
     for o in state["observations"]:
         # Keep the source's exact decimal quote through threshold comparisons.
@@ -613,7 +637,8 @@ def analyze(state):
                       "complete_market_history":False,
                       "eligible_for_model_promotion":False,
                       "data_scope":"SHA-verified PAPER snapshot ledger, not exchange-authenticated full history",
-                      "runs":len(state["runs"]),"observations":len(state["observations"])},
+                      "runs":len(state["runs"]),"observations":len(state["observations"]),
+                      "prediction_bindings":prediction_bindings},
             "horizons":output}
 
 

@@ -993,5 +993,38 @@ class EpisodeTests(unittest.TestCase):
         self.assertIsNone(c["false_positive_rate_20"])
         self.assertIsNone(c["false_positive_rate_wilson_95_naive_30"])
 
+    def test_prediction_binding_reports_duplicate_and_unbound_watch_keys(self):
+        state = fixture()
+        state["predictions"].extend([
+            {"run_id":"30", "pair":"BBBUSD"},
+            {"run_id":"0", "pair":"UNOBSERVEDUSD"}])
+        with patch("paper_pov.ledger.verify", return_value=None):
+            result = analyze(state)
+        binding = result["source"]["prediction_bindings"]
+        self.assertEqual(binding["prediction_rows"], 3)
+        self.assertEqual(binding["unique_prediction_keys"], 2)
+        self.assertEqual(binding["duplicate_prediction_keys"], 1)
+        self.assertEqual(binding["bound_prediction_keys"], 1)
+        self.assertEqual(binding["unbound_prediction_keys"], 1)
+        self.assertEqual(binding["unbound_examples"],
+                         [{"run_id":"0","pair":"UNOBSERVEDUSD"}])
+        self.assertFalse(binding["binding_complete"])
+        # The orphan cannot become a fabricated WATCH market observation.
+        self.assertEqual(result["horizons"]["1"]["coverage"]["watch_eligible"], 1)
+
+    def test_prediction_binding_empty_and_duplicate_observation_diagnostics(self):
+        state = fixture()
+        state["predictions"] = []
+        with patch("paper_pov.ledger.verify", return_value=None):
+            b = analyze(state)["source"]["prediction_bindings"]
+        self.assertTrue(b["binding_complete"])
+        self.assertEqual(b["unbound_examples"], [])
+        self.assertEqual(b["bound_prediction_keys"], 0)
+        state["observations"].append(dict(state["observations"][0]))
+        with patch("paper_pov.ledger.verify", return_value=None):
+            b = analyze(state)["source"]["prediction_bindings"]
+        self.assertEqual(b["duplicate_observation_keys"], 1)
+        self.assertFalse(b["binding_complete"])
+
 if __name__=="__main__":
     unittest.main()
