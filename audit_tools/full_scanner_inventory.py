@@ -325,7 +325,7 @@ def workflow_orchestration_references(source):
 
 def inventory_workflow_source(path,source):
     """Parse a workflow's exact supplied source, independent of checkout location."""
-    return {"path":path,"name":next((m.group(1).strip().strip("\'\"") for m in re.finditer(r"^name:\\s*(.+)$",source,re.M)),None),
+    return {"path":path,"name":next((m.group(1).strip().strip("\'\"") for m in re.finditer(r"^name:\s*(.+)$",source,re.M)),None),
             "orchestration":workflow_orchestration_references(source),
             "schedule_cron":re.findall(r"cron:\s*([^\n]+)",source),
             "has_dispatch":"workflow_dispatch:" in source,
