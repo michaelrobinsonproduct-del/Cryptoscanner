@@ -129,7 +129,8 @@ def analyze(state):
     output = {}
     for hours in HORIZONS:
         positives, negatives, cases, cases20 = [], [], [], []
-        coverage = {"eligible": 0, "immature": 0, "abstain_gap": 0, "matured": 0,
+        coverage = {"eligible": 0, "immature": 0, "abstain_gap": 0,
+                    "abstain_conflicting_quotes": 0, "abstain_future_entry_quotes": 0, "matured": 0,
                     "watch_matured": 0, "watch_positive": 0, "movers": 0,
                     "watch_positive_20": 0, "movers_20": 0,
                     "feature_30m": 0, "feature_60m": 0, "feature_180m": 0,
@@ -145,6 +146,11 @@ def analyze(state):
                 if latest is None or latest < target + MAX_GAP:
                     coverage["immature"] += 1
                     continue
+                # A quote timestamp later than its own decision cannot be an as-of entry.
+                if at > start:
+                    coverage["abstain_gap"] += 1
+                    coverage["abstain_future_entry_quotes"] += 1
+                    continue
                 end = bisect.bisect_right(times, target+MAX_GAP, lo=i+1)
                 future = series[i+1:end]
                 # The PAPER decision is the immutable run as_of, not its
@@ -156,7 +162,11 @@ def analyze(state):
                 ambiguous = (at in conflicting_quotes[pair] or
                              bisect.bisect_right(conflicts, start) <
                              bisect.bisect_right(conflicts, target+MAX_GAP))
-                if (ambiguous or not before or not anchors or start-at > MAX_GAP
+                if ambiguous:
+                    coverage["abstain_gap"] += 1
+                    coverage["abstain_conflicting_quotes"] += 1
+                    continue
+                if (not before or not anchors or start-at > MAX_GAP
                     or any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
                     or anchors[0][0]-timeline[-1] > MAX_GAP):
                     coverage["abstain_gap"] += 1
@@ -196,6 +206,7 @@ def analyze(state):
                     coverage["mover_feature_60m"] += 1
                 record = {"pair":pair,"entry_at":at.isoformat(),"run_id":rid,"decision_at":start.isoformat(),
                           "peak_observed_return":round(peak,8) if peak is not None else None,
+                          "entry_quote_age_minutes":(start-at).total_seconds()/60,
                           "hit_20":hit20,"hit_30":hit,
                           "watch":selected,"lagged_returns":lag}
                 if hit20:
@@ -210,6 +221,7 @@ def analyze(state):
         episodes = cluster_episodes(cases,hours)
         episodes20 = cluster_episodes(cases20,hours)
         episode_watch_count = sum(e["watch_captured"] for e in episodes)
+        episode_watch_count_20 = sum(e["watch_captured"] for e in episodes20)
         episode_first_lags = [e["first_lagged_60m"] for e in episodes
                               if e["first_lagged_60m"] is not None]
         # Descriptive only: features cannot be backfilled for most first observations.
@@ -235,6 +247,10 @@ def analyze(state):
                      distinct_pairs=len({r["pair"] for r in first_entries
                                          if r["lagged_returns"][key] is not None}))
             for key in ("30m","60m","180m")}
+        first_entries_20 = [{"pair":e["pair"],"lagged_returns":e["first_lagged_returns"]}
+                            for e in episodes20]
+        episode_features_20 = {key:summarize_feature(first_entries_20,key)
+                               for key in ("30m","60m","180m")}
         assert coverage["eligible"]==coverage["matured"]+coverage["abstain_gap"]+coverage["immature"]
         assert coverage["movers"]==len(positives)
         assert coverage["movers_20"]==len(cases20)
@@ -242,10 +258,15 @@ def analyze(state):
                                         if coverage["eligible"] else None)
         coverage["distinct_matured_pairs"] = len({r["pair"] for r in positives+negatives})
         coverage["distinct_positive_pairs"] = len({r["pair"] for r in positives})
+        # Only matured, non-abstained WATCH cases can be labeled nonhits.
+        coverage["watch_false_positive_30"] = coverage["watch_matured"] - coverage["watch_positive"]
+        coverage["watch_false_positive_20"] = coverage["watch_matured"] - coverage["watch_positive_20"]
         output[str(hours)] = {"coverage":coverage,"unique_mover_episodes":len(episodes),
             "unique_mover_pairs":len({e["pair"] for e in episodes}),
             "unique_mover_episodes_20":len(episodes20),
-            "watch_captured_episodes_20":sum(e["watch_captured"] for e in episodes20),
+            "watch_captured_episodes_20":episode_watch_count_20,
+            "watch_episode_recall_wilson_95_naive_20":wilson(episode_watch_count_20,len(episodes20)),
+            "episode_first_entry_feature_distributions_20":episode_features_20,
             "watch_episode_recall_20":(sum(e["watch_captured"] for e in episodes20)/len(episodes20)
                                       if episodes20 else None),
             "watch_recall_20":(coverage["watch_positive_20"]/coverage["movers_20"]
