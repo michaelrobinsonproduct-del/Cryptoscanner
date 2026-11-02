@@ -91,6 +91,35 @@ def chronological_readiness(records, runs, hours, positive_key="hit_30"):
                 if not require_first_feature or r["lagged_returns"]["60m"] is not None:
                     count += 1
         return count
+    def first_entry_feature_reasons(positive_rows):
+        """Missing as-of features at the FIRST qualifying positive decision.
+
+        Later overlapping positive cases cannot repair the initial signal.
+        Synthetic records lacking reason metadata are explicitly attributed
+        as unknown, never silently labeled covered.
+        """
+        result = {lag:{"episodes":0,"with_asof_feature":0,
+                       "without_asof_feature":0,"missing_reasons":{}}
+                  for lag in ("30m","60m","180m")}
+        first_by_pair = {}
+        for r in sorted(positive_rows, key=lambda x:(x["pair"], runs[x["run_id"]])):
+            decision = runs[r["run_id"]]
+            first = first_by_pair.get(r["pair"])
+            if first is not None and decision-first <= dt.timedelta(hours=hours):
+                continue
+            first_by_pair[r["pair"]] = decision
+            for lag, stats in result.items():
+                stats["episodes"] += 1
+                if r["lagged_returns"].get(lag) is not None:
+                    stats["with_asof_feature"] += 1
+                else:
+                    stats["without_asof_feature"] += 1
+                    reason = r.get("lagged_return_reasons", {}).get(lag, "reason_unavailable")
+                    stats["missing_reasons"][reason] = stats["missing_reasons"].get(reason,0)+1
+        for stats in result.values():
+            assert stats["episodes"] == stats["with_asof_feature"]+stats["without_asof_feature"]
+            assert stats["without_asof_feature"] == sum(stats["missing_reasons"].values())
+        return result
     def summary(rows):
         featured = [r for r in rows if r["lagged_returns"]["60m"] is not None]
         positive = [r for r in rows if r[positive_key]]
@@ -102,8 +131,14 @@ def chronological_readiness(records, runs, hours, positive_key="hit_30"):
                 "lag_60m_covered":len(featured),
                 "positive_lag_60m_covered":len(featured_positive),
                 "positive_lag_60m_episodes":independent_positive_episodes(positive, require_first_feature=True),
+                "positive_first_entry_feature_coverage":first_entry_feature_reasons(positive),
                 "negative_lag_60m_pairs":len({r["pair"] for r in featured_negative})}
     a,b=summary(train),summary(test)
+    for partition in (a,b):
+        assert (partition["positive_first_entry_feature_coverage"]["60m"]["with_asof_feature"]
+                == partition["positive_lag_60m_episodes"])
+        assert all(s["episodes"] == partition["positive_episodes"]
+                   for s in partition["positive_first_entry_feature_coverage"].values())
     # Concrete missing sample requirements, not a fabricated trained model.
     # The >=10 thresholds are a minimal readiness diagnostic, not statistical
     # proof of generalization or independent exchange-authenticated coverage.

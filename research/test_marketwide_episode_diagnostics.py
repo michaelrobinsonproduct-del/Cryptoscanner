@@ -769,5 +769,47 @@ class EpisodeTests(unittest.TestCase):
             if c["watch_matured"]==0:
                 self.assertIsNone(report["watch_precision_wilson_95_naive_20"])
 
+
+    def test_chronological_first_entry_missing_reasons_never_backfill_late_surge(self):
+        runs={str(m):BASE+dt.timedelta(hours=m) for m in range(100)}
+        rows=[]
+        for offset in (0,70):
+            for k in range(3):
+                pair=f"POS{k}USD"
+                rows.append({"run_id":str(offset),"pair":pair,"hit_30":True,
+                             "lagged_returns":{"30m":None,"60m":None,"180m":0.03},
+                             "lagged_return_reasons":{"30m":"no_prior_anchor",
+                                                       "60m":"discontinuous_history",
+                                                       "180m":"covered"}})
+                rows.append({"run_id":str(offset+1),"pair":pair,"hit_30":True,
+                             "lagged_returns":{"30m":0.1,"60m":0.2,"180m":0.3},
+                             "lagged_return_reasons":{"30m":"covered","60m":"covered",
+                                                       "180m":"covered"}})
+        split=chronological_readiness(rows,runs,6)
+        for part in ("train","test"):
+            s=split[part]
+            self.assertEqual(s["positive_episodes"],3)
+            self.assertEqual(s["positive_lag_60m_covered"],3)
+            self.assertEqual(s["positive_lag_60m_episodes"],0)
+            f=s["positive_first_entry_feature_coverage"]
+            self.assertEqual(f["30m"]["missing_reasons"],{"no_prior_anchor":3})
+            self.assertEqual(f["60m"]["missing_reasons"],{"discontinuous_history":3})
+            self.assertEqual(f["180m"]["with_asof_feature"],3)
+            for lag in ("30m","60m","180m"):
+                self.assertEqual(f[lag]["episodes"],3)
+                self.assertEqual(f[lag]["without_asof_feature"],
+                                 sum(f[lag]["missing_reasons"].values()))
+
+    def test_chronological_missing_reason_unavailable_is_explicit(self):
+        runs={str(m):BASE+dt.timedelta(hours=m) for m in range(100)}
+        rows=[{"run_id":str(m),"pair":"POSUSD","hit_30":True,
+               "lagged_returns":{"30m":None,"60m":None,"180m":None}}
+              for m in (0,70)]
+        split=chronological_readiness(rows,runs,1)
+        for part in ("train","test"):
+            reasons=split[part]["positive_first_entry_feature_coverage"]
+            self.assertEqual(reasons["60m"]["missing_reasons"],{"reason_unavailable":1})
+            self.assertEqual(reasons["60m"]["with_asof_feature"],0)
+
 if __name__=="__main__":
     unittest.main()
