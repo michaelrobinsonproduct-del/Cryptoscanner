@@ -6,6 +6,8 @@ on:
       - 'research/test_marketwide_paper_outcomes.py'
       - 'research/marketwide_episode_diagnostics.py'
       - 'research/test_marketwide_episode_diagnostics.py'
+      - 'research/kraken_archive_readiness.py'
+      - 'research/test_kraken_archive_readiness.py'
       - '.github/workflows/research-marketwide-checks.yml'
   workflow_dispatch:
 permissions:
@@ -32,8 +34,8 @@ jobs:
         run: |
           set -euo pipefail
           git rev-parse HEAD
-          python -m unittest research.test_marketwide_paper_outcomes research.test_marketwide_episode_diagnostics -v
-          python -m compileall -q research/marketwide_paper_outcomes.py research/marketwide_episode_diagnostics.py
+          python -m unittest research.test_marketwide_paper_outcomes research.test_marketwide_episode_diagnostics research.test_kraken_archive_readiness -v
+          python -m compileall -q research/marketwide_paper_outcomes.py research/marketwide_episode_diagnostics.py research/kraken_archive_readiness.py
       - name: Verify existing segmented PAPER ledger read-only and evaluate authentic observations
         run: |
           set -euo pipefail
