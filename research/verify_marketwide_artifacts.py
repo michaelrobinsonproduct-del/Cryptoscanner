@@ -112,6 +112,30 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
             or episode["missed_mover_episodes_30"] != (episode["unique_mover_episodes"] -
                 episode["watch_captured_episodes"])):
             raise ValueError("cross-report cohort partition mismatch: " + horizon)
+        # The descriptive early-entry signal must not be inflated by a WATCH
+        # arriving only after an episode's first qualifying observation.
+        for suffix, captured in (("20", "watch_captured_episodes_20"),
+                                 ("30", "watch_captured_episodes")):
+            first = episode.get("watch_first_entry_episodes_" + suffix)
+            late = episode.get("watch_late_only_episodes_" + suffix)
+            total = episode.get(captured)
+            if (not all(isinstance(x, int) and not isinstance(x, bool) and x >= 0
+                        for x in (first, late, total)) or first + late != total):
+                raise ValueError("invalid first-entry versus late WATCH episode partition: " + horizon)
+        # Mutually exclusive gap reasons must reconcile with BOTH market and
+        # WATCH unknown outcomes. A resealed report cannot fabricate reasons.
+        reasons = ("abstain_conflicting_quotes", "abstain_future_entry_quotes",
+                   "abstain_no_future_observation", "abstain_missing_horizon_anchor",
+                   "abstain_stale_entry", "abstain_discontinuous_path")
+        if (any(not isinstance(coverage.get(k), int) or isinstance(coverage.get(k), bool)
+                or coverage[k] < 0 or
+                not isinstance(coverage.get("watch_" + k), int) or
+                isinstance(coverage.get("watch_" + k), bool) or
+                coverage["watch_" + k] < 0 or coverage["watch_" + k] > coverage[k]
+                for k in reasons)
+            or sum(coverage[k] for k in reasons) != coverage["abstain_gap"]
+            or sum(coverage["watch_" + k] for k in reasons) != coverage["watch_abstain_gap"]):
+            raise ValueError("invalid mutually exclusive gap-reason partition: " + horizon)
     for source in (outcomes, episodes.get("source", {}), provenance):
         if (source.get("source_authenticated") is not False
             or source.get("complete_market_history") is not False
