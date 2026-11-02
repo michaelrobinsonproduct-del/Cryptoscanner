@@ -387,6 +387,40 @@ class CadenceCollectorTests(unittest.TestCase):
                          "AMBIGUOUS_WRITER_JOB_METADATA")
         self.assertFalse(any("/jobs/101/logs" in path for path, _ in calls))
 
+    def test_authenticated_cross_run_writer_overlap_is_a_bounded_failure(self):
+        get, _ = fixture()
+        result = collect(get, "owner/repo", NOW)
+        proof = result["writer_overlap_evidence"]
+        self.assertEqual(proof["status"], "FAILED_OVERLAPPING_CANONICAL_WRITER_JOBS")
+        self.assertEqual(proof["authenticated_writer_job_count"], 2)
+        self.assertEqual(proof["overlap_pair_count"], 1)
+        self.assertEqual(proof["overlaps"][0]["overlap_seconds"], 56)
+        self.assertFalse(proof["global_exclusivity_verified"])
+
+    def test_nonoverlap_is_not_global_writer_exclusivity_proof(self):
+        get, _ = fixture()
+        def changed(path, text=False):
+            response = get(path, text)
+            if "/runs/2/jobs?" in path:
+                response["jobs"][0]["started_at"] = "2026-11-02T03:11:01Z"
+                response["jobs"][0]["completed_at"] = "2026-11-02T03:12:00Z"
+            if "/jobs/102/logs" in path:
+                return response.replace("03:10:06Z", "03:11:06Z")
+            return response
+        result = collect(changed, "owner/repo", NOW)
+        proof = result["writer_overlap_evidence"]
+        self.assertEqual(result["report"]["verified_dispatch_count"], 1)
+        self.assertEqual(proof["status"], "NO_OVERLAP_OBSERVED_BOUNDED_SAMPLE")
+        self.assertEqual(proof["overlap_pair_count"], 0)
+        self.assertFalse(proof["global_exclusivity_verified"])
+
+    def test_insufficient_writer_sample_cannot_certify_global_exclusivity(self):
+        get, _ = fixture(dispatched=[])
+        proof = collect(get, "owner/repo", NOW)["writer_overlap_evidence"]
+        self.assertEqual(proof["status"], "UNVERIFIED_INSUFFICIENT_AUTHENTICATED_JOBS")
+        self.assertEqual(proof["authenticated_writer_job_count"], 1)
+        self.assertFalse(proof["global_exclusivity_verified"])
+
     def test_no_writer_job_abstains_not_fabricates_native_success(self):
         get, _ = fixture(jobs=False)
         result = collect(get, "owner/repo", NOW)

@@ -204,6 +204,54 @@ def current_remote_ref_evidence(get, repo, evidence, runs, report=None):
             "current_ref_sha": observed, "remote_ledger_bytes_verified": False}
 
 
+def canonical_writer_overlap_evidence(report, jobs):
+    """Compare independently authenticated canonical writer job intervals only.
+
+    An observed overlap fails the bounded sample. A nonoverlapping sample
+    does NOT prove global exclusivity or absence of an external writer.
+    """
+    intervals = []
+    for row in report.get("runs", []):
+        if row.get("classification") not in (
+                "VERIFIED_NATIVE_SCHEDULE",
+                "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE"):
+            continue
+        rid = row["run_id"]
+        matching = [j for j in jobs.get(str(rid), [])
+                    if isinstance(j, dict) and j.get("name") == "public-paper"
+                    and type(j.get("run_id")) is int and j["run_id"] == rid]
+        if len(matching) != 1 or matching[0].get("conclusion") != "success":
+            return {"status": "UNVERIFIED_INCONSISTENT_WRITER_JOB",
+                    "global_exclusivity_verified": False}
+        try:
+            start = timestamp(matching[0]["started_at"])
+            end = timestamp(matching[0]["completed_at"])
+            if start >= end:
+                raise ValueError("empty writer interval")
+        except (KeyError, TypeError, ValueError, OverflowError):
+            return {"status": "UNVERIFIED_INVALID_WRITER_INTERVAL",
+                    "global_exclusivity_verified": False}
+        intervals.append((start, end, rid))
+    intervals.sort()
+    overlaps = []
+    for i, (start, end, rid) in enumerate(intervals):
+        for next_start, next_end, next_rid in intervals[i + 1:]:
+            if next_start >= end:
+                break
+            if max(start, next_start) < min(end, next_end):
+                overlaps.append({"first_run_id": rid, "second_run_id": next_rid,
+                                 "overlap_seconds": round(
+                                     (min(end, next_end) -
+                                      max(start, next_start)).total_seconds(), 3)})
+    return {"status": ("FAILED_OVERLAPPING_CANONICAL_WRITER_JOBS" if overlaps
+                       else "NO_OVERLAP_OBSERVED_BOUNDED_SAMPLE" if len(intervals) >= 2
+                       else "UNVERIFIED_INSUFFICIENT_AUTHENTICATED_JOBS"),
+            "authenticated_writer_job_count": len(intervals),
+            "overlap_pair_count": len(overlaps),
+            "overlaps": overlaps,
+            "global_exclusivity_verified": False}
+
+
 def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
     """Return a reproducible audit plus SHA256 evidence index; no writes."""
     if not isinstance(repo, str) or len(repo.split("/")) != 2 or any(
@@ -297,8 +345,10 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
                          "raw_log_sha256_verified": False})
     result = audit(runs, logs, checked_at, lookback_hours, jobs=jobs)
     remote_ref = current_remote_ref_evidence(get, repo, evidence, runs, report=result)
+    overlap = canonical_writer_overlap_evidence(result, jobs)
     return {"report": result, "evidence": evidence,
             "current_remote_ref_evidence": remote_ref,
+            "writer_overlap_evidence": overlap,
             "raw_log_content_persisted": False,
             "read_only": True, "workflow": WORKFLOW}
 
