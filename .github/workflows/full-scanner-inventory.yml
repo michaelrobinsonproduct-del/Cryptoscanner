@@ -9,6 +9,9 @@ on:
       - 'audit_tools/pr_semantic_current_20261102.json'
       - '.github/workflows/full-scanner-inventory.yml'
   workflow_dispatch:
+concurrency:
+  group: scanner-audit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
   pull-requests: read
