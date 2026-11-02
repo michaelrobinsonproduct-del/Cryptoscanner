@@ -335,6 +335,7 @@ def capture_bounded(state, evaluation_at, max_pairs=MAX_PAIRS, max_pages=MAX_PAG
                     raise ValueError("Empty or oversized Kraken response")
                 payload = json.loads(raw, parse_float=Decimal)
                 attempted = {"request_url": url, "source_sha256": hashlib.sha256(raw).hexdigest(),
+                    "raw_response_b64": base64.b64encode(raw).decode("ascii"),
                     "requested_since_ns": since,
                     "response_last": str(payload.get("result", {}).get("last")) if isinstance(payload, dict) else None,
                     "response_pair_keys": sorted(k for k in payload.get("result", {}) if k != "last") if isinstance(payload, dict) and isinstance(payload.get("result"), dict) else [],
