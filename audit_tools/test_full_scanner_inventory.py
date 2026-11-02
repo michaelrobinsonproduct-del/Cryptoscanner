@@ -668,3 +668,30 @@ class AuditCertificationGateTests(unittest.TestCase):
 
 if __name__=="__main__":
     unittest.main()
+
+
+class ExplicitWriteTargetTests(unittest.TestCase):
+    def test_model_push_to_rebuild_history_is_source_bound(self):
+        from audit_tools.full_scanner_inventory import inventory_workflow_source, classify_declared_write_surfaces
+        source = "name: Historical\npermissions:\n  contents: write\nsteps:\n  - run: |\n      git push origin HEAD:rebuild-history\n"
+        workflow = inventory_workflow_source(".github/workflows/model.yml", source)
+        self.assertEqual(workflow["write_targets"]["static_push_refs"], ["rebuild-history"])
+        census = classify_declared_write_surfaces([workflow], "a"*40)
+        self.assertEqual(census["surfaces"][0]["write_destination_evidence"], "REBUILD_HISTORY_REFERENCE")
+        self.assertEqual(census["unknown_write_destinations"], [])
+        self.assertFalse(census["surfaces"][0]["safe_to_delete"])
+
+    def test_dynamic_agent_push_is_still_unknown_not_main_or_safe(self):
+        from audit_tools.full_scanner_inventory import inventory_workflow_source, classify_declared_write_surfaces
+        source = 'name: Agent\npermissions:\n  contents: write\nsteps:\n  - run: |\n      git push origin "HEAD:refs/heads/$branch"\n'
+        workflow = inventory_workflow_source(".github/workflows/agent.yml", source)
+        self.assertEqual(workflow["write_targets"]["dynamic_pushes"], ["DYNAMIC_PUSH_TARGET"])
+        census = classify_declared_write_surfaces([workflow], "a"*40)
+        self.assertEqual(census["surfaces"][0]["write_destination_evidence"], "DYNAMIC_BRANCH_WRITE_UNATTESTED")
+        self.assertEqual(census["unknown_write_destinations"], [".github/workflows/agent.yml"])
+        self.assertFalse(census["cleanup_authorized"])
+
+    def test_comment_and_non_push_text_are_not_write_proof(self):
+        from audit_tools.full_scanner_inventory import workflow_write_targets
+        self.assertEqual(workflow_write_targets("# git push origin HEAD:rebuild-history\n"
+                                                 "echo 'git push origin HEAD:rebuild-history'")["static_push_refs"], [])

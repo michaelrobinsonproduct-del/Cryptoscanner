@@ -55,7 +55,7 @@ class FreezeScopeTests(unittest.TestCase):
 
     def test_head_mismatch_and_duplicate_pr_fail(self):
         data = list(fixtures())
-        data[1]["prs"][0]["head_sha"] = "d" * 40
+        data[1]["prs"][0]["head_sha"] = "f" * 40
         with self.assertRaisesRegex(ValueError, "different PR head"):
             freeze(*data)
         data = list(fixtures())

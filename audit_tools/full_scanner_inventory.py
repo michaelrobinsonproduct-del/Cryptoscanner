@@ -380,7 +380,27 @@ def inventory_workflow_source(path,source):
             "ledger_ref":"paper-proof-ledger" in source,
             "python_modules":sorted(set(re.findall(r"python\s+-m\s+([A-Za-z0-9_.]+)",source))),
             "scripts":sorted(set(re.findall(r"(?:python|bun|node)\s+([A-Za-z0-9_./-]+\.(?:py|ts|mjs))",source))),
-            "branch_references":workflow_branch_references(source)}
+            "branch_references":workflow_branch_references(source),
+            "write_targets":workflow_write_targets(source)}
+
+
+def workflow_write_targets(source):
+    """Only explicit git-push targets; a dynamic ref is not a known safe destination."""
+    static, dynamic = set(), []
+    for line in source.splitlines():
+        command = line.strip()
+        if command.startswith("#") or not re.search(r"^(?:git\s+push\s+origin|(?:if\s+)?git\s+push\s+origin)\b", command):
+            continue
+        found = re.findall(r"HEAD:([A-Za-z0-9_.$/-]+)", command)
+        if not found:
+            dynamic.append("UNRESOLVED_PUSH_TARGET")
+        for ref in found:
+            ref = ref.removeprefix("refs/heads/")
+            if "$" in ref or not re.fullmatch(r"[A-Za-z0-9._/-]+", ref):
+                dynamic.append("DYNAMIC_PUSH_TARGET")
+            else:
+                static.add(ref)
+    return {"static_push_refs": sorted(static), "dynamic_pushes": sorted(set(dynamic))}
 
 
 def classify_declared_write_surfaces(workflows, main_sha):
@@ -390,16 +410,23 @@ def classify_declared_write_surfaces(workflows, main_sha):
         if not w.get("writes_contents"):
             continue
         refs=w.get("branch_references",{})
-        mentions=set(refs.get("branch_ref_mentions",[])) | set(refs.get("checkout_refs",[]))
+        targets=w.get("write_targets",{})
+        mentions=set(refs.get("branch_ref_mentions",[])) | set(refs.get("checkout_refs",[])) | set(targets.get("static_push_refs",[]))
         if w.get("ledger_ref") or "paper-proof-ledger" in mentions:
             surface="PAPER_LEDGER_REFERENCE"
         elif "simple-history" in mentions:
             surface="LEGACY_SIMPLE_HISTORY_REFERENCE"
+        elif "rebuild-history" in mentions:
+            surface="REBUILD_HISTORY_REFERENCE"
+        elif targets.get("dynamic_pushes"):
+            surface="DYNAMIC_BRANCH_WRITE_UNATTESTED"
         else:
             surface="UNRESOLVED_WRITE_DESTINATION"
         rows.append({"workflow":w["path"],"declared_contents_write":True,
                      "write_destination_evidence":surface,
                      "explicit_checkout_refs":refs.get("checkout_refs",[]),
+                     "explicit_push_refs":targets.get("static_push_refs",[]),
+                     "dynamic_pushes":targets.get("dynamic_pushes",[]),
                      "schedule_cron":w.get("schedule_cron",[]),
                      "has_workflow_dispatch":bool(w.get("has_dispatch")),
                      "execution_proven":False,
@@ -408,7 +435,7 @@ def classify_declared_write_surfaces(workflows, main_sha):
             "remote_main_sha":main_sha,
             "scope":"Static workflow contents:write declarations and branch mentions; not observed writes, permission reachability or runtime deployment",
             "surfaces":sorted(rows,key=lambda r:r["workflow"]),
-            "unknown_write_destinations":sorted(r["workflow"] for r in rows if r["write_destination_evidence"]=="UNRESOLVED_WRITE_DESTINATION"),
+            "unknown_write_destinations":sorted(r["workflow"] for r in rows if r["write_destination_evidence"] in ("UNRESOLVED_WRITE_DESTINATION", "DYNAMIC_BRANCH_WRITE_UNATTESTED")),
             "cleanup_authorized":False}
 
 
