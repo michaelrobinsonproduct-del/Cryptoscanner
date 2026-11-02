@@ -485,6 +485,55 @@ def apply_semantic_review(matrix, rows, current_main_sha, self_pr=121):
                     "source_blob_sha":r["semantic_source_blob_sha"]} for r in rows]}
 
 
+def assess_external_runtime_snapshot(snapshot, main_sha, now=None, max_age_seconds=3600):
+    """Classify external observations without promoting a dated snapshot to live proof."""
+    if snapshot.get("schema") != "cryptoscanner-external-runtime-audit-v1":
+        raise ValueError("Unknown external runtime snapshot schema")
+    if not re.fullmatch(r"[0-9a-f]{40}", str(main_sha)):
+        raise ValueError("Invalid current main SHA")
+    recorded_main = snapshot.get("repo_main_sha")
+    if not re.fullmatch(r"[0-9a-f]{40}", str(recorded_main)):
+        raise ValueError("Invalid snapshot main SHA")
+    try:
+        raw = snapshot["snapshot_utc"]
+        if not isinstance(raw, str) or not raw.endswith("Z"):
+            raise ValueError("UTC Z timestamp required")
+        recorded_at = datetime.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        current = now or datetime.datetime.now(datetime.timezone.utc)
+        if current.tzinfo is None:
+            raise ValueError("Current time must be timezone-aware")
+        age = (current.astimezone(datetime.timezone.utc) - recorded_at).total_seconds()
+    except (KeyError, TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("Invalid external snapshot UTC timestamp") from exc
+    if max_age_seconds <= 0:
+        raise ValueError("Invalid maximum snapshot age")
+    main_matches = recorded_main == main_sha
+    recent = 0 <= age <= max_age_seconds
+    if age < 0:
+        reason = "FUTURE_SNAPSHOT"
+    elif not main_matches:
+        reason = "MAIN_SHA_MISMATCH"
+    elif not recent:
+        reason = "STALE_SNAPSHOT"
+    else:
+        reason = "SNAPSHOT_ONLY_NO_LIVE_AUTHENTICATION"
+    return {
+        "evidence_class": "snapshot_only",
+        "reason": reason,
+        "snapshot_utc": raw,
+        "snapshot_main_sha": recorded_main,
+        "current_main_sha": main_sha,
+        "age_seconds": round(age, 3),
+        "age_limit_seconds": max_age_seconds,
+        "source_main_matches": main_matches,
+        "age_within_limit": recent,
+        "runtime_invocations_verified": False,
+        "database_scheduler_verified": False,
+        "runtime_coverage_certified": False,
+        "cleanup_authorized": False,
+    }
+
+
 def main():
     tracked=cmd("git","ls-files")
     if not tracked["ok"]:
