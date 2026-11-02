@@ -367,5 +367,25 @@ class EpisodeTests(unittest.TestCase):
                               "median","min","max"})
 
 
+    def test_chronological_20pct_readiness_uses_20pct_labels(self):
+        state=fixture()
+        for obs in state["observations"]:
+            if obs["pair"]=="AAAUSD" and obs["price"]==135:
+                obs["price"]=125
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        twenty=one["chronological_readiness_20"]
+        thirty=one["chronological_readiness"]
+        self.assertEqual(twenty["cutoff"],thirty["cutoff"])
+        self.assertEqual(twenty["embargo_hours"],thirty["embargo_hours"])
+        self.assertEqual(twenty["train"]["matured_cases"],
+                         thirty["train"]["matured_cases"])
+        self.assertGreater(twenty["train"]["positive_cases"],
+                           thirty["train"]["positive_cases"])
+        self.assertFalse(twenty["model_evaluation_ready"])
+        self.assertEqual(twenty["status"],
+                         "DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER")
+
+
 if __name__=="__main__":
     unittest.main()
