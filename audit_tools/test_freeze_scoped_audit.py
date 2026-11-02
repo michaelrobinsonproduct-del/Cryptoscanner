@@ -9,7 +9,9 @@ C = "c" * 40
 
 def fixtures():
     heads = {4: "d" * 40, 7: "e" * 40, 33: "f" * 40, 40: "1" * 40}
-    live = [{"number": n, "head_sha": heads[n]} for n in (4, 7, 33, 40)]
+    live = [{"number": n, "head_sha": heads[n],
+             "file_blob_comparisons": [{"path": "x.py", "pr_blob_sha": C}]}
+            for n in (4, 7, 33, 40)]
     review = [{"number": p["number"], "head_sha": p["head_sha"], "classification": "conflicting",
                "review_valid": True, "reason": "verified source", "source_path": "x.py",
                "source_blob_sha": C} for p in live]
@@ -52,6 +54,31 @@ class FreezeScopeTests(unittest.TestCase):
         self.assertEqual(result["unknown_write_destinations"], ["unknown.yml"])
         self.assertFalse(result["cleanup_authorized"])
         self.assertEqual(len(result["prs"]), 4)
+
+    def test_review_valid_cannot_hide_wrong_or_missing_source_blob(self):
+        for mutation in ("wrong_blob", "missing_path", "duplicate_path", "wrong_claim"):
+            data = list(fixtures())
+            if mutation == "wrong_blob":
+                data[0]["open_prs"][0]["file_blob_comparisons"][0]["pr_blob_sha"] = "9" * 40
+            elif mutation == "missing_path":
+                data[0]["open_prs"][0]["file_blob_comparisons"] = []
+            elif mutation == "duplicate_path":
+                data[0]["open_prs"][0]["file_blob_comparisons"].append(
+                    copy.deepcopy(data[0]["open_prs"][0]["file_blob_comparisons"][0]))
+            else:
+                data[1]["prs"][0]["source_blob_sha"] = "9" * 40
+            with self.subTest(mutation=mutation):
+                with self.assertRaisesRegex(ValueError, "semantic source blob mismatch"):
+                    freeze(*data)
+
+    def test_unreviewed_pr_is_unknown_without_source_claim(self):
+        data = list(fixtures())
+        data[1]["prs"][0]["review_valid"] = False
+        data[0]["open_prs"][0]["file_blob_comparisons"] = []
+        data[3]["unresolved_pr_count"] = 1
+        result = freeze(*data)
+        self.assertEqual(result["prs"][0]["disposition"], "unknown")
+        self.assertFalse(result["cleanup_authorized"])
 
     def test_stale_review_is_unknown_and_gate_must_agree(self):
         data = list(fixtures())
