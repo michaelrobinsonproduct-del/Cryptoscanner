@@ -21,6 +21,29 @@ def assert_same_cohorts(test, state):
         test.assertEqual(e["coverage"]["movers_20"], w["movers_20"], h)
         test.assertEqual(e["coverage"]["movers"], w["movers_30"], h)
         test.assertLessEqual(e["unique_mover_episodes"], w["movers_30"], h)
+        # WATCH outcomes are partitioned into resolved, immature and abstained;
+        # missing labels cannot be treated as false positives.
+        test.assertEqual(e["coverage"]["watch_eligible"], w["watch_eligible"], h)
+        test.assertEqual(e["coverage"]["watch_immature"], w["watch_immature"], h)
+        test.assertEqual(e["coverage"]["watch_abstain_gap"], w["watch_abstain_gap"], h)
+        test.assertEqual(e["coverage"]["watch_matured"], w["watch_matured"], h)
+        test.assertEqual(e["coverage"]["watch_eligible"],
+            e["coverage"]["watch_matured"] + e["coverage"]["watch_immature"] +
+            e["coverage"]["watch_abstain_gap"], h)
+        test.assertEqual(e["coverage"]["missed_20"], w["missed_20"], h)
+        test.assertEqual(e["coverage"]["missed_30"], w["missed_30"], h)
+        test.assertEqual(e["coverage"]["watch_false_positive_20"],
+                         w["watch_false_positive_20"], h)
+        test.assertEqual(e["coverage"]["watch_false_positive_30"],
+                         w["watch_false_positive_30"], h)
+        for lag in ("30m","60m","180m"):
+            cohorts=e["pre_entry_price_feature_distributions"][lag]
+            test.assertEqual(cohorts["positive_20"]["n"]+cohorts["negative_20"]["n"],
+                             cohorts["positive_30"]["n"]+cohorts["negative_30"]["n"], (h,lag))
+        test.assertEqual(e["missed_mover_episodes_20"],
+            e["unique_mover_episodes_20"]-e["watch_captured_episodes_20"], h)
+        test.assertEqual(e["missed_mover_episodes_30"],
+            e["unique_mover_episodes"]-e["watch_captured_episodes"], h)
     test.assertFalse(windows["eligible_for_model_promotion"])
     test.assertFalse(episodes["source"]["eligible_for_model_promotion"])
 
