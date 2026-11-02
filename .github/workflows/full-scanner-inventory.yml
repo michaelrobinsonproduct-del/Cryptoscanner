@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'audit_tools/full_scanner_inventory.py'
+      - 'audit_tools/pr_triage_20261102.json'
       - '.github/workflows/full-scanner-inventory.yml'
   workflow_dispatch:
 permissions:
@@ -26,6 +27,17 @@ jobs:
         run: git rev-parse HEAD
       - name: Compile check
         run: python -m py_compile audit_tools/full_scanner_inventory.py
+      - name: Validate evidence-qualified PR classification snapshot
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open("audit_tools/pr_triage_20261102.json"))
+          rows=d["prs"]
+          assert len(rows)==d["open_pr_count"] and len({r["number"] for r in rows})==len(rows)
+          assert all(len(r["head_sha"])==40 and r["classification"] in
+                     {"integrated","superseded","needed","conflicting","unknown"} for r in rows)
+          print("AUDIT_TRIAGE_SNAPSHOT_VALID",len(rows),d["main_sha"])
+          PY
       - name: Inventory all workflows, PRs, branches and recent runs
         env:
           GH_TOKEN: ${{ github.token }}
