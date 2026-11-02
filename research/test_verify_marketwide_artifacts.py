@@ -103,6 +103,23 @@ class ArtifactContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "claims authentication"):
             verify_artifacts(self.base, HEAD)
 
+    def test_workflow_only_uploads_after_successful_verification(self):
+        workflow = (Path(__file__).resolve().parents[1] /
+                    ".github/workflows/research-marketwide-checks.yml").read_text()
+        verification = workflow.index("python -m research.verify_marketwide_artifacts --directory /tmp")
+        upload = workflow.index("- uses: actions/upload-artifact@v4")
+        self.assertLess(verification, upload)
+        self.assertIn("if: success()", workflow[upload:])
+        self.assertIn("if-no-files-found: error", workflow[upload:])
+        self.assertNotIn("if: always()", workflow[upload:])
+
+    def test_workflow_runs_contract_tests_before_replay(self):
+        workflow = (Path(__file__).resolve().parents[1] /
+                    ".github/workflows/research-marketwide-checks.yml").read_text()
+        tests = workflow.index("research.test_verify_marketwide_artifacts -v")
+        replay = workflow.index("python -m paper_pov.segmented_repository export-git")
+        self.assertLess(tests, replay)
+
     def test_repeated_or_unexpected_checksums_fail(self):
         with (self.base / "marketwide-SHA256SUMS").open("a") as f:
             f.write(digest(self.base / FILES[0]) + "  " + FILES[0] + "\n")
