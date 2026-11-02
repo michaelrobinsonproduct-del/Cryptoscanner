@@ -32,6 +32,15 @@ CASES = (
      "forbid": ("paper-segment-manifest.json", "paper-segments/"),
      "block_production": True, "block_deletion": True},
 )
+# Current-main branch-pinned legacy writer is a distinct live deletion dependency.
+# Its immutable blob was independently read from main e3fb5ec... on 2026-11-02.
+MAIN_LEGACY_WRITER = {
+    "path": ".github/workflows/kraken-recovery-schedule.yml",
+    "sha": "2585e9489fb8a24b0b396411b68aaa88dbb9504f",
+    "require": ("contents: write", "refs/heads/simple-history",
+                "simplified-scanner-recovery-20261011", "cron: '3,33 * * * *'"),
+}
+
 SCOPE = {
     "isolated_read_only_integration": "PREPARE_AND_TEST_ONLY_PENDING_B_V",
     "production_activation": "BLOCKED",
@@ -76,7 +85,7 @@ def source_identity(case, pr_row, payload):
                                     "MATCH" if pr_files_sha == calculated else "MISMATCH"),
             "pr_files_api_discrepancy": pr_files_sha is not None and pr_files_sha != calculated}
 
-def assess(inventory, responses):
+def assess(inventory, responses, main_writer_response=None):
     """Produce finite scope restrictions; no unknown consumer is deemed safe to delete."""
     rows = {p["number"]: p for p in inventory["open_prs"]}
     cases = []
@@ -93,6 +102,20 @@ def assess(inventory, responses):
                                  "production_activation": c["block_production"],
                                  "legacy_deletion": c["block_deletion"]},
                       "restriction": "No workflow execution, external credential use, production activation or deletion from this audit; isolate read-only tests only."})
+    main_path = MAIN_LEGACY_WRITER["path"]
+    main_sha = inventory["main_sha"]
+    main_blob = inventory.get("main_blob_shas", {}).get(main_path)
+    main_case = dict(MAIN_LEGACY_WRITER, expected_head_sha=main_sha)
+    main_row = {"head_sha": main_sha,
+                "file_blob_comparisons": [{"path": main_path, "pr_blob_sha": main_blob}]}
+    main_identity = (source_identity(main_case, main_row, main_writer_response)
+                     if main_blob == MAIN_LEGACY_WRITER["sha"]
+                     else {"status": "MAIN_TREE_BLOB_MISMATCH", "main_tree_blob_sha": main_blob})
+    main_writer = {"path": main_path, "main_sha": main_sha,
+                   "expected_blob_sha": MAIN_LEGACY_WRITER["sha"],
+                   "source": main_identity, "observed_execution": False,
+                   "blocks": {"isolated_read_only_integration": False,
+                              "production_activation": True, "legacy_deletion": True}}
     verified = sum(x["source"]["status"] == "VERIFIED_EXACT_HEAD_SOURCE" for x in cases)
     # Scope decisions are deliberately narrower than full-audit certification.
     # Unknown external consumers block deletion, not unrelated GET-only tests.
@@ -114,8 +137,13 @@ def assess(inventory, responses):
                    "expected_head_sha": x["expected_head_sha"],
                    "expected_blob_sha": x["expected_blob_sha"]}
                   for x in cases if x["source"]["status"] != "VERIFIED_EXACT_HEAD_SOURCE"]
+    if main_identity["status"] != "VERIFIED_EXACT_HEAD_SOURCE":
+        unverified.append({"pr": None, "path": main_path, "status": main_identity["status"],
+                           "expected_head_sha": main_sha,
+                           "expected_blob_sha": MAIN_LEGACY_WRITER["sha"]})
     return {"schema": "cryptoscanner-bounded-source-audit-v1",
             "scope_matrix": scope_matrix,
+            "main_legacy_writer": main_writer,
             "unverified_source_cases": unverified,
             "main_sha": inventory["main_sha"], "ledger_sha_read_only": inventory["ledger_sha"],
             "audit_checkout_sha": inventory["checkout_sha"],
@@ -160,7 +188,8 @@ def main():
         row = current.get(c["pr"])
         if row and row.get("head_sha") == c["expected_head_sha"]:
             responses[(c["pr"], c["path"])] = github_get_contents(c["pr"], c["path"], row["head_sha"])
-    result = assess(inventory, responses)
+    main_writer_response = github_get_contents(None, MAIN_LEGACY_WRITER["path"], inventory["main_sha"])
+    result = assess(inventory, responses, main_writer_response)
     pathlib.Path("audit-evidence/bounded-source-audit.json").write_text(
         json.dumps(result, sort_keys=True, indent=2) + "\n")
     print("BOUNDED_SOURCE_AUDIT", result["source_verified"], result["source_total"],
