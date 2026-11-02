@@ -307,6 +307,7 @@ def capture_bounded(state, evaluation_at, max_pairs=MAX_PAIRS, max_pages=MAX_PAG
         start = min(_utc(r["as_of"]) for r in candidates[pair])
         since = max(0, _ns(start) - 1)
         pages = []
+        attempted = {}
         try:
             for _ in range(max_pages):
                 url = _source_url(pair, since)
@@ -316,7 +317,12 @@ def capture_bounded(state, evaluation_at, max_pairs=MAX_PAIRS, max_pages=MAX_PAG
                     raw = response.read(MAX_RESPONSE_BYTES + 1)
                 if not raw or len(raw) > MAX_RESPONSE_BYTES:
                     raise ValueError("Empty or oversized Kraken response")
-                payload = json.loads(raw)
+                payload = json.loads(raw, parse_float=Decimal)
+                attempted = {"request_url": url, "source_sha256": hashlib.sha256(raw).hexdigest(),
+                    "requested_since_ns": since,
+                    "response_last": str(payload.get("result", {}).get("last")) if isinstance(payload, dict) else None,
+                    "response_pair_keys": sorted(k for k in payload.get("result", {}) if k != "last") if isinstance(payload, dict) and isinstance(payload.get("result"), dict) else [],
+                    "returned_trade_count": sum(len(v) for k, v in payload.get("result", {}).items() if k != "last" and isinstance(v, list)) if isinstance(payload, dict) and isinstance(payload.get("result"), dict) else 0}
                 if not isinstance(payload, dict) or payload.get("error") != []:
                     raise ValueError("Kraken API error")
                 retrieved = dt.datetime.now(UTC).isoformat()
@@ -335,7 +341,8 @@ def capture_bounded(state, evaluation_at, max_pairs=MAX_PAIRS, max_pages=MAX_PAG
                 captures.append(candidate)
         except Exception as exc:
             errors.append({"pair": pair, "status": "SOURCE_ABSTAIN",
-                           "reason": type(exc).__name__ + ": " + str(exc)[:160]})
+                           "reason": type(exc).__name__ + ": " + str(exc)[:160],
+                           **attempted})
     return captures, errors
 
 
