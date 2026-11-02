@@ -382,6 +382,13 @@ def analyze(state):
         coverage["distinct_positive_pairs"] = len({r["pair"] for r in positives})
         # Only label-complete WATCH entries can be counted as false positives.
         # Gap and immature WATCHs remain unknown, never false negatives.
+        # Overlapping WATCH nonhits are not independent false-positive bets.
+        # Fixed-first-decision windows give a descriptive lower-granularity
+        # denominator without pretending these windows are independent.
+        nonhit_windows_20 = cluster_episodes([r for r in negatives20 if r["watch"]],hours)
+        nonhit_windows_30 = cluster_episodes([r for r in negatives if r["watch"]],hours)
+        assert len(nonhit_windows_20) <= sum(r["watch"] for r in negatives20)
+        assert len(nonhit_windows_30) <= sum(r["watch"] for r in negatives)
         coverage["watch_false_positive_30"] = coverage["watch_matured"] - coverage["watch_positive"]
         coverage["watch_false_positive_20"] = coverage["watch_matured"] - coverage["watch_positive_20"]
         coverage["missed_20"] = coverage["movers_20"] - coverage["watch_positive_20"]
@@ -393,6 +400,10 @@ def analyze(state):
             "watch_first_entry_episodes_20":first_watch_count_20,
             "watch_late_only_episodes_20":episode_watch_count_20-first_watch_count_20,
             "watch_first_entry_recall_20":first_watch_count_20/len(episodes20) if episodes20 else None,
+            "watch_nonhit_windows_20":len(nonhit_windows_20),
+            "watch_nonhit_windows_30":len(nonhit_windows_30),
+            "watch_nonhit_distinct_pairs_20":len({e["pair"] for e in nonhit_windows_20}),
+            "watch_nonhit_distinct_pairs_30":len({e["pair"] for e in nonhit_windows_30}),
             "missed_mover_episodes_20":len(episodes20)-episode_watch_count_20,
             "missed_mover_episodes_30":len(episodes)-episode_watch_count,
             "watch_episode_recall_wilson_95_naive_20":wilson(episode_watch_count_20,len(episodes20)),
@@ -433,6 +444,7 @@ def analyze(state):
     return {"status":"DESCRIPTIVE_ONLY_NO_HELD_OUT_LIFT",
             "limitations":["Sampled PAPER ticker prices, not intrabar highs or complete Kraken history",
                            "Repeated pair/time entries and overlapping horizons are dependent",
+                           "WATCH nonhit windows group overlapping decisions; not independent negative trials",
                            "Wilson intervals assume independence and must NOT be used as model confidence",
                            "Only lagged price returns are available; no authenticated pre-entry volume, spread or order-book features",
                            "No predictive challenger was trained or tested"],
