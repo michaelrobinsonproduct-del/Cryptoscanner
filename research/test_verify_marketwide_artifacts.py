@@ -46,7 +46,16 @@ def fixture(directory):
         "watch_captured_episodes_20": 0, "watch_captured_episodes": 0,
         "watch_first_entry_episodes_20": 0, "watch_late_only_episodes_20": 0,
         "watch_first_entry_episodes_30": 0, "watch_late_only_episodes_30": 0,
-        "missed_mover_episodes_20": 0, "missed_mover_episodes_30": 0}
+        "missed_mover_episodes_20": 0, "missed_mover_episodes_30": 0,
+        "watch_first_entry_recall_20": None, "watch_first_entry_recall_30": None,
+        **{"episode_first_entry_feature_distributions" + suffix:
+           {lag: {"n": 0, "distinct_pairs": 0} for lag in ("30m","60m","180m")}
+           for suffix in ("", "_20")},
+        **{"episode_first_entry_feature_coverage_" + suffix:
+           {lag: {"episodes": 0, "with_asof_feature": 0,
+                  "without_asof_feature": 0, "distinct_covered_pairs": 0,
+                  "covered_fraction": None} for lag in ("30m","60m","180m")}
+           for suffix in ("20","30")}}
     outcomes = {"horizons": {h: dict(window) for h in ("1","6","24","48")},
                 "observed_run_count": 51, "observed_entry_count": 30872,
                 "source_authenticated": False, "complete_market_history": False,
@@ -194,6 +203,23 @@ class ArtifactContractTests(unittest.TestCase):
         self.reseal_episode_change(lambda h: h["coverage"].update(
             watch_abstain_stale_entry=1))
         with self.assertRaisesRegex(ValueError, "gap-reason partition"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_first_entry_recall_cannot_be_fabricated(self):
+        self.reseal_episode_change(lambda h: h.update(watch_first_entry_recall_30=0.5))
+        with self.assertRaisesRegex(ValueError, "first-entry WATCH recall"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_feature_coverage_cannot_invent_history(self):
+        self.reseal_episode_change(lambda h: h["episode_first_entry_feature_coverage_20"]["60m"].update(
+            with_asof_feature=1, without_asof_feature=0, covered_fraction=1.0))
+        with self.assertRaisesRegex(ValueError, "first-entry feature coverage"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_feature_coverage_cannot_hide_duplicate_pair_count(self):
+        self.reseal_episode_change(lambda h: h["episode_first_entry_feature_distributions"]["30m"].update(
+            distinct_pairs=1))
+        with self.assertRaisesRegex(ValueError, "first-entry feature coverage"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
     def test_workflow_only_uploads_after_successful_verification(self):
