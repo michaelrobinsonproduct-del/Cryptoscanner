@@ -262,10 +262,13 @@ def capture_bounded(state, evaluation_at, max_pairs=MAX_PAIRS, max_pages=MAX_PAG
     candidates = defaultdict(list)
     for row in rows:
         if (row["status"] == "ABSTAIN_GAP"
-                and _utc(row["as_of"]) >= now - dt.timedelta(hours=6)
+                and _utc(row["as_of"]) >= now - dt.timedelta(hours=49)
                 and _utc(row["target_at"]) <= now):
             candidates[row["pair"]].append(row)
-    ranked = sorted(candidates, key=lambda p: (-len(candidates[p]), p))[:max_pairs]
+    ranked = sorted(candidates, key=lambda p: (
+        min(r["horizon_hours"] for r in candidates[p]),
+        -max(_utc(r["as_of"]).timestamp() for r in candidates[p]),
+        -len(candidates[p]), p))[:max_pairs]
     captures, errors = [], []
     for pair in ranked:
         start = min(_utc(r["as_of"]) for r in candidates[pair])
