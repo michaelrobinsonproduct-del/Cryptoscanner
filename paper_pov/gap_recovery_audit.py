@@ -80,7 +80,7 @@ def _verify_page(page, pair, expected_since, evaluation_at):
         raise ValueError("Missing or oversized Kraken response")
     try:
         raw = base64.b64decode(raw64, validate=True)
-    except (ValueError, Exception) as exc:
+    except Exception as exc:
         raise ValueError("Invalid response encoding") from exc
     if not raw or len(raw) > MAX_RESPONSE_BYTES or hashlib.sha256(raw).hexdigest() != page.get("response_sha256"):
         raise ValueError("Kraken source SHA256 mismatch")
@@ -217,8 +217,8 @@ def audit(state, evaluation_at, captures=(), source_errors=()):
         after[h]["gap_abstentions"] -= 1
         after[h]["gap_reason_counts"][row["gap_reason"]] -= 1
         after[h]["matured_recovered_trade_evidence"] = after[h].get("matured_recovered_trade_evidence", 0) + 1
-        after[h]["sampled_20pct_windows"] += int(update["observed_20pct_hit"])
-        after[h]["sampled_30pct_windows"] += int(update["observed_30pct_hit"])
+        after[h]["recovered_trade_20pct_windows"] = after[h].get("recovered_trade_20pct_windows", 0) + int(update["observed_20pct_hit"])
+        after[h]["recovered_trade_30pct_windows"] = after[h].get("recovered_trade_30pct_windows", 0) + int(update["observed_30pct_hit"])
         if len(recovered_examples) < 30:
             recovered_examples.append({"pair": pair, "run_id": row["run_id"],
                 "horizon_hours": row["horizon_hours"], "old_gap_reason": row["gap_reason"],
@@ -226,6 +226,8 @@ def audit(state, evaluation_at, captures=(), source_errors=()):
     for h in HORIZONS:
         key = str(h)
         after[key].setdefault("matured_recovered_trade_evidence", 0)
+        after[key].setdefault("recovered_trade_20pct_windows", 0)
+        after[key].setdefault("recovered_trade_30pct_windows", 0)
         after[key]["still_missing"] = after[key]["gap_abstentions"]
         after[key]["eligible_before"] = before[key]["matured_observed"] + before[key]["gap_abstentions"]
         after[key]["eligible_after"] = after[key]["eligible_before"]
@@ -291,8 +293,10 @@ def capture_bounded(state, evaluation_at, max_pairs=MAX_PAIRS, max_pages=MAX_PAG
                 if prints and prints[-1][0] >= max(_utc(r["target_at"]) for r in candidates[pair]):
                     break
             if pages:
-                captures.append({"pair": pair, "start_since_ns": max(0, int(start.timestamp()*1_000_000_000)-1),
-                                 "pages": pages})
+                candidate = {"pair": pair, "start_since_ns": max(0, int(start.timestamp()*1_000_000_000)-1),
+                             "pages": pages}
+                verify_sources([candidate], dt.datetime.now(UTC))
+                captures.append(candidate)
         except Exception as exc:
             errors.append({"pair": pair, "status": "SOURCE_ABSTAIN",
                            "reason": type(exc).__name__ + ": " + str(exc)[:160]})
@@ -309,7 +313,7 @@ def main(argv=None):
     state = json.loads(Path(args.ledger).read_bytes())
     now = dt.datetime.now(UTC)
     captures, errors = capture_bounded(state, now) if args.capture else ([], [])
-    report = audit(state, now, captures, errors)
+    report = audit(state, dt.datetime.now(UTC), captures, errors)
     Path(args.output).write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
     if args.sources_output:
         Path(args.sources_output).write_text(json.dumps(
