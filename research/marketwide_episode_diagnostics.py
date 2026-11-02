@@ -33,8 +33,11 @@ def lagged_return(series, times, index, minutes, conflicting_times=()):
     j = bisect.bisect_right(times, target, hi=index) - 1
     if j < 0 or target - times[j] > MAX_GAP:
         return None
-    # A conflicting duplicate at the exact bisect anchor can sit just before j.
-    if j > 0 and times[j-1] == times[j] and series[j-1][1] != series[j][1]:
+    # bisect_right selects the last equal-time anchor. Inspect ALL equal-time
+    # predecessors; the immediately preceding one may agree while an earlier
+    # quote conflicts. No arbitrary price may define an as-of feature.
+    first_anchor = bisect.bisect_left(times, times[j], hi=j)
+    if any(series[k][1] != series[j][1] for k in range(first_anchor, j)):
         return None
     if any(times[k] == times[k+1] and series[k][1] != series[k+1][1]
            for k in range(j, index)):
@@ -134,9 +137,10 @@ def analyze(state):
         by_pair[o["pair"]].append((at, price, o["run_id"]))
     output = {}
     for hours in HORIZONS:
-        positives, negatives, cases, cases20 = [], [], [], []
+        positives, negatives, negatives20, cases, cases20 = [], [], [], [], []
         coverage = {"eligible": 0, "immature": 0, "abstain_gap": 0,
                     "abstain_conflicting_quotes": 0, "abstain_future_entry_quotes": 0, "matured": 0,
+                    "watch_eligible": 0, "watch_immature": 0, "watch_abstain_gap": 0,
                     "watch_matured": 0, "watch_positive": 0, "movers": 0,
                     "watch_positive_20": 0, "movers_20": 0,
                     "feature_30m": 0, "feature_60m": 0, "feature_180m": 0,
@@ -147,15 +151,22 @@ def analyze(state):
             conflicts = sorted(conflicting_quotes[pair])
             for i, (at, entry, rid) in enumerate(series):
                 coverage["eligible"] += 1
+                selected = (rid,pair) in watches
+                if selected:
+                    coverage["watch_eligible"] += 1
                 start = runs[rid]
                 target = start + dt.timedelta(hours=hours)
                 if latest is None or latest < target + MAX_GAP:
                     coverage["immature"] += 1
+                    if selected:
+                        coverage["watch_immature"] += 1
                     continue
                 # A quote timestamp later than its own decision cannot be an as-of entry.
                 if at > start:
                     coverage["abstain_gap"] += 1
                     coverage["abstain_future_entry_quotes"] += 1
+                    if selected:
+                        coverage["watch_abstain_gap"] += 1
                     continue
                 end = bisect.bisect_right(times, target+MAX_GAP, lo=i+1)
                 future = series[i+1:end]
@@ -171,14 +182,17 @@ def analyze(state):
                 if ambiguous:
                     coverage["abstain_gap"] += 1
                     coverage["abstain_conflicting_quotes"] += 1
+                    if selected:
+                        coverage["watch_abstain_gap"] += 1
                     continue
                 if (not before or not anchors or start-at > MAX_GAP
                     or any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
                     or anchors[0][0]-timeline[-1] > MAX_GAP):
                     coverage["abstain_gap"] += 1
+                    if selected:
+                        coverage["watch_abstain_gap"] += 1
                     continue
                 coverage["matured"] += 1
-                selected = (rid,pair) in watches
                 if selected:
                     coverage["watch_matured"] += 1
                 peak_price = max(p for _,p in before)
@@ -217,6 +231,8 @@ def analyze(state):
                           "watch":selected,"lagged_returns":lag}
                 if hit20:
                     cases20.append(record)
+                else:
+                    negatives20.append(record)
                 if hit:
                     positives.append(record)
                     cases.append(record)
@@ -260,6 +276,9 @@ def analyze(state):
         assert coverage["eligible"]==coverage["matured"]+coverage["abstain_gap"]+coverage["immature"]
         assert coverage["movers"]==len(positives)
         assert coverage["movers_20"]==len(cases20)
+        assert coverage["matured"]==len(cases20)+len(negatives20)
+        assert coverage["watch_eligible"] == (coverage["watch_matured"] +
+            coverage["watch_immature"] + coverage["watch_abstain_gap"])
         coverage["matured_fraction"] = (coverage["matured"]/coverage["eligible"]
                                         if coverage["eligible"] else None)
         coverage["distinct_matured_pairs"] = len({r["pair"] for r in positives+negatives})
@@ -267,9 +286,13 @@ def analyze(state):
         # Only matured, non-abstained WATCH cases can be labeled nonhits.
         coverage["watch_false_positive_30"] = coverage["watch_matured"] - coverage["watch_positive"]
         coverage["watch_false_positive_20"] = coverage["watch_matured"] - coverage["watch_positive_20"]
+        coverage["missed_20"] = coverage["movers_20"] - coverage["watch_positive_20"]
+        coverage["missed_30"] = coverage["movers"] - coverage["watch_positive"]
         output[str(hours)] = {"coverage":coverage,"unique_mover_episodes":len(episodes),
             "unique_mover_pairs":len({e["pair"] for e in episodes}),
             "unique_mover_episodes_20":len(episodes20),
+            "missed_mover_episodes_20":len(episodes20)-episode_watch_count_20,
+            "missed_mover_episodes_30":len(episodes)-episode_watch_count,
             "watch_captured_episodes_20":episode_watch_count_20,
             "watch_episode_recall_wilson_95_naive_20":wilson(episode_watch_count_20,len(episodes20)),
             "episode_first_entry_feature_distributions_20":episode_features_20,
@@ -296,7 +319,9 @@ def analyze(state):
             "lag_60m_positive":summarize_feature(positives,"60m"),
             "lag_60m_negative":summarize_feature(negatives,"60m"),
             "pre_entry_price_feature_distributions":{
-                key:{"positive_30":summarize_feature(positives,key),
+                key:{"positive_20":summarize_feature(cases20,key),
+                     "negative_20":summarize_feature(negatives20,key),
+                     "positive_30":summarize_feature(positives,key),
                      "negative_30":summarize_feature(negatives,key)}
                 for key in ("30m","60m","180m")}}
     return {"status":"DESCRIPTIVE_ONLY_NO_HELD_OUT_LIFT",
