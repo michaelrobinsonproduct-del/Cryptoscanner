@@ -93,7 +93,21 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
                     and type(j.get("id")) is int and j["id"] > 0]
         if len(matching) != 1:
             continue  # Audit abstains without a unique writer job.
-        raw = get(base + "/jobs/" + str(matching[0]["id"]) + "/logs", text=True)
+        # A green workflow is not evidence that its canonical writer job ran.
+        # Bind log acquisition to a completed successful writer job with
+        # coherent start/end timestamps, not a skipped or failed job.
+        writer = matching[0]
+        try:
+            started = timestamp(writer["started_at"])
+            finished = timestamp(writer["completed_at"])
+            created = timestamp(run["created_at"])
+        except (KeyError, ValueError, TypeError, OverflowError):
+            continue
+        if (writer.get("status") != "completed" or
+                writer.get("conclusion") != "success" or
+                not created <= started <= finished <= now):
+            continue
+        raw = get(base + "/jobs/" + str(writer["id"]) + "/logs", text=True)
         logs[str(rid)] = raw
         evidence.append({"run_id": rid, "job_id": matching[0]["id"],
                          # The API client decodes text with replacement. This

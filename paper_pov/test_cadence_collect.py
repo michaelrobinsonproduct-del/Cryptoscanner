@@ -16,7 +16,9 @@ def row(rid, event):
 
 def job(rid):
     return {"id": rid + 100, "run_id": rid, "name": "public-paper",
-            "started_at": "2026-11-02T03:10:04Z"}
+            "status": "completed", "conclusion": "success",
+            "started_at": "2026-11-02T03:10:04Z",
+            "completed_at": "2026-11-02T03:11:00Z"}
 
 
 def log(event, cron):
@@ -67,6 +69,35 @@ class CadenceCollectorTests(unittest.TestCase):
         result = collect(get, "owner/repo", NOW)
         self.assertEqual(result["report"]["verified_native_count"], 0)
         self.assertEqual(result["report"]["unverified_or_ambiguous_count"], 2)
+
+    def test_green_workflow_with_failed_or_skipped_writer_abstains(self):
+        for conclusion in ("failure", "skipped", "cancelled", None):
+            with self.subTest(conclusion=conclusion):
+                get, calls = fixture()
+                def changed(path, text=False):
+                    response = get(path, text)
+                    if "/runs/" in path and "/jobs?" in path:
+                        response["jobs"][0]["conclusion"] = conclusion
+                    return response
+                result = collect(changed, "owner/repo", NOW)
+                self.assertEqual(result["report"]["verified_native_count"], 0)
+                self.assertEqual(result["report"]["verified_dispatch_count"], 0)
+                self.assertFalse(any("/logs" in path for path, _ in calls))
+
+    def test_missing_or_incoherent_writer_job_times_abstain(self):
+        for field, value in (("completed_at", None),
+                             ("completed_at", "2026-11-02T03:09:00Z"),
+                             ("started_at", "2026-11-02T03:12:00Z")):
+            with self.subTest(field=field, value=value):
+                get, calls = fixture()
+                def changed(path, text=False):
+                    response = get(path, text)
+                    if "/runs/" in path and "/jobs?" in path:
+                        response["jobs"][0][field] = value
+                    return response
+                result = collect(changed, "owner/repo", NOW)
+                self.assertEqual(result["report"]["verified_native_count"], 0)
+                self.assertFalse(any("/logs" in path for path, _ in calls))
 
     def test_duplicate_event_run_ids_fail_closed(self):
         get, _ = fixture(dispatched=[row(1, "workflow_dispatch")])
