@@ -14,6 +14,14 @@ def kwargs():
                 decision_sha256="b"*64, controller_run_id=41523180769,
                 owner_comment_id=190001, owner_id=OWNER_ID)
 
+def attempt_checked(api, claim, **overrides):
+    """Supply independently authenticated *fixture* context to offline tests."""
+    context = dict(now=S + dt.timedelta(minutes=18),
+                   observed_main_sha=SOURCE,
+                   observed_ledger_commit="a" * 40)
+    context.update(overrides)
+    return attempt(api, claim, **context)
+
 
 class FakeGit:
     def __init__(self):
@@ -65,7 +73,7 @@ class SlotClaimTests(unittest.TestCase):
         first = prepare(**kwargs())
         second_args = dict(kwargs(), controller_run_id=41523180770)
         second = prepare(**second_args)
-        a, b = attempt(api, first), attempt(api, second)
+        a, b = attempt_checked(api, first), attempt_checked(api, second)
         self.assertEqual(a["status"], "CLAIMED_NOT_DISPATCHED")
         self.assertEqual(b["reason"], "SLOT_REF_ALREADY_EXISTS")
         self.assertEqual(len(api.refs), 1)
@@ -113,40 +121,40 @@ class SlotClaimTests(unittest.TestCase):
     def test_readback_ref_tamper_blocks(self):
         api = FakeGit()
         api.tamper = "ref"
-        self.assertEqual(attempt(api, prepare(**kwargs()))["reason"],
+        self.assertEqual(attempt_checked(api, prepare(**kwargs()))["reason"],
                          "CLAIM_READBACK_MISMATCH")
 
     def test_readback_tag_tamper_blocks(self):
         api = FakeGit()
         api.tamper = "tag"
-        self.assertEqual(attempt(api, prepare(**kwargs()))["reason"],
+        self.assertEqual(attempt_checked(api, prepare(**kwargs()))["reason"],
                          "CLAIM_READBACK_MISMATCH")
 
     def test_post_commit_timeout_does_not_retry(self):
         api = FakeGit()
         api.fail = "after_ref"
         claim = prepare(**kwargs())
-        result = attempt(api, claim)
+        result = attempt_checked(api, claim)
         self.assertEqual(result["reason"], "GITHUB_CLAIM_OUTCOME_UNCERTAIN_NO_RETRY")
         self.assertIn(claim["ref"], api.refs)
-        self.assertEqual(attempt(api, claim)["reason"], "SLOT_REF_ALREADY_EXISTS")
+        self.assertEqual(attempt_checked(api, claim)["reason"], "SLOT_REF_ALREADY_EXISTS")
 
     def test_precommit_timeout_blocks(self):
         api = FakeGit()
         api.fail = "tag"
-        self.assertEqual(attempt(api, prepare(**kwargs()))["status"], "BLOCKED")
+        self.assertEqual(attempt_checked(api, prepare(**kwargs()))["status"], "BLOCKED")
         self.assertEqual(api.refs, {})
 
     def test_bad_tag_sha_blocks(self):
         api = FakeGit()
         api.fail = "bad_sha"
-        self.assertEqual(attempt(api, prepare(**kwargs()))["reason"],
+        self.assertEqual(attempt_checked(api, prepare(**kwargs()))["reason"],
                          "INVALID_TAG_SHA")
 
     def test_read_failure_blocks_without_dispatch(self):
         api = FakeGit()
         api.fail = "read"
-        result = attempt(api, prepare(**kwargs()))
+        result = attempt_checked(api, prepare(**kwargs()))
         self.assertEqual(result["status"], "BLOCKED")
         self.assertFalse(result["scanner_executed"])
         self.assertFalse(result["ledger_written"])
@@ -168,20 +176,81 @@ class SlotClaimTests(unittest.TestCase):
         for change in mutations:
             with self.subTest(change=change):
                 api = FakeGit()
-                result = attempt(api, dict(original, **change))
+                result = attempt_checked(api, dict(original, **change))
                 self.assertEqual(result["reason"], "INVALID_CLAIM")
                 self.assertEqual(api.refs, {})
                 self.assertEqual(api.tags, {})
 
     def test_malformed_claim_blocks(self):
-        self.assertEqual(attempt(FakeGit(), {"ref": "refs/heads/main"})["reason"],
+        self.assertEqual(attempt_checked(FakeGit(), {"ref": "refs/heads/main"})["reason"],
                          "INVALID_CLAIM")
 
     def test_claim_is_not_native_schedule_or_live_writer_proof(self):
-        result = attempt(FakeGit(), prepare(**kwargs()))
+        result = attempt_checked(FakeGit(), prepare(**kwargs()))
         for field in ("dispatch_executed", "scanner_executed", "ledger_written",
                       "native_schedule_claimed", "global_writer_exclusivity_proven"):
             self.assertFalse(result[field])
+
+
+    def test_replayed_prepared_claim_fails_before_any_git_write(self):
+        claim = prepare(**kwargs())
+        for clock in (S - dt.timedelta(seconds=1),
+                      S + dt.timedelta(minutes=30),
+                      S + dt.timedelta(days=1)):
+            with self.subTest(clock=clock):
+                api = FakeGit()
+                result = attempt_checked(api, claim, now=clock)
+                self.assertEqual(result["reason"], "STALE_OR_FUTURE_SLOT_REPLAY")
+                self.assertEqual(api.tags, {})
+                self.assertEqual(api.refs, {})
+
+    def test_source_changed_after_preparation_blocks_claim(self):
+        api = FakeGit()
+        result = attempt_checked(api, prepare(**kwargs()),
+                                 observed_main_sha="c" * 40)
+        self.assertEqual(result["reason"],
+                         "SOURCE_OR_LEDGER_CHANGED_SINCE_PREPARATION")
+        self.assertEqual(api.tags, {})
+        self.assertEqual(api.refs, {})
+
+    def test_ledger_changed_after_preparation_blocks_claim(self):
+        api = FakeGit()
+        result = attempt_checked(api, prepare(**kwargs()),
+                                 observed_ledger_commit="c" * 40)
+        self.assertEqual(result["reason"],
+                         "SOURCE_OR_LEDGER_CHANGED_SINCE_PREPARATION")
+        self.assertEqual(api.tags, {})
+        self.assertEqual(api.refs, {})
+
+    def test_missing_or_naive_attempt_clock_blocks_claim(self):
+        for clock in (None, S.replace(tzinfo=None), "2026-11-02T21:18:00Z"):
+            with self.subTest(clock=clock):
+                api = FakeGit()
+                result = attempt_checked(api, prepare(**kwargs()), now=clock)
+                self.assertEqual(result["reason"], "UNAUTHENTICATED_ATTEMPT_CLOCK")
+                self.assertEqual(api.tags, {})
+                self.assertEqual(api.refs, {})
+
+    def test_untrusted_main_or_ledger_observation_blocks(self):
+        for override in ({"observed_main_sha": None},
+                         {"observed_main_sha": "z" * 40},
+                         {"observed_ledger_commit": None},
+                         {"observed_ledger_commit": "x" * 40}):
+            with self.subTest(override=override):
+                api = FakeGit()
+                result = attempt_checked(api, prepare(**kwargs()), **override)
+                self.assertEqual(result["reason"],
+                                 "SOURCE_OR_LEDGER_CHANGED_SINCE_PREPARATION")
+                self.assertEqual(api.tags, {})
+                self.assertEqual(api.refs, {})
+
+    def test_last_permitted_minute_is_not_automatically_dispatched(self):
+        api = FakeGit()
+        result = attempt_checked(api, prepare(**kwargs()),
+                                 now=S + dt.timedelta(minutes=29))
+        self.assertEqual(result["status"], "CLAIMED_NOT_DISPATCHED")
+        self.assertFalse(result["dispatch_executed"])
+        self.assertEqual(api.dispatch_calls, 0)
 
 
 if __name__ == "__main__":
