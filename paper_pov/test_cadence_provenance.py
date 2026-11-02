@@ -56,8 +56,20 @@ class CadenceProvenanceTests(unittest.TestCase):
 
     def test_invalid_and_duplicate_run_ids_never_count_as_proven(self):
         result = self.check([run(), run()], {"1": log()})
-        self.assertEqual(result["verified_native_count"], 1)
-        self.assertEqual(result["unverified_or_ambiguous_count"], 1)
+        self.assertEqual(result["verified_native_count"], 0)
+        self.assertEqual(result["unverified_or_ambiguous_count"], 2)
+        self.assertTrue(all(r["classification"] == "INVALID_RUN_METADATA" for r in result["runs"]))
+
+    def test_duplicate_conflicting_run_cannot_leave_first_verified(self):
+        rows = [run(), {**run(), "event": "workflow_dispatch"}]
+        result = self.check(rows, {"1": log()})
+        self.assertEqual(result["verified_native_count"], 0)
+        self.assertEqual(result["verified_dispatch_count"], 0)
+        self.assertEqual(result["unverified_or_ambiguous_count"], 2)
+
+    def test_future_run_within_two_minutes_is_invalid_not_silently_skipped(self):
+        result = self.check([run(1, "2026-11-02T03:20:30Z")])
+        self.assertEqual(result["runs"][0]["classification"], "INVALID_RUN_METADATA")
 
     def test_older_than_lookback_not_counted(self):
         self.assertEqual(self.check([run(1, "2026-10-31T00:00:00Z")])["runs"], [])
