@@ -124,9 +124,42 @@ class CadenceCollectorTests(unittest.TestCase):
                                ledger_commit="b" * 40)
         proof = check()
         self.assertTrue(proof["artifact_zip_bytes_independently_verified"])
+        self.assertEqual(proof["supplied_github_run_origin_status"],
+                         "UNVERIFIED_NO_INDEPENDENT_RUN_METADATA")
+        self.assertFalse(proof["owner_manual_origin_verified"])
         self.assertEqual(proof["internal_sha256_verified"], 5)
         self.assertFalse(proof["remote_ledger_readback_independently_verified"])
         self.assertFalse(proof["results_delivery_verified"])
+        # Optional GitHub run metadata must be separately authenticated by
+        # the caller. Even matching dispatch metadata is NOT owner-manual proof.
+        authentic = {"id": 1, "head_sha": SHA, "head_branch": "main",
+                     "path": ".github/workflows/paper-pipeline.yml",
+                     "run_attempt": 1, "status": "completed",
+                     "conclusion": "success", "event": "workflow_dispatch"}
+        def with_run(metadata):
+            return verify_pair(lzip, ldigest, rzip, rdigest, run_id=1,
+                               source_sha=SHA, ledger_commit="b" * 40,
+                               github_run_metadata=metadata)
+        dispatched = with_run(authentic)
+        self.assertEqual(dispatched["supplied_github_run_origin_status"],
+                         "SUPPLIED_DISPATCH_METADATA_OWNER_ORIGIN_UNKNOWN")
+        self.assertFalse(dispatched["owner_manual_origin_verified"])
+        scheduled = with_run({**authentic, "event": "schedule"})
+        self.assertEqual(scheduled["supplied_github_run_origin_status"],
+                         "SUPPLIED_SCHEDULE_METADATA_NOT_CRON_SLOT_ATTESTED")
+        self.assertFalse(scheduled["originating_cron_slot_verified"])
+        for change in ({"id": True}, {"id": 2},
+                       {"head_sha": "f" * 40}, {"head_branch": "research"},
+                       {"path": ".github/workflows/other.yml"},
+                       {"run_attempt": 2}, {"run_attempt": True},
+                       {"status": "in_progress"}, {"conclusion": "failure"},
+                       {"event": "push"}):
+            with self.subTest(change=change):
+                with self.assertRaisesRegex(ValueError, "run provenance mismatch"):
+                    with_run({**authentic, **change})
+        with self.assertRaisesRegex(ValueError, "run provenance mismatch"):
+            with_run("untrusted string")
+
         with tempfile.TemporaryDirectory() as folder:
             lpath = Path(folder) / "ledger.zip"
             rpath = Path(folder) / "results.zip"
