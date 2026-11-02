@@ -54,7 +54,7 @@ def chronological_readiness(records, runs, hours):
     test = [r for r in records if runs[r["run_id"]] >= cutoff]
     def summary(rows):
         featured = [r for r in rows if r["lagged_returns"]["60m"] is not None]
-        positive = [r for r in rows if r["peak_observed_return"] >= 0.30]
+        positive = [r for r in rows if r["hit_30"]]
         featured_positive = [r for r in positive if r["lagged_returns"]["60m"] is not None]
         return {"matured_cases":len(rows), "positive_cases":len(positive),
                 "positive_pairs":len({r["pair"] for r in positive}),
@@ -154,6 +154,7 @@ def analyze(state):
                     coverage["mover_feature_60m"] += 1
                 record = {"pair":pair,"entry_at":at.isoformat(),"run_id":rid,"decision_at":start.isoformat(),
                           "peak_observed_return":round(peak,8),
+                          "hit_20":peak>=0.20,"hit_30":hit,
                           "watch":selected,"lagged_returns":lag}
                 if peak >= 0.20:
                     cases20.append(record)
