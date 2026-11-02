@@ -36,7 +36,9 @@ def evaluate(state):
                          "missed_30": 0, "watch_false_positive_20": 0,
                          "watch_false_positive_30": 0,
                          "watch_eligible": 0, "watch_matured": 0,
-                         "watch_abstain_gap": 0, "watch_immature": 0} for h in HORIZONS}
+                         "watch_abstain_gap": 0, "watch_immature": 0,
+                         "abstain_conflicting_quote": 0,
+                         "watch_abstain_conflicting_quote": 0} for h in HORIZONS}
     latest = max((timestamp(r["as_of"]) for r in runs.values()), default=None)
     for pair, series in prices.items():
         times = [record[0] for record in series]
@@ -80,7 +82,10 @@ def evaluate(state):
                     or any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
                     or anchors[0][0]-timeline[-1] > MAX_GAP):
                     row["abstain_gap"] += 1
-                    if selected: row["watch_abstain_gap"] += 1
+                    if ambiguous: row["abstain_conflicting_quote"] += 1
+                    if selected:
+                        row["watch_abstain_gap"] += 1
+                        if ambiguous: row["watch_abstain_conflicting_quote"] += 1
                     continue
                 row["matured"] += 1
                 if selected: row["watch_matured"] += 1
@@ -100,6 +105,8 @@ def evaluate(state):
         assert row["eligible"] == row["matured"] + row["abstain_gap"] + row["immature"]
         assert row["watch_eligible"] == (row["watch_matured"] +
                 row["watch_abstain_gap"] + row["watch_immature"])
+        assert row["abstain_conflicting_quote"] <= row["abstain_gap"]
+        assert row["watch_abstain_conflicting_quote"] <= row["watch_abstain_gap"]
         row["watch_resolved_fraction"] = (row["watch_matured"] / row["watch_eligible"]
                 if row["watch_eligible"] else None)
         for suffix in ("20","30"):
