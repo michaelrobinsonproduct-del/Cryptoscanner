@@ -214,6 +214,30 @@ class CadenceProvenanceTests(unittest.TestCase):
         self.assertIs(result["latest_cross_event_source_sha_equal"], True)
         self.assertNotIn("manual_parity_verified", result)
 
+    def test_latest_cross_event_time_comparability_is_not_manual_parity(self):
+        rows = [run(1, "2026-11-02T01:10:01Z"),
+                run(2, "2026-11-02T01:35:01Z", event="workflow_dispatch")]
+        logs = {"1": log(), "2": log(event="workflow_dispatch", cron="MANUAL_DISPATCH")}
+        result = self.check(rows, logs)
+        self.assertEqual(result["latest_cross_event_creation_gap_seconds"], 1500)
+        self.assertIs(result["latest_cross_event_within_30m"], True)
+        self.assertIs(result["latest_cross_event_source_sha_equal"], True)
+        self.assertNotIn("manual_parity_verified", result)
+
+    def test_old_same_sha_dispatch_is_not_time_comparable(self):
+        rows = [run(1, "2026-11-02T01:10:01Z"),
+                run(2, "2026-11-02T02:40:01Z", event="workflow_dispatch")]
+        logs = {"1": log(), "2": log(event="workflow_dispatch", cron="MANUAL_DISPATCH")}
+        result = self.check(rows, logs)
+        self.assertEqual(result["latest_cross_event_creation_gap_seconds"], 5400)
+        self.assertIs(result["latest_cross_event_within_30m"], False)
+        self.assertIs(result["latest_cross_event_source_sha_equal"], True)
+
+    def test_no_cross_event_pair_abstains_on_comparability(self):
+        result = self.check()
+        self.assertIsNone(result["latest_cross_event_creation_gap_seconds"])
+        self.assertIsNone(result["latest_cross_event_within_30m"])
+
     def test_no_false_ledger_or_trade_claims(self):
         result = self.check()
         self.assertNotIn("ledger_verified", result)
