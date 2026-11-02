@@ -343,6 +343,75 @@ def inventory_workflow_source(path,source):
             "branch_references":workflow_branch_references(source)}
 
 
+def apply_semantic_review(matrix, rows, current_main_sha, self_pr=121):
+    """Bind human semantic decisions to live main/head and exact PR file blobs.
+
+    A stale decision is visible but never promoted to current classification.
+    This audit PR's own head is inherently self-changing, so it remains
+    provisional even when its recorded snapshot SHA matches.
+    """
+    if matrix.get("schema") != "cryptoscanner-current-semantic-pr-review-v1":
+        raise ValueError("Unsupported semantic review schema")
+    allowed={"integrated","superseded","needed","conflicting","unknown"}
+    decisions=matrix.get("prs")
+    if not isinstance(decisions,list):
+        raise ValueError("Semantic review rows missing")
+    by_number={}
+    for decision in decisions:
+        n=decision.get("number")
+        if not isinstance(n,int) or isinstance(n,bool) or n in by_number:
+            raise ValueError("Duplicate or malformed semantic PR number")
+        if decision.get("classification") not in allowed:
+            raise ValueError("Unsupported semantic classification")
+        if decision.get("release_authorized") is not False or decision.get("cleanup_authorized") is not False:
+            raise ValueError("Semantic review cannot authorize release or cleanup")
+        if not re.fullmatch(r"[0-9a-f]{40}",str(decision.get("head_sha",""))):
+            raise ValueError("Malformed semantic PR head SHA")
+        by_number[n]=decision
+    main_matches=matrix.get("main_sha")==current_main_sha
+    open_numbers={r["number"] for r in rows}
+    missing=sorted(open_numbers-set(by_number))
+    no_longer_open=sorted(set(by_number)-open_numbers)
+    counts=collections.Counter()
+    for row in rows:
+        n=row["number"]
+        d=by_number.get(n)
+        head_matches=bool(d and d["head_sha"]==row["head_sha"])
+        path=d.get("source_path") if d else None
+        file_match=next((x for x in row.get("file_blob_comparisons",[]) if x["path"]==path),None)
+        expected_blob=d.get("source_blob_sha") if d else None
+        blob_matches=bool(file_match and (expected_blob is None or file_match["pr_blob_sha"]==expected_blob))
+        self_moving=n==self_pr
+        current=bool(d and main_matches and head_matches and blob_matches and not self_moving)
+        row["semantic_classification"]=d["classification"] if current else "unknown"
+        row["semantic_review_valid"]=current
+        row["semantic_review_reason"]=(d.get("reason") if current else
+            "SELF_MUTATING_AUDIT_HEAD_REQUIRES_INDEPENDENT_REVIEW" if self_moving else
+            "MAIN_DRIFT" if not main_matches else
+            "MISSING_REVIEW" if not d else
+            "PR_HEAD_DRIFT" if not head_matches else
+            "PR_SOURCE_BLOB_DRIFT_OR_MISSING")
+        row["semantic_snapshot_classification"]=d.get("classification") if d else None
+        row["semantic_snapshot_head_sha"]=d.get("head_sha") if d else None
+        row["semantic_source_path"]=path
+        row["semantic_source_blob_sha"]=expected_blob
+        counts[row["semantic_classification"]]+=1
+    return {"schema":"cryptoscanner-semantic-review-reconciliation-v1",
+            "main_sha":current_main_sha,"matrix_main_sha":matrix.get("main_sha"),
+            "main_matches":main_matches,"open_pr_count":len(rows),
+            "reviewed_pr_count":len(decisions),"current_validated_count":sum(r["semantic_review_valid"] for r in rows),
+            "missing_prs":missing,"no_longer_open_prs":no_longer_open,
+            "counts":dict(sorted(counts.items())),"certified":False,
+            "cleanup_authorized":False,"release_authorized":False,
+            "prs":[{"number":r["number"],"head_sha":r["head_sha"],
+                    "classification":r["semantic_classification"],
+                    "review_valid":r["semantic_review_valid"],
+                    "reason":r["semantic_review_reason"],
+                    "snapshot_classification":r["semantic_snapshot_classification"],
+                    "source_path":r["semantic_source_path"],
+                    "source_blob_sha":r["semantic_source_blob_sha"]} for r in rows]}
+
+
 def main():
     tracked=cmd("git","ls-files")
     if not tracked["ok"]:
@@ -404,6 +473,8 @@ def main():
     runs_response=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/actions/runs?per_page=30")
     runs=runs_response.get("workflow_runs",[]) if isinstance(runs_response,dict) else []
     closed_prs_since_snapshot=reconcile_pr_snapshot(triage,pr_rows,main_ref.get("object",{}).get("sha")) if isinstance(prs,list) else []
+    semantic_matrix=json.loads((ROOT/"audit_tools/pr_semantic_current_20261102.json").read_text())
+    semantic_review=apply_semantic_review(semantic_matrix,pr_rows,main_sha)
     external_runtime=json.loads((ROOT/"audit_tools/external_runtime_20261102.json").read_text())
     runtime_snapshot_main_matches=external_runtime.get("repo_main_sha")==main_ref.get("object",{}).get("sha")
     errors={"prs":prs.get("error") if isinstance(prs,dict) else None,
@@ -427,6 +498,7 @@ def main():
         "main_workflows":sorted(p for p in main_files if p.startswith(".github/workflows/") and p.endswith((".yml",".yaml"))),
         "workflow_inventory":workflow_inventory,"main_workflow_inventory":main_workflow_inventory,"python_imports":dict(imports),
         "package_scripts":package.get("scripts",{}),"legacy_files":legacy_files,
+        "semantic_review_summary":{k:v for k,v in semantic_review.items() if k!="prs"},
         "triage_snapshot_main_sha":triage.get("main_sha"),
         "triage_snapshot_main_matches":triage.get("main_sha")==main_ref.get("object",{}).get("sha"),
         "external_runtime_snapshot_utc":external_runtime.get("snapshot_utc"),
@@ -444,6 +516,7 @@ def main():
     out=ROOT/"audit-evidence";out.mkdir(exist_ok=True)
     graph=build_consumer_graph(main_workflow_inventory,external_runtime,data["checkout_sha"],data["main_sha"],workflow_source="remote_main")
     (out/"consumer-graph.json").write_text(json.dumps(graph,indent=2,sort_keys=True)+"\n")
+    (out/"semantic-pr-matrix.json").write_text(json.dumps(semantic_review,indent=2,sort_keys=True)+"\n")
     (out/"scanner-inventory.json").write_text(json.dumps(data,indent=2,sort_keys=True)+"\n")
     lines=["# Scanner runtime and legacy inventory (read-only)","",
       f"Generated UTC: {data['created_utc']}","",
@@ -456,6 +529,11 @@ def main():
     lines+=["","## All open PRs (path overlap is NOT proof of equivalent behavior)","",
        "| PR | Head SHA | Triage | Snapshot head match | Changed files | Actual main path overlaps | Exact blob matches |","|---|---|---|---|---:|---:|---:|"]
     for p in pr_rows:lines.append(f"| [#{p['number']}]({p['url']}) | `{p['head_sha'][:12]}` | {p['triage_classification']} | {p['triage_snapshot_head_matches']} | {len(p['files'])} | {len(p['already_on_main_paths'])} | {len(p['exact_main_blob_matches'])} |")
+    lines+=["","## Current-head semantic review (provisional; fail-closed)","",
+      f"Current validated decisions: {semantic_review['current_validated_count']}/{semantic_review['open_pr_count']}; unknown includes self-changing audit head and stale decisions.",
+      "Artifact: semantic-pr-matrix.json; neither this table nor green CI authorizes cleanup or merge.",
+      "","| PR | Current disposition | Evidence status |","|---|---|---|"]
+    for p in pr_rows:lines.append(f"| #{p['number']} | {p['semantic_classification']} | {p['semantic_review_reason']} |")
     lines+=["","## Snapshot drift / closed PR reconciliation","",
       f"Triage snapshot main matches current main: {data['triage_snapshot_main_matches']}",
       f"External runtime snapshot main matches current main: {data['external_runtime_snapshot_main_matches']}",
