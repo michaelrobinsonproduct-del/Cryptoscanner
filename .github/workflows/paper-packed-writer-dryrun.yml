@@ -57,12 +57,15 @@ jobs:
           import json
           from pathlib import Path
           from paper_pov import ledger, segmented_repository as repo, segmented_storage as storage
+          from paper_pov.retention_acceptance import verify_transition
           before=ledger.verify(json.loads(Path("/tmp/paper-dryrun-before.json").read_bytes()),storage.MAX_RAW_BYTES)
           after=ledger.verify(json.loads(Path("/tmp/paper-dryrun-after.json").read_bytes()),storage.MAX_RAW_BYTES)
-          assert after["generation"]==before["generation"]+1
           assert after["sha256"]==repo.read_state("/tmp/paper-staged",True)[0]["sha256"]
-          assert len(after["predictions"])>=len(before["predictions"])
-          assert len(after["observations"])>=len(before["observations"])
+          report=json.loads(Path("paper_pov/output/latest.json").read_bytes())
+          import subprocess
+          source_sha=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip()
+          retention=verify_transition(before,after,report,source_sha)
+          print("PAPER_RETENTION_IDENTITIES_OK",json.dumps(retention,sort_keys=True))
           assert ledger.scoreboard(after,storage.MAX_RAW_BYTES)["held_out_lift"] is None
           print("PAPER_PACKED_DRYRUN_OK",before["generation"],after["generation"],
                 len(ledger.canonical(after)),
