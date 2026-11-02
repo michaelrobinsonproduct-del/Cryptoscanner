@@ -52,6 +52,8 @@ jobs:
               assert row['eligible']==d['observed_entry_count']
               assert row['watch_eligible']==d['watched_prediction_count']
               assert row['watch_eligible']==row['watch_matured']+row['watch_abstain_gap']+row['watch_immature']
+              assert row['abstain_conflicting_quote'] <= row['abstain_gap']
+              assert row['watch_abstain_conflicting_quote'] <= row['watch_abstain_gap']
               assert row['watch_20']+row['watch_false_positive_20']==row['watch_matured']
               assert row['watch_30']+row['watch_false_positive_30']==row['watch_matured']
               assert row['movers_20']==row['watch_20']+row['missed_20']
