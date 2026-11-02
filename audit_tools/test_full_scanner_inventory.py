@@ -1,7 +1,7 @@
 """Offline fail-closed pagination tests for repository inventory (no network)."""
 import unittest
 from unittest.mock import patch
-from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph, workflow_branch_references, inventory_workflow_source, workflow_orchestration_references, apply_semantic_review, classify_declared_write_surfaces, assess_external_runtime_snapshot
+from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph, workflow_branch_references, inventory_workflow_source, workflow_orchestration_references, apply_semantic_review, classify_declared_write_surfaces, assess_external_runtime_snapshot, audit_gate_decision
 
 
 class BranchReferenceTests(unittest.TestCase):
@@ -604,6 +604,31 @@ class ExternalRuntimeEvidenceTests(unittest.TestCase):
         self.assertEqual(x["evidence_class"],"snapshot_only")
         self.assertFalse(x["runtime_invocations_verified"])
         self.assertFalse(x["database_scheduler_verified"])
+
+
+class AuditCertificationGateTests(unittest.TestCase):
+    def test_unresolved_semantics_consumers_and_writer_are_explicit(self):
+        semantic={"open_pr_count":22,"current_validated_count":12}
+        graph={"unknowns":["dynamic checkout","unverified gateway"]}
+        writes={"unknown_write_destinations":[".github/workflows/unknown.yml"]}
+        runtime={"runtime_coverage_certified":False,"reason":"STALE_SNAPSHOT"}
+        gate=audit_gate_decision(semantic,graph,writes,runtime,"a"*40,"b"*40)
+        self.assertEqual(gate["status"],"NOT_CERTIFIED")
+        self.assertEqual(gate["unresolved_pr_count"],10)
+        self.assertEqual(gate["unknown_consumer_count"],2)
+        self.assertEqual(gate["unknown_write_destination_count"],1)
+        self.assertIn("EXTERNAL_RUNTIME_UNATTESTED",[b["id"] for b in gate["blockers"]])
+        self.assertFalse(gate["cleanup_authorized"])
+
+    def test_no_static_unknowns_does_not_fake_independent_certification(self):
+        gate=audit_gate_decision(
+            {"open_pr_count":1,"current_validated_count":1},
+            {"unknowns":[]},{"unknown_write_destinations":[]},
+            {"runtime_coverage_certified":False,"reason":"SNAPSHOT_ONLY_NO_LIVE_AUTHENTICATION"},
+            "a"*40,"b"*40)
+        self.assertEqual([x["id"] for x in gate["blockers"]],
+                         ["EXTERNAL_RUNTIME_UNATTESTED","INDEPENDENT_VERIFIER_APPROVAL_MISSING"])
+        self.assertFalse(gate["production_mutation_authorized"])
 
 
 if __name__=="__main__":
