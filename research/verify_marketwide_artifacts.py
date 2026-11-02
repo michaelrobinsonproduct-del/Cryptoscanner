@@ -122,6 +122,38 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
             if (not all(isinstance(x, int) and not isinstance(x, bool) and x >= 0
                         for x in (first, late, total)) or first + late != total):
                 raise ValueError("invalid first-entry versus late WATCH episode partition: " + horizon)
+        # First-entry recall and feature coverage are independently sealed
+        # semantic contracts; checksums alone cannot detect fabricated ratios.
+        for suffix, episodes_key, first_key, distributions_key in (
+            ("20", "unique_mover_episodes_20", "watch_first_entry_episodes_20",
+             "episode_first_entry_feature_distributions_20"),
+            ("30", "unique_mover_episodes", "watch_first_entry_episodes_30",
+             "episode_first_entry_feature_distributions")):
+            total = episode[episodes_key]
+            first = episode[first_key]
+            recall = episode.get("watch_first_entry_recall_" + suffix)
+            expected_recall = first / total if total else None
+            if (not isinstance(total, int) or isinstance(total, bool) or total < 0
+                or first > total or recall != expected_recall):
+                raise ValueError("invalid first-entry WATCH recall: " + horizon)
+            feature_coverage = episode.get("episode_first_entry_feature_coverage_" + suffix)
+            distributions = episode.get(distributions_key)
+            if (not isinstance(feature_coverage, dict) or not isinstance(distributions, dict)
+                or set(feature_coverage) != {"30m", "60m", "180m"}
+                or set(distributions) != set(feature_coverage)):
+                raise ValueError("invalid first-entry feature coverage schema: " + horizon)
+            for lag, stats in feature_coverage.items():
+                distribution = distributions[lag]
+                n = stats.get("with_asof_feature")
+                missing = stats.get("without_asof_feature")
+                pairs = stats.get("distinct_covered_pairs")
+                if (not all(isinstance(x, int) and not isinstance(x, bool) and x >= 0
+                            for x in (n, missing, pairs))
+                    or stats.get("episodes") != total or n + missing != total
+                    or pairs > n or n != distribution.get("n")
+                    or pairs != distribution.get("distinct_pairs")
+                    or stats.get("covered_fraction") != (n / total if total else None)):
+                    raise ValueError("invalid first-entry feature coverage: " + horizon)
         # Mutually exclusive gap reasons must reconcile with BOTH market and
         # WATCH unknown outcomes. A resealed report cannot fabricate reasons.
         reasons = ("abstain_conflicting_quotes", "abstain_future_entry_quotes",
