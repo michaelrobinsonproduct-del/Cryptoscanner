@@ -966,5 +966,32 @@ class EpisodeTests(unittest.TestCase):
         self.assertEqual(c["movers_20"], 2)
         self.assertEqual(c["movers"], 1)
 
+    def test_false_positive_rate_excludes_unknown_and_positive_labels(self):
+        with patch("paper_pov.ledger.verify", return_value=None):
+            horizons = analyze(fixture())["horizons"]
+        for report in horizons.values():
+            c = report["coverage"]
+            for suffix,mover,fp in (("20", "movers_20", "watch_false_positive_20"),
+                                     ("30", "movers", "watch_false_positive_30")):
+                n = c["matured"] - c[mover]
+                self.assertEqual(c["matured_negative_" + suffix], n)
+                self.assertEqual(c["false_positive_rate_" + suffix],
+                                 c[fp] / n if n else None)
+                self.assertEqual(c["false_positive_rate_wilson_95_naive_" + suffix],
+                                 wilson(c[fp], n))
+        # 24h and 48h have no mature negatives; FPR is undefined, not zero.
+        self.assertIsNone(horizons["48"]["coverage"]["false_positive_rate_30"])
+
+    def test_zero_observations_do_not_fabricate_fpr_denominators(self):
+        state = fixture()
+        state["observations"] = []
+        state["predictions"] = []
+        with patch("paper_pov.ledger.verify", return_value=None):
+            c = analyze(state)["horizons"]["1"]["coverage"]
+        self.assertEqual(c["matured_negative_20"], 0)
+        self.assertEqual(c["matured_negative_30"], 0)
+        self.assertIsNone(c["false_positive_rate_20"])
+        self.assertIsNone(c["false_positive_rate_wilson_95_naive_30"])
+
 if __name__=="__main__":
     unittest.main()

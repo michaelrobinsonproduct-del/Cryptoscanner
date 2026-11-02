@@ -519,6 +519,23 @@ def analyze(state):
                                             if nonwatch["eligible"] else None}}
         coverage["watch_false_positive_30"] = coverage["watch_matured"] - coverage["watch_positive"]
         coverage["watch_false_positive_20"] = coverage["watch_matured"] - coverage["watch_positive_20"]
+        # False-positive rate uses all MATURED observed non-movers, not all
+        # WATCH entries. Unknown labels are excluded, not assigned negative.
+        # These rates are descriptive on PAPER observations, not held-out FPR.
+        negatives_20 = coverage["matured"] - coverage["movers_20"]
+        negatives_30 = coverage["matured"] - coverage["movers"]
+        assert 0 <= coverage["watch_false_positive_20"] <= negatives_20
+        assert 0 <= coverage["watch_false_positive_30"] <= negatives_30
+        coverage["false_positive_rate_20"] = (
+            coverage["watch_false_positive_20"] / negatives_20 if negatives_20 else None)
+        coverage["false_positive_rate_30"] = (
+            coverage["watch_false_positive_30"] / negatives_30 if negatives_30 else None)
+        coverage["false_positive_rate_wilson_95_naive_20"] = wilson(
+            coverage["watch_false_positive_20"], negatives_20)
+        coverage["false_positive_rate_wilson_95_naive_30"] = wilson(
+            coverage["watch_false_positive_30"], negatives_30)
+        coverage["matured_negative_20"] = negatives_20
+        coverage["matured_negative_30"] = negatives_30
         coverage["missed_20"] = coverage["movers_20"] - coverage["watch_positive_20"]
         coverage["missed_30"] = coverage["movers"] - coverage["watch_positive"]
         output[str(hours)] = {"coverage":coverage,
