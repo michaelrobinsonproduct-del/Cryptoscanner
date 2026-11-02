@@ -89,6 +89,7 @@ class EpisodeTests(unittest.TestCase):
         runs = {str(m):BASE+dt.timedelta(minutes=m) for m in times}
         records = [{"run_id":str(m),"pair":"AAAUSD",
                     "peak_observed_return":0.35 if m==0 else 0.0,
+                    "hit_30":m==0,
                     "lagged_returns":{"60m":0.01}} for m in times]
         split = chronological_readiness(records,runs,1)
         cutoff = BASE+dt.timedelta(minutes=420)
@@ -117,6 +118,19 @@ class EpisodeTests(unittest.TestCase):
         self.assertEqual(one["unique_mover_episodes_20"],1)
         self.assertEqual(one["unique_mover_episodes"],0)
         self.assertEqual(one["watch_captured_episodes_20"],0)
+
+    def test_rounded_return_does_not_create_false_positive_label(self):
+        state=fixture()
+        for o in state["observations"]:
+            if o["pair"]=="AAAUSD" and o["price"]==135:
+                o["price"]=129.99999999
+        with patch("paper_pov.ledger.verify",return_value=None):
+            report=analyze(state)
+        one=report["horizons"]["1"]
+        self.assertEqual(one["coverage"]["movers"],0)
+        self.assertEqual(one["unique_mover_episodes"],0)
+        self.assertGreater(one["coverage"]["movers_20"],0)
+        self.assertEqual(one["chronological_readiness"]["train"]["positive_cases"],0)
 
     def test_gap_abstains_not_false_negative(self):
         state=fixture()
