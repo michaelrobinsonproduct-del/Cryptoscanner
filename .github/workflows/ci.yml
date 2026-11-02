@@ -1,30 +1,41 @@
 name: CI
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [production-source-recovery-20261010]
 permissions:
   contents: read
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bun install
+      - run: bun install --frozen-lockfile
       - run: bun test
       - run: bun run validate
       - run: bun run live-smoke
   shadow:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/production-source-recovery-20261010') || (github.event_name == 'pull_request' && github.head_ref == 'production-source-recovery-20261010')
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bun install
+      - run: bun install --frozen-lockfile
       - name: Run one challenger cycle against production control
+        env:
+          CHALLENGER_SUPABASE_URL: ${{ secrets.CHALLENGER_SUPABASE_URL }}
+          CHALLENGER_SUPABASE_SERVICE_KEY: ${{ secrets.CHALLENGER_SUPABASE_SERVICE_KEY }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: bun run evaluation/shadow-cycle.ts
       - uses: actions/upload-artifact@v4
         with:
           name: shadow-result
           path: evaluation/out/*.json
           retention-days: 30
+
+# Credential-backed challenger persistence is exercised only on recovery-branch pushes.
