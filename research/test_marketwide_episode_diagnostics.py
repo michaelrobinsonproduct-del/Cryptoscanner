@@ -195,7 +195,7 @@ class EpisodeTests(unittest.TestCase):
         dist=one["pre_entry_price_feature_distributions"]
         self.assertEqual(set(dist),{"30m","60m","180m"})
         for lag in dist:
-            for label in ("positive_30","negative_30"):
+            for label in ("positive_20","negative_20","positive_30","negative_30"):
                 d=dist[lag][label]
                 self.assertEqual(set(d),{"n","distinct_pairs","mean","positive_fraction","median","min","max"})
                 self.assertLessEqual(d["distinct_pairs"],d["n"])
@@ -387,6 +387,44 @@ class EpisodeTests(unittest.TestCase):
         self.assertFalse(twenty["model_evaluation_ready"])
         self.assertEqual(twenty["status"],
                          "DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER")
+
+
+    def test_watch_outcome_denominators_distinguish_unknown_from_nonhits(self):
+        state=fixture()
+        state["predictions"].append({"run_id":"480","pair":"BBBUSD"})
+        # A WATCH at run 0 is label-incomplete when later BBB observations
+        # are missing; it must not be counted as a false positive.
+        state["predictions"].append({"run_id":"0","pair":"BBBUSD"})
+        state["observations"]=[o for o in state["observations"]
+            if not (o["pair"]=="BBBUSD" and o["run_id"] in ("60","90"))]
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        c=one["coverage"]
+        self.assertGreater(c["watch_immature"],0)
+        self.assertGreater(c["watch_abstain_gap"],0)
+        self.assertEqual(c["watch_eligible"],
+            c["watch_matured"]+c["watch_immature"]+c["watch_abstain_gap"])
+        self.assertEqual(c["missed_20"],c["movers_20"]-c["watch_positive_20"])
+        self.assertEqual(c["missed_30"],c["movers"]-c["watch_positive"])
+        self.assertEqual(one["missed_mover_episodes_20"],
+            one["unique_mover_episodes_20"]-one["watch_captured_episodes_20"])
+        self.assertEqual(one["missed_mover_episodes_30"],
+            one["unique_mover_episodes"]-one["watch_captured_episodes"])
+
+    def test_20pct_feature_cohorts_do_not_reuse_30pct_negative_labels(self):
+        state=fixture()
+        for o in state["observations"]:
+            if o["pair"]=="AAAUSD" and o["price"]==135:
+                o["price"]=125
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        for lag in ("30m","60m","180m"):
+            d=one["pre_entry_price_feature_distributions"][lag]
+            self.assertEqual(d["positive_30"]["n"],0)
+            self.assertGreaterEqual(d["positive_20"]["n"],0)
+            self.assertEqual(d["positive_20"]["n"]+d["negative_20"]["n"],
+                d["positive_30"]["n"]+d["negative_30"]["n"])
+            self.assertLessEqual(d["negative_20"]["n"],d["negative_30"]["n"])
 
 
 if __name__=="__main__":
