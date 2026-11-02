@@ -17,7 +17,7 @@ WRITER_WORKFLOW = ".github/workflows/paper-pipeline.yml"
 WRITER_BRANCH = "main"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 # Match executed log output, not the shell's echoed source commands.
-EXECUTED = re.compile(r"(?:^|\n)[^\n]*?Z (PAPER_VERIFIED_GITHUB_EVENT|PAPER_VERIFIED_ORIGINATING_CRON|PAPER_PIPELINE_SOURCE_SHA)=([^\r\n]+)")
+EXECUTED = re.compile(r"(?:^|\n)(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z) (PAPER_VERIFIED_GITHUB_EVENT|PAPER_VERIFIED_ORIGINATING_CRON|PAPER_PIPELINE_SOURCE_SHA)=([^\r\n]+)")
 
 
 def timestamp(value):
@@ -34,10 +34,20 @@ def provenance(log):
     if not isinstance(log, str):
         return None
     found = {}
-    for key, value in EXECUTED.findall(log):
+    marker_times = []
+    for raw_time, key, value in EXECUTED.findall(log):
         if key in found:  # Never silently select one of two contradictory markers.
             return None
+        try:
+            marker_times.append(timestamp(raw_time))
+        except (ValueError, TypeError, OverflowError):
+            return None
         found[key] = value.strip()
+    # Executed GitHub log markers should be chronological and close together.
+    # Reject pasted/reordered historical fragments rather than joining them.
+    if marker_times and (marker_times != sorted(marker_times) or
+                         (marker_times[-1] - marker_times[0]).total_seconds() > 300):
+        return None
     if set(found) != {"PAPER_VERIFIED_GITHUB_EVENT", "PAPER_VERIFIED_ORIGINATING_CRON", "PAPER_PIPELINE_SOURCE_SHA"}:
         return None
     if not SHA.fullmatch(found["PAPER_PIPELINE_SOURCE_SHA"]):
