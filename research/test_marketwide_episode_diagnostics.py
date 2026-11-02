@@ -225,6 +225,20 @@ class EpisodeTests(unittest.TestCase):
 
 
 
+    def test_episode_clusters_by_decision_not_stale_quote_time(self):
+        # Decisions are exactly 60m apart, but the first quote is 3m old.
+        # Grouping by quote timestamps would split one episode into two.
+        cases=[{"pair":"AAAUSD","entry_at":iso(-3),"decision_at":iso(0),
+                "watch":False,"lagged_returns":{"60m":None},
+                "peak_observed_return":0.35},
+               {"pair":"AAAUSD","entry_at":iso(60),"decision_at":iso(60),
+                "watch":False,"lagged_returns":{"60m":None},
+                "peak_observed_return":0.35}]
+        episodes=cluster_episodes(cases,1)
+        self.assertEqual(len(episodes),1)
+        self.assertEqual(episodes[0]["entry_cases"],2)
+        self.assertEqual(episodes[0]["first_decision_at"],iso(0))
+
     def test_conflicting_future_quote_abstains_in_episode_metrics(self):
         # A second retained quote for the same pair/time disagrees. A
         # sealed ledger cannot authenticate which is correct.
