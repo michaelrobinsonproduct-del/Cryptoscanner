@@ -136,12 +136,18 @@ def cluster_episodes(cases, hours):
             and t-timestamp(episodes[-1]["first_decision_at"]) <= dt.timedelta(hours=hours)):
             episodes[-1]["entry_cases"] += 1
             episodes[-1]["last_entry_at"] = case["entry_at"]
+            episodes[-1]["last_decision_at"] = t.isoformat()
+            if case["watch"] and episodes[-1]["first_watch_decision_at"] is None:
+                episodes[-1]["first_watch_decision_at"] = t.isoformat()
             episodes[-1]["watch_captured"] |= case["watch"]
         else:
             episodes.append({"pair":case["pair"],"first_entry_at":case["entry_at"],
                              "first_decision_at":t.isoformat(),
+                             "last_decision_at":t.isoformat(),
                              "last_entry_at":case["entry_at"],"entry_cases":1,
                              "watch_captured":case["watch"],
+                             "first_entry_watch":bool(case["watch"]),
+                             "first_watch_decision_at":t.isoformat() if case["watch"] else None,
                              "first_lagged_60m":case["lagged_returns"]["60m"],
                              "first_lagged_returns":dict(case["lagged_returns"]),
                              "first_peak_observed_return":case["peak_observed_return"]})
@@ -167,8 +173,15 @@ def analyze(state):
     for hours in HORIZONS:
         positives, negatives, negatives20, cases, cases20 = [], [], [], [], []
         coverage = {"eligible": 0, "immature": 0, "abstain_gap": 0,
-                    "abstain_conflicting_quotes": 0, "abstain_future_entry_quotes": 0, "matured": 0,
+                    "abstain_conflicting_quotes": 0, "abstain_future_entry_quotes": 0,
+                    "abstain_no_future_observation": 0, "abstain_missing_horizon_anchor": 0,
+                    "abstain_stale_entry": 0, "abstain_discontinuous_path": 0,
+                    "matured": 0,
                     "watch_eligible": 0, "watch_immature": 0, "watch_abstain_gap": 0,
+                    "watch_abstain_conflicting_quotes": 0, "watch_abstain_future_entry_quotes": 0,
+                    "watch_abstain_no_future_observation": 0,
+                    "watch_abstain_missing_horizon_anchor": 0,
+                    "watch_abstain_stale_entry": 0, "watch_abstain_discontinuous_path": 0,
                     "watch_matured": 0, "watch_positive": 0, "movers": 0,
                     "watch_positive_20": 0, "movers_20": 0,
                     "feature_30m": 0, "feature_60m": 0, "feature_180m": 0,
@@ -195,6 +208,7 @@ def analyze(state):
                     coverage["abstain_future_entry_quotes"] += 1
                     if selected:
                         coverage["watch_abstain_gap"] += 1
+                        coverage["watch_abstain_future_entry_quotes"] += 1
                     continue
                 end = bisect.bisect_right(times, target+MAX_GAP, lo=i+1)
                 future = series[i+1:end]
@@ -212,13 +226,25 @@ def analyze(state):
                     coverage["abstain_conflicting_quotes"] += 1
                     if selected:
                         coverage["watch_abstain_gap"] += 1
+                        coverage["watch_abstain_conflicting_quotes"] += 1
                     continue
-                if (not before or not anchors or start-at > MAX_GAP
-                    or any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
-                    or anchors[0][0]-timeline[-1] > MAX_GAP):
+                # One mutually exclusive primary reason for every unknown label.
+                reason = None
+                if not before:
+                    reason = "abstain_no_future_observation"
+                elif not anchors:
+                    reason = "abstain_missing_horizon_anchor"
+                elif start-at > MAX_GAP:
+                    reason = "abstain_stale_entry"
+                elif (any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
+                      or anchors[0][0]-timeline[-1] > MAX_GAP):
+                    reason = "abstain_discontinuous_path"
+                if reason is not None:
                     coverage["abstain_gap"] += 1
+                    coverage[reason] += 1
                     if selected:
                         coverage["watch_abstain_gap"] += 1
+                        coverage["watch_" + reason] += 1
                     continue
                 coverage["matured"] += 1
                 if selected:
@@ -272,6 +298,9 @@ def analyze(state):
         episodes20 = cluster_episodes(cases20,hours)
         episode_watch_count = sum(e["watch_captured"] for e in episodes)
         episode_watch_count_20 = sum(e["watch_captured"] for e in episodes20)
+        # First qualifying entry is not necessarily the true pre-surge onset.
+        first_watch_count = sum(e["first_entry_watch"] for e in episodes)
+        first_watch_count_20 = sum(e["first_entry_watch"] for e in episodes20)
         episode_first_lags = [e["first_lagged_60m"] for e in episodes
                               if e["first_lagged_60m"] is not None]
         # Descriptive only: features cannot be backfilled for most first observations.
@@ -302,6 +331,12 @@ def analyze(state):
         episode_features_20 = {key:summarize_feature(first_entries_20,key)
                                for key in ("30m","60m","180m")}
         assert coverage["eligible"]==coverage["matured"]+coverage["abstain_gap"]+coverage["immature"]
+        gap_reasons = ("abstain_conflicting_quotes", "abstain_future_entry_quotes",
+                       "abstain_no_future_observation", "abstain_missing_horizon_anchor",
+                       "abstain_stale_entry", "abstain_discontinuous_path")
+        assert coverage["abstain_gap"] == sum(coverage[k] for k in gap_reasons)
+        assert coverage["watch_abstain_gap"] == sum(coverage["watch_" + k] for k in gap_reasons)
+        assert all(coverage["watch_" + k] <= coverage[k] for k in gap_reasons)
         assert coverage["movers"]==len(positives)
         assert coverage["movers_20"]==len(cases20)
         assert coverage["matured"]==len(cases20)+len(negatives20)
@@ -322,6 +357,8 @@ def analyze(state):
             "missed_mover_episodes_20":len(episodes20)-episode_watch_count_20,
             "missed_mover_episodes_30":len(episodes)-episode_watch_count,
             "watch_captured_episodes_20":episode_watch_count_20,
+            "watch_first_entry_episodes_20":first_watch_count_20,
+            "watch_late_only_episodes_20":episode_watch_count_20-first_watch_count_20,
             "watch_episode_recall_wilson_95_naive_20":wilson(episode_watch_count_20,len(episodes20)),
             "episode_first_entry_feature_distributions_20":episode_features_20,
             "watch_episode_recall_20":(sum(e["watch_captured"] for e in episodes20)/len(episodes20)
@@ -332,6 +369,8 @@ def analyze(state):
                                   if coverage["watch_matured"] else None),
             "episodes":episodes,"mover_cases":cases,
             "watch_captured_episodes":episode_watch_count,
+            "watch_first_entry_episodes_30":first_watch_count,
+            "watch_late_only_episodes_30":episode_watch_count-first_watch_count,
             "watch_episode_recall_30":episode_watch_count/len(episodes) if episodes else None,
             "watch_episode_recall_wilson_95_naive":wilson(episode_watch_count,len(episodes)),
             "episode_first_entry_feature_distributions":episode_features,
