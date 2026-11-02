@@ -343,6 +343,35 @@ def inventory_workflow_source(path,source):
             "branch_references":workflow_branch_references(source)}
 
 
+def classify_declared_write_surfaces(workflows, main_sha):
+    """Static write-capability census; never claim execution from permissions alone."""
+    rows=[]
+    for w in workflows:
+        if not w.get("writes_contents"):
+            continue
+        refs=w.get("branch_references",{})
+        mentions=set(refs.get("branch_ref_mentions",[])) | set(refs.get("checkout_refs",[]))
+        if w.get("ledger_ref") or "paper-proof-ledger" in mentions:
+            surface="PAPER_LEDGER_REFERENCE"
+        elif "simple-history" in mentions:
+            surface="LEGACY_SIMPLE_HISTORY_REFERENCE"
+        else:
+            surface="UNRESOLVED_WRITE_DESTINATION"
+        rows.append({"workflow":w["path"],"declared_contents_write":True,
+                     "write_destination_evidence":surface,
+                     "explicit_checkout_refs":refs.get("checkout_refs",[]),
+                     "schedule_cron":w.get("schedule_cron",[]),
+                     "has_workflow_dispatch":bool(w.get("has_dispatch")),
+                     "execution_proven":False,
+                     "safe_to_delete":False})
+    return {"schema":"cryptoscanner-declared-write-surfaces-v1",
+            "remote_main_sha":main_sha,
+            "scope":"Static workflow contents:write declarations and branch mentions; not observed writes, permission reachability or runtime deployment",
+            "surfaces":sorted(rows,key=lambda r:r["workflow"]),
+            "unknown_write_destinations":sorted(r["workflow"] for r in rows if r["write_destination_evidence"]=="UNRESOLVED_WRITE_DESTINATION"),
+            "cleanup_authorized":False}
+
+
 def apply_semantic_review(matrix, rows, current_main_sha, self_pr=121):
     """Bind human semantic decisions to live main/head and exact PR file blobs.
 
@@ -521,6 +550,8 @@ def main():
     graph=build_consumer_graph(main_workflow_inventory,external_runtime,data["checkout_sha"],data["main_sha"],workflow_source="remote_main")
     (out/"consumer-graph.json").write_text(json.dumps(graph,indent=2,sort_keys=True)+"\n")
     (out/"semantic-pr-matrix.json").write_text(json.dumps(semantic_review,indent=2,sort_keys=True)+"\n")
+    write_surfaces=classify_declared_write_surfaces(main_workflow_inventory,data["main_sha"])
+    (out/"declared-write-surfaces.json").write_text(json.dumps(write_surfaces,indent=2,sort_keys=True)+"\n")
     (out/"scanner-inventory.json").write_text(json.dumps(data,indent=2,sort_keys=True)+"\n")
     lines=["# Scanner runtime and legacy inventory (read-only)","",
       f"Generated UTC: {data['created_utc']}","",
@@ -533,6 +564,9 @@ def main():
     lines+=["","## All open PRs (path overlap is NOT proof of equivalent behavior)","",
        "| PR | Head SHA | Triage | Snapshot head match | Changed files | Actual main path overlaps | Exact blob matches |","|---|---|---|---|---:|---:|---:|"]
     for p in pr_rows:lines.append(f"| [#{p['number']}]({p['url']}) | `{p['head_sha'][:12]}` | {p['triage_classification']} | {p['triage_snapshot_head_matches']} | {len(p['files'])} | {len(p['already_on_main_paths'])} | {len(p['exact_main_blob_matches'])} |")
+    lines+=["","## Declared GitHub write surfaces (static, NOT observed writers)","",
+      f"Workflows declaring contents:write: {len(write_surfaces['surfaces'])}; unresolved destinations: {len(write_surfaces['unknown_write_destinations'])}.",
+      "See declared-write-surfaces.json; no cleanup authorization.", ""]
     lines+=["","## Current-head semantic review (provisional; fail-closed)","",
       f"Current validated decisions: {semantic_review['current_validated_count']}/{semantic_review['open_pr_count']}; unknown includes self-changing audit head and stale decisions.",
       "Artifact: semantic-pr-matrix.json; neither this table nor green CI authorizes cleanup or merge.",
