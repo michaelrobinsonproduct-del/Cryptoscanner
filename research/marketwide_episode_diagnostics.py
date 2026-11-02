@@ -50,7 +50,7 @@ def lagged_return(series, times, index, minutes):
 
 
 
-def chronological_readiness(records, runs, hours):
+def chronological_readiness(records, runs, hours, positive_key="hit_30"):
     """Audit whether an as-of, label-embargoed split is even measurable.
 
     Split is determined from ALL scan decision times, never from outcome labels.
@@ -65,7 +65,7 @@ def chronological_readiness(records, runs, hours):
     test = [r for r in records if runs[r["run_id"]] >= cutoff]
     def summary(rows):
         featured = [r for r in rows if r["lagged_returns"]["60m"] is not None]
-        positive = [r for r in rows if r["hit_30"]]
+        positive = [r for r in rows if r[positive_key]]
         featured_positive = [r for r in positive if r["lagged_returns"]["60m"] is not None]
         return {"matured_cases":len(rows), "positive_cases":len(positive),
                 "positive_pairs":len({r["pair"] for r in positive}),
@@ -277,6 +277,8 @@ def analyze(state):
             "watch_recall_wilson_95_naive":wilson(coverage["watch_positive"],coverage["movers"]),
             "watch_precision_wilson_95_naive":wilson(coverage["watch_positive"],coverage["watch_matured"]),
             "chronological_readiness":chronological_readiness(positives+negatives,runs,hours),
+            "chronological_readiness_20":chronological_readiness(positives+negatives,runs,hours,
+                                                                 positive_key="hit_20"),
             "lag_60m_positive":summarize_feature(positives,"60m"),
             "lag_60m_negative":summarize_feature(negatives,"60m"),
             "pre_entry_price_feature_distributions":{
