@@ -194,6 +194,14 @@ def current_remote_ref_evidence(get, repo, evidence, runs, report=None):
     for row in (report or {}).get("runs", []):
         if not isinstance(row, dict) or row.get("classification") in verified:
             continue
+        # A rerun preserves the original created_at even though its writer
+        # attempt may have executed *after* the latest trusted writer. Its
+        # attempt time is not authenticated here, so creation order cannot
+        # rule it out as a newer writer. Abstain even when the ref still
+        # matches the trusted claim.
+        if row.get("classification") == "MISSING_OR_RERUN_ATTEMPT_PROVENANCE":
+            newer_unknown.append(row.get("run_id"))
+            continue
         try:
             if timestamp(row["created_at"]) <= timestamp(created[latest["run_id"]]):
                 continue

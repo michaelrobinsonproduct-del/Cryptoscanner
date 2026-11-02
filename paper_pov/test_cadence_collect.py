@@ -368,6 +368,47 @@ class CadenceCollectorTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertFalse(proof["remote_ledger_bytes_verified"])
 
+    def test_older_created_rerun_cannot_certify_current_ref_as_latest_writer(self):
+        from paper_pov.cadence_collect import current_remote_ref_evidence
+        # GitHub reruns keep their original created_at; the rerun's actual
+        # writer attempt can occur after run 2 without a newer run created_at.
+        report = {"runs": [
+            {"run_id": 1, "classification": "MISSING_OR_RERUN_ATTEMPT_PROVENANCE",
+             "created_at": "2026-11-02T03:00:00Z"},
+            {"run_id": 2, "classification": "VERIFIED_NATIVE_SCHEDULE",
+             "created_at": "2026-11-02T03:10:00Z"}]}
+        runs = [{"id": 1, "created_at": "2026-11-02T03:00:00Z"},
+                {"id": 2, "created_at": "2026-11-02T03:10:00Z"}]
+        evidence = [{"run_id": 2, "claimed_ledger_commit": SHA,
+                     "delivery_log_claim_status": "MATCHED_LOG_MARKERS_NOT_REMOTE_BYTES"}]
+        def get(path):
+            self.assertTrue(path.endswith("/git/ref/heads/paper-proof-ledger"))
+            return {"ref": "refs/heads/paper-proof-ledger",
+                    "object": {"sha": SHA, "type": "commit"}}
+        proof = current_remote_ref_evidence(get, "owner/repo", evidence, runs, report)
+        self.assertEqual(proof["status"], "UNVERIFIED_NEWER_WRITER_ORIGIN")
+        self.assertEqual(proof["newer_unattested_run_ids"], [1])
+        self.assertEqual(proof["current_ref_sha"], SHA)
+        self.assertFalse(proof["remote_ledger_bytes_verified"])
+
+    def test_older_failed_original_run_does_not_falsely_count_as_newer(self):
+        from paper_pov.cadence_collect import current_remote_ref_evidence
+        report = {"runs": [
+            {"run_id": 1, "classification": "WRITER_JOB_NOT_SUCCESSFUL",
+             "created_at": "2026-11-02T03:00:00Z"},
+            {"run_id": 2, "classification": "VERIFIED_NATIVE_SCHEDULE",
+             "created_at": "2026-11-02T03:10:00Z"}]}
+        runs = [{"id": 1, "created_at": "2026-11-02T03:00:00Z"},
+                {"id": 2, "created_at": "2026-11-02T03:10:00Z"}]
+        evidence = [{"run_id": 2, "claimed_ledger_commit": SHA,
+                     "delivery_log_claim_status": "MATCHED_LOG_MARKERS_NOT_REMOTE_BYTES"}]
+        def get(path):
+            return {"ref": "refs/heads/paper-proof-ledger",
+                    "object": {"sha": SHA, "type": "commit"}}
+        proof = current_remote_ref_evidence(get, "owner/repo", evidence, runs, report)
+        self.assertEqual(proof["status"], "MATCHED_CURRENT_REF_SHA_NOT_LEDGER_BYTES")
+        self.assertEqual(proof["newer_unattested_run_ids"], [])
+
     def test_delivery_claim_rejects_reordered_lines_despite_plausible_timestamps(self):
         from datetime import datetime, timezone
         start = datetime(2026, 11, 2, 3, 10, 4, tzinfo=timezone.utc)
