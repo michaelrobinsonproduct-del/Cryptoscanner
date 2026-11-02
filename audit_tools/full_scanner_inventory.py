@@ -15,7 +15,7 @@ def gh(path):
         r=cmd("gh","api",path,"--jq",
               '{workflow_runs: [.workflow_runs[] | {id,name,event,status,conclusion,head_sha,created_at,run_started_at}]}')
     else:
-        r=cmd("gh","api",path,"--paginate")
+        r=cmd("gh","api",path)
     if not r["ok"]: return {"error":r["error"]}
     try:
         text=r["output"].strip()
@@ -62,7 +62,7 @@ def main():
                 "files":changed_files,"already_on_main_paths":overlaps,
                 "file_api_error":changed.get("error") if isinstance(changed,dict) else None,
                 "requires_semantic_review":True,"url":p["html_url"]})
-    branches=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/branches?per_page=100")
+    branches=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/branches?per_page=100&page=1")
     main_ref=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/git/ref/heads/main")
     ledger_ref=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/git/ref/heads/paper-proof-ledger")
     runs_response=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/actions/runs?per_page=30")
