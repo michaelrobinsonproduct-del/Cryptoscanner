@@ -11,7 +11,9 @@ class RetentionAcceptanceTests(unittest.TestCase):
         before = ledger.advance(ledger.empty(), synthetic(0), SHA)
         report = synthetic(minutes)
         after = ledger.advance(before, report, SHA)
-        # ledger.advance reuses nested immutable record dictionaries; isolate\n        # the before snapshot so adversarial mutations only affect after.\n        return copy.deepcopy(before), copy.deepcopy(after), report
+        # ledger.advance reuses nested immutable record dictionaries; isolate
+        # the before snapshot so adversarial mutations only affect after.
+        return copy.deepcopy(before), copy.deepcopy(after), report
 
     def check(self, before, after, report):
         return verify_transition(before, after, report, SHA)
