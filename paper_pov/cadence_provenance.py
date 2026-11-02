@@ -5,6 +5,7 @@ The workflow's executed provenance step must be present in the job log;
 otherwise this audit abstains. No scanner dispatches or repository writes.
 """
 import argparse
+from collections import Counter
 import datetime as dt
 import json
 import re
@@ -65,17 +66,19 @@ def audit(runs, logs, checked_at, lookback_hours=24):
         raise ValueError("runs and logs must be structured inputs")
     cutoff = now - dt.timedelta(hours=lookback_hours)
     evidence = []
-    ids = set()
+    # Duplicate run IDs invalidate every occurrence, not just the later one.
+    # Otherwise a valid first occurrence could be counted despite conflicting input.
+    id_counts = Counter(row.get("id") for row in runs if isinstance(row, dict)
+                        and type(row.get("id")) is int)
     for run in runs:
         try:
             rid = run["id"]
-            if type(rid) is not int or rid <= 0 or rid in ids:
+            if type(rid) is not int or rid <= 0 or id_counts[rid] != 1:
                 raise ValueError("duplicate/invalid run id")
-            ids.add(rid)
             created = timestamp(run["created_at"])
-            if created > now + dt.timedelta(minutes=2):
+            if created > now:
                 raise ValueError("future run")
-            if created < cutoff or created > now:
+            if created < cutoff:
                 continue
             event = run["event"]
             if event not in ("schedule", "workflow_dispatch"):
