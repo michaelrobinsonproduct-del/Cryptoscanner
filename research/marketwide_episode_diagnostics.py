@@ -324,6 +324,20 @@ def analyze(state):
         episode_features_20 = {
             key:summarize_feature(first_entries_20,key)
             for key in ("30m","60m","180m")}
+        # Explicit first-entry denominator: later positive observations cannot
+        # backfill an episode whose first decision lacks a valid lag feature.
+        def episode_first_coverage(distributions, total):
+            return {lag:{"episodes":total,
+                         "with_asof_feature":stats["n"],
+                         "without_asof_feature":total-stats["n"],
+                         "distinct_covered_pairs":stats["distinct_pairs"],
+                         "covered_fraction":stats["n"]/total if total else None}
+                    for lag,stats in distributions.items()}
+        first_coverage_30 = episode_first_coverage(episode_features,len(episodes))
+        first_coverage_20 = episode_first_coverage(episode_features_20,len(episodes20))
+        assert all(v["with_asof_feature"]+v["without_asof_feature"]==v["episodes"]
+                   and 0 <= v["distinct_covered_pairs"] <= v["with_asof_feature"]
+                   for v in list(first_coverage_30.values())+list(first_coverage_20.values()))
         assert coverage["eligible"]==coverage["matured"]+coverage["abstain_gap"]+coverage["immature"]
         assert coverage["abstain_gap"] == sum(coverage[k] for k in (
             "abstain_conflicting_quotes", "abstain_future_entry_quotes",
@@ -362,6 +376,7 @@ def analyze(state):
             "missed_mover_episodes_30":len(episodes)-episode_watch_count,
             "watch_episode_recall_wilson_95_naive_20":wilson(episode_watch_count_20,len(episodes20)),
             "episode_first_entry_feature_distributions_20":episode_features_20,
+            "episode_first_entry_feature_coverage_20":first_coverage_20,
             "watch_episode_recall_20":(episode_watch_count_20/len(episodes20)
                                       if episodes20 else None),
             "watch_recall_20":(coverage["watch_positive_20"]/coverage["movers_20"]
@@ -375,6 +390,7 @@ def analyze(state):
             "watch_episode_recall_30":episode_watch_count/len(episodes) if episodes else None,
             "watch_episode_recall_wilson_95_naive":wilson(episode_watch_count,len(episodes)),
             "episode_first_entry_feature_distributions":episode_features,
+            "episode_first_entry_feature_coverage_30":first_coverage_30,
             "episode_first_lag_60m":{"n":len(episode_first_lags),
                 "mean":sum(episode_first_lags)/len(episode_first_lags) if episode_first_lags else None},
             "watch_recall_30":coverage["watch_positive"]/coverage["movers"] if coverage["movers"] else None,
