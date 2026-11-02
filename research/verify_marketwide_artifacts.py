@@ -17,11 +17,14 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def verify_artifacts(directory, expected_head):
+def verify_artifacts(directory, expected_head, expected_ledger_commit):
     base = Path(directory)
     if not isinstance(expected_head, str) or len(expected_head) != 40 or any(
             c not in "0123456789abcdef" for c in expected_head):
         raise ValueError("invalid expected exact source commit")
+    if not isinstance(expected_ledger_commit, str) or len(expected_ledger_commit) != 40 or any(
+            c not in "0123456789abcdef" for c in expected_ledger_commit):
+        raise ValueError("invalid expected remote ledger commit")
     required = (*FILES, LEDGER, "marketwide-SHA256SUMS")
     for name in required:
         path = base / name
@@ -49,6 +52,8 @@ def verify_artifacts(directory, expected_head):
     provenance = json.loads((base / FILES[2]).read_text())
     if provenance.get("research_source_commit") != expected_head:
         raise ValueError("source head mismatch")
+    if provenance.get("paper_ledger_branch_commit") != expected_ledger_commit:
+        raise ValueError("remote ledger commit mismatch")
     for name, key in ((LEDGER, "verified_ledger_export_sha256"),
                       (FILES[0], "outcome_report_sha256"),
                       (FILES[1], "episode_report_sha256")):
@@ -76,8 +81,10 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--directory", required=True)
     p.add_argument("--expected-head", required=True)
+    p.add_argument("--expected-ledger-commit", required=True)
     args = p.parse_args()
-    print(json.dumps(verify_artifacts(args.directory, args.expected_head),
+    print(json.dumps(verify_artifacts(args.directory, args.expected_head,
+                                      args.expected_ledger_commit),
                      sort_keys=True))
 
 
