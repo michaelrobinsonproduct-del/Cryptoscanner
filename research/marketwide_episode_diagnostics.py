@@ -26,11 +26,13 @@ def wilson(successes, trials, z=1.96):
     return [max(0, center-radius), min(1, center+radius)]
 
 
-def lagged_return_diagnostic(series, times, index, minutes, conflicting_times=()):
+def lagged_return_diagnostic(series, times, index, minutes, conflicting_times=(), run_decisions=None):
     """As-of finite price return and mutually exclusive missingness reason.
 
     Preserve exact Decimal arithmetic and all historical quote-conflict checks.
     Missing anchors are never backfilled by a later observation.
+    With run_decisions, reject quotes first observed after the entry scan,
+    even when their event timestamps precede the immutable decision.
     """
     at, entry, _ = series[index]
     target = at - dt.timedelta(minutes=minutes)
@@ -39,6 +41,14 @@ def lagged_return_diagnostic(series, times, index, minutes, conflicting_times=()
         return None, "no_prior_anchor"
     if target - times[j] > MAX_GAP:
         return None, "stale_prior_anchor"
+    # Historical feature anchors must be observable AS OF the entry scan.
+    # A quote backdated by a later run is not available at the decision.
+    # Key lookup intentionally fails closed if source run provenance is absent.
+    if run_decisions is not None:
+        entry_decision = run_decisions[series[index][2]]
+        if any(run_decisions[series[k][2]] > entry_decision
+               for k in range(j, index)):
+            return None, "future_scan_observation"
     first_anchor = bisect.bisect_left(times, times[j], hi=j)
     if any(series[k][1] != series[j][1] for k in range(first_anchor, j)):
         return None, "conflicting_anchor"
@@ -375,7 +385,7 @@ def analyze(state):
                 lag = {}
                 lag_reasons = {}
                 for minutes in (30,60,180):
-                    value, reason = lagged_return_diagnostic(series,times,i,minutes,conflicts)
+                    value, reason = lagged_return_diagnostic(series,times,i,minutes,conflicts,runs)
                     lag[str(minutes)+"m"] = value
                     lag_reasons[str(minutes)+"m"] = reason
                     if value is not None:
