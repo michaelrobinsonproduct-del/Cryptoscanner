@@ -806,5 +806,96 @@ class EpisodeTests(unittest.TestCase):
         self.assertEqual(one["watch_nonhit_windows_20"],
                          one["watch_nonhit_windows_30"])
 
+    def test_sample_thresholds_cannot_authorize_paper_model_evaluation(self):
+        runs={str(m):BASE+dt.timedelta(hours=m) for m in range(100)}
+        rows=[]
+        for offset in (0,70):
+            for k in range(12):
+                rid=str(offset+k)
+                rows.extend((
+                    {"run_id":rid,"pair":f"POS{k}USD","hit_30":True,
+                     "lagged_returns":{"60m":0.1}},
+                    {"run_id":rid,"pair":f"NEG{k}USD","hit_30":False,
+                     "lagged_returns":{"60m":-0.01}}))
+        readiness=chronological_readiness(rows,runs,1)
+        self.assertTrue(readiness["sample_thresholds_met"])
+        self.assertFalse(readiness["model_evaluation_ready"])
+        self.assertEqual(readiness["minimum_sample_requirements"],[])
+        self.assertEqual(len(readiness["unmet_evidence_gates"]),3)
+
+    def test_twenty_percent_wilson_intervals_have_matured_denominators(self):
+        with patch("paper_pov.ledger.verify",return_value=None):
+            horizons=analyze(fixture())["horizons"]
+        for report in horizons.values():
+            c=report["coverage"]
+            self.assertEqual(report["watch_recall_wilson_95_naive_20"],
+                             wilson(c["watch_positive_20"],c["movers_20"]))
+            self.assertEqual(report["watch_precision_wilson_95_naive_20"],
+                             wilson(c["watch_positive_20"],c["watch_matured"]))
+            if c["movers_20"]==0:
+                self.assertIsNone(report["watch_recall_wilson_95_naive_20"])
+            if c["watch_matured"]==0:
+                self.assertIsNone(report["watch_precision_wilson_95_naive_20"])
+
+
+    def test_chronological_first_entry_missing_reasons_never_backfill_late_surge(self):
+        runs={str(m):BASE+dt.timedelta(hours=m) for m in range(100)}
+        rows=[]
+        for offset in (0,70):
+            for k in range(3):
+                pair=f"POS{k}USD"
+                rows.append({"run_id":str(offset),"pair":pair,"hit_30":True,
+                             "lagged_returns":{"30m":None,"60m":None,"180m":0.03},
+                             "lagged_return_reasons":{"30m":"no_prior_anchor",
+                                                       "60m":"discontinuous_history",
+                                                       "180m":"covered"}})
+                rows.append({"run_id":str(offset+1),"pair":pair,"hit_30":True,
+                             "lagged_returns":{"30m":0.1,"60m":0.2,"180m":0.3},
+                             "lagged_return_reasons":{"30m":"covered","60m":"covered",
+                                                       "180m":"covered"}})
+        split=chronological_readiness(rows,runs,6)
+        for part in ("train","test"):
+            s=split[part]
+            self.assertEqual(s["positive_episodes"],3)
+            self.assertEqual(s["positive_lag_60m_covered"],3)
+            self.assertEqual(s["positive_lag_60m_episodes"],0)
+            f=s["positive_first_entry_feature_coverage"]
+            self.assertEqual(f["30m"]["missing_reasons"],{"no_prior_anchor":3})
+            self.assertEqual(f["60m"]["missing_reasons"],{"discontinuous_history":3})
+            self.assertEqual(f["180m"]["with_asof_feature"],3)
+            for lag in ("30m","60m","180m"):
+                self.assertEqual(f[lag]["episodes"],3)
+                self.assertEqual(f[lag]["without_asof_feature"],
+                                 sum(f[lag]["missing_reasons"].values()))
+
+    def test_chronological_missing_reason_unavailable_is_explicit(self):
+        runs={str(m):BASE+dt.timedelta(hours=m) for m in range(100)}
+        rows=[{"run_id":str(m),"pair":"POSUSD","hit_30":True,
+               "lagged_returns":{"30m":None,"60m":None,"180m":None}}
+              for m in (0,70)]
+        split=chronological_readiness(rows,runs,1)
+        for part in ("train","test"):
+            reasons=split[part]["positive_first_entry_feature_coverage"]
+            self.assertEqual(reasons["60m"]["missing_reasons"],{"reason_unavailable":1})
+            self.assertEqual(reasons["60m"]["with_asof_feature"],0)
+
+    def test_cutoff_straddling_positive_is_not_reborn_as_test_episode(self):
+        runs={str(m):BASE+dt.timedelta(hours=m) for m in range(100)}
+        rows=[
+            {"run_id":"65","pair":"CROSSUSD","hit_30":True,
+             "lagged_returns":{"30m":None,"60m":None,"180m":None},
+             "lagged_return_reasons":{"60m":"stale_prior_anchor"}},
+            {"run_id":"70","pair":"CROSSUSD","hit_30":True,
+             "lagged_returns":{"30m":0.2,"60m":0.2,"180m":0.2}},
+        ]
+        split=chronological_readiness(rows,runs,6)
+        self.assertEqual(split["train"]["positive_episodes"],0)
+        self.assertEqual(split["test"]["positive_cases"],1)
+        self.assertEqual(split["test"]["positive_episodes"],0)
+        self.assertEqual(split["test"]["positive_lag_60m_episodes"],0)
+        self.assertEqual(split["test"]["positive_first_entry_feature_coverage"]["60m"]["episodes"],0)
+        self.assertFalse(split["model_evaluation_ready"])
+
+
 if __name__=="__main__":
     unittest.main()
