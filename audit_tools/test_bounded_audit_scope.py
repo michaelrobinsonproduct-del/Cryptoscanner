@@ -82,9 +82,9 @@ class BoundedAuditScopeTests(unittest.TestCase):
         inventory={"main_sha":"a"*40,"ledger_sha":"b"*40,"checkout_sha":"c"*40,
                    "open_prs":[]}
         result=assess(inventory,{})
-        self.assertEqual(len(result["unverified_source_cases"]),len(CASES))
+        self.assertEqual(len(result["unverified_source_cases"]),len(CASES)+1)
         self.assertEqual(result["finite_blockers"][0]["scope"],"source_evidence")
-        self.assertEqual(len(result["finite_blockers"][0]["cases"]),len(CASES))
+        self.assertEqual(len(result["finite_blockers"][0]["cases"]),len(CASES)+1)
         scopes={x["scope"]:x for x in result["scope_matrix"]}
         self.assertEqual(scopes["isolated_read_only_integration"]["decision"],
                          "CONDITIONAL_PREPARE_TEST_ONLY")
@@ -95,6 +95,24 @@ class BoundedAuditScopeTests(unittest.TestCase):
         self.assertEqual(scopes["legacy_deletion"]["decision"],"BLOCKED")
         self.assertIn("UNKNOWN_DEPLOYED_CONSUMERS",
                       scopes["legacy_deletion"]["blocking_findings"])
+
+    def test_main_legacy_writer_source_is_required_for_deletion(self):
+        from audit_tools.bounded_audit_scope import MAIN_LEGACY_WRITER
+        inventory={"main_sha":"a"*40,"ledger_sha":"b"*40,"checkout_sha":"c"*40,
+                   "main_blob_shas":{MAIN_LEGACY_WRITER["path"]:"d"*40},
+                   "open_prs":[]}
+        result=assess(inventory,{})
+        writer=result["main_legacy_writer"]
+        self.assertEqual(writer["source"]["status"],"MAIN_TREE_BLOB_MISMATCH")
+        self.assertTrue(writer["blocks"]["legacy_deletion"])
+        self.assertFalse(writer["blocks"]["isolated_read_only_integration"])
+        self.assertIn(MAIN_LEGACY_WRITER["path"],
+                      [x["path"] for x in result["unverified_source_cases"]])
+        inventory["main_blob_shas"][MAIN_LEGACY_WRITER["path"]]=MAIN_LEGACY_WRITER["sha"]
+        result=assess(inventory,{})
+        self.assertEqual(result["main_legacy_writer"]["source"]["status"],
+                         "UNVERIFIED_SOURCE_RESPONSE")
+        self.assertFalse(result["cleanup_authorized"])
 
     def test_scoped_decision_cannot_claim_full_certification(self):
         inventory={"main_sha":"a"*40,"ledger_sha":"b"*40,"checkout_sha":"c"*40,
