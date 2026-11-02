@@ -225,6 +225,40 @@ class EpisodeTests(unittest.TestCase):
 
 
 
+    def test_conflicting_same_timestamp_future_and_entry_quotes_abstain(self):
+        baseline=fixture()
+        with patch("paper_pov.ledger.verify",return_value=None):
+            normal=analyze(baseline)["horizons"]["1"]
+        state=fixture()
+        # A second run reports a different price at the exact future
+        # timestamp; neither the high nor low can be trusted as a label.
+        state["observations"].append({"run_id":"90","at":iso(90),
+            "pair":"AAAUSD","price":200})
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        self.assertGreater(one["coverage"]["abstain_conflicting_quotes"],0)
+        self.assertLess(one["coverage"]["movers"],normal["coverage"]["movers"])
+        self.assertLessEqual(one["coverage"]["abstain_conflicting_quotes"],
+                             one["coverage"]["abstain_gap"])
+        self.assertEqual(one["coverage"]["eligible"],
+                         one["coverage"]["matured"]+
+                         one["coverage"]["abstain_gap"]+
+                         one["coverage"]["immature"])
+        entry=fixture()
+        entry["observations"].append({"run_id":"30","at":iso(30),
+            "pair":"AAAUSD","price":200})
+        with patch("paper_pov.ledger.verify",return_value=None):
+            entry_result=analyze(entry)["horizons"]["1"]
+        self.assertGreater(entry_result["coverage"]["abstain_conflicting_quotes"],0)
+
+    def test_ambiguous_historical_quote_abstains_feature(self):
+        series=[(BASE,100,"0"),(BASE+dt.timedelta(minutes=30),100,"30"),
+                (BASE+dt.timedelta(minutes=30),200,"other"),
+                (BASE+dt.timedelta(minutes=60),150,"60")]
+        self.assertIsNone(lagged_return(series,[r[0] for r in series],3,60))
+        series[2]=(series[2][0],100,"other")
+        self.assertEqual(lagged_return(series,[r[0] for r in series],3,60),0.5)
+
     def test_provenance_and_coverage_are_not_model_evidence(self):
         with patch("paper_pov.ledger.verify",return_value=None):
             report=analyze(fixture())
