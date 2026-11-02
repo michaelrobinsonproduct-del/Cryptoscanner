@@ -292,6 +292,12 @@ def canonical_writer_attempt_intervals(report, jobs):
     verified = {"VERIFIED_NATIVE_SCHEDULE",
                 "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE"}
     intervals, unknown, unverified_source = [], [], []
+    seen_job_ids = set()
+    try:
+        audit_time = timestamp(report["checked_at"]) if report.get("checked_at") else None
+    except (ValueError, TypeError, OverflowError):
+        return {"status": "UNVERIFIED_INVALID_AUDIT_TIME",
+                "actual_ledger_write_overlap_verified": False}
     for row in rows:
         rid = row.get("run_id") if isinstance(row, dict) else None
         if type(rid) is not int or rid <= 0:
@@ -307,15 +313,17 @@ def canonical_writer_attempt_intervals(report, jobs):
         writer = canonical[0]
         if (type(writer.get("id")) is not int or writer["id"] <= 0 or
                 type(writer.get("run_id")) is not int or writer["run_id"] != rid or
-                writer.get("status") != "completed"):
+                writer.get("status") != "completed" or
+                writer["id"] in seen_job_ids):
             unknown.append(rid)
             continue
+        seen_job_ids.add(writer["id"])
         try:
             start = timestamp(writer["started_at"])
             end = timestamp(writer["completed_at"])
             created = timestamp(row["created_at"])
-            if not created <= start < end:
-                raise ValueError("incoherent job interval")
+            if not created <= start < end or (audit_time is not None and end > audit_time):
+                raise ValueError("incoherent or future job interval")
         except (KeyError, TypeError, ValueError, OverflowError):
             unknown.append(rid)
             continue

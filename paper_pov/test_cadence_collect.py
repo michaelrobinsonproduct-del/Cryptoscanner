@@ -533,6 +533,34 @@ class CadenceCollectorTests(unittest.TestCase):
         self.assertEqual(result["writer_attempt_interval_evidence"]
                          ["unknown_interval_run_ids"], [2])
 
+    def test_attempt_overlap_reused_job_id_is_not_independent_writer_evidence(self):
+        from paper_pov.cadence_collect import canonical_writer_attempt_intervals
+        report = {"checked_at": NOW, "runs": [
+            {"run_id": 1, "classification": "VERIFIED_NATIVE_SCHEDULE",
+             "created_at": "2026-11-02T03:10:01Z"},
+            {"run_id": 2, "classification": "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE",
+             "created_at": "2026-11-02T03:10:01Z"}]}
+        second = dict(job(2), id=job(1)["id"])
+        proof = canonical_writer_attempt_intervals(
+            report, {"1": [job(1)], "2": [second]})
+        self.assertEqual(proof["status"], "UNVERIFIED_INCOMPLETE_JOB_INTERVALS")
+        self.assertEqual(proof["unknown_interval_run_ids"], [2])
+        self.assertEqual(proof["overlap_pair_count"], 0)
+
+    def test_attempt_overlap_future_completed_job_abstains(self):
+        from paper_pov.cadence_collect import canonical_writer_attempt_intervals
+        report = {"checked_at": NOW, "runs": [
+            {"run_id": 1, "classification": "VERIFIED_NATIVE_SCHEDULE",
+             "created_at": "2026-11-02T03:10:01Z"},
+            {"run_id": 2, "classification": "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE",
+             "created_at": "2026-11-02T03:10:01Z"}]}
+        future = dict(job(2), completed_at="2026-11-02T03:21:00Z")
+        proof = canonical_writer_attempt_intervals(
+            report, {"1": [job(1)], "2": [future]})
+        self.assertEqual(proof["status"], "UNVERIFIED_INCOMPLETE_JOB_INTERVALS")
+        self.assertEqual(proof["unknown_interval_run_ids"], [2])
+        self.assertFalse(proof["global_exclusivity_verified"])
+
     def test_ledger_claim_continuity_monotonic_is_not_remote_byte_proof(self):
         from paper_pov.cadence_collect import authenticated_ledger_claim_continuity
         report = {"runs": [
