@@ -238,6 +238,26 @@ class CadenceProvenanceTests(unittest.TestCase):
         self.assertIsNone(result["latest_cross_event_creation_gap_seconds"])
         self.assertIsNone(result["latest_cross_event_within_30m"])
 
+    def test_recent_failed_attempt_does_not_mask_stale_success(self):
+        rows = [run(1, "2026-11-02T01:10:01Z"),
+                {**run(2, "2026-11-02T03:10:01Z"), "conclusion": "failure"}]
+        result = self.check(rows, {"1": log(), "2": log()})
+        self.assertEqual(result["verified_attempt_run_creation_count"], 2)
+        self.assertEqual(result["max_verified_attempt_run_creation_gap_seconds"], 7200)
+        self.assertEqual(result["seconds_since_last_verified_attempt_creation"], 599)
+        self.assertFalse(result["over_45m_since_verified_attempt_creation"])
+        self.assertTrue(result["over_45m_since_verified_successful_run_creation"])
+        self.assertEqual(result["verified_native_unsuccessful_count"], 1)
+
+    def test_empty_or_untrusted_attempts_abstain(self):
+        for rows, logs in (([], {}), ([run()], {})):
+            with self.subTest(rows=rows):
+                result = self.check(rows, logs)
+                self.assertEqual(result["verified_attempt_run_creation_count"], 0)
+                self.assertIsNone(result["seconds_since_last_verified_attempt_creation"])
+                self.assertIsNone(result["max_verified_attempt_run_creation_gap_seconds"])
+                self.assertIsNone(result["over_45m_since_verified_attempt_creation"])
+
     def test_no_false_ledger_or_trade_claims(self):
         result = self.check()
         self.assertNotIn("ledger_verified", result)
