@@ -537,6 +537,19 @@ class EpisodeTests(unittest.TestCase):
         self.assertTrue(episodes[0]["first_entry_watch"])
         self.assertEqual(episodes[0]["first_watch_decision_at"],iso(0))
 
+    def test_same_first_decision_watch_is_not_misclassified_as_late(self):
+        # Two same-decision entries must not depend on sort stability.
+        base={"pair":"AAAUSD","entry_at":iso(0),"decision_at":iso(0),
+              "lagged_returns":{"60m":None},"peak_observed_return":0.35}
+        for order in ((False, True), (True, False)):
+            cases=[dict(base,watch=watch) for watch in order]
+            cases.append(dict(base,entry_at=iso(30),decision_at=iso(30),watch=False))
+            episodes=cluster_episodes(cases,1)
+            self.assertEqual(len(episodes),1)
+            self.assertTrue(episodes[0]["first_entry_watch"])
+            self.assertTrue(episodes[0]["watch_captured"])
+            self.assertEqual(episodes[0]["first_watch_decision_at"],iso(0))
+
     def test_episode_first_watch_accounting_preserves_any_watch_recall(self):
         state=fixture()
         state["predictions"].append({"run_id":"30","pair":"AAAUSD"})
