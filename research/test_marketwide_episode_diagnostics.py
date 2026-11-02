@@ -3,7 +3,7 @@ import datetime as dt
 import unittest
 from unittest.mock import patch
 
-from research.marketwide_episode_diagnostics import analyze, lagged_return, wilson
+from research.marketwide_episode_diagnostics import analyze, lagged_return, wilson, chronological_readiness
 
 BASE=dt.datetime(2026,1,1,tzinfo=dt.timezone.utc)
 
@@ -83,6 +83,26 @@ class EpisodeTests(unittest.TestCase):
         one = report["horizons"]["1"]
         self.assertGreaterEqual(one["coverage"]["movers"],1)
         self.assertEqual(one["unique_mover_episodes"],1)
+
+    def test_chronological_split_embargoes_future_labels(self):
+        times = [0, 60, 120, 180, 240, 300, 360, 420, 480, 540]
+        runs = {str(m):BASE+dt.timedelta(minutes=m) for m in times}
+        records = [{"run_id":str(m),"pair":"AAAUSD",
+                    "peak_observed_return":0.35 if m==0 else 0.0,
+                    "lagged_returns":{"60m":0.01}} for m in times]
+        split = chronological_readiness(records,runs,1)
+        cutoff = BASE+dt.timedelta(minutes=420)
+        self.assertEqual(split["cutoff"],cutoff.isoformat())
+        self.assertEqual(split["train"]["matured_cases"],6)
+        self.assertEqual(split["test"]["matured_cases"],3)
+        self.assertEqual(split["excluded_crossing_cutoff"],1)
+        self.assertEqual(split["train"]["positive_cases"],1)
+        self.assertFalse(split["model_evaluation_ready"])
+        self.assertEqual(split["status"],"DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER")
+
+    def test_no_chronological_split_from_single_scan(self):
+        r=chronological_readiness([],{"0":BASE},6)
+        self.assertEqual(r["status"],"INSUFFICIENT_SCAN_TIMES")
 
     def test_gap_abstains_not_false_negative(self):
         state=fixture()
