@@ -103,6 +103,74 @@ class EpisodeTests(unittest.TestCase):
         self.assertFalse(split["model_evaluation_ready"])
         self.assertEqual(split["status"],"DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER")
 
+    def test_many_overlapping_positive_labels_are_not_independent_training_examples(self):
+        runs={str(m):BASE+dt.timedelta(hours=m) for m in range(100)}
+        rows=[]
+        # Old readiness used >=10 positive/negative observations per split.
+        # Repeated hourly entries from one market satisfy that but are not
+        # independent positive episodes or a diverse negative cohort.
+        for m in list(range(20))+list(range(70,90)):
+            rows.append({"run_id":str(m),"pair":"ONEUSD","hit_30":True,
+                         "lagged_returns":{"60m":0.1}})
+        for m in list(range(30,50))+list(range(80,100)):
+            rows.append({"run_id":str(m),"pair":"NEGUSD","hit_30":False,
+                         "lagged_returns":{"60m":0.0}})
+        split=chronological_readiness(rows,runs,6)
+        for part in ("train","test"):
+            self.assertGreaterEqual(split[part]["positive_lag_60m_covered"],10)
+            self.assertLess(split[part]["positive_lag_60m_episodes"],10)
+            self.assertEqual(split[part]["positive_pairs"],1)
+            self.assertEqual(split[part]["negative_lag_60m_pairs"],1)
+        self.assertFalse(split["model_evaluation_ready"])
+        self.assertEqual(
+            {(b["partition"],b["requirement"],b["required"],b["observed"])
+             for b in split["minimum_sample_requirements"]},
+            {(p,requirement,10,observed)
+             for p in ("train","test")
+             for requirement,observed in (
+                 ("episode_first_positive_lag_60m",split[p]["positive_lag_60m_episodes"]),
+                 ("distinct_negative_lag_60m_pairs",1))})
+
+    def test_readiness_requires_both_independent_positive_and_negative_cohorts(self):
+        runs={str(m):BASE+dt.timedelta(hours=m) for m in range(100)}
+        rows=[]
+        for part_start in (0,70):
+            for k in range(12):
+                rid=str(part_start+k)
+                rows.append({"run_id":rid,"pair":f"POS{k}USD","hit_30":True,
+                             "lagged_returns":{"60m":0.12}})
+                rows.append({"run_id":rid,"pair":f"NEG{k}USD","hit_30":False,
+                             "lagged_returns":{"60m":-0.01}})
+        split=chronological_readiness(rows,runs,1)
+        for part in ("train","test"):
+            self.assertEqual(split[part]["positive_lag_60m_episodes"],12)
+            self.assertEqual(split[part]["negative_lag_60m_pairs"],12)
+        self.assertTrue(split["model_evaluation_ready"])
+        self.assertEqual(split["minimum_sample_requirements"],[])
+        # This is sample-readiness only; no challenger was trained.
+        self.assertEqual(split["status"],"DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER")
+
+    def test_later_surge_feature_cannot_backfill_missing_first_entry_feature(self):
+        runs={str(m):BASE+dt.timedelta(hours=m) for m in range(100)}
+        rows=[]
+        for start in (0,70):
+            for k in range(12):
+                # One positive episode per pair; first positive has no
+                # historical lag. The later overlapping label has a feature.
+                for offset,lag in ((0,None),(1,0.30)):
+                    rows.append({"run_id":str(start+offset),
+                                 "pair":f"POS{k}USD","hit_30":True,
+                                 "lagged_returns":{"60m":lag}})
+                rows.append({"run_id":str(start),"pair":f"NEG{k}USD",
+                             "hit_30":False,"lagged_returns":{"60m":0.0}})
+        split=chronological_readiness(rows,runs,6)
+        for part in ("train","test"):
+            self.assertEqual(split[part]["positive_episodes"],12)
+            self.assertEqual(split[part]["positive_lag_60m_covered"],12)
+            self.assertEqual(split[part]["positive_lag_60m_episodes"],0)
+            self.assertEqual(split[part]["negative_lag_60m_pairs"],12)
+        self.assertFalse(split["model_evaluation_ready"])
+
     def test_no_chronological_split_from_single_scan(self):
         r=chronological_readiness([],{"0":BASE},6)
         self.assertEqual(r["status"],"INSUFFICIENT_SCAN_TIMES")
