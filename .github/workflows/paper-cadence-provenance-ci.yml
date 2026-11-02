@@ -25,4 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "PAPER_CADENCE_PROVENANCE_EXACT_SHA=$(git rev-parse HEAD)"
+          TREE_SHA="$(git rev-parse 'HEAD^{tree}')"
+          test "$(git cat-file -t "$TREE_SHA")" = tree
+          echo "PAPER_CADENCE_BASE_TREE_SHA=$TREE_SHA"
           python -m unittest paper_pov.test_cadence_provenance paper_pov.test_cadence_collect -v
