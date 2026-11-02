@@ -302,6 +302,13 @@ def capture_bounded(state, evaluation_at, max_pairs=MAX_PAIRS, max_pages=MAX_PAG
         min(r["horizon_hours"] for r in candidates[p]),
         -max(_utc(r["as_of"]).timestamp() for r in candidates[p]),
         -len(candidates[p]), p))[:max_pairs]
+    # Compare illiquid-gap source behavior with a liquid-market control.
+    # Do not invent a market: only use a control present in the sealed ledger.
+    if max_pairs >= 3:
+        for control in ("SOLUSD", "ETHUSD", "XBTUSD"):
+            if control in candidates and control not in ranked:
+                ranked[-1] = control
+                break
     captures, errors = [], []
     for pair in ranked:
         start = min(_utc(r["as_of"]) for r in candidates[pair])
