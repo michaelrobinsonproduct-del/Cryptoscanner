@@ -78,6 +78,13 @@ class SafeLogRedirect(HTTPRedirectHandler):
         return redirected
 
 
+class RejectApiRedirect(HTTPRedirectHandler):
+    """Authenticated JSON API reads must never redirect to another origin."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise ValueError("unexpected authenticated GitHub JSON API redirect")
+
+
 def github_reader(token, api_url="https://api.github.com"):
     if not token:
         raise ValueError("read-only GitHub token required")
@@ -98,7 +105,7 @@ def github_reader(token, api_url="https://api.github.com"):
             with build_opener(SafeLogRedirect()).open(req, timeout=20) as response:
                 body = response.read(MAX_LOG_BYTES + 1)
         else:
-            with urlopen(req, timeout=20) as response:
+            with build_opener(RejectApiRedirect()).open(req, timeout=20) as response:
                 body = response.read(MAX_LOG_BYTES + 1)
         if len(body) > MAX_LOG_BYTES:
             raise ValueError("GitHub response exceeds bounded size")
