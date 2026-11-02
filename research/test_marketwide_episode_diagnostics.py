@@ -702,5 +702,35 @@ class EpisodeTests(unittest.TestCase):
         self.assertEqual(reason,"covered")
         self.assertAlmostEqual(value,0.25)
 
+
+    def test_overlapping_watch_nonhits_are_not_counted_as_independent_windows(self):
+        state=fixture()
+        state["predictions"].extend([
+            {"run_id":"60","pair":"BBBUSD"},
+            {"run_id":"90","pair":"BBBUSD"}])
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        self.assertEqual(one["coverage"]["watch_false_positive_30"],3)
+        self.assertEqual(one["coverage"]["watch_false_positive_20"],3)
+        self.assertEqual(one["watch_nonhit_windows_30"],1)
+        self.assertEqual(one["watch_nonhit_windows_20"],1)
+        self.assertEqual(one["watch_nonhit_distinct_pairs_30"],1)
+        self.assertEqual(one["watch_nonhit_distinct_pairs_20"],1)
+
+    def test_watch_nonhit_windows_keep_separate_pairs_and_distant_decisions(self):
+        state=fixture()
+        state["predictions"].extend([
+            {"run_id":"180","pair":"AAAUSD"},
+            {"run_id":"180","pair":"BBBUSD"},
+            {"run_id":"360","pair":"BBBUSD"}])
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        self.assertEqual(one["watch_nonhit_distinct_pairs_30"],2)
+        self.assertGreaterEqual(one["watch_nonhit_windows_30"],3)
+        self.assertLessEqual(one["watch_nonhit_windows_30"],
+                             one["coverage"]["watch_false_positive_30"])
+        self.assertEqual(one["watch_nonhit_windows_20"],
+                         one["watch_nonhit_windows_30"])
+
 if __name__=="__main__":
     unittest.main()
