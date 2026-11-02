@@ -298,7 +298,7 @@ class ArtifactContractTests(unittest.TestCase):
     def test_resealed_watch_gap_reason_cannot_exceed_market_reason(self):
         self.reseal_episode_change(lambda h: h["coverage"].update(
             watch_abstain_stale_entry=1))
-        with self.assertRaisesRegex(ValueError, "gap-reason partition"):
+        with self.assertRaisesRegex(ValueError, "gap.reason partition"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
     def test_resealed_first_entry_recall_cannot_be_fabricated(self):
