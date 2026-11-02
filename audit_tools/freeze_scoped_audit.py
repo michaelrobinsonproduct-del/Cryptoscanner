@@ -78,6 +78,19 @@ def freeze(inventory, semantic, bounded, gate, graph, writes, runtime):
             if (not expected_blob or source.get("calculated_sha") != expected_blob or
                     source.get("github_contents_sha") != expected_blob):
                 raise ValueError("Source evidence identity mismatch: " + str(number) + ":" + path)
+            # GitHub Contents is authoritative for the verified bytes; PR-files
+            # API disagreement must nevertheless be accurately disclosed.
+            comparisons = live_by_id[number].get("file_blob_comparisons")
+            matches = ([entry for entry in comparisons
+                        if isinstance(entry, dict) and entry.get("path") == path]
+                       if isinstance(comparisons, list) else [])
+            if (len(matches) != 1 or
+                    matches[0].get("pr_blob_sha") != source.get("pr_files_api_sha")):
+                raise ValueError("Risk source PR-files evidence mismatch: " + str(number) + ":" + path)
+            api_sha = source.get("pr_files_api_sha")
+            actual_discrepancy = api_sha is not None and api_sha != expected_blob
+            if source.get("pr_files_api_discrepancy") is not actual_discrepancy:
+                raise ValueError("Risk source discrepancy flag mismatch: " + str(number) + ":" + path)
         source_status[str(number) + ":" + path] = status
     main_writer = bounded.get("main_legacy_writer", {})
     if main_writer.get("main_sha") != main:
