@@ -329,13 +329,53 @@ def workflow_orchestration_references(source):
             "unresolved":sorted(set(unresolved))}
 
 
+def workflow_trigger_inventory(source):
+    """Read only top-level YAML on: triggers; ignore shell strings and comments."""
+    if not isinstance(source,str):
+        raise ValueError("Workflow source must be text")
+    lines=source.splitlines()
+    triggers=set(); crons=[]; unresolved=[]
+    for i,line in enumerate(lines):
+        match=re.match(r"^on:\s*(.*?)\s*$",line)
+        if not match:
+            continue
+        raw=match.group(1).split(" #",1)[0].strip()
+        if raw:
+            if raw.startswith("[") and raw.endswith("]"):
+                triggers.update(x.strip().strip("'\"") for x in raw[1:-1].split(",") if x.strip())
+            elif re.fullmatch(r"[a-z_]+",raw):
+                triggers.add(raw)
+            else:
+                unresolved.append("Unparsed inline on trigger: "+raw)
+            continue
+        end=next((j for j in range(i+1,len(lines))
+                  if lines[j].strip() and not lines[j].lstrip().startswith("#")
+                  and not lines[j][0].isspace()),len(lines))
+        active=None
+        for line2 in lines[i+1:end]:
+            if not line2.strip() or line2.lstrip().startswith("#"):
+                continue
+            key=re.match(r"^  ([a-z_]+):(?:\s|$)",line2)
+            if key:
+                active=key.group(1)
+                triggers.add(active)
+                continue
+            if active=="schedule":
+                cron=re.match(r"^\s+-\s+cron:\s*(.+?)\s*$",line2)
+                if cron:
+                    crons.append(cron.group(1).split(" #",1)[0].strip().strip("'\""))
+    return {"triggers":sorted(triggers),"schedule_cron":crons,"unresolved":unresolved}
+
+
 def inventory_workflow_source(path,source):
     """Parse a workflow's exact supplied source, independent of checkout location."""
+    triggers=workflow_trigger_inventory(source)
     return {"path":path,"name":next((m.group(1).strip().strip("\'\"") for m in re.finditer(r"^name:\s*(.+)$",source,re.M)),None),
             "orchestration":workflow_orchestration_references(source),
-            "schedule_cron":re.findall(r"cron:\s*([^\n]+)",source),
-            "has_dispatch":"workflow_dispatch:" in source,
-            "has_schedule":bool(re.search(r"^\s*schedule:",source,re.M)),
+            "schedule_cron":triggers["schedule_cron"],
+            "trigger_unresolved":triggers["unresolved"],
+            "has_dispatch":"workflow_dispatch" in triggers["triggers"],
+            "has_schedule":"schedule" in triggers["triggers"],
             "writes_contents":bool(re.search(r"contents:\s*write",source)),
             "ledger_ref":"paper-proof-ledger" in source,
             "python_modules":sorted(set(re.findall(r"python\s+-m\s+([A-Za-z0-9_.]+)",source))),
