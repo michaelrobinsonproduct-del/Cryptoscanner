@@ -566,6 +566,33 @@ def analyze(state):
                          "unknown": nonwatch["immature"] + nonwatch["abstain_gap"],
                          "mature_fraction": nonwatch["matured"] / nonwatch["eligible"]
                                             if nonwatch["eligible"] else None}}
+        # Reason-specific missingness is conditional on selection. Report both
+        # group denominators so a different WATCH maturity rate is not confused
+        # with predictive precision. No missing outcome is assigned a label.
+        selection_gap_diagnostics = {}
+        for name, group, reasons in (
+            ("watch", coverage["selection_maturity"]["watch"], watch_gap_totals),
+            ("nonwatch", coverage["selection_maturity"]["nonwatch"], nonwatch_gap_totals)):
+            eligible = group["eligible"]
+            gap = sum(reasons.values())
+            assert gap == group["unknown"] - (
+                coverage["watch_immature"] if name == "watch"
+                else nonwatch["immature"])
+            selection_gap_diagnostics[name] = {
+                "eligible": eligible,
+                "matured": group["matured"],
+                "immature": (coverage["watch_immature"] if name == "watch"
+                             else nonwatch["immature"]),
+                "abstain_gap": gap,
+                "gap_fraction_of_eligible": gap / eligible if eligible else None,
+                "gap_reason_counts": reasons,
+                "gap_reason_fraction_of_gap": {
+                    reason: n / gap if gap else None for reason,n in reasons.items()},
+                "gap_reason_fraction_of_eligible": {
+                    reason: n / eligible if eligible else None for reason,n in reasons.items()}}
+            assert eligible == (selection_gap_diagnostics[name]["matured"] +
+                                selection_gap_diagnostics[name]["immature"] + gap)
+        coverage["selection_gap_diagnostics"] = selection_gap_diagnostics
         coverage["watch_false_positive_30"] = coverage["watch_matured"] - coverage["watch_positive"]
         coverage["watch_false_positive_20"] = coverage["watch_matured"] - coverage["watch_positive_20"]
         # False-positive rate uses all MATURED observed non-movers, not all
