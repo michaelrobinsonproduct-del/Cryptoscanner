@@ -26,28 +26,35 @@ def wilson(successes, trials, z=1.96):
     return [max(0, center-radius), min(1, center+radius)]
 
 
-def lagged_return(series, times, index, minutes):
-    """As-of return only if an older quote and continuous coverage exist."""
+def lagged_return_diagnostic(series, times, index, minutes):
+    """Point-in-time feature and mutually exclusive reason for missingness.
+
+    Never interpolate or use a later observation to repair a missing anchor.
+    """
     at, entry, _ = series[index]
     target = at - dt.timedelta(minutes=minutes)
     j = bisect.bisect_right(times, target, hi=index) - 1
-    if j < 0 or target - times[j] > MAX_GAP:
-        return None
-    # bisect_right chooses the LAST quote at an exact target timestamp.
-    # Its contradictory predecessor would otherwise sit outside the checked
-    # interval and silently determine the feature from an arbitrary price.
+    if j < 0:
+        return None, "no_prior_anchor"
+    if target - times[j] > MAX_GAP:
+        return None, "stale_prior_anchor"
+    # The last quote at an anchor cannot conceal an earlier contradictory
+    # same-timestamp price, even if several subsequent duplicates agree.
     first_anchor = bisect.bisect_left(times, times[j], hi=j)
     if any(series[k][1] != series[j][1] for k in range(first_anchor, j)):
-        return None
+        return None, "conflicting_anchor"
     segment = times[j:index+1]
     if any(b-a > MAX_GAP for a,b in zip(segment, segment[1:])):
-        return None
-    # A contradictory same-time quote cannot define a reliable lagged return.
+        return None, "discontinuous_history"
     if any(times[k] == times[k+1] and series[k][1] != series[k+1][1]
            for k in range(j, index)):
-        return None
-    return entry / series[j][1] - 1
+        return None, "conflicting_history"
+    return entry / series[j][1] - 1, "covered"
 
+
+def lagged_return(series, times, index, minutes):
+    """Backward-compatible price feature; diagnostics are not model inputs."""
+    return lagged_return_diagnostic(series, times, index, minutes)[0]
 
 
 def chronological_readiness(records, runs, hours, positive_key="hit_30"):
@@ -147,6 +154,7 @@ def cluster_episodes(cases, hours):
                              "first_watch_decision_at":decision_at if case["watch"] else None,
                              "first_lagged_60m":case["lagged_returns"]["60m"],
                              "first_lagged_returns":dict(case["lagged_returns"]),
+                             "first_lagged_reasons":dict(case.get("lagged_return_reasons", {})),
                              "first_peak_observed_return":case["peak_observed_return"]})
     return episodes
 
@@ -265,9 +273,11 @@ def analyze(state):
                     if selected:
                         coverage["watch_positive"] += 1
                 lag = {}
+                lag_reasons = {}
                 for minutes in (30,60,180):
-                    value = lagged_return(series,times,i,minutes)
+                    value, reason = lagged_return_diagnostic(series,times,i,minutes)
                     lag[str(minutes)+"m"] = value
+                    lag_reasons[str(minutes)+"m"] = reason
                     if value is not None:
                         coverage["feature_"+str(minutes)+"m"] += 1
                 if hit and lag["60m"] is not None:
@@ -276,7 +286,8 @@ def analyze(state):
                           "peak_observed_return":round(peak,8),
                           "entry_quote_age_minutes":(start-at).total_seconds()/60,
                           "hit_20":hit20,"hit_30":hit,
-                          "watch":selected,"lagged_returns":lag}
+                          "watch":selected,"lagged_returns":lag,
+                          "lagged_return_reasons":lag_reasons}
                 if hit20:
                     cases20.append(record)
                 else:
@@ -326,15 +337,24 @@ def analyze(state):
             for key in ("30m","60m","180m")}
         # Explicit first-entry denominator: later positive observations cannot
         # backfill an episode whose first decision lacks a valid lag feature.
-        def episode_first_coverage(distributions, total):
-            return {lag:{"episodes":total,
-                         "with_asof_feature":stats["n"],
-                         "without_asof_feature":total-stats["n"],
-                         "distinct_covered_pairs":stats["distinct_pairs"],
-                         "covered_fraction":stats["n"]/total if total else None}
-                    for lag,stats in distributions.items()}
-        first_coverage_30 = episode_first_coverage(episode_features,len(episodes))
-        first_coverage_20 = episode_first_coverage(episode_features_20,len(episodes20))
+        def episode_first_coverage(distributions, episode_rows):
+            result = {}
+            for lag,stats in distributions.items():
+                missing_reasons = defaultdict(int)
+                for e in episode_rows:
+                    if e["first_lagged_returns"][lag] is None:
+                        missing_reasons[e["first_lagged_reasons"][lag]] += 1
+                total = len(episode_rows)
+                result[lag] = {"episodes":total,
+                               "with_asof_feature":stats["n"],
+                               "without_asof_feature":total-stats["n"],
+                               "missing_reasons":dict(sorted(missing_reasons.items())),
+                               "distinct_covered_pairs":stats["distinct_pairs"],
+                               "covered_fraction":stats["n"]/total if total else None}
+                assert sum(missing_reasons.values()) == result[lag]["without_asof_feature"]
+            return result
+        first_coverage_30 = episode_first_coverage(episode_features,episodes)
+        first_coverage_20 = episode_first_coverage(episode_features_20,episodes20)
         assert all(v["with_asof_feature"]+v["without_asof_feature"]==v["episodes"]
                    and 0 <= v["distinct_covered_pairs"] <= v["with_asof_feature"]
                    for v in list(first_coverage_30.values())+list(first_coverage_20.values()))
