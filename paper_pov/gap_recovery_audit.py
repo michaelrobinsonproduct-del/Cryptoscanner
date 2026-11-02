@@ -12,6 +12,7 @@ import datetime as dt
 from decimal import Decimal, InvalidOperation
 import hashlib
 import json
+import math
 from pathlib import Path
 from urllib.parse import urlencode, urlparse, parse_qs
 from urllib.request import urlopen
@@ -127,7 +128,14 @@ def _verify_page(page, pair, expected_since, evaluation_at):
         when = _trade_time(at)
         if when > _ns(retrieved):
             raise ValueError("Future trade in captured source")
-        parsed_trades.append((when, str(trade_id), float(_decimal(price)), str(_decimal(volume))))
+        finite_price = float(_decimal(price))
+        if not math.isfinite(finite_price):
+            raise ValueError("Nonfinite trade price")
+        # Keep the full exact source-field signature for cross-page ID checks.
+        # A float-rounded price or normalized volume is NOT enough to prove
+        # that an inclusive Kraken cursor repeated the identical print.
+        parsed_trades.append((when, str(trade_id), finite_price,
+                              str(_decimal(volume)), tuple(str(v) for v in trade)))
     if any(b[0] < a[0] for a, b in zip(parsed_trades, parsed_trades[1:])):
         raise ValueError("Nonmonotonic Kraken trade timestamps")
     return int(cursor), parsed_trades
@@ -161,13 +169,13 @@ def verify_sources(captures, evaluation_at):
             cursor, trades = _verify_page(page, pair, cursor, evaluation_at)
             page_ids = set()
             passed_overlap = False
-            for when, tid, price, volume in trades:
+            for when, tid, price, volume, signature in trades:
                 if tid in page_ids:
                     raise ValueError("Duplicate trade identity within page")
                 page_ids.add(tid)
                 if tid in seen_ids:
                     if (page_index == 0 or passed_overlap
-                            or seen_ids[tid] != (when, price, volume)):
+                            or seen_ids[tid] != signature):
                         raise ValueError("Conflicting/non-prefix cross-page trade identity")
                     # Kraken's cursor is inclusive at the next page boundary.
                     # Only discard byte-equivalent authenticated repeated prints.
@@ -176,7 +184,7 @@ def verify_sources(captures, evaluation_at):
                 passed_overlap = True
                 if prints and when < prints[-1][0]:
                     raise ValueError("Nonmonotonic cross-page trades")
-                seen_ids[tid] = (when, price, volume)
+                seen_ids[tid] = signature
                 if prints and when == prints[-1][0]:
                     # Multiple authentic Kraken prints can share a nanosecond.
                     # Preserve exact raw page and ID provenance; use the LAST
