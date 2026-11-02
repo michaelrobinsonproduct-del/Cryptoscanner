@@ -37,7 +37,9 @@ def github_reader(token, api_url="https://api.github.com"):
             body = response.read(MAX_LOG_BYTES + 1)
         if len(body) > MAX_LOG_BYTES:
             raise ValueError("GitHub response exceeds bounded size")
-        return body.decode("utf-8", errors="replace") if text else json.loads(body)
+        # Lossy replacement would make a digest of modified log evidence.
+        # Malformed UTF-8 must abstain, never masquerade as authenticated text.
+        return body.decode("utf-8", errors="strict") if text else json.loads(body)
 
     return get
 

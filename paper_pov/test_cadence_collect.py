@@ -1,7 +1,9 @@
 """No-network failure injection for the read-only GitHub cadence collector."""
+import io
 import unittest
+from unittest.mock import patch
 
-from paper_pov.cadence_collect import collect
+from paper_pov.cadence_collect import collect, github_reader
 
 SHA = "a" * 40
 NOW = "2026-11-02T03:20:00Z"
@@ -135,6 +137,23 @@ class CadenceCollectorTests(unittest.TestCase):
             return response
         with self.assertRaisesRegex(ValueError, "truncated"):
             collect(altered, "owner/repo", NOW)
+
+    def test_lossy_non_utf8_job_log_is_rejected_before_provenance(self):
+        with patch("paper_pov.cadence_collect.urlopen",
+                   return_value=io.BytesIO(b"bad-utf8-\\xff")):
+            get = github_reader("test-readonly-token")
+            with self.assertRaises(UnicodeDecodeError):
+                get("/repos/owner/repo/actions/jobs/123/logs", text=True)
+
+    def test_reader_uses_only_get_for_authenticated_evidence(self):
+        def fake_open(request, timeout):
+            self.assertEqual(request.get_method(), "GET")
+            self.assertEqual(timeout, 20)
+            return io.BytesIO(b'{"total_count":0,"workflow_runs":[]}')
+        with patch("paper_pov.cadence_collect.urlopen", side_effect=fake_open):
+            result = github_reader("test-readonly-token")(
+                "/repos/owner/repo/actions/workflows/paper-pipeline.yml/runs")
+        self.assertEqual(result["total_count"], 0)
 
     def test_invalid_repo_or_unbounded_parameters_fail_before_network(self):
         get, calls = fixture()
