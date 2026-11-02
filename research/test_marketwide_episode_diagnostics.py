@@ -196,7 +196,8 @@ class EpisodeTests(unittest.TestCase):
         for lag in dist:
             for label in ("positive_30","negative_30"):
                 d=dist[lag][label]
-                self.assertEqual(set(d),{"n","mean","positive_fraction","median","min","max"})
+                self.assertEqual(set(d),{"n","distinct_pairs","mean","positive_fraction","median","min","max"})
+                self.assertLessEqual(d["distinct_pairs"],d["n"])
                 self.assertLessEqual(d["n"],one["coverage"]["matured"])
         self.assertEqual(dist["60m"]["positive_30"]["n"],one["coverage"]["mover_feature_60m"])
 
