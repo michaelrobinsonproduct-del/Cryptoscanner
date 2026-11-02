@@ -1,7 +1,7 @@
 """Offline fail-closed pagination tests for repository inventory (no network)."""
 import unittest
 from unittest.mock import patch
-from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph, workflow_branch_references, inventory_workflow_source
+from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph, workflow_branch_references, inventory_workflow_source, workflow_orchestration_references
 
 
 class BranchReferenceTests(unittest.TestCase):
@@ -231,6 +231,120 @@ class SnapshotReconciliationTests(unittest.TestCase):
         self.assertEqual(rows[1]["triage_classification"],"unknown")
         self.assertEqual(rows[1]["triage_stale_reason"],"NEW_PR_NOT_IN_SNAPSHOT")
 
+
+
+class WorkflowOrchestrationTests(unittest.TestCase):
+    def test_cadence_post_links_existing_writer(self):
+        cadence="""name: Owner-authenticated independent paper cadence
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  wake:
+    steps:
+      - run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/runs?per_page=100"
+          gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/dispatches" -f ref=main
+"""
+        writer="""name: Public Kraken Paper POV (scheduled, isolated ledger)
+on:
+  workflow_dispatch:
+jobs:
+  writer:
+    steps: []
+"""
+        w=[inventory_workflow_source(".github/workflows/paper-cadence-wake.yml",cadence),
+           inventory_workflow_source(".github/workflows/paper-pipeline.yml",writer)]
+        self.assertEqual(w[0]["orchestration"]["dispatch_workflows"],["paper-pipeline.yml"])
+        graph=build_consumer_graph(w,{"snapshot_utc":"2026-11-02T05:00:00Z"},"a"*40,"b"*40,workflow_source="remote_main")
+        matches=[e for e in graph["edges"] if e["kind"]=="explicit_workflow_dispatch_post"]
+        self.assertEqual(len(matches),1)
+        self.assertEqual(matches[0]["target"],"github-workflow:.github/workflows/paper-pipeline.yml")
+        self.assertEqual(matches[0]["evidence"],"remote_main:"+"b"*40)
+        self.assertFalse(matches[0]["observed_runtime"])
+
+    def test_learning_subscription_resolves_display_name(self):
+        writer="""name: Public Kraken Paper POV (scheduled, isolated ledger)
+on:
+  workflow_dispatch:
+"""
+        learning="""name: Independent PAPER sampled-outcome research (read only)
+on:
+  workflow_run:
+    workflows: ["Public Kraken Paper POV (scheduled, isolated ledger)"]
+    types: [completed]
+permissions:
+  contents: read
+"""
+        w=[inventory_workflow_source(".github/workflows/paper-pipeline.yml",writer),
+           inventory_workflow_source(".github/workflows/paper-learning-outcomes-shadow.yml",learning)]
+        self.assertEqual(w[1]["orchestration"]["workflow_run_names"],
+                         ["Public Kraken Paper POV (scheduled, isolated ledger)"])
+        graph=build_consumer_graph(w,{"snapshot_utc":"2026-11-02T05:00:00Z"},"a"*40,"b"*40,workflow_source="remote_main")
+        matches=[e for e in graph["edges"] if e["kind"]=="workflow_run_subscription"]
+        self.assertEqual(len(matches),1)
+        self.assertEqual(matches[0]["target"],"github-workflow:.github/workflows/paper-pipeline.yml")
+
+    def test_multiline_subscription_and_unknown_name_fail_closed(self):
+        source="""name: Child
+on:
+  workflow_run:
+    workflows:
+      - "Never deployed parent"
+      - "Other parent"
+    types: [completed]
+"""
+        w=inventory_workflow_source(".github/workflows/child.yml",source)
+        self.assertEqual(len(w["orchestration"]["workflow_run_names"]),2)
+        graph=build_consumer_graph([w],{"snapshot_utc":"2026-11-02T05:00:00Z"},"a"*40,"b"*40)
+        self.assertEqual(len([e for e in graph["edges"] if e["kind"]=="unresolved_workflow_run_name"]),2)
+        self.assertTrue(any("not uniquely mapped" in x for x in graph["unknowns"]))
+        self.assertFalse(graph["cleanup_authorized"])
+
+    def test_get_comment_and_echo_are_not_dispatch_edges(self):
+        source="""name: No dispatch
+on:
+  workflow_dispatch:
+jobs:
+  audit:
+    steps:
+      - run: |
+          # gh api -X POST "repos/x/y/actions/workflows/other.yml/dispatches"
+          echo 'gh api -X POST "repos/x/y/actions/workflows/other.yml/dispatches"'
+          gh api "repos/x/y/actions/workflows/other.yml/runs"
+          gh api -X GET "repos/x/y/actions/workflows/other.yml/dispatches"
+"""
+        refs=workflow_orchestration_references(source)
+        self.assertEqual(refs["dispatch_workflows"],[])
+        self.assertEqual(refs["workflow_run_names"],[])
+
+    def test_dynamic_dispatch_is_unknown_not_guessed(self):
+        source="""name: Dynamic
+on:
+  workflow_dispatch:
+jobs:
+  wake:
+    steps:
+      - run: |
+          gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/\${TARGET}/dispatches"
+"""
+        refs=workflow_orchestration_references(source)
+        self.assertEqual(refs["dispatch_workflows"],[])
+        self.assertTrue(refs["unresolved"])
+
+    def test_top_level_on_only(self):
+        source="""name: Literal
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    steps:
+      - run: |
+          echo on:
+          echo '  workflow_run:'
+          echo '    workflows: ["Fake"]'
+"""
+        self.assertEqual(workflow_orchestration_references(source)["workflow_run_names"],[])
 
 if __name__=="__main__":
     unittest.main()
