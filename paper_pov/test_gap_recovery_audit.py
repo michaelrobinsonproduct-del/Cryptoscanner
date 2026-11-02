@@ -156,6 +156,44 @@ class GapRecoveryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Conflicting"):
             audit(self.state, END, [bad])
 
+    def test_cross_page_same_id_requires_all_exact_trade_fields(self):
+        s = source()
+        first = json.loads(base64.b64decode(s["pages"][0]["response_b64"]))
+        cursor = int(first["result"]["last"])
+        duplicate = list(first["result"]["AAAUSD"][-1])
+        new = ["1.25", "3", str(int((START + dt.timedelta(minutes=70)).timestamp())),
+               "b", "m", "", "5"]
+        raw = json.dumps({"error": [], "result": {
+            "AAAUSD": [duplicate, new],
+            "last": str(int((START + dt.timedelta(minutes=71)).timestamp() * 1_000_000_000))
+        }}, separators=(",", ":")).encode()
+        s["pages"].append({"revision": REVISION,
+            "request_url": _source_url("AAAUSD", cursor),
+            "retrieved_at": END.isoformat(),
+            "response_b64": base64.b64encode(raw).decode(),
+            "response_sha256": hashlib.sha256(raw).hexdigest()})
+        self.assertEqual(audit(self.state, END, [s])["recovered_total_correlated_windows"], 1)
+        # These values round to the SAME float, but they are not the same
+        # authenticated source print. The previous validator silently deduped.
+        modified = copy.deepcopy(s)
+        replace_payload(modified["pages"][1], lambda x:
+            x["result"]["AAAUSD"][0].__setitem__(0, "1.200000000000000001"))
+        with self.assertRaisesRegex(ValueError, "Conflicting"):
+            audit(self.state, END, [modified])
+        # Side/order metadata is also part of the immutable trade identity.
+        modified = copy.deepcopy(s)
+        replace_payload(modified["pages"][1], lambda x:
+            x["result"]["AAAUSD"][0].__setitem__(3, "s"))
+        with self.assertRaisesRegex(ValueError, "Conflicting"):
+            audit(self.state, END, [modified])
+
+    def test_extreme_finite_decimal_must_not_overflow_to_infinite_peak(self):
+        s = source()
+        replace_payload(s["pages"][0], lambda x:
+            x["result"]["AAAUSD"][1].__setitem__(0, "1e10000"))
+        with self.assertRaisesRegex(ValueError, "Nonfinite trade price"):
+            audit(self.state, END, [s])
+
     def test_numeric_json_nanosecond_timestamp_does_not_float_round(self):
         s = source()
         page = s["pages"][0]
