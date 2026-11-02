@@ -335,6 +335,17 @@ class EpisodeTests(unittest.TestCase):
         series[1]=(BASE,100,"second")
         self.assertAlmostEqual(lagged_return(series,times,3,60),0.5)
 
+    def test_multiple_duplicate_anchor_quotes_cannot_hide_earlier_conflict(self):
+        # The final two anchor prices agree, but the first contradicts them.
+        # Checking only the immediately preceding quote would miss it.
+        series=[(BASE,100,"a"),(BASE,200,"b"),(BASE,200,"c"),
+                (BASE+dt.timedelta(minutes=30),225,"middle"),
+                (BASE+dt.timedelta(minutes=60),250,"entry")]
+        times=[r[0] for r in series]
+        self.assertIsNone(lagged_return(series,times,4,60))
+        series[0]=(BASE,200,"a")
+        self.assertAlmostEqual(lagged_return(series,times,4,60),0.25)
+
     def test_watch_false_positives_require_matured_labels(self):
         with patch("paper_pov.ledger.verify",return_value=None):
             one=analyze(fixture())["horizons"]["1"]

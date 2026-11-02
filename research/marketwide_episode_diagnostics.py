@@ -36,8 +36,8 @@ def lagged_return(series, times, index, minutes):
     # bisect_right chooses the LAST quote at an exact target timestamp.
     # Its contradictory predecessor would otherwise sit outside the checked
     # interval and silently determine the feature from an arbitrary price.
-    if (j > 0 and times[j-1] == times[j]
-        and series[j-1][1] != series[j][1]):
+    first_anchor = bisect.bisect_left(times, times[j], hi=j)
+    if any(series[k][1] != series[j][1] for k in range(first_anchor, j)):
         return None
     segment = times[j:index+1]
     if any(b-a > MAX_GAP for a,b in zip(segment, segment[1:])):
