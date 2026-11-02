@@ -326,6 +326,34 @@ class CadenceProvenanceTests(unittest.TestCase):
         self.assertEqual(report["verified_native_count"], 1)
         self.assertNotIn("missed_slots_verified", report)
 
+    def test_job_bound_provenance_rejects_prestart_log_markers(self):
+        jobs = {"1": [{"run_id": 1, "name": "public-paper",
+                        "started_at": "2026-11-01T19:10:08Z"}]}
+        report = self.check(jobs=jobs)
+        self.assertEqual(report["verified_native_count"], 0)
+        self.assertEqual(report["runs"][0]["classification"], "UNVERIFIED_PROVENANCE")
+
+    def test_job_bound_provenance_accepts_authentic_marker_order(self):
+        jobs = {"1": [{"run_id": 1, "name": "public-paper",
+                        "started_at": "2026-11-01T19:10:04Z"}]}
+        report = self.check(jobs=jobs)
+        self.assertEqual(report["verified_native_count"], 1)
+        self.assertTrue(report["runs"][0]["provenance_bound_to_writer_job_start"])
+
+    def test_future_marker_rejected_when_job_bound(self):
+        future_log = log().replace("2026-11-01T19:10:06Z", "2026-11-02T04:10:06Z")
+        jobs = {"1": [{"run_id": 1, "name": "public-paper",
+                        "started_at": "2026-11-01T19:10:04Z"}]}
+        report = self.check(logs={"1": future_log}, jobs=jobs)
+        self.assertEqual(report["verified_native_count"], 0)
+
+    def test_boolean_job_run_id_never_authenticates_queue_or_log_bound(self):
+        jobs = {"1": [{"run_id": True, "name": "public-paper",
+                        "started_at": "2026-11-01T19:10:04Z"}]}
+        report = self.check(jobs=jobs)
+        self.assertEqual(report["writer_job_queue_sample_count"], 0)
+        self.assertNotIn("provenance_bound_to_writer_job_start", report["runs"][0])
+
     def test_no_false_ledger_or_trade_claims(self):
         result = self.check()
         self.assertNotIn("ledger_verified", result)
