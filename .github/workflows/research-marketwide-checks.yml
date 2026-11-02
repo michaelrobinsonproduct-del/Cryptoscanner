@@ -8,6 +8,8 @@ on:
       - 'research/test_marketwide_episode_diagnostics.py'
       - 'research/kraken_archive_readiness.py'
       - 'research/test_kraken_archive_readiness.py'
+      - 'research/retained_first_entry_candidates.py'
+      - 'research/test_retained_first_entry_candidates.py'
       - '.github/workflows/research-marketwide-checks.yml'
   workflow_dispatch:
 permissions:
