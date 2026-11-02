@@ -367,6 +367,10 @@ def apply_semantic_review(matrix, rows, current_main_sha, self_pr=121):
             raise ValueError("Semantic review cannot authorize release or cleanup")
         if not re.fullmatch(r"[0-9a-f]{40}",str(decision.get("head_sha",""))):
             raise ValueError("Malformed semantic PR head SHA")
+        if not isinstance(decision.get("source_path"),str) or not decision["source_path"]:
+            raise ValueError("Semantic PR source path missing")
+        if not re.fullmatch(r"[0-9a-f]{40}",str(decision.get("source_blob_sha",""))):
+            raise ValueError("Semantic PR source blob SHA missing or malformed")
         by_number[n]=decision
     main_matches=matrix.get("main_sha")==current_main_sha
     open_numbers={r["number"] for r in rows}
