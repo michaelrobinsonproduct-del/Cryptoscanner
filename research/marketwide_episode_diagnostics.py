@@ -485,6 +485,36 @@ def analyze(state):
         nonhit_windows_30 = cluster_episodes([r for r in negatives if r["watch"]],hours)
         assert len(nonhit_windows_20) <= sum(r["watch"] for r in negatives20)
         assert len(nonhit_windows_30) <= sum(r["watch"] for r in negatives)
+        # Partial identification: unknown WATCH outcomes are neither wins nor
+        # losses. These are logical bounds over observed PAPER WATCH entries,
+        # not model confidence intervals or complete-market precision.
+        unknown_watch = coverage["watch_immature"] + coverage["watch_abstain_gap"]
+        total_watch = coverage["watch_eligible"]
+        assert total_watch == coverage["watch_matured"] + unknown_watch
+        coverage["watch_precision_all_entries_bounds"] = {
+            "scope": "observed PAPER WATCH entries; unknown outcomes unresolved",
+            "unknown": unknown_watch,
+            "20": {
+                "lower": coverage["watch_positive_20"] / total_watch if total_watch else None,
+                "upper": (coverage["watch_positive_20"] + unknown_watch) / total_watch if total_watch else None},
+            "30": {
+                "lower": coverage["watch_positive"] / total_watch if total_watch else None,
+                "upper": (coverage["watch_positive"] + unknown_watch) / total_watch if total_watch else None}}
+        # Selection-dependent maturity can bias observed-only WATCH precision.
+        # Keep non-WATCH abstentions visible rather than silently comparing
+        # differently observable cohorts.
+        nonwatch = {key: coverage[key] - coverage["watch_" + key]
+                    for key in ("eligible", "matured", "immature", "abstain_gap")}
+        assert nonwatch["eligible"] == sum(nonwatch[k] for k in
+                                          ("matured", "immature", "abstain_gap"))
+        coverage["selection_maturity"] = {
+            "watch": {"eligible": total_watch, "matured": coverage["watch_matured"],
+                      "unknown": unknown_watch,
+                      "mature_fraction": coverage["watch_matured"] / total_watch if total_watch else None},
+            "nonwatch": {"eligible": nonwatch["eligible"], "matured": nonwatch["matured"],
+                         "unknown": nonwatch["immature"] + nonwatch["abstain_gap"],
+                         "mature_fraction": nonwatch["matured"] / nonwatch["eligible"]
+                                            if nonwatch["eligible"] else None}}
         coverage["watch_false_positive_30"] = coverage["watch_matured"] - coverage["watch_positive"]
         coverage["watch_false_positive_20"] = coverage["watch_matured"] - coverage["watch_positive_20"]
         coverage["missed_20"] = coverage["movers_20"] - coverage["watch_positive_20"]

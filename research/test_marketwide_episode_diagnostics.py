@@ -903,5 +903,37 @@ class EpisodeTests(unittest.TestCase):
         self.assertGreater(one["gap_reason_totals"]["stale_entry"],0)
         self.assertGreater(one["gap_reason_totals"]["missing_horizon_anchor"],0)
 
+    def test_unknown_watch_outcomes_bound_all_entry_precision(self):
+        state = fixture()
+        with patch("paper_pov.ledger.verify", return_value=None):
+            reports = analyze(state)["horizons"]
+        for horizon in ("1", "6", "24", "48"):
+            c = reports[horizon]["coverage"]
+            bounds = c["watch_precision_all_entries_bounds"]
+            self.assertEqual(bounds["unknown"], c["watch_immature"] + c["watch_abstain_gap"])
+            self.assertEqual(c["watch_eligible"], c["watch_matured"] + bounds["unknown"])
+            for threshold, positive in (("20", "watch_positive_20"), ("30", "watch_positive")):
+                self.assertEqual(bounds[threshold]["lower"], c[positive] / c["watch_eligible"])
+                self.assertEqual(bounds[threshold]["upper"],
+                                 (c[positive] + bounds["unknown"]) / c["watch_eligible"])
+                self.assertLessEqual(bounds[threshold]["lower"], bounds[threshold]["upper"])
+            s = c["selection_maturity"]
+            self.assertEqual(s["watch"]["eligible"] + s["nonwatch"]["eligible"], c["eligible"])
+            self.assertEqual(s["watch"]["matured"] + s["nonwatch"]["matured"], c["matured"])
+        # With no 48-hour matured outcomes, uncertainty is [0, 1], not a zero precision.
+        self.assertEqual(reports["48"]["coverage"]["watch_precision_all_entries_bounds"]["30"],
+                         {"lower": 0.0, "upper": 1.0})
+
+    def test_no_watch_has_undefined_precision_bounds(self):
+        state = fixture()
+        state["predictions"] = []
+        with patch("paper_pov.ledger.verify", return_value=None):
+            c = analyze(state)["horizons"]["1"]["coverage"]
+        self.assertEqual(c["watch_precision_all_entries_bounds"]["unknown"], 0)
+        self.assertIsNone(c["watch_precision_all_entries_bounds"]["20"]["lower"])
+        self.assertIsNone(c["watch_precision_all_entries_bounds"]["30"]["upper"])
+        self.assertEqual(c["selection_maturity"]["watch"]["eligible"], 0)
+        self.assertIsNone(c["selection_maturity"]["watch"]["mature_fraction"])
+
 if __name__=="__main__":
     unittest.main()
