@@ -158,9 +158,9 @@
     {
       "number": 27,
       "head_sha": "a285459b492b4c5f05166e84db87d49bf0f9a679",
-      "classification": "unknown",
+      "classification": "needed",
       "source_path": "simple_scanner/real_history_replay.py",
-      "reason": "Legacy shadow/history replay and eligibility changes; no current-main parity or verified runtime consumer graph. Requires source-level independent comparison.",
+      "reason": "Exact PR #27 source blob 71bad5e4486699c5aed496d1c0460b24ff3edbe4 provides isolated SQLite mode=ro historical identity/eligibility replay requiring operator-supplied verified Kraken AssetPairs provenance, checks SQLite integrity and abstains on missing identity. Useful read-only legacy evidence tool only, not canonical marketwide training history, no proof of actual backup access or deployed consumer parity; do not merge/activate/delete on this classification.",
       "release_authorized": false,
       "cleanup_authorized": false,
       "source_blob_sha": "71bad5e4486699c5aed496d1c0460b24ff3edbe4"
@@ -168,30 +168,30 @@
     {
       "number": 11,
       "head_sha": "3b12e19b6ad686ee473d0e5114db5137ec7ffb2c",
-      "classification": "unknown",
+      "classification": "conflicting",
       "source_path": "simple_scanner/daemon.py",
       "source_blob_sha": "7f1da71aff044a1b771ef7e2440829b7a737eabf",
-      "reason": "Legacy Railway single-process daemon/manual path; deployed consumers and safe retirement not proven.",
+      "reason": "Exact PR #11 source blob 7f1da71aff044a1b771ef7e2440829b7a737eabf defines a separate Railway single-process 15-minute scheduler plus GitHub manual request polling, invokes simple_scanner.execute_once, and explicitly requires one replica and cron disabled. This conflicts with the canonical GitHub PAPER native/manual execution path; not proven deployed, do not merge/activate or retire consumers without live attestation.",
       "release_authorized": false,
       "cleanup_authorized": false
     },
     {
       "number": 10,
       "head_sha": "6fa12655e7b88b3c8bda11287035edd756944195",
-      "classification": "unknown",
+      "classification": "conflicting",
       "source_path": "simple_scanner/promotion_gate.py",
       "source_blob_sha": "828bf9529de7af298b8c40b1c8d03d6c2e394e59",
-      "reason": "Research-only learning promotion gate on legacy branch; not equivalent to canonical PAPER learning or release authorization.",
+      "reason": "Exact PR #10 source blob 828bf9529de7af298b8c40b1c8d03d6c2e394e59 is pure DECISION_ONLY with no I/O, but hard-codes 1/3/6/24h, >=40 cohorts and 0.10pp delta, unlike current 1/6/24/48h outcome and independent holdout requirements. Not a production promotion gate or proof of model lift; retain as isolated reference, do not wire into scoring or delete legacy consumers.",
       "release_authorized": false,
       "cleanup_authorized": false
     },
     {
       "number": 7,
       "head_sha": "940a4af9d976fb271c7534ad3e3e9eae33c376cf",
-      "classification": "unknown",
+      "classification": "conflicting",
       "source_path": "simple_scanner/scan.py",
       "source_blob_sha": "25539447cb9fb2b1d83dcc04fcc595e5fd9e38af",
-      "reason": "Exact PR #7 head 940a4af9... GitHub Contents AND current PR-files API independently return simple_scanner/scan.py blob 25539447...; earlier 4f5aba... PR-files observation was stale/discrepant. This resolves source identity only. Branch-pinned legacy recovery and simple-history consumers remain unverified for deletion; classification unknown, not integrated.",
+      "reason": "Exact PR #7 head 940a4af9d976fb271c7534ad3e3e9eae33c376cf and source blob 25539447cb9fb2b1d83dcc04fcc595e5fd9e38af independently match Contents/PR-files. Its simple_scanner recovery execution is distinct from main's canonical PAPER writer; main branch-pinned recovery workflow references the separate simple-history branch. This is a competing execution/control path, not an integrated PAPER scanner. Source identity resolved; live invocation/consumers remain unknown, so no deployment, dispatch or legacy deletion.",
       "release_authorized": false,
       "cleanup_authorized": false
     },
@@ -218,9 +218,9 @@
     {
       "number": 3,
       "head_sha": "719437c5b93abc8a9b6ea856554cdc8980c2f302",
-      "classification": "unknown",
+      "classification": "conflicting",
       "source_path": "evaluation/early-mover-evaluation.mjs",
-      "reason": "Shadow-only early mover evaluation script; no verified main integration or runtime consumer equivalence.",
+      "reason": "Exact PR #3 source af0978f88050fa6ee2c96728710d495f7a7ee303 is a shadow-only JS evaluator for 24/48/72h and +20/+50/+100/+500%, with signal reference-price matching but no continuous quote-gap, 1/6h, segmented PAPER ledger or exchange-authenticated as-of feature contract. Not equivalent to the canonical 1/6/24/48h full-market evaluator; preserve as isolated research reference, do not merge/activate/delete without independent parity and consumer review.",
       "release_authorized": false,
       "cleanup_authorized": false,
       "source_blob_sha": "af0978f88050fa6ee2c96728710d495f7a7ee303"

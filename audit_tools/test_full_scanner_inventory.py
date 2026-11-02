@@ -649,11 +649,44 @@ class AuditCertificationGateTests(unittest.TestCase):
         matrix=json.loads((pathlib.Path(__file__).parent/"pr_semantic_current_20261102.json").read_text())
         rows={x["number"]:x for x in matrix["prs"]}
         self.assertEqual(rows[7]["source_blob_sha"],"25539447cb9fb2b1d83dcc04fcc595e5fd9e38af")
-        self.assertEqual(rows[7]["classification"],"unknown")
+        self.assertEqual(rows[7]["classification"],"conflicting")
         self.assertEqual(rows[4]["classification"],"conflicting")
         self.assertIn("PATCH",rows[4]["reason"])
         self.assertEqual(rows[33]["classification"],"conflicting")
         self.assertIn("simple-history",rows[33]["reason"])
+
+    def test_bounded_legacy_semantic_review_preserves_runtime_restrictions(self):
+        matrix=json.loads((pathlib.Path(__file__).parent/"pr_semantic_current_20261102.json").read_text())
+        rows={x["number"]:x for x in matrix["prs"]}
+        expected={
+            3: ("conflicting","af0978f88050fa6ee2c96728710d495f7a7ee303","24/48/72h"),
+            7: ("conflicting","25539447cb9fb2b1d83dcc04fcc595e5fd9e38af","simple-history"),
+            10: ("conflicting","828bf9529de7af298b8c40b1c8d03d6c2e394e59","DECISION_ONLY"),
+            11: ("conflicting","7f1da71aff044a1b771ef7e2440829b7a737eabf","single-process"),
+            27: ("needed","71bad5e4486699c5aed496d1c0460b24ff3edbe4","mode=ro"),
+        }
+        for number,(disposition,blob,reason) in expected.items():
+            with self.subTest(pr=number):
+                row=rows[number]
+                self.assertEqual(row["classification"],disposition)
+                self.assertEqual(row["source_blob_sha"],blob)
+                self.assertIn(reason,row["reason"])
+                self.assertFalse(row["release_authorized"])
+                self.assertFalse(row["cleanup_authorized"])
+        # A resolved source-level disposition is not permission to delete
+        # branch-pinned legacy or unobserved deployed runtime consumers.
+        gate=audit_gate_decision(
+            {"open_pr_count":5,"current_validated_count":5,
+             "prs":[{"number":n,"classification":v[0],"review_valid":True}
+                    for n,v in expected.items()]},
+            {"unknowns":["legacy branch-pinned consumer"]},
+            {"unknown_write_destinations":[]},
+            {"runtime_coverage_certified":False,"reason":"SNAPSHOT_ONLY"},
+            "a"*40,"b"*40)
+        self.assertEqual(gate["unresolved_pr_count"],0)
+        self.assertEqual(gate["status"],"NOT_CERTIFIED")
+        self.assertIn("LIVE_CONSUMERS_UNRESOLVED",[x["id"] for x in gate["blockers"]])
+        self.assertFalse(gate["cleanup_authorized"])
 
     def test_no_static_unknowns_does_not_fake_independent_certification(self):
         gate=audit_gate_decision(
