@@ -63,24 +63,39 @@ def chronological_readiness(records, runs, hours, positive_key="hit_30"):
     embargo = dt.timedelta(hours=hours) + MAX_GAP
     train = [r for r in records if runs[r["run_id"]] + embargo <= cutoff]
     test = [r for r in records if runs[r["run_id"]] >= cutoff]
+    def independent_positive_episodes(rows):
+        """Count non-chained, decision-time positive episodes, not overlapping labels."""
+        first_by_pair = {}
+        count = 0
+        for r in sorted(rows, key=lambda x:(x["pair"], runs[x["run_id"]])):
+            decision = runs[r["run_id"]]
+            first = first_by_pair.get(r["pair"])
+            if first is None or decision-first > dt.timedelta(hours=hours):
+                first_by_pair[r["pair"]] = decision
+                count += 1
+        return count
     def summary(rows):
         featured = [r for r in rows if r["lagged_returns"]["60m"] is not None]
         positive = [r for r in rows if r[positive_key]]
         featured_positive = [r for r in positive if r["lagged_returns"]["60m"] is not None]
+        featured_negative = [r for r in featured if not r[positive_key]]
         return {"matured_cases":len(rows), "positive_cases":len(positive),
                 "positive_pairs":len({r["pair"] for r in positive}),
+                "positive_episodes":independent_positive_episodes(positive),
                 "lag_60m_covered":len(featured),
-                "positive_lag_60m_covered":len(featured_positive)}
+                "positive_lag_60m_covered":len(featured_positive),
+                "positive_lag_60m_episodes":independent_positive_episodes(featured_positive),
+                "negative_lag_60m_pairs":len({r["pair"] for r in featured_negative})}
     a,b=summary(train),summary(test)
     return {"status":"DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER",
             "cutoff":cutoff.isoformat(),
             "embargo_hours":hours + MAX_GAP.total_seconds()/3600,
             "excluded_crossing_cutoff":len(records)-len(train)-len(test),
             "train":a,"test":b,
-            "model_evaluation_ready":(a["positive_lag_60m_covered"]>=10
-                 and b["positive_lag_60m_covered"]>=10
-                 and a["lag_60m_covered"]-a["positive_lag_60m_covered"]>=10
-                 and b["lag_60m_covered"]-b["positive_lag_60m_covered"]>=10)}
+            "model_evaluation_ready":(a["positive_lag_60m_episodes"]>=10
+                 and b["positive_lag_60m_episodes"]>=10
+                 and a["negative_lag_60m_pairs"]>=10
+                 and b["negative_lag_60m_pairs"]>=10)}
 
 
 def cluster_episodes(cases, hours):
