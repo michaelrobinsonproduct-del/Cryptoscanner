@@ -66,8 +66,33 @@ def checked_zip(raw, reported_digest, kind):
     return data
 
 
+def supplied_github_run_origin(metadata, run_id, source_sha):
+    """Bound optional caller-supplied GitHub run metadata; never attest its source.
+
+    The caller must authenticate this metadata independently with GitHub.
+    A workflow_dispatch event cannot distinguish owner-manual from recovery.
+    Even a schedule event does not authenticate its originating UTC cron hour.
+    """
+    if metadata is None:
+        return "UNVERIFIED_NO_INDEPENDENT_RUN_METADATA"
+    if (not isinstance(metadata, dict) or
+            type(metadata.get("id")) is not int or metadata["id"] != run_id or
+            metadata.get("head_sha") != source_sha or
+            metadata.get("head_branch") != "main" or
+            metadata.get("path") != ".github/workflows/paper-pipeline.yml" or
+            type(metadata.get("run_attempt")) is not int or
+            metadata["run_attempt"] != 1 or
+            metadata.get("status") != "completed" or
+            metadata.get("conclusion") != "success" or
+            metadata.get("event") not in ("schedule", "workflow_dispatch")):
+        raise ValueError("supplied GitHub run provenance mismatch")
+    return ("SUPPLIED_SCHEDULE_METADATA_NOT_CRON_SLOT_ATTESTED"
+            if metadata["event"] == "schedule" else
+            "SUPPLIED_DISPATCH_METADATA_OWNER_ORIGIN_UNKNOWN")
+
+
 def verify_pair(ledger_zip, ledger_digest, results_zip, results_digest,
-                *, run_id, source_sha, ledger_commit):
+                *, run_id, source_sha, ledger_commit, github_run_metadata=None):
     """Independent original ZIP+internal checksums and ledger/result identity.
 
     This does not verify the actual Git remote ref or results delivery.
@@ -76,6 +101,7 @@ def verify_pair(ledger_zip, ledger_digest, results_zip, results_digest,
             not isinstance(source_sha, str) or not SOURCE_SHA.fullmatch(source_sha) or
             not isinstance(ledger_commit, str) or not SOURCE_SHA.fullmatch(ledger_commit)):
         raise ValueError("invalid immutable source/run/commit identity")
+    supplied_origin = supplied_github_run_origin(github_run_metadata, run_id, source_sha)
     lfiles = checked_zip(ledger_zip, ledger_digest, "ledger")
     rfiles = checked_zip(results_zip, results_digest, "results")
     try:
@@ -142,6 +168,9 @@ def verify_pair(ledger_zip, ledger_digest, results_zip, results_digest,
             "ledger_generation": generation,
             "ledger_sha256": state["sha256"],
             "run_id": run_id, "source_sha": source_sha,
+            "supplied_github_run_origin_status": supplied_origin,
+            "owner_manual_origin_verified": False,
+            "originating_cron_slot_verified": False,
             "client_quote_age_seconds": age,
             "exchange_event_freshness_verified": False,
             "remote_ledger_readback_independently_verified": False,
