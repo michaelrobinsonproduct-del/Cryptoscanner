@@ -103,6 +103,50 @@ class Tests(unittest.TestCase):
             self.assertLessEqual(row["watch_eligible"],report["watched_prediction_count"])
         self.assertIs(report["complete_market_history"],False)
 
+    def test_exact_gap_boundary_is_mature_but_one_minute_late_abstains(self):
+        def state(first_followup):
+            runs=[]; observations=[]
+            for minute in (0,first_followup,60,120):
+                rid=str(minute)
+                runs.append({"id":rid,"as_of":iso(minute)})
+                observations.append({"run_id":rid,"at":iso(minute),
+                                     "pair":"AAAUSD","price":100})
+            return sealed_fixture({"runs":runs,"observations":observations,
+                                   "predictions":[]})
+        at_boundary=evaluate(state(45))["horizons"]["1"]
+        beyond_boundary=evaluate(state(46))["horizons"]["1"]
+        self.assertEqual(at_boundary["matured"],1)
+        self.assertEqual(at_boundary["abstain_gap"],0)
+        self.assertEqual(beyond_boundary["matured"],0)
+        self.assertEqual(beyond_boundary["abstain_gap"],1)
+
+    def test_missing_target_anchor_abstains_instead_of_false_positive(self):
+        runs=[]; observations=[]
+        for minute in (0,30,50,120):
+            rid=str(minute)
+            runs.append({"id":rid,"as_of":iso(minute)})
+            observations.append({"run_id":rid,"at":iso(minute),
+                                 "pair":"AAAUSD","price":100})
+        row=evaluate(sealed_fixture({"runs":runs,"observations":observations,
+                                     "predictions":[]}))["horizons"]["1"]
+        self.assertGreater(row["abstain_gap"],0)
+        self.assertEqual(row["watch_false_positive_30"],0)
+        self.assertEqual(row["watch_matured"],0)
+
+    def test_post_horizon_spike_cannot_become_one_hour_hit(self):
+        runs=[]; observations=[]
+        for minute,price in ((0,100),(30,100),(60,100),(90,135),(110,135)):
+            rid=str(minute)
+            runs.append({"id":rid,"as_of":iso(minute)})
+            observations.append({"run_id":rid,"at":iso(minute),
+                                 "pair":"AAAUSD","price":price})
+        row=evaluate(sealed_fixture({"runs":runs,"observations":observations,
+                                     "predictions":[]}))["horizons"]["1"]
+        self.assertEqual(row["matured"],1)
+        self.assertEqual(row["movers_30"],0)
+        self.assertEqual(row["watch_30"],0)
+        self.assertEqual(row["watch_false_positive_30"],1)
+
     def test_marketwide_missed_mover(self):
         result=evaluate(sealed_fixture(fixture()))["horizons"]["1"]
         self.assertGreater(result["missed_30"],0)
