@@ -26,6 +26,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Run exact-head evaluator tests
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          python -m unittest research.test_marketwide_paper_outcomes -v
+          python -m compileall -q research/marketwide_paper_outcomes.py
       - name: Verify existing segmented PAPER ledger read-only and evaluate authentic observations
         run: |
           set -euo pipefail
@@ -55,12 +61,6 @@ jobs:
           assert d['eligible_for_model_promotion'] is False
           print('RESEARCH_EVIDENCE_FAIL_CLOSED',d['observed_run_count'],d['observed_pair_count'],d['observed_entry_count'],d['watched_prediction_count'])
           PY
-      - name: Run exact-head evaluator tests
-        run: |
-          set -euo pipefail
-          git rev-parse HEAD
-          python -m unittest research.test_marketwide_paper_outcomes -v
-          python -m compileall -q research/marketwide_paper_outcomes.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
