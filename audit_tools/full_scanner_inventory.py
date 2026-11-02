@@ -485,6 +485,39 @@ def apply_semantic_review(matrix, rows, current_main_sha, self_pr=121):
                     "source_blob_sha":r["semantic_source_blob_sha"]} for r in rows]}
 
 
+def audit_gate_decision(semantic_review, consumer_graph, write_surfaces, runtime_assessment,
+                        main_sha, ledger_sha):
+    """Machine-readable bounded gate; independent runtime attestation is never inferred."""
+    blockers = []
+    total = semantic_review["open_pr_count"]
+    valid = semantic_review["current_validated_count"]
+    if valid != total:
+        blockers.append({"id":"PR_SEMANTICS_UNRESOLVED",
+                         "count":total-valid, "required":"Independently review exact-head semantic decisions"})
+    unknown = len(consumer_graph["unknowns"])
+    if unknown:
+        blockers.append({"id":"LIVE_CONSUMERS_UNRESOLVED",
+                         "count":unknown, "required":"Resolve dynamic and deployed consumer evidence before cleanup"})
+    writes = len(write_surfaces["unknown_write_destinations"])
+    if writes:
+        blockers.append({"id":"WRITE_DESTINATIONS_UNRESOLVED",
+                         "count":writes, "required":"Identify actual writer destination and runtime"})
+    if not runtime_assessment["runtime_coverage_certified"]:
+        blockers.append({"id":"EXTERNAL_RUNTIME_UNATTESTED", "count":1,
+                         "required":"Verify deployed invocations, database scheduler and gateway source independently",
+                         "snapshot_reason":runtime_assessment["reason"]})
+    blockers.append({"id":"INDEPENDENT_VERIFIER_APPROVAL_MISSING", "count":1,
+                     "required":"Role V and Role B sign off on exact current-source/runtime evidence"})
+    return {"schema":"cryptoscanner-audit-certification-gate-v1",
+            "main_sha":main_sha, "ledger_sha_read_only":ledger_sha,
+            "status":"NOT_CERTIFIED", "blockers":blockers,
+            "unresolved_pr_count":total-valid,
+            "unknown_consumer_count":unknown,
+            "unknown_write_destination_count":writes,
+            "production_mutation_authorized":False,
+            "cleanup_authorized":False}
+
+
 def assess_external_runtime_snapshot(snapshot, main_sha, now=None, max_age_seconds=3600):
     """Classify external observations without promoting a dated snapshot to live proof."""
     if snapshot.get("schema") != "cryptoscanner-external-runtime-audit-v1":
@@ -645,6 +678,8 @@ def main():
     (out/"semantic-pr-matrix.json").write_text(json.dumps(semantic_review,indent=2,sort_keys=True)+"\n")
     write_surfaces=classify_declared_write_surfaces(main_workflow_inventory,data["main_sha"])
     (out/"declared-write-surfaces.json").write_text(json.dumps(write_surfaces,indent=2,sort_keys=True)+"\n")
+    gate=audit_gate_decision(semantic_review,graph,write_surfaces,external_runtime_assessment,data["main_sha"],data["ledger_sha"])
+    (out/"audit-certification-gate.json").write_text(json.dumps(gate,indent=2,sort_keys=True)+"\n")
     (out/"scanner-inventory.json").write_text(json.dumps(data,indent=2,sort_keys=True)+"\n")
     lines=["# Scanner runtime and legacy inventory (read-only)","",
       f"Generated UTC: {data['created_utc']}","",
@@ -659,7 +694,8 @@ def main():
     for p in pr_rows:lines.append(f"| [#{p['number']}]({p['url']}) | `{p['head_sha'][:12]}` | {p['triage_classification']} | {p['triage_snapshot_head_matches']} | {len(p['files'])} | {len(p['already_on_main_paths'])} | {len(p['exact_main_blob_matches'])} |")
     lines+=["","## Declared GitHub write surfaces (static, NOT observed writers)","",
       f"Workflows declaring contents:write: {len(write_surfaces['surfaces'])}; unresolved destinations: {len(write_surfaces['unknown_write_destinations'])}.",
-      "See declared-write-surfaces.json; no cleanup authorization.", ""]
+      "See declared-write-surfaces.json; no cleanup authorization.",
+      f"Audit certification: {gate['status']}; {len(gate['blockers'])} evidence blockers; see audit-certification-gate.json.", ""]
     lines+=["","## Current-head semantic review (provisional; fail-closed)","",
       f"Current validated decisions: {semantic_review['current_validated_count']}/{semantic_review['open_pr_count']}; unknown includes self-changing audit head and stale decisions.",
       "Artifact: semantic-pr-matrix.json; neither this table nor green CI authorizes cleanup or merge.",
