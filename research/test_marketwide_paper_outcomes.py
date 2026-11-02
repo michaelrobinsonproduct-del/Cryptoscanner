@@ -1,7 +1,14 @@
 """Offline behavioral tests; synthetic fixtures are NOT predictive evidence."""
 import datetime as dt
 import hashlib
+import contextlib
+import io
+import json
+import sys
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 from paper_pov.ledger import seal, verify
 from research.marketwide_paper_outcomes import evaluate
 
@@ -241,5 +248,74 @@ class Tests(unittest.TestCase):
         self.assertEqual(result["horizons"]["1"]["movers_30"],2)
         self.assertIn("NOT distinct surge episodes",result["metric_unit"])
         self.assertIn("not independently authenticated",result["source_provenance"])
+
+
+    def test_conflicting_same_timestamp_quote_must_abstain(self):
+        # Two distinct valid runs can carry the same quote timestamp with
+        # conflicting prices. A max() would invent a reliable +30% mover.
+        runs=[]; observations=[]
+        for minute, quote_at, price in ((0,0,100),(30,30,140),
+                                        (31,30,100),(60,60,100),(120,120,100)):
+            rid=str(minute)
+            runs.append({"id":rid,"as_of":iso(minute)})
+            observations.append({"run_id":rid,"at":iso(quote_at),
+                                 "pair":"AAAUSD","price":price})
+        row=evaluate(sealed_fixture({"runs":runs,"observations":observations,
+                                     "predictions":[]}))["horizons"]["1"]
+        self.assertEqual(row["movers_30"],0)
+        self.assertGreaterEqual(row["abstain_gap"],1)
+
+    def test_identical_same_timestamp_quote_remains_usable(self):
+        runs=[]; observations=[]
+        for minute, quote_at, price in ((0,0,100),(30,30,135),
+                                        (31,30,135),(60,60,135),(120,120,135)):
+            rid=str(minute)
+            runs.append({"id":rid,"as_of":iso(minute)})
+            observations.append({"run_id":rid,"at":iso(quote_at),
+                                 "pair":"AAAUSD","price":price})
+        row=evaluate(sealed_fixture({"runs":runs,"observations":observations,
+                                     "predictions":[]}))["horizons"]["1"]
+        self.assertEqual(row["movers_30"],1)
+        self.assertEqual(row["matured"],1)
+
+    def test_other_pair_spike_never_leaks_into_watched_pair(self):
+        runs=[]; observations=[]
+        for minute in (0,30,60,120):
+            rid=str(minute)
+            runs.append({"id":rid,"as_of":iso(minute)})
+            for pair, price in (("AAAUSD",135 if minute else 100),
+                                ("BBBUSD",100)):
+                observations.append({"run_id":rid,"at":iso(minute),
+                                     "pair":pair,"price":price})
+        raw={"runs":runs,"observations":observations,
+             "predictions":[{"run_id":"0","pair":"BBBUSD"}]}
+        row=evaluate(sealed_fixture(raw))["horizons"]["1"]
+        self.assertEqual(row["movers_30"],1)
+        self.assertEqual(row["watch_30"],0)
+        self.assertEqual(row["missed_30"],1)
+        self.assertEqual(row["watch_false_positive_30"],1)
+
+    def test_cli_unresolved_watch_null_precision_and_no_promotion(self):
+        from research.marketwide_paper_outcomes import main
+        raw=fixture()
+        raw["observations"]=[o for o in raw["observations"]
+                             if o["run_id"] in ("0","180")]
+        state=sealed_fixture(raw)
+        with tempfile.TemporaryDirectory() as folder:
+            source=Path(folder)/"ledger.json"
+            output=Path(folder)/"report.json"
+            source.write_text(json.dumps(state))
+            with patch.object(sys,"argv",["marketwide","--verified-ledger",str(source),
+                                         "--output",str(output)]):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    main()
+            report=json.loads(output.read_text())
+        row=report["horizons"]["1"]
+        self.assertEqual(row["watch_matured"],0)
+        self.assertIsNone(row["watch_precision_30"])
+        self.assertIsNone(row["watch_precision_20"])
+        self.assertIs(report["source_authenticated"],False)
+        self.assertIs(report["complete_market_history"],False)
+        self.assertIs(report["eligible_for_model_promotion"],False)
 
 if __name__=="__main__":unittest.main()
