@@ -34,7 +34,7 @@ def main():
     workflow_inventory=[]
     for p in workflows:
         s=pathlib.Path(p).read_text()
-        workflow_inventory.append({"path":p,"schedule_cron":re.findall(r"cron:\s*['\\"]?([^'\\"\n]+)",s),
+        workflow_inventory.append({"path":p,"schedule_cron":re.findall(r"cron:\s*([^\n]+)",s),
           "has_dispatch":"workflow_dispatch:" in s,"has_schedule":bool(re.search(r"^\s*schedule:",s,re.M)),
           "writes_contents":bool(re.search(r"contents:\s*write",s)),
           "ledger_ref":"paper-proof-ledger" in s,
