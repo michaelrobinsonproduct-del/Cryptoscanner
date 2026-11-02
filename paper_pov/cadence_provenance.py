@@ -202,13 +202,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--runs", required=True)
     parser.add_argument("--logs", required=True, help="JSON object: run ID -> decoded job log")
+    parser.add_argument("--jobs", help="Optional JSON object: run ID -> GitHub Actions job metadata list")
     parser.add_argument("--checked-at", required=True)
     parser.add_argument("--lookback-hours", type=int, default=24)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
     payload = json.loads(Path(args.runs).read_text())
+    jobs = json.loads(Path(args.jobs).read_text()) if args.jobs else None
     report = audit(payload["workflow_runs"], json.loads(Path(args.logs).read_text()),
-                   args.checked_at, args.lookback_hours)
+                   args.checked_at, args.lookback_hours, jobs=jobs)
     Path(args.output).write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
     print("PAPER_CADENCE_PROVENANCE " + json.dumps({k: v for k, v in report.items() if k != "runs"}, sort_keys=True))
 
