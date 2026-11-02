@@ -5,7 +5,7 @@ import hashlib
 import unittest
 from unittest.mock import patch
 
-from research.marketwide_episode_diagnostics import analyze, lagged_return, wilson, chronological_readiness, cluster_episodes
+from research.marketwide_episode_diagnostics import analyze, lagged_return, lagged_return_diagnostic, wilson, chronological_readiness, cluster_episodes
 
 BASE=dt.datetime(2026,1,1,tzinfo=dt.timezone.utc)
 
@@ -734,6 +734,77 @@ class EpisodeTests(unittest.TestCase):
         one=report["horizons"]["1"]
         self.assertGreater(one["episode_first_entry_feature_coverage_30"]["60m"]
                            ["without_asof_feature"],0)
+
+    def test_feature_missing_reasons_are_point_in_time_and_mutually_exclusive(self):
+        series=[(BASE,100,"0"),(BASE+dt.timedelta(minutes=30),110,"30"),
+                (BASE+dt.timedelta(minutes=60),120,"60")]
+        times=[r[0] for r in series]
+        self.assertEqual(lagged_return_diagnostic(series,times,0,30),
+                         (None,"no_prior_anchor"))
+        self.assertEqual(lagged_return_diagnostic(series,times,2,180),
+                         (None,"no_prior_anchor"))
+        self.assertAlmostEqual(lagged_return_diagnostic(series,times,2,60)[0],0.2)
+        self.assertEqual(lagged_return_diagnostic(series,times,2,60)[1],"covered")
+        old=[(BASE-dt.timedelta(minutes=60),100,"old"),series[2]]
+        self.assertEqual(lagged_return_diagnostic(old,[r[0] for r in old],1,30),
+                         (None,"stale_prior_anchor"))
+        gap=[(BASE,100,"0"),(BASE+dt.timedelta(minutes=60),120,"60")]
+        self.assertEqual(lagged_return_diagnostic(gap,[r[0] for r in gap],1,60),
+                         (None,"discontinuous_history"))
+
+    def test_feature_missing_reasons_do_not_backfill_later_episode_entries(self):
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(fixture())["horizons"]["1"]
+        for threshold in (20,30):
+            cohort=one["episode_first_entry_feature_coverage_"+str(threshold)]
+            for lag in ("30m","60m","180m"):
+                stats=cohort[lag]
+                self.assertEqual(sum(stats["missing_reasons"].values()),
+                                 stats["without_asof_feature"])
+                self.assertEqual(stats["with_asof_feature"]+
+                                 stats["without_asof_feature"],stats["episodes"])
+        self.assertGreater(one["episode_first_entry_feature_coverage_30"]
+                           ["60m"]["missing_reasons"].get("no_prior_anchor",0),0)
+
+    def test_conflicting_anchor_reason_survives_duplicate_quote_order(self):
+        series=[(BASE,100,"a"),(BASE,200,"b"),(BASE,200,"c"),
+                (BASE+dt.timedelta(minutes=30),220,"m"),
+                (BASE+dt.timedelta(minutes=60),250,"entry")]
+        self.assertEqual(lagged_return_diagnostic(series,[r[0] for r in series],4,60),
+                         (None,"conflicting_anchor"))
+        series[0]=(BASE,200,"a")
+        value,reason=lagged_return_diagnostic(series,[r[0] for r in series],4,60)
+        self.assertEqual(reason,"covered")
+        self.assertAlmostEqual(value,0.25)
+
+    def test_overlapping_watch_nonhits_are_not_counted_as_independent_windows(self):
+        state=fixture()
+        state["predictions"].extend([
+            {"run_id":"60","pair":"BBBUSD"},
+            {"run_id":"90","pair":"BBBUSD"}])
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        self.assertEqual(one["coverage"]["watch_false_positive_30"],3)
+        self.assertEqual(one["coverage"]["watch_false_positive_20"],3)
+        self.assertEqual(one["watch_nonhit_windows_30"],1)
+        self.assertEqual(one["watch_nonhit_windows_20"],1)
+        self.assertEqual(one["watch_nonhit_distinct_pairs_30"],1)
+        self.assertEqual(one["watch_nonhit_distinct_pairs_20"],1)
+
+    def test_watch_nonhit_windows_keep_separate_pairs_and_distant_decisions(self):
+        state=fixture()
+        state["predictions"].extend([
+            {"run_id":"180","pair":"AAAUSD"},
+            {"run_id":"180","pair":"BBBUSD"},
+            {"run_id":"360","pair":"BBBUSD"}])
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        self.assertEqual(one["watch_nonhit_distinct_pairs_30"],2)
+        self.assertGreaterEqual(one["watch_nonhit_windows_30"],3)
+        self.assertLessEqual(one["watch_nonhit_windows_30"],
+                             one["coverage"]["watch_false_positive_30"])
+        self.assertEqual(one["watch_nonhit_windows_20"],
+                         one["watch_nonhit_windows_30"])
 
 if __name__=="__main__":
     unittest.main()
