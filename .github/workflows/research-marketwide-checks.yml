@@ -34,8 +34,8 @@ jobs:
         run: |
           set -euo pipefail
           git rev-parse HEAD
-          python -m unittest research.test_marketwide_paper_outcomes research.test_marketwide_episode_diagnostics research.test_kraken_archive_readiness -v
-          python -m compileall -q research/marketwide_paper_outcomes.py research/marketwide_episode_diagnostics.py research/kraken_archive_readiness.py
+          python -m unittest research.test_marketwide_paper_outcomes research.test_marketwide_episode_diagnostics research.test_kraken_archive_readiness research.test_retained_first_entry_candidates -v
+          python -m compileall -q research/marketwide_paper_outcomes.py research/marketwide_episode_diagnostics.py research/kraken_archive_readiness.py research/retained_first_entry_candidates.py
       - name: Verify existing segmented PAPER ledger read-only and evaluate authentic observations
         run: |
           set -euo pipefail
