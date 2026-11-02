@@ -113,7 +113,12 @@ def analyze(state):
             else:
                 episodes.append({"pair":case["pair"],"first_entry_at":case["entry_at"],
                                  "last_entry_at":case["entry_at"],"entry_cases":1,
-                                 "watch_captured":case["watch"]})
+                                 "watch_captured":case["watch"],
+                                 "first_lagged_60m":case["lagged_returns"]["60m"],
+                                 "first_peak_observed_return":case["peak_observed_return"]})
+        episode_watch_count = sum(e["watch_captured"] for e in episodes)
+        episode_first_lags = [e["first_lagged_60m"] for e in episodes
+                              if e["first_lagged_60m"] is not None]
         # Descriptive only: features cannot be backfilled for most first observations.
         def summarize_feature(records,key):
             vals = [r["lagged_returns"][key] for r in records
@@ -125,6 +130,11 @@ def analyze(state):
         output[str(hours)] = {"coverage":coverage,"unique_mover_episodes":len(episodes),
             "unique_mover_pairs":len({e["pair"] for e in episodes}),
             "episodes":episodes,"mover_cases":cases,
+            "watch_captured_episodes":episode_watch_count,
+            "watch_episode_recall_30":episode_watch_count/len(episodes) if episodes else None,
+            "watch_episode_recall_wilson_95_naive":wilson(episode_watch_count,len(episodes)),
+            "episode_first_lag_60m":{"n":len(episode_first_lags),
+                "mean":sum(episode_first_lags)/len(episode_first_lags) if episode_first_lags else None},
             "watch_recall_30":coverage["watch_positive"]/coverage["movers"] if coverage["movers"] else None,
             "watch_precision_30":coverage["watch_positive"]/coverage["watch_matured"] if coverage["watch_matured"] else None,
             "watch_recall_wilson_95_naive":wilson(coverage["watch_positive"],coverage["movers"]),
