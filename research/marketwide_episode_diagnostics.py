@@ -92,6 +92,7 @@ def cluster_episodes(cases, hours):
                              "last_entry_at":case["entry_at"],"entry_cases":1,
                              "watch_captured":case["watch"],
                              "first_lagged_60m":case["lagged_returns"]["60m"],
+                             "first_lagged_returns":dict(case["lagged_returns"]),
                              "first_peak_observed_return":case["peak_observed_return"]})
     return episodes
 
@@ -187,9 +188,19 @@ def analyze(state):
             ordered = sorted(vals)
             return {"n":len(vals),"mean":sum(vals)/len(vals) if vals else None,
                     "positive_fraction":sum(v>0 for v in vals)/len(vals) if vals else None,
-                    "median":ordered[len(ordered)//2] if ordered else None,
+                    "median":((ordered[(len(ordered)-1)//2] + ordered[len(ordered)//2])/2
+                              if ordered else None),
                     "min":ordered[0] if ordered else None,
                     "max":ordered[-1] if ordered else None}
+        # Episode-first-entry feature cohorts reduce, but do not eliminate,
+        # overlapping-entry dependence. Keep distinct-pair sample counts visible.
+        first_entries = [{"pair":e["pair"],"lagged_returns":e["first_lagged_returns"]}
+                         for e in episodes]
+        episode_features = {
+            key:dict(summarize_feature(first_entries,key),
+                     distinct_pairs=len({r["pair"] for r in first_entries
+                                         if r["lagged_returns"][key] is not None}))
+            for key in ("30m","60m","180m")}
         assert coverage["eligible"]==coverage["matured"]+coverage["abstain_gap"]+coverage["immature"]
         assert coverage["movers"]==len(positives)
         assert coverage["movers_20"]==len(cases20)
@@ -207,6 +218,7 @@ def analyze(state):
             "watch_captured_episodes":episode_watch_count,
             "watch_episode_recall_30":episode_watch_count/len(episodes) if episodes else None,
             "watch_episode_recall_wilson_95_naive":wilson(episode_watch_count,len(episodes)),
+            "episode_first_entry_feature_distributions":episode_features,
             "episode_first_lag_60m":{"n":len(episode_first_lags),
                 "mean":sum(episode_first_lags)/len(episode_first_lags) if episode_first_lags else None},
             "watch_recall_30":coverage["watch_positive"]/coverage["movers"] if coverage["movers"] else None,
