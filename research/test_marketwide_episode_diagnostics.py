@@ -145,9 +145,11 @@ class EpisodeTests(unittest.TestCase):
         for part in ("train","test"):
             self.assertEqual(split[part]["positive_lag_60m_episodes"],12)
             self.assertEqual(split[part]["negative_lag_60m_pairs"],12)
-        self.assertTrue(split["model_evaluation_ready"])
+        self.assertTrue(split["sample_thresholds_met"])
+        self.assertFalse(split["model_evaluation_ready"])
+        self.assertEqual(len(split["unmet_evidence_gates"]),3)
         self.assertEqual(split["minimum_sample_requirements"],[])
-        # This is sample-readiness only; no challenger was trained.
+        # PAPER-only sample thresholds cannot authorize model evaluation.
         self.assertEqual(split["status"],"DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER")
 
     def test_later_surge_feature_cannot_backfill_missing_first_entry_feature(self):
