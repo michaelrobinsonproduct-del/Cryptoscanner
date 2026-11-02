@@ -599,6 +599,7 @@ def main():
     semantic_review=apply_semantic_review(semantic_matrix,pr_rows,main_sha)
     external_runtime=json.loads((ROOT/"audit_tools/external_runtime_20261102.json").read_text())
     runtime_snapshot_main_matches=external_runtime.get("repo_main_sha")==main_ref.get("object",{}).get("sha")
+    external_runtime_assessment=assess_external_runtime_snapshot(external_runtime,main_sha)
     errors={"prs":prs.get("error") if isinstance(prs,dict) else None,
             "branches":branches.get("error") if isinstance(branches,dict) else None,
             "runs":runs_response.get("error") if isinstance(runs_response,dict) else "Invalid runs response",
@@ -626,6 +627,8 @@ def main():
         "external_runtime_snapshot_utc":external_runtime.get("snapshot_utc"),
         "external_runtime_snapshot_main_sha":external_runtime.get("repo_main_sha"),
         "external_runtime_snapshot_main_matches":runtime_snapshot_main_matches,
+        "external_runtime_evidence_class":external_runtime_assessment["evidence_class"],
+        "external_runtime_evidence_reason":external_runtime_assessment["reason"],
         "closed_prs_since_snapshot":closed_prs_since_snapshot,
         "new_prs_since_snapshot":[p["number"] for p in pr_rows if p["triage_stale_reason"]=="NEW_PR_NOT_IN_SNAPSHOT"],
         "open_prs":pr_rows,"branches":branches,
@@ -638,6 +641,7 @@ def main():
     out=ROOT/"audit-evidence";out.mkdir(exist_ok=True)
     graph=build_consumer_graph(main_workflow_inventory,external_runtime,data["checkout_sha"],data["main_sha"],workflow_source="remote_main")
     (out/"consumer-graph.json").write_text(json.dumps(graph,indent=2,sort_keys=True)+"\n")
+    (out/"external-runtime-assessment.json").write_text(json.dumps(external_runtime_assessment,indent=2,sort_keys=True)+"\n")
     (out/"semantic-pr-matrix.json").write_text(json.dumps(semantic_review,indent=2,sort_keys=True)+"\n")
     write_surfaces=classify_declared_write_surfaces(main_workflow_inventory,data["main_sha"])
     (out/"declared-write-surfaces.json").write_text(json.dumps(write_surfaces,indent=2,sort_keys=True)+"\n")
@@ -664,6 +668,8 @@ def main():
     lines+=["","## Snapshot drift / closed PR reconciliation","",
       f"Triage snapshot main matches current main: {data['triage_snapshot_main_matches']}",
       f"External runtime snapshot main matches current main: {data['external_runtime_snapshot_main_matches']}",
+      f"External runtime evidence: {external_runtime_assessment['evidence_class']} / {external_runtime_assessment['reason']}; age seconds {external_runtime_assessment['age_seconds']}.",
+      "External deployments, invocations and DB schedulers remain unverified; no cleanup authority.",
       "A mismatch means historical runtime observations and PR classifications are NOT revalidated against current main.",
       ""]
     for p in closed_prs_since_snapshot:
