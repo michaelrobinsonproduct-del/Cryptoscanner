@@ -1,7 +1,7 @@
 """Offline fail-closed pagination tests for repository inventory (no network)."""
 import unittest
 from unittest.mock import patch
-from audit_tools.full_scanner_inventory import gh_pages
+from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot
 
 class PaginationTests(unittest.TestCase):
     def test_multiple_pages_are_all_included(self):
@@ -24,6 +24,44 @@ class PaginationTests(unittest.TestCase):
         with patch("audit_tools.full_scanner_inventory.gh", return_value=list(range(100))):
             with self.assertRaisesRegex(RuntimeError,"limit reached"):
                 gh_pages("repos/owner/repo/branches",max_pages=2)
+
+class SnapshotReconciliationTests(unittest.TestCase):
+    def setUp(self):
+        self.snapshot={"main_sha":"main-old","prs":[
+            {"number":120,"head_sha":"head-old","classification":"needed"},
+            {"number":80,"head_sha":"same-head","classification":"integrated"}]}
+        self.rows=[{"number":80,"head_sha":"same-head"}]
+
+    def test_main_drift_invalidates_old_integrated_claim(self):
+        fetch=lambda _:{"state":"closed","merged_at":"2026-11-02T02:27:49Z",
+                         "head":{"sha":"head-new"},"merge_commit_sha":"merge-120"}
+        closed=reconcile_pr_snapshot(self.snapshot,self.rows,"main-new",fetch)
+        self.assertEqual(self.rows[0]["triage_classification"],"unknown")
+        self.assertEqual(self.rows[0]["triage_snapshot_classification"],"integrated")
+        self.assertEqual(self.rows[0]["triage_stale_reason"],"MAIN_CHANGED_REQUIRES_SEMANTIC_REVIEW")
+        self.assertTrue(closed[0]["merged"])
+        self.assertEqual(closed[0]["final_head_sha"],"head-new")
+        self.assertEqual(closed[0]["classification"],"integrated")
+
+    def test_matching_main_and_head_retains_historical_classification(self):
+        fetch=lambda _:{"state":"closed","merged_at":None,"head":{"sha":"head-old"}}
+        closed=reconcile_pr_snapshot(self.snapshot,self.rows,"main-old",fetch)
+        self.assertEqual(self.rows[0]["triage_classification"],"integrated")
+        self.assertTrue(self.rows[0]["classification_valid_for_current_main"])
+        self.assertFalse(closed[0]["merged"])
+        self.assertEqual(closed[0]["classification"],"unknown")
+
+    def test_closed_pr_api_ambiguity_fails_closed(self):
+        with self.assertRaisesRegex(RuntimeError,"closed state unverified"):
+            reconcile_pr_snapshot(self.snapshot,self.rows,"main-old",lambda _:{"error":"403"})
+
+    def test_new_pr_cannot_inherit_classification(self):
+        rows=[{"number":80,"head_sha":"same-head"},{"number":121,"head_sha":"new-head"}]
+        reconcile_pr_snapshot(self.snapshot,rows,"main-old",
+                              lambda _:{"state":"closed","merged_at":None,"head":{"sha":"head-old"}})
+        self.assertEqual(rows[1]["triage_classification"],"unknown")
+        self.assertEqual(rows[1]["triage_stale_reason"],"NEW_PR_NOT_IN_SNAPSHOT")
+
 
 if __name__=="__main__":
     unittest.main()
