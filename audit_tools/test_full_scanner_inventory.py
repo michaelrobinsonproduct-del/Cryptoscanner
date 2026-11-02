@@ -477,6 +477,27 @@ class CurrentSemanticReviewTests(unittest.TestCase):
             apply_semantic_review(matrix,[self.row()],self.MAIN)
 
 
+class WorkflowTriggerSourceTests(unittest.TestCase):
+    def test_shell_fake_schedule_and_dispatch_not_reported(self):
+        source="""name: Safe\non:\n  push:\njobs:\n  check:\n    steps:\n      - run: |\n          echo 'workflow_dispatch:'\n          echo 'schedule:'\n          echo 'cron: 9,39 * * * *'\n"""
+        w=inventory_workflow_source(".github/workflows/safe.yml",source)
+        self.assertFalse(w["has_dispatch"])
+        self.assertFalse(w["has_schedule"])
+        self.assertEqual(w["schedule_cron"],[])
+
+    def test_real_cron_and_dispatch_parsed(self):
+        source="""name: Writer\non:\n  schedule:\n    - cron: '9,39 * * * *'\n  workflow_dispatch:\njobs:\n  run:\n    steps: []\n"""
+        w=inventory_workflow_source(".github/workflows/paper-pipeline.yml",source)
+        self.assertTrue(w["has_dispatch"])
+        self.assertTrue(w["has_schedule"])
+        self.assertEqual(w["schedule_cron"],["9,39 * * * *"])
+
+    def test_inline_triggers_not_dropped(self):
+        w=inventory_workflow_source(".github/workflows/inline.yml", "name: Inline\non: [push, workflow_dispatch]\n")
+        self.assertTrue(w["has_dispatch"])
+        self.assertFalse(w["has_schedule"])
+
+
 class DeclaredWriteSurfaceTests(unittest.TestCase):
     def test_canonical_and_legacy_writers_are_distinct(self):
         source_main="""name: Paper
