@@ -65,7 +65,8 @@ class FreezeScopeTests(unittest.TestCase):
             if mutation == "wrong_blob":
                 data[0]["open_prs"][0]["file_blob_comparisons"][0]["pr_blob_sha"] = "9" * 40
             elif mutation == "missing_path":
-                data[0]["open_prs"][0]["file_blob_comparisons"] = []
+                data[0]["open_prs"][0]["file_blob_comparisons"] = [
+                    x for x in data[0]["open_prs"][0]["file_blob_comparisons"] if x["path"] != "x.py"]
             elif mutation == "duplicate_path":
                 data[0]["open_prs"][0]["file_blob_comparisons"].append(
                     copy.deepcopy(data[0]["open_prs"][0]["file_blob_comparisons"][0]))
@@ -78,7 +79,8 @@ class FreezeScopeTests(unittest.TestCase):
     def test_unreviewed_pr_is_unknown_without_source_claim(self):
         data = list(fixtures())
         data[1]["prs"][0]["review_valid"] = False
-        data[0]["open_prs"][0]["file_blob_comparisons"] = []
+        data[0]["open_prs"][0]["file_blob_comparisons"] = [
+                    x for x in data[0]["open_prs"][0]["file_blob_comparisons"] if x["path"] != "x.py"]
         data[3]["unresolved_pr_count"] = 1
         result = freeze(*data)
         self.assertEqual(result["prs"][0]["disposition"], "unknown")
