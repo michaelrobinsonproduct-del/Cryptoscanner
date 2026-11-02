@@ -9,6 +9,9 @@ on:
       - 'paper_pov/test_native_gap_diagnostic.py'
       - 'paper_pov/test_cadence_collect.py'
       - 'paper_pov/artifact_bytes_verify.py'
+      - 'paper_pov/independent_wake_rehearsal.py'
+      - 'paper_pov/test_independent_wake_rehearsal.py'
+      - 'paper_pov/INDEPENDENT_CLOCK_RECOVERY.md'
       - '.github/workflows/paper-cadence-provenance-ci.yml'
 permissions:
   contents: read
@@ -32,7 +35,7 @@ jobs:
           TREE_SHA="$(git rev-parse 'HEAD^{tree}')"
           test "$(git cat-file -t "$TREE_SHA")" = tree
           echo "PAPER_CADENCE_BASE_TREE_SHA=$TREE_SHA"
-          python -m unittest paper_pov.test_cadence_provenance paper_pov.test_cadence_collect paper_pov.test_native_gap_diagnostic -v
+          python -m unittest paper_pov.test_cadence_provenance paper_pov.test_cadence_collect paper_pov.test_native_gap_diagnostic paper_pov.test_independent_wake_rehearsal -v
 
   authenticated-get-only-rehearsal:
     runs-on: ubuntu-latest
