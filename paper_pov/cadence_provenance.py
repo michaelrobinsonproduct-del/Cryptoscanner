@@ -134,6 +134,7 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
             queue_seconds = writer_job_queue_seconds(jobs, rid, created, now)
             if queue_seconds is not None:
                 row["writer_job_queue_seconds"] = queue_seconds
+            row["verified_source_sha"] = p["PAPER_PIPELINE_SOURCE_SHA"]
             cron = p["PAPER_VERIFIED_ORIGINATING_CRON"]
             if event == "workflow_dispatch":
                 if cron == "MANUAL_DISPATCH":
@@ -163,10 +164,16 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
     native_failed = [r for r in evidence if r["classification"] == "VERIFIED_NATIVE_SCHEDULE_UNSUCCESSFUL"]
     dispatch_failed = [r for r in evidence if r["classification"] == "VERIFIED_WORKFLOW_DISPATCH_UNSUCCESSFUL"]
     native.sort(key=lambda r: r["created_at"])
+    dispatched.sort(key=lambda r: r["created_at"])
     # This is only GitHub run-creation coverage, NOT proof of successful
     # persistence, quote freshness, delivery, or expected cron-slot identity.
     successful = sorted(native + dispatched, key=lambda r: r["created_at"])
     creation_times = [timestamp(r["created_at"]) for r in successful]
+    latest_native = native[-1] if native else None
+    latest_dispatch = dispatched[-1] if dispatched else None
+    # Source equality is a necessary but NOT sufficient manual/schedule parity gate.
+    source_match = (latest_native["verified_source_sha"] == latest_dispatch["verified_source_sha"]
+                    if latest_native and latest_dispatch else None)
     max_creation_gap = max((int((b - a).total_seconds()) for a, b in
                             zip(creation_times, creation_times[1:])), default=None)
     latest_age = int((now - creation_times[-1]).total_seconds()) if creation_times else None
@@ -175,6 +182,9 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
     evidence.sort(key=lambda r: (r.get("created_at", ""), str(r.get("run_id"))))
     return {"schema": 1, "checked_at": now.isoformat(), "lookback_hours": lookback_hours,
             "verified_native_count": len(native), "verified_dispatch_count": len(dispatched),
+            "latest_native_source_sha": latest_native["verified_source_sha"] if latest_native else None,
+            "latest_dispatch_source_sha": latest_dispatch["verified_source_sha"] if latest_dispatch else None,
+            "latest_cross_event_source_sha_equal": source_match,
             "verified_successful_writer_run_creation_count": len(successful),
             "last_verified_successful_run_created_at": successful[-1]["created_at"] if successful else None,
             "seconds_since_last_verified_successful_run_creation": latest_age,
@@ -195,7 +205,8 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
                             "Writer job queue delay is measured only from matching GitHub public-paper job started_at; missing metadata abstains",
                             "Job queue delay is separate from the native cron creation lateness lower bound",
                             "A successful workflow is not durable ledger or remote SHA256 readback proof",
-                            "workflow_dispatch alone does not distinguish owner manual from external recovery"]}
+                            "workflow_dispatch alone does not distinguish owner manual from external recovery",
+                            "Cross-event source SHA equality is necessary but never proves manual/unattended result parity"]}
 
 
 def main():
