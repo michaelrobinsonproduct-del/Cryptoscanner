@@ -198,9 +198,9 @@
     {
       "number": 6,
       "head_sha": "ecdf788a33c5cf0d2fd1e7c42a8215738c635dc8",
-      "classification": "unknown",
+      "classification": "conflicting",
       "source_path": "evaluation/report-integrity-guard.mjs",
-      "reason": "Legacy Bun/TypeScript report guard and SQL evidence; external callers and deployment state unresolved.",
+      "reason": "Exact PR #6 source blob f5ac90ee0a5d4ed9151c34e0edb1539d8f6b5a5d is a pure JS reconcileScanEvidence guard (no I/O), checks run ID, report timestamps, durable coverage and persistence_verified, but defaults to 15-minute age and has no canonical segmented PAPER manifest, source SHA, exchange-event timestamp or ledger remote-byte proof. It is not equivalent to current <=10-minute exchange freshness and SHA-sealed PAPER contract. Keep isolated for research; no production wiring, closure or legacy deletion without consumer/parity evidence.",
       "release_authorized": false,
       "cleanup_authorized": false,
       "source_blob_sha": "f5ac90ee0a5d4ed9151c34e0edb1539d8f6b5a5d"

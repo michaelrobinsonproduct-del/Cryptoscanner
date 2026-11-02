@@ -660,6 +660,7 @@ class AuditCertificationGateTests(unittest.TestCase):
         rows={x["number"]:x for x in matrix["prs"]}
         expected={
             3: ("conflicting","af0978f88050fa6ee2c96728710d495f7a7ee303","24/48/72h"),
+            6: ("conflicting","f5ac90ee0a5d4ed9151c34e0edb1539d8f6b5a5d","15-minute"),
             7: ("conflicting","25539447cb9fb2b1d83dcc04fcc595e5fd9e38af","simple-history"),
             10: ("conflicting","828bf9529de7af298b8c40b1c8d03d6c2e394e59","DECISION_ONLY"),
             11: ("conflicting","7f1da71aff044a1b771ef7e2440829b7a737eabf","single-process"),
