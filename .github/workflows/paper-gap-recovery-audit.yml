@@ -1,0 +1,84 @@
+name: Authenticated Kraken gap recovery research (read only)
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/gap_recovery_audit.py'
+      - 'paper_pov/test_gap_recovery_audit.py'
+      - '.github/workflows/paper-gap-recovery-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: paper-gap-audit-${{ github.event.pull_request.head.sha || github.run_id }}
+  cancel-in-progress: false
+jobs:
+  offline-and-authenticated-replay:
+    if: >-
+      github.repository == 'michaelrobinsonproduct-del/Cryptoscanner' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository))
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact source and adversarial tests
+        run: |
+          set -euo pipefail
+          echo "GAP_AUDIT_EXACT_SOURCE_SHA=$(git rev-parse HEAD)"
+          python -m unittest paper_pov.test_gap_recovery_audit paper_pov.test_learning_outcomes -v
+      - name: Read and independently verify current immutable ledger
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          BASE="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+          echo "GAP_AUDIT_LEDGER_COMMIT=$BASE"
+          CHECKPOINT="$(git show "${BASE}:paper-segment-manifest.json" | python -c 'import json,sys;print(json.load(sys.stdin)["checkpoint"]["git_commit"])')"
+          git cat-file -e "${CHECKPOINT}^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$CHECKPOINT"
+          python -m paper_pov.segmented_repository export-git \
+            --repository . --commit "$BASE" --output /tmp/gap-ledger.json --full-replay
+          python - <<'PY'
+          import json
+          from paper_pov import ledger
+          from paper_pov.segmented_storage import MAX_RAW_BYTES
+          state=ledger.verify(json.load(open("/tmp/gap-ledger.json")),MAX_RAW_BYTES)
+          print("GAP_SOURCE_LEDGER_VERIFIED",state["generation"],state["sha256"])
+          PY
+      - name: Bounded live Kraken HTTPS trade acquisition and gap before/after audit
+        run: |
+          set -euo pipefail
+          mkdir -p paper_pov/gap-evidence
+          python -m paper_pov.gap_recovery_audit \
+            --ledger /tmp/gap-ledger.json \
+            --output paper_pov/gap-evidence/before-after.json \
+            --sources-output paper_pov/gap-evidence/source-captures.json \
+            --capture
+          (cd paper_pov/gap-evidence && sha256sum before-after.json source-captures.json > SHA256SUMS && sha256sum -c SHA256SUMS)
+          python - <<'PY'
+          import json
+          p=json.load(open("paper_pov/gap-evidence/before-after.json"))
+          assert p["ledger_modified"] is False and p["production_applied"] is False
+          assert p["max_gap_minutes"] == 45 and p["held_out_lift"] is None
+          for h in ("1","6","24","48"):
+              b,a=p["before"][h],p["after"][h]
+              assert a["still_missing"]+a["matured_recovered_trade_evidence"]==b["gap_abstentions"]
+              assert a["eligible_after"]==b["eligible_before"]
+          print("GAP_RECOVERY_READ_ONLY_COUNTS_VERIFIED",p["source_generation"],p["recovered_total_correlated_windows"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: authenticated-kraken-gap-audit-${{ github.run_id }}
+          path: |
+            paper_pov/gap-evidence/before-after.json
+            paper_pov/gap-evidence/source-captures.json
+            paper_pov/gap-evidence/SHA256SUMS
+          retention-days: 90
+          if-no-files-found: warn
