@@ -63,8 +63,13 @@ def chronological_readiness(records, runs, hours, positive_key="hit_30"):
     embargo = dt.timedelta(hours=hours) + MAX_GAP
     train = [r for r in records if runs[r["run_id"]] + embargo <= cutoff]
     test = [r for r in records if runs[r["run_id"]] >= cutoff]
-    def independent_positive_episodes(rows):
-        """Count non-chained, decision-time positive episodes, not overlapping labels."""
+    def independent_positive_episodes(rows, require_first_feature=False):
+        """Count fixed-first-decision episodes, with strictly first-entry features.
+
+        Later entries in the same positive episode may have a lagged feature
+        only because the surge has already begun. They cannot retroactively
+        supply a missing pre-move feature for the episode's first entry.
+        """
         first_by_pair = {}
         count = 0
         for r in sorted(rows, key=lambda x:(x["pair"], runs[x["run_id"]])):
@@ -72,7 +77,8 @@ def chronological_readiness(records, runs, hours, positive_key="hit_30"):
             first = first_by_pair.get(r["pair"])
             if first is None or decision-first > dt.timedelta(hours=hours):
                 first_by_pair[r["pair"]] = decision
-                count += 1
+                if not require_first_feature or r["lagged_returns"]["60m"] is not None:
+                    count += 1
         return count
     def summary(rows):
         featured = [r for r in rows if r["lagged_returns"]["60m"] is not None]
@@ -84,7 +90,7 @@ def chronological_readiness(records, runs, hours, positive_key="hit_30"):
                 "positive_episodes":independent_positive_episodes(positive),
                 "lag_60m_covered":len(featured),
                 "positive_lag_60m_covered":len(featured_positive),
-                "positive_lag_60m_episodes":independent_positive_episodes(featured_positive),
+                "positive_lag_60m_episodes":independent_positive_episodes(positive, require_first_feature=True),
                 "negative_lag_60m_pairs":len({r["pair"] for r in featured_negative})}
     a,b=summary(train),summary(test)
     return {"status":"DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER",
