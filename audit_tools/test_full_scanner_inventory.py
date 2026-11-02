@@ -1,7 +1,7 @@
 """Offline fail-closed pagination tests for repository inventory (no network)."""
 import unittest
 from unittest.mock import patch
-from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph, workflow_branch_references, inventory_workflow_source, workflow_orchestration_references, apply_semantic_review, classify_declared_write_surfaces
+from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph, workflow_branch_references, inventory_workflow_source, workflow_orchestration_references, apply_semantic_review, classify_declared_write_surfaces, assess_external_runtime_snapshot
 
 
 class BranchReferenceTests(unittest.TestCase):
@@ -554,6 +554,56 @@ steps:
         self.assertEqual(census["unknown_write_destinations"],[".github/workflows/unknown.yml"])
         self.assertEqual(len(census["surfaces"]),1)
         self.assertFalse(census["surfaces"][0]["safe_to_delete"])
+
+
+class ExternalRuntimeEvidenceTests(unittest.TestCase):
+    MAIN = "a" * 40
+    def snapshot(self, timestamp="2026-11-02T02:17:00Z", main=None):
+        return {"schema":"cryptoscanner-external-runtime-audit-v1",
+                "snapshot_utc":timestamp, "repo_main_sha":main or self.MAIN,
+                "supabase":{"deployed_edge_functions":27}, "railway":{"active_deployments":0}}
+
+    def at(self, iso):
+        import datetime
+        return datetime.datetime.fromisoformat(iso.replace("Z","+00:00"))
+
+    def test_matching_recent_snapshot_is_still_not_live_authentication(self):
+        x=assess_external_runtime_snapshot(self.snapshot(),self.MAIN,
+                                           self.at("2026-11-02T02:20:00Z"))
+        self.assertEqual(x["reason"],"SNAPSHOT_ONLY_NO_LIVE_AUTHENTICATION")
+        self.assertEqual(x["age_seconds"],180)
+        self.assertFalse(x["runtime_coverage_certified"])
+        self.assertFalse(x["cleanup_authorized"])
+
+    def test_stale_snapshot_is_explicitly_untrusted(self):
+        x=assess_external_runtime_snapshot(self.snapshot(),self.MAIN,
+                                           self.at("2026-11-02T06:30:00Z"))
+        self.assertEqual(x["reason"],"STALE_SNAPSHOT")
+        self.assertFalse(x["age_within_limit"])
+
+    def test_changed_main_invalidates_even_recent_snapshot(self):
+        x=assess_external_runtime_snapshot(self.snapshot(), "b"*40,
+                                           self.at("2026-11-02T02:20:00Z"))
+        self.assertEqual(x["reason"],"MAIN_SHA_MISMATCH")
+        self.assertFalse(x["source_main_matches"])
+
+    def test_future_or_malformed_timestamp_fails_closed(self):
+        x=assess_external_runtime_snapshot(self.snapshot(),self.MAIN,
+                                           self.at("2026-11-02T02:00:00Z"))
+        self.assertEqual(x["reason"],"FUTURE_SNAPSHOT")
+        with self.assertRaisesRegex(ValueError,"timestamp"):
+            assess_external_runtime_snapshot(self.snapshot("2026-11-02T02:17:00"),self.MAIN)
+        with self.assertRaisesRegex(ValueError,"schema"):
+            assess_external_runtime_snapshot({"schema":"invented"},self.MAIN)
+
+    def test_counts_do_not_masquerade_as_live_coverage(self):
+        snap=self.snapshot()
+        snap["supabase"]["deployed_edge_functions"]=0
+        snap["railway"]["active_deployments"]=10
+        x=assess_external_runtime_snapshot(snap,self.MAIN,self.at("2026-11-02T02:20:00Z"))
+        self.assertEqual(x["evidence_class"],"snapshot_only")
+        self.assertFalse(x["runtime_invocations_verified"])
+        self.assertFalse(x["database_scheduler_verified"])
 
 
 if __name__=="__main__":
