@@ -34,12 +34,12 @@ def main():
     workflow_inventory=[]
     for p in workflows:
         s=pathlib.Path(p).read_text()
-        workflow_inventory.append({"path":p,"schedule_cron":re.findall(r"cron:\\s*['\\\"]?([^'\\\"\\n]+)",s),
-          "has_dispatch":"workflow_dispatch:" in s,"has_schedule":bool(re.search(r"^\\s*schedule:",s,re.M)),
-          "writes_contents":bool(re.search(r"contents:\\s*write",s)),
+        workflow_inventory.append({"path":p,"schedule_cron":re.findall(r"cron:\s*['\\"]?([^'\\"\n]+)",s),
+          "has_dispatch":"workflow_dispatch:" in s,"has_schedule":bool(re.search(r"^\s*schedule:",s,re.M)),
+          "writes_contents":bool(re.search(r"contents:\s*write",s)),
           "ledger_ref":"paper-proof-ledger" in s,
-          "python_modules":sorted(set(re.findall(r"python\\s+-m\\s+([A-Za-z0-9_.]+)",s))),
-          "scripts":sorted(set(re.findall(r"(?:python|bun|node)\\s+([A-Za-z0-9_./-]+\\.(?:py|ts|mjs))",s)))})
+          "python_modules":sorted(set(re.findall(r"python\s+-m\s+([A-Za-z0-9_.]+)",s))),
+          "scripts":sorted(set(re.findall(r"(?:python|bun|node)\s+([A-Za-z0-9_./-]+\.(?:py|ts|mjs))",s)))})
     prs=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/pulls?state=open&per_page=100")
     pr_rows=[]
     if isinstance(prs,list):
@@ -65,10 +65,10 @@ def main():
         "api_errors":{"prs":prs.get("error") if isinstance(prs,dict) else None,
                       "branches":branches.get("error") if isinstance(branches,dict) else None}}
     out=ROOT/"audit-evidence";out.mkdir(exist_ok=True)
-    (out/"scanner-inventory.json").write_text(json.dumps(data,indent=2,sort_keys=True)+"\\n")
+    (out/"scanner-inventory.json").write_text(json.dumps(data,indent=2,sort_keys=True)+"\n")
     lines=["# Scanner runtime and legacy inventory (read-only)","",
       f"Generated UTC: {data['created_utc']}","",
-      f"Git checkout SHA: \`{data['main_sha']}\`","",
+      f"Git checkout SHA: `{data['main_sha']}`","",
       f"Tracked files: {len(files)}; workflows: {len(workflows)}; open PRs: {len(pr_rows)}","",
       "## Workflow inventory","",
       "| Workflow | Cron | Dispatch | Contents write | Ledger reference |","|---|---|---|---|---|"]
@@ -76,13 +76,13 @@ def main():
         lines.append(f"| {w['path']} | {', '.join(w['schedule_cron']) or '-'} | {w['has_dispatch']} | {w['writes_contents']} | {w['ledger_ref']} |")
     lines+=["","## All open PRs (path overlap is NOT proof of equivalent behavior)","",
        "| PR | Head SHA | Changed files | Paths already present on main |","|---|---|---:|---:|"]
-    for p in pr_rows:lines.append(f"| [#{p['number']}]({p['url']}) | \`{p['head_sha'][:12]}\` | {len(p['files'])} | {len(p['already_on_main_paths'])} |")
+    for p in pr_rows:lines.append(f"| [#{p['number']}]({p['url']}) | `{p['head_sha'][:12]}` | {len(p['files'])} | {len(p['already_on_main_paths'])} |")
     lines+=["","## Evidence boundaries","",
       "- This is a machine-generated source and GitHub inventory, not proof of live deployment or functional equivalence.",
       "- Existing paths do not mean a PR's implementation is already merged.",
       "- Branches, PRs and workflows are not deleted or changed by this audit.",
       "- Runtime identification requires corroborating actual successful runs, deployment identity, and ledger history.",
       "- PR retirement must be based on semantic diff and confirmed consumers, not filename overlap."]
-    (out/"scanner-inventory.md").write_text("\\n".join(lines)+"\\n")
+    (out/"scanner-inventory.md").write_text("\n".join(lines)+"\n")
     print(f"INVENTORY files={len(files)} workflows={len(workflows)} prs={len(pr_rows)} branches={len(branches) if isinstance(branches,list) else 'unknown'}")
 if __name__=="__main__":main()
