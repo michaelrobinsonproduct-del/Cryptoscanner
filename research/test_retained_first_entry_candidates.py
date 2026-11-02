@@ -66,6 +66,24 @@ class CandidateTests(unittest.TestCase):
         self.assertFalse(r["production_applied"])
         self.assertFalse(r["first_observed_at_available"])
 
+    def test_phase_sensitivity_exposes_fixed_stride_selection(self):
+        p = inspect_candidates(self.make(high_at=13))["horizons"]["1"]["phase_sensitivity"]
+        self.assertEqual(p["offsets_tested"], 12)
+        self.assertEqual(p["offsets_with_entries"], 6)
+        self.assertEqual(p["offsets_with_ge30pct"], 1)
+        self.assertEqual((p["min_ge30pct_per_offset"], p["max_ge30pct_per_offset"]), (0, 1))
+        self.assertEqual((p["min_entries_per_offset"], p["max_entries_per_offset"]), (0, 1))
+
+    def test_phase_sensitivity_no_false_hit_from_entry_candle(self):
+        r = inspect_candidates(self.make(high_at=0))["horizons"]["1"]
+        self.assertEqual(r["phase_sensitivity"]["offsets_with_ge30pct"], 0)
+        self.assertEqual(r["phase_sensitivity"]["max_ge30pct_per_offset"], 0)
+
+    def test_phase_sensitivity_never_crosses_missing_candle(self):
+        r = inspect_candidates(self.make(gap_at=15))["horizons"]["1"]
+        self.assertEqual(r["phase_sensitivity"]["offsets_with_entries"], 0)
+        self.assertEqual(r["phase_sensitivity"]["max_entries_per_offset"], 0)
+
     def test_reject_retained_hash_tamper(self):
         with self.assertRaisesRegex(ValueError, "SHA256 mismatch"):
             inspect_candidates(self.make(corrupt=True))
