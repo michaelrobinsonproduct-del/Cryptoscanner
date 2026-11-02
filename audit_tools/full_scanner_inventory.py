@@ -491,9 +491,16 @@ def audit_gate_decision(semantic_review, consumer_graph, write_surfaces, runtime
     blockers = []
     total = semantic_review["open_pr_count"]
     valid = semantic_review["current_validated_count"]
-    if valid != total:
+    # A reviewed UNKNOWN is still an unresolved semantic decision. Never mistake
+    # source-identity verification for proof that a PR is integrated or deletable.
+    reviewed = semantic_review.get("prs")
+    unresolved = (sum(1 for row in reviewed if not row.get("review_valid")
+                      or row.get("classification") == "unknown")
+                  if isinstance(reviewed, list) and len(reviewed) == total
+                  else total - valid)
+    if unresolved:
         blockers.append({"id":"PR_SEMANTICS_UNRESOLVED",
-                         "count":total-valid, "required":"Independently review exact-head semantic decisions"})
+                         "count":unresolved, "required":"Independently classify exact-head PR semantics, including source-verified UNKNOWNs"})
     unknown = len(consumer_graph["unknowns"])
     if unknown:
         blockers.append({"id":"LIVE_CONSUMERS_UNRESOLVED",
@@ -511,7 +518,7 @@ def audit_gate_decision(semantic_review, consumer_graph, write_surfaces, runtime
     return {"schema":"cryptoscanner-audit-certification-gate-v1",
             "main_sha":main_sha, "ledger_sha_read_only":ledger_sha,
             "status":"NOT_CERTIFIED", "blockers":blockers,
-            "unresolved_pr_count":total-valid,
+            "unresolved_pr_count":unresolved,
             "unknown_consumer_count":unknown,
             "unknown_write_destination_count":writes,
             "production_mutation_authorized":False,
