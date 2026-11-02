@@ -104,6 +104,20 @@ class EpisodeTests(unittest.TestCase):
         r=chronological_readiness([],{"0":BASE},6)
         self.assertEqual(r["status"],"INSUFFICIENT_SCAN_TIMES")
 
+    def test_20pct_episode_is_not_misreported_as_30pct(self):
+        state=fixture()
+        for o in state["observations"]:
+            if o["pair"]=="AAAUSD" and o["price"]==135:
+                o["price"]=125
+        with patch("paper_pov.ledger.verify",return_value=None):
+            report=analyze(state)
+        one=report["horizons"]["1"]
+        self.assertGreater(one["coverage"]["movers_20"],0)
+        self.assertEqual(one["coverage"]["movers"],0)
+        self.assertEqual(one["unique_mover_episodes_20"],1)
+        self.assertEqual(one["unique_mover_episodes"],0)
+        self.assertEqual(one["watch_captured_episodes_20"],0)
+
     def test_gap_abstains_not_false_negative(self):
         state=fixture()
         state["observations"]=[o for o in state["observations"]
