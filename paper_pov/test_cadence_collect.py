@@ -67,7 +67,10 @@ class CadenceCollectorTests(unittest.TestCase):
         import json
         import zipfile
         from paper_pov import ledger
-        from paper_pov.artifact_bytes_verify import verify_pair
+        from paper_pov.artifact_bytes_verify import verify_pair, main
+        from contextlib import redirect_stdout
+        from pathlib import Path
+        import tempfile
 
         state = ledger.empty()
         score = {"generation": 0, "ledger_sha256": state["sha256"]}
@@ -103,6 +106,21 @@ class CadenceCollectorTests(unittest.TestCase):
         self.assertEqual(proof["internal_sha256_verified"], 5)
         self.assertFalse(proof["remote_ledger_readback_independently_verified"])
         self.assertFalse(proof["results_delivery_verified"])
+        with tempfile.TemporaryDirectory() as folder:
+            lpath = Path(folder) / "ledger.zip"
+            rpath = Path(folder) / "results.zip"
+            lpath.write_bytes(lzip)
+            rpath.write_bytes(rzip)
+            argv = ["artifact_bytes_verify", "--ledger-zip", str(lpath),
+                    "--ledger-digest", ldigest, "--results-zip", str(rpath),
+                    "--results-digest", rdigest, "--run-id", "1",
+                    "--source-sha", SHA, "--ledger-commit", "b" * 40]
+            output = io.StringIO()
+            with patch("sys.argv", argv), redirect_stdout(output):
+                main()
+            self.assertIn("PAPER_ARTIFACT_BYTES_READONLY", output.getvalue())
+            self.assertIn('"artifact_zip_bytes_independently_verified": true',
+                          output.getvalue())
         with self.assertRaisesRegex(ValueError, "ZIP SHA256"):
             check(a=lzip + b"tamper")
         with self.assertRaisesRegex(ValueError, "identity"):
