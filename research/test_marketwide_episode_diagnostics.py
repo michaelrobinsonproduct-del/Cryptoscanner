@@ -678,5 +678,62 @@ class EpisodeTests(unittest.TestCase):
         self.assertEqual(row["watch_captured_episodes"],
                          row["watch_first_entry_episodes_30"]+row["watch_late_only_episodes_30"])
 
+
+    def test_same_first_decision_watch_is_not_misclassified_as_late(self):
+        # Two same-decision entries must not depend on sort stability.
+        base={"pair":"AAAUSD","entry_at":iso(0),"decision_at":iso(0),
+              "lagged_returns":{"60m":None},"peak_observed_return":0.35}
+        for order in ((False, True), (True, False)):
+            cases=[dict(base,watch=watch) for watch in order]
+            cases.append(dict(base,entry_at=iso(30),decision_at=iso(30),watch=False))
+            episodes=cluster_episodes(cases,1)
+            self.assertEqual(len(episodes),1)
+            self.assertTrue(episodes[0]["first_entry_watch"])
+            self.assertTrue(episodes[0]["watch_captured"])
+            self.assertEqual(episodes[0]["first_watch_decision_at"],iso(0))
+
+    def test_first_entry_recall_is_separate_from_later_capture(self):
+        state=fixture()
+        # The first +30% qualifying entry is at decision 0. A later WATCH
+        # can capture the episode but cannot claim first-entry detection.
+        state["predictions"].append({"run_id":"30","pair":"AAAUSD"})
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        self.assertGreater(one["watch_captured_episodes"],0)
+        self.assertLessEqual(one["watch_first_entry_recall_30"],one["watch_episode_recall_30"])
+        self.assertEqual(one["watch_first_entry_recall_30"],
+                         one["watch_first_entry_episodes_30"]/one["unique_mover_episodes"])
+        with patch("paper_pov.ledger.verify",return_value=None):
+            immature=analyze(fixture())["horizons"]["24"]
+        for h in (one,immature):
+            for threshold in (20,30):
+                total=h["unique_mover_episodes"+("_20" if threshold==20 else "")]
+                ratio=h["watch_first_entry_recall_"+str(threshold)]
+                count=h["watch_first_entry_episodes_"+str(threshold)]
+                self.assertEqual(ratio,count/total if total else None)
+
+    def test_episode_first_feature_coverage_has_explicit_denominators(self):
+        with patch("paper_pov.ledger.verify",return_value=None):
+            report=analyze(fixture())
+        for horizon in report["horizons"].values():
+            for threshold in (20,30):
+                total=horizon["unique_mover_episodes"+("_20" if threshold==20 else "")]
+                stats=horizon["episode_first_entry_feature_coverage_"+str(threshold)]
+                for lag in ("30m","60m","180m"):
+                    row=stats[lag]
+                    self.assertEqual(row["episodes"],total)
+                    self.assertEqual(row["with_asof_feature"]+row["without_asof_feature"],total)
+                    self.assertLessEqual(row["distinct_covered_pairs"],row["with_asof_feature"])
+                    self.assertEqual(row["covered_fraction"],
+                                     row["with_asof_feature"]/total if total else None)
+                    self.assertEqual(row["with_asof_feature"],
+                        horizon["episode_first_entry_feature_distributions"+
+                                ("_20" if threshold==20 else "")][lag]["n"])
+        # A positive case with no historical anchor must remain uncovered,
+        # not become an apparent zero-return historical feature.
+        one=report["horizons"]["1"]
+        self.assertGreater(one["episode_first_entry_feature_coverage_30"]["60m"]
+                           ["without_asof_feature"],0)
+
 if __name__=="__main__":
     unittest.main()
