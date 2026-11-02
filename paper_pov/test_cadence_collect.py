@@ -3,7 +3,7 @@ import io
 import unittest
 from unittest.mock import patch
 
-from paper_pov.cadence_collect import collect, github_reader, delivery_log_claim, SafeLogRedirect
+from paper_pov.cadence_collect import collect, github_reader, delivery_log_claim, SafeLogRedirect, RejectApiRedirect
 from urllib.request import Request
 
 SHA = "a" * 40
@@ -216,10 +216,23 @@ class CadenceCollectorTests(unittest.TestCase):
             self.assertEqual(request.get_method(), "GET")
             self.assertEqual(timeout, 20)
             return io.BytesIO(b'{"total_count":0,"workflow_runs":[]}')
-        with patch("paper_pov.cadence_collect.urlopen", side_effect=fake_open):
+        with patch("paper_pov.cadence_collect.build_opener") as opener:
+            opener.return_value.open.side_effect = fake_open
             result = github_reader("test-readonly-token")(
                 "/repos/owner/repo/actions/workflows/paper-pipeline.yml/runs")
+            self.assertIsInstance(opener.call_args.args[0], RejectApiRedirect)
         self.assertEqual(result["total_count"], 0)
+
+    def test_authenticated_json_api_redirect_fails_closed_without_token_forwarding(self):
+        req = Request("https://api.github.com/repos/owner/repo/actions/runs",
+                      headers={"Authorization": "Bearer private-token"})
+        for target in ("https://evil.example.com/collect",
+                       "https://pipelines.actions.githubusercontent.com/logs?sig=abc",
+                       "https://api.github.com/repos/owner/repo/other"):
+            with self.subTest(target=target), self.assertRaisesRegex(
+                    ValueError, "JSON API redirect"):
+                RejectApiRedirect().redirect_request(
+                    req, None, 302, "Found", {}, target)
 
     def test_invalid_repo_or_unbounded_parameters_fail_before_network(self):
         get, calls = fixture()
