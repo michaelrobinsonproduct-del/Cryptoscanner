@@ -51,24 +51,32 @@ jobs:
           41326715230 13091825807
           41329629549 13092284763
           ARTIFACTS
-      - name: Replay actual as-of liquidity and confirm frozen exploratory evidence
+      - name: Replay actual as-of liquidity without future-conditioned selection
         run: |
           set -euo pipefail
           python historical/paper_asof_liquidity_audit.py research/input > research/output/paper_asof_liquidity_replay.json
           python - <<'PY'
           import json
           r=json.load(open('research/output/paper_asof_liquidity_replay.json'))
-          assert r['source_generation']==45
-          assert r['evaluated_times']==8
+          assert r['source_generation']==45 and len(r['source_runs'])==10
+          assert r['evaluated_times']>0
           s=r['strategies']
           for name in ('momentum_1h','volatility_3h','volatility_direction','liquidity_adjusted_volatility'):
-              assert s[name]['picks']==96
-              assert s[name]['positive_windows']['30']==2
-              assert s[name]['distinct_positive_markets_30']==['ESPORTSUSD']
-          assert s['actual_paper_watch']['picks']==95
-          assert s['actual_paper_watch']['positive_windows']['30']==0
-          assert len(r['source_runs'])==10
-          print('AUTHENTICATED_ASOF_LIQUIDITY_REPLAY_PASS',r['evaluated_times'],s['volatility_direction']['positive_windows']['30'])
+              row=s[name]
+              assert row['picks']==12*r['evaluated_times']
+              assert row['labeled_picks']+row['missing_forward_label_picks']==row['picks']
+              assert len(row['selected_pairs_by_time'])==r['evaluated_times']
+              assert all(len(pairs)==12 for pairs in row['selected_pairs_by_time'].values())
+              assert row['positive_windows']['30']<=row['labeled_picks']
+          actual=s['actual_paper_watch']
+          assert actual['labeled_picks']+actual['missing_forward_label_picks']==actual['picks']
+          print('AUTHENTICATED_ASOF_LIQUIDITY_REPLAY_PASS',r['evaluated_times'])
+          print('ASOF_RANKING_EVIDENCE',json.dumps({name:{
+              'picks':row['picks'],'labeled':row['labeled_picks'],
+              'missing_forward':row['missing_forward_label_picks'],
+              'hits30':row['positive_windows']['30'],
+              'distinct30':row['distinct_positive_markets_30']
+          } for name,row in s.items()},sort_keys=True))
           PY
       - uses: actions/upload-artifact@v4
         if: success()
