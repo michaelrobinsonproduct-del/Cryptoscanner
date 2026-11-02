@@ -224,5 +224,21 @@ class EpisodeTests(unittest.TestCase):
 
 
 
+    def test_provenance_and_coverage_are_not_model_evidence(self):
+        with patch("paper_pov.ledger.verify",return_value=None):
+            report=analyze(fixture())
+        source=report["source"]
+        self.assertFalse(source["source_authenticated"])
+        self.assertFalse(source["complete_market_history"])
+        self.assertFalse(source["eligible_for_model_promotion"])
+        self.assertEqual(source["generation"],len(fixture()["runs"]))
+        for horizon in report["horizons"].values():
+            cov=horizon["coverage"]
+            self.assertEqual(cov["eligible"],cov["matured"]+cov["abstain_gap"]+cov["immature"])
+            self.assertAlmostEqual(cov["matured_fraction"],cov["matured"]/cov["eligible"])
+            self.assertLessEqual(cov["distinct_positive_pairs"],cov["distinct_matured_pairs"])
+            self.assertLessEqual(cov["distinct_matured_pairs"],cov["matured"])
+
+
 if __name__=="__main__":
     unittest.main()
