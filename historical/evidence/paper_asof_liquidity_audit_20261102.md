@@ -66,3 +66,33 @@ Independently downloaded sealed writer [gen45 #41366093862](https://github.com/m
 This is a **concrete algorithmic bottleneck**, not merely an inferred historical proxy. In `paper_pov/scanner.py`, the only additional gate after those liquidity conditions is **+0.25% to +12% price movement from today's UTC opening price**. Because `max_ohlc=24` and the screened pool is smaller than 24, these **99 and 103 liquid candidates were excluded by the UTC-open price gate** before their five-minute momentum/volume acceleration could be examined. This can severely starve the scanner near midnight UTC when most coins have moved <0.25% since the daily open.
 
 The as-of observations do **not** retain each rejected market's exact UTC-open move, so we cannot break the 99/103 into too-low versus too-high or claim that all would have produced valid OHLC/early recommendations. **Next high-value research change:** independent read-only OHLC collection for a bounded set of rejected liquid markets, with exact as-of 5m features and prospective 1h/6h outcome tracking, to test relaxed/alternative entry gates at the same top-12 budget. Do not weaken the live scanner until this produces distinct liquid early-mover lift.
+
+
+## Independent review repair: future-label-conditioned ranking removed (2026-11-02 01:36 UTC)
+
+Role V correctly identified a lookahead vulnerability in the original exploratory
+replay: it dropped candidates with missing forward outcomes *before* ranking.
+That code is now corrected: all as-of spread/notional-qualified, lag-feature-complete
+markets enter the ranking without consulting any future label. The top-12 list
+is frozen first; unavailable forward paths are explicitly counted as
+`missing_forward_label_picks`, not replaced by lower-ranked hindsight winners.
+Time eligibility depends only on as-of features and elapsed six-hour maturity.
+New adversarial tests prove a future-gap **highest-ranked** candidate remains
+selected and that changing future labels cannot change picks.
+
+The original authenticated 11-ZIP replay on corrected code at exact head
+`cf2fb37853977d4840f331f71547df334d35feb7`
+([CI #41373315219](https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41373315219))
+passed all **6** adversarial tests and the source replay. The downloaded
+replay JSON (artifact #13110436846) was independently inspected: 8 eligible
+entry times, pool sizes 102/103/101/103/104/98/101/94; all four challengers
+selected **96**, each with **96 labeled and 0 missing-forward-label picks**,
+**2** overlapping +30% windows from **one** distinct market (ESPORTS);
+actual PAPER WATCH selected **95**, all 95 labeled, 0 +30% windows.
+Thus **this particular historical sample's headline counts did not change**
+when the leakage was removed, but the previous methodology was invalid for
+future-gap cohorts. Do not interpret the unchanged counts as prospective lift.
+
+The replay is still only eight overlapping six-hour entry times; ESPORTS
+was already +71% extended by the first selected entry. No independent early
+mover improvement is demonstrated; no scoring promotion is warranted.
