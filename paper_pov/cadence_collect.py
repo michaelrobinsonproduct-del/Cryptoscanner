@@ -186,6 +186,20 @@ def current_remote_ref_evidence(get, repo, evidence, runs, report=None):
                            if complete_claims else "UNVERIFIED_NO_COMPLETE_LOG_CLAIM")}
     latest = max(claims, key=lambda e: (created.get(e["run_id"], ""), e["run_id"]))
     expected = latest["claimed_ledger_commit"]
+    # A later unauthenticated or failed writer may have changed the ledger.
+    # Matching the old trusted claim to today's ref cannot prove that the
+    # latest observed writer attempt was safe or idempotent.
+    verified = {"VERIFIED_NATIVE_SCHEDULE", "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE"}
+    newer_unknown = []
+    for row in (report or {}).get("runs", []):
+        if not isinstance(row, dict) or row.get("classification") in verified:
+            continue
+        try:
+            if timestamp(row["created_at"]) <= timestamp(created[latest["run_id"]]):
+                continue
+        except (KeyError, TypeError, ValueError, OverflowError):
+            pass  # Missing time is not evidence that the attempt was earlier.
+        newer_unknown.append(row.get("run_id"))
     try:
         response = get("/repos/" + repo + "/git/ref/heads/paper-proof-ledger")
         observed = response["object"]["sha"]
@@ -197,10 +211,12 @@ def current_remote_ref_evidence(get, repo, evidence, runs, report=None):
     except (OSError, ValueError, KeyError, TypeError):
         return {"status": "UNVERIFIED_REMOTE_REF_UNAVAILABLE",
                 "claimed_run_id": latest["run_id"], "claimed_commit": expected}
-    return {"status": ("MATCHED_CURRENT_REF_SHA_NOT_LEDGER_BYTES"
+    return {"status": ("UNVERIFIED_NEWER_WRITER_ORIGIN" if newer_unknown
+                       else "MATCHED_CURRENT_REF_SHA_NOT_LEDGER_BYTES"
                        if observed == expected else
                        "UNVERIFIED_REF_DIFFERENT_OR_ADVANCED"),
             "claimed_run_id": latest["run_id"], "claimed_commit": expected,
+            "newer_unattested_run_ids": newer_unknown,
             "current_ref_sha": observed, "remote_ledger_bytes_verified": False}
 
 
