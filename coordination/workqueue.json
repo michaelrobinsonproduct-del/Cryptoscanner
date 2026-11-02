@@ -1,0 +1,94 @@
+{
+  "schema": "cryptoscanner-workqueue-v1",
+  "updated_at": "2026-11-02T00:00:00Z",
+  "policy": {
+    "priority": "validated full-market early +30% learning",
+    "production_changes": "reviewed only",
+    "coordination": "one owner per work item; update by expected blob SHA; leases advisory; no concurrent edits to shared branch",
+    "done_definition": "exact-head code and tests plus reproducible evidence, not just CI green"
+  },
+  "items": [
+    {
+      "id": "DATA-01",
+      "priority": 1,
+      "owner": "A",
+      "state": "ready",
+      "scope": "research/marketwide-data",
+      "summary": "Build authenticated market-wide historical point-in-time feature/outcome dataset for all eligible Kraken USD pairs",
+      "depends_on": [],
+      "acceptance": "Source hashes, as-of timestamps, coverage, 1/6/24/48h +20/+30% labels and explicit gaps; numeric sample counts",
+      "checkpoint": null
+    },
+    {
+      "id": "OUTCOME-02",
+      "priority": 1,
+      "owner": "E",
+      "state": "ready",
+      "scope": "research/outcomes",
+      "summary": "Complete and test market-wide misses and false positives evaluator; review draft PR #122",
+      "depends_on": [],
+      "acceptance": "Real verified ledger/archive evaluation, exact-head tests, observed samples, miss and false-positive counts; no fabricated lift",
+      "checkpoint": "PR #122 draft"
+    },
+    {
+      "id": "INTEGRATE-03",
+      "priority": 2,
+      "owner": "B",
+      "state": "ready",
+      "scope": "integration/tests",
+      "summary": "Review and repair research PR #122, test fixture semantics, provenance and production isolation",
+      "depends_on": [],
+      "acceptance": "Exact-head tests and review with defect fixes and reproducible artifacts",
+      "checkpoint": "PR #122"
+    },
+    {
+      "id": "ARCH-04",
+      "priority": 2,
+      "owner": "C",
+      "state": "in_progress",
+      "scope": "architecture/audit",
+      "summary": "Finish consumer graph and semantic PR inventory, then implement safe consolidation only where dependencies verified",
+      "depends_on": [],
+      "acceptance": "Current main/runtime graph and PR classification with no unknown live consumers deleted",
+      "checkpoint": "PR #121 draft"
+    },
+    {
+      "id": "RELIABILITY-05",
+      "priority": 2,
+      "owner": "D",
+      "state": "ready",
+      "scope": "paper/reliability",
+      "summary": "Fix actual native schedule timing, manual parity and persistence issues without changing the single writer",
+      "depends_on": [],
+      "acceptance": "Native vs recovery run IDs, gaps and latency quantified; tested safe repairs",
+      "checkpoint": "issue #34"
+    },
+    {
+      "id": "MODEL-06",
+      "priority": 3,
+      "owner": "A",
+      "state": "blocked",
+      "scope": "research/model",
+      "summary": "Walk-forward multivariate baseline vs challenger with realistic execution costs and uncertainty",
+      "depends_on": [
+        "DATA-01"
+      ],
+      "acceptance": "Unseen chronological holdout, equal-budget baseline/challenger, precision/recall/lift and uncertainty",
+      "checkpoint": null
+    },
+    {
+      "id": "LEARNING-07",
+      "priority": 4,
+      "owner": "E",
+      "state": "blocked",
+      "scope": "research/learning",
+      "summary": "Persist versioned challenger experiments and update learning evidence after each run without unreviewed live promotion",
+      "depends_on": [
+        "OUTCOME-02",
+        "MODEL-06"
+      ],
+      "acceptance": "Versioned model/evidence lineage, scheduled and manual learning parity, safe shadow promotion proposal",
+      "checkpoint": null
+    }
+  ]
+}
