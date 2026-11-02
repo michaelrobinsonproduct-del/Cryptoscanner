@@ -90,7 +90,7 @@ jobs:
               'complete_market_history':False,
               'eligible_for_model_promotion':False,
           }
-          pathlib.Path('/tmp/marketwide-provenance.json').write_text(json.dumps(evidence,sort_keys=True,indent=2)+'\\n')
+          pathlib.Path('/tmp/marketwide-provenance.json').write_text(json.dumps(evidence,sort_keys=True,indent=2)+'\n')
           print('RESEARCH_PROVENANCE',json.dumps(evidence,sort_keys=True))
           PY
           (cd /tmp && sha256sum marketwide-outcomes.json marketwide-provenance.json > marketwide-SHA256SUMS && sha256sum -c marketwide-SHA256SUMS)
