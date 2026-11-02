@@ -50,9 +50,13 @@ def source_identity(case, pr_row, payload):
     if not isinstance(payload, dict) or payload.get("encoding") != "base64":
         return {"status": "UNVERIFIED_SOURCE_RESPONSE"}
     try:
-        raw = base64.b64decode(payload["content"], validate=False)
+        encoded = payload["content"]
+        if not isinstance(encoded, str):
+            return {"status": "UNVERIFIED_SOURCE_BYTES"}
+        # GitHub Contents wraps base64 with CR/LF; reject all other invalid bytes.
+        raw = base64.b64decode(encoded.replace("\n", "").replace("\r", ""), validate=True)
         content = raw.decode("utf-8")
-    except (KeyError, ValueError, UnicodeError, TypeError):
+    except (KeyError, ValueError, UnicodeError, TypeError, base64.binascii.Error):
         return {"status": "UNVERIFIED_SOURCE_BYTES"}
     calculated = git_blob_sha(raw)
     if payload.get("sha") != calculated or calculated != case["sha"]:
@@ -68,7 +72,9 @@ def source_identity(case, pr_row, payload):
     return {"status": "VERIFIED_EXACT_HEAD_SOURCE", "calculated_sha": calculated,
             "github_contents_sha": payload["sha"],
             "pr_files_api_sha": pr_files_sha,
-            "pr_files_api_discrepancy": pr_files_sha != calculated}
+            "pr_files_api_status": ("MISSING" if pr_files_sha is None else
+                                    "MATCH" if pr_files_sha == calculated else "MISMATCH"),
+            "pr_files_api_discrepancy": pr_files_sha is not None and pr_files_sha != calculated}
 
 def assess(inventory, responses):
     """Produce finite scope restrictions; no unknown consumer is deemed safe to delete."""
