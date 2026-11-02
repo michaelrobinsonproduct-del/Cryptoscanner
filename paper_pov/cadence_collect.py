@@ -58,8 +58,11 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
     runs = []
     seen = set()
     for event in ("schedule", "workflow_dispatch"):
+        # Server-side time filtering avoids hitting the first full page of
+        # all-time history and falsely treating it as the 24h sample.
         path = base + "/workflows/" + WORKFLOW + "/runs?" + urlencode(
-            {"event": event, "per_page": MAX_PAGE})
+            {"event": event, "created": ">=" + cutoff.strftime("%Y-%m-%dT%H:%M:%SZ"),
+             "per_page": MAX_PAGE})
         response = get(path)
         rows = response.get("workflow_runs") if isinstance(response, dict) else None
         if not isinstance(rows, list) or len(rows) >= MAX_PAGE:
@@ -93,7 +96,11 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
         raw = get(base + "/jobs/" + str(matching[0]["id"]) + "/logs", text=True)
         logs[str(rid)] = raw
         evidence.append({"run_id": rid, "job_id": matching[0]["id"],
-                         "log_sha256": hashlib.sha256(raw.encode("utf-8")).hexdigest()})
+                         # The API client decodes text with replacement. This
+                         # digest is of the audited decoded log, NOT original
+                         # transport bytes or a GitHub-attested log digest.
+                         "decoded_log_sha256": hashlib.sha256(raw.encode("utf-8")).hexdigest(),
+                         "raw_log_sha256_verified": False})
     result = audit(runs, logs, checked_at, lookback_hours, jobs=jobs)
     return {"report": result, "evidence": evidence,
             "raw_log_content_persisted": False,
