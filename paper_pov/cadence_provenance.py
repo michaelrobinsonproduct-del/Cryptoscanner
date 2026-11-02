@@ -12,6 +12,8 @@ from pathlib import Path
 
 UTC = dt.timezone.utc
 CRONS = {"9 * * * *": 9, "39 * * * *": 39}
+WRITER_WORKFLOW = ".github/workflows/paper-pipeline.yml"
+WRITER_BRANCH = "main"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 # Match executed log output, not the shell's echoed source commands.
 EXECUTED = re.compile(r"(?:^|\n)[^\n]*?Z (PAPER_VERIFIED_GITHUB_EVENT|PAPER_VERIFIED_ORIGINATING_CRON|PAPER_PIPELINE_SOURCE_SHA)=([^\r\n]+)")
@@ -78,6 +80,21 @@ def audit(runs, logs, checked_at, lookback_hours=24):
             event = run["event"]
             if event not in ("schedule", "workflow_dispatch"):
                 continue
+            # Printed provenance markers alone cannot authenticate a foreign
+            # workflow or PR branch that happens to emit identical strings.
+            if run.get("path") != WRITER_WORKFLOW or run.get("head_branch") != WRITER_BRANCH:
+                evidence.append({"run_id": rid, "created_at": created.isoformat(),
+                                 "classification": "WRONG_WORKFLOW_OR_REF"})
+                continue
+            if run.get("status") != "completed":
+                evidence.append({"run_id": rid, "created_at": created.isoformat(),
+                                 "classification": "INCOMPLETE_WORKFLOW"})
+                continue
+            if run.get("conclusion") not in ("success", "failure", "cancelled", "timed_out"):
+                evidence.append({"run_id": rid, "created_at": created.isoformat(),
+                                 "classification": "UNKNOWN_WORKFLOW_CONCLUSION"})
+                continue
+            successful = run["conclusion"] == "success"
             p = provenance(logs.get(str(rid)))
             row = {"run_id": rid, "event": event, "created_at": created.isoformat(),
                    "conclusion": run.get("conclusion"), "classification": "UNVERIFIED_PROVENANCE"}
@@ -88,7 +105,8 @@ def audit(runs, logs, checked_at, lookback_hours=24):
             cron = p["PAPER_VERIFIED_ORIGINATING_CRON"]
             if event == "workflow_dispatch":
                 if cron == "MANUAL_DISPATCH":
-                    row["classification"] = "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE"
+                    row["classification"] = ("VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE"
+                                             if successful else "VERIFIED_WORKFLOW_DISPATCH_UNSUCCESSFUL")
                 evidence.append(row)
                 continue
             if cron not in CRONS:
@@ -99,23 +117,31 @@ def audit(runs, logs, checked_at, lookback_hours=24):
             row.update(originating_cron=cron, minimum_lateness_seconds=lower_bound)
             # GitHub does not expose the scheduled hour. This is the *latest*
             # possible matching cron slot, never a proven originating slot.
-            row.update(classification="VERIFIED_NATIVE_SCHEDULE",
+            row.update(classification=("VERIFIED_NATIVE_SCHEDULE" if successful
+                                       else "VERIFIED_NATIVE_SCHEDULE_UNSUCCESSFUL"),
                        latest_possible_nominal_slot=nominal.isoformat(),
-                       originating_hour_verified=False)
+                       originating_hour_verified=False,
+                       durable_ledger_verified=False)
             evidence.append(row)
         except (ValueError, TypeError, KeyError, AttributeError):
             evidence.append({"run_id": run.get("id") if isinstance(run, dict) else None,
                              "classification": "INVALID_RUN_METADATA"})
     native = [r for r in evidence if r["classification"] == "VERIFIED_NATIVE_SCHEDULE"]
     dispatched = [r for r in evidence if r["classification"] == "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE"]
+    native_failed = [r for r in evidence if r["classification"] == "VERIFIED_NATIVE_SCHEDULE_UNSUCCESSFUL"]
+    dispatch_failed = [r for r in evidence if r["classification"] == "VERIFIED_WORKFLOW_DISPATCH_UNSUCCESSFUL"]
     native.sort(key=lambda r: r["created_at"])
     evidence.sort(key=lambda r: (r.get("created_at", ""), str(r.get("run_id"))))
     return {"schema": 1, "checked_at": now.isoformat(), "lookback_hours": lookback_hours,
             "verified_native_count": len(native), "verified_dispatch_count": len(dispatched),
-            "unverified_or_ambiguous_count": len(evidence) - len(native) - len(dispatched),
+            "verified_native_unsuccessful_count": len(native_failed),
+            "verified_dispatch_unsuccessful_count": len(dispatch_failed),
+            "unverified_or_ambiguous_count": len(evidence) - len(native) - len(dispatched) - len(native_failed) - len(dispatch_failed),
             "native_minimum_lateness_seconds": [r["minimum_lateness_seconds"] for r in native],
             "runs": evidence,
-            "limitations": ["A cron expression identifies a minute, not an hour; reported lateness is only a lower bound",
+            "limitations": ["Only the canonical main-branch PAPER writer workflow is counted; foreign workflow markers abstain",
+                            "A completed failed workflow is an attempt, not a successful scan",
+                            "A cron expression identifies a minute, not an hour; reported lateness is only a lower bound",
                             "Created-at is not the job's completion time",
                             "A successful workflow is not durable ledger or remote SHA256 readback proof",
                             "workflow_dispatch alone does not distinguish owner manual from external recovery"]}
