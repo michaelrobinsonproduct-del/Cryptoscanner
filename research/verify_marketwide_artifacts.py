@@ -214,6 +214,51 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
             len({row["pair"] for row in top}) != len(top) or
             top != sorted(top,key=lambda row:(-row["abstain_gap"],row["pair"]))):
             raise ValueError("invalid per-pair top-gap evidence: " + horizon)
+        # Independently bind the WATCH/non-WATCH missingness partition to
+        # source-ledger coverage. A resealed ZIP must not be able to invent a
+        # selection bias or suppress a missing-label reason.
+        selected = pair.get("watch_gap_reason_totals")
+        unselected = pair.get("nonwatch_gap_reason_totals")
+        if (not isinstance(selected,dict) or not isinstance(unselected,dict)
+            or set(selected) != set(reason_keys) or set(unselected) != set(reason_keys)
+            or any(not natural(selected[k]) or not natural(unselected[k])
+                   or selected[k] != coverage["watch_abstain_" + k]
+                   or selected[k] + unselected[k] != pair["gap_reason_totals"][k]
+                   for k in reason_keys)
+            or sum(selected.values()) != coverage["watch_abstain_gap"]
+            or sum(unselected.values()) !=
+               coverage["abstain_gap"] - coverage["watch_abstain_gap"]):
+            raise ValueError("selection gap reason partition: " + horizon)
+        for row in top:
+            wr, nr = row.get("watch_gap_reasons"), row.get("nonwatch_gap_reasons")
+            if (not isinstance(wr,dict) or not isinstance(nr,dict)
+                or set(wr) != set(reason_keys) or set(nr) != set(reason_keys)
+                or any(not natural(wr[k]) or not natural(nr[k])
+                       or wr[k] + nr[k] != row["gap_reasons"][k]
+                       for k in reason_keys)
+                or sum(wr.values()) != row["watch_abstain_gap"]
+                or sum(nr.values()) != row["abstain_gap"] - row["watch_abstain_gap"]):
+                raise ValueError("selection gap per-pair partition: " + horizon)
+        expected_gap = {}
+        for name, eligible, matured, immature, reasons in (
+            ("watch", coverage["watch_eligible"], coverage["watch_matured"],
+             coverage["watch_immature"], selected),
+            ("nonwatch", nonwatch["eligible"], nonwatch["matured"],
+             nonwatch["immature"], unselected)):
+            gap = sum(reasons.values())
+            if eligible != matured + immature + gap:
+                raise ValueError("selection gap denominator conservation: " + horizon)
+            expected_gap[name] = {
+                "eligible": eligible, "matured": matured,
+                "immature": immature, "abstain_gap": gap,
+                "gap_fraction_of_eligible": gap / eligible if eligible else None,
+                "gap_reason_counts": reasons,
+                "gap_reason_fraction_of_gap": {
+                    k: n / gap if gap else None for k,n in reasons.items()},
+                "gap_reason_fraction_of_eligible": {
+                    k: n / eligible if eligible else None for k,n in reasons.items()}}
+        if coverage.get("selection_gap_diagnostics") != expected_gap:
+            raise ValueError("selection gap diagnostics mismatch: " + horizon)
         if any(coverage.get(k) != window.get(v) for k, v in matching.items()):
             raise ValueError("cross-report outcome mismatch: " + horizon)
         if (coverage["eligible"] != outcomes["observed_entry_count"]

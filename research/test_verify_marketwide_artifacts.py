@@ -87,6 +87,20 @@ def fixture(directory):
                   "without_asof_feature": 0, "distinct_covered_pairs": 0,
                   "missing_reasons": {}, "covered_fraction": None} for lag in ("30m","60m","180m")}
            for suffix in ("20","30")}}
+    # Selection-conditioned gap evidence: every synthetic entry is immature,
+    # so both cohorts have zero gaps and undefined per-gap fractions.
+    reason_keys = tuple(episode_window["pair_coverage"]["gap_reason_totals"])
+    episode_window["pair_coverage"]["watch_gap_reason_totals"] = {k:0 for k in reason_keys}
+    episode_window["pair_coverage"]["nonwatch_gap_reason_totals"] = {k:0 for k in reason_keys}
+    def empty_gap_group(eligible):
+        return {"eligible":eligible,"matured":0,"immature":eligible,"abstain_gap":0,
+                "gap_fraction_of_eligible":0.0 if eligible else None,
+                "gap_reason_counts":{k:0 for k in reason_keys},
+                "gap_reason_fraction_of_gap":{k:None for k in reason_keys},
+                "gap_reason_fraction_of_eligible":{
+                    k:0.0 if eligible else None for k in reason_keys}}
+    episode_window["coverage"]["selection_gap_diagnostics"] = {
+        "watch":empty_gap_group(584), "nonwatch":empty_gap_group(30288)}
     # A fully consistent empty chronological cohort is valid descriptive PAPER
     # evidence, but can never authorize a fitted/held-out model evaluation.
     def empty_partition():
@@ -255,6 +269,24 @@ class ArtifactContractTests(unittest.TestCase):
         self.reseal_episode_change(lambda h: h.update(
             watch_first_entry_episodes_30=1))
         with self.assertRaisesRegex(ValueError, "first-entry versus late WATCH"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_selection_partition_cannot_invent_watch_gap(self):
+        self.reseal_episode_change(lambda h: h["pair_coverage"]["watch_gap_reason_totals"].update(
+            stale_entry=1))
+        with self.assertRaisesRegex(ValueError, "selection gap reason partition"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_selection_gap_rate_cannot_be_fabricated(self):
+        self.reseal_episode_change(lambda h: h["coverage"]["selection_gap_diagnostics"]["watch"].update(
+            gap_fraction_of_eligible=0.5))
+        with self.assertRaisesRegex(ValueError, "selection gap diagnostics mismatch"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_selection_gap_cannot_hide_nonwatch_missingness(self):
+        self.reseal_episode_change(lambda h: h["pair_coverage"]["nonwatch_gap_reason_totals"].update(
+            no_future_observation=1))
+        with self.assertRaisesRegex(ValueError, "selection gap reason partition"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
     def test_resealed_gap_reason_cannot_disagree_with_unknown_denominator(self):
