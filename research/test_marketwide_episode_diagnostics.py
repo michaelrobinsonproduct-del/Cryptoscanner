@@ -1,5 +1,6 @@
 """Synthetic contract tests; no predictive claims from fixtures."""
 import datetime as dt
+import hashlib
 import unittest
 from unittest.mock import patch
 
@@ -272,6 +273,38 @@ class EpisodeTests(unittest.TestCase):
         self.assertEqual(cov["eligible"],cov["matured"]+cov["abstain_gap"]+cov["immature"])
         self.assertTrue(all(case["entry_quote_age_minutes"]>=0
                             for case in one["mover_cases"]))
+
+    def test_real_sha_sealed_ledger_contract_and_tamper_rejection(self):
+        # Unlike the fast synthetic unit fixtures, this exercises the
+        # production ledger's real checksum and relationship verification.
+        from paper_pov.ledger import seal, verify
+        state=fixture()
+        mapping={}
+        for run in state["runs"]:
+            old_id=run["id"]
+            rid=hashlib.sha256(("episode-fixture|"+run["as_of"]).encode()).hexdigest()
+            mapping[old_id]=rid
+            run.update(id=rid,source_sha="a"*40,report_sha256="b"*64,
+                       watch_count=1,observation_count=2)
+        for obs in state["observations"]:
+            obs["run_id"]=mapping[obs["run_id"]]
+        state["predictions"]=[]
+        for run in state["runs"]:
+            asof=run["as_of"]
+            state["predictions"].append({
+                "run_id":run["id"],"pair":"BBBUSD","as_of":asof,
+                "prediction_id":hashlib.sha256(("paper-v1|"+asof+"|BBBUSD").encode()).hexdigest(),
+                "price":100,"baseline_score":0.0,"challenger_score":0.0,"rank":1})
+        state.update(schema=1,generation=len(state["runs"]),outcomes=[])
+        seal(state)
+        verify(state)
+        one=analyze(state)["horizons"]["1"]
+        self.assertGreater(one["coverage"]["movers"],0)
+        self.assertEqual(one["watch_captured_episodes"],0)
+        self.assertFalse(analyze(state)["source"]["eligible_for_model_promotion"])
+        state["observations"][0]["price"]=999
+        with self.assertRaisesRegex(ValueError,"checksum"):
+            analyze(state)
 
     def test_provenance_and_coverage_are_not_model_evidence(self):
         with patch("paper_pov.ledger.verify",return_value=None):
