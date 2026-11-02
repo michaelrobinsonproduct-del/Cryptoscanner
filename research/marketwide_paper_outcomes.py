@@ -95,6 +95,10 @@ def evaluate(state):
             denom = row["watch_"+suffix] + row["watch_false_positive_"+suffix]
             row["watch_precision_"+suffix] = row["watch_"+suffix] / denom if denom else None
     return {"status":"DESCRIPTIVE_ONLY_NOT_HELD_OUT_LIFT",
+            "observed_run_count":len(runs),
+            "observed_pair_count":len(prices),
+            "observed_entry_count":sum(map(len,prices.values())),
+            "watched_prediction_count":len(watches),
             "source_authenticated":False,
             "complete_market_history":False,
             "eligible_for_model_promotion":False,
