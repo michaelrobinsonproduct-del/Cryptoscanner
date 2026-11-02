@@ -150,6 +150,17 @@ class ArtifactContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "missing or unexpected evaluation horizon"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
+    def test_resealed_nonfinite_research_statistic_rejected(self):
+        e = json.loads((self.base / FILES[1]).read_text())
+        e["horizons"]["1"]["pre_entry_price_feature_distributions"] = {"60m": {"mean": float("nan")}}
+        write_json(self.base / FILES[1], e)
+        p = json.loads((self.base / FILES[2]).read_text())
+        p["episode_report_sha256"] = digest(self.base / FILES[1])
+        write_json(self.base / FILES[2], p)
+        reseal(self.base)
+        with self.assertRaisesRegex(ValueError, "nonfinite research JSON"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
     def test_workflow_only_uploads_after_successful_verification(self):
         workflow = (Path(__file__).resolve().parents[1] /
                     ".github/workflows/research-marketwide-checks.yml").read_text()
