@@ -449,5 +449,33 @@ class ArtifactContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "source-sealed prediction"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
+
+    def test_duplicate_sealed_watch_key_cannot_pass_even_if_resealed(self):
+        ledger_path = self.base / LEDGER
+        ledger = json.loads(ledger_path.read_text())
+        ledger["predictions"].append(dict(ledger["predictions"][0]))
+        write_json(ledger_path, ledger)
+        provenance_path = self.base / FILES[2]
+        provenance = json.loads(provenance_path.read_text())
+        provenance["verified_ledger_export_sha256"] = digest(ledger_path)
+        write_json(provenance_path, provenance)
+        reseal(self.base)
+        with self.assertRaisesRegex(ValueError, "source-sealed prediction"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_duplicate_sealed_observation_key_cannot_pass_even_if_resealed(self):
+        ledger_path = self.base / LEDGER
+        ledger = json.loads(ledger_path.read_text())
+        ledger["observations"].append(dict(ledger["observations"][0]))
+        write_json(ledger_path, ledger)
+        provenance_path = self.base / FILES[2]
+        provenance = json.loads(provenance_path.read_text())
+        provenance["verified_ledger_export_sha256"] = digest(ledger_path)
+        write_json(provenance_path, provenance)
+        reseal(self.base)
+        with self.assertRaisesRegex(ValueError, "source-sealed prediction"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+
 if __name__ == "__main__":
     unittest.main()
