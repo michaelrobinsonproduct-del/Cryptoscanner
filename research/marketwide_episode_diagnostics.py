@@ -65,7 +65,11 @@ def chronological_readiness(records, runs, hours, positive_key="hit_30"):
     """
     times = sorted(set(runs.values()))
     if len(times) < 2:
-        return {"status":"INSUFFICIENT_SCAN_TIMES","cutoff":None}
+        return {"status":"INSUFFICIENT_SCAN_TIMES","cutoff":None,
+                "model_evaluation_ready":False,"sample_thresholds_met":False,
+                "unmet_evidence_gates":["exchange_authenticated_market_history",
+                                        "point_in_time_execution_features",
+                                        "independent_held_out_challenger"]}
     cutoff = times[min(len(times)-1, max(1, int(len(times)*0.7)))]
     embargo = dt.timedelta(hours=hours) + MAX_GAP
     train = [r for r in records if runs[r["run_id"]] + embargo <= cutoff]
@@ -117,7 +121,13 @@ def chronological_readiness(records, runs, hours, positive_key="hit_30"):
             "excluded_crossing_cutoff":len(records)-len(train)-len(test),
             "train":a,"test":b,
             "minimum_sample_requirements":blockers,
-            "model_evaluation_ready":not blockers}
+            "sample_thresholds_met":not blockers,
+            "unmet_evidence_gates":["exchange_authenticated_market_history",
+                                    "point_in_time_execution_features",
+                                    "independent_held_out_challenger"],
+            # PAPER sample sufficiency is never equivalent to exchange-source
+            # provenance or an actual independent held-out evaluation.
+            "model_evaluation_ready":False}
 
 
 def cluster_episodes(cases, hours):
@@ -415,6 +425,8 @@ def analyze(state):
                                if coverage["movers_20"] else None),
             "watch_precision_20":(coverage["watch_positive_20"]/coverage["watch_matured"]
                                   if coverage["watch_matured"] else None),
+            "watch_recall_wilson_95_naive_20":wilson(coverage["watch_positive_20"],coverage["movers_20"]),
+            "watch_precision_wilson_95_naive_20":wilson(coverage["watch_positive_20"],coverage["watch_matured"]),
             "episodes":episodes,"mover_cases":cases,
             "watch_captured_episodes":episode_watch_count,
             "watch_first_entry_episodes_30":first_watch_count,

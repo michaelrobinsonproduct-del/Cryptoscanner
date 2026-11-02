@@ -144,8 +144,11 @@ class EpisodeTests(unittest.TestCase):
         for part in ("train","test"):
             self.assertEqual(split[part]["positive_lag_60m_episodes"],12)
             self.assertEqual(split[part]["negative_lag_60m_pairs"],12)
-        self.assertTrue(split["model_evaluation_ready"])
+        self.assertTrue(split["sample_thresholds_met"])
+        self.assertFalse(split["model_evaluation_ready"])
         self.assertEqual(split["minimum_sample_requirements"],[])
+        self.assertIn("exchange_authenticated_market_history",split["unmet_evidence_gates"])
+        self.assertIn("independent_held_out_challenger",split["unmet_evidence_gates"])
         # This is sample-readiness only; no challenger was trained.
         self.assertEqual(split["status"],"DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER")
 
@@ -173,6 +176,8 @@ class EpisodeTests(unittest.TestCase):
     def test_no_chronological_split_from_single_scan(self):
         r=chronological_readiness([],{"0":BASE},6)
         self.assertEqual(r["status"],"INSUFFICIENT_SCAN_TIMES")
+        self.assertFalse(r["model_evaluation_ready"])
+        self.assertFalse(r["sample_thresholds_met"])
 
     def test_20pct_episode_is_not_misreported_as_30pct(self):
         state=fixture()
@@ -731,6 +736,38 @@ class EpisodeTests(unittest.TestCase):
                              one["coverage"]["watch_false_positive_30"])
         self.assertEqual(one["watch_nonhit_windows_20"],
                          one["watch_nonhit_windows_30"])
+
+
+    def test_sample_thresholds_cannot_authorize_paper_model_evaluation(self):
+        runs={str(m):BASE+dt.timedelta(hours=m) for m in range(100)}
+        rows=[]
+        for offset in (0,70):
+            for k in range(12):
+                rid=str(offset+k)
+                rows.extend((
+                    {"run_id":rid,"pair":f"POS{k}USD","hit_30":True,
+                     "lagged_returns":{"60m":0.1}},
+                    {"run_id":rid,"pair":f"NEG{k}USD","hit_30":False,
+                     "lagged_returns":{"60m":-0.01}}))
+        readiness=chronological_readiness(rows,runs,1)
+        self.assertTrue(readiness["sample_thresholds_met"])
+        self.assertFalse(readiness["model_evaluation_ready"])
+        self.assertEqual(readiness["minimum_sample_requirements"],[])
+        self.assertEqual(len(readiness["unmet_evidence_gates"]),3)
+
+    def test_twenty_percent_wilson_intervals_have_matured_denominators(self):
+        with patch("paper_pov.ledger.verify",return_value=None):
+            horizons=analyze(fixture())["horizons"]
+        for report in horizons.values():
+            c=report["coverage"]
+            self.assertEqual(report["watch_recall_wilson_95_naive_20"],
+                             wilson(c["watch_positive_20"],c["movers_20"]))
+            self.assertEqual(report["watch_precision_wilson_95_naive_20"],
+                             wilson(c["watch_positive_20"],c["watch_matured"]))
+            if c["movers_20"]==0:
+                self.assertIsNone(report["watch_recall_wilson_95_naive_20"])
+            if c["watch_matured"]==0:
+                self.assertIsNone(report["watch_precision_wilson_95_naive_20"])
 
 if __name__=="__main__":
     unittest.main()
