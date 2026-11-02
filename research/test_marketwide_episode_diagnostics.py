@@ -1137,7 +1137,8 @@ class EpisodeTests(unittest.TestCase):
             {"run_id": str(m), "at": iso(1 if m == 45 else m),
              "pair": "AAAUSD", "price": 100 if m < 60 else 135}
             for m in range(0, 241, 15)]
-        state = {"runs": runs, "observations": observations, "predictions": []}
+        state = {"schema": 1, "generation": len(runs), "sha256": "0"*64,
+                 "runs": runs, "observations": observations, "predictions": []}
         with patch("paper_pov.ledger.verify", return_value=None):
             report = analyze(state)["horizons"]["1"]
         first = next(r for r in report["mover_cases"] if r["run_id"] == "30")
