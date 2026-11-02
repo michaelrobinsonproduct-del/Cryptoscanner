@@ -51,10 +51,15 @@ class CadenceCollectorTests(unittest.TestCase):
         self.assertEqual(result["report"]["verified_native_count"], 1)
         self.assertEqual(result["report"]["verified_dispatch_count"], 1)
         self.assertEqual(len(result["evidence"]), 2)
-        self.assertEqual(len(result["evidence"][0]["log_sha256"]), 64)
+        self.assertEqual(len(result["evidence"][0]["decoded_log_sha256"]), 64)
+        self.assertFalse(result["evidence"][0]["raw_log_sha256_verified"])
         self.assertTrue(result["read_only"])
         self.assertFalse(result["raw_log_content_persisted"])
         self.assertTrue(all(path.startswith("/repos/") for path, _ in calls))
+        workflow_queries = [path for path, _ in calls if "/workflows/" in path]
+        self.assertEqual(len(workflow_queries), 2)
+        self.assertTrue(all("created=%3E%3D2026-11-01T03%3A20%3A00Z" in path
+                            for path in workflow_queries))
         self.assertEqual(sum("jobs/" in path and "/logs" in path for path, _ in calls), 2)
 
     def test_no_writer_job_abstains_not_fabricates_native_success(self):
