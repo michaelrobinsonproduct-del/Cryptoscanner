@@ -34,6 +34,16 @@ class BranchReferenceTests(unittest.TestCase):
         self.assertEqual(refs["checkout_refs"],[])
         self.assertEqual(len(refs["unresolved_checkout_refs"]),1)
 
+    def test_unresolved_dynamic_checkout_blocks_cleanup(self):
+        workflow={"path":".github/workflows/full-scanner-inventory.yml",
+                  "scripts":[],"python_modules":[],"ledger_ref":False,
+                  "branch_references":{"checkout_refs":[],"branch_ref_mentions":[],
+                                       "unresolved_checkout_refs":["dynamic expression"]}}
+        graph=build_consumer_graph([workflow],{"snapshot_utc":"2026-11-02T02:17:00Z"},"a"*40,"b"*40)
+        self.assertIn("Dynamic checkout ref unresolved in .github/workflows/full-scanner-inventory.yml",
+                      graph["unknowns"])
+        self.assertFalse(graph["cleanup_authorized"])
+
     def test_default_checkout_does_not_invent_main(self):
         refs=workflow_branch_references("- uses: actions/checkout@v4\n")
         self.assertEqual(refs["checkout_refs"],[])
