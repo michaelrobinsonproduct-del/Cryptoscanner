@@ -121,7 +121,7 @@ def analyze(state):
     for hours in HORIZONS:
         positives, negatives, cases, cases20 = [], [], [], []
         coverage = {"eligible": 0, "immature": 0, "abstain_gap": 0,
-                    "abstain_conflicting_quotes": 0, "matured": 0,
+                    "abstain_conflicting_quotes": 0, "abstain_future_entry_quotes": 0, "matured": 0,
                     "watch_matured": 0, "watch_positive": 0, "movers": 0,
                     "watch_positive_20": 0, "movers_20": 0,
                     "feature_30m": 0, "feature_60m": 0, "feature_180m": 0,
@@ -135,6 +135,12 @@ def analyze(state):
                 target = start + dt.timedelta(hours=hours)
                 if latest is None or latest < target + MAX_GAP:
                     coverage["immature"] += 1
+                    continue
+                # A quote observed after its own scan decision is not an
+                # executable as-of entry, even if it is otherwise fresh.
+                if at > start:
+                    coverage["abstain_gap"] += 1
+                    coverage["abstain_future_entry_quotes"] += 1
                     continue
                 end = bisect.bisect_right(times, target+MAX_GAP, lo=i+1)
                 future = series[i+1:end]
@@ -186,6 +192,7 @@ def analyze(state):
                     coverage["mover_feature_60m"] += 1
                 record = {"pair":pair,"entry_at":at.isoformat(),"run_id":rid,"decision_at":start.isoformat(),
                           "peak_observed_return":round(peak,8),
+                          "entry_quote_age_minutes":(start-at).total_seconds()/60,
                           "hit_20":hit20,"hit_30":hit,
                           "watch":selected,"lagged_returns":lag}
                 if hit20:
