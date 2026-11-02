@@ -27,8 +27,24 @@ def gh(path):
             return items
         return json.loads(text)
     except Exception as exc:return {"error":str(exc)}
+def gh_pages(resource, per_page=100, max_pages=20):
+    """Fail closed on incomplete API pagination; never silently drop branches or PR files."""
+    result=[]
+    sep="&" if "?" in resource else "?"
+    for page in range(1,max_pages+1):
+        batch=gh(f"{resource}{sep}per_page={per_page}&page={page}")
+        if not isinstance(batch,list):
+            raise RuntimeError(f"GitHub pagination failure {resource} page {page}: {batch}")
+        result.extend(batch)
+        if len(batch)<per_page:
+            return result
+    raise RuntimeError(f"GitHub pagination limit reached for {resource}: {max_pages} pages")
+
 def main():
-    files=cmd("git","ls-files")["output"].splitlines()
+    tracked=cmd("git","ls-files")
+    if not tracked["ok"]:
+        raise RuntimeError("Unable to enumerate exact checkout tracked files: "+tracked["error"])
+    files=tracked["output"].splitlines()
     workflows=[p for p in files if p.startswith(".github/workflows/") and p.endswith((".yml",".yaml"))]
     pyfiles=[p for p in files if p.endswith(".py")]
     imports=collections.defaultdict(list)
@@ -49,12 +65,12 @@ def main():
           "ledger_ref":"paper-proof-ledger" in s,
           "python_modules":sorted(set(re.findall(r"python\s+-m\s+([A-Za-z0-9_.]+)",s))),
           "scripts":sorted(set(re.findall(r"(?:python|bun|node)\s+([A-Za-z0-9_./-]+\.(?:py|ts|mjs))",s)))})
-    prs=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/pulls?state=open&per_page=100")
+    prs=gh_pages("repos/michaelrobinsonproduct-del/Cryptoscanner/pulls?state=open")
     pr_rows=[]
     if isinstance(prs,list):
         for p in prs:
             n=p["number"]
-            changed=gh(f"repos/michaelrobinsonproduct-del/Cryptoscanner/pulls/{n}/files?per_page=100")
+            changed=gh_pages(f"repos/michaelrobinsonproduct-del/Cryptoscanner/pulls/{n}/files")
             changed_files=[x["filename"] for x in changed] if isinstance(changed,list) else []
             overlaps=[f for f in changed_files if f in files]
             pr_rows.append({"number":n,"title":p["title"],"head_sha":p["head"]["sha"],"head_ref":p["head"]["ref"],
@@ -62,7 +78,7 @@ def main():
                 "files":changed_files,"already_on_main_paths":overlaps,
                 "file_api_error":changed.get("error") if isinstance(changed,dict) else None,
                 "requires_semantic_review":True,"url":p["html_url"]})
-    branches=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/branches?per_page=100&page=1")
+    branches=gh_pages("repos/michaelrobinsonproduct-del/Cryptoscanner/branches")
     main_ref=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/git/ref/heads/main")
     ledger_ref=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/git/ref/heads/paper-proof-ledger")
     runs_response=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/actions/runs?per_page=30")
@@ -88,13 +104,13 @@ def main():
           "run_started_at":r.get("run_started_at")} for r in runs] if isinstance(runs,list) else [],
         "api_errors":errors,
         "run_scope":"latest 30 repository-wide GitHub Actions runs, not complete history",
-        "branch_scope":"all branches returned by paginated GitHub API"}
+        "branch_scope":"all branches across every API page, fail-closed if incomplete"}
     out=ROOT/"audit-evidence";out.mkdir(exist_ok=True)
     (out/"scanner-inventory.json").write_text(json.dumps(data,indent=2,sort_keys=True)+"\n")
     lines=["# Scanner runtime and legacy inventory (read-only)","",
       f"Generated UTC: {data['created_utc']}","",
       f"Audit checkout SHA: `{data['checkout_sha']}`; remote main: `{data['main_sha']}`; remote ledger: `{data['ledger_sha']}`","",
-      f"Tracked files: {len(files)}; workflows: {len(workflows)}; open PRs: {len(pr_rows)}","",
+      f"Tracked files: {len(files)}; workflows: {len(workflows)}; open PRs: {len(pr_rows)}; branches: {len(branches)}","",
       "## Workflow inventory","",
       "| Workflow | Cron | Dispatch | Contents write | Ledger reference |","|---|---|---|---|---|"]
     for w in workflow_inventory:
