@@ -1,5 +1,7 @@
 """Offline fail-closed pagination tests for repository inventory (no network)."""
 import unittest
+import json
+import pathlib
 from unittest.mock import patch
 from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph, workflow_branch_references, inventory_workflow_source, workflow_orchestration_references, apply_semantic_review, classify_declared_write_surfaces, assess_external_runtime_snapshot, audit_gate_decision
 
