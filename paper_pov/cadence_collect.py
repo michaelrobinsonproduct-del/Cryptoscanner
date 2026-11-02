@@ -597,7 +597,8 @@ def main():
         "ledger_claim_continuity": result["ledger_log_claim_continuity"],
         "canonical_writer_overlap": result["writer_overlap_evidence"],
         "current_remote_ref": result["current_remote_ref_evidence"],
-        "native_creation_gap": result["native_creation_gap_evidence"],
+        "native_creation_gap": result.get("native_creation_gap_evidence",
+                                          {"status": "UNVERIFIED_NOT_COLLECTED"}),
     }, sort_keys=True))
 
 
