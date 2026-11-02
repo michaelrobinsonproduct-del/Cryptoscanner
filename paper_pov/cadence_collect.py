@@ -60,6 +60,44 @@ def delivery_log_claim(log, run_id, started, finished):
             "results_delivery_verified": False}
 
 
+def artifact_metadata_claim(artifacts, run):
+    """Verify GitHub artifact *metadata* identity, never archive contents.
+
+    A matching digest is a GitHub assertion until ZIP bytes are downloaded,
+    independently SHA256-hashed and ledger continuity is checked.
+    """
+    rid = run["id"]
+    expected = {"public-paper-ledger-" + str(rid),
+                "public-paper-results-" + str(rid)}
+    if not isinstance(artifacts, list) or len(artifacts) != 2:
+        return {"artifact_metadata_status": "UNVERIFIED"}
+    names, digests = set(), {}
+    for artifact in artifacts:
+        if not isinstance(artifact, dict):
+            return {"artifact_metadata_status": "UNVERIFIED"}
+        name = artifact.get("name")
+        source = artifact.get("workflow_run")
+        digest = artifact.get("digest")
+        if (name not in expected or name in names or
+                artifact.get("expired") is not False or
+                type(artifact.get("id")) is not int or artifact["id"] <= 0 or
+                type(artifact.get("size_in_bytes")) is not int or
+                artifact["size_in_bytes"] <= 0 or
+                not isinstance(source, dict) or
+                source.get("id") != rid or source.get("head_sha") != run.get("head_sha") or
+                source.get("head_branch") != "main" or
+                not isinstance(digest, str) or
+                not re.fullmatch(r"sha256:[0-9a-f]{64}", digest)):
+            return {"artifact_metadata_status": "UNVERIFIED"}
+        names.add(name)
+        digests[name] = digest
+    if names != expected:
+        return {"artifact_metadata_status": "UNVERIFIED"}
+    return {"artifact_metadata_status": "GITHUB_METADATA_MATCHED_NOT_BYTES",
+            "github_reported_artifact_digests": digests,
+            "artifact_zip_bytes_independently_verified": False}
+
+
 class SafeLogRedirect(HTTPRedirectHandler):
     """Allow signed GitHub log-storage redirects without forwarding API tokens."""
 
@@ -189,8 +227,17 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
                 not created <= started <= finished <= now):
             continue
         raw = get(base + "/jobs/" + str(writer["id"]) + "/logs", text=True)
+        artifact_response = get(base + "/runs/" + str(rid) + "/artifacts?per_page=100")
+        artifact_rows = (artifact_response.get("artifacts")
+                         if isinstance(artifact_response, dict) else None)
+        artifact_total = (artifact_response.get("total_count")
+                          if isinstance(artifact_response, dict) else None)
+        if (not isinstance(artifact_rows, list) or len(artifact_rows) >= MAX_PAGE or
+                type(artifact_total) is not int or artifact_total != len(artifact_rows)):
+            raise ValueError("truncated or malformed artifact metadata page")
         logs[str(rid)] = raw
         evidence.append({"run_id": rid, "job_id": matching[0]["id"],
+                         **artifact_metadata_claim(artifact_rows, run),
                          **delivery_log_claim(raw, rid, started, finished),
                          # The API client decodes text with replacement. This
                          # digest is of the audited decoded log, NOT original
