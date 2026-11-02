@@ -879,5 +879,29 @@ class EpisodeTests(unittest.TestCase):
                          wilson(one["watch_first_entry_episodes_30"],
                                 one["unique_mover_episodes"]))
 
+
+    def test_per_pair_gap_reasons_exhaust_unknown_labels_without_inventing_coverage(self):
+        state=fixture()
+        # Independently create a stale entry and a missing maturity anchor.
+        for row in state["observations"]:
+            if row["pair"]=="BBBUSD" and row["run_id"]=="0":
+                row["at"]=iso(-50)
+        state["observations"]=[o for o in state["observations"] if not
+            (o["pair"]=="AAAUSD" and o["run_id"] in ("60","90"))]
+        with patch("paper_pov.ledger.verify",return_value=None):
+            horizons=analyze(state)["horizons"]
+        for report in horizons.values():
+            c=report["coverage"]
+            pair=report["pair_coverage"]
+            self.assertEqual(sum(pair["gap_reason_totals"].values()),c["abstain_gap"])
+            for reason,count in pair["gap_reason_totals"].items():
+                self.assertEqual(count,c["abstain_"+reason])
+            for row in pair["top_gap_pairs"]:
+                self.assertEqual(sum(row["gap_reasons"].values()),row["abstain_gap"])
+                self.assertLessEqual(row["abstain_gap"],row["eligible"])
+        one=horizons["1"]["pair_coverage"]
+        self.assertGreater(one["gap_reason_totals"]["stale_entry"],0)
+        self.assertGreater(one["gap_reason_totals"]["missing_horizon_anchor"],0)
+
 if __name__=="__main__":
     unittest.main()

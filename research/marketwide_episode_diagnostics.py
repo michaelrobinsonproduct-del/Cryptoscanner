@@ -242,7 +242,12 @@ def analyze(state):
                      "watch_eligible", "watch_matured", "watch_immature",
                      "watch_abstain_gap", "movers_20", "movers",
                      "watch_positive_20", "watch_positive")
-        per_pair = {pair: {key: 0 for key in pair_keys} for pair in by_pair}
+        gap_reason_keys = ("conflicting_quotes", "future_entry_quotes",
+                           "no_future_observation", "missing_horizon_anchor",
+                           "stale_entry", "discontinuous_path")
+        per_pair = {pair: {**{key: 0 for key in pair_keys},
+                           "gap_reasons":{reason:0 for reason in gap_reason_keys}}
+                    for pair in by_pair}
         for pair, series in by_pair.items():
             pair_counts = per_pair[pair]
             series.sort()
@@ -273,6 +278,7 @@ def analyze(state):
                         pair_counts["watch_abstain_gap"] += 1
                         coverage["watch_abstain_future_entry_quotes"] += 1
                     coverage["abstain_future_entry_quotes"] += 1
+                    pair_counts["gap_reasons"]["future_entry_quotes"] += 1
                     continue
                 end = bisect.bisect_right(times, target+MAX_GAP, lo=i+1)
                 future = series[i+1:end]
@@ -294,6 +300,7 @@ def analyze(state):
                         pair_counts["watch_abstain_gap"] += 1
                         coverage["watch_abstain_conflicting_quotes"] += 1
                     coverage["abstain_conflicting_quotes"] += 1
+                    pair_counts["gap_reasons"]["conflicting_quotes"] += 1
                     continue
                 # One mutually exclusive primary reason per unknown label;
                 # retain abstain_gap as the conservative aggregate.
@@ -311,6 +318,7 @@ def analyze(state):
                     coverage["abstain_gap"] += 1
                     pair_counts["abstain_gap"] += 1
                     coverage[reason] += 1
+                    pair_counts["gap_reasons"][reason.removeprefix("abstain_")] += 1
                     if selected:
                         coverage["watch_abstain_gap"] += 1
                         pair_counts["watch_abstain_gap"] += 1
@@ -374,8 +382,11 @@ def analyze(state):
         assert all(row["eligible"] == row["matured"] + row["immature"] +
                    row["abstain_gap"] and
                    row["watch_eligible"] == row["watch_matured"] +
-                   row["watch_immature"] + row["watch_abstain_gap"]
+                   row["watch_immature"] + row["watch_abstain_gap"] and
+                   row["abstain_gap"] == sum(row["gap_reasons"].values())
                    for row in per_pair.values())
+        assert all(sum(row["gap_reasons"][reason] for row in per_pair.values())
+                   == coverage["abstain_" + reason] for reason in gap_reason_keys)
         top_gap_pairs = [
             {"pair":pair, **per_pair[pair]}
             for pair in sorted(per_pair,
@@ -482,6 +493,10 @@ def analyze(state):
             "pair_coverage":{"observed_pairs":len(per_pair),
                              "pairs_with_gap":sum(v["abstain_gap"] > 0 for v in per_pair.values()),
                              "totals":pair_totals,
+                             "gap_reason_totals":{
+                                 reason:sum(row["gap_reasons"][reason]
+                                            for row in per_pair.values())
+                                 for reason in gap_reason_keys},
                              "top_gap_pairs":top_gap_pairs,
                              "top_gap_pairs_limit":10,
                              "scope":"observed PAPER pairs only; no inferred unobserved markets"},
