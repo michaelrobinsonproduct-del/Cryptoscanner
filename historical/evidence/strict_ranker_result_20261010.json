@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "source_run": 38029912468,
+  "source_artifact": 11662155953,
+  "source_sha256": "766683bae34744d825f0ee68335fd2e474ccc77d77849e46b2e4a8ecaf81778c",
+  "label": "max_forward_24h_5m_close_return_ge_30pct",
+  "usd_control_rows": 14483,
+  "split_counts": {
+    "train": 8080,
+    "val": 2777,
+    "test": 3288,
+    "embargo": 338
+  },
+  "selected_on_validation": "logistic",
+  "validation_top1": {
+    "logistic": {
+      "picks": 192,
+      "hits30": 38,
+      "hits20": 67
+    },
+    "prior60_abs": {
+      "picks": 192,
+      "hits30": 28,
+      "hits20": 49
+    },
+    "trade2": {
+      "picks": 192,
+      "hits30": 6,
+      "hits20": 14
+    }
+  },
+  "test_top1": {
+    "logistic": {
+      "picks": 183,
+      "hits30": 51,
+      "hits20": 84,
+      "positive_pairs": 10,
+      "positive_pairdays": 12
+    },
+    "prior60_abs": {
+      "picks": 183,
+      "hits30": 41,
+      "hits20": 68,
+      "positive_pairs": 11,
+      "positive_pairdays": 13
+    },
+    "trade2": {
+      "picks": 183,
+      "hits30": 7,
+      "hits20": 16,
+      "positive_pairs": 4,
+      "positive_pairdays": 6
+    }
+  },
+  "test_early_only_top1": {
+    "logistic": {
+      "picks": 183,
+      "hits30": 29,
+      "hits20": 53,
+      "positive_pairdays": 9
+    },
+    "prior60_abs": {
+      "picks": 183,
+      "hits30": 17,
+      "hits20": 28,
+      "positive_pairdays": 8
+    }
+  },
+  "post_test_ablation_exploratory": {
+    "volatility_only": {
+      "hits30": 51,
+      "picks": 183
+    },
+    "no_volatility": {
+      "hits30": 19,
+      "picks": 183
+    },
+    "no_trade_accel": {
+      "hits30": 51,
+      "picks": 183
+    }
+  },
+  "cooldown_24h": {
+    "logistic": {
+      "picks": 158,
+      "hits30": 8
+    },
+    "prior60_abs": {
+      "picks": 158,
+      "hits30": 7
+    }
+  },
+  "caveats": [
+    "retrospective sampled forward 5m-close peaks, not executable trades",
+    "not full live market universe or actual current PAPER score",
+    "correlated pair-time labels, 8 weeks in test",
+    "no historical liquidity/spread, do not promote",
+    "ablation used test set after model selection"
+  ]
+}
