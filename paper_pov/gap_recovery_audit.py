@@ -47,13 +47,27 @@ def _decimal(value):
     return number
 
 
+def _ns(when):
+    """Exact UTC nanoseconds without floating-point timestamp rounding."""
+    delta = _utc(when) - dt.datetime(1970, 1, 1, tzinfo=UTC)
+    return ((delta.days * 86400 + delta.seconds) * 1_000_000_000
+            + delta.microseconds * 1000)
+
+
 def _trade_time(value):
     stamp = _decimal(value)
-    # Kraken prints seconds since epoch; microsecond resolution is preserved.
-    micros = stamp * 1_000_000
-    if micros != micros.to_integral_value():
-        raise ValueError("Submicrosecond trade time unsupported")
-    return dt.datetime(1970, 1, 1, tzinfo=UTC) + dt.timedelta(microseconds=int(micros))
+    # Kraken prints fractional UNIX seconds, often with 9 decimal places.
+    # Retain every authentic nanosecond; do NOT round into fake microseconds.
+    nanos = stamp * 1_000_000_000
+    if nanos != nanos.to_integral_value():
+        raise ValueError("Subnanosecond Kraken trade time unsupported")
+    return int(nanos)
+
+
+def _iso_ns(value):
+    seconds, nanos = divmod(value, 1_000_000_000)
+    base = dt.datetime(1970, 1, 1, tzinfo=UTC) + dt.timedelta(seconds=seconds)
+    return base.strftime("%Y-%m-%dT%H:%M:%S") + ".%09d+00:00" % nanos
 
 
 def _source_url(pair, since):
@@ -111,7 +125,7 @@ def _verify_page(page, pair, expected_since, evaluation_at):
         if not isinstance(trade_id, (str, int)) or isinstance(trade_id, bool) or not str(trade_id):
             raise ValueError("Missing Kraken trade ID")
         when = _trade_time(at)
-        if when > retrieved:
+        if when > _ns(retrieved):
             raise ValueError("Future trade in captured source")
         parsed_trades.append((when, str(trade_id), float(_decimal(price)), str(_decimal(volume))))
     if any(b[0] < a[0] for a, b in zip(parsed_trades, parsed_trades[1:])):
@@ -167,25 +181,24 @@ def verify_sources(captures, evaluation_at):
 def _recovery_row(row, original, trades, evaluation_at):
     if row["status"] != "ABSTAIN_GAP" or not trades:
         return None
-    start, target = _utc(row["as_of"]), _utc(row["target_at"])
+    start, target = _ns(row["as_of"]), _ns(row["target_at"])
+    gap_ns = 45 * 60 * 1_000_000_000
     # Proof must start no later than entry and extend past the target.
-    if trades["start_since_ns"] > int(start.timestamp() * 1_000_000_000):
+    if trades["start_since_ns"] > start or trades["last"] < target:
         return None
-    if trades["last"] < target:
-        return None
-    merged = list(original) + trades["prints"]
+    merged = [(_ns(t), p) for t, p in original] + trades["prints"]
     stamps = [t for t, _ in merged]
     if len(stamps) != len(set(stamps)):
         raise ValueError("Duplicate original/recovered observation timestamps")
     merged.sort()
     lo = bisect_right(merged, (start, float("inf")))
-    hi = bisect_right(merged, (target + MAX_GAP, float("inf")))
+    hi = bisect_right(merged, (target + gap_ns, float("inf")))
     within = [(t, p) for t, p in merged[lo:hi] if t <= target]
     anchors = [(t, p) for t, p in merged[lo:hi] if t >= target]
     if not within or not anchors:
         return None
     timeline = [start] + [t for t, _ in within] + [anchors[0][0]]
-    if any(b - a > MAX_GAP for a, b in zip(timeline, timeline[1:])):
+    if any(b - a > gap_ns for a, b in zip(timeline, timeline[1:])):
         return None
     entry = row["entry_price"]
     peak = 100 * (max([entry] + [p for _, p in within]) / entry - 1)
@@ -193,7 +206,7 @@ def _recovery_row(row, original, trades, evaluation_at):
             "observed_peak_pct": round(peak, 6),
             "observed_20pct_hit": peak >= 20,
             "observed_30pct_hit": peak >= 30,
-            "anchor_at": anchors[0][0].isoformat()}
+            "anchor_at": _iso_ns(anchors[0][0])}
 
 
 def audit(state, evaluation_at, captures=(), source_errors=()):
@@ -241,6 +254,11 @@ def audit(state, evaluation_at, captures=(), source_errors=()):
         "source_ledger_sha256": state["sha256"], "source_generation": state["generation"],
         "evaluation_at": now.isoformat(), "max_gap_minutes": 45,
         "source_revision": REVISION, "source_pages": provenance,
+        "source_coverage": {pair: {"first_trade_utc": _iso_ns(s["first"]),
+            "last_trade_utc": _iso_ns(s["last"]), "pages": sum(p["pair"] == pair for p in provenance),
+            "requested_start_utc": _iso_ns(s["start_since_ns"])}
+            for pair, s in verified.items()},
+        "no_trade_vs_missing": "UNPROVEN_WITHOUT_COMPLETE_SOURCE_COVERAGE",
         "source_errors": list(source_errors),
         "retention": {"ledger_retention_hours": 50,
             "archived_runs_count": archived.get("scans", 0),
@@ -272,7 +290,7 @@ def capture_bounded(state, evaluation_at, max_pairs=MAX_PAIRS, max_pages=MAX_PAG
     captures, errors = [], []
     for pair in ranked:
         start = min(_utc(r["as_of"]) for r in candidates[pair])
-        since = max(0, int(start.timestamp() * 1_000_000_000) - 1)
+        since = max(0, _ns(start) - 1)
         pages = []
         try:
             for _ in range(max_pages):
@@ -293,10 +311,10 @@ def capture_bounded(state, evaluation_at, max_pairs=MAX_PAIRS, max_pages=MAX_PAG
                 next_since, prints = _verify_page(page, pair, since, dt.datetime.now(UTC))
                 pages.append(page)
                 since = next_since
-                if prints and prints[-1][0] >= max(_utc(r["target_at"]) for r in candidates[pair]):
+                if prints and prints[-1][0] >= max(_ns(r["target_at"]) for r in candidates[pair]):
                     break
             if pages:
-                candidate = {"pair": pair, "start_since_ns": max(0, int(start.timestamp()*1_000_000_000)-1),
+                candidate = {"pair": pair, "start_since_ns": max(0, _ns(start)-1),
                              "pages": pages}
                 verify_sources([candidate], dt.datetime.now(UTC))
                 captures.append(candidate)
