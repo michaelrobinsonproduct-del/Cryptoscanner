@@ -101,6 +101,12 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
             rid = run["id"]
             if type(rid) is not int or rid <= 0 or id_counts[rid] != 1:
                 raise ValueError("duplicate/invalid run id")
+            # A GitHub rerun keeps the original run ID/event/created_at but
+            # is manually initiated later. It cannot certify an unattended slot.
+            if type(run.get("run_attempt")) is not int or run["run_attempt"] != 1:
+                evidence.append({"run_id": rid,
+                                 "classification": "MISSING_OR_RERUN_ATTEMPT_PROVENANCE"})
+                continue
             created = timestamp(run["created_at"])
             if created > now:
                 raise ValueError("future run")
@@ -223,6 +229,8 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
             "native_minimum_lateness_seconds": [r["minimum_lateness_seconds"] for r in native],
             "runs": evidence,
             "limitations": ["Only the canonical main-branch PAPER writer workflow is counted; foreign workflow markers abstain",
+                            "GitHub reruns preserve event=schedule but are not original unattended cron executions",
+                            "Missing or noninitial run_attempt metadata abstains rather than certifying native cadence",
                             "A completed failed workflow is an attempt, not a successful scan",
                             "Attempt cadence includes authenticated failed executions but is not persisted scan cadence",
                             "A cron expression identifies a minute, not an hour; reported lateness is only a lower bound",
