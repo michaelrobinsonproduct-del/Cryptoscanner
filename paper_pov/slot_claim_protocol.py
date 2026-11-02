@@ -113,13 +113,17 @@ def valid_plan(claim):
         return False
 
 
-def attempt(api, claim):
-    """Use injected GitHub Git-data adapter. NEVER dispatch, retry or write ledger.
+def attempt(api, claim, *, now, observed_main_sha, observed_ledger_commit):
+    """Fail closed on replay/source drift before an isolated Git-data claim.
+
+    `now`, `observed_main_sha` and `observed_ledger_commit` MUST be independently
+    authenticated immediately before this call by any future live adapter.
+    Passing fixtures proves only the offline contract. This module has no
+    GitHub client, credentials, dispatch path or production writes.
 
     Required adapter methods: create_tag(tag_name,target_sha,message)->sha;
-    create_ref(ref,sha); get_ref(ref)->sha or None; get_tag(sha)->dict
-    with name,target_sha,message. All errors fail closed, including HTTP 422,
-    timeout and ambiguous success. The adapter is NOT instantiated here.
+    create_ref(ref,sha); get_ref(ref)->sha or None; get_tag(sha)->dict.
+    All errors fail closed, including HTTP 422, timeout and ambiguous success.
     """
     result = {"status": "BLOCKED", "reason": "UNVERIFIED",
               "dispatch_executed": False, "scanner_executed": False,
@@ -127,6 +131,27 @@ def attempt(api, claim):
               "global_writer_exclusivity_proven": False}
     if not valid_plan(claim):
         result["reason"] = "INVALID_CLAIM"
+        return result
+    if not isinstance(now, dt.datetime) or now.tzinfo is None or now.utcoffset() is None:
+        result["reason"] = "UNAUTHENTICATED_ATTEMPT_CLOCK"
+        return result
+    try:
+        slot = dt.datetime.fromisoformat(claim["slot_utc"]).astimezone(UTC)
+        age = now.astimezone(UTC) - slot
+        if not dt.timedelta(0) <= age <= dt.timedelta(minutes=29):
+            result["reason"] = "STALE_OR_FUTURE_SLOT_REPLAY"
+            return result
+        record = json.loads(claim["message"].splitlines()[1])
+        if (not isinstance(observed_main_sha, str) or
+            SHA40.fullmatch(observed_main_sha) is None or
+            observed_main_sha != claim["source_sha"] or
+            not isinstance(observed_ledger_commit, str) or
+            SHA40.fullmatch(observed_ledger_commit) is None or
+            observed_ledger_commit != record["ledger_commit"]):
+            result["reason"] = "SOURCE_OR_LEDGER_CHANGED_SINCE_PREPARATION"
+            return result
+    except (ValueError, TypeError, KeyError, AttributeError, OverflowError):
+        result["reason"] = "UNAUTHENTICATED_ATTEMPT_CONTEXT"
         return result
     try:
         existing = api.get_ref(claim["ref"])
