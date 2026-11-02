@@ -1,7 +1,7 @@
 """Offline fail-closed pagination tests for repository inventory (no network)."""
 import unittest
 from unittest.mock import patch
-from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs
+from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph
 
 class PaginationTests(unittest.TestCase):
     def test_multiple_pages_are_all_included(self):
@@ -81,6 +81,30 @@ class ExactBlobComparisonTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,"invalid blob SHA"):
             remote_main_blobs("a"*40,lambda _:{
                 "truncated":False,"tree":[{"type":"blob","path":"x","sha":"bad"}]})
+
+
+class ConsumerGraphTests(unittest.TestCase):
+    def test_static_edges_do_not_claim_live_invocation_or_cleanup(self):
+        workflows=[{"path":".github/workflows/paper-pipeline.yml",
+                    "scripts":["paper_pov/scanner.py"],"python_modules":[],
+                    "ledger_ref":True}]
+        runtime={"snapshot_utc":"2026-11-02T02:17:00Z",
+                 "supabase":{"sample_source_consumers":[
+                     {"function":"kraken-miss-learner","tables":["kraken_miss_learning"]}]},
+                 "static_consumers":{"ios":{"source":"ios/KrakenEdge/ScannerAPI.swift",
+                                             "endpoint":"https://example.invalid/dashboard"}}}
+        graph=build_consumer_graph(workflows,runtime,"a"*40,"b"*40)
+        self.assertFalse(graph["cleanup_authorized"])
+        self.assertTrue(graph["unknowns"])
+        self.assertTrue(all(not e["observed_runtime"] for e in graph["edges"]))
+        self.assertTrue(any(e["target"]=="supabase-table:kraken_miss_learning" for e in graph["edges"]))
+        self.assertTrue(any(e["target"]=="repo-script:paper_pov/scanner.py" for e in graph["edges"]))
+        self.assertEqual(graph["remote_main_sha"],"b"*40)
+
+    def test_empty_evidence_does_not_invent_runtime(self):
+        graph=build_consumer_graph([],{"snapshot_utc":"2026-11-02T02:17:00Z"},"a"*40,"b"*40)
+        self.assertEqual(graph["edges"],[])
+        self.assertFalse(graph["cleanup_authorized"])
 
 
 class SnapshotReconciliationTests(unittest.TestCase):
