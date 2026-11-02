@@ -535,6 +535,7 @@ class CadenceCollectorTests(unittest.TestCase):
                     "workflows" / "paper-cadence-provenance-ci.yml").read_text()
         self.assertIn("actions: read", workflow)
         self.assertIn("authenticated-get-only-rehearsal:", workflow)
+        self.assertIn("'paper_pov/artifact_bytes_verify.py'", workflow)
         self.assertIn("python -m paper_pov.cadence_collect", workflow)
         self.assertIn("--lookback-hours 6 --max-runs 40", workflow)
         self.assertNotIn("gh workflow run", workflow)
