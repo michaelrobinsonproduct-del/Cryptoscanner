@@ -11,7 +11,7 @@ class RetentionAcceptanceTests(unittest.TestCase):
         before = ledger.advance(ledger.empty(), synthetic(0), SHA)
         report = synthetic(minutes)
         after = ledger.advance(before, report, SHA)
-        return before, after, report
+        # ledger.advance reuses nested immutable record dictionaries; isolate\n        # the before snapshot so adversarial mutations only affect after.\n        return copy.deepcopy(before), copy.deepcopy(after), report
 
     def check(self, before, after, report):
         return verify_transition(before, after, report, SHA)
@@ -71,6 +71,7 @@ class RetentionAcceptanceTests(unittest.TestCase):
         b = ledger.advance(b, synthetic(120), SHA)
         r = synthetic(150)
         a = ledger.advance(b, r, SHA)
+        b = copy.deepcopy(b)
         a["outcomes"][0]["target_at"] = "2020-01-01T00:00:00+00:00"
         ledger.seal(a)
         with self.assertRaisesRegex(ValueError, "MUTATED_OLD_OUTCOME"):
