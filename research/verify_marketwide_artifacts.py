@@ -66,6 +66,44 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
         or provenance.get("observed_run_count") != outcomes.get("observed_run_count")
         or provenance.get("observed_entry_count") != outcomes.get("observed_entry_count")):
         raise ValueError("cross-report ledger identity mismatch")
+    # Check the two independent evaluator reports, not only their checksums.
+    # An internally resealed artifact with inconsistent outcomes is invalid.
+    horizons = ("1", "6", "24", "48")
+    if (set(outcomes.get("horizons", {})) != set(horizons)
+        or set(episodes.get("horizons", {})) != set(horizons)):
+        raise ValueError("missing or unexpected evaluation horizon")
+    matching = {
+        "eligible": "eligible", "matured": "matured",
+        "immature": "immature", "abstain_gap": "abstain_gap",
+        "movers_20": "movers_20", "movers": "movers_30",
+        "watch_eligible": "watch_eligible",
+        "watch_immature": "watch_immature",
+        "watch_abstain_gap": "watch_abstain_gap",
+        "watch_matured": "watch_matured",
+        "watch_positive_20": "watch_20",
+        "watch_positive": "watch_30",
+        "watch_false_positive_20": "watch_false_positive_20",
+        "watch_false_positive_30": "watch_false_positive_30",
+        "missed_20": "missed_20", "missed_30": "missed_30",
+    }
+    for horizon in horizons:
+        window = outcomes["horizons"][horizon]
+        episode = episodes["horizons"][horizon]
+        coverage = episode["coverage"]
+        if any(coverage.get(k) != window.get(v) for k, v in matching.items()):
+            raise ValueError("cross-report outcome mismatch: " + horizon)
+        if (coverage["eligible"] != outcomes["observed_entry_count"]
+            or coverage["eligible"] != (coverage["matured"] +
+                coverage["immature"] + coverage["abstain_gap"])
+            or coverage["watch_eligible"] != (coverage["watch_matured"] +
+                coverage["watch_immature"] + coverage["watch_abstain_gap"])
+            or coverage["movers_20"] != coverage["watch_positive_20"] + coverage["missed_20"]
+            or coverage["movers"] != coverage["watch_positive"] + coverage["missed_30"]
+            or episode["missed_mover_episodes_20"] != (episode["unique_mover_episodes_20"] -
+                episode["watch_captured_episodes_20"])
+            or episode["missed_mover_episodes_30"] != (episode["unique_mover_episodes"] -
+                episode["watch_captured_episodes"])):
+            raise ValueError("cross-report cohort partition mismatch: " + horizon)
     for source in (outcomes, episodes.get("source", {}), provenance):
         if (source.get("source_authenticated") is not False
             or source.get("complete_market_history") is not False
