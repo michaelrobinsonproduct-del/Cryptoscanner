@@ -50,7 +50,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python audit_tools/full_scanner_inventory.py
-      - name: Include verified external runtime snapshot
+      - name: Record snapshot-only external runtime and audit gate
         run: |
           python - <<'PY'
           import json,shutil
@@ -64,11 +64,17 @@ jobs:
           assert a["snapshot_main_sha"]==x["repo_main_sha"]
           assert a["current_main_sha"]==inventory["main_sha"]
           assert a["reason"]==inventory["external_runtime_evidence_reason"]
+          gate=json.load(open("audit-evidence/audit-certification-gate.json"))
+          assert gate["status"]=="NOT_CERTIFIED"
+          assert gate["main_sha"]==inventory["main_sha"]
+          assert gate["ledger_sha_read_only"]==inventory["ledger_sha"]
+          assert gate["cleanup_authorized"] is False and gate["production_mutation_authorized"] is False
+          print("AUDIT_GATE",gate["status"],len(gate["blockers"]))
           print("EXTERNAL_RUNTIME_SNAPSHOT_ONLY",a["reason"],a["age_seconds"])
           shutil.copy2(p,"audit-evidence/external-runtime.json")
           PY
       - name: SHA256 evidence
-        run: (cd audit-evidence && sha256sum scanner-inventory.json scanner-inventory.md consumer-graph.json semantic-pr-matrix.json declared-write-surfaces.json external-runtime.json external-runtime-assessment.json > SHA256SUMS && sha256sum -c SHA256SUMS)
+        run: (cd audit-evidence && sha256sum scanner-inventory.json scanner-inventory.md consumer-graph.json semantic-pr-matrix.json declared-write-surfaces.json external-runtime.json external-runtime-assessment.json audit-certification-gate.json > SHA256SUMS && sha256sum -c SHA256SUMS)
       - uses: actions/upload-artifact@v4
         with:
           name: scanner-full-inventory-${{ github.run_id }}
