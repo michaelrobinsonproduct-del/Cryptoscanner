@@ -77,6 +77,21 @@ class Tests(unittest.TestCase):
         self.assertEqual(row["watch_false_positive_30"],0)
         self.assertIsNone(row["watch_precision_30"])
 
+    def test_descriptive_evidence_cannot_claim_authenticated_history_or_promotion(self):
+        report=evaluate(sealed_fixture(fixture()))
+        self.assertEqual(report["status"],"DESCRIPTIVE_ONLY_NOT_HELD_OUT_LIFT")
+        self.assertIs(report["source_authenticated"],False)
+        self.assertIs(report["complete_market_history"],False)
+        self.assertIs(report["eligible_for_model_promotion"],False)
+        self.assertIn("overlapping",report["metric_unit"])
+        self.assertIn("not independently authenticated",report["source_provenance"])
+
+    def test_invalid_checksum_rejected_before_any_outcome(self):
+        state=sealed_fixture(fixture())
+        state["observations"][0]["price"]=999
+        with self.assertRaisesRegex(ValueError,"Ledger checksum mismatch"):
+            evaluate(state)
+
     def test_marketwide_missed_mover(self):
         result=evaluate(sealed_fixture(fixture()))["horizons"]["1"]
         self.assertGreater(result["missed_30"],0)
