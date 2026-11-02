@@ -71,6 +71,25 @@ def chronological_readiness(records, runs, hours):
                  and a["lag_60m_covered"]-a["positive_lag_60m_covered"]>=10
                  and b["lag_60m_covered"]-b["positive_lag_60m_covered"]>=10)}
 
+
+def cluster_episodes(cases, hours):
+    """Collapse overlapping same-pair entry windows into descriptive episodes."""
+    episodes = []
+    for case in sorted(cases,key=lambda x:(x["pair"],x["entry_at"])):
+        t = timestamp(case["entry_at"])
+        if (episodes and episodes[-1]["pair"]==case["pair"]
+            and t-timestamp(episodes[-1]["last_entry_at"]) <= dt.timedelta(hours=hours)):
+            episodes[-1]["entry_cases"] += 1
+            episodes[-1]["last_entry_at"] = case["entry_at"]
+            episodes[-1]["watch_captured"] |= case["watch"]
+        else:
+            episodes.append({"pair":case["pair"],"first_entry_at":case["entry_at"],
+                             "last_entry_at":case["entry_at"],"entry_cases":1,
+                             "watch_captured":case["watch"],
+                             "first_lagged_60m":case["lagged_returns"]["60m"],
+                             "first_peak_observed_return":case["peak_observed_return"]})
+    return episodes
+
 def analyze(state):
     from paper_pov.ledger import verify
     verify(state, 32_000_000)
@@ -82,9 +101,10 @@ def analyze(state):
         by_pair[o["pair"]].append((timestamp(o["at"]), float(o["price"]), o["run_id"]))
     output = {}
     for hours in HORIZONS:
-        positives, negatives, cases = [], [], []
+        positives, negatives, cases, cases20 = [], [], [], []
         coverage = {"eligible": 0, "immature": 0, "abstain_gap": 0, "matured": 0,
                     "watch_matured": 0, "watch_positive": 0, "movers": 0,
+                    "watch_positive_20": 0, "movers_20": 0,
                     "feature_30m": 0, "feature_60m": 0, "feature_180m": 0,
                     "mover_feature_60m": 0}
         for pair, series in by_pair.items():
@@ -116,6 +136,10 @@ def analyze(state):
                     coverage["watch_matured"] += 1
                 peak = max(p for _,p in before)/entry - 1
                 hit = peak >= 0.30
+                if peak >= 0.20:
+                    coverage["movers_20"] += 1
+                    if selected:
+                        coverage["watch_positive_20"] += 1
                 if hit:
                     coverage["movers"] += 1
                     if selected:
@@ -131,6 +155,8 @@ def analyze(state):
                 record = {"pair":pair,"entry_at":at.isoformat(),"run_id":rid,"decision_at":start.isoformat(),
                           "peak_observed_return":round(peak,8),
                           "watch":selected,"lagged_returns":lag}
+                if peak >= 0.20:
+                    cases20.append(record)
                 if hit:
                     positives.append(record)
                     cases.append(record)
@@ -138,20 +164,8 @@ def analyze(state):
                     negatives.append(record)
         # Repeated overlapping entry/horizon labels are not independent movers.
         # Cluster same-pair positives whose entry times fall within one horizon.
-        episodes = []
-        for case in sorted(cases,key=lambda x:(x["pair"],x["entry_at"])):
-            t = timestamp(case["entry_at"])
-            if (episodes and episodes[-1]["pair"]==case["pair"]
-                and t-timestamp(episodes[-1]["last_entry_at"]) <= dt.timedelta(hours=hours)):
-                episodes[-1]["entry_cases"] += 1
-                episodes[-1]["last_entry_at"] = case["entry_at"]
-                episodes[-1]["watch_captured"] |= case["watch"]
-            else:
-                episodes.append({"pair":case["pair"],"first_entry_at":case["entry_at"],
-                                 "last_entry_at":case["entry_at"],"entry_cases":1,
-                                 "watch_captured":case["watch"],
-                                 "first_lagged_60m":case["lagged_returns"]["60m"],
-                                 "first_peak_observed_return":case["peak_observed_return"]})
+        episodes = cluster_episodes(cases,hours)
+        episodes20 = cluster_episodes(cases20,hours)
         episode_watch_count = sum(e["watch_captured"] for e in episodes)
         episode_first_lags = [e["first_lagged_60m"] for e in episodes
                               if e["first_lagged_60m"] is not None]
@@ -163,8 +177,17 @@ def analyze(state):
                     "positive_fraction":sum(v>0 for v in vals)/len(vals) if vals else None}
         assert coverage["eligible"]==coverage["matured"]+coverage["abstain_gap"]+coverage["immature"]
         assert coverage["movers"]==len(positives)
+        assert coverage["movers_20"]==len(cases20)
         output[str(hours)] = {"coverage":coverage,"unique_mover_episodes":len(episodes),
             "unique_mover_pairs":len({e["pair"] for e in episodes}),
+            "unique_mover_episodes_20":len(episodes20),
+            "watch_captured_episodes_20":sum(e["watch_captured"] for e in episodes20),
+            "watch_episode_recall_20":(sum(e["watch_captured"] for e in episodes20)/len(episodes20)
+                                      if episodes20 else None),
+            "watch_recall_20":(coverage["watch_positive_20"]/coverage["movers_20"]
+                               if coverage["movers_20"] else None),
+            "watch_precision_20":(coverage["watch_positive_20"]/coverage["watch_matured"]
+                                  if coverage["watch_matured"] else None),
             "episodes":episodes,"mover_cases":cases,
             "watch_captured_episodes":episode_watch_count,
             "watch_episode_recall_30":episode_watch_count/len(episodes) if episodes else None,
