@@ -109,6 +109,31 @@ class CadenceProvenanceTests(unittest.TestCase):
         self.assertNotIn("manual_parity_verified", result)
         self.assertNotIn("ledger_verified", result)
 
+    def test_successful_writer_creation_gap_is_quantified_not_called_ledger_gap(self):
+        rows = [run(1, "2026-11-02T01:10:01Z"),
+                run(2, "2026-11-02T02:10:01Z", event="workflow_dispatch")]
+        logs = {"1": log(), "2": log(event="workflow_dispatch", cron="MANUAL_DISPATCH")}
+        result = self.check(rows, logs)
+        self.assertEqual(result["verified_successful_writer_run_creation_count"], 2)
+        self.assertEqual(result["max_verified_successful_run_creation_gap_seconds"], 3600)
+        self.assertEqual(result["seconds_since_last_verified_successful_run_creation"], 4200)
+        self.assertTrue(result["over_45m_since_verified_successful_run_creation"])
+        self.assertNotIn("missed_slots_verified", result)
+
+    def test_failed_run_does_not_reset_last_successful_creation(self):
+        rows = [run(1, "2026-11-02T01:10:01Z"),
+                {**run(2, "2026-11-02T03:10:01Z"), "conclusion": "failure"}]
+        result = self.check(rows, {"1": log(), "2": log()})
+        self.assertEqual(result["verified_native_unsuccessful_count"], 1)
+        self.assertEqual(result["last_verified_successful_run_created_at"], "2026-11-02T01:10:01+00:00")
+        self.assertTrue(result["over_45m_since_verified_successful_run_creation"])
+
+    def test_no_authenticated_run_abstains_on_staleness_instead_of_zero(self):
+        result = self.check(rows=[], logs={})
+        self.assertIsNone(result["over_45m_since_verified_successful_run_creation"])
+        self.assertIsNone(result["max_verified_successful_run_creation_gap_seconds"])
+        self.assertIsNone(result["seconds_since_last_verified_successful_run_creation"])
+
     def test_no_false_ledger_or_trade_claims(self):
         result = self.check()
         self.assertNotIn("ledger_verified", result)
