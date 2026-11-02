@@ -148,10 +148,10 @@
     {
       "number": 33,
       "head_sha": "3a58194ec9c11649111f29450c5e28e3585c0068",
-      "classification": "unknown",
+      "classification": "conflicting",
       "source_path": ".github/workflows/kraken-simple.yml",
       "source_blob_sha": "627719697f7a20758b420fd07b8fc4f31b4ed99d",
-      "reason": "Legacy simple-history manual writer/storage CI; separate live recovery branch exists; do not delete or enable competing writer.",
+      "reason": "Exact PR #33 head 3a58194... .github/workflows/kraken-simple.yml blob 62771969... declares contents:write, workflow_dispatch, and pushes to refs/heads/simple-history after restoring SQLite. This is an additional possible manual legacy writer, distinct from canonical PAPER writer and recovery scheduled workflow. Do not merge/dispatch or delete until runtime and single-writer reconciliation; isolated source/tests only.",
       "release_authorized": false,
       "cleanup_authorized": false
     },
@@ -190,8 +190,8 @@
       "head_sha": "940a4af9d976fb271c7534ad3e3e9eae33c376cf",
       "classification": "unknown",
       "source_path": "simple_scanner/scan.py",
-      "source_blob_sha": "4f5aba73fd4877ca1991b13cfe8d6432a694c865",
-      "reason": "Legacy recovery branch source is referenced by active GitHub workflows and separate simple-history writer; preserve until retirement approved.",
+      "source_blob_sha": "25539447cb9fb2b1d83dcc04fcc595e5fd9e38af",
+      "reason": "Exact PR #7 head 940a4af9... GitHub Contents AND current PR-files API independently return simple_scanner/scan.py blob 25539447...; earlier 4f5aba... PR-files observation was stale/discrepant. This resolves source identity only. Branch-pinned legacy recovery and simple-history consumers remain unverified for deletion; classification unknown, not integrated.",
       "release_authorized": false,
       "cleanup_authorized": false
     },
@@ -208,9 +208,9 @@
     {
       "number": 4,
       "head_sha": "7284645c1dbeb21c67fb07dc23200770500475d3",
-      "classification": "unknown",
+      "classification": "conflicting",
       "source_path": "production-recovery/market-evidence.ts",
-      "reason": "Legacy TypeScript production-recovery contracts and Supabase SQL; not proven wired to canonical PAPER or safe to retire.",
+      "reason": "Exact PR #4 head 7284645c... source-bound evaluation/measure-forward.ts blob 637c33d... uses CHALLENGER_SUPABASE_SERVICE_KEY and PATCH to challenger_forward_outcomes; evaluation/shadow-cycle.ts blob 09a6e90... uses credential-backed POST to challenger_observations. Workflow challenger-outcomes.yml schedules and injects service key under contents:read. This is an external write surface, not read-only integration or PAPER equivalence; production activation blocked pending credential and consumer attestation. No deletion authorized.",
       "release_authorized": false,
       "cleanup_authorized": false,
       "source_blob_sha": "359340e3bd302e2bf69c2d65ee8cf4dde6d06ed3"
