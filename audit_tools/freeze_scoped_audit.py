@@ -55,13 +55,42 @@ def freeze(inventory, semantic, bounded, gate, graph, writes, runtime):
     if not isinstance(bounded.get("source_cases"), list) or not isinstance(graph.get("unknowns"), list):
         raise ValueError("Missing bounded source or consumer evidence")
     cases = bounded["source_cases"]
-    if {x["pr"] for x in cases} != {4, 7, 33, 40}:
-        raise ValueError("Expected risk source cases absent")
-    source_status = {str(x["pr"]) + ":" + x["path"]: x["source"]["status"] for x in cases}
+    expected_cases = {
+        (4, "evaluation/measure-forward.ts"), (4, "evaluation/shadow-cycle.ts"),
+        (7, "simple_scanner/scan.py"), (33, ".github/workflows/kraken-simple.yml"),
+        (40, ".github/workflows/paper-forward-audit.yml"),
+    }
+    if len(cases) != len(expected_cases) or {(x["pr"], x["path"]) for x in cases} != expected_cases:
+        raise ValueError("Expected risk source cases absent or duplicated")
+    source_status = {}
+    for case in cases:
+        number, path = case["pr"], case["path"]
+        current_head = live_by_id.get(number, {}).get("head_sha")
+        if current_head is None:
+            status = "PR_NOT_CURRENTLY_OPEN"
+        elif case.get("head_sha") != current_head or case.get("expected_head_sha") != current_head:
+            status = "PR_HEAD_DRIFT"
+        else:
+            status = case["source"]["status"]
+        if status == "VERIFIED_EXACT_HEAD_SOURCE":
+            expected_blob = case.get("expected_blob_sha")
+            source = case["source"]
+            if (not expected_blob or source.get("calculated_sha") != expected_blob or
+                    source.get("github_contents_sha") != expected_blob):
+                raise ValueError("Source evidence identity mismatch: " + str(number) + ":" + path)
+        source_status[str(number) + ":" + path] = status
     main_writer = bounded.get("main_legacy_writer", {})
     if main_writer.get("main_sha") != main:
         raise ValueError("Main legacy writer not bound to current main")
-    source_status["main:" + main_writer["path"]] = main_writer["source"]["status"]
+    main_path = main_writer["path"]
+    main_status = main_writer["source"]["status"]
+    if main_status == "VERIFIED_EXACT_HEAD_SOURCE":
+        expected_blob = main_writer.get("expected_blob_sha")
+        if (not expected_blob or main_writer["source"].get("calculated_sha") != expected_blob or
+                main_writer["source"].get("github_contents_sha") != expected_blob or
+                inventory.get("main_blob_shas", {}).get(main_path) != expected_blob):
+            raise ValueError("Main legacy writer blob identity mismatch")
+    source_status["main:" + main_path] = main_status
     records = []
     for number in sorted(live_by_id):
         live_row, review = live_by_id[number], reviewed_by_id[number]
@@ -79,6 +108,11 @@ def freeze(inventory, semantic, bounded, gate, graph, writes, runtime):
             "reason": review.get("reason"),
             "restrictions": list(risk[1:]) if risk else [],
             "risk": risk[0] if risk else None,
+            "source_evidence": {k: v for k, v in sorted(source_status.items())
+                                if risk and k.startswith(str(number) + ":")},
+            "source_evidence_current": (all(v == "VERIFIED_EXACT_HEAD_SOURCE"
+                                           for k, v in source_status.items()
+                                           if k.startswith(str(number) + ":")) if risk else None),
             "next_check": ("Independent exact-head semantic review" if not valid else
                            "Preserve restrictions until independently cleared"),
         })

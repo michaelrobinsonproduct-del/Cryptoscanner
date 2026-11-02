@@ -8,19 +8,30 @@ B = "b" * 40
 C = "c" * 40
 
 def fixtures():
-    live = [{"number": n, "head_sha": chr(96+n)*40} for n in (4, 7)]
+    heads = {4: "d" * 40, 7: "e" * 40, 33: "f" * 40, 40: "1" * 40}
+    live = [{"number": n, "head_sha": heads[n]} for n in (4, 7, 33, 40)]
     review = [{"number": p["number"], "head_sha": p["head_sha"], "classification": "conflicting",
                "review_valid": True, "reason": "verified source", "source_path": "x.py",
                "source_blob_sha": C} for p in live]
-    cases = [{"pr": n, "path": "x"+str(n)+".py",
-              "source": {"status": "VERIFIED_EXACT_HEAD_SOURCE"}} for n in (4, 7, 33, 40)]
+    cases = [{"pr": n, "path": path, "head_sha": heads[n], "expected_head_sha": heads[n],
+              "expected_blob_sha": C,
+              "source": {"status": "VERIFIED_EXACT_HEAD_SOURCE",
+                         "calculated_sha": C, "github_contents_sha": C}}
+             for n, path in ((4, "evaluation/measure-forward.ts"),
+                             (4, "evaluation/shadow-cycle.ts"),
+                             (7, "simple_scanner/scan.py"),
+                             (33, ".github/workflows/kraken-simple.yml"),
+                             (40, ".github/workflows/paper-forward-audit.yml"))]
     return (
-        {"main_sha": A, "ledger_sha": B, "checkout_sha": C, "open_prs": live},
-        {"main_sha": A, "open_pr_count": 2, "prs": review},
+        {"main_sha": A, "ledger_sha": B, "checkout_sha": C, "open_prs": live,
+         "main_blob_shas": {".github/workflows/kraken-recovery-schedule.yml": C}},
+        {"main_sha": A, "open_pr_count": 4, "prs": review},
         {"main_sha": A, "ledger_sha_read_only": B, "audit_checkout_sha": C,
          "source_cases": cases, "main_legacy_writer": {"main_sha": A,
              "path": ".github/workflows/kraken-recovery-schedule.yml",
-             "source": {"status": "VERIFIED_EXACT_HEAD_SOURCE"}}},
+             "expected_blob_sha": C,
+             "source": {"status": "VERIFIED_EXACT_HEAD_SOURCE",
+                        "calculated_sha": C, "github_contents_sha": C}}},
         {"main_sha": A, "ledger_sha_read_only": B, "status": "NOT_CERTIFIED", "blockers": [],
          "unresolved_pr_count": 0, "unknown_consumer_count": 2,
          "unknown_write_destination_count": 1,
@@ -40,7 +51,7 @@ class FreezeScopeTests(unittest.TestCase):
         self.assertEqual(result["unknown_consumer_count"], 2)
         self.assertEqual(result["unknown_write_destinations"], ["unknown.yml"])
         self.assertFalse(result["cleanup_authorized"])
-        self.assertEqual(len(result["prs"]), 2)
+        self.assertEqual(len(result["prs"]), 4)
 
     def test_stale_review_is_unknown_and_gate_must_agree(self):
         data = list(fixtures())
@@ -86,10 +97,34 @@ class FreezeScopeTests(unittest.TestCase):
         data = list(fixtures())
         data[2]["source_cases"][0]["source"]["status"] = "PR_HEAD_DRIFT"
         result = freeze(*data)
-        self.assertEqual(result["unverified_source_cases"], ["4:x4.py"])
+        self.assertEqual(result["unverified_source_cases"], ["4:evaluation/measure-forward.ts"])
         self.assertEqual(result["scope_decisions"]["isolated_read_only_integration"],
                          "CONDITIONAL_PREPARE_TEST_ONLY")
         self.assertEqual(result["scope_decisions"]["production_activation"], "BLOCKED")
+
+    def test_forged_verified_status_cannot_hide_head_drift(self):
+        data = list(fixtures())
+        data[2]["source_cases"][0]["head_sha"] = "9" * 40
+        result = freeze(*data)
+        self.assertIn("4:evaluation/measure-forward.ts", result["unverified_source_cases"])
+        self.assertFalse(result["prs"][0]["source_evidence_current"])
+        self.assertEqual(result["scope_decisions"]["production_activation"], "BLOCKED")
+
+    def test_forged_verified_source_blob_rejected(self):
+        data = list(fixtures())
+        data[2]["source_cases"][0]["source"]["calculated_sha"] = "9" * 40
+        with self.assertRaisesRegex(ValueError, "Source evidence identity mismatch"):
+            freeze(*data)
+        data = list(fixtures())
+        data[2]["main_legacy_writer"]["source"]["github_contents_sha"] = "9" * 40
+        with self.assertRaisesRegex(ValueError, "Main legacy writer blob identity mismatch"):
+            freeze(*data)
+
+    def test_duplicate_risk_case_is_not_silently_accepted(self):
+        data = list(fixtures())
+        data[2]["source_cases"].append(copy.deepcopy(data[2]["source_cases"][0]))
+        with self.assertRaisesRegex(ValueError, "duplicated"):
+            freeze(*data)
 
     def test_runtime_assessment_bound_to_current_main(self):
         data = list(fixtures())
