@@ -154,16 +154,29 @@ def verify_sources(captures, evaluation_at):
         if type(cursor) is not int or cursor < 0:
             raise ValueError("Invalid source start cursor")
         prints = []
-        seen_ids = set()
+        seen_ids = {}
         collapsed_same_timestamp = 0
-        for page in pages:
+        deduped_cross_page = 0
+        for page_index, page in enumerate(pages):
             cursor, trades = _verify_page(page, pair, cursor, evaluation_at)
+            page_ids = set()
+            passed_overlap = False
             for when, tid, price, volume in trades:
+                if tid in page_ids:
+                    raise ValueError("Duplicate trade identity within page")
+                page_ids.add(tid)
                 if tid in seen_ids:
-                    raise ValueError("Duplicate trade identity")
+                    if (page_index == 0 or passed_overlap
+                            or seen_ids[tid] != (when, price, volume)):
+                        raise ValueError("Conflicting/non-prefix cross-page trade identity")
+                    # Kraken's cursor is inclusive at the next page boundary.
+                    # Only discard byte-equivalent authenticated repeated prints.
+                    deduped_cross_page += 1
+                    continue
+                passed_overlap = True
                 if prints and when < prints[-1][0]:
                     raise ValueError("Nonmonotonic cross-page trades")
-                seen_ids.add(tid)
+                seen_ids[tid] = (when, price, volume)
                 if prints and when == prints[-1][0]:
                     # Multiple authentic Kraken prints can share a nanosecond.
                     # Preserve exact raw page and ID provenance; use the LAST
@@ -182,7 +195,8 @@ def verify_sources(captures, evaluation_at):
                           "first": prints[0][0], "last": prints[-1][0],
                           "start_since_ns": item["start_since_ns"],
                           "last_cursor_ns": cursor,
-                          "collapsed_same_timestamp_prints": collapsed_same_timestamp}
+                          "collapsed_same_timestamp_prints": collapsed_same_timestamp,
+                          "deduped_identical_cross_page_prints": deduped_cross_page}
     return verified, provenance
 
 
@@ -277,7 +291,8 @@ def audit(state, evaluation_at, captures=(), source_errors=()):
         "source_coverage": {pair: {"first_trade_utc": _iso_ns(s["first"]),
             "last_trade_utc": _iso_ns(s["last"]), "pages": sum(p["pair"] == pair for p in provenance),
             "requested_start_utc": _iso_ns(s["start_since_ns"]),
-            "collapsed_same_timestamp_prints": s["collapsed_same_timestamp_prints"]}
+            "collapsed_same_timestamp_prints": s["collapsed_same_timestamp_prints"],
+            "deduped_identical_cross_page_prints": s["deduped_identical_cross_page_prints"]}
             for pair, s in verified.items()},
         "no_trade_vs_missing": "UNPROVEN_WITHOUT_COMPLETE_SOURCE_COVERAGE",
         "source_errors": list(source_errors),
