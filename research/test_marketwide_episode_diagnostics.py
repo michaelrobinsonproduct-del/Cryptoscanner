@@ -1048,6 +1048,10 @@ class EpisodeTests(unittest.TestCase):
 
     def test_all_watch_and_no_watch_gap_reasons_are_conserved(self):
         state = fixture()
+        # Force a mature post-decision entry gap; the base fixture is continuous.
+        for row in state["observations"]:
+            if row["pair"] == "BBBUSD" and row["run_id"] == "0":
+                row["at"] = iso(1)
         state["predictions"] = [{"run_id": o["run_id"], "pair": o["pair"]}
                                 for o in state["observations"]]
         with patch("paper_pov.ledger.verify", return_value=None):
