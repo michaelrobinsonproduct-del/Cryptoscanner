@@ -27,6 +27,27 @@ class BoundedAuditScopeTests(unittest.TestCase):
         self.assertTrue(identity["pr_files_api_discrepancy"])
         self.assertEqual(identity["calculated_sha"],case["sha"])
 
+    def test_missing_pr_files_sha_is_not_a_false_discrepancy(self):
+        case,content=self.synthetic()
+        row={"head_sha":case["expected_head_sha"],"file_blob_comparisons":[]}
+        identity=source_identity(case,row,self.payload(content))
+        self.assertEqual(identity["status"],"VERIFIED_EXACT_HEAD_SOURCE")
+        self.assertEqual(identity["pr_files_api_status"],"MISSING")
+        self.assertFalse(identity["pr_files_api_discrepancy"])
+
+    def test_strict_base64_rejects_garbage_but_accepts_github_wrapping(self):
+        case,content=self.synthetic()
+        row=self.row(case,content)
+        valid=self.payload(content)
+        valid["content"]=valid["content"][:12]+"\\n"+valid["content"][12:]
+        self.assertEqual(source_identity(case,row,valid)["status"],"UNVERIFIED_SOURCE_BYTES")
+        valid=self.payload(content)
+        valid["content"]=valid["content"][:12]+"\n"+valid["content"][12:]
+        self.assertEqual(source_identity(case,row,valid)["status"],"VERIFIED_EXACT_HEAD_SOURCE")
+        invalid=self.payload(content)
+        invalid["content"]=invalid["content"][:12]+"!"+invalid["content"][12:]
+        self.assertEqual(source_identity(case,row,invalid)["status"],"UNVERIFIED_SOURCE_BYTES")
+
     def test_stale_head_abstains_before_fetch(self):
         case,content=self.synthetic()
         row=self.row(case,content);row["head_sha"]="b"*40
