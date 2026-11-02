@@ -122,6 +122,58 @@ def reconcile_pr_snapshot(triage, pr_rows, current_main_sha, fetch_pr=gh):
                        "classification_basis":"GitHub merged_at, NOT semantic equivalence of any other PR" if current.get("merged_at") else "Closed without merge; semantic outcome unknown"})
     return closed
 
+def build_consumer_graph(workflows, runtime, checkout_sha, main_sha):
+    """Evidence-scoped dependency edges, not a certification of live invocation.
+
+    Workflow edges come from the audit checkout. External edges come from a
+    dated deployed-source snapshot and are explicitly NOT invocation proof.
+    """
+    edges=[]
+    def edge(source,target,kind,evidence,observed_runtime=False):
+        edges.append({"source":source,"target":target,"kind":kind,
+                      "evidence":evidence,"observed_runtime":observed_runtime})
+    for w in workflows:
+        source="github-workflow:"+w["path"]
+        for script in w["scripts"]:
+            edge(source,"repo-script:"+script,"invokes_script",
+                 "audit_checkout:"+checkout_sha)
+        for module in w["python_modules"]:
+            edge(source,"python-module:"+module,"invokes_module",
+                 "audit_checkout:"+checkout_sha)
+        if w["ledger_ref"]:
+            edge(source,"github-ref:paper-proof-ledger","mentions_ledger_ref",
+                 "audit_checkout:"+checkout_sha)
+    sb=runtime.get("supabase",{})
+    for item in sb.get("sample_source_consumers",[])+sb.get("source_review",{}).get("additional_direct_table_consumers",[]):
+        source="supabase-edge:"+item["function"]
+        for table in item.get("tables",[]):
+            edge(source,"supabase-table:"+table,"static_table_reference",
+                 "external_snapshot:"+runtime["snapshot_utc"])
+        for rpc in item.get("rpc",[]):
+            edge(source,"supabase-rpc:"+rpc,"static_rpc_reference",
+                 "external_snapshot:"+runtime["snapshot_utc"])
+    static=runtime.get("static_consumers",{})
+    if static.get("ios",{}).get("endpoint"):
+        edge("ios:"+static["ios"]["source"],"railway-url:"+static["ios"]["endpoint"],
+             "hardcoded_endpoint","external_snapshot:"+runtime["snapshot_utc"])
+    for endpoint_key in ("collector_endpoint","confirmation_endpoint"):
+        endpoint=static.get("bun",{}).get(endpoint_key)
+        if endpoint:
+            for source in static["bun"].get("sources",[]):
+                edge("bun:"+source,"railway-url:"+endpoint,
+                     "reported_static_endpoint","external_snapshot:"+runtime["snapshot_utc"])
+    return {"schema":"cryptoscanner-consumer-graph-v1",
+            "audit_checkout_sha":checkout_sha,"remote_main_sha":main_sha,
+            "external_snapshot_utc":runtime["snapshot_utc"],
+            "scope":"Partial static references only; not deployed caller reachability, pg_cron, dynamic references, or invocation evidence",
+            "edges":sorted(edges,key=lambda e:(e["source"],e["target"],e["kind"])),
+            "unknowns":["Supabase invocation/pg_cron and database schema",
+                        "iOS client deployment and users",
+                        "Bun external callers and Railway retained storage consumers",
+                        "GitHub workflow dynamic shell dispatch and branch-pinned consumers"],
+            "cleanup_authorized":False}
+
+
 def main():
     tracked=cmd("git","ls-files")
     if not tracked["ok"]:
@@ -217,6 +269,8 @@ def main():
         "run_scope":"latest 30 repository-wide GitHub Actions runs, not complete history",
         "branch_scope":"all branches across every API page, fail-closed if incomplete"}
     out=ROOT/"audit-evidence";out.mkdir(exist_ok=True)
+    graph=build_consumer_graph(workflow_inventory,external_runtime,data["checkout_sha"],data["main_sha"])
+    (out/"consumer-graph.json").write_text(json.dumps(graph,indent=2,sort_keys=True)+"\n")
     (out/"scanner-inventory.json").write_text(json.dumps(data,indent=2,sort_keys=True)+"\n")
     lines=["# Scanner runtime and legacy inventory (read-only)","",
       f"Generated UTC: {data['created_utc']}","",
@@ -236,7 +290,10 @@ def main():
       ""]
     for p in closed_prs_since_snapshot:
         lines.append(f"- PR #{p['number']}: {'MERGED' if p['merged'] else 'CLOSED WITHOUT MERGE'}, final head `{p['final_head_sha']}`, merge `{p['merge_commit_sha']}` (snapshot had `{p['snapshot_head_sha']}`).")
-    lines+=["","## Evidence boundaries","",
+    lines+=["","## Static consumer graph","",
+      f"Evidence-scoped edges: {len(graph['edges'])}; graph artifact: consumer-graph.json",
+      "All external runtime invocation status remains unverified; no cleanup authorization.",
+      "","## Evidence boundaries","",
       "- This is a machine-generated source and GitHub inventory, not proof of live deployment or functional equivalence.",
       "- PR triage is a dated human review snapshot; drifted heads revert to unknown. The audit PR's own head necessarily advances as this inventory evolves.",
       "- Remote main path and blob comparisons use the exact SHA-bound Git tree, not the audit checkout; exact matching blobs prove only identical individual files, not whole-PR integration.",
