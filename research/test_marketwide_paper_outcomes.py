@@ -125,9 +125,28 @@ class Tests(unittest.TestCase):
 
     def test_authentic_ledger_verification_is_not_mocked(self):
         state=sealed_fixture(fixture())
-        state["observations"][0]["price"]=999
+        first=state["predictions"][0]
+        quote=next(o for o in state["observations"]
+                   if o["run_id"]==first["run_id"] and o["pair"]==first["pair"])
+        quote["price"]=999
         seal(state)
         with self.assertRaisesRegex(ValueError,"Prediction price differs"):
             evaluate(state)
+
+    def test_sampled_windows_are_not_distinct_episodes(self):
+        runs=[]; observations=[]
+        # One +35% surge can make two earlier entry windows positive.
+        for minute,price in ((0,100),(30,100),(60,135),(90,135),
+                             (120,135),(150,135),(180,135)):
+            rid=str(minute)
+            runs.append({"id":rid,"as_of":iso(minute)})
+            observations.append({"run_id":rid,"at":iso(minute),
+                                 "pair":"AAAUSD","price":price})
+        result=evaluate(sealed_fixture({"runs":runs,
+                                       "observations":observations,
+                                       "predictions":[]}))
+        self.assertEqual(result["horizons"]["1"]["movers_30"],2)
+        self.assertIn("NOT distinct surge episodes",result["metric_unit"])
+        self.assertIn("not independently authenticated",result["source_provenance"])
 
 if __name__=="__main__":unittest.main()
