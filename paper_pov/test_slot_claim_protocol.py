@@ -163,7 +163,7 @@ class SlotClaimTests(unittest.TestCase):
                                                      "FAKE_CLAIM")},
             {"message": original["message"].replace('"owner_id":336805669',
                                                      '"owner_id":7')},
-            {"message": original["message"].rstrip("\\n")},
+            {"message": original["message"].rstrip("\n")},
         ]
         for change in mutations:
             with self.subTest(change=change):

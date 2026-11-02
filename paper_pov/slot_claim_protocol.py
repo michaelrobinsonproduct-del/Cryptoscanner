@@ -89,7 +89,7 @@ def valid_plan(claim):
             return False
         suffix = slot.strftime("%Y%m%dT%H%MZ")
         return (
-            claim["message"].endswith("\\n") and
+            claim["message"].endswith("\n") and
             claim["ref"] == NAMESPACE + suffix and
             claim["tag_name"] == "paper-recovery-slot-v1-" + suffix and
             claim["slot_utc"] == slot.isoformat() and
