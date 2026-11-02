@@ -8,7 +8,7 @@ import argparse
 import bisect
 import datetime as dt
 import json
-import math
+from decimal import Decimal
 from collections import defaultdict
 
 HORIZONS = (1, 6, 24, 48)
@@ -26,7 +26,7 @@ def evaluate(state):
     runs = {r["id"]: r for r in state["runs"]}
     prices = defaultdict(list)
     for o in state["observations"]:
-        prices[o["pair"]].append((timestamp(o["at"]), float(o["price"]), o["run_id"]))
+        prices[o["pair"]].append((timestamp(o["at"]), Decimal(str(o["price"])), o["run_id"]))
     for series in prices.values():
         series.sort()
     watches = {(p["run_id"], p["pair"]) for p in state["predictions"]}
@@ -65,9 +65,12 @@ def evaluate(state):
                     row["abstain_gap"] += 1
                     continue
                 row["matured"] += 1
-                peak = max(p for _, p in before) / entry - 1
-                for threshold, suffix in ((0.20,"20"),(0.30,"30")):
-                    hit = peak >= threshold
+                # Decimal avoids binary float cancellation at exact +20/+30
+                # thresholds and overflow when entry prices are very small.
+                peak_price = max(p for _, p in before)
+                for multiplier, suffix in ((Decimal("1.20"),"20"),
+                                           (Decimal("1.30"),"30")):
+                    hit = peak_price >= entry * multiplier
                     if hit:
                         row["movers_"+suffix] += 1
                         if selected: row["watch_"+suffix] += 1
