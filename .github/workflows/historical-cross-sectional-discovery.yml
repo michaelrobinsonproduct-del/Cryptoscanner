@@ -1,0 +1,46 @@
+name: Historical cross-sectional regime discovery (research only)
+on:
+  pull_request:
+    paths:
+      - 'historical/cross_sectional_regime_discovery.py'
+      - 'historical/test_cross_sectional_regime_discovery.py'
+      - 'historical/evidence/cross_sectional_regime_discovery_20261102.md'
+      - '.github/workflows/historical-cross-sectional-discovery.yml'
+  push:
+    branches:
+      - 'research/role-a-cross-sectional-*'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  strict-asof-experiment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned offline dependencies
+        run: python -m pip install 'numpy==2.2.6' 'pandas==2.2.3'
+      - name: Adversarial no-lookahead and equal-budget tests
+        run: python -m unittest discover -s historical -p 'test_cross_sectional_regime_discovery.py' -v
+      - name: Download strict retained Kraken source (read only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api --method GET -H 'Accept: application/vnd.github+json' "/repos/$REPO/actions/artifacts/11662155953/zip" > /tmp/strict-kraken-training.zip
+          test "$(stat -c %s /tmp/strict-kraken-training.zip)" -gt 1000000
+      - name: Reproduce point-in-time regime and interaction experiment
+        run: |
+          python historical/cross_sectional_regime_discovery.py /tmp/strict-kraken-training.zip --compact --output /tmp/cross_sectional_results.json
+          python -m json.tool /tmp/cross_sectional_results.json > /dev/null
+          sha256sum /tmp/cross_sectional_results.json
+          cat /tmp/cross_sectional_results.json
+          echo 'STRICT_CROSS_SECTIONAL_EXPERIMENT_COMPLETE'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cross-sectional-research-${{ github.run_id }}
+          path: /tmp/cross_sectional_results.json
+          retention-days: 90
