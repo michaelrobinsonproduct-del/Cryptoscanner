@@ -93,15 +93,24 @@ def chronological_readiness(records, runs, hours, positive_key="hit_30"):
                 "positive_lag_60m_episodes":independent_positive_episodes(positive, require_first_feature=True),
                 "negative_lag_60m_pairs":len({r["pair"] for r in featured_negative})}
     a,b=summary(train),summary(test)
+    # Concrete missing sample requirements, not a fabricated trained model.
+    # The >=10 thresholds are a minimal readiness diagnostic, not statistical
+    # proof of generalization or independent exchange-authenticated coverage.
+    blockers = []
+    for name, cohort in (("train",a),("test",b)):
+        if cohort["positive_lag_60m_episodes"] < 10:
+            blockers.append({"partition":name,"requirement":"episode_first_positive_lag_60m",
+                             "required":10,"observed":cohort["positive_lag_60m_episodes"]})
+        if cohort["negative_lag_60m_pairs"] < 10:
+            blockers.append({"partition":name,"requirement":"distinct_negative_lag_60m_pairs",
+                             "required":10,"observed":cohort["negative_lag_60m_pairs"]})
     return {"status":"DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER",
             "cutoff":cutoff.isoformat(),
             "embargo_hours":hours + MAX_GAP.total_seconds()/3600,
             "excluded_crossing_cutoff":len(records)-len(train)-len(test),
             "train":a,"test":b,
-            "model_evaluation_ready":(a["positive_lag_60m_episodes"]>=10
-                 and b["positive_lag_60m_episodes"]>=10
-                 and a["negative_lag_60m_pairs"]>=10
-                 and b["negative_lag_60m_pairs"]>=10)}
+            "minimum_sample_requirements":blockers,
+            "model_evaluation_ready":not blockers}
 
 
 def cluster_episodes(cases, hours):
