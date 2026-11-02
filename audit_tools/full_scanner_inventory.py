@@ -3,10 +3,19 @@ import ast, datetime, json, os, pathlib, re, subprocess, collections
 
 ROOT=pathlib.Path(".")
 def cmd(*args):
-    p=subprocess.run(args,text=True,capture_output=True,timeout=120)
-    return {"ok":p.returncode==0,"output":p.stdout[:150000],"error":p.stderr[:300]}
+    try:
+        p=subprocess.run(args,text=True,capture_output=True,timeout=120)
+    except subprocess.TimeoutExpired as exc:
+        return {"ok":False,"output":"","error":"Timed out after 120s: "+str(args[:3])}
+    return {"ok":p.returncode==0,"output":p.stdout[:1000000],"error":p.stderr[:500]}
 def gh(path):
-    r=cmd("gh","api",path,"--paginate")
+    # Actions run history is very large: never paginate the entire repository.
+    # Request one bounded page and project only the fields needed for evidence.
+    if "/actions/runs?" in path:
+        r=cmd("gh","api",path,"--jq",
+              '{workflow_runs: [.workflow_runs[] | {id,name,event,status,conclusion,head_sha,created_at,run_started_at}]}')
+    else:
+        r=cmd("gh","api",path,"--paginate")
     if not r["ok"]: return {"error":r["error"]}
     try:
         text=r["output"].strip()
@@ -51,24 +60,40 @@ def main():
             pr_rows.append({"number":n,"title":p["title"],"head_sha":p["head"]["sha"],"head_ref":p["head"]["ref"],
                 "base_sha":p["base"]["sha"],"draft":p["draft"],"mergeable":p.get("mergeable"),
                 "files":changed_files,"already_on_main_paths":overlaps,
-                "requires_semantic_review":bool(overlaps),"url":p["html_url"]})
+                "file_api_error":changed.get("error") if isinstance(changed,dict) else None,
+                "requires_semantic_review":True,"url":p["html_url"]})
     branches=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/branches?per_page=100")
-    runs=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/actions/runs?per_page=100")
-    runs=runs.get("workflow_runs",[]) if isinstance(runs,dict) else runs
+    main_ref=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/git/ref/heads/main")
+    ledger_ref=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/git/ref/heads/paper-proof-ledger")
+    runs_response=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/actions/runs?per_page=30")
+    runs=runs_response.get("workflow_runs",[]) if isinstance(runs_response,dict) else []
+    errors={"prs":prs.get("error") if isinstance(prs,dict) else None,
+            "branches":branches.get("error") if isinstance(branches,dict) else None,
+            "runs":runs_response.get("error") if isinstance(runs_response,dict) else "Invalid runs response",
+            "main_ref":main_ref.get("error") if isinstance(main_ref,dict) else "Invalid main ref",
+            "ledger_ref":ledger_ref.get("error") if isinstance(ledger_ref,dict) else "Invalid ledger ref"}
+    for p in pr_rows:
+        if p.get("file_api_error"):
+            errors["pr_files_"+str(p["number"])]=p["file_api_error"]
+    if any(errors.values()) or not isinstance(prs,list) or not isinstance(branches,list):
+        raise RuntimeError("Incomplete GitHub audit inventory: "+json.dumps(errors))
     data={"created_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "main_sha":cmd("git","rev-parse","HEAD")["output"].strip(),
+        "checkout_sha":cmd("git","rev-parse","HEAD")["output"].strip(),
+        "main_sha":main_ref.get("object",{}).get("sha"),
+        "ledger_sha":ledger_ref.get("object",{}).get("sha"),
         "files":files,"workflow_inventory":workflow_inventory,"python_imports":dict(imports),
         "open_prs":pr_rows,"branches":branches,
         "recent_runs":[{"id":r.get("id"),"name":r.get("name"),"event":r.get("event"),"status":r.get("status"),
           "conclusion":r.get("conclusion"),"head_sha":r.get("head_sha"),"created_at":r.get("created_at"),
           "run_started_at":r.get("run_started_at")} for r in runs] if isinstance(runs,list) else [],
-        "api_errors":{"prs":prs.get("error") if isinstance(prs,dict) else None,
-                      "branches":branches.get("error") if isinstance(branches,dict) else None}}
+        "api_errors":errors,
+        "run_scope":"latest 30 repository-wide GitHub Actions runs, not complete history",
+        "branch_scope":"all branches returned by paginated GitHub API"}
     out=ROOT/"audit-evidence";out.mkdir(exist_ok=True)
     (out/"scanner-inventory.json").write_text(json.dumps(data,indent=2,sort_keys=True)+"\n")
     lines=["# Scanner runtime and legacy inventory (read-only)","",
       f"Generated UTC: {data['created_utc']}","",
-      f"Git checkout SHA: `{data['main_sha']}`","",
+      f"Audit checkout SHA: `{data['checkout_sha']}`; remote main: `{data['main_sha']}`; remote ledger: `{data['ledger_sha']}`","",
       f"Tracked files: {len(files)}; workflows: {len(workflows)}; open PRs: {len(pr_rows)}","",
       "## Workflow inventory","",
       "| Workflow | Cron | Dispatch | Contents write | Ledger reference |","|---|---|---|---|---|"]
