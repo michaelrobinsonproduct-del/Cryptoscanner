@@ -427,5 +427,21 @@ class EpisodeTests(unittest.TestCase):
             self.assertLessEqual(d["negative_20"]["n"],d["negative_30"]["n"])
 
 
+    def test_episode_clusters_use_decision_time_not_stale_quote_time(self):
+        cases=[
+            {"pair":"AAAUSD","entry_at":iso(0),"decision_at":iso(0),
+             "watch":False,"lagged_returns":{"60m":None},
+             "peak_observed_return":0.35},
+            {"pair":"AAAUSD","entry_at":iso(40),"decision_at":iso(80),
+             "watch":False,"lagged_returns":{"60m":None},
+             "peak_observed_return":0.40},
+        ]
+        episodes=cluster_episodes(cases,1)
+        self.assertEqual(len(episodes),2)
+        self.assertEqual([e["first_decision_at"] for e in episodes],
+                         [iso(0),iso(80)])
+        self.assertEqual([e["entry_cases"] for e in episodes],[1,1])
+
+
 if __name__=="__main__":
     unittest.main()
