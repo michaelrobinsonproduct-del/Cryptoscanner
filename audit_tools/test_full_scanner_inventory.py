@@ -58,6 +58,47 @@ steps:
         self.assertTrue(workflow["writes_contents"])
         self.assertFalse(graph["cleanup_authorized"])
 
+
+    def test_legacy_script_source_is_branch_pinned_not_main(self):
+        source="""name: Old Kraken recovery
+on:
+  schedule:
+    - cron: '3,33 * * * *'
+jobs:
+  scan:
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: simplified-scanner-recovery-20261011
+      - run: python simple_scanner/scan.py
+"""
+        w=inventory_workflow_source(".github/workflows/kraken-recovery-schedule.yml",source)
+        graph=build_consumer_graph([w],{"snapshot_utc":"2026-11-02T05:00:00Z"},"a"*40,"b"*40,workflow_source="remote_main")
+        scripts=[e for e in graph["edges"] if e["kind"]=="invokes_script"]
+        self.assertEqual(len(scripts),1)
+        self.assertEqual(scripts[0]["target_checkout_ref"],"simplified-scanner-recovery-20261011")
+        self.assertEqual(scripts[0]["target"],"repo-script:simple_scanner/scan.py")
+        self.assertFalse(scripts[0]["observed_runtime"])
+
+    def test_dynamic_checkout_does_not_assign_source_ref(self):
+        source="""name: Dynamic source
+on:
+  workflow_dispatch:
+jobs:
+  scan:
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: \${{ github.sha }}
+      - run: python simple_scanner/scan.py
+"""
+        w=inventory_workflow_source(".github/workflows/dynamic.yml",source)
+        graph=build_consumer_graph([w],{"snapshot_utc":"2026-11-02T05:00:00Z"},"a"*40,"b"*40)
+        scripts=[e for e in graph["edges"] if e["kind"]=="invokes_script"]
+        self.assertEqual(len(scripts),1)
+        self.assertNotIn("target_checkout_ref",scripts[0])
+        self.assertTrue(any("Dynamic checkout" in u for u in graph["unknowns"]))
+
     def test_unrecognized_workflow_provenance_fails_closed(self):
         with self.assertRaisesRegex(ValueError,"Unrecognized"):
             build_consumer_graph([],{"snapshot_utc":"2026-11-02T02:17:00Z"},
