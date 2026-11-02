@@ -8,7 +8,7 @@ import argparse
 import bisect
 import datetime as dt
 import json
-import math
+from decimal import Decimal
 from collections import defaultdict
 
 HORIZONS = (1, 6, 24, 48)
@@ -26,7 +26,7 @@ def evaluate(state):
     runs = {r["id"]: r for r in state["runs"]}
     prices = defaultdict(list)
     for o in state["observations"]:
-        prices[o["pair"]].append((timestamp(o["at"]), float(o["price"]), o["run_id"]))
+        prices[o["pair"]].append((timestamp(o["at"]), Decimal(str(o["price"])), o["run_id"]))
     for series in prices.values():
         series.sort()
     watches = {(p["run_id"], p["pair"]) for p in state["predictions"]}
@@ -50,20 +50,27 @@ def evaluate(state):
                     row["immature"] += 1
                     continue
                 end = bisect.bisect_right(times, target + MAX_GAP, lo=i+1)
+                # A quote can precede the PAPER decision by up to three minutes.
+                # Never label a pre-decision high as a future surge.
                 future = [(t, p) for t, p, _ in series[i+1:end]
-                          if at < t]
+                          if start < t]
                 before = [(t, p) for t, p in future if t <= target]
                 anchors = [(t, p) for t, p in future if target <= t <= target + MAX_GAP]
-                timeline = [at] + [t for t, _ in before]
+                # Continuity is measured from the immutable decision time,
+                # matching the production PAPER outcome contract.
+                timeline = [start] + [t for t, _ in before]
                 if (not before or not anchors or start - at > MAX_GAP
                     or any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
                     or anchors[0][0]-timeline[-1] > MAX_GAP):
                     row["abstain_gap"] += 1
                     continue
                 row["matured"] += 1
-                peak = max(p for _, p in before) / entry - 1
-                for threshold, suffix in ((0.20,"20"),(0.30,"30")):
-                    hit = peak >= threshold
+                # Decimal avoids binary float cancellation at exact +20/+30
+                # thresholds and overflow when entry prices are very small.
+                peak_price = max(p for _, p in before)
+                for multiplier, suffix in ((Decimal("1.20"),"20"),
+                                           (Decimal("1.30"),"30")):
+                    hit = peak_price >= entry * multiplier
                     if hit:
                         row["movers_"+suffix] += 1
                         if selected: row["watch_"+suffix] += 1
@@ -78,6 +85,8 @@ def evaluate(state):
             denom = row["watch_"+suffix] + row["watch_false_positive_"+suffix]
             row["watch_precision_"+suffix] = row["watch_"+suffix] / denom if denom else None
     return {"status":"DESCRIPTIVE_ONLY_NOT_HELD_OUT_LIFT",
+            "metric_unit":"overlapping pair/run entry windows; NOT distinct surge episodes",
+            "source_provenance":"SHA-sealed PAPER observations, not independently authenticated complete Kraken historical candles",
             "coverage_warning":"Only observed run/pair timestamps; not complete historical market or intrabar highs. Incomplete periods abstain.",
             "horizons":results}
 
