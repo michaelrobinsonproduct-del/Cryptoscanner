@@ -90,10 +90,6 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
     outcomes = load_strict_json((base / FILES[0]))
     episodes = load_strict_json((base / FILES[1]))
     provenance = load_strict_json((base / FILES[2]))
-    if (episodes.get("source", {}).get("prediction_bindings") != expected_bindings
-        or not expected_bindings["binding_complete"]
-        or len(observations) != outcomes.get("observed_entry_count")):
-        raise ValueError("invalid source-sealed prediction/observation bindings")
     if provenance.get("research_source_commit") != expected_head:
         raise ValueError("source head mismatch")
     if provenance.get("paper_ledger_branch_commit") != expected_ledger_commit:
@@ -110,6 +106,10 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
         or provenance.get("observed_run_count") != outcomes.get("observed_run_count")
         or provenance.get("observed_entry_count") != outcomes.get("observed_entry_count")):
         raise ValueError("cross-report ledger identity mismatch")
+    if (episodes.get("source", {}).get("prediction_bindings") != expected_bindings
+        or not expected_bindings["binding_complete"]
+        or len(observations) != outcomes.get("observed_entry_count")):
+        raise ValueError("invalid source-sealed prediction/observation bindings")
     # Check the two independent evaluator reports, not only their checksums.
     # An internally resealed artifact with inconsistent outcomes is invalid.
     horizons = ("1", "6", "24", "48")
