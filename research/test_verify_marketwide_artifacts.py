@@ -59,6 +59,30 @@ def fixture(directory):
                   "without_asof_feature": 0, "distinct_covered_pairs": 0,
                   "missing_reasons": {}, "covered_fraction": None} for lag in ("30m","60m","180m")}
            for suffix in ("20","30")}}
+    # A fully consistent empty chronological cohort is valid descriptive PAPER
+    # evidence, but can never authorize a fitted/held-out model evaluation.
+    def empty_partition():
+        return {"positive_episodes":0,"positive_lag_60m_episodes":0,
+                "negative_lag_60m_pairs":0,
+                "positive_first_entry_feature_coverage":{
+                    lag:{"episodes":0,"with_asof_feature":0,
+                         "without_asof_feature":0,"missing_reasons":{}}
+                    for lag in ("30m","60m","180m")}}
+    blockers=[{"partition":part,"requirement":requirement,"required":10,"observed":0}
+              for part in ("train","test")
+              for requirement in ("episode_first_positive_lag_60m",
+                                  "distinct_negative_lag_60m_pairs")]
+    readiness={"status":"DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER",
+               "cutoff":"2026-01-01T00:00:00+00:00",
+               "train":empty_partition(),"test":empty_partition(),
+               "minimum_sample_requirements":blockers,
+               "sample_thresholds_met":False,
+               "model_evaluation_ready":False,
+               "unmet_evidence_gates":["exchange_authenticated_market_history",
+                                       "point_in_time_execution_features",
+                                       "independent_held_out_challenger"]}
+    episode_window["chronological_readiness"]=json.loads(json.dumps(readiness))
+    episode_window["chronological_readiness_20"]=json.loads(json.dumps(readiness))
     outcomes = {"horizons": {h: dict(window) for h in ("1","6","24","48")},
                 "observed_run_count": 51, "observed_entry_count": 30872,
                 "source_authenticated": False, "complete_market_history": False,
@@ -261,6 +285,31 @@ class ArtifactContractTests(unittest.TestCase):
     def test_resealed_missing_episode_rows_are_rejected(self):
         self.reseal_episode_change(lambda h: h.pop("episodes"))
         with self.assertRaisesRegex(ValueError, "episode-row inventory"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_paper_model_ready_cannot_be_fabricated(self):
+        self.reseal_episode_change(lambda h:
+            h["chronological_readiness"].update(model_evaluation_ready=True))
+        with self.assertRaisesRegex(ValueError,"PAPER-only model-readiness gate"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_chronological_first_entry_coverage_cannot_backfill(self):
+        self.reseal_episode_change(lambda h:
+            h["chronological_readiness_20"]["train"]
+             ["positive_first_entry_feature_coverage"]["60m"].update(with_asof_feature=1))
+        with self.assertRaisesRegex(ValueError,"chronological first-entry coverage"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_chronological_sample_thresholds_must_match_cohorts(self):
+        self.reseal_episode_change(lambda h:
+            h["chronological_readiness"].update(sample_thresholds_met=True))
+        with self.assertRaisesRegex(ValueError,"chronological sample requirements"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_chronological_evidence_gates_cannot_disappear(self):
+        self.reseal_episode_change(lambda h:
+            h["chronological_readiness_20"].update(unmet_evidence_gates=[]))
+        with self.assertRaisesRegex(ValueError,"PAPER-only model-readiness gate"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
     def test_workflow_only_uploads_after_successful_verification(self):
