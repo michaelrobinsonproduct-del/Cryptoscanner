@@ -346,6 +346,19 @@ class CadenceCollectorTests(unittest.TestCase):
         self.assertEqual(proof["current_remote_ref_evidence"]["status"],
                          "MATCHED_CURRENT_REF_SHA_NOT_LEDGER_BYTES")
 
+    def test_delivery_claim_rejects_reordered_lines_despite_plausible_timestamps(self):
+        from datetime import datetime, timezone
+        start = datetime(2026, 11, 2, 3, 10, 4, tzinfo=timezone.utc)
+        end = datetime(2026, 11, 2, 3, 11, 0, tzinfo=timezone.utc)
+        readback = "2026-11-02T03:10:30Z PAPER_LEDGER_REMOTE_READBACK_VERIFIED " + SHA
+        result = "2026-11-02T03:10:40Z PAPER_RESULTS_VERIFIED 1 51 11"
+        self.assertEqual(
+            delivery_log_claim(result + "\n" + readback + "\n", 1, start, end)
+            ["delivery_log_claim_status"], "UNVERIFIED")
+        self.assertEqual(
+            delivery_log_claim(readback + "\n" + result + "\n", 1, start, end)
+            ["delivery_log_claim_status"], "MATCHED_LOG_MARKERS_NOT_REMOTE_BYTES")
+
     def test_delivery_log_claim_rejects_wrong_run_duplicate_and_reversed_order(self):
         start = __import__("datetime").datetime.fromisoformat("2026-11-02T03:10:04+00:00")
         end = __import__("datetime").datetime.fromisoformat("2026-11-02T03:11:00+00:00")

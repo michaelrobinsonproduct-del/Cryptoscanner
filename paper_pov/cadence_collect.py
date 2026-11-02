@@ -35,18 +35,23 @@ def delivery_log_claim(log, run_id, started, finished):
     No result here verifies remote bytes, artifacts, or user delivery.
     """
     readbacks, results = [], []
-    for line in log.splitlines():
+    for line_index, line in enumerate(log.splitlines()):
         match = READBACK_MARKER.fullmatch(line)
         if match:
-            readbacks.append(match.groups())
+            readbacks.append((line_index, *match.groups()))
         match = RESULTS_MARKER.fullmatch(line)
         if match and match.group(2) == str(run_id):
-            results.append(match.groups())
+            results.append((line_index, *match.groups()))
     if len(readbacks) != 1 or len(results) != 1:
         return {"delivery_log_claim_status": "UNVERIFIED"}
+    # A log whose results marker physically precedes the readback marker
+    # cannot prove results were published after remote persistence, even if
+    # the embedded timestamps claim otherwise.
+    if readbacks[0][0] >= results[0][0]:
+        return {"delivery_log_claim_status": "UNVERIFIED"}
     try:
-        rt, commit = readbacks[0]
-        st, _, generation, watch = results[0]
+        _, rt, commit = readbacks[0]
+        _, st, _, generation, watch = results[0]
         rt, st = timestamp(rt), timestamp(st)
         if not started <= rt <= st <= finished or int(generation) < 1 or int(watch) < 0:
             raise ValueError("incoherent delivery log claim")
