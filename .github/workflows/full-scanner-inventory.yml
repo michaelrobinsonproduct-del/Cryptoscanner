@@ -1,0 +1,40 @@
+name: Full scanner repository inventory (read only)
+on:
+  pull_request:
+    paths:
+      - 'audit_tools/full_scanner_inventory.py'
+      - '.github/workflows/full-scanner-inventory.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+jobs:
+  inventory:
+    if: github.repository == 'michaelrobinsonproduct-del/Cryptoscanner'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Record exact audit source
+        run: git rev-parse HEAD
+      - name: Compile check
+        run: python -m py_compile audit_tools/full_scanner_inventory.py
+      - name: Inventory all workflows, PRs, branches and recent runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python audit_tools/full_scanner_inventory.py
+      - name: SHA256 evidence
+        run: (cd audit-evidence && sha256sum scanner-inventory.json scanner-inventory.md > SHA256SUMS && sha256sum -c SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scanner-full-inventory-${{ github.run_id }}
+          path: audit-evidence/
+          retention-days: 90
+          if-no-files-found: error
