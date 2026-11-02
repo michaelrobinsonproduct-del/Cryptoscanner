@@ -1,0 +1,78 @@
+name: Historical as-of PAPER liquidity audit (read only)
+on:
+  pull_request:
+    paths:
+      - 'historical/paper_asof_liquidity_audit.py'
+      - 'historical/test_paper_asof_liquidity_audit.py'
+      - 'historical/evidence/paper_asof_liquidity_audit_20261102.md'
+      - '.github/workflows/historical-paper-asof-liquidity-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Adversarial unit tests
+        run: python -m unittest discover -s historical -p 'test_paper_asof_liquidity_audit.py' -v
+      - name: Fetch immutable source ZIPs from original successful GitHub runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p research/input research/output
+          while read -r run_id artifact_id; do
+            target="research/input/paper-ledger-$run_id.zip"
+            if [ "$run_id" = latest ]; then target="research/input/paper-ledger-latest.zip"; fi
+            curl --fail --silent --show-error --location --retry 3 \
+              --max-time 120 -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/$artifact_id/zip" \
+              -o "$target"
+            python -c 'import sys,zipfile; assert zipfile.is_zipfile(sys.argv[1])' "$target"
+          done <<'ARTIFACTS'
+          latest 13106709969
+          41307201989 13083313885
+          41309654993 13084902045
+          41311926367 13086225844
+          41314165370 13086558444
+          41316423836 13087930327
+          41319133932 13088049650
+          41322013186 13089194993
+          41324272237 13090613137
+          41326715230 13091825807
+          41329629549 13092284763
+          ARTIFACTS
+      - name: Replay actual as-of liquidity and confirm frozen exploratory evidence
+        run: |
+          set -euo pipefail
+          python historical/paper_asof_liquidity_audit.py research/input > research/output/paper_asof_liquidity_replay.json
+          python - <<'PY'
+          import json
+          r=json.load(open('research/output/paper_asof_liquidity_replay.json'))
+          assert r['source_generation']==45
+          assert r['evaluated_times']==8
+          s=r['strategies']
+          for name in ('momentum_1h','volatility_3h','volatility_direction','liquidity_adjusted_volatility'):
+              assert s[name]['picks']==96
+              assert s[name]['positive_windows']['30']==2
+              assert s[name]['distinct_positive_markets_30']==['ESPORTSUSD']
+          assert s['actual_paper_watch']['picks']==95
+          assert s['actual_paper_watch']['positive_windows']['30']==0
+          assert len(r['source_runs'])==10
+          print('AUTHENTICATED_ASOF_LIQUIDITY_REPLAY_PASS',r['evaluated_times'],s['volatility_direction']['positive_windows']['30'])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: asof-paper-liquidity-research-only
+          path: research/output/paper_asof_liquidity_replay.json
+          retention-days: 14
