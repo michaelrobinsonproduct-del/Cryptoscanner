@@ -322,5 +322,50 @@ class EpisodeTests(unittest.TestCase):
             self.assertLessEqual(cov["distinct_matured_pairs"],cov["matured"])
 
 
+    def test_duplicate_exact_lag_anchor_conflict_abstains(self):
+        # bisect_right selects the last of the two zero-minute quotes.
+        # The earlier contradictory quote must still invalidate the feature.
+        series=[(BASE,100,"first"),(BASE,200,"second"),
+                (BASE+dt.timedelta(minutes=60),150,"entry")]
+        times=[x[0] for x in series]
+        self.assertIsNone(lagged_return(series,times,2,60))
+        # Identical repeated quotes do not create artificial abstentions.
+        series[1]=(BASE,100,"second")
+        self.assertAlmostEqual(lagged_return(series,times,2,60),0.5)
+
+    def test_watch_false_positives_require_matured_labels(self):
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(fixture())["horizons"]["1"]
+        cov=one["coverage"]
+        self.assertGreater(cov["watch_matured"],0)
+        self.assertEqual(cov["watch_false_positive_30"],
+                         cov["watch_matured"]-cov["watch_positive"])
+        self.assertEqual(cov["watch_false_positive_20"],
+                         cov["watch_matured"]-cov["watch_positive_20"])
+        self.assertGreaterEqual(cov["watch_false_positive_30"],0)
+        self.assertLessEqual(cov["watch_false_positive_30"],cov["watch_matured"])
+        self.assertEqual(cov["eligible"],
+                         cov["matured"]+cov["immature"]+cov["abstain_gap"])
+
+    def test_episode_first_20pct_features_are_not_30pct_evidence(self):
+        state=fixture()
+        for o in state["observations"]:
+            if o["pair"]=="AAAUSD" and o["price"]==135:
+                o["price"]=125
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        self.assertEqual(one["unique_mover_episodes"],0)
+        self.assertGreater(one["unique_mover_episodes_20"],0)
+        self.assertIsNone(one["watch_episode_recall_wilson_95_naive"])
+        self.assertIsNotNone(one["watch_episode_recall_wilson_95_naive_20"])
+        for lag in ("30m","60m","180m"):
+            stats=one["episode_first_entry_feature_distributions_20"][lag]
+            self.assertLessEqual(stats["distinct_pairs"],stats["n"])
+            self.assertLessEqual(stats["n"],one["unique_mover_episodes_20"])
+            self.assertEqual(set(stats),
+                             {"n","distinct_pairs","mean","positive_fraction",
+                              "median","min","max"})
+
+
 if __name__=="__main__":
     unittest.main()
