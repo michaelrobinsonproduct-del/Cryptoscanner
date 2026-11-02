@@ -140,6 +140,27 @@ class EpisodeTests(unittest.TestCase):
         # This is sample-readiness only; no challenger was trained.
         self.assertEqual(split["status"],"DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER")
 
+    def test_later_surge_feature_cannot_backfill_missing_first_entry_feature(self):
+        runs={str(m):BASE+dt.timedelta(hours=m) for m in range(100)}
+        rows=[]
+        for start in (0,70):
+            for k in range(12):
+                # One positive episode per pair; first positive has no
+                # historical lag. The later overlapping label has a feature.
+                for offset,lag in ((0,None),(1,0.30)):
+                    rows.append({"run_id":str(start+offset),
+                                 "pair":f"POS{k}USD","hit_30":True,
+                                 "lagged_returns":{"60m":lag}})
+                rows.append({"run_id":str(start),"pair":f"NEG{k}USD",
+                             "hit_30":False,"lagged_returns":{"60m":0.0}})
+        split=chronological_readiness(rows,runs,6)
+        for part in ("train","test"):
+            self.assertEqual(split[part]["positive_episodes"],12)
+            self.assertEqual(split[part]["positive_lag_60m_covered"],12)
+            self.assertEqual(split[part]["positive_lag_60m_episodes"],0)
+            self.assertEqual(split[part]["negative_lag_60m_pairs"],12)
+        self.assertFalse(split["model_evaluation_ready"])
+
     def test_no_chronological_split_from_single_scan(self):
         r=chronological_readiness([],{"0":BASE},6)
         self.assertEqual(r["status"],"INSUFFICIENT_SCAN_TIMES")
