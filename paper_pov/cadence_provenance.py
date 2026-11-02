@@ -174,6 +174,14 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
     # Source equality is a necessary but NOT sufficient manual/schedule parity gate.
     source_match = (latest_native["verified_source_sha"] == latest_dispatch["verified_source_sha"]
                     if latest_native and latest_dispatch else None)
+    # Same source code hours apart is not a meaningful paired-run comparison.
+    # This is a time-comparability check only; it does not establish manual
+    # origin, identical inputs, outcomes, or a successful persisted ledger.
+    cross_event_gap = (abs(int((timestamp(latest_native["created_at"]) -
+                                timestamp(latest_dispatch["created_at"])).total_seconds()))
+                       if latest_native and latest_dispatch else None)
+    cross_event_comparable = (cross_event_gap <= 1800
+                              if cross_event_gap is not None else None)
     max_creation_gap = max((int((b - a).total_seconds()) for a, b in
                             zip(creation_times, creation_times[1:])), default=None)
     latest_age = int((now - creation_times[-1]).total_seconds()) if creation_times else None
@@ -185,6 +193,8 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
             "latest_native_source_sha": latest_native["verified_source_sha"] if latest_native else None,
             "latest_dispatch_source_sha": latest_dispatch["verified_source_sha"] if latest_dispatch else None,
             "latest_cross_event_source_sha_equal": source_match,
+            "latest_cross_event_creation_gap_seconds": cross_event_gap,
+            "latest_cross_event_within_30m": cross_event_comparable,
             "verified_successful_writer_run_creation_count": len(successful),
             "last_verified_successful_run_created_at": successful[-1]["created_at"] if successful else None,
             "seconds_since_last_verified_successful_run_creation": latest_age,
@@ -206,7 +216,8 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
                             "Job queue delay is separate from the native cron creation lateness lower bound",
                             "A successful workflow is not durable ledger or remote SHA256 readback proof",
                             "workflow_dispatch alone does not distinguish owner manual from external recovery",
-                            "Cross-event source SHA equality is necessary but never proves manual/unattended result parity"]}
+                            "Cross-event source SHA equality is necessary but never proves manual/unattended result parity",
+                            "A cross-event pair more than 30 minutes apart is not time-comparable even if source SHAs match"]}
 
 
 def main():
