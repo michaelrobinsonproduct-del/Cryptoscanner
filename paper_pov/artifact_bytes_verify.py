@@ -109,6 +109,29 @@ def verify_pair(ledger_zip, ledger_digest, results_zip, results_digest,
             (generation > 0 and (not state["runs"] or
                                  state["runs"][-1]["source_sha"] != source_sha))):
         raise ValueError("PAPER artifact identity or safety mismatch")
+    # Independently bind each human-readable WATCH candidate to the actual
+    # latest immutable ledger prediction. A self-resealed results.json cannot
+    # invent a rank, price or score without detection.
+    latest_run = state["runs"][-1]
+    predictions = {p["rank"]: p for p in state["predictions"]
+                   if p["run_id"] == latest_run["id"]}
+    candidates = result.get("candidates")
+    if (not isinstance(candidates, list) or
+            len(candidates) != latest_run["watch_count"] or
+            len(predictions) != latest_run["watch_count"]):
+        raise ValueError("PAPER results candidate/ledger mismatch")
+    for rank, candidate in enumerate(candidates, 1):
+        expected = predictions.get(rank)
+        if not isinstance(candidate, dict) or expected is None or (
+                type(candidate.get("rank")) is not int or candidate["rank"] != rank or
+                candidate.get("prediction_id") != expected["prediction_id"] or
+                type(candidate.get("price_usd")) not in (int, float) or
+                candidate["price_usd"] != expected["price"] or
+                type(candidate.get("baseline_score")) not in (int, float) or
+                candidate["baseline_score"] != expected["baseline_score"] or
+                type(candidate.get("challenger_score")) not in (int, float) or
+                candidate["challenger_score"] != expected["challenger_score"]):
+            raise ValueError("PAPER results candidate/ledger mismatch")
     age = result.get("max_client_quote_age_seconds")
     if type(age) not in (int, float) or not 0 <= age <= 600:
         raise ValueError("client quote age missing, stale or invalid")

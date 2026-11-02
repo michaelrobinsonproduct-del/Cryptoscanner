@@ -95,6 +95,9 @@ class CadenceCollectorTests(unittest.TestCase):
                   "status": "SUCCESS_PAPER_ONLY", "remote_readback_verified": True,
                   "buy_approved": False, "exchange_event_freshness_verified": False,
                   "as_of": as_of, "observed_markets": 1,
+                  "candidates": [{"rank": 1, "prediction_id": prediction_id,
+                                  "price_usd": 1.0, "baseline_score": 1,
+                                  "challenger_score": 2}],
                   "max_client_quote_age_seconds": 7.61}
 
         def archive(members):
@@ -175,6 +178,22 @@ class CadenceCollectorTests(unittest.TestCase):
         rwrong, rdwrong = archive({"results.md": b"PAPER", "results.json":
                                    {**result, "observed_markets": 2}})
         with self.assertRaisesRegex(ValueError, "identity"):
+            check(c=rwrong, d=rdwrong)
+
+        # Every reported WATCH must be the latest immutable ledger decision.
+        for field, replacement in (("prediction_id", "e" * 64),
+                                   ("rank", 2), ("price_usd", 9.0),
+                                   ("baseline_score", 99.0),
+                                   ("challenger_score", 99.0)):
+            with self.subTest(field=field):
+                altered = [{**result["candidates"][0], field: replacement}]
+                rwrong, rdwrong = archive({"results.md": b"PAPER", "results.json":
+                                           {**result, "candidates": altered}})
+                with self.assertRaisesRegex(ValueError, "candidate/ledger"):
+                    check(c=rwrong, d=rdwrong)
+        rwrong, rdwrong = archive({"results.md": b"PAPER", "results.json":
+                                   {**result, "candidates": []}})
+        with self.assertRaisesRegex(ValueError, "candidate/ledger"):
             check(c=rwrong, d=rdwrong)
 
     def test_readonly_collects_native_dispatch_and_sha_bound_log_index(self):
