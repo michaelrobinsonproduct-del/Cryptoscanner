@@ -11,6 +11,11 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# Only the newest immutable head needs the expensive read-only replay.
+# Superseded PR pushes should not consume runners or produce stale evidence.
+concurrency:
+  group: research-marketwide-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   marketwide:
     runs-on: ubuntu-latest
