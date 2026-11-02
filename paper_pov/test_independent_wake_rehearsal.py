@@ -1,5 +1,6 @@
 """Offline adversarial acceptance for independently clocked existing-writer path."""
 import datetime as dt
+import hashlib
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -45,6 +46,9 @@ CANDIDATE = {"action": "DISPATCH_EXISTING_WORKFLOW",
              "source_sha": SHA, "target_slot": "2026-11-02T19:00:00+00:00",
              "attempt_marker": "PAPER_CADENCE_ATTEMPT:" + "a" * 40,
              "ledger_generation": 55, "anchor_run_id": 41473947157}
+CANDIDATE["decision_sha256"] = hashlib.sha256(
+    ("a" * 40 + "|41473947157|2026-11-02T19:00:00+00:00|" + SHA).encode()
+).hexdigest()
 
 
 class IndependentWakeTests(unittest.TestCase):
@@ -52,6 +56,8 @@ class IndependentWakeTests(unittest.TestCase):
         c = checkout_contracts(Path(__file__).resolve().parent.parent)
         self.assertEqual(c["single_writer"], "paper-pipeline.yml")
         self.assertFalse(c["durable_slot_cas_proven"])
+        self.assertEqual(c["pending_queue_mode"], "single")
+        self.assertTrue(c["pending_replacement_risk"])
 
     def test_eligible_candidate_never_dispatches_or_claims_live_recovery(self):
         with patch("paper_pov.independent_wake_rehearsal.decide", return_value=CANDIDATE):
@@ -152,6 +158,83 @@ class IndependentWakeTests(unittest.TestCase):
         a = args()
         a["now"] = NOW.replace(tzinfo=None)
         self.assertEqual(rehearse(**a)["reason"], "INVALID_CLOCK")
+
+    def test_missing_target_slot_abstains(self):
+        bad = dict(CANDIDATE)
+        bad.pop("target_slot")
+        with patch("paper_pov.independent_wake_rehearsal.decide", return_value=bad):
+            self.assertEqual(rehearse(**args())["reason"], "UNBOUND_CANDIDATE_SLOT_OR_DECISION")
+
+    def test_wrong_target_slot_abstains(self):
+        bad = dict(CANDIDATE, target_slot="2026-11-02T18:30:00+00:00")
+        with patch("paper_pov.independent_wake_rehearsal.decide", return_value=bad):
+            self.assertEqual(rehearse(**args())["reason"], "UNBOUND_CANDIDATE_SLOT_OR_DECISION")
+
+    def test_wrong_decision_digest_abstains(self):
+        bad = dict(CANDIDATE, decision_sha256="0" * 64)
+        with patch("paper_pov.independent_wake_rehearsal.decide", return_value=bad):
+            self.assertEqual(rehearse(**args())["reason"], "UNBOUND_CANDIDATE_SLOT_OR_DECISION")
+
+    def test_wrong_anchor_abstains(self):
+        bad = dict(CANDIDATE, anchor_run_id=41473947158)
+        with patch("paper_pov.independent_wake_rehearsal.decide", return_value=bad):
+            self.assertEqual(rehearse(**args())["reason"], "UNBOUND_CANDIDATE_SLOT_OR_DECISION")
+
+    def test_missing_generation_abstains(self):
+        bad = dict(CANDIDATE, ledger_generation=None)
+        with patch("paper_pov.independent_wake_rehearsal.decide", return_value=bad):
+            self.assertEqual(rehearse(**args())["reason"], "UNBOUND_CANDIDATE_SLOT_OR_DECISION")
+
+    def test_wrong_attempt_marker_suffix_abstains(self):
+        bad = dict(CANDIDATE, attempt_marker="PAPER_CADENCE_ATTEMPT:" + "b" * 40)
+        with patch("paper_pov.independent_wake_rehearsal.decide", return_value=bad):
+            self.assertEqual(rehearse(**args())["reason"], "UNBOUND_CANDIDATE_SLOT_OR_DECISION")
+
+    def test_mismatched_ledger_commit_abstains(self):
+        a = args()
+        a["ledger_commit"] = "b" * 40
+        with patch("paper_pov.independent_wake_rehearsal.decide", return_value=CANDIDATE):
+            self.assertEqual(rehearse(**a)["reason"], "UNBOUND_CANDIDATE_SLOT_OR_DECISION")
+
+    def test_candidate_outside_slot_grace_abstains(self):
+        a = args()
+        a["now"] = NOW.replace(minute=29, second=1)
+        a["event"]["comment"]["created_at"] = a["now"].isoformat()
+        with patch("paper_pov.independent_wake_rehearsal.decide", return_value=CANDIDATE):
+            self.assertEqual(rehearse(**a)["reason"], "UNBOUND_CANDIDATE_SLOT_OR_DECISION")
+
+    def test_writer_mutex_false_elsewhere_cannot_bypass_drift(self):
+        a = args()
+        w = a["sources"]["paper-pipeline.yml"]
+        a["sources"]["paper-pipeline.yml"] = w.replace(
+            "cancel-in-progress: false", "cancel-in-progress: true", 1) + (
+            "\n# cancel-in-progress: false\n")
+        self.assertEqual(rehearse(**a)["reason"], "WRITER_MUTEX_DRIFT")
+
+    def test_controller_mutex_false_elsewhere_cannot_bypass_drift(self):
+        a = args()
+        w = a["sources"]["paper-cadence-wake.yml"]
+        a["sources"]["paper-cadence-wake.yml"] = w.replace(
+            "cancel-in-progress: false", "cancel-in-progress: true", 1) + (
+            "\n# cancel-in-progress: false\n")
+        self.assertEqual(rehearse(**a)["reason"], "CADENCE_CONTROLLER_DRIFT")
+
+    def test_unsupported_queue_mode_abstains(self):
+        a = args()
+        w = a["sources"]["paper-pipeline.yml"]
+        a["sources"]["paper-pipeline.yml"] = w.replace(
+            "cancel-in-progress: false", "cancel-in-progress: false\n  queue: invalid", 1)
+        self.assertEqual(rehearse(**a)["reason"], "WRITER_QUEUE_DRIFT")
+
+    def test_queue_max_proposal_still_does_not_prove_slot_cas(self):
+        a = args()
+        w = a["sources"]["paper-pipeline.yml"]
+        a["sources"]["paper-pipeline.yml"] = w.replace(
+            "cancel-in-progress: false", "cancel-in-progress: false\n  queue: max", 1)
+        c = validate_workflows(a["sources"])
+        self.assertEqual(c["pending_queue_mode"], "max")
+        self.assertFalse(c["pending_replacement_risk"])
+        self.assertFalse(c["durable_slot_cas_proven"])
 
 
 if __name__ == "__main__":
