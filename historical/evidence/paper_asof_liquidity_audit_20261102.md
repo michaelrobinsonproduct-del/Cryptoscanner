@@ -1,0 +1,36 @@
+# Actual as-of liquidity replay: 2026-11-02 (research only)
+
+## Source and integrity
+
+Read original sealed **generation 45** PAPER ledger (GitHub writer [#41366093862](https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41366093862), ledger SHA256 `70f60d2be8faa7b967536b5a474b371674facb77418f6f5c2c544f40ceabeeab`), **27,248** actual market observations across **45** scans, 522 predictions. Downloaded and independently verified SHA256SUMS for **10 earlier immutable ledger ZIPs** from real writer runs #41307201989, #41309654993, #41311926367, #41314165370, #41316423836, #41319133932, #41322013186, #41324272237, #41326715230, #41329629549. For every original snapshot, matched as-of UTC, all pairs/prices and report SHA256 against gen45 ledger. These per-run `latest.json` snapshots preserve **actual as-of bid/ask spread and 24-hour notional for all ~603 markets**, including rejected markets. This materially improves on the price-only historical UTC-open proxy from PR #117.
+
+## Six-hour retrospective experiment
+
+Only 8 of the 10 source entry times (2026-11-01 13:36–17:07 UTC) have sufficient prior-price features and fully mature six-hour quote paths with **no >45-minute scan gap** and post-target anchor within 45 minutes. Same as-of liquidity screen for all experimental strategies: spread <=45bps, 24-hour notional >=$100,000. No price-since-UTC-open prefilter (its actual value is unavailable for rejected markets). Eligible pool sizes by time: **102, 103, 101, 103, 104, 98, 101, 94**.
+
+| As-of top-12 selection | +5% windows | +10% | +20% | +30% | Distinct +30% markets |
+|---|---:|---:|---:|---:|---:|
+| 1h momentum | 6 | 3 | 2 | **2** | 1 (ESPORTS) |
+| Trailing 3h volatility | 12 | 7 | 2 | **2** | 1 (ESPORTS) |
+| Volatility + direction | 7 | 4 | 2 | **2** | 1 (ESPORTS) |
+| Liquidity-adjusted volatility + direction | 3 | 3 | 2 | **2** | 1 (ESPORTS) |
+| Actual PAPER WATCH intersected with comparable feature pool | 0 | 0 | 0 | **0** | 0 |
+
+All experimental strategies generated **96 selections** (8 x 12); actual PAPER delivered **95** WATCH selections in those times (one scan had 11). Each experimental strategy's 2 positive windows represent **the same market**, not two independent opportunities. At a +30% threshold, the experimental strategies had **94 nonpositive windows of 96**; actual PAPER had 95 nonpositive of 95. This is *not* statistically persuasive or demonstrated prospective lift.
+
+**Actual liquidity/false-opportunity distinctions from source:**
+
+- ESPORTS/USD at **13:36 UTC**, 24h notional **$1,098,734**, spread **33.62bps**, subsequent observed six-hour peak **+39.41%**. At **15:37 UTC**, notional **$1,415,770**, spread **44.39bps**, subsequent peak **+33.61%**. Both meet the liquidity screen; experimental top-12 strategies selected both, PAPER WATCH did not.
+- DEBIT/USD +33.74% repeated sampled windows but notional only **$1,582**, spreads **300–5,743bps**: correctly excluded by liquidity screen.
+- UMXM/USD +39.10% window, but notional **$2,175**, spread **476bps**: correctly excluded.
+- **Critical early-entry limitation:** ESPORTS at 13:36 had already climbed from **$0.00872 at 01:09 UTC** to **$0.01492** (approximately **+71.1%**) before the experimental signal. At 15:37 it was $0.01586 (+81.9%). Catching a further +30% move after this extension is not the requested *pre-surge* discovery. Earlier ESPORTS at 01:09 and 02:10 had approximately $323k/$338k notional and 11.47/22.75bps spreads but were **not WATCH**; earlier signals require separate investigation.
+
+## Interpretation and next experiment
+
+The new as-of liquidity evidence shows **one genuinely liquid missed market** in the evaluated six-hour cohort; DEBIT and UMXM are misleading apparent winners due to very poor liquidity/spreads. The existing PAPER ranker caught zero of these sampled positive windows. Retrospective volatility/momentum alternatives found ESPORTS, but only **after** a major prior rise. Therefore do **not** promote any alternative.
+
+Next research should compare pre-surge (price extension <5–10% from an authenticated as-of reference) liquidity + changes in volume/trade count + spread compression against actual rejected markets at **01:09/02:10 UTC** and across future disjoint market episodes. Capture full as-of UTC-open and rejection reasons without touching the live writer, or use independent timestamped read-only snapshots. Optimize **distinct liquid movers identified before the first +20%**, not overlapping +30% windows.
+
+## Limitations
+
+Research is retrospective and exploratory, not untouched holdout or live scoring proof. Eight entry times have overlapping six-hour labels. The actual PAPER strategy has a different initial UTC-open/ohlc gate; comparison is not identical opportunity eligibility. Source prices are client-observed quotes, not exchange highs or executable fills; no independent historical order book. Feature availability excludes one possible actual WATCH outside the comparison only if its required lag history is missing; in this sample the count 95 matches delivered total. No trading, scoring promotion, second writer or ledger modification.
