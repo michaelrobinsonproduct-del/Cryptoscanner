@@ -171,6 +171,30 @@ class EpisodeTests(unittest.TestCase):
             self.assertEqual(split[part]["negative_lag_60m_pairs"],12)
         self.assertFalse(split["model_evaluation_ready"])
 
+    def test_cross_cutoff_positive_episode_cannot_be_relabelled_as_test_first(self):
+        # A surge starts before the chronological cutoff; later entries are
+        # in test but are NOT independent post-cutoff opportunities.
+        runs={str(m):BASE+dt.timedelta(hours=m) for m in range(100)}
+        rows=[{"run_id":str(m),"pair":"CROSSUSD","hit_30":True,
+               "lagged_returns":{"60m":None if m==69 else 0.25}}
+              for m in (69,70,71,72)]
+        split=chronological_readiness(rows,runs,6)
+        self.assertEqual(split["test"]["positive_cases"],3)
+        self.assertEqual(split["test"]["positive_lag_60m_covered"],3)
+        self.assertEqual(split["test"]["positive_episodes"],0)
+        self.assertEqual(split["test"]["positive_lag_60m_episodes"],0)
+        self.assertFalse(split["model_evaluation_ready"])
+
+    def test_new_post_cutoff_episode_counts_only_after_prior_horizon_expires(self):
+        runs={str(m):BASE+dt.timedelta(hours=m) for m in range(100)}
+        rows=[{"run_id":str(m),"pair":"CROSSUSD","hit_30":True,
+               "lagged_returns":{"60m":0.10}}
+              for m in (69,70,71,80,81)]
+        split=chronological_readiness(rows,runs,6)
+        self.assertEqual(split["test"]["positive_cases"],4)
+        self.assertEqual(split["test"]["positive_episodes"],1)
+        self.assertEqual(split["test"]["positive_lag_60m_episodes"],1)
+
     def test_no_chronological_split_from_single_scan(self):
         r=chronological_readiness([],{"0":BASE},6)
         self.assertEqual(r["status"],"INSUFFICIENT_SCAN_TIMES")
