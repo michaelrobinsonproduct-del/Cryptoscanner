@@ -340,6 +340,26 @@ class CadenceProvenanceTests(unittest.TestCase):
         self.assertEqual(report["verified_native_count"], 1)
         self.assertTrue(report["runs"][0]["provenance_bound_to_writer_job_start"])
 
+    def test_provenance_marker_after_completed_writer_job_abstains(self):
+        jobs = {"1": [{"run_id": 1, "name": "public-paper",
+                       "started_at": "2026-11-01T19:10:04Z",
+                       "completed_at": "2026-11-01T19:10:05Z"}]}
+        report = self.check(jobs=jobs)
+        self.assertEqual(report["verified_native_count"], 0)
+        self.assertEqual(report["runs"][0]["classification"], "UNVERIFIED_PROVENANCE")
+
+    def test_incoherent_writer_completion_never_falls_back_to_now(self):
+        for completed in ("2026-11-01T19:10:03Z",
+                          "2026-11-02T05:00:00Z", None):
+            with self.subTest(completed=completed):
+                jobs = {"1": [{"run_id": 1, "name": "public-paper",
+                               "started_at": "2026-11-01T19:10:04Z",
+                               "completed_at": completed}]}
+                report = self.check(jobs=jobs)
+                self.assertEqual(report["verified_native_count"], 0)
+                self.assertEqual(report["runs"][0]["classification"],
+                                 "INVALID_WRITER_JOB_COMPLETION")
+
     def test_future_marker_rejected_when_job_bound(self):
         future_log = log().replace("2026-11-01T19:10:06Z", "2026-11-02T04:10:06Z")
         jobs = {"1": [{"run_id": 1, "name": "public-paper",

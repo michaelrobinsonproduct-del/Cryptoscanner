@@ -159,8 +159,26 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
             # the writer job began (or from the future) cannot certify this run.
             job_start = (created + dt.timedelta(seconds=queue_seconds)
                          if queue_seconds is not None else None)
+            job_end = now
+            # When GitHub supplies a canonical writer completion timestamp,
+            # executed markers after that job ended cannot authenticate it.
+            # Invalid supplied completion evidence abstains rather than
+            # silently falling back to the wall-clock audit timestamp.
+            if job_start is not None and isinstance(jobs, dict):
+                matching_jobs = [j for j in jobs.get(str(rid), [])
+                                 if isinstance(j, dict) and j.get("name") == "public-paper"
+                                 and type(j.get("run_id")) is int and j["run_id"] == rid]
+                if len(matching_jobs) == 1 and "completed_at" in matching_jobs[0]:
+                    try:
+                        job_end = timestamp(matching_jobs[0]["completed_at"])
+                        if not job_start <= job_end <= now:
+                            raise ValueError("incoherent writer completion")
+                    except (ValueError, TypeError, OverflowError):
+                        evidence.append({"run_id": rid,
+                                         "classification": "INVALID_WRITER_JOB_COMPLETION"})
+                        continue
             p = provenance(logs.get(str(rid)), earliest=job_start,
-                           latest=now if job_start is not None else None)
+                           latest=job_end if job_start is not None else None)
             row = {"run_id": rid, "event": event, "created_at": created.isoformat(),
                    "conclusion": run.get("conclusion"), "classification": "UNVERIFIED_PROVENANCE"}
             if (p is None or p["PAPER_VERIFIED_GITHUB_EVENT"] != event
