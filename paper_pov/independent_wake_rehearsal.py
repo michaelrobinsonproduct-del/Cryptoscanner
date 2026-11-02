@@ -38,15 +38,15 @@ def validate_workflows(sources):
     _require("jobs:\n  public-paper:" in writer and
              writer.count("python -m paper_pov.scanner") == 1,
              "WRITER_ENTRYPOINT_DRIFT")
-    _require(re.search(r"(?m)^concurrency:\\n  group: " + MUTEX +
-                       r"\\n  cancel-in-progress: false(?:\\n|$)", writer) is not None,
+    _require(re.search(r"(?m)^concurrency:\n  group: " + MUTEX +
+                       r"\n  cancel-in-progress: false(?:\n|$)", writer) is not None,
              "WRITER_MUTEX_DRIFT")
     _require(not re.search(r"(?m)^  queue:", writer) or
              re.search(r"(?m)^  queue: max$", writer) is not None,
              "WRITER_QUEUE_DRIFT")
     for name, source in (("CADENCE", cadence), ("RECOVERY", recovery)):
-        _require(re.search(r"(?m)^concurrency:\\n  group: " + CONTROLLER_MUTEX +
-                           r"\\n  cancel-in-progress: false(?:\\n|$)", source) is not None and
+        _require(re.search(r"(?m)^concurrency:\n  group: " + CONTROLLER_MUTEX +
+                           r"\n  cancel-in-progress: false(?:\n|$)", source) is not None and
                  "actions: write" in source and
                  "paper-pipeline.yml/dispatches" in source and
                  "paper_pov.scanner" not in source,
