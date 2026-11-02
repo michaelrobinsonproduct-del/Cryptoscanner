@@ -414,6 +414,12 @@ class ArtifactContractTests(unittest.TestCase):
         data = json.loads(path.read_text())
         data["source"]["prediction_bindings"]["duplicate_prediction_keys"] = 1
         write_json(path, data)
+        # An attacker may also reseal provenance, so reach the semantic
+        # binding check rather than merely tripping the earlier checksum gate.
+        provenance_path = self.base / FILES[2]
+        provenance = json.loads(provenance_path.read_text())
+        provenance["episode_report_sha256"] = digest(path)
+        write_json(provenance_path, provenance)
         reseal(self.base)
         with self.assertRaisesRegex(ValueError, "source-sealed prediction"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
