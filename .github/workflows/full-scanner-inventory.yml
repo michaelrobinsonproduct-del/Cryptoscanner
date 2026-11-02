@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'audit_tools/full_scanner_inventory.py'
+      - 'audit_tools/test_full_scanner_inventory.py'
       - 'audit_tools/pr_triage_20261102.json'
       - '.github/workflows/full-scanner-inventory.yml'
   workflow_dispatch:
@@ -27,6 +28,8 @@ jobs:
         run: git rev-parse HEAD
       - name: Compile check
         run: python -m py_compile audit_tools/full_scanner_inventory.py
+      - name: Fail-closed pagination regression tests
+        run: python -m unittest audit_tools.test_full_scanner_inventory -v
       - name: Validate evidence-qualified PR classification snapshot
         run: |
           python - <<'PY'
