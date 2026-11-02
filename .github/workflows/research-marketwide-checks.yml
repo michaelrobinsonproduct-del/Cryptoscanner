@@ -4,6 +4,8 @@ on:
     paths:
       - 'research/marketwide_paper_outcomes.py'
       - 'research/test_marketwide_paper_outcomes.py'
+      - 'research/marketwide_episode_diagnostics.py'
+      - 'research/test_marketwide_episode_diagnostics.py'
       - '.github/workflows/research-marketwide-checks.yml'
   workflow_dispatch:
 permissions:
@@ -28,6 +30,7 @@ jobs:
           fi
           python -m paper_pov.segmented_repository export-git --repository . --commit "$BASE" --output /tmp/verified-paper-ledger.json --full-replay
           python -m research.marketwide_paper_outcomes --verified-ledger /tmp/verified-paper-ledger.json --output /tmp/marketwide-outcomes.json
+          python -m research.marketwide_episode_diagnostics --verified-ledger /tmp/verified-paper-ledger.json --output /tmp/marketwide-episodes.json
           python - <<'PY'
           import json
           d=json.load(open('/tmp/marketwide-outcomes.json'))
@@ -39,12 +42,14 @@ jobs:
         run: |
           set -euo pipefail
           git rev-parse HEAD
-          python -m unittest research.test_marketwide_paper_outcomes -v
-          python -m compileall -q research/marketwide_paper_outcomes.py
+          python -m unittest research.test_marketwide_paper_outcomes research.test_marketwide_episode_diagnostics -v
+          python -m compileall -q research/marketwide_paper_outcomes.py research/marketwide_episode_diagnostics.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: marketwide-outcome-validation-${{ github.run_id }}
-          path: /tmp/marketwide-outcomes.json
+          path: |
+            /tmp/marketwide-outcomes.json
+            /tmp/marketwide-episodes.json
           if-no-files-found: ignore
           retention-days: 14
