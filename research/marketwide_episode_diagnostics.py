@@ -257,12 +257,13 @@ def analyze(state):
     for hours in HORIZONS:
         positives, negatives, negatives20, cases, cases20 = [], [], [], [], []
         coverage = {"eligible": 0, "immature": 0, "abstain_gap": 0,
-                    "abstain_conflicting_quotes": 0, "abstain_future_entry_quotes": 0,
+                    "abstain_conflicting_quotes": 0, "abstain_future_entry_quotes": 0, "abstain_outcome_provenance": 0,
                     "abstain_no_future_observation": 0, "abstain_missing_horizon_anchor": 0,
                     "abstain_stale_entry": 0, "abstain_discontinuous_path": 0,
                     "matured": 0,
                     "watch_eligible": 0, "watch_immature": 0, "watch_abstain_gap": 0,
                     "watch_abstain_conflicting_quotes": 0, "watch_abstain_future_entry_quotes": 0,
+                     "watch_abstain_outcome_provenance": 0,
                     "watch_abstain_no_future_observation": 0,
                     "watch_abstain_missing_horizon_anchor": 0,
                     "watch_abstain_stale_entry": 0, "watch_abstain_discontinuous_path": 0,
@@ -276,6 +277,7 @@ def analyze(state):
                      "watch_abstain_gap", "movers_20", "movers",
                      "watch_positive_20", "watch_positive")
         gap_reason_keys = ("conflicting_quotes", "future_entry_quotes",
+                           "outcome_provenance",
                            "no_future_observation", "missing_horizon_anchor",
                            "stale_entry", "discontinuous_path")
         per_pair = {pair: {**{key: 0 for key in pair_keys},
@@ -337,6 +339,24 @@ def analyze(state):
                         pair_counts["watch_gap_reasons"]["conflicting_quotes"] += 1
                     coverage["abstain_conflicting_quotes"] += 1
                     pair_counts["gap_reasons"]["conflicting_quotes"] += 1
+                    continue
+                # An event-time quote from a later scan is not authenticated
+                # historical outcome evidence if it was first observed AFTER
+                # the target's allowed anchor window. Equally, a scan cannot
+                # observe a quote from its own future. Do not turn either into
+                # a retrospective +20/+30 PAPER hit or a WATCH false positive.
+                if any(runs[future_rid] < t or runs[future_rid] > target + MAX_GAP
+                       for t, _, future_rid in future
+                       if start < t <= target + MAX_GAP):
+                    coverage["abstain_gap"] += 1
+                    pair_counts["abstain_gap"] += 1
+                    coverage["abstain_outcome_provenance"] += 1
+                    pair_counts["gap_reasons"]["outcome_provenance"] += 1
+                    if selected:
+                        coverage["watch_abstain_gap"] += 1
+                        pair_counts["watch_abstain_gap"] += 1
+                        coverage["watch_abstain_outcome_provenance"] += 1
+                        pair_counts["watch_gap_reasons"]["outcome_provenance"] += 1
                     continue
                 # One mutually exclusive primary reason per unknown label;
                 # retain abstain_gap as the conservative aggregate.
@@ -515,14 +535,17 @@ def analyze(state):
         assert coverage["eligible"]==coverage["matured"]+coverage["abstain_gap"]+coverage["immature"]
         assert coverage["abstain_gap"] == sum(coverage[k] for k in (
             "abstain_conflicting_quotes", "abstain_future_entry_quotes",
+             "abstain_outcome_provenance",
             "abstain_no_future_observation", "abstain_missing_horizon_anchor",
             "abstain_stale_entry", "abstain_discontinuous_path"))
         assert coverage["watch_abstain_gap"] == sum(coverage["watch_" + k] for k in (
             "abstain_conflicting_quotes", "abstain_future_entry_quotes",
+             "abstain_outcome_provenance",
             "abstain_no_future_observation", "abstain_missing_horizon_anchor",
             "abstain_stale_entry", "abstain_discontinuous_path"))
         assert all(coverage["watch_" + k] <= coverage[k] for k in (
             "abstain_conflicting_quotes", "abstain_future_entry_quotes",
+             "abstain_outcome_provenance",
             "abstain_no_future_observation", "abstain_missing_horizon_anchor",
             "abstain_stale_entry", "abstain_discontinuous_path"))
         assert coverage["movers"]==len(positives)
