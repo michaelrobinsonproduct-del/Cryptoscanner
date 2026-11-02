@@ -50,3 +50,19 @@ At **01:09**, ESPORTS price fell **0.68%** while 24h notional increased **3.28%*
 Against **all ~602 contemporaneous markets** at 01:09, there were **106** meeting the same as-of spread<=45bps, notional>=$100k and absolute price change<=3% screen. ESPORTS ranked **13th** on (24h notional % change minus absolute price % change), **13th** on spread ratio improvement, and **8th** on a *post-hoc exploratory* combination (notional growth minus absolute price change + 0.1 x percentage spread-ratio improvement). At 02:10, among **100** liquid/quiet markets, ESPORTS ranked **8th** on the first notional-change-minus-price-change metric but **50th** on the combined metric because its spread widened.
 
 **Crucial limitation:** these formulas and thresholds were examined *after* identifying ESPORTS; the 01:09-to-03:54 quote path contains >45-minute observation gaps, so this is a promising hypothesis **not** a valid backtested early-entry hit or proven recommendation improvement. A rolling 24h notional increase can reflect changing volume and price; it is not directly measured five-minute trade acceleration. Before any promotion, freeze the candidate, evaluate all liquid markets over independent future periods with proper target coverage, compare distinct +30% mover episodes, lead time and false positives, and include 5m trade-count/volume when independently available.
+
+## Newly verified 00:00–00:45 UTC live-gate starvation (generation 45 and 46)
+
+Independently downloaded sealed writer [gen45 #41366093862](https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41366093862) and [gen46 #41368602217](https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41368602217). Verified every internal ZIP SHA256, canonical ledger hash, matching result SHA and remote manifest.
+
+| Actual as-of source | Gen45 00:16 UTC | Gen46 00:44 UTC |
+|---|---:|---:|
+| Eligible USD pairs | 604 | 604 |
+| Liquid by as-of spread<=45bps and notional>=$100k | **105** | **108** |
+| Actually selected for 5m OHLC screening | **6** | **5** |
+| Surviving WATCH after OHLC validation | **2** | **3** |
+| Liquid candidates excluded before OHLC | **99** | **103** |
+
+This is a **concrete algorithmic bottleneck**, not merely an inferred historical proxy. In `paper_pov/scanner.py`, the only additional gate after those liquidity conditions is **+0.25% to +12% price movement from today's UTC opening price**. Because `max_ohlc=24` and the screened pool is smaller than 24, these **99 and 103 liquid candidates were excluded by the UTC-open price gate** before their five-minute momentum/volume acceleration could be examined. This can severely starve the scanner near midnight UTC when most coins have moved <0.25% since the daily open.
+
+The as-of observations do **not** retain each rejected market's exact UTC-open move, so we cannot break the 99/103 into too-low versus too-high or claim that all would have produced valid OHLC/early recommendations. **Next high-value research change:** independent read-only OHLC collection for a bounded set of rejected liquid markets, with exact as-of 5m features and prospective 1h/6h outcome tracking, to test relaxed/alternative entry gates at the same top-12 budget. Do not weaken the live scanner until this produces distinct liquid early-mover lift.
