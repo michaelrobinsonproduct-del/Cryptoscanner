@@ -33,6 +33,12 @@ def lagged_return(series, times, index, minutes):
     j = bisect.bisect_right(times, target, hi=index) - 1
     if j < 0 or target - times[j] > MAX_GAP:
         return None
+    # bisect_right chooses the LAST quote at an exact target timestamp.
+    # Its contradictory predecessor would otherwise sit outside the checked
+    # interval and silently determine the feature from an arbitrary price.
+    if (j > 0 and times[j-1] == times[j]
+        and series[j-1][1] != series[j][1]):
+        return None
     segment = times[j:index+1]
     if any(b-a > MAX_GAP for a,b in zip(segment, segment[1:])):
         return None
@@ -207,6 +213,7 @@ def analyze(state):
         episodes = cluster_episodes(cases,hours)
         episodes20 = cluster_episodes(cases20,hours)
         episode_watch_count = sum(e["watch_captured"] for e in episodes)
+        episode_watch_count_20 = sum(e["watch_captured"] for e in episodes20)
         episode_first_lags = [e["first_lagged_60m"] for e in episodes
                               if e["first_lagged_60m"] is not None]
         # Descriptive only: features cannot be backfilled for most first observations.
@@ -228,9 +235,12 @@ def analyze(state):
         first_entries = [{"pair":e["pair"],"lagged_returns":e["first_lagged_returns"]}
                          for e in episodes]
         episode_features = {
-            key:dict(summarize_feature(first_entries,key),
-                     distinct_pairs=len({r["pair"] for r in first_entries
-                                         if r["lagged_returns"][key] is not None}))
+            key:summarize_feature(first_entries,key)
+            for key in ("30m","60m","180m")}
+        first_entries_20 = [{"pair":e["pair"],"lagged_returns":e["first_lagged_returns"]}
+                            for e in episodes20]
+        episode_features_20 = {
+            key:summarize_feature(first_entries_20,key)
             for key in ("30m","60m","180m")}
         assert coverage["eligible"]==coverage["matured"]+coverage["abstain_gap"]+coverage["immature"]
         assert coverage["movers"]==len(positives)
@@ -239,11 +249,17 @@ def analyze(state):
                                         if coverage["eligible"] else None)
         coverage["distinct_matured_pairs"] = len({r["pair"] for r in positives+negatives})
         coverage["distinct_positive_pairs"] = len({r["pair"] for r in positives})
+        # Only label-complete WATCH entries can be counted as false positives.
+        # Gap and immature WATCHs remain unknown, never false negatives.
+        coverage["watch_false_positive_30"] = coverage["watch_matured"] - coverage["watch_positive"]
+        coverage["watch_false_positive_20"] = coverage["watch_matured"] - coverage["watch_positive_20"]
         output[str(hours)] = {"coverage":coverage,"unique_mover_episodes":len(episodes),
             "unique_mover_pairs":len({e["pair"] for e in episodes}),
             "unique_mover_episodes_20":len(episodes20),
-            "watch_captured_episodes_20":sum(e["watch_captured"] for e in episodes20),
-            "watch_episode_recall_20":(sum(e["watch_captured"] for e in episodes20)/len(episodes20)
+            "watch_captured_episodes_20":episode_watch_count_20,
+            "watch_episode_recall_wilson_95_naive_20":wilson(episode_watch_count_20,len(episodes20)),
+            "episode_first_entry_feature_distributions_20":episode_features_20,
+            "watch_episode_recall_20":(episode_watch_count_20/len(episodes20)
                                       if episodes20 else None),
             "watch_recall_20":(coverage["watch_positive_20"]/coverage["movers_20"]
                                if coverage["movers_20"] else None),
