@@ -98,8 +98,11 @@ class GapRecoveryTests(unittest.TestCase):
         s = source()
         replace_payload(s["pages"][0], lambda x: x["result"]["AAAUSD"][1].__setitem__(
             2, x["result"]["AAAUSD"][0][2]))
-        with self.assertRaisesRegex(ValueError, "Duplicate"):
-            audit(self.state, END, [s])
+        # Distinct trade IDs can legitimately share one exact exchange time.
+        # Only the last actual source-listed print becomes the unique observation.
+        report = audit(self.state, END, [s])
+        self.assertEqual(report["source_coverage"]["AAAUSD"]["collapsed_same_timestamp_prints"], 1)
+        self.assertEqual(report["recovered_total_correlated_windows"], 1)
         s = source()
         replace_payload(s["pages"][0], lambda x: x["result"]["AAAUSD"][0].pop())
         with self.assertRaisesRegex(ValueError, "trade ID"):
