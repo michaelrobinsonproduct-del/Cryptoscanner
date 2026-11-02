@@ -6,10 +6,11 @@ clock. GitHub Actions noncancelling concurrency serializes jobs but is NOT a
 durable per-slot idempotency guarantee.
 """
 import datetime as dt
+import hashlib
 import re
 from pathlib import Path
 
-from .cadence_wake import authorize, decide
+from .cadence_wake import authorize, decide, slot_at, MAX_SLOT_LATENESS, MARKER
 
 REPO = "michaelrobinsonproduct-del/Cryptoscanner"
 WRITER = "paper-pipeline.yml"
@@ -37,11 +38,15 @@ def validate_workflows(sources):
     _require("jobs:\n  public-paper:" in writer and
              writer.count("python -m paper_pov.scanner") == 1,
              "WRITER_ENTRYPOINT_DRIFT")
-    _require(re.search(r"(?m)^  group: " + MUTEX + r"$", writer) is not None and
-             "cancel-in-progress: false" in writer, "WRITER_MUTEX_DRIFT")
+    _require(re.search(r"(?m)^concurrency:\\n  group: " + MUTEX +
+                       r"\\n  cancel-in-progress: false(?:\\n|$)", writer) is not None,
+             "WRITER_MUTEX_DRIFT")
+    _require(not re.search(r"(?m)^  queue:", writer) or
+             re.search(r"(?m)^  queue: max$", writer) is not None,
+             "WRITER_QUEUE_DRIFT")
     for name, source in (("CADENCE", cadence), ("RECOVERY", recovery)):
-        _require("group: " + CONTROLLER_MUTEX in source and
-                 "cancel-in-progress: false" in source and
+        _require(re.search(r"(?m)^concurrency:\\n  group: " + CONTROLLER_MUTEX +
+                           r"\\n  cancel-in-progress: false(?:\\n|$)", source) is not None and
                  "actions: write" in source and
                  "paper-pipeline.yml/dispatches" in source and
                  "paper_pov.scanner" not in source,
@@ -64,7 +69,9 @@ def validate_workflows(sources):
             "controller_mutex": CONTROLLER_MUTEX,
             "independent_event": "OWNER_AUTHENTICATED_ISSUE_COMMENT",
             "github_native_schedule_guaranteed": False,
-            "durable_slot_cas_proven": False}
+            "durable_slot_cas_proven": False,
+            "pending_queue_mode": "max" if re.search(r"(?m)^  queue: max$", writer) else "single",
+            "pending_replacement_risk": not bool(re.search(r"(?m)^  queue: max$", writer))}
 
 
 def checkout_contracts(root):
@@ -114,8 +121,22 @@ def rehearse(*, event, repository, actor, ref, event_name, now,
         if decision["action"] == "DISPATCH_EXISTING_WORKFLOW":
             _require(decision.get("source_sha") == main_sha and
                      isinstance(decision.get("attempt_marker"), str) and
-                     decision["attempt_marker"].startswith("PAPER_CADENCE_ATTEMPT:"),
+                     decision["attempt_marker"].startswith(MARKER),
                      "UNBOUND_CANDIDATE_SOURCE_OR_MARKER")
+            slot = slot_at(now)
+            anchor = decision.get("anchor_run_id")
+            generation = decision.get("ledger_generation")
+            expected_hash = hashlib.sha256(
+                (ledger_commit + "|" + str(anchor) + "|" +
+                 slot.isoformat() + "|" + main_sha).encode()).hexdigest()
+            _require(SHA.fullmatch(ledger_commit or "") is not None and
+                     type(anchor) is int and anchor > 0 and
+                     type(generation) is int and generation > 0 and
+                     decision.get("target_slot") == slot.isoformat() and
+                     dt.timedelta(0) <= now.astimezone(dt.timezone.utc) - slot <= MAX_SLOT_LATENESS and
+                     decision["attempt_marker"] == MARKER + ledger_commit and
+                     decision.get("decision_sha256") == expected_hash,
+                     "UNBOUND_CANDIDATE_SLOT_OR_DECISION")
             result["action"] = "DRY_RUN_CANDIDATE_ONLY"
             result["reason"] = "DURABLE_SLOT_CAS_AND_AUDIT_NOT_CERTIFIED"
             result["proposed_target"] = WRITER
