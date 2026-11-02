@@ -413,14 +413,34 @@ class CurrentSemanticReviewTests(unittest.TestCase):
         from pathlib import Path
         matrix=json.loads(Path("audit_tools/pr_semantic_current_20261102.json").read_text())
         rows=matrix["prs"]
-        self.assertEqual(len(rows),22)
-        self.assertEqual(len({x["number"] for x in rows}),22)
+        self.assertEqual(len(rows),23)
+        self.assertEqual(len({x["number"] for x in rows}),23)
         self.assertEqual(len(matrix["main_sha"]),40)
         self.assertTrue(all(len(x["head_sha"])==40 and
                             len(x["source_blob_sha"])==40 and
                             x["source_path"] and
                             x["release_authorized"] is False and
                             x["cleanup_authorized"] is False for x in rows))
+        self.assertEqual(matrix["review_status"],"PROVISIONAL_NOT_CERTIFIED")
+
+    def test_active_owner_prs_have_exact_head_source_checkpoints_not_release(self):
+        matrix=json.loads((pathlib.Path(__file__).parent/"pr_semantic_current_20261102.json").read_text())
+        rows={x["number"]:x for x in matrix["prs"]}
+        expected={
+            124: ("bf7a572c63d7ad6ba441157706bcddc3ca96392d","90af6bd7118cbea8100011508d7d20ebda337cbe"),
+            125: ("64cd42eca12e22ddb0ef6e98ea1782ce7db99c4c","84273c4b526fe4d40c6deeca5ca3b20db6fd8d17"),
+            126: ("a361a2c7c4bfb67057b8895fe2b9ae211ef403c3","f4ed9e8d971d122d71a4eb51603375d1dec8e04c"),
+            127: ("086842e1f0aa79c1af19df758121487a18ad7375","2707ad4c873f8994217461bb98d3bdcfe970171f"),
+        }
+        for number,(head,blob) in expected.items():
+            with self.subTest(pr=number):
+                row=rows[number]
+                self.assertEqual(row["head_sha"],head)
+                self.assertEqual(row["source_blob_sha"],blob)
+                self.assertEqual(row["classification"],"needed")
+                self.assertFalse(row["release_authorized"])
+                self.assertFalse(row["cleanup_authorized"])
+        self.assertEqual(rows[121]["classification"],"needed")
         self.assertEqual(matrix["review_status"],"PROVISIONAL_NOT_CERTIFIED")
 
     def test_pr40_raw_only_contract_is_not_marked_integrated(self):

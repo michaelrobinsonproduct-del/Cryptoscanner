@@ -6,32 +6,42 @@
   "review_status": "PROVISIONAL_NOT_CERTIFIED",
   "prs": [
     {
+      "number": 127,
+      "classification": "needed",
+      "release_authorized": false,
+      "cleanup_authorized": false,
+      "head_sha": "086842e1f0aa79c1af19df758121487a18ad7375",
+      "source_path": "research/marketwide_episode_diagnostics.py",
+      "source_blob_sha": "2707ad4c873f8994217461bb98d3bdcfe970171f",
+      "reason": "B-owned draft PR #127 current-head combined read-only outcome and episode evaluator integration, source blob 2707ad4c873f8994217461bb98d3bdcfe970171f. Includes B's stricter point-in-time/Decimal/provenance safeguards and E's current diagnostics per B handoff; exact-head CI #41435531860 was pending at review, not counted as passed. GET-only isolated test candidate only; no main merge, writer, scoring or production activation."
+    },
+    {
       "number": 126,
-      "head_sha": "a7c5ded4eed7b8c69ef871f65a0652237e7b36d8",
+      "head_sha": "a361a2c7c4bfb67057b8895fe2b9ae211ef403c3",
       "classification": "needed",
       "source_path": "research/marketwide_paper_outcomes.py",
-      "source_blob_sha": "136a0f6e4bd06ea520c469ebbbbeb12f9570d6b4",
-      "reason": "Isolated B-owned outcome evidence corrections; stacked on #122. Exact-head tests reported, but integration and independent review remain; not a standalone merge.",
+      "source_blob_sha": "f4ed9e8d971d122d71a4eb51603375d1dec8e04c",
+      "reason": "B-owned PR #126 exact-head read-only PAPER evaluator/provenance gate, source blob f4ed9e8d971d122d71a4eb51603375d1dec8e04c; separate B combined PR #127 is integration candidate. Do not independently merge or activate.",
       "release_authorized": false,
       "cleanup_authorized": false
     },
     {
       "number": 125,
-      "head_sha": "f60649d2031c7ca17fc0c713a70836798cf298bf",
+      "head_sha": "64cd42eca12e22ddb0ef6e98ea1782ce7db99c4c",
       "classification": "needed",
       "source_path": "research/marketwide_episode_diagnostics.py",
-      "source_blob_sha": "2be1ac19f478ef4b4f29591596b1a864cf340ab3",
-      "reason": "E-owned distinct-episode descriptive diagnostics; stacked on #122, no predictive lift or 24/48h maturity established.",
+      "source_blob_sha": "84273c4b526fe4d40c6deeca5ca3b20db6fd8d17",
+      "reason": "E-owned PR #125 current-head isolated first-entry/missingness/nonhit-window descriptive PAPER diagnostics, verified source blob 84273c4b526fe4d40c6deeca5ca3b20db6fd8d17; no exchange-authenticated complete history, held-out predictive lift, or scoring promotion.",
       "release_authorized": false,
       "cleanup_authorized": false
     },
     {
       "number": 124,
-      "head_sha": "f3fd0be61e0566d7ba596acca5795cee467ff07d",
+      "head_sha": "bf7a572c63d7ad6ba441157706bcddc3ca96392d",
       "classification": "needed",
       "source_path": "paper_pov/cadence_provenance.py",
-      "source_blob_sha": "6388556276c3e0e9db5a2debf2e6c20503be2a5e",
-      "reason": "D-owned read-only provenance checks for actual schedule vs dispatch; no workflow timing repair on main; independent review required.",
+      "source_blob_sha": "90af6bd7118cbea8100011508d7d20ebda337cbe",
+      "reason": "D-owned PR #124 current-head read-only PAPER schedule/dispatch provenance, verified source blob 90af6bd7118cbea8100011508d7d20ebda337cbe; tests are isolated, actual native lateness and manual parity still fail acceptance. No live cron/writer change authorized.",
       "release_authorized": false,
       "cleanup_authorized": false
     },
