@@ -550,6 +550,14 @@ def main():
     Path(args.output).write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
     print("PAPER_CADENCE_READONLY " + json.dumps({
         k: v for k, v in result["report"].items() if k != "runs"}, sort_keys=True))
+    # Surface bounded job-attempt and ledger-claim failures in CI logs, so
+    # reviewers need not download an artifact merely to see a critical FAIL.
+    print("PAPER_RELIABILITY_READONLY " + json.dumps({
+        "writer_attempt_intervals": result["writer_attempt_interval_evidence"],
+        "ledger_claim_continuity": result["ledger_log_claim_continuity"],
+        "canonical_writer_overlap": result["writer_overlap_evidence"],
+        "current_remote_ref": result["current_remote_ref_evidence"],
+    }, sort_keys=True))
 
 
 if __name__ == "__main__":

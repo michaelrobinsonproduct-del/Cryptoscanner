@@ -773,6 +773,29 @@ class CadenceCollectorTests(unittest.TestCase):
             with self.subTest(target=target), self.assertRaises(ValueError):
                 SafeLogRedirect().redirect_request(req, None, 302, "Found", {}, target)
 
+    def test_cli_exposes_attempt_and_ledger_claim_failures_without_network_writes(self):
+        from paper_pov.cadence_collect import main
+        result = {"report": {"runs": [], "verified_native_count": 0},
+                  "writer_attempt_interval_evidence": {
+                      "status": "FAILED_OVERLAPPING_GITHUB_CANONICAL_JOB_INTERVALS"},
+                  "ledger_log_claim_continuity": {
+                      "status": "FAILED_CONFLICTING_AUTHENTICATED_LEDGER_CLAIMS"},
+                  "writer_overlap_evidence": {"status": "UNVERIFIED"},
+                  "current_remote_ref_evidence": {"status": "UNVERIFIED"}}
+        args = ["cadence_collect", "--repo", "owner/repo",
+                "--checked-at", NOW, "--output", "/tmp/readonly.json"]
+        with patch("sys.argv", args), patch(
+                "paper_pov.cadence_collect.github_reader", return_value=lambda *a: None), patch(
+                "paper_pov.cadence_collect.collect", return_value=result), patch(
+                "pathlib.Path.write_text") as write, patch("builtins.print") as output:
+            main()
+        self.assertEqual(write.call_count, 1)
+        messages = [call.args[0] for call in output.call_args_list]
+        self.assertEqual(len(messages), 2)
+        self.assertTrue(messages[1].startswith("PAPER_RELIABILITY_READONLY "))
+        self.assertIn("FAILED_OVERLAPPING_GITHUB_CANONICAL_JOB_INTERVALS", messages[1])
+        self.assertIn("FAILED_CONFLICTING_AUTHENTICATED_LEDGER_CLAIMS", messages[1])
+
     def test_live_rehearsal_workflow_is_get_only_and_has_no_writer(self):
         from pathlib import Path
         workflow = (Path(__file__).resolve().parents[1] / ".github" /
