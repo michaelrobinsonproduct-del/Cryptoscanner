@@ -1,0 +1,225 @@
+{
+  "schema": "cryptoscanner-current-semantic-pr-review-v1",
+  "reviewed_utc": "2026-11-02T06:30:00Z",
+  "main_sha": "e3fb5ec272d74a72f19e306c1825aae1b7960576",
+  "scope": "Evidence-qualified static source review; does not prove runtime reachability, whole-PR semantic equivalence or authorize merges/cleanup.",
+  "review_status": "PROVISIONAL_NOT_CERTIFIED",
+  "prs": [
+    {
+      "number": 126,
+      "head_sha": "a7c5ded4eed7b8c69ef871f65a0652237e7b36d8",
+      "classification": "needed",
+      "source_path": "research/marketwide_paper_outcomes.py",
+      "source_blob_sha": "136a0f6e4bd06ea520c469ebbbbeb12f9570d6b4",
+      "reason": "Isolated B-owned outcome evidence corrections; stacked on #122. Exact-head tests reported, but integration and independent review remain; not a standalone merge.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 125,
+      "head_sha": "f60649d2031c7ca17fc0c713a70836798cf298bf",
+      "classification": "needed",
+      "source_path": "research/marketwide_episode_diagnostics.py",
+      "source_blob_sha": "2be1ac19f478ef4b4f29591596b1a864cf340ab3",
+      "reason": "E-owned distinct-episode descriptive diagnostics; stacked on #122, no predictive lift or 24/48h maturity established.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 124,
+      "head_sha": "f3fd0be61e0566d7ba596acca5795cee467ff07d",
+      "classification": "needed",
+      "source_path": "paper_pov/cadence_provenance.py",
+      "source_blob_sha": "6388556276c3e0e9db5a2debf2e6c20503be2a5e",
+      "reason": "D-owned read-only provenance checks for actual schedule vs dispatch; no workflow timing repair on main; independent review required.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 123,
+      "head_sha": "3e9cdf8a6166a362d733e8b39e84a36e44f97a42",
+      "classification": "needed",
+      "source_path": "coordination/workqueue.json",
+      "source_blob_sha": "6d1af833493b4b1a6eeb6b3fbc96a0898ea8580b",
+      "reason": "A-owned proposed coordination queue, not on main; issue #34 authoritative until reviewed merge.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 122,
+      "head_sha": "3e84e661ce3812114f9a5aadf7045fe6d5189d3a",
+      "classification": "needed",
+      "source_path": "research/marketwide_paper_outcomes.py",
+      "source_blob_sha": "15c8699c83c1a1f56f9694df07e64632dd183e8a",
+      "reason": "New read-only PAPER evaluator; observed windows are not distinct episodes; #125/#126 are stacked corrections; coordinate integration.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 121,
+      "head_sha": "ce774b340e217e3c0d4ee25fde639a6905046901",
+      "classification": "needed",
+      "source_path": "audit_tools/full_scanner_inventory.py",
+      "source_blob_sha": "2bf54f36ae77a621c2f58311e328b7dc6c155db7",
+      "reason": "C-owned audit instrument, not deployed on main; cannot self-certify or authorize cleanup.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 115,
+      "head_sha": "7af2fcb1948a036eb2ec0a33b2eb1825835ae741",
+      "classification": "conflicting",
+      "source_path": "paper_pov/trade_gap_recovery.py",
+      "source_blob_sha": "fd76cb27bc6c18a81ad7c4d552d7f98d64413809",
+      "reason": "Self-sealed caller-supplied raw response validates bytes but does not authenticate exchange acquisition; not equivalent to merged #120 source capture.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 80,
+      "head_sha": "43dafcda01d7e529f5947968e9aee17eeb7866f2",
+      "classification": "integrated",
+      "source_path": "paper_pov/results_report.py",
+      "source_blob_sha": "3e3e0f0507f35b5331b8665ab5059b6b8e9ff16e",
+      "reason": "Historical semantic inspection found score/UTC display on main; exact file equality and complete PR parity must still be rechecked before closure.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 74,
+      "head_sha": "29ee5fb3a8b38b3efec318cdb44efe7404d3533b",
+      "classification": "conflicting",
+      "source_path": ".github/workflows/paper-pipeline.yml",
+      "source_blob_sha": "53810d409e1d8f288eb28216dcffc9ab8a9599c8",
+      "reason": "Partially integrated segmented rollover; distinct shallow-fetch workflow change and schedule test remain; cannot blind-merge into current writer.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 71,
+      "head_sha": "a2d0c8880dcf3ea02425622e662f10309f9062de",
+      "classification": "needed",
+      "source_path": ".github/workflows/paper-pipeline.yml",
+      "source_blob_sha": "6e45163d0be9330e6ce4af4df5a7562c7f4760f1",
+      "reason": "Failure-report module reportedly present on main but workflow failure-posting step differs; requires safe behavior/permissions review.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 64,
+      "head_sha": "9c6a78f8c05be687cdedc262f84da0d9cc0bc5b3",
+      "classification": "conflicting",
+      "source_path": "paper_pov/live_storage_migration_probe.py",
+      "source_blob_sha": "b428f8071b825f04e06fc012081f5c1e094b96d1",
+      "reason": "Probes raw paper-ledger.json rather than canonical segmented manifest+replay; cannot attest current generation lossless migration.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 61,
+      "head_sha": "9e10992ea3a87a4fb3316993ae1d11482c6ddc29",
+      "classification": "conflicting",
+      "source_path": "paper_pov/manual_trigger.py",
+      "source_blob_sha": "7507f52de3121feb38c4cea4a430af13857017fb",
+      "reason": "Owner-authenticated unconditional dispatch bypasses main cadence controller slot/spacing/CAS gates; do not activate as-is.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 40,
+      "head_sha": "9c66e45b2a7d674e60fc47c761d44788f9bb15c5",
+      "classification": "unknown",
+      "source_path": "paper_eval/audit.py",
+      "source_blob_sha": "9c4a659e4be6b7886c03ba1fe50ea34d0143e0c4",
+      "reason": "Distinct isolated sampled forward-outcome evaluator; semantic parity against #122/#125/#126 and live consumers not established.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 39,
+      "head_sha": "df63a94ff67dac282643df17d3347fdfcc335b24",
+      "classification": "conflicting",
+      "source_path": "paper_verifier/contracts.py",
+      "source_blob_sha": "865acb906d21e161da2842bb83d18d5307e0fa5e",
+      "reason": "Prediction-list hash-chain schema is not canonical PAPER dict ledger schema; adapter/equivalence proof absent.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 33,
+      "head_sha": "3a58194ec9c11649111f29450c5e28e3585c0068",
+      "classification": "unknown",
+      "source_path": ".github/workflows/kraken-simple.yml",
+      "source_blob_sha": "627719697f7a20758b420fd07b8fc4f31b4ed99",
+      "reason": "Legacy simple-history manual writer/storage CI; separate live recovery branch exists; do not delete or enable competing writer.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 27,
+      "head_sha": "a285459b492b4c5f05166e84db87d49bf0f9a679",
+      "classification": "unknown",
+      "source_path": "simple_scanner/real_history_replay.py",
+      "reason": "Legacy shadow/history replay and eligibility changes; no current-main parity or verified runtime consumer graph. Requires source-level independent comparison.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 11,
+      "head_sha": "3b12e19b6ad686ee473d0e5114db5137ec7ffb2c",
+      "classification": "unknown",
+      "source_path": "simple_scanner/daemon.py",
+      "source_blob_sha": "7f1da71aff044a1b771ef7e2440829b7a737eabf6",
+      "reason": "Legacy Railway single-process daemon/manual path; deployed consumers and safe retirement not proven.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 10,
+      "head_sha": "6fa12655e7b88b3c8bda11287035edd756944195",
+      "classification": "unknown",
+      "source_path": "simple_scanner/promotion_gate.py",
+      "source_blob_sha": "828bf9529de7af298b8c40b1c8d03d6c2e394e59",
+      "reason": "Research-only learning promotion gate on legacy branch; not equivalent to canonical PAPER learning or release authorization.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 7,
+      "head_sha": "940a4af9d976fb271c7534ad3e3e9eae33c376cf",
+      "classification": "unknown",
+      "source_path": "simple_scanner/scan.py",
+      "source_blob_sha": "4f5aba73fd4877ca1991b13cfe8d6432a694c865",
+      "reason": "Legacy recovery branch source is referenced by active GitHub workflows and separate simple-history writer; preserve until retirement approved.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 6,
+      "head_sha": "ecdf788a33c5cf0d2fd1e7c42a8215738c635dc8",
+      "classification": "unknown",
+      "source_path": "evaluation/report-integrity-guard.mjs",
+      "reason": "Legacy Bun/TypeScript report guard and SQL evidence; external callers and deployment state unresolved.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 4,
+      "head_sha": "7284645c1dbeb21c67fb07dc23200770500475d3",
+      "classification": "unknown",
+      "source_path": "production-recovery/market-evidence.ts",
+      "reason": "Legacy TypeScript production-recovery contracts and Supabase SQL; not proven wired to canonical PAPER or safe to retire.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 3,
+      "head_sha": "719437c5b93abc8a9b6ea856554cdc8980c2f302",
+      "classification": "unknown",
+      "source_path": "evaluation/early-mover-evaluation.mjs",
+      "reason": "Shadow-only early mover evaluation script; no verified main integration or runtime consumer equivalence.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    }
+  ]
+}
