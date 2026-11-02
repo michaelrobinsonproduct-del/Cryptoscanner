@@ -421,6 +421,17 @@ class CurrentSemanticReviewTests(unittest.TestCase):
                             x["cleanup_authorized"] is False for x in rows))
         self.assertEqual(matrix["review_status"],"PROVISIONAL_NOT_CERTIFIED")
 
+    def test_pr40_raw_only_contract_is_not_marked_integrated(self):
+        import json
+        from pathlib import Path
+        matrix=json.loads(Path("audit_tools/pr_semantic_current_20261102.json").read_text())
+        pr=next(x for x in matrix["prs"] if x["number"]==40)
+        self.assertEqual(pr["classification"],"conflicting")
+        self.assertIn("paper-ledger.json",pr["reason"])
+        self.assertIn("paper-segment-manifest.json",pr["reason"])
+        self.assertFalse(pr["cleanup_authorized"])
+        self.assertFalse(pr["release_authorized"])
+
     def test_exact_main_head_and_blob_give_provisional_disposition(self):
         rows=[self.row()]
         result=apply_semantic_review(self.matrix(),rows,self.MAIN)
