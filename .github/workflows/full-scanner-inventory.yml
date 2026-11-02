@@ -6,6 +6,8 @@ on:
       - 'audit_tools/test_full_scanner_inventory.py'
       - 'audit_tools/bounded_audit_scope.py'
       - 'audit_tools/test_bounded_audit_scope.py'
+      - 'audit_tools/freeze_scoped_audit.py'
+      - 'audit_tools/test_freeze_scoped_audit.py'
       - 'audit_tools/external_runtime_20261102.json'
       - 'audit_tools/pr_triage_20261102.json'
       - 'audit_tools/pr_semantic_current_20261102.json'
@@ -34,9 +36,9 @@ jobs:
       - name: Record exact audit source
         run: git rev-parse HEAD
       - name: Compile check
-        run: python -m py_compile audit_tools/full_scanner_inventory.py audit_tools/test_full_scanner_inventory.py audit_tools/bounded_audit_scope.py audit_tools/test_bounded_audit_scope.py
+        run: python -m py_compile audit_tools/full_scanner_inventory.py audit_tools/test_full_scanner_inventory.py audit_tools/bounded_audit_scope.py audit_tools/test_bounded_audit_scope.py audit_tools/freeze_scoped_audit.py audit_tools/test_freeze_scoped_audit.py
       - name: Fail-closed pagination regression tests
-        run: python -m unittest audit_tools.test_full_scanner_inventory audit_tools.test_bounded_audit_scope -v
+        run: python -m unittest audit_tools.test_full_scanner_inventory audit_tools.test_bounded_audit_scope audit_tools.test_freeze_scoped_audit -v
       - name: Validate evidence-qualified PR classification snapshot
         run: |
           python - <<'PY'
@@ -79,8 +81,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python audit_tools/bounded_audit_scope.py
+      - name: Freeze exact-source finite scope decision
+        run: python audit_tools/freeze_scoped_audit.py
       - name: SHA256 evidence
-        run: (cd audit-evidence && sha256sum scanner-inventory.json scanner-inventory.md consumer-graph.json semantic-pr-matrix.json declared-write-surfaces.json external-runtime.json external-runtime-assessment.json audit-certification-gate.json bounded-source-audit.json > SHA256SUMS && sha256sum -c SHA256SUMS)
+        run: (cd audit-evidence && sha256sum scanner-inventory.json scanner-inventory.md consumer-graph.json semantic-pr-matrix.json declared-write-surfaces.json external-runtime.json external-runtime-assessment.json audit-certification-gate.json bounded-source-audit.json finite-scope-decision.json > SHA256SUMS && sha256sum -c SHA256SUMS)
       - uses: actions/upload-artifact@v4
         with:
           name: scanner-full-inventory-${{ github.run_id }}
