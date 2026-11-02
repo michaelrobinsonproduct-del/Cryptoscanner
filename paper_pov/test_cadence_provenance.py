@@ -1,6 +1,12 @@
 """Offline, adversarial contracts for read-only PAPER cadence provenance."""
 import unittest
-from paper_pov.cadence_provenance import audit, provenance
+import json
+import tempfile
+import io
+from pathlib import Path
+from contextlib import redirect_stdout
+from unittest.mock import patch
+from paper_pov.cadence_provenance import audit, provenance, main
 
 SHA = "a" * 40
 
@@ -169,6 +175,24 @@ class CadenceProvenanceTests(unittest.TestCase):
                 self.assertEqual(result["writer_job_queue_sample_count"], 0)
                 self.assertIsNone(result["max_verified_writer_job_queue_seconds"])
                 self.assertNotIn("writer_job_queue_seconds", result["runs"][0])
+
+    def test_cli_optional_jobs_metadata_produces_read_only_queue_metric(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "runs.json").write_text(json.dumps({"workflow_runs": [run()]}))
+            (root / "logs.json").write_text(json.dumps({"1": log()}))
+            (root / "jobs.json").write_text(json.dumps({
+                "1": [{"run_id": 1, "name": "public-paper",
+                       "started_at": "2026-11-01T19:10:04Z"}]}))
+            argv = ["cadence_provenance", "--runs", str(root / "runs.json"),
+                    "--logs", str(root / "logs.json"), "--jobs", str(root / "jobs.json"),
+                    "--checked-at", NOW, "--output", str(root / "report.json")]
+            with patch("sys.argv", argv), redirect_stdout(io.StringIO()):
+                main()
+            report = json.loads((root / "report.json").read_text())
+            self.assertEqual(report["writer_job_queue_sample_count"], 1)
+            self.assertEqual(report["max_verified_writer_job_queue_seconds"], 3)
+            self.assertFalse(report["runs"][0]["durable_ledger_verified"])
 
     def test_no_false_ledger_or_trade_claims(self):
         result = self.check()
