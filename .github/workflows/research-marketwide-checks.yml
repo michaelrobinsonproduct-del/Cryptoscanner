@@ -28,6 +28,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Run exact-head evaluator tests
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          python -m unittest research.test_marketwide_paper_outcomes research.test_marketwide_episode_diagnostics -v
+          python -m compileall -q research/marketwide_paper_outcomes.py research/marketwide_episode_diagnostics.py
       - name: Verify existing segmented PAPER ledger read-only and evaluate authentic observations
         run: |
           set -euo pipefail
@@ -47,12 +53,6 @@ jobs:
               print('MARKETWIDE_OUTCOME',horizon,json.dumps(row,sort_keys=True))
               assert row['eligible']==row['matured']+row['abstain_gap']+row['immature']
           PY
-      - name: Run exact-head evaluator tests
-        run: |
-          set -euo pipefail
-          git rev-parse HEAD
-          python -m unittest research.test_marketwide_paper_outcomes research.test_marketwide_episode_diagnostics -v
-          python -m compileall -q research/marketwide_paper_outcomes.py research/marketwide_episode_diagnostics.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
