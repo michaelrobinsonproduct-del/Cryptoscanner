@@ -92,6 +92,17 @@ class Tests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"Ledger checksum mismatch"):
             evaluate(state)
 
+    def test_observed_cohort_counts_are_explicit_not_full_market_claims(self):
+        report=evaluate(sealed_fixture(fixture()))
+        self.assertEqual(report["observed_run_count"],7)
+        self.assertEqual(report["observed_pair_count"],2)
+        self.assertEqual(report["observed_entry_count"],14)
+        self.assertEqual(report["watched_prediction_count"],7)
+        for row in report["horizons"].values():
+            self.assertEqual(row["eligible"],report["observed_entry_count"])
+            self.assertLessEqual(row["watch_eligible"],report["watched_prediction_count"])
+        self.assertIs(report["complete_market_history"],False)
+
     def test_marketwide_missed_mover(self):
         result=evaluate(sealed_fixture(fixture()))["horizons"]["1"]
         self.assertGreater(result["missed_30"],0)
