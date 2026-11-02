@@ -124,6 +124,50 @@ def freeze(inventory, semantic, bounded, gate, graph, writes, runtime):
         raise ValueError("Gate and consumer counts disagree")
     if gate.get("unknown_write_destination_count") != len(writes.get("unknown_write_destinations", [])):
         raise ValueError("Gate and write destination counts disagree")
+    source_evidence_matrix = []
+    for case in sorted(cases, key=lambda x: (x["pr"], x["path"])):
+        source = case["source"]
+        key = str(case["pr"]) + ":" + case["path"]
+        source_evidence_matrix.append({
+            "pr": case["pr"], "path": case["path"],
+            "current_head_sha": live_by_id.get(case["pr"], {}).get("head_sha"),
+            "evidence_head_sha": case.get("head_sha"),
+            "expected_head_sha": case.get("expected_head_sha"),
+            "expected_blob_sha": case.get("expected_blob_sha"),
+            "contents_blob_sha": source.get("calculated_sha"),
+            "pr_files_api_blob_sha": source.get("pr_files_api_sha"),
+            "pr_files_api_discrepancy": source.get("pr_files_api_discrepancy") is True,
+            "source_status": source_status[key],
+            "blocks": {"isolated_read_only_integration": False,
+                       "production_activation": True, "legacy_deletion": True},
+        })
+    source_evidence_matrix.append({
+        "pr": None, "path": main_path, "current_head_sha": main,
+        "evidence_head_sha": main_writer["main_sha"],
+        "expected_head_sha": main, "expected_blob_sha": main_writer.get("expected_blob_sha"),
+        "contents_blob_sha": main_writer["source"].get("calculated_sha"),
+        "pr_files_api_blob_sha": None, "pr_files_api_discrepancy": False,
+        "source_status": main_status,
+        "blocks": {"isolated_read_only_integration": False,
+                   "production_activation": True, "legacy_deletion": True},
+    })
+    scope_evidence = {
+        "isolated_read_only_integration": {
+            "decision": "CONDITIONAL_PREPARE_TEST_ONLY",
+            "blocking_source_cases": [],
+            "requires": "Independent B/V exact-head GET-only test concurrence; no merge or activation",
+        },
+        "production_activation": {
+            "decision": "BLOCKED", "blocking_source_cases": [x["path"] for x in source_evidence_matrix],
+            "unverified_write_destinations": sorted(writes["unknown_write_destinations"]),
+            "requires": "D/B/V real native/manual source-authenticated parity, single-writer isolation, freshness and delivery",
+        },
+        "legacy_deletion": {
+            "decision": "BLOCKED", "blocking_source_cases": [x["path"] for x in source_evidence_matrix],
+            "unverified_consumer_count": len(graph["unknowns"]),
+            "requires": "C/V independently attest live iOS/Bun/Railway/Supabase/pg_cron and branch-pinned history consumers",
+        },
+    }
     return {
         "schema": "cryptoscanner-finite-scope-decision-v1",
         "source": {"main_sha": main, "ledger_sha": ledger, "audit_checkout_sha": checkout},
@@ -135,6 +179,10 @@ def freeze(inventory, semantic, bounded, gate, graph, writes, runtime):
         },
         "pr_count": len(records), "prs": records, "unresolved_semantic_prs": unresolved,
         "source_cases": source_status, "unverified_source_cases": source_failures,
+        "source_evidence_matrix": source_evidence_matrix,
+        "pr_files_api_discrepancies": [x["pr"] for x in source_evidence_matrix
+                                       if x["pr_files_api_discrepancy"]],
+        "scope_evidence": scope_evidence,
         "unknown_consumer_count": len(graph["unknowns"]),
         "unknown_write_destinations": sorted(writes["unknown_write_destinations"]),
         "external_runtime_evidence": "SNAPSHOT_ONLY_NOT_INVOCATION_PROOF",

@@ -126,6 +126,30 @@ class FreezeScopeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicated"):
             freeze(*data)
 
+    def test_pr_files_api_discrepancy_is_preserved_without_faking_source_drift(self):
+        data = list(fixtures())
+        case = data[2]["source_cases"][2]  # PR 7: exact Contents blob remains valid
+        case["source"]["pr_files_api_discrepancy"] = True
+        case["source"]["pr_files_api_sha"] = "9" * 40
+        result = freeze(*data)
+        self.assertEqual(result["pr_files_api_discrepancies"], [7])
+        row = next(x for x in result["source_evidence_matrix"] if x["pr"] == 7)
+        self.assertEqual(row["source_status"], "VERIFIED_EXACT_HEAD_SOURCE")
+        self.assertEqual(row["pr_files_api_blob_sha"], "9" * 40)
+        self.assertFalse(row["blocks"]["isolated_read_only_integration"])
+        self.assertTrue(row["blocks"]["legacy_deletion"])
+
+    def test_scoped_matrix_never_promotes_unknown_runtime_to_deletion(self):
+        data = list(fixtures())
+        data[2]["source_cases"][0]["source"]["status"] = "PR_HEAD_DRIFT"
+        result = freeze(*data)
+        scopes = result["scope_evidence"]
+        self.assertEqual(scopes["isolated_read_only_integration"]["blocking_source_cases"], [])
+        self.assertEqual(scopes["production_activation"]["decision"], "BLOCKED")
+        self.assertEqual(scopes["legacy_deletion"]["unverified_consumer_count"], 2)
+        self.assertIn("unknown.yml", scopes["production_activation"]["unverified_write_destinations"])
+        self.assertEqual(len(result["source_evidence_matrix"]), 6)
+
     def test_runtime_assessment_bound_to_current_main(self):
         data = list(fixtures())
         data[6]["current_main_sha"] = "f" * 40
