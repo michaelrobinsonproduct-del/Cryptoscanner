@@ -1,7 +1,7 @@
 """Offline fail-closed pagination tests for repository inventory (no network)."""
 import unittest
 from unittest.mock import patch
-from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph, workflow_branch_references
+from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph, workflow_branch_references, inventory_workflow_source
 
 
 class BranchReferenceTests(unittest.TestCase):
@@ -33,6 +33,35 @@ class BranchReferenceTests(unittest.TestCase):
         refs=workflow_branch_references(source)
         self.assertEqual(refs["checkout_refs"],[])
         self.assertEqual(len(refs["unresolved_checkout_refs"]),1)
+
+    def test_actual_main_workflow_provenance(self):
+        source="""on:
+  workflow_dispatch:
+  schedule:
+    - cron: '3,33 * * * *'
+permissions:
+  contents: write
+steps:
+  - uses: actions/checkout@v4
+    with:
+      ref: simplified-scanner-recovery-20261011
+  - name: Persist
+    run: git push origin HEAD:refs/heads/simple-history
+"""
+        workflow=inventory_workflow_source(".github/workflows/kraken-recovery-schedule.yml",source)
+        self.assertEqual(workflow["branch_references"]["checkout_refs"],
+                         ["simplified-scanner-recovery-20261011"])
+        self.assertEqual(workflow["branch_references"]["branch_ref_mentions"],["simple-history"])
+        graph=build_consumer_graph([workflow],{"snapshot_utc":"2026-11-02T02:17:00Z"},
+                                   "a"*40,"b"*40,workflow_source="remote_main")
+        self.assertTrue(all(e["evidence"]=="remote_main:"+"b"*40 for e in graph["edges"]))
+        self.assertTrue(workflow["writes_contents"])
+        self.assertFalse(graph["cleanup_authorized"])
+
+    def test_unrecognized_workflow_provenance_fails_closed(self):
+        with self.assertRaisesRegex(ValueError,"Unrecognized"):
+            build_consumer_graph([],{"snapshot_utc":"2026-11-02T02:17:00Z"},
+                                 "a"*40,"b"*40,workflow_source="guessed")
 
     def test_unresolved_dynamic_checkout_blocks_cleanup(self):
         workflow={"path":".github/workflows/full-scanner-inventory.yml",
