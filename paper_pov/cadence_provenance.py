@@ -35,6 +35,7 @@ def provenance(log):
         return None
     found = {}
     marker_times = []
+    marker_order = []
     for raw_time, key, value in EXECUTED.findall(log):
         if key in found:  # Never silently select one of two contradictory markers.
             return None
@@ -43,6 +44,11 @@ def provenance(log):
         except (ValueError, TypeError, OverflowError):
             return None
         found[key] = value.strip()
+        marker_order.append(key)
+    if marker_order != ["PAPER_VERIFIED_GITHUB_EVENT",
+                        "PAPER_VERIFIED_ORIGINATING_CRON",
+                        "PAPER_PIPELINE_SOURCE_SHA"]:
+        return None
     # Executed GitHub log markers should be chronological and close together.
     # Reject pasted/reordered historical fragments rather than joining them.
     if marker_times and (marker_times != sorted(marker_times) or
