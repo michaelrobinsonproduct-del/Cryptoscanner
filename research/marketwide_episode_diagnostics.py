@@ -204,6 +204,28 @@ def analyze(state):
     runs = {r["id"]: timestamp(r["as_of"]) for r in state["runs"]}
     latest = max(runs.values(), default=None)
     watches = {(p["run_id"], p["pair"]) for p in state["predictions"]}
+    # Bounded integrity diagnostics: WATCH keys must correspond to observed
+    # pair/run snapshots. This does not establish exchange-wide coverage.
+    observed_keys = {(o["run_id"], o["pair"]) for o in state["observations"]}
+    unbound = watches - observed_keys
+    prediction_bindings = {
+        "prediction_rows": len(state["predictions"]),
+        "unique_prediction_keys": len(watches),
+        "duplicate_prediction_keys": len(state["predictions"]) - len(watches),
+        "observation_rows": len(state["observations"]),
+        "unique_observation_keys": len(observed_keys),
+        "duplicate_observation_keys": len(state["observations"]) - len(observed_keys),
+        "bound_prediction_keys": len(watches & observed_keys),
+        "unbound_prediction_keys": len(unbound),
+        "unbound_examples": [{"run_id": rid, "pair": pair}
+                             for rid, pair in sorted(unbound)[:10]],
+        "unbound_examples_limit": 10,
+        "binding_complete": (not unbound and
+                             len(watches) == len(state["predictions"]) and
+                             len(observed_keys) == len(state["observations"])),
+        "scope": "observed PAPER pair/run keys only; not all eligible Kraken markets"}
+    assert (prediction_bindings["bound_prediction_keys"] +
+            prediction_bindings["unbound_prediction_keys"] == len(watches))
     by_pair = defaultdict(list)
     quote_prices = defaultdict(dict)
     conflicting_quotes = defaultdict(set)
@@ -475,6 +497,43 @@ def analyze(state):
         # Only matured, non-abstained WATCH cases can be labeled nonhits.
         coverage["watch_false_positive_30"] = coverage["watch_matured"] - coverage["watch_positive"]
         coverage["watch_false_positive_20"] = coverage["watch_matured"] - coverage["watch_positive_20"]
+        # Unknown WATCH labels are neither wins nor losses; bound all-entry
+        # precision rather than reporting immature/gap outcomes as failures.
+        unknown_watch = coverage["watch_immature"] + coverage["watch_abstain_gap"]
+        total_watch = coverage["watch_eligible"]
+        assert total_watch == coverage["watch_matured"] + unknown_watch
+        coverage["watch_precision_all_entries_bounds"] = {
+            "scope": "observed PAPER WATCH entries; unknown outcomes unresolved",
+            "unknown": unknown_watch,
+            "20": {
+                "lower": coverage["watch_positive_20"] / total_watch if total_watch else None,
+                "upper": (coverage["watch_positive_20"] + unknown_watch) / total_watch if total_watch else None},
+            "30": {
+                "lower": coverage["watch_positive"] / total_watch if total_watch else None,
+                "upper": (coverage["watch_positive"] + unknown_watch) / total_watch if total_watch else None}}
+        nonwatch = {key: coverage[key] - coverage["watch_" + key]
+                    for key in ("eligible", "matured", "immature", "abstain_gap")}
+        assert nonwatch["eligible"] == sum(nonwatch[k] for k in
+                                          ("matured", "immature", "abstain_gap"))
+        coverage["selection_maturity"] = {
+            "watch": {"eligible": total_watch, "matured": coverage["watch_matured"],
+                      "unknown": unknown_watch,
+                      "mature_fraction": coverage["watch_matured"] / total_watch if total_watch else None},
+            "nonwatch": {"eligible": nonwatch["eligible"], "matured": nonwatch["matured"],
+                         "unknown": nonwatch["immature"] + nonwatch["abstain_gap"],
+                         "mature_fraction": nonwatch["matured"] / nonwatch["eligible"]
+                                            if nonwatch["eligible"] else None}}
+        # FPR denominator is all matured observed negatives, not WATCH entries.
+        for suffix, mover, positive in (("20", "movers_20", "watch_positive_20"),
+                                        ("30", "movers", "watch_positive")):
+            negative_count = coverage["matured"] - coverage[mover]
+            false_positives = coverage["watch_matured"] - coverage[positive]
+            assert 0 <= false_positives <= negative_count
+            coverage["matured_negative_" + suffix] = negative_count
+            coverage["false_positive_rate_" + suffix] = (
+                false_positives / negative_count if negative_count else None)
+            coverage["false_positive_rate_wilson_95_naive_" + suffix] = (
+                wilson(false_positives, negative_count))
         coverage["missed_20"] = coverage["movers_20"] - coverage["watch_positive_20"]
         coverage["missed_30"] = coverage["movers"] - coverage["watch_positive"]
         output[str(hours)] = {"coverage":coverage,
@@ -552,7 +611,8 @@ def analyze(state):
                       "complete_market_history":False,
                       "eligible_for_model_promotion":False,
                       "data_scope":"SHA-verified PAPER snapshot ledger, not exchange-authenticated full history",
-                      "runs":len(state["runs"]),"observations":len(state["observations"])},
+                      "runs":len(state["runs"]),"observations":len(state["observations"]),
+                      "prediction_bindings":prediction_bindings},
             "horizons":output}
 
 

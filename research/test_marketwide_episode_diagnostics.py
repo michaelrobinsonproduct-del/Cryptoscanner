@@ -989,5 +989,129 @@ class EpisodeTests(unittest.TestCase):
         self.assertGreater(one["gap_reason_totals"]["stale_entry"],0)
         self.assertGreater(one["gap_reason_totals"]["missing_horizon_anchor"],0)
 
+
+    def test_unknown_watch_outcomes_bound_all_entry_precision(self):
+        state = fixture()
+        with patch("paper_pov.ledger.verify", return_value=None):
+            reports = analyze(state)["horizons"]
+        for horizon in ("1", "6", "24", "48"):
+            c = reports[horizon]["coverage"]
+            bounds = c["watch_precision_all_entries_bounds"]
+            self.assertEqual(bounds["unknown"], c["watch_immature"] + c["watch_abstain_gap"])
+            self.assertEqual(c["watch_eligible"], c["watch_matured"] + bounds["unknown"])
+            for threshold, positive in (("20", "watch_positive_20"), ("30", "watch_positive")):
+                self.assertEqual(bounds[threshold]["lower"], c[positive] / c["watch_eligible"])
+                self.assertEqual(bounds[threshold]["upper"],
+                                 (c[positive] + bounds["unknown"]) / c["watch_eligible"])
+                self.assertLessEqual(bounds[threshold]["lower"], bounds[threshold]["upper"])
+            s = c["selection_maturity"]
+            self.assertEqual(s["watch"]["eligible"] + s["nonwatch"]["eligible"], c["eligible"])
+            self.assertEqual(s["watch"]["matured"] + s["nonwatch"]["matured"], c["matured"])
+        # With no 48-hour matured outcomes, uncertainty is [0, 1], not a zero precision.
+        self.assertEqual(reports["48"]["coverage"]["watch_precision_all_entries_bounds"]["30"],
+                         {"lower": 0.0, "upper": 1.0})
+
+    def test_no_watch_has_undefined_precision_bounds(self):
+        state = fixture()
+        state["predictions"] = []
+        with patch("paper_pov.ledger.verify", return_value=None):
+            c = analyze(state)["horizons"]["1"]["coverage"]
+        self.assertEqual(c["watch_precision_all_entries_bounds"]["unknown"], 0)
+        self.assertIsNone(c["watch_precision_all_entries_bounds"]["20"]["lower"])
+        self.assertIsNone(c["watch_precision_all_entries_bounds"]["30"]["upper"])
+        self.assertEqual(c["selection_maturity"]["watch"]["eligible"], 0)
+        self.assertIsNone(c["selection_maturity"]["watch"]["mature_fraction"])
+
+    def test_subthreshold_high_precision_prices_are_not_rounded_into_hits(self):
+        runs = [{"id":str(m), "as_of":iso(m)} for m in range(0,481,30)]
+        observations = [
+            {"run_id":str(m), "at":iso(m), "pair":pair,
+             "price": (near if m==30 else "100")}
+            for pair,near in (("AAAUSD","119.999999999999999999999999999"),
+                              ("BBBUSD","129.999999999999999999999999999"))
+            for m in range(0,481,30)]
+        state = {"schema":1,"generation":len(runs),"sha256":"0"*64,
+                 "runs":runs,"observations":observations,"predictions":[]}
+        with patch("paper_pov.ledger.verify", return_value=None):
+            c = analyze(state)["horizons"]["1"]["coverage"]
+        self.assertGreater(c["matured"], 0)
+        self.assertEqual(c["movers_20"], 1)  # BBB near +30% is still >= +20%.
+        self.assertEqual(c["movers"], 0)
+
+    def test_exact_decimal_thresholds_remain_inclusive_after_precision_fix(self):
+        runs = [{"id":str(m), "as_of":iso(m)} for m in range(0,481,30)]
+        observations = [
+            {"run_id":str(m), "at":iso(m), "pair":pair,
+             "price": (peak if m==30 else "100")}
+            for pair,peak in (("AAAUSD","120.000000000000000000000000000"),
+                              ("BBBUSD","130.000000000000000000000000000"))
+            for m in range(0,481,30)]
+        state = {"schema":1,"generation":len(runs),"sha256":"0"*64,
+                 "runs":runs,"observations":observations,"predictions":[]}
+        with patch("paper_pov.ledger.verify", return_value=None):
+            c = analyze(state)["horizons"]["1"]["coverage"]
+        self.assertEqual(c["movers_20"], 2)
+        self.assertEqual(c["movers"], 1)
+
+    def test_false_positive_rate_excludes_unknown_and_positive_labels(self):
+        with patch("paper_pov.ledger.verify", return_value=None):
+            horizons = analyze(fixture())["horizons"]
+        for report in horizons.values():
+            c = report["coverage"]
+            for suffix,mover,fp in (("20", "movers_20", "watch_false_positive_20"),
+                                     ("30", "movers", "watch_false_positive_30")):
+                n = c["matured"] - c[mover]
+                self.assertEqual(c["matured_negative_" + suffix], n)
+                self.assertEqual(c["false_positive_rate_" + suffix],
+                                 c[fp] / n if n else None)
+                self.assertEqual(c["false_positive_rate_wilson_95_naive_" + suffix],
+                                 wilson(c[fp], n))
+        # 24h and 48h have no mature negatives; FPR is undefined, not zero.
+        self.assertIsNone(horizons["48"]["coverage"]["false_positive_rate_30"])
+
+    def test_zero_observations_do_not_fabricate_fpr_denominators(self):
+        state = fixture()
+        state["observations"] = []
+        state["predictions"] = []
+        with patch("paper_pov.ledger.verify", return_value=None):
+            c = analyze(state)["horizons"]["1"]["coverage"]
+        self.assertEqual(c["matured_negative_20"], 0)
+        self.assertEqual(c["matured_negative_30"], 0)
+        self.assertIsNone(c["false_positive_rate_20"])
+        self.assertIsNone(c["false_positive_rate_wilson_95_naive_30"])
+
+    def test_prediction_binding_reports_duplicate_and_unbound_watch_keys(self):
+        state = fixture()
+        state["predictions"].extend([
+            {"run_id":"30", "pair":"BBBUSD"},
+            {"run_id":"0", "pair":"UNOBSERVEDUSD"}])
+        with patch("paper_pov.ledger.verify", return_value=None):
+            result = analyze(state)
+        binding = result["source"]["prediction_bindings"]
+        self.assertEqual(binding["prediction_rows"], 3)
+        self.assertEqual(binding["unique_prediction_keys"], 2)
+        self.assertEqual(binding["duplicate_prediction_keys"], 1)
+        self.assertEqual(binding["bound_prediction_keys"], 1)
+        self.assertEqual(binding["unbound_prediction_keys"], 1)
+        self.assertEqual(binding["unbound_examples"],
+                         [{"run_id":"0","pair":"UNOBSERVEDUSD"}])
+        self.assertFalse(binding["binding_complete"])
+        # The orphan cannot become a fabricated WATCH market observation.
+        self.assertEqual(result["horizons"]["1"]["coverage"]["watch_eligible"], 1)
+
+    def test_prediction_binding_empty_and_duplicate_observation_diagnostics(self):
+        state = fixture()
+        state["predictions"] = []
+        with patch("paper_pov.ledger.verify", return_value=None):
+            b = analyze(state)["source"]["prediction_bindings"]
+        self.assertTrue(b["binding_complete"])
+        self.assertEqual(b["unbound_examples"], [])
+        self.assertEqual(b["bound_prediction_keys"], 0)
+        state["observations"].append(dict(state["observations"][0]))
+        with patch("paper_pov.ledger.verify", return_value=None):
+            b = analyze(state)["source"]["prediction_bindings"]
+        self.assertEqual(b["duplicate_observation_keys"], 1)
+        self.assertFalse(b["binding_complete"])
+
 if __name__=="__main__":
     unittest.main()
