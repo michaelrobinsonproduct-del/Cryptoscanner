@@ -33,6 +33,34 @@ class CadenceProvenanceTests(unittest.TestCase):
         self.assertEqual(result["runs"][0]["minimum_lateness_seconds"], 1861)
         self.assertFalse(result["runs"][0]["originating_hour_verified"])
 
+    def test_real_native_39_creation_two_seconds_early_abstains_on_lateness(self):
+        # Actual GitHub run #41438473450: created 11:38:58Z for 39 * * * *.
+        # Do not fabricate a 59m58s delay from a two-second boundary ambiguity.
+        candidate = run(41438473450, "2026-11-02T11:38:58Z")
+        executed = ("2026-11-02T11:39:03Z PAPER_VERIFIED_GITHUB_EVENT=schedule\n"
+                    "2026-11-02T11:39:03Z PAPER_VERIFIED_ORIGINATING_CRON=39 * * * *\n"
+                    "2026-11-02T11:39:03Z PAPER_PIPELINE_SOURCE_SHA=" + SHA + "\n")
+        report = audit([candidate], {"41438473450": executed},
+                       "2026-11-02T12:20:00Z")
+        self.assertEqual(report["verified_native_count"], 1)
+        self.assertEqual(report["native_nominal_boundary_ambiguous_count"], 1)
+        self.assertEqual(report["native_minimum_lateness_seconds"], [])
+        row = report["runs"][0]
+        self.assertIsNone(row["minimum_lateness_seconds"])
+        self.assertIsNone(row["latest_possible_nominal_slot"])
+        self.assertEqual(row["possible_prior_nominal_slot"], "2026-11-02T10:39:00+00:00")
+        self.assertEqual(row["possible_upcoming_nominal_slot"], "2026-11-02T11:39:00+00:00")
+        self.assertFalse(row["originating_hour_verified"])
+
+    def test_more_than_fifteen_seconds_before_cron_remains_late_lower_bound(self):
+        candidate = run(1, "2026-11-02T11:38:44Z")
+        executed = ("2026-11-02T11:38:48Z PAPER_VERIFIED_GITHUB_EVENT=schedule\n"
+                    "2026-11-02T11:38:48Z PAPER_VERIFIED_ORIGINATING_CRON=39 * * * *\n"
+                    "2026-11-02T11:38:48Z PAPER_PIPELINE_SOURCE_SHA=" + SHA + "\n")
+        report = audit([candidate], {"1": executed}, "2026-11-02T12:20:00Z")
+        self.assertEqual(report["native_nominal_boundary_ambiguous_count"], 0)
+        self.assertEqual(report["runs"][0]["minimum_lateness_seconds"], 3584)
+
     def test_late_09_slot_53_minutes(self):
         result = self.check([run(2, "2026-11-01T15:02:07Z")], {"2": log(cron="9 * * * *")})
         self.assertEqual(result["runs"][0]["latest_possible_nominal_slot"], "2026-11-01T14:09:00+00:00")

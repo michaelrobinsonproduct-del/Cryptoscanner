@@ -233,13 +233,28 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
                 evidence.append(row)
                 continue
             nominal = last_nominal_slot(created, CRONS[cron])
-            lower_bound = round((created - nominal).total_seconds(), 3)
-            row.update(originating_cron=cron, minimum_lateness_seconds=lower_bound)
-            # GitHub does not expose the scheduled hour. This is the *latest*
-            # possible matching cron slot, never a proven originating slot.
+            next_nominal = nominal + dt.timedelta(hours=1)
+            seconds_before_next = (next_nominal - created).total_seconds()
+            # GitHub sometimes creates a :39 schedule at 11:38:58. Treating
+            # that as 59m58s late is a false precision claim: the upcoming
+            # :39 slot is only two seconds away. Neither hour is attested.
+            # Abstain on lateness within a narrow 15-second clock boundary,
+            # rather than calling it punctual or attributing it an hour late.
+            if 0 < seconds_before_next <= 15:
+                row.update(originating_cron=cron, minimum_lateness_seconds=None,
+                           nominal_boundary_ambiguous=True,
+                           possible_prior_nominal_slot=nominal.isoformat(),
+                           possible_upcoming_nominal_slot=next_nominal.isoformat(),
+                           latest_possible_nominal_slot=None)
+            else:
+                lower_bound = round((created - nominal).total_seconds(), 3)
+                row.update(originating_cron=cron, minimum_lateness_seconds=lower_bound,
+                           nominal_boundary_ambiguous=False,
+                           latest_possible_nominal_slot=nominal.isoformat())
+            # GitHub does not expose the scheduled hour, even for a
+            # source-authenticated schedule event.
             row.update(classification=("VERIFIED_NATIVE_SCHEDULE" if successful
                                        else "VERIFIED_NATIVE_SCHEDULE_UNSUCCESSFUL"),
-                       latest_possible_nominal_slot=nominal.isoformat(),
                        originating_hour_verified=False,
                        durable_ledger_verified=False)
             evidence.append(row)
@@ -340,7 +355,10 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
             "verified_native_unsuccessful_count": len(native_failed),
             "verified_dispatch_unsuccessful_count": len(dispatch_failed),
             "unverified_or_ambiguous_count": len(evidence) - len(native) - len(dispatched) - len(native_failed) - len(dispatch_failed),
-            "native_minimum_lateness_seconds": [r["minimum_lateness_seconds"] for r in native],
+            "native_minimum_lateness_seconds": [r["minimum_lateness_seconds"] for r in native
+                                                if r["minimum_lateness_seconds"] is not None],
+            "native_nominal_boundary_ambiguous_count": sum(
+                bool(r.get("nominal_boundary_ambiguous")) for r in native),
             "runs": evidence,
             "limitations": ["Only the canonical main-branch PAPER writer workflow is counted; foreign workflow markers abstain",
                             "GitHub reruns preserve event=schedule but are not original unattended cron executions",
@@ -348,6 +366,7 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
                             "A completed failed workflow is an attempt, not a successful scan",
                             "Attempt cadence includes authenticated failed executions but is not persisted scan cadence",
                             "A cron expression identifies a minute, not an hour; reported lateness is only a lower bound",
+                            "Native runs created <=15 seconds before the upcoming cron minute have ambiguous nominal-hour attribution and no lateness estimate",
                             "Creation gaps are observational and cannot certify missed cron slots or persisted ledger generations",
                             "Created-at is not the job's completion time",
                             "Writer job queue delay is measured only from matching GitHub public-paper job started_at; missing metadata abstains",
