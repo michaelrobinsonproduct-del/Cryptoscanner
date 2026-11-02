@@ -631,6 +631,28 @@ class AuditCertificationGateTests(unittest.TestCase):
         self.assertIn("EXTERNAL_RUNTIME_UNATTESTED",[b["id"] for b in gate["blockers"]])
         self.assertFalse(gate["cleanup_authorized"])
 
+    def test_source_verified_unknown_still_blocks_semantic_certification(self):
+        gate=audit_gate_decision(
+            {"open_pr_count":2,"current_validated_count":2,
+             "prs":[{"number":7,"classification":"unknown","review_valid":True},
+                    {"number":40,"classification":"conflicting","review_valid":True}]},
+            {"unknowns":[]},{"unknown_write_destinations":[]},
+            {"runtime_coverage_certified":False,"reason":"SNAPSHOT_ONLY_NO_LIVE_AUTHENTICATION"},
+            "a"*40,"b"*40)
+        self.assertEqual(gate["unresolved_pr_count"],1)
+        self.assertEqual(gate["blockers"][0]["id"],"PR_SEMANTICS_UNRESOLVED")
+        self.assertFalse(gate["cleanup_authorized"])
+
+    def test_source_review_contract_for_legacy_and_external_writers(self):
+        matrix=json.loads((pathlib.Path(__file__).parent/"pr_semantic_current_20261102.json").read_text())
+        rows={x["number"]:x for x in matrix["prs"]}
+        self.assertEqual(rows[7]["source_blob_sha"],"25539447cb9fb2b1d83dcc04fcc595e5fd9e38af")
+        self.assertEqual(rows[7]["classification"],"unknown")
+        self.assertEqual(rows[4]["classification"],"conflicting")
+        self.assertIn("PATCH",rows[4]["reason"])
+        self.assertEqual(rows[33]["classification"],"conflicting")
+        self.assertIn("simple-history",rows[33]["reason"])
+
     def test_no_static_unknowns_does_not_fake_independent_certification(self):
         gate=audit_gate_decision(
             {"open_pr_count":1,"current_validated_count":1},
