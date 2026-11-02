@@ -147,13 +147,32 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
                 n = stats.get("with_asof_feature")
                 missing = stats.get("without_asof_feature")
                 pairs = stats.get("distinct_covered_pairs")
+                reasons = stats.get("missing_reasons")
+                allowed = {"no_prior_anchor", "stale_prior_anchor", "conflicting_anchor",
+                           "conflicting_history", "discontinuous_history", "nonfinite_return"}
                 if (not all(isinstance(x, int) and not isinstance(x, bool) and x >= 0
                             for x in (n, missing, pairs))
                     or stats.get("episodes") != total or n + missing != total
                     or pairs > n or n != distribution.get("n")
                     or pairs != distribution.get("distinct_pairs")
-                    or stats.get("covered_fraction") != (n / total if total else None)):
+                    or stats.get("covered_fraction") != (n / total if total else None)
+                    or not isinstance(reasons, dict) or not set(reasons) <= allowed
+                    or any(not isinstance(v, int) or isinstance(v, bool) or v <= 0
+                           for v in reasons.values())
+                    or sum(reasons.values()) != missing):
                     raise ValueError("invalid first-entry feature coverage: " + horizon)
+        # The count of dependent WATCH nonhit windows cannot exceed the
+        # independently validated matured negative WATCH denominator.
+        for suffix in ("20", "30"):
+            windows = episode.get("watch_nonhit_windows_" + suffix)
+            pairs = episode.get("watch_nonhit_distinct_pairs_" + suffix)
+            nonhits = coverage["watch_false_positive_" + suffix]
+            if (not all(isinstance(v, int) and not isinstance(v, bool) and v >= 0
+                        for v in (windows, pairs))
+                or windows > nonhits or pairs > windows
+                or (windows == 0) != (nonhits == 0)
+                or (pairs == 0) != (windows == 0)):
+                raise ValueError("invalid WATCH nonhit window partition: " + horizon)
         # A self-resealed aggregate cannot contradict its actual +30% episode
         # records. The +20% evaluator does not currently export episode rows.
         actual_episodes = episode.get("episodes")
