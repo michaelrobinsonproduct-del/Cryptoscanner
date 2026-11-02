@@ -129,6 +129,7 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
             # is manually initiated later. It cannot certify an unattended slot.
             if type(run.get("run_attempt")) is not int or run["run_attempt"] != 1:
                 evidence.append({"run_id": rid,
+                                 "created_at": run.get("created_at"),
                                  "classification": "MISSING_OR_RERUN_ATTEMPT_PROVENANCE"})
                 continue
             created = timestamp(run["created_at"])

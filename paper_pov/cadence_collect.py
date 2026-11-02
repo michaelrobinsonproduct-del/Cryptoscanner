@@ -473,8 +473,9 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
         rid = run["id"]
         # Even failed/in-progress runs may contain concurrent canonical jobs.
         # Read their job metadata, but never read/publish a success log for them.
-        if run.get("run_attempt") != 1:
-            continue
+        # A rerun retains its original event/created_at, but its latest
+        # canonical job attempt can overlap a different writer. Collect job
+        # metadata for reruns without accepting their logs as native proof.
         response = get(base + "/runs/" + str(rid) + "/jobs?per_page=100")
         job_rows = response.get("jobs") if isinstance(response, dict) else None
         job_total = response.get("total_count") if isinstance(response, dict) else None
@@ -482,6 +483,8 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
                 type(job_total) is not int or job_total != len(job_rows)):
             raise ValueError("truncated or malformed job page")
         jobs[str(rid)] = job_rows
+        if run.get("run_attempt") != 1:
+            continue  # Job interval only; never certify a rerun's source/log.
         if run.get("status") != "completed":
             continue
         canonical = [j for j in job_rows if isinstance(j, dict)

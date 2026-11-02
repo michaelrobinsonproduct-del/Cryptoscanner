@@ -513,6 +513,38 @@ class CadenceCollectorTests(unittest.TestCase):
         self.assertEqual(evidence["overlap_pair_count"], 0)
         self.assertFalse(evidence["global_exclusivity_verified"])
 
+    def test_rerun_attempt_job_overlap_detected_without_native_or_manual_credit(self):
+        upstream, calls = fixture()
+        def altered(path, text=False):
+            response = upstream(path, text)
+            if "event=workflow_dispatch" in path:
+                response["workflow_runs"][0]["run_attempt"] = 2
+            return response
+        result = collect(altered, "owner/repo", NOW)
+        self.assertTrue(any("/runs/2/jobs?" in p for p, _ in calls))
+        self.assertFalse(any("/jobs/102/logs" in p for p, _ in calls))
+        self.assertEqual(result["report"]["verified_dispatch_count"], 0)
+        self.assertEqual(result["writer_attempt_interval_evidence"]["status"],
+                         "FAILED_OVERLAPPING_GITHUB_CANONICAL_JOB_INTERVALS")
+        self.assertEqual(result["writer_attempt_interval_evidence"]["overlap_pair_count"], 1)
+        self.assertFalse(result["writer_attempt_interval_evidence"]["global_exclusivity_verified"])
+
+    def test_nonoverlapping_rerun_attempt_cannot_prove_clean_writer_coverage(self):
+        upstream, _ = fixture()
+        def altered(path, text=False):
+            response = upstream(path, text)
+            if "event=workflow_dispatch" in path:
+                response["workflow_runs"][0]["run_attempt"] = 2
+            if "/runs/2/jobs?" in path:
+                response["jobs"][0].update({
+                    "started_at": "2026-11-02T03:11:01Z",
+                    "completed_at": "2026-11-02T03:12:00Z"})
+            return response
+        result = collect(altered, "owner/repo", NOW)
+        self.assertEqual(result["writer_attempt_interval_evidence"]["status"],
+                         "UNVERIFIED_SOURCE_PROVENANCE_FOR_JOB_INTERVALS")
+        self.assertEqual(result["writer_attempt_interval_evidence"]["unverified_source_run_ids"], [2])
+
     def test_running_canonical_job_is_read_but_cannot_prove_no_overlap(self):
         upstream, calls = fixture()
         def altered(path, text=False):
