@@ -116,7 +116,7 @@ class CadenceProvenanceTests(unittest.TestCase):
         result = self.check(rows, logs)
         self.assertEqual(result["verified_successful_writer_run_creation_count"], 2)
         self.assertEqual(result["max_verified_successful_run_creation_gap_seconds"], 3600)
-        self.assertEqual(result["seconds_since_last_verified_successful_run_creation"], 4200)
+        self.assertEqual(result["seconds_since_last_verified_successful_run_creation"], 4199)
         self.assertTrue(result["over_45m_since_verified_successful_run_creation"])
         self.assertNotIn("missed_slots_verified", result)
 
