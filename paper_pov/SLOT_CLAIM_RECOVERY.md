@@ -29,6 +29,25 @@ replace pending jobs; optional `queue: max` requires GitHub-environment
 compatibility testing and separate authorization. Neither mutex nor slot
 tag ref proves global writer exclusivity or exactly-once completion.
 
+## Replay and drift gate (isolated, offline-tested)
+
+The future Git-data adapter must supply a fresh authenticated UTC clock,
+current default-branch main commit SHA, and current canonical ledger commit
+at **attempt time**, not merely when the slot plan was prepared.
+`attempt(..., now=..., observed_main_sha=..., observed_ledger_commit=...)`
+rejects claims outside the UTC slot's 0–29 minute recovery window, and rejects
+source or ledger changes since preparation **before any Git-data calls**.
+Adversarial tests cover stale/future replay, missing/naive clocks, source drift,
+ledger drift and malformed observations. A fixture value is NOT an authenticated
+live observation; the caller must prove its provenance.
+
+There remains a time-of-check/time-of-use gap between authenticated GET
+observations and Git tag-ref creation. Independent audit must require a bounded
+freshness age for those observations, re-read after the claim, and fail closed
+if main/ledger changes or readback becomes ambiguous. This isolated protocol
+does not certify that a claimed slot was dispatched, completed, or delivered.
+A successful claim alone must never trigger a retry of a stranded slot.
+
 ## Critical crash/consistency limits
 
 * Creating a tag object before creating its ref can leave an unreachable
