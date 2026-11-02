@@ -161,6 +161,69 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
                            for v in reasons.values())
                     or sum(reasons.values()) != missing):
                     raise ValueError("invalid first-entry feature coverage: " + horizon)
+        # PAPER sample adequacy is not model-readiness or authenticated lift.
+        # Rechecking partition denominators prevents resealed research JSON
+        # from inventing eligible cohorts or retroactive first-entry features.
+        for key, total_key in (("chronological_readiness", "unique_mover_episodes"),
+                               ("chronological_readiness_20", "unique_mover_episodes_20")):
+            readiness = episode.get(key)
+            gates = ["exchange_authenticated_market_history",
+                     "point_in_time_execution_features",
+                     "independent_held_out_challenger"]
+            if (not isinstance(readiness, dict)
+                or readiness.get("model_evaluation_ready") is not False
+                or readiness.get("unmet_evidence_gates") != gates
+                or type(readiness.get("sample_thresholds_met")) is not bool):
+                raise ValueError("invalid PAPER-only model-readiness gate: " + horizon)
+            if readiness.get("status") == "INSUFFICIENT_SCAN_TIMES":
+                if readiness["sample_thresholds_met"] or readiness.get("cutoff") is not None:
+                    raise ValueError("invalid insufficient-scan readiness: " + horizon)
+                continue
+            if readiness.get("status") != "DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER":
+                raise ValueError("invalid chronological readiness status: " + horizon)
+            expected_blockers = []
+            partition_episodes = 0
+            for partition in ("train", "test"):
+                cohort = readiness.get(partition)
+                if not isinstance(cohort, dict):
+                    raise ValueError("invalid chronological cohort: " + horizon)
+                episodes_n = cohort.get("positive_episodes")
+                featured_n = cohort.get("positive_lag_60m_episodes")
+                negatives_n = cohort.get("negative_lag_60m_pairs")
+                if (not all(type(v) is int and v >= 0
+                            for v in (episodes_n, featured_n, negatives_n))
+                    or featured_n > episodes_n):
+                    raise ValueError("invalid chronological cohort: " + horizon)
+                partition_episodes += episodes_n
+                first_features = cohort.get("positive_first_entry_feature_coverage")
+                if not isinstance(first_features, dict) or set(first_features) != {"30m","60m","180m"}:
+                    raise ValueError("invalid chronological first-entry feature schema: " + horizon)
+                for lag, stats in first_features.items():
+                    if not isinstance(stats, dict):
+                        raise ValueError("invalid chronological first-entry coverage: " + horizon)
+                    with_feature = stats.get("with_asof_feature")
+                    without_feature = stats.get("without_asof_feature")
+                    reasons = stats.get("missing_reasons")
+                    allowed = {"no_prior_anchor","stale_prior_anchor","conflicting_anchor",
+                               "conflicting_history","discontinuous_history",
+                               "nonfinite_return","reason_unavailable"}
+                    if (not all(type(v) is int and v >= 0 for v in (with_feature, without_feature))
+                        or stats.get("episodes") != episodes_n
+                        or with_feature + without_feature != episodes_n
+                        or not isinstance(reasons, dict) or not set(reasons) <= allowed
+                        or any(type(v) is not int or v <= 0 for v in reasons.values())
+                        or sum(reasons.values()) != without_feature
+                        or (lag == "60m" and with_feature != featured_n)):
+                        raise ValueError("invalid chronological first-entry coverage: " + horizon)
+                for requirement, observed in (("episode_first_positive_lag_60m",featured_n),
+                                              ("distinct_negative_lag_60m_pairs",negatives_n)):
+                    if observed < 10:
+                        expected_blockers.append({"partition":partition,"requirement":requirement,
+                                                  "required":10,"observed":observed})
+            if (partition_episodes > episode[total_key]
+                or readiness.get("minimum_sample_requirements") != expected_blockers
+                or readiness["sample_thresholds_met"] != (not expected_blockers)):
+                raise ValueError("invalid chronological sample requirements: " + horizon)
         # The count of dependent WATCH nonhit windows cannot exceed the
         # independently validated matured negative WATCH denominator.
         for suffix in ("20", "30"):
