@@ -1,7 +1,7 @@
 """Offline fail-closed pagination tests for repository inventory (no network)."""
 import unittest
 from unittest.mock import patch
-from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths
+from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs
 
 class PaginationTests(unittest.TestCase):
     def test_multiple_pages_are_all_included(self):
@@ -33,7 +33,7 @@ class RemoteMainTreeTests(unittest.TestCase):
         def fetch(path):
             calls.append(path)
             return {"truncated":False,"tree":[
-                {"type":"blob","path":"paper_pov/scanner.py"},
+                {"type":"blob","path":"paper_pov/scanner.py","sha":"b"*40},
                 {"type":"tree","path":"audit_tools"}]}
         paths=remote_main_paths(self.SHA,fetch)
         self.assertEqual(paths,{"paper_pov/scanner.py"})
@@ -54,10 +54,33 @@ class RemoteMainTreeTests(unittest.TestCase):
 
     def test_malformed_or_duplicate_tree_fails_closed(self):
         for entries in ([{"type":"blob"}],
-                        [{"type":"blob","path":"x"},{"type":"blob","path":"x"}]):
+                        [{"type":"blob","path":"x","sha":"b"*40},{"type":"blob","path":"x","sha":"c"*40}]):
             with self.subTest(entries=entries):
                 with self.assertRaises(RuntimeError):
                     remote_main_paths(self.SHA,lambda _:{"truncated":False,"tree":entries})
+
+
+class ExactBlobComparisonTests(unittest.TestCase):
+    def test_same_path_different_contents_is_not_integrated(self):
+        main={"paper_pov/scanner.py":"a"*40}
+        changed=[{"filename":"paper_pov/scanner.py","sha":"b"*40,"status":"modified"}]
+        rows=compare_pr_blobs(changed,main)
+        self.assertEqual(rows[0]["comparison"],"DIFFERENT_BLOB_OR_UNKNOWN")
+        self.assertEqual(rows[0]["main_blob_sha"],"a"*40)
+
+    def test_exact_blob_equality_and_missing_file(self):
+        main={"x.py":"a"*40}
+        rows=compare_pr_blobs([
+            {"filename":"x.py","sha":"a"*40,"status":"modified"},
+            {"filename":"new.py","sha":"b"*40,"status":"added"},
+            {"filename":"x.py","status":"removed"}],main)
+        self.assertEqual([r["comparison"] for r in rows],
+                         ["EXACT_BLOB_EQUAL","NOT_ON_MAIN","DIFFERENT_BLOB_OR_UNKNOWN"])
+
+    def test_malformed_main_blob_sha_fails_closed(self):
+        with self.assertRaisesRegex(RuntimeError,"invalid blob SHA"):
+            remote_main_blobs("a"*40,lambda _:{
+                "truncated":False,"tree":[{"type":"blob","path":"x","sha":"bad"}]})
 
 
 class SnapshotReconciliationTests(unittest.TestCase):
