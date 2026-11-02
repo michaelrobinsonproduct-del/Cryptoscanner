@@ -34,7 +34,9 @@ def evaluate(state):
                          "immature": 0, "movers_20": 0, "movers_30": 0,
                          "watch_20": 0, "watch_30": 0, "missed_20": 0,
                          "missed_30": 0, "watch_false_positive_20": 0,
-                         "watch_false_positive_30": 0} for h in HORIZONS}
+                         "watch_false_positive_30": 0,
+                         "watch_eligible": 0, "watch_matured": 0,
+                         "watch_abstain_gap": 0, "watch_immature": 0} for h in HORIZONS}
     latest = max((timestamp(r["as_of"]) for r in runs.values()), default=None)
     for pair, series in prices.items():
         times = [record[0] for record in series]
@@ -45,9 +47,11 @@ def evaluate(state):
             for h in HORIZONS:
                 row = results[str(h)]
                 row["eligible"] += 1
+                if selected: row["watch_eligible"] += 1
                 target = start + dt.timedelta(hours=h)
                 if latest is None or latest < target + MAX_GAP:
                     row["immature"] += 1
+                    if selected: row["watch_immature"] += 1
                     continue
                 end = bisect.bisect_right(times, target + MAX_GAP, lo=i+1)
                 # A quote can precede the PAPER decision by up to three minutes.
@@ -63,8 +67,10 @@ def evaluate(state):
                     or any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
                     or anchors[0][0]-timeline[-1] > MAX_GAP):
                     row["abstain_gap"] += 1
+                    if selected: row["watch_abstain_gap"] += 1
                     continue
                 row["matured"] += 1
+                if selected: row["watch_matured"] += 1
                 # Decimal avoids binary float cancellation at exact +20/+30
                 # thresholds and overflow when entry prices are very small.
                 peak_price = max(p for _, p in before)
@@ -79,6 +85,10 @@ def evaluate(state):
                         row["watch_false_positive_"+suffix] += 1
     for row in results.values():
         assert row["eligible"] == row["matured"] + row["abstain_gap"] + row["immature"]
+        assert row["watch_eligible"] == (row["watch_matured"] +
+                row["watch_abstain_gap"] + row["watch_immature"])
+        row["watch_resolved_fraction"] = (row["watch_matured"] / row["watch_eligible"]
+                if row["watch_eligible"] else None)
         for suffix in ("20","30"):
             row["recall_"+suffix] = (row["watch_"+suffix] / row["movers_"+suffix]
                                      if row["movers_"+suffix] else None)
