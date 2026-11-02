@@ -9,6 +9,7 @@ on:
       - '.github/workflows/paper-cadence-provenance-ci.yml'
 permissions:
   contents: read
+  actions: read
 jobs:
   offline-provenance-contracts:
     runs-on: ubuntu-latest
@@ -29,3 +30,38 @@ jobs:
           test "$(git cat-file -t "$TREE_SHA")" = tree
           echo "PAPER_CADENCE_BASE_TREE_SHA=$TREE_SHA"
           python -m unittest paper_pov.test_cadence_provenance paper_pov.test_cadence_collect -v
+
+  authenticated-get-only-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Source-bound real GitHub GET-only cadence evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          echo "PAPER_CADENCE_GET_ONLY_EXACT_SHA=$(git rev-parse HEAD)"
+          python -m paper_pov.cadence_collect \
+            --repo "$GITHUB_REPOSITORY" --lookback-hours 6 --max-runs 40 \
+            --output /tmp/paper-cadence-readonly.json
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/paper-cadence-readonly.json'))
+          assert d['read_only'] is True and d['raw_log_content_persisted'] is False
+          assert d['workflow'] == 'paper-pipeline.yml'
+          print('PAPER_CADENCE_GET_ONLY_EVIDENCE',len(d['evidence']))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: paper-cadence-readonly-${{ github.run_id }}
+          path: /tmp/paper-cadence-readonly.json
+          if-no-files-found: ignore
+          retention-days: 7

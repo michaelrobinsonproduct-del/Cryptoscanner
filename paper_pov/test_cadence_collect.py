@@ -184,6 +184,17 @@ class CadenceCollectorTests(unittest.TestCase):
             with self.assertRaises(UnicodeDecodeError):
                 get("/repos/owner/repo/actions/jobs/123/logs", text=True)
 
+    def test_live_rehearsal_workflow_is_get_only_and_has_no_writer(self):
+        from pathlib import Path
+        workflow = (Path(__file__).resolve().parents[1] / ".github" /
+                    "workflows" / "paper-cadence-provenance-ci.yml").read_text()
+        self.assertIn("actions: read", workflow)
+        self.assertIn("authenticated-get-only-rehearsal:", workflow)
+        self.assertIn("python -m paper_pov.cadence_collect", workflow)
+        self.assertIn("--lookback-hours 6 --max-runs 40", workflow)
+        self.assertNotIn("gh workflow run", workflow)
+        self.assertNotIn("paper-proof-ledger-single-writer", workflow)
+
     def test_reader_uses_only_get_for_authenticated_evidence(self):
         def fake_open(request, timeout):
             self.assertEqual(request.get_method(), "GET")
