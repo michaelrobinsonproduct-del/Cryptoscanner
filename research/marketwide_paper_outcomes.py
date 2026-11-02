@@ -52,6 +52,7 @@ def evaluate(state):
                 conflicting_times.add(quote_at)
             else:
                 quote_by_time.setdefault(quote_at, quote_price)
+        conflicting_lookup = conflicting_times
         conflicting_times = sorted(conflicting_times)
         for i, (at, entry, rid) in enumerate(series):
             # One point per actual market/run observation, not just WATCH.
@@ -76,7 +77,7 @@ def evaluate(state):
                 # Continuity is measured from the immutable decision time,
                 # matching the production PAPER outcome contract.
                 timeline = [start] + [t for t, _ in before]
-                ambiguous = (at in conflicting_times or
+                ambiguous = (at in conflicting_lookup or
                              bisect.bisect_right(conflicting_times, start) <
                              bisect.bisect_right(conflicting_times, target + MAX_GAP))
                 if (ambiguous or not before or not anchors or start - at > MAX_GAP
