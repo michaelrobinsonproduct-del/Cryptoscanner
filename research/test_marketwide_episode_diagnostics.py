@@ -1113,5 +1113,76 @@ class EpisodeTests(unittest.TestCase):
         self.assertEqual(b["duplicate_observation_keys"], 1)
         self.assertFalse(b["binding_complete"])
 
+
+    def test_ambiguous_historical_quote_abstains_feature(self):
+        series=[(BASE,100,"0"),(BASE+dt.timedelta(minutes=30),100,"30"),
+                (BASE+dt.timedelta(minutes=30),200,"other"),
+                (BASE+dt.timedelta(minutes=60),150,"60")]
+        self.assertIsNone(lagged_return(series,[r[0] for r in series],3,60))
+        series[2]=(series[2][0],100,"other")
+        self.assertEqual(lagged_return(series,[r[0] for r in series],3,60),0.5)
+
+    def test_multiple_duplicate_anchor_quotes_cannot_hide_earlier_conflict(self):
+        # The final two anchor prices agree, but the first contradicts them.
+        # Checking only the immediately preceding quote would miss it.
+        series=[(BASE,100,"a"),(BASE,200,"b"),(BASE,200,"c"),
+                (BASE+dt.timedelta(minutes=30),225,"middle"),
+                (BASE+dt.timedelta(minutes=60),250,"entry")]
+        times=[r[0] for r in series]
+        self.assertIsNone(lagged_return(series,times,4,60))
+        series[0]=(BASE,200,"a")
+        self.assertAlmostEqual(lagged_return(series,times,4,60),0.25)
+
+    def test_watch_outcome_denominators_distinguish_unknown_from_nonhits(self):
+        state=fixture()
+        state["predictions"].append({"run_id":"480","pair":"BBBUSD"})
+        # A WATCH at run 0 is label-incomplete when later BBB observations
+        # are missing; it must not be counted as a false positive.
+        state["predictions"].append({"run_id":"0","pair":"BBBUSD"})
+        state["observations"]=[o for o in state["observations"]
+            if not (o["pair"]=="BBBUSD" and o["run_id"] in ("60","90"))]
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        c=one["coverage"]
+        self.assertGreater(c["watch_immature"],0)
+        self.assertGreater(c["watch_abstain_gap"],0)
+        self.assertEqual(c["watch_eligible"],
+            c["watch_matured"]+c["watch_immature"]+c["watch_abstain_gap"])
+        self.assertEqual(c["missed_20"],c["movers_20"]-c["watch_positive_20"])
+        self.assertEqual(c["missed_30"],c["movers"]-c["watch_positive"])
+        self.assertEqual(one["missed_mover_episodes_20"],
+            one["unique_mover_episodes_20"]-one["watch_captured_episodes_20"])
+        self.assertEqual(one["missed_mover_episodes_30"],
+            one["unique_mover_episodes"]-one["watch_captured_episodes"])
+
+    def test_20pct_feature_cohorts_do_not_reuse_30pct_negative_labels(self):
+        state=fixture()
+        for o in state["observations"]:
+            if o["pair"]=="AAAUSD" and o["price"]==135:
+                o["price"]=125
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        for lag in ("30m","60m","180m"):
+            d=one["pre_entry_price_feature_distributions"][lag]
+            self.assertEqual(d["positive_30"]["n"],0)
+            self.assertGreaterEqual(d["positive_20"]["n"],0)
+            self.assertEqual(d["positive_20"]["n"]+d["negative_20"]["n"],
+                d["positive_30"]["n"]+d["negative_30"]["n"])
+            self.assertLessEqual(d["negative_20"]["n"],d["negative_30"]["n"])
+
+    def test_episode_clusters_use_decision_time_not_stale_quote_time(self):
+        cases=[
+            {"pair":"AAAUSD","entry_at":iso(0),"decision_at":iso(0),
+             "watch":False,"lagged_returns":{"60m":None},
+             "peak_observed_return":0.35},
+            {"pair":"AAAUSD","entry_at":iso(40),"decision_at":iso(80),
+             "watch":False,"lagged_returns":{"60m":None},
+             "peak_observed_return":0.40},
+        ]
+        episodes=cluster_episodes(cases,1)
+        self.assertEqual(len(episodes),2)
+        self.assertEqual([e["first_decision_at"] for e in episodes],
+                         [iso(0),iso(80)])
+        self.assertEqual([e["entry_cases"] for e in episodes],[1,1])
 if __name__=="__main__":
     unittest.main()
