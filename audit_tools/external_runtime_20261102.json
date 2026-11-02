@@ -171,5 +171,22 @@
       "other_functions": "20 additional deployed source files inspected; no static direct .from table references extracted, which does not establish absence of remote or dynamic consumers"
     }
   },
-  "safety": "Read-only observations; no deployment, secret access, scoring, trading, ledger writes or cleanup. Full consumer/runtime audit incomplete."
+  "safety": "Read-only observations; no deployment, secret access, scoring, trading, ledger writes or cleanup. Full consumer/runtime audit incomplete.",
+  "static_consumers": {
+    "ios": {
+      "source": "ios/KrakenEdge/ScannerAPI.swift",
+      "endpoint": "https://kraken-autonomous-controller-production.up.railway.app/dashboard",
+      "finding": "hard-coded Railway dashboard endpoint, not the current GitHub PAPER ledger; app deployment/use unverified"
+    },
+    "bun": {
+      "sources": [
+        "scanner/src/server.ts",
+        "evaluation/shadow-cycle.ts"
+      ],
+      "collector_endpoint": "https://kraken-collector-production.up.railway.app",
+      "confirmation_endpoint": "https://kraken-rest-confirm-production.up.railway.app",
+      "finding": "legacy Bun challenger depends on Railway HTTP services; current Railway inventory has no active deployments"
+    },
+    "implication": "No legacy client/source cleanup or assertion of current user-facing delivery until actual deployed consumers and migration are verified"
+  }
 }
