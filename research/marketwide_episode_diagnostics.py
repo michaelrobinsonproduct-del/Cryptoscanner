@@ -38,6 +38,39 @@ def lagged_return(series, times, index, minutes):
     return entry / series[j][1] - 1
 
 
+
+def chronological_readiness(records, runs, hours):
+    """Audit whether an as-of, label-embargoed split is even measurable.
+
+    Split is determined from ALL scan decision times, never from outcome labels.
+    This is not a fitted model or a claim of predictive lift.
+    """
+    times = sorted(set(runs.values()))
+    if len(times) < 2:
+        return {"status":"INSUFFICIENT_SCAN_TIMES","cutoff":None}
+    cutoff = times[min(len(times)-1, max(1, int(len(times)*0.7)))]
+    embargo = dt.timedelta(hours=hours) + MAX_GAP
+    train = [r for r in records if runs[r["run_id"]] + embargo <= cutoff]
+    test = [r for r in records if runs[r["run_id"]] >= cutoff]
+    def summary(rows):
+        featured = [r for r in rows if r["lagged_returns"]["60m"] is not None]
+        positive = [r for r in rows if r["peak_observed_return"] >= 0.30]
+        featured_positive = [r for r in positive if r["lagged_returns"]["60m"] is not None]
+        return {"matured_cases":len(rows), "positive_cases":len(positive),
+                "positive_pairs":len({r["pair"] for r in positive}),
+                "lag_60m_covered":len(featured),
+                "positive_lag_60m_covered":len(featured_positive)}
+    a,b=summary(train),summary(test)
+    return {"status":"DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER",
+            "cutoff":cutoff.isoformat(),
+            "embargo_hours":hours + MAX_GAP.total_seconds()/3600,
+            "excluded_crossing_cutoff":len(records)-len(train)-len(test),
+            "train":a,"test":b,
+            "model_evaluation_ready":(a["positive_lag_60m_covered"]>=10
+                 and b["positive_lag_60m_covered"]>=10
+                 and a["lag_60m_covered"]-a["positive_lag_60m_covered"]>=10
+                 and b["lag_60m_covered"]-b["positive_lag_60m_covered"]>=10)}
+
 def analyze(state):
     from paper_pov.ledger import verify
     verify(state, 32_000_000)
@@ -95,7 +128,7 @@ def analyze(state):
                         coverage["feature_"+str(minutes)+"m"] += 1
                 if hit and lag["60m"] is not None:
                     coverage["mover_feature_60m"] += 1
-                record = {"pair":pair,"entry_at":at.isoformat(),"run_id":rid,
+                record = {"pair":pair,"entry_at":at.isoformat(),"run_id":rid,"decision_at":start.isoformat(),
                           "peak_observed_return":round(peak,8),
                           "watch":selected,"lagged_returns":lag}
                 if hit:
@@ -142,6 +175,7 @@ def analyze(state):
             "watch_precision_30":coverage["watch_positive"]/coverage["watch_matured"] if coverage["watch_matured"] else None,
             "watch_recall_wilson_95_naive":wilson(coverage["watch_positive"],coverage["movers"]),
             "watch_precision_wilson_95_naive":wilson(coverage["watch_positive"],coverage["watch_matured"]),
+            "chronological_readiness":chronological_readiness(positives+negatives,runs,hours),
             "lag_60m_positive":summarize_feature(positives,"60m"),
             "lag_60m_negative":summarize_feature(negatives,"60m")}
     return {"status":"DESCRIPTIVE_ONLY_NO_HELD_OUT_LIFT",
