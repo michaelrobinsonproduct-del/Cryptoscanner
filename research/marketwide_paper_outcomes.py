@@ -40,6 +40,17 @@ def evaluate(state):
     latest = max((timestamp(r["as_of"]) for r in runs.values()), default=None)
     for pair, series in prices.items():
         times = [record[0] for record in series]
+        # A SHA-sealed ledger proves internal integrity, not which of two
+        # conflicting same-timestamp quotes is the true market price.
+        # Abstain instead of selecting the larger value as a future peak.
+        quote_by_time = {}
+        conflicting_times = set()
+        for quote_at, quote_price, _ in series:
+            if quote_at in quote_by_time and quote_by_time[quote_at] != quote_price:
+                conflicting_times.add(quote_at)
+            else:
+                quote_by_time.setdefault(quote_at, quote_price)
+        conflicting_times = sorted(conflicting_times)
         for i, (at, entry, rid) in enumerate(series):
             # One point per actual market/run observation, not just WATCH.
             start = timestamp(runs[rid]["as_of"])
@@ -63,7 +74,9 @@ def evaluate(state):
                 # Continuity is measured from the immutable decision time,
                 # matching the production PAPER outcome contract.
                 timeline = [start] + [t for t, _ in before]
-                if (not before or not anchors or start - at > MAX_GAP
+                ambiguous = (bisect.bisect_right(conflicting_times, start) <
+                             bisect.bisect_right(conflicting_times, target + MAX_GAP))
+                if (ambiguous or not before or not anchors or start - at > MAX_GAP
                     or any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
                     or anchors[0][0]-timeline[-1] > MAX_GAP):
                     row["abstain_gap"] += 1
