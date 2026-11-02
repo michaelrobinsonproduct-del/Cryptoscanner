@@ -61,10 +61,47 @@ jobs:
           assert d['eligible_for_model_promotion'] is False
           print('RESEARCH_EVIDENCE_FAIL_CLOSED',d['observed_run_count'],d['observed_pair_count'],d['observed_entry_count'],d['watched_prediction_count'])
           PY
+      - name: Bind report to exact source and read-only ledger snapshot
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json, pathlib, subprocess
+          def sha256(path):
+              h=hashlib.sha256()
+              with open(path,'rb') as f:
+                  for chunk in iter(lambda:f.read(1024*1024),b''):
+                      h.update(chunk)
+              return h.hexdigest()
+          def rev(ref):
+              return subprocess.check_output(['git','rev-parse',ref],text=True).strip()
+          report=json.loads(pathlib.Path('/tmp/marketwide-outcomes.json').read_text())
+          assert report['source_authenticated'] is False
+          assert report['complete_market_history'] is False
+          assert report['eligible_for_model_promotion'] is False
+          evidence={
+              'schema':1,
+              'research_source_commit':rev('HEAD'),
+              'paper_ledger_branch_commit':rev('refs/remotes/origin/paper-proof-ledger'),
+              'verified_ledger_export_sha256':sha256('/tmp/verified-paper-ledger.json'),
+              'outcome_report_sha256':sha256('/tmp/marketwide-outcomes.json'),
+              'observed_run_count':report['observed_run_count'],
+              'observed_entry_count':report['observed_entry_count'],
+              'source_authenticated':False,
+              'complete_market_history':False,
+              'eligible_for_model_promotion':False,
+          }
+          pathlib.Path('/tmp/marketwide-provenance.json').write_text(json.dumps(evidence,sort_keys=True,indent=2)+'\\n')
+          print('RESEARCH_PROVENANCE',json.dumps(evidence,sort_keys=True))
+          PY
+          (cd /tmp && sha256sum marketwide-outcomes.json marketwide-provenance.json > marketwide-SHA256SUMS && sha256sum -c marketwide-SHA256SUMS)
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: marketwide-outcome-validation-${{ github.run_id }}
-          path: /tmp/marketwide-outcomes.json
-          if-no-files-found: ignore
+          path: |
+            /tmp/marketwide-outcomes.json
+            /tmp/marketwide-provenance.json
+            /tmp/marketwide-SHA256SUMS
+          if-no-files-found: warn
           retention-days: 14
