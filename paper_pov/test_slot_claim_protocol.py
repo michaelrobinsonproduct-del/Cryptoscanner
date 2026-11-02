@@ -151,6 +151,28 @@ class SlotClaimTests(unittest.TestCase):
         self.assertFalse(result["scanner_executed"])
         self.assertFalse(result["ledger_written"])
 
+    def test_forged_plan_never_touches_git(self):
+        original = prepare(**kwargs())
+        mutations = [
+            {"ref": "refs/tags/paper-recovery-slot-v1/20261102T2130Z"},
+            {"tag_name": "wrong-tag"},
+            {"target_sha": "c"*40},
+            {"source_sha": "c"*40},
+            {"digest": "0"*64},
+            {"message": original["message"].replace("PAPER_RECOVERY_SLOT_CLAIM_V1",
+                                                     "FAKE_CLAIM")},
+            {"message": original["message"].replace('"owner_id":336805669',
+                                                     '"owner_id":7')},
+            {"message": original["message"].rstrip("\\n")},
+        ]
+        for change in mutations:
+            with self.subTest(change=change):
+                api = FakeGit()
+                result = attempt(api, dict(original, **change))
+                self.assertEqual(result["reason"], "INVALID_CLAIM")
+                self.assertEqual(api.refs, {})
+                self.assertEqual(api.tags, {})
+
     def test_malformed_claim_blocks(self):
         self.assertEqual(attempt(FakeGit(), {"ref": "refs/heads/main"})["reason"],
                          "INVALID_CLAIM")

@@ -64,6 +64,55 @@ def prepare(*, slot, now, source_sha, main_sha, ledger_commit,
             "source_sha": source_sha}
 
 
+def valid_plan(claim):
+    """Reject forged/incomplete plan before even reading a GitHub ref."""
+    try:
+        if not isinstance(claim, dict):
+            return False
+        required = ("ref", "tag_name", "target_sha", "message", "digest",
+                    "slot_utc", "source_sha")
+        if any(not isinstance(claim.get(k), str) for k in required):
+            return False
+        lines = claim["message"].splitlines()
+        if len(lines) != 3 or lines[0] != "PAPER_RECOVERY_SLOT_CLAIM_V1":
+            return False
+        record = json.loads(lines[1])
+        if not isinstance(record, dict) or json.dumps(
+            record, sort_keys=True, separators=(",", ":"), allow_nan=False
+        ) != lines[1]:
+            return False
+        digest = hashlib.sha256(lines[1].encode("utf-8")).hexdigest()
+        slot = dt.datetime.fromisoformat(record["slot_utc"])
+        if slot.tzinfo is None or slot.utcoffset() != dt.timedelta(0) or (
+            slot.minute not in (0, 30) or slot.second or slot.microsecond
+        ):
+            return False
+        suffix = slot.strftime("%Y%m%dT%H%MZ")
+        return (
+            claim["message"].endswith("\\n") and
+            claim["ref"] == NAMESPACE + suffix and
+            claim["tag_name"] == "paper-recovery-slot-v1-" + suffix and
+            claim["slot_utc"] == slot.isoformat() and
+            claim["source_sha"] == claim["target_sha"] ==
+            record["source_sha"] and SHA40.fullmatch(record["source_sha"]) is not None and
+            SHA40.fullmatch(record["ledger_commit"]) is not None and
+            SHA64.fullmatch(record["decision_sha256"]) is not None and
+            record["owner_id"] == OWNER_ID and
+            type(record["controller_run_id"]) is int and record["controller_run_id"] > 0 and
+            type(record["owner_comment_id"]) is int and record["owner_comment_id"] > 0 and
+            record["origin"] == ORIGIN and record["target_workflow"] ==
+            "paper-pipeline.yml" and record["native_schedule"] is False and
+            lines[2] == "SHA256=" + digest and claim["digest"] == digest and
+            set(record) == {"schema", "slot_utc", "source_sha", "ledger_commit",
+                            "decision_sha256", "controller_run_id",
+                            "owner_comment_id", "owner_id", "origin",
+                            "target_workflow", "native_schedule"} and
+            type(record["schema"]) is int and record["schema"] == 1
+        )
+    except (ValueError, TypeError, KeyError, AttributeError, OverflowError):
+        return False
+
+
 def attempt(api, claim):
     """Use injected GitHub Git-data adapter. NEVER dispatch, retry or write ledger.
 
@@ -76,9 +125,7 @@ def attempt(api, claim):
               "dispatch_executed": False, "scanner_executed": False,
               "ledger_written": False, "native_schedule_claimed": False,
               "global_writer_exclusivity_proven": False}
-    if not isinstance(claim, dict) or not isinstance(claim.get("ref"), str) or (
-        not claim["ref"].startswith(NAMESPACE)
-    ):
+    if not valid_plan(claim):
         result["reason"] = "INVALID_CLAIM"
         return result
     try:
