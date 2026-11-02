@@ -1,6 +1,7 @@
 """Synthetic contract tests; no predictive claims from fixtures."""
 import datetime as dt
 import json
+import hashlib
 import unittest
 from unittest.mock import patch
 
@@ -287,6 +288,94 @@ class EpisodeTests(unittest.TestCase):
             self.assertAlmostEqual(cov["matured_fraction"],cov["matured"]/cov["eligible"])
             self.assertLessEqual(cov["distinct_positive_pairs"],cov["distinct_matured_pairs"])
             self.assertLessEqual(cov["distinct_matured_pairs"],cov["matured"])
+
+
+    def test_conflicting_same_timestamp_future_and_entry_quotes_abstain(self):
+        baseline=fixture()
+        with patch("paper_pov.ledger.verify",return_value=None):
+            normal=analyze(baseline)["horizons"]["1"]
+        state=fixture()
+        # A second run reports a different price at the exact future
+        # timestamp; neither the high nor low can be trusted as a label.
+        state["observations"].append({"run_id":"90","at":iso(90),
+            "pair":"AAAUSD","price":200})
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        self.assertGreater(one["coverage"]["abstain_conflicting_quotes"],0)
+        self.assertLess(one["coverage"]["movers"],normal["coverage"]["movers"])
+        self.assertLessEqual(one["coverage"]["abstain_conflicting_quotes"],
+                             one["coverage"]["abstain_gap"])
+        self.assertEqual(one["coverage"]["eligible"],
+                         one["coverage"]["matured"]+
+                         one["coverage"]["abstain_gap"]+
+                         one["coverage"]["immature"])
+        entry=fixture()
+        entry["observations"].append({"run_id":"30","at":iso(30),
+            "pair":"AAAUSD","price":200})
+        with patch("paper_pov.ledger.verify",return_value=None):
+            entry_result=analyze(entry)["horizons"]["1"]
+        self.assertGreater(entry_result["coverage"]["abstain_conflicting_quotes"],0)
+
+
+    def test_postdecision_entry_quote_is_not_an_asof_entry(self):
+        state=fixture()
+        for obs in state["observations"]:
+            if obs["run_id"]=="30" and obs["pair"]=="AAAUSD":
+                obs["at"]=iso(31)  # Quote from the future of the decision.
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        cov=one["coverage"]
+        self.assertGreaterEqual(cov["abstain_future_entry_quotes"],1)
+        self.assertLessEqual(cov["abstain_future_entry_quotes"],cov["abstain_gap"])
+        self.assertEqual(cov["eligible"],cov["matured"]+cov["abstain_gap"]+cov["immature"])
+        self.assertTrue(all(case["entry_quote_age_minutes"]>=0
+                            for case in one["mover_cases"]))
+
+
+    def test_real_sha_sealed_ledger_contract_and_tamper_rejection(self):
+        # Unlike the fast synthetic unit fixtures, this exercises the
+        # production ledger's real checksum and relationship verification.
+        from paper_pov.ledger import seal, verify
+        state=fixture()
+        mapping={}
+        for run in state["runs"]:
+            old_id=run["id"]
+            rid=hashlib.sha256(("episode-fixture|"+run["as_of"]).encode()).hexdigest()
+            mapping[old_id]=rid
+            run.update(id=rid,source_sha="a"*40,report_sha256="b"*64,
+                       watch_count=1,observation_count=2)
+        for obs in state["observations"]:
+            obs["run_id"]=mapping[obs["run_id"]]
+        state["predictions"]=[]
+        for run in state["runs"]:
+            asof=run["as_of"]
+            state["predictions"].append({
+                "run_id":run["id"],"pair":"BBBUSD","as_of":asof,
+                "prediction_id":hashlib.sha256(("paper-v1|"+asof+"|BBBUSD").encode()).hexdigest(),
+                "price":100,"baseline_score":0.0,"challenger_score":0.0,"rank":1})
+        state.update(schema=1,generation=len(state["runs"]),outcomes=[])
+        seal(state)
+        verify(state)
+        one=analyze(state)["horizons"]["1"]
+        self.assertGreater(one["coverage"]["movers"],0)
+        self.assertEqual(one["watch_captured_episodes"],0)
+        self.assertFalse(analyze(state)["source"]["eligible_for_model_promotion"])
+        state["observations"][0]["price"]=999
+        with self.assertRaisesRegex(ValueError,"checksum"):
+            analyze(state)
+
+
+    def test_episode_cohort_and_matured_watch_diagnostics(self):
+        with patch("paper_pov.ledger.verify",return_value=None):
+            report=analyze(fixture())
+        one=report["horizons"]["1"]
+        cov=one["coverage"]
+        self.assertEqual(cov["watch_false_positive_30"],cov["watch_matured"]-cov["watch_positive"])
+        self.assertEqual(cov["watch_false_positive_20"],cov["watch_matured"]-cov["watch_positive_20"])
+        self.assertLessEqual(cov["abstain_conflicting_quotes"]+cov["abstain_future_entry_quotes"],cov["abstain_gap"])
+        self.assertIn("episode_first_entry_feature_distributions_20",one)
+        self.assertIn("watch_episode_recall_wilson_95_naive_20",one)
+        json.dumps(report,allow_nan=False)
 
 
 if __name__=="__main__":
