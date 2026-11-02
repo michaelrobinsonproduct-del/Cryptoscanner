@@ -8,7 +8,7 @@ import argparse
 import bisect
 import datetime as dt
 import json
-import math
+from decimal import Decimal
 from collections import defaultdict
 
 HORIZONS = (1, 6, 24, 48)
@@ -24,9 +24,10 @@ def evaluate(state):
     from paper_pov.ledger import verify
     verify(state, 32_000_000)
     runs = {r["id"]: r for r in state["runs"]}
+    decision_times = {rid: timestamp(run["as_of"]) for rid, run in runs.items()}
     prices = defaultdict(list)
     for o in state["observations"]:
-        prices[o["pair"]].append((timestamp(o["at"]), float(o["price"]), o["run_id"]))
+        prices[o["pair"]].append((timestamp(o["at"]), Decimal(str(o["price"])), o["run_id"]))
     for series in prices.values():
         series.sort()
     watches = {(p["run_id"], p["pair"]) for p in state["predictions"]}
@@ -34,10 +35,28 @@ def evaluate(state):
                          "immature": 0, "movers_20": 0, "movers_30": 0,
                          "watch_20": 0, "watch_30": 0, "missed_20": 0,
                          "missed_30": 0, "watch_false_positive_20": 0,
-                         "watch_false_positive_30": 0} for h in HORIZONS}
+                         "watch_false_positive_30": 0,
+                         "watch_eligible": 0, "watch_matured": 0,
+                         "watch_abstain_gap": 0, "watch_immature": 0,
+                         "abstain_conflicting_quote": 0,
+                         "abstain_outcome_provenance": 0,
+                         "watch_abstain_conflicting_quote": 0,
+                         "watch_abstain_outcome_provenance": 0} for h in HORIZONS}
     latest = max((timestamp(r["as_of"]) for r in runs.values()), default=None)
     for pair, series in prices.items():
         times = [record[0] for record in series]
+        # A SHA-sealed ledger proves internal integrity, not which of two
+        # conflicting same-timestamp quotes is the true market price.
+        # Abstain instead of selecting the larger value as a future peak.
+        quote_by_time = {}
+        conflicting_times = set()
+        for quote_at, quote_price, _ in series:
+            if quote_at in quote_by_time and quote_by_time[quote_at] != quote_price:
+                conflicting_times.add(quote_at)
+            else:
+                quote_by_time.setdefault(quote_at, quote_price)
+        conflicting_lookup = conflicting_times
+        conflicting_times = sorted(conflicting_times)
         for i, (at, entry, rid) in enumerate(series):
             # One point per actual market/run observation, not just WATCH.
             start = timestamp(runs[rid]["as_of"])
@@ -45,25 +64,51 @@ def evaluate(state):
             for h in HORIZONS:
                 row = results[str(h)]
                 row["eligible"] += 1
+                if selected: row["watch_eligible"] += 1
                 target = start + dt.timedelta(hours=h)
                 if latest is None or latest < target + MAX_GAP:
                     row["immature"] += 1
+                    if selected: row["watch_immature"] += 1
                     continue
                 end = bisect.bisect_right(times, target + MAX_GAP, lo=i+1)
-                future = [(t, p) for t, p, _ in series[i+1:end]
-                          if at < t]
-                before = [(t, p) for t, p in future if t <= target]
-                anchors = [(t, p) for t, p in future if target <= t <= target + MAX_GAP]
-                timeline = [at] + [t for t, _ in before]
-                if (not before or not anchors or start - at > MAX_GAP
+                # A quote can precede the PAPER decision by up to three minutes.
+                # Never label a pre-decision high as a future surge.
+                future = [(t, p, source_rid) for t, p, source_rid in series[i+1:end]
+                          if start < t]
+                before = [(t, p) for t, p, _ in future if t <= target]
+                anchors = [(t, p) for t, p, _ in future if target <= t <= target + MAX_GAP]
+                # Continuity is measured from the immutable decision time,
+                # matching the production PAPER outcome contract.
+                timeline = [start] + [t for t, _ in before]
+                ambiguous = (at in conflicting_lookup or
+                             bisect.bisect_right(conflicting_times, start) <
+                             bisect.bisect_right(conflicting_times, target + MAX_GAP))
+                # A quote first observed after the horizon+gap, or with an
+                # event timestamp after its own scan, cannot label this entry.
+                # Match the episode evaluator: ambiguity takes precedence.
+                provenance_invalid = any(
+                    decision_times[source_rid] < t or
+                    decision_times[source_rid] > target + MAX_GAP
+                    for t, _, source_rid in future)
+                if (ambiguous or provenance_invalid or not before or not anchors or start - at > MAX_GAP
                     or any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
                     or anchors[0][0]-timeline[-1] > MAX_GAP):
                     row["abstain_gap"] += 1
+                    if ambiguous: row["abstain_conflicting_quote"] += 1
+                    elif provenance_invalid: row["abstain_outcome_provenance"] += 1
+                    if selected:
+                        row["watch_abstain_gap"] += 1
+                        if ambiguous: row["watch_abstain_conflicting_quote"] += 1
+                        elif provenance_invalid: row["watch_abstain_outcome_provenance"] += 1
                     continue
                 row["matured"] += 1
-                peak = max(p for _, p in before) / entry - 1
-                for threshold, suffix in ((0.20,"20"),(0.30,"30")):
-                    hit = peak >= threshold
+                if selected: row["watch_matured"] += 1
+                # Decimal avoids binary float cancellation at exact +20/+30
+                # thresholds and overflow when entry prices are very small.
+                peak_price = max(p for _, p in before)
+                for multiplier, suffix in ((Decimal("1.20"),"20"),
+                                           (Decimal("1.30"),"30")):
+                    hit = peak_price >= entry * multiplier
                     if hit:
                         row["movers_"+suffix] += 1
                         if selected: row["watch_"+suffix] += 1
@@ -72,12 +117,29 @@ def evaluate(state):
                         row["watch_false_positive_"+suffix] += 1
     for row in results.values():
         assert row["eligible"] == row["matured"] + row["abstain_gap"] + row["immature"]
+        assert row["watch_eligible"] == (row["watch_matured"] +
+                row["watch_abstain_gap"] + row["watch_immature"])
+        assert row["abstain_conflicting_quote"] <= row["abstain_gap"]
+        assert row["watch_abstain_conflicting_quote"] <= row["watch_abstain_gap"]
+        assert row["abstain_outcome_provenance"] <= row["abstain_gap"]
+        assert row["watch_abstain_outcome_provenance"] <= row["watch_abstain_gap"]
+        row["watch_resolved_fraction"] = (row["watch_matured"] / row["watch_eligible"]
+                if row["watch_eligible"] else None)
         for suffix in ("20","30"):
             row["recall_"+suffix] = (row["watch_"+suffix] / row["movers_"+suffix]
                                      if row["movers_"+suffix] else None)
             denom = row["watch_"+suffix] + row["watch_false_positive_"+suffix]
             row["watch_precision_"+suffix] = row["watch_"+suffix] / denom if denom else None
     return {"status":"DESCRIPTIVE_ONLY_NOT_HELD_OUT_LIFT",
+            "observed_run_count":len(runs),
+            "observed_pair_count":len(prices),
+            "observed_entry_count":sum(map(len,prices.values())),
+            "watched_prediction_count":len(watches),
+            "source_authenticated":False,
+            "complete_market_history":False,
+            "eligible_for_model_promotion":False,
+            "metric_unit":"overlapping pair/run entry windows; NOT distinct surge episodes",
+            "source_provenance":"SHA-sealed PAPER observations, not independently authenticated complete Kraken historical candles",
             "coverage_warning":"Only observed run/pair timestamps; not complete historical market or intrabar highs. Incomplete periods abstain.",
             "horizons":results}
 
