@@ -587,6 +587,26 @@ class EpisodeTests(unittest.TestCase):
                              one["watch_captured_episodes_20"])
 
 
+    def test_first_entry_recall_is_separate_from_later_capture(self):
+        state=fixture()
+        # The first +30% qualifying entry is at decision 0. A later WATCH
+        # can capture the episode but cannot claim first-entry detection.
+        state["predictions"].append({"run_id":"30","pair":"AAAUSD"})
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        self.assertGreater(one["watch_captured_episodes"],0)
+        self.assertLessEqual(one["watch_first_entry_recall_30"],one["watch_episode_recall_30"])
+        self.assertEqual(one["watch_first_entry_recall_30"],
+                         one["watch_first_entry_episodes_30"]/one["unique_mover_episodes"])
+        with patch("paper_pov.ledger.verify",return_value=None):
+            immature=analyze(fixture())["horizons"]["24"]
+        for h in (one,immature):
+            for threshold in (20,30):
+                total=h["unique_mover_episodes"+("_20" if threshold==20 else "")]
+                ratio=h["watch_first_entry_recall_"+str(threshold)]
+                count=h["watch_first_entry_episodes_"+str(threshold)]
+                self.assertEqual(ratio,count/total if total else None)
+
     def test_gap_reasons_partition_all_abstentions(self):
         with patch("paper_pov.ledger.verify",return_value=None):
             report=analyze(fixture())
