@@ -55,6 +55,7 @@ jobs:
           root=Path('/tmp/kraken-batch-evidence')
           m=json.loads((root/'manifest.json').read_text())
           assert m['pairs_requested']==4
+          assert m['pairs_eligible']>=1, 'No fresh source-authenticated market: do not claim acquisition success'
           assert m['pairs_eligible']+m['pairs_stale']+m['pairs_invalid']+m['pairs_budget_skipped']==4
           assert m['certified_first_entry_episodes']==0 and m['held_out_lift'] is None and not m['production_applied']
           for entry in m['entries']:
