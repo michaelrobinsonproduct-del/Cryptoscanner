@@ -132,6 +132,30 @@ class GapRecoveryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Subnanosecond"):
             audit(self.state, END, [s])
 
+    def test_inclusive_kraken_cursor_overlap_dedupes_only_identical_print(self):
+        s = source()
+        previous = json.loads(base64.b64decode(s["pages"][0]["response_b64"]))
+        cursor = int(previous["result"]["last"])
+        duplicate = list(previous["result"]["AAAUSD"][-1])
+        new = ["1.25", "3", str(int((START + dt.timedelta(minutes=70)).timestamp())),
+               "b", "m", "", "5"]
+        raw = json.dumps({"error": [], "result": {
+            "AAAUSD": [duplicate, new],
+            "last": str(int((START + dt.timedelta(minutes=71)).timestamp()*1_000_000_000))
+        }}, separators=(",", ":")).encode()
+        s["pages"].append({"revision": REVISION,
+            "request_url": _source_url("AAAUSD", cursor),
+            "retrieved_at": END.isoformat(),
+            "response_b64": base64.b64encode(raw).decode(),
+            "response_sha256": hashlib.sha256(raw).hexdigest()})
+        report = audit(self.state, END, [s])
+        self.assertEqual(report["recovered_total_correlated_windows"], 1)
+        self.assertEqual(report["source_coverage"]["AAAUSD"]["deduped_identical_cross_page_prints"], 1)
+        bad = copy.deepcopy(s)
+        replace_payload(bad["pages"][1], lambda x: x["result"]["AAAUSD"][0].__setitem__(0, "99"))
+        with self.assertRaisesRegex(ValueError, "Conflicting"):
+            audit(self.state, END, [bad])
+
     def test_numeric_json_nanosecond_timestamp_does_not_float_round(self):
         s = source()
         page = s["pages"][0]
