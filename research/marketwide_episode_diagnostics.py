@@ -49,7 +49,7 @@ def lagged_return_diagnostic(series, times, index, minutes):
     if any(times[k] == times[k+1] and series[k][1] != series[k+1][1]
            for k in range(j, index)):
         return None, "conflicting_history"
-    return entry / series[j][1] - 1, "covered"
+    return float(entry / series[j][1] - 1), "covered"
 
 
 def lagged_return(series, times, index, minutes):
@@ -211,7 +211,9 @@ def analyze(state):
     watches = {(p["run_id"], p["pair"]) for p in state["predictions"]}
     by_pair = defaultdict(list)
     for o in state["observations"]:
-        by_pair[o["pair"]].append((timestamp(o["at"]), float(o["price"]), o["run_id"]))
+        # Keep the source's exact decimal quote through threshold comparisons.
+        # Binary float conversion can round a genuine 19.999...% move to +20%.
+        by_pair[o["pair"]].append((timestamp(o["at"]), Decimal(str(o["price"])), o["run_id"]))
     # The verified ledger may contain distinct runs with conflicting prices
     # for the same pair/timestamp. Never select the most favorable quote.
     conflicting_times = {}
@@ -330,12 +332,12 @@ def analyze(state):
                     coverage["watch_matured"] += 1
                     pair_counts["watch_matured"] += 1
                 peak_price = max(p for _,p in before)
-                peak = peak_price/entry - 1
+                peak = float(peak_price/entry - 1)
                 # Convert the source's finite decimal price representation,
                 # not the rounded floating-point return, into exact labels.
                 # E.g. 120/100 must be a +20% hit, not 19.999999999999996%.
-                hit20 = Decimal(str(peak_price)) >= Decimal(str(entry))*Decimal('1.20')
-                hit = Decimal(str(peak_price)) >= Decimal(str(entry))*Decimal('1.30')
+                hit20 = peak_price >= entry*Decimal('1.20')
+                hit = peak_price >= entry*Decimal('1.30')
                 if hit20:
                     coverage["movers_20"] += 1
                     pair_counts["movers_20"] += 1

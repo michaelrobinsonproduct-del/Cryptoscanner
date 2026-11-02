@@ -935,5 +935,36 @@ class EpisodeTests(unittest.TestCase):
         self.assertEqual(c["selection_maturity"]["watch"]["eligible"], 0)
         self.assertIsNone(c["selection_maturity"]["watch"]["mature_fraction"])
 
+    def test_subthreshold_high_precision_prices_are_not_rounded_into_hits(self):
+        runs = [{"id":str(m), "as_of":iso(m)} for m in range(0,481,30)]
+        observations = [
+            {"run_id":str(m), "at":iso(m), "pair":pair,
+             "price": (near if m==30 else "100")}
+            for pair,near in (("AAAUSD","119.999999999999999999999999999"),
+                              ("BBBUSD","129.999999999999999999999999999"))
+            for m in range(0,481,30)]
+        state = {"schema":1,"generation":len(runs),"sha256":"0"*64,
+                 "runs":runs,"observations":observations,"predictions":[]}
+        with patch("paper_pov.ledger.verify", return_value=None):
+            c = analyze(state)["horizons"]["1"]["coverage"]
+        self.assertGreater(c["matured"], 0)
+        self.assertEqual(c["movers_20"], 1)  # BBB near +30% is still >= +20%.
+        self.assertEqual(c["movers"], 0)
+
+    def test_exact_decimal_thresholds_remain_inclusive_after_precision_fix(self):
+        runs = [{"id":str(m), "as_of":iso(m)} for m in range(0,481,30)]
+        observations = [
+            {"run_id":str(m), "at":iso(m), "pair":pair,
+             "price": (peak if m==30 else "100")}
+            for pair,peak in (("AAAUSD","120.000000000000000000000000000"),
+                              ("BBBUSD","130.000000000000000000000000000"))
+            for m in range(0,481,30)]
+        state = {"schema":1,"generation":len(runs),"sha256":"0"*64,
+                 "runs":runs,"observations":observations,"predictions":[]}
+        with patch("paper_pov.ledger.verify", return_value=None):
+            c = analyze(state)["horizons"]["1"]["coverage"]
+        self.assertEqual(c["movers_20"], 2)
+        self.assertEqual(c["movers"], 1)
+
 if __name__=="__main__":
     unittest.main()
