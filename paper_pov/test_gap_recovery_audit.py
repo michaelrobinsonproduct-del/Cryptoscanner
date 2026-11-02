@@ -113,6 +113,19 @@ class GapRecoveryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Nonmonotonic|Future"):
             audit(self.state, END, [s])
 
+    def test_authentic_nanosecond_trade_timestamp_is_preserved_not_rounded(self):
+        s = source()
+        t = str(int((START + dt.timedelta(minutes=20)).timestamp())) + ".000000001"
+        replace_payload(s["pages"][0], lambda x: x["result"]["AAAUSD"][0].__setitem__(2, t))
+        report = audit(self.state, END, [s])
+        self.assertEqual(report["recovered_total_correlated_windows"], 1)
+        self.assertIn(".000000001+00:00", report["source_coverage"]["AAAUSD"]["first_trade_utc"])
+        s = source()
+        replace_payload(s["pages"][0], lambda x: x["result"]["AAAUSD"][0].__setitem__(
+            2, str(int((START + dt.timedelta(minutes=20)).timestamp())) + ".0000000001"))
+        with self.assertRaisesRegex(ValueError, "Subnanosecond"):
+            audit(self.state, END, [s])
+
     def test_uncovered_trade_window_remains_missing(self):
         s = source(offsets=(20, 30))
         report = audit(self.state, END, [s])
