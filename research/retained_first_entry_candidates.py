@@ -58,6 +58,7 @@ def inspect_candidates(path, *, expected_archive_sha=ARCHIVE_SHA):
         "cohort_markets": 0,
         "cohort_markets_ge30pct": 0,
     } for h in HORIZONS}
+    phase_totals = {str(h): {"entries": [0] * (h * 12), "hits": [0] * (h * 12)} for h in HORIZONS}
     with zipfile.ZipFile(path) as archive:
         manifest = json.loads(archive.read("manifest.json"))
         for name in sorted(manifest["markets"]):
@@ -69,7 +70,8 @@ def inspect_candidates(path, *, expected_archive_sha=ARCHIVE_SHA):
             for horizon in HORIZONS:
                 width = horizon * 12
                 out = result[str(horizon)]
-                market_entries = market_positive = 0
+                phase_entries = [0] * width
+                phase_hits = [0] * width
                 for segment in _segments(rows):
                     if len(segment) <= width:
                         continue
@@ -79,23 +81,42 @@ def inspect_candidates(path, *, expected_archive_sha=ARCHIVE_SHA):
                         out["contiguous_entry_windows"] += 1
                         ratio = future[i] / closes[i]
                         out["hindsight_high_ge20pct_windows"] += ratio >= Decimal("1.2")
-                        out["hindsight_high_ge30pct_windows"] += ratio >= Decimal("1.3")
-                    # Twelve prior candles required; sample future horizons
-                    # without overlap. This is not an executable-entry claim.
-                    for i in range(12, len(segment) - width, width):
-                        market_entries += 1
-                        out["nonoverlap_cohort_entries"] += 1
-                        ratio = future[i] / closes[i]
-                        out["cohort_hindsight_ge20pct"] += ratio >= Decimal("1.2")
-                        if ratio >= Decimal("1.3"):
-                            market_positive += 1
-                            out["cohort_hindsight_ge30pct"] += 1
-                        else:
-                            out["cohort_hindsight_lt30pct"] += 1
-                out["cohort_markets"] += market_entries > 0
-                out["cohort_markets_ge30pct"] += market_positive > 0
+                        positive30 = ratio >= Decimal("1.3")
+                        out["hindsight_high_ge30pct_windows"] += positive30
+                        # Every eligible entry belongs to exactly one fixed-stride
+                        # phase. Varying phase exposes selection instability.
+                        if i >= 12:
+                            phase = (i - 12) % width
+                            phase_entries[phase] += 1
+                            phase_hits[phase] += positive30
+                            if phase == 0:
+                                out["cohort_hindsight_ge20pct"] += ratio >= Decimal("1.2")
+                out["nonoverlap_cohort_entries"] += phase_entries[0]
+                out["cohort_hindsight_ge30pct"] += phase_hits[0]
+                out["cohort_hindsight_lt30pct"] += phase_entries[0] - phase_hits[0]
+                out["cohort_markets"] += phase_entries[0] > 0
+                out["cohort_markets_ge30pct"] += phase_hits[0] > 0
+                for phase in range(width):
+                    phase_totals[str(horizon)]["entries"][phase] += phase_entries[phase]
+                    phase_totals[str(horizon)]["hits"][phase] += phase_hits[phase]
     for horizon in HORIZONS:
         out = result[str(horizon)]
+        phases = phase_totals[str(horizon)]
+        entries, hits = phases["entries"], phases["hits"]
+        out["phase_sensitivity"] = {
+            "offsets_tested": len(entries),
+            "offsets_with_entries": sum(n > 0 for n in entries),
+            "offsets_with_ge30pct": sum(n > 0 for n in hits),
+            "min_entries_per_offset": min(entries),
+            "max_entries_per_offset": max(entries),
+            "min_ge30pct_per_offset": min(hits),
+            "max_ge30pct_per_offset": max(hits),
+            "fixed_phase_offset": 0,
+        }
+        if entries[0] != out["nonoverlap_cohort_entries"] or hits[0] != out["cohort_hindsight_ge30pct"]:
+            raise ValueError("fixed phase conservation failed")
+        if sum(entries) > out["contiguous_entry_windows"] or sum(hits) > out["hindsight_high_ge30pct_windows"]:
+            raise ValueError("phase entry conservation failed")
         if out["contiguous_entry_windows"] != readiness["candidate_windows"][str(horizon)]:
             raise ValueError("candidate window conservation failed")
         if out["cohort_hindsight_ge30pct"] + out["cohort_hindsight_lt30pct"] != out["nonoverlap_cohort_entries"]:
