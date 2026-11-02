@@ -17,6 +17,14 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def load_strict_json(path):
+    # Python's default json.loads accepts NaN/Infinity, which are not JSON
+    # numbers and can silently contaminate descriptive research artifacts.
+    def reject_nonfinite(value):
+        raise ValueError("nonfinite research JSON value: " + value)
+    return json.loads(path.read_text(), parse_constant=reject_nonfinite)
+
+
 def verify_artifacts(directory, expected_head, expected_ledger_commit):
     base = Path(directory)
     if not isinstance(expected_head, str) or len(expected_head) != 40 or any(
@@ -46,10 +54,10 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
     for name in FILES:
         if digest(base / name) != expected[name]:
             raise ValueError("report checksum mismatch: " + name)
-    ledger = json.loads((base / LEDGER).read_text())
-    outcomes = json.loads((base / FILES[0]).read_text())
-    episodes = json.loads((base / FILES[1]).read_text())
-    provenance = json.loads((base / FILES[2]).read_text())
+    ledger = load_strict_json((base / LEDGER))
+    outcomes = load_strict_json((base / FILES[0]))
+    episodes = load_strict_json((base / FILES[1]))
+    provenance = load_strict_json((base / FILES[2]))
     if provenance.get("research_source_commit") != expected_head:
         raise ValueError("source head mismatch")
     if provenance.get("paper_ledger_branch_commit") != expected_ledger_commit:
