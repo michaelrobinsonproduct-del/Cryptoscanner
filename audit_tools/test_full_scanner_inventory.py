@@ -1,7 +1,7 @@
 """Offline fail-closed pagination tests for repository inventory (no network)."""
 import unittest
 from unittest.mock import patch
-from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot
+from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths
 
 class PaginationTests(unittest.TestCase):
     def test_multiple_pages_are_all_included(self):
@@ -24,6 +24,41 @@ class PaginationTests(unittest.TestCase):
         with patch("audit_tools.full_scanner_inventory.gh", return_value=list(range(100))):
             with self.assertRaisesRegex(RuntimeError,"limit reached"):
                 gh_pages("repos/owner/repo/branches",max_pages=2)
+
+class RemoteMainTreeTests(unittest.TestCase):
+    SHA="a"*40
+
+    def test_remote_main_not_checkout_paths(self):
+        calls=[]
+        def fetch(path):
+            calls.append(path)
+            return {"truncated":False,"tree":[
+                {"type":"blob","path":"paper_pov/scanner.py"},
+                {"type":"tree","path":"audit_tools"}]}
+        paths=remote_main_paths(self.SHA,fetch)
+        self.assertEqual(paths,{"paper_pov/scanner.py"})
+        self.assertNotIn("audit_tools/full_scanner_inventory.py",paths)
+        self.assertIn(self.SHA,calls[0])
+
+    def test_truncated_tree_fails_closed(self):
+        with self.assertRaisesRegex(RuntimeError,"truncated"):
+            remote_main_paths(self.SHA,lambda _:{"truncated":True,"tree":[]})
+
+    def test_api_error_fails_closed(self):
+        with self.assertRaisesRegex(RuntimeError,"unavailable"):
+            remote_main_paths(self.SHA,lambda _:{"error":"403"})
+
+    def test_invalid_main_sha_fails_closed(self):
+        with self.assertRaisesRegex(RuntimeError,"invalid"):
+            remote_main_paths("not-a-sha",lambda _:None)
+
+    def test_malformed_or_duplicate_tree_fails_closed(self):
+        for entries in ([{"type":"blob"}],
+                        [{"type":"blob","path":"x"},{"type":"blob","path":"x"}]):
+            with self.subTest(entries=entries):
+                with self.assertRaises(RuntimeError):
+                    remote_main_paths(self.SHA,lambda _:{"truncated":False,"tree":entries})
+
 
 class SnapshotReconciliationTests(unittest.TestCase):
     def setUp(self):
