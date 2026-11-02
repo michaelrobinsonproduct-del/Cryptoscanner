@@ -1,7 +1,7 @@
 """Offline fail-closed pagination tests for repository inventory (no network)."""
 import unittest
 from unittest.mock import patch
-from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph, workflow_branch_references, inventory_workflow_source, workflow_orchestration_references
+from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph, workflow_branch_references, inventory_workflow_source, workflow_orchestration_references, apply_semantic_review
 
 
 class BranchReferenceTests(unittest.TestCase):
@@ -386,6 +386,85 @@ jobs:
           echo '    workflows: ["Fake"]'
 """
         self.assertEqual(workflow_orchestration_references(source)["workflow_run_names"],[])
+
+class CurrentSemanticReviewTests(unittest.TestCase):
+    MAIN="a"*40
+    HEAD="b"*40
+    BLOB="c"*40
+
+    def row(self,number=80,head=None,blob=None):
+        return {"number":number,"head_sha":head or self.HEAD,
+                "file_blob_comparisons":[{"path":"paper_pov/results_report.py",
+                                          "pr_blob_sha":blob or self.BLOB}]}
+
+    def matrix(self,number=80,head=None,blob=None):
+        return {"schema":"cryptoscanner-current-semantic-pr-review-v1",
+                "main_sha":self.MAIN,
+                "prs":[{"number":number,"head_sha":head or self.HEAD,
+                        "classification":"integrated","source_path":"paper_pov/results_report.py",
+                        "source_blob_sha":blob or self.BLOB,
+                        "reason":"Source-reviewed score/UTC behavior",
+                        "release_authorized":False,"cleanup_authorized":False}]}
+
+    def test_exact_main_head_and_blob_give_provisional_disposition(self):
+        rows=[self.row()]
+        result=apply_semantic_review(self.matrix(),rows,self.MAIN)
+        self.assertEqual(result["current_validated_count"],1)
+        self.assertEqual(rows[0]["semantic_classification"],"integrated")
+        self.assertFalse(result["certified"])
+        self.assertFalse(result["cleanup_authorized"])
+
+    def test_changed_pr_head_is_unknown_even_when_file_blob_matches(self):
+        rows=[self.row(head="d"*40)]
+        result=apply_semantic_review(self.matrix(),rows,self.MAIN)
+        self.assertEqual(rows[0]["semantic_classification"],"unknown")
+        self.assertEqual(rows[0]["semantic_review_reason"],"PR_HEAD_DRIFT")
+        self.assertEqual(result["current_validated_count"],0)
+
+    def test_changed_main_is_unknown_even_when_pr_head_matches(self):
+        rows=[self.row()]
+        apply_semantic_review(self.matrix(),rows,"d"*40)
+        self.assertEqual(rows[0]["semantic_review_reason"],"MAIN_DRIFT")
+
+    def test_changed_source_blob_is_unknown_even_with_matching_head(self):
+        rows=[self.row(blob="d"*40)]
+        apply_semantic_review(self.matrix(),rows,self.MAIN)
+        self.assertEqual(rows[0]["semantic_review_reason"],"PR_SOURCE_BLOB_DRIFT_OR_MISSING")
+
+    def test_self_modifying_audit_pr_cannot_self_certify(self):
+        rows=[self.row(number=121)]
+        apply_semantic_review(self.matrix(number=121),rows,self.MAIN)
+        self.assertFalse(rows[0]["semantic_review_valid"])
+        self.assertEqual(rows[0]["semantic_classification"],"unknown")
+
+    def test_new_and_closed_prs_explicitly_recorded(self):
+        rows=[self.row(),self.row(number=126)]
+        result=apply_semantic_review(self.matrix(number=80),rows,self.MAIN)
+        self.assertEqual(result["missing_prs"],[126])
+        self.assertEqual(rows[1]["semantic_classification"],"unknown")
+        result=apply_semantic_review(self.matrix(number=80),[self.row(number=126)],self.MAIN)
+        self.assertEqual(result["no_longer_open_prs"],[80])
+
+    def test_duplicate_and_release_claims_fail_closed(self):
+        matrix=self.matrix()
+        matrix["prs"].append(dict(matrix["prs"][0]))
+        with self.assertRaisesRegex(ValueError,"Duplicate"):
+            apply_semantic_review(matrix,[self.row()],self.MAIN)
+        matrix=self.matrix()
+        matrix["prs"][0]["cleanup_authorized"]=True
+        with self.assertRaisesRegex(ValueError,"cannot authorize"):
+            apply_semantic_review(matrix,[self.row()],self.MAIN)
+
+    def test_malformed_source_head_and_schema_fail_closed(self):
+        matrix=self.matrix()
+        matrix["prs"][0]["head_sha"]="short"
+        with self.assertRaisesRegex(ValueError,"Malformed"):
+            apply_semantic_review(matrix,[self.row()],self.MAIN)
+        matrix=self.matrix()
+        matrix["schema"]="unknown"
+        with self.assertRaisesRegex(ValueError,"schema"):
+            apply_semantic_review(matrix,[self.row()],self.MAIN)
+
 
 if __name__=="__main__":
     unittest.main()
