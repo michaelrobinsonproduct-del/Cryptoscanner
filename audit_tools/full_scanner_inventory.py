@@ -40,6 +40,28 @@ def gh_pages(resource, per_page=100, max_pages=20):
             return result
     raise RuntimeError(f"GitHub pagination limit reached for {resource}: {max_pages} pages")
 
+def remote_main_paths(main_sha, fetch=gh):
+    """Enumerate the ACTUAL remote main tree, never the audit PR checkout.
+
+    GitHub's recursive tree response can be truncated while still HTTP 200.
+    Missing or truncated evidence must abort instead of implying path absence.
+    """
+    if not isinstance(main_sha,str) or not re.fullmatch(r"[0-9a-f]{40}",main_sha):
+        raise RuntimeError("Remote main SHA missing or invalid")
+    tree=fetch(f"repos/michaelrobinsonproduct-del/Cryptoscanner/git/trees/{main_sha}?recursive=1")
+    if not isinstance(tree,dict) or tree.get("truncated") is not False or not isinstance(tree.get("tree"),list):
+        raise RuntimeError("Remote main tree unavailable or truncated: cannot certify path overlap")
+    paths=[]
+    for entry in tree["tree"]:
+        if not isinstance(entry,dict) or not isinstance(entry.get("path"),str) or entry.get("type") not in ("blob","tree"):
+            raise RuntimeError("Malformed remote main tree entry")
+        if entry["type"]=="blob":
+            paths.append(entry["path"])
+    if len(paths)!=len(set(paths)):
+        raise RuntimeError("Duplicate paths in remote main tree")
+    return set(paths)
+
+
 def reconcile_pr_snapshot(triage, pr_rows, current_main_sha, fetch_pr=gh):
     """Reconcile historical triage against CURRENT main, PR heads, and closed PRs.
 
@@ -107,6 +129,9 @@ def main():
           "scripts":sorted(set(re.findall(r"(?:python|bun|node)\s+([A-Za-z0-9_./-]+\.(?:py|ts|mjs))",s)))})
     triage=json.loads((ROOT/"audit_tools/pr_triage_20261102.json").read_text())
     triage_by_number={p["number"]:p for p in triage["prs"]}
+    main_ref=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/git/ref/heads/main")
+    main_sha=main_ref.get("object",{}).get("sha") if isinstance(main_ref,dict) else None
+    main_files=remote_main_paths(main_sha)
     prs=gh_pages("repos/michaelrobinsonproduct-del/Cryptoscanner/pulls?state=open")
     pr_rows=[]
     if isinstance(prs,list):
@@ -114,7 +139,7 @@ def main():
             n=p["number"]
             changed=gh_pages(f"repos/michaelrobinsonproduct-del/Cryptoscanner/pulls/{n}/files")
             changed_files=[x["filename"] for x in changed] if isinstance(changed,list) else []
-            overlaps=[f for f in changed_files if f in files]
+            overlaps=[f for f in changed_files if f in main_files]
             prior=triage_by_number.get(n,{})
             same_head=prior.get("head_sha")==p["head"]["sha"]
             classification=prior.get("classification","unknown") if (same_head or n==121) else "unknown"
@@ -126,7 +151,6 @@ def main():
                 "file_api_error":changed.get("error") if isinstance(changed,dict) else None,
                 "requires_semantic_review":True,"url":p["html_url"]})
     branches=gh_pages("repos/michaelrobinsonproduct-del/Cryptoscanner/branches")
-    main_ref=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/git/ref/heads/main")
     ledger_ref=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/git/ref/heads/paper-proof-ledger")
     runs_response=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/actions/runs?per_page=30")
     runs=runs_response.get("workflow_runs",[]) if isinstance(runs_response,dict) else []
@@ -149,7 +173,9 @@ def main():
         "checkout_sha":cmd("git","rev-parse","HEAD")["output"].strip(),
         "main_sha":main_ref.get("object",{}).get("sha"),
         "ledger_sha":ledger_ref.get("object",{}).get("sha"),
-        "files":files,"workflow_inventory":workflow_inventory,"python_imports":dict(imports),
+        "files":files,"checkout_files":files,"main_files":sorted(main_files),
+        "main_workflows":sorted(p for p in main_files if p.startswith(".github/workflows/") and p.endswith((".yml",".yaml"))),
+        "workflow_inventory":workflow_inventory,"python_imports":dict(imports),
         "package_scripts":package.get("scripts",{}),"legacy_files":legacy_files,
         "triage_snapshot_main_sha":triage.get("main_sha"),
         "triage_snapshot_main_matches":triage.get("main_sha")==main_ref.get("object",{}).get("sha"),
@@ -170,13 +196,13 @@ def main():
     lines=["# Scanner runtime and legacy inventory (read-only)","",
       f"Generated UTC: {data['created_utc']}","",
       f"Audit checkout SHA: `{data['checkout_sha']}`; remote main: `{data['main_sha']}`; remote ledger: `{data['ledger_sha']}`","",
-      f"Tracked files: {len(files)}; workflows: {len(workflows)}; open PRs: {len(pr_rows)}; branches: {len(branches)}","",
+      f"Audit checkout files: {len(files)}; remote main files: {len(main_files)}; checkout workflows: {len(workflows)}; remote main workflows: {len(data['main_workflows'])}; open PRs: {len(pr_rows)}; branches: {len(branches)}","",
       "## Workflow inventory","",
       "| Workflow | Cron | Dispatch | Contents write | Ledger reference |","|---|---|---|---|---|"]
     for w in workflow_inventory:
         lines.append(f"| {w['path']} | {', '.join(w['schedule_cron']) or '-'} | {w['has_dispatch']} | {w['writes_contents']} | {w['ledger_ref']} |")
     lines+=["","## All open PRs (path overlap is NOT proof of equivalent behavior)","",
-       "| PR | Head SHA | Triage | Snapshot head match | Changed files | Paths already present on main |","|---|---|---|---|---:|---:|"]
+       "| PR | Head SHA | Triage | Snapshot head match | Changed files | Actual remote main path overlaps |","|---|---|---|---|---:|---:|"]
     for p in pr_rows:lines.append(f"| [#{p['number']}]({p['url']}) | `{p['head_sha'][:12]}` | {p['triage_classification']} | {p['triage_snapshot_head_matches']} | {len(p['files'])} | {len(p['already_on_main_paths'])} |")
     lines+=["","## Snapshot drift / closed PR reconciliation","",
       f"Triage snapshot main matches current main: {data['triage_snapshot_main_matches']}",
@@ -188,6 +214,7 @@ def main():
     lines+=["","## Evidence boundaries","",
       "- This is a machine-generated source and GitHub inventory, not proof of live deployment or functional equivalence.",
       "- PR triage is a dated human review snapshot; drifted heads revert to unknown. The audit PR's own head necessarily advances as this inventory evolves.",
+      "- Remote main path overlaps use the exact SHA-bound Git tree, not the audit checkout; overlaps never establish semantic integration.",
       "- Existing paths do not mean a PR's implementation is already merged.",
       "- Branches, PRs and workflows are not deleted or changed by this audit.",
       "- Runtime identification requires corroborating actual successful runs, deployment identity, and ledger history.",
