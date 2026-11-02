@@ -71,7 +71,7 @@ def artifact_metadata_claim(artifacts, run):
                 "public-paper-results-" + str(rid)}
     if not isinstance(artifacts, list) or len(artifacts) != 2:
         return {"artifact_metadata_status": "UNVERIFIED"}
-    names, digests = set(), {}
+    names, ids, digests = set(), set(), {}
     for artifact in artifacts:
         if not isinstance(artifact, dict):
             return {"artifact_metadata_status": "UNVERIFIED"}
@@ -79,17 +79,20 @@ def artifact_metadata_claim(artifacts, run):
         source = artifact.get("workflow_run")
         digest = artifact.get("digest")
         if (name not in expected or name in names or
+                artifact.get("id") in ids or
                 artifact.get("expired") is not False or
                 type(artifact.get("id")) is not int or artifact["id"] <= 0 or
                 type(artifact.get("size_in_bytes")) is not int or
                 artifact["size_in_bytes"] <= 0 or
                 not isinstance(source, dict) or
-                source.get("id") != rid or source.get("head_sha") != run.get("head_sha") or
+                type(source.get("id")) is not int or source["id"] != rid or
+                source.get("head_sha") != run.get("head_sha") or
                 source.get("head_branch") != "main" or
                 not isinstance(digest, str) or
                 not re.fullmatch(r"sha256:[0-9a-f]{64}", digest)):
             return {"artifact_metadata_status": "UNVERIFIED"}
         names.add(name)
+        ids.add(artifact["id"])
         digests[name] = digest
     if names != expected:
         return {"artifact_metadata_status": "UNVERIFIED"}
