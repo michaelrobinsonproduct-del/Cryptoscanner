@@ -43,6 +43,8 @@ def fixture(directory):
                          "watch_abstain_no_future_observation", "watch_abstain_missing_horizon_anchor",
                          "watch_abstain_stale_entry", "watch_abstain_discontinuous_path")}},
         "unique_mover_episodes_20": 0, "unique_mover_episodes": 0,
+        "watch_nonhit_windows_20": 0, "watch_nonhit_windows_30": 0,
+        "watch_nonhit_distinct_pairs_20": 0, "watch_nonhit_distinct_pairs_30": 0,
         "watch_captured_episodes_20": 0, "watch_captured_episodes": 0,
         "watch_first_entry_episodes_20": 0, "watch_late_only_episodes_20": 0,
         "watch_first_entry_episodes_30": 0, "watch_late_only_episodes_30": 0,
@@ -55,7 +57,7 @@ def fixture(directory):
         **{"episode_first_entry_feature_coverage_" + suffix:
            {lag: {"episodes": 0, "with_asof_feature": 0,
                   "without_asof_feature": 0, "distinct_covered_pairs": 0,
-                  "covered_fraction": None} for lag in ("30m","60m","180m")}
+                  "missing_reasons": {}, "covered_fraction": None} for lag in ("30m","60m","180m")}
            for suffix in ("20","30")}}
     outcomes = {"horizons": {h: dict(window) for h in ("1","6","24","48")},
                 "observed_run_count": 51, "observed_entry_count": 30872,
@@ -221,6 +223,31 @@ class ArtifactContractTests(unittest.TestCase):
         self.reseal_episode_change(lambda h: h["episode_first_entry_feature_distributions"]["30m"].update(
             distinct_pairs=1))
         with self.assertRaisesRegex(ValueError, "first-entry feature coverage"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_missing_reason_inventory_cannot_hide_unknown_features(self):
+        self.reseal_episode_change(lambda h:
+            h["episode_first_entry_feature_coverage_30"]["60m"].update(
+                missing_reasons={"no_prior_anchor": 1}))
+        with self.assertRaisesRegex(ValueError, "first-entry feature coverage"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_missing_reason_inventory_rejects_unknown_reason(self):
+        self.reseal_episode_change(lambda h:
+            h["episode_first_entry_feature_coverage_20"]["30m"].update(
+                missing_reasons={"future_price_backfill": 1}))
+        with self.assertRaisesRegex(ValueError, "first-entry feature coverage"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_watch_nonhit_windows_cannot_invent_negative_trials(self):
+        self.reseal_episode_change(lambda h: h.update(watch_nonhit_windows_30=1,
+                                                       watch_nonhit_distinct_pairs_30=1))
+        with self.assertRaisesRegex(ValueError, "WATCH nonhit window partition"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_watch_nonhit_windows_cannot_claim_pairs_without_windows(self):
+        self.reseal_episode_change(lambda h: h.update(watch_nonhit_distinct_pairs_20=1))
+        with self.assertRaisesRegex(ValueError, "WATCH nonhit window partition"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
     def test_resealed_phantom_episode_row_is_rejected(self):
