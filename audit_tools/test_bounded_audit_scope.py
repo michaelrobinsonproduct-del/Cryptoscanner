@@ -46,9 +46,11 @@ class BoundedAuditScopeTests(unittest.TestCase):
         case["sha"]=git_blob_sha(b"market_prices")
         self.assertEqual(source_identity(case,self.row(case,"market_prices"),self.payload("market_prices"))["status"],
                          "SOURCE_CONTRACT_MISMATCH")
-        case["sha"]=git_blob_sha(content.encode());case["forbid"]=("segment-manifest",)
-        self.assertEqual(source_identity(case,self.row(case,content+" segment-manifest"),
-                                         self.payload(content+" segment-manifest"))["status"],"SOURCE_BLOB_MISMATCH")
+        case["forbid"]=("segment-manifest",)
+        forbidden_content=content+" segment-manifest"
+        case["sha"]=git_blob_sha(forbidden_content.encode())
+        self.assertEqual(source_identity(case,self.row(case,forbidden_content),
+                                         self.payload(forbidden_content))["status"],"SOURCE_CONTRACT_MISMATCH")
 
     def test_all_findings_restrict_activation_and_deletion_not_isolated_tests(self):
         self.assertEqual({c["pr"] for c in CASES},{4,7,33,40})
