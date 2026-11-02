@@ -8,6 +8,7 @@ from research.verify_marketwide_artifacts import verify_artifacts, FILES, LEDGER
 
 HEAD = "a" * 40
 LEDGER_SHA = "b" * 64
+LEDGER_COMMIT = "c" * 40
 
 
 def write_json(path, data):
@@ -33,6 +34,7 @@ def fixture(directory):
     write_json(base / FILES[0], outcomes)
     write_json(base / FILES[1], episodes)
     provenance = {"research_source_commit": HEAD,
+                  "paper_ledger_branch_commit": LEDGER_COMMIT,
                   "verified_ledger_export_sha256": digest(base / LEDGER),
                   "outcome_report_sha256": digest(base / FILES[0]),
                   "episode_report_sha256": digest(base / FILES[1]),
@@ -57,32 +59,36 @@ class ArtifactContractTests(unittest.TestCase):
         fixture(self.base)
 
     def test_valid_readonly_evidence(self):
-        self.assertEqual(verify_artifacts(self.base, HEAD)["reports_checked"], 3)
+        self.assertEqual(verify_artifacts(self.base, HEAD, LEDGER_COMMIT)["reports_checked"], 3)
 
     def test_missing_report_fails(self):
         (self.base / FILES[1]).unlink()
         with self.assertRaisesRegex(ValueError, "missing"):
-            verify_artifacts(self.base, HEAD)
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
     def test_missing_checksum_file_fails(self):
         (self.base / "marketwide-SHA256SUMS").unlink()
         with self.assertRaisesRegex(ValueError, "missing"):
-            verify_artifacts(self.base, HEAD)
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
     def test_tampered_report_fails_even_with_valid_provenance(self):
         (self.base / FILES[0]).write_text("{}")
         with self.assertRaisesRegex(ValueError, "checksum mismatch"):
-            verify_artifacts(self.base, HEAD)
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
     def test_self_resealed_report_without_provenance_update_fails(self):
         (self.base / FILES[0]).write_text("{}")
         reseal(self.base)
         with self.assertRaisesRegex(ValueError, "provenance checksum mismatch"):
-            verify_artifacts(self.base, HEAD)
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_wrong_remote_ledger_commit_fails(self):
+        with self.assertRaisesRegex(ValueError, "remote ledger commit mismatch"):
+            verify_artifacts(self.base, HEAD, "d"*40)
 
     def test_wrong_exact_head_fails(self):
         with self.assertRaisesRegex(ValueError, "source head mismatch"):
-            verify_artifacts(self.base, "c"*40)
+            verify_artifacts(self.base, "d"*40, LEDGER_COMMIT)
 
     def test_mismatched_ledger_identity_fails_even_if_resealed(self):
         e = json.loads((self.base / FILES[1]).read_text())
@@ -93,7 +99,7 @@ class ArtifactContractTests(unittest.TestCase):
         write_json(self.base / FILES[2], p)
         reseal(self.base)
         with self.assertRaisesRegex(ValueError, "ledger identity mismatch"):
-            verify_artifacts(self.base, HEAD)
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
     def test_false_authentication_claim_fails_even_if_resealed(self):
         p = json.loads((self.base / FILES[2]).read_text())
@@ -101,7 +107,7 @@ class ArtifactContractTests(unittest.TestCase):
         write_json(self.base / FILES[2], p)
         reseal(self.base)
         with self.assertRaisesRegex(ValueError, "claims authentication"):
-            verify_artifacts(self.base, HEAD)
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
     def test_workflow_only_uploads_after_successful_verification(self):
         workflow = (Path(__file__).resolve().parents[1] /
@@ -124,7 +130,7 @@ class ArtifactContractTests(unittest.TestCase):
         with (self.base / "marketwide-SHA256SUMS").open("a") as f:
             f.write(digest(self.base / FILES[0]) + "  " + FILES[0] + "\n")
         with self.assertRaisesRegex(ValueError, "repeated"):
-            verify_artifacts(self.base, HEAD)
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
 
 if __name__ == "__main__":
