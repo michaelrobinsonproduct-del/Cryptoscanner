@@ -581,5 +581,27 @@ class EpisodeTests(unittest.TestCase):
             "abstain_no_future_observation","abstain_missing_horizon_anchor",
             "abstain_stale_entry","abstain_discontinuous_path")))
 
+
+    def test_watch_gap_reasons_are_subset_of_market_gap_reasons(self):
+        state=fixture()
+        state["predictions"].extend([
+            {"run_id":"0","pair":"AAAUSD"},
+            {"run_id":"0","pair":"BBBUSD"}])
+        state["observations"]=[o for o in state["observations"] if not
+            (o["pair"]=="AAAUSD" and o["run_id"] in ("60","90"))]
+        for o in state["observations"]:
+            if o["pair"]=="BBBUSD" and o["run_id"]=="0":
+                o["at"]=iso(-50)
+        with patch("paper_pov.ledger.verify",return_value=None):
+            c=analyze(state)["horizons"]["1"]["coverage"]
+        keys=("abstain_conflicting_quotes","abstain_future_entry_quotes",
+              "abstain_no_future_observation","abstain_missing_horizon_anchor",
+              "abstain_stale_entry","abstain_discontinuous_path")
+        self.assertEqual(c["watch_abstain_gap"],sum(c["watch_"+k] for k in keys))
+        self.assertGreater(c["watch_abstain_missing_horizon_anchor"],0)
+        self.assertGreater(c["watch_abstain_stale_entry"],0)
+        for key in keys:
+            self.assertLessEqual(c["watch_"+key],c[key])
+
 if __name__=="__main__":
     unittest.main()

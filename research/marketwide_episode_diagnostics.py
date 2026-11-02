@@ -172,6 +172,10 @@ def analyze(state):
                     "abstain_stale_entry": 0, "abstain_discontinuous_path": 0,
                     "matured": 0,
                     "watch_eligible": 0, "watch_immature": 0, "watch_abstain_gap": 0,
+                    "watch_abstain_conflicting_quotes": 0, "watch_abstain_future_entry_quotes": 0,
+                    "watch_abstain_no_future_observation": 0,
+                    "watch_abstain_missing_horizon_anchor": 0,
+                    "watch_abstain_stale_entry": 0, "watch_abstain_discontinuous_path": 0,
                     "watch_matured": 0, "watch_positive": 0, "movers": 0,
                     "watch_positive_20": 0, "movers_20": 0,
                     "feature_30m": 0, "feature_60m": 0, "feature_180m": 0,
@@ -197,6 +201,7 @@ def analyze(state):
                     coverage["abstain_gap"] += 1
                     if selected:
                         coverage["watch_abstain_gap"] += 1
+                        coverage["watch_abstain_future_entry_quotes"] += 1
                     coverage["abstain_future_entry_quotes"] += 1
                     continue
                 end = bisect.bisect_right(times, target+MAX_GAP, lo=i+1)
@@ -215,6 +220,7 @@ def analyze(state):
                     coverage["abstain_gap"] += 1
                     if selected:
                         coverage["watch_abstain_gap"] += 1
+                        coverage["watch_abstain_conflicting_quotes"] += 1
                     coverage["abstain_conflicting_quotes"] += 1
                     continue
                 # One mutually exclusive primary reason per unknown label;
@@ -234,6 +240,7 @@ def analyze(state):
                     coverage[reason] += 1
                     if selected:
                         coverage["watch_abstain_gap"] += 1
+                        coverage["watch_" + reason] += 1
                     continue
                 coverage["matured"] += 1
                 if selected:
@@ -315,6 +322,14 @@ def analyze(state):
             for key in ("30m","60m","180m")}
         assert coverage["eligible"]==coverage["matured"]+coverage["abstain_gap"]+coverage["immature"]
         assert coverage["abstain_gap"] == sum(coverage[k] for k in (
+            "abstain_conflicting_quotes", "abstain_future_entry_quotes",
+            "abstain_no_future_observation", "abstain_missing_horizon_anchor",
+            "abstain_stale_entry", "abstain_discontinuous_path"))
+        assert coverage["watch_abstain_gap"] == sum(coverage["watch_" + k] for k in (
+            "abstain_conflicting_quotes", "abstain_future_entry_quotes",
+            "abstain_no_future_observation", "abstain_missing_horizon_anchor",
+            "abstain_stale_entry", "abstain_discontinuous_path"))
+        assert all(coverage["watch_" + k] <= coverage[k] for k in (
             "abstain_conflicting_quotes", "abstain_future_entry_quotes",
             "abstain_no_future_observation", "abstain_missing_horizon_anchor",
             "abstain_stale_entry", "abstain_discontinuous_path"))
