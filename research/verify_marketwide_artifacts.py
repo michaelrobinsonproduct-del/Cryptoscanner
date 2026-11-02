@@ -154,6 +154,26 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
                     or pairs != distribution.get("distinct_pairs")
                     or stats.get("covered_fraction") != (n / total if total else None)):
                     raise ValueError("invalid first-entry feature coverage: " + horizon)
+        # A self-resealed aggregate cannot contradict its actual +30% episode
+        # records. The +20% evaluator does not currently export episode rows.
+        actual_episodes = episode.get("episodes")
+        if (not isinstance(actual_episodes, list)
+            or len(actual_episodes) != episode["unique_mover_episodes"]
+            or episode["unique_mover_episodes"] > coverage["movers"]
+            or any(not isinstance(row, dict) for row in actual_episodes)):
+            raise ValueError("invalid episode-row inventory: " + horizon)
+        if (sum(row.get("watch_captured") is True for row in actual_episodes)
+                != episode["watch_captured_episodes"]
+            or sum(row.get("first_entry_watch") is True for row in actual_episodes)
+                != episode["watch_first_entry_episodes_30"]
+            or any(row.get("first_entry_watch") is True and
+                   (row.get("watch_captured") is not True or
+                    row.get("first_watch_decision_at") != row.get("first_decision_at"))
+                   for row in actual_episodes)
+            or any(row.get("watch_captured") is False and
+                   row.get("first_watch_decision_at") is not None
+                   for row in actual_episodes)):
+            raise ValueError("inconsistent episode-row WATCH capture: " + horizon)
         # Mutually exclusive gap reasons must reconcile with BOTH market and
         # WATCH unknown outcomes. A resealed report cannot fabricate reasons.
         reasons = ("abstain_conflicting_quotes", "abstain_future_entry_quotes",
