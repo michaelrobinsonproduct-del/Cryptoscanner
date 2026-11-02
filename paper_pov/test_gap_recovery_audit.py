@@ -156,6 +156,25 @@ class GapRecoveryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "generation"):
             audit(self.state, END)
 
+    def test_source_cursor_failure_retains_sha_and_requested_cursor(self):
+        s = source()
+        page = s["pages"][0]
+        replace_payload(page, lambda x: x["result"].__setitem__("last", str(s["start_since_ns"])))
+        raw = base64.b64decode(page["response_b64"])
+        class FakeResponse:
+            def __init__(self, url): self.url = url
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def geturl(self): return self.url
+            def read(self, n): return raw
+        captures, errors = capture_bounded(self.state, END, max_pairs=1, max_pages=1,
+                                           opener=lambda url, timeout: FakeResponse(url))
+        self.assertEqual(captures, [])
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]["source_sha256"], hashlib.sha256(raw).hexdigest())
+        self.assertEqual(errors[0]["response_last"], str(s["start_since_ns"]))
+        self.assertIn("cursor", errors[0]["reason"])
+
     def test_mock_https_capture_preserves_exact_bytes_and_sha(self):
         s = source()
         raw = base64.b64decode(s["pages"][0]["response_b64"])
