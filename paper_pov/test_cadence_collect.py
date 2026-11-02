@@ -82,7 +82,7 @@ class CadenceCollectorTests(unittest.TestCase):
         def archive(members):
             payload = {name: (json.dumps(value).encode() if not isinstance(value, bytes)
                               else value) for name, value in members.items()}
-            sums = "".join(hashlib.sha256(value).hexdigest() + "  " + name + "\\n"
+            sums = "".join(hashlib.sha256(value).hexdigest() + "  " + name + "\n"
                            for name, value in payload.items())
             payload["SHA256SUMS"] = sums.encode()
             buffer = io.BytesIO()
