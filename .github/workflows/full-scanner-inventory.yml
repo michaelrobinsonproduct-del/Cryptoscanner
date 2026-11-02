@@ -6,6 +6,7 @@ on:
       - 'audit_tools/test_full_scanner_inventory.py'
       - 'audit_tools/external_runtime_20261102.json'
       - 'audit_tools/pr_triage_20261102.json'
+      - 'audit_tools/pr_semantic_current_20261102.json'
       - '.github/workflows/full-scanner-inventory.yml'
   workflow_dispatch:
 permissions:
@@ -28,7 +29,7 @@ jobs:
       - name: Record exact audit source
         run: git rev-parse HEAD
       - name: Compile check
-        run: python -m py_compile audit_tools/full_scanner_inventory.py
+        run: python -m py_compile audit_tools/full_scanner_inventory.py audit_tools/test_full_scanner_inventory.py
       - name: Fail-closed pagination regression tests
         run: python -m unittest audit_tools.test_full_scanner_inventory -v
       - name: Validate evidence-qualified PR classification snapshot
@@ -58,7 +59,7 @@ jobs:
           shutil.copy2(p,"audit-evidence/external-runtime.json")
           PY
       - name: SHA256 evidence
-        run: (cd audit-evidence && sha256sum scanner-inventory.json scanner-inventory.md consumer-graph.json external-runtime.json > SHA256SUMS && sha256sum -c SHA256SUMS)
+        run: (cd audit-evidence && sha256sum scanner-inventory.json scanner-inventory.md consumer-graph.json semantic-pr-matrix.json external-runtime.json > SHA256SUMS && sha256sum -c SHA256SUMS)
       - uses: actions/upload-artifact@v4
         with:
           name: scanner-full-inventory-${{ github.run_id }}
