@@ -250,6 +250,18 @@ def audit(state, evaluation_at, captures=(), source_errors=()):
             raise ValueError("Gap accounting failed")
     archived = state.get("archived", {})
     index = state.get("archive_index", [])
+    run_intervals = []
+    for a, b in zip(state["runs"], state["runs"][1:]):
+        gap = _utc(b["as_of"]) - _utc(a["as_of"])
+        if gap > MAX_GAP:
+            run_intervals.append({
+                "from_run_id": a["id"], "to_run_id": b["id"],
+                "from_as_of": a["as_of"], "to_as_of": b["as_of"],
+                "gap_minutes": round(gap.total_seconds() / 60, 6),
+                "from_report_sha256": a["report_sha256"],
+                "to_report_sha256": b["report_sha256"],
+                "from_source_sha": a["source_sha"],
+                "to_source_sha": b["source_sha"]})
     return {"schema": 1, "mode": "READ_ONLY_TRADE_GAP_AUDIT",
         "source_ledger_sha256": state["sha256"], "source_generation": state["generation"],
         "evaluation_at": now.isoformat(), "max_gap_minutes": 45,
@@ -260,6 +272,9 @@ def audit(state, evaluation_at, captures=(), source_errors=()):
             for pair, s in verified.items()},
         "no_trade_vs_missing": "UNPROVEN_WITHOUT_COMPLETE_SOURCE_COVERAGE",
         "source_errors": list(source_errors),
+        "retained_run_interval_gaps": {"over_45m_count": len(run_intervals),
+            "max_gap_minutes": max((x["gap_minutes"] for x in run_intervals), default=0),
+            "source_bound_intervals": run_intervals},
         "retention": {"ledger_retention_hours": 50,
             "archived_runs_count": archived.get("scans", 0),
             "archived_observations_count": archived.get("observations", 0),
