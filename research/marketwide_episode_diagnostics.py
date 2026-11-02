@@ -40,7 +40,14 @@ def lagged_return(series, times, index, minutes, conflicting_times=()):
     segment = times[j:index+1]
     if any(b-a > MAX_GAP for a,b in zip(segment, segment[1:])):
         return None
-    return entry / series[j][1] - 1
+    # Convert to a finite display statistic only after exact decimal division;
+    # extreme but valid quote ratios must not become JSON Infinity/NaN.
+    value = entry / series[j][1] - 1
+    try:
+        display = float(value)
+    except (OverflowError, ValueError):
+        return None
+    return display if math.isfinite(display) else None
 
 
 
@@ -118,7 +125,7 @@ def analyze(state):
         previous = quote_prices[o["pair"]].setdefault(at, price)
         if previous != price:
             conflicting_quotes[o["pair"]].add(at)
-        by_pair[o["pair"]].append((at, float(o["price"]), o["run_id"]))
+        by_pair[o["pair"]].append((at, price, o["run_id"]))
     output = {}
     for hours in HORIZONS:
         positives, negatives, cases, cases20 = [], [], [], []
@@ -159,7 +166,13 @@ def analyze(state):
                 if selected:
                     coverage["watch_matured"] += 1
                 peak_price = max(p for _,p in before)
-                peak = peak_price/entry - 1
+                peak_decimal = peak_price/entry - 1
+                try:
+                    peak = float(peak_decimal)
+                except (OverflowError, ValueError):
+                    peak = None
+                if peak is not None and not math.isfinite(peak):
+                    peak = None
                 # Convert the source's finite decimal price representation,
                 # not the rounded floating-point return, into exact labels.
                 # E.g. 120/100 must be a +20% hit, not 19.999999999999996%.
@@ -182,7 +195,7 @@ def analyze(state):
                 if hit and lag["60m"] is not None:
                     coverage["mover_feature_60m"] += 1
                 record = {"pair":pair,"entry_at":at.isoformat(),"run_id":rid,"decision_at":start.isoformat(),
-                          "peak_observed_return":round(peak,8),
+                          "peak_observed_return":round(peak,8) if peak is not None else None,
                           "hit_20":hit20,"hit_30":hit,
                           "watch":selected,"lagged_returns":lag}
                 if hit20:
@@ -207,12 +220,12 @@ def analyze(state):
             return {"n":len(vals),
                     "distinct_pairs":len({r["pair"] for r in records
                                           if r["lagged_returns"][key] is not None}),
-                    "mean":sum(vals)/len(vals) if vals else None,
+                    "mean":(sum(vals)/len(vals) if vals and math.isfinite(sum(vals)) else None),
                     "positive_fraction":sum(v>0 for v in vals)/len(vals) if vals else None,
-                    "median":((ordered[(len(ordered)-1)//2] + ordered[len(ordered)//2])/2
+                    "median":(float((ordered[(len(ordered)-1)//2] + ordered[len(ordered)//2])/2)
                               if ordered else None),
-                    "min":ordered[0] if ordered else None,
-                    "max":ordered[-1] if ordered else None}
+                    "min":float(ordered[0]) if ordered else None,
+                    "max":float(ordered[-1]) if ordered else None}
         # Episode-first-entry feature cohorts reduce, but do not eliminate,
         # overlapping-entry dependence. Keep distinct-pair sample counts visible.
         first_entries = [{"pair":e["pair"],"lagged_returns":e["first_lagged_returns"]}
