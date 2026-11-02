@@ -2,35 +2,35 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 7497,
+      "matured_snapshots": 7509,
       "evaluated": 7038,
-      "coverage_pct": 93.9,
-      "unresolved": 459,
-      "no_observation_in_window": 459
+      "coverage_pct": 93.7,
+      "unresolved": 471,
+      "no_observation_in_window": 471
     },
     {
       "hours": 3,
-      "matured_snapshots": 7497,
+      "matured_snapshots": 7509,
       "evaluated": 6673,
-      "coverage_pct": 89.0,
-      "unresolved": 824,
-      "no_observation_in_window": 824
+      "coverage_pct": 88.9,
+      "unresolved": 836,
+      "no_observation_in_window": 836
     },
     {
       "hours": 6,
-      "matured_snapshots": 7485,
+      "matured_snapshots": 7509,
       "evaluated": 6639,
-      "coverage_pct": 88.7,
-      "unresolved": 846,
-      "no_observation_in_window": 846
+      "coverage_pct": 88.4,
+      "unresolved": 870,
+      "no_observation_in_window": 870
     },
     {
       "hours": 24,
-      "matured_snapshots": 7401,
+      "matured_snapshots": 7461,
       "evaluated": 6483,
-      "coverage_pct": 87.6,
-      "unresolved": 918,
-      "no_observation_in_window": 918
+      "coverage_pct": 86.9,
+      "unresolved": 978,
+      "no_observation_in_window": 978
     }
   ],
   "outcome_lag_hours_by_horizon": [
@@ -55,12 +55,12 @@
       "average_delay_hours": 0.354
     }
   ],
-  "unresolved_1h_snapshots": 459,
+  "unresolved_1h_snapshots": 471,
   "rank_comparison": {
-    "historical_ranked_samples": 7221,
+    "historical_ranked_samples": 7232,
     "mean_base_minus_early_rank": 1.77
   },
-  "newly_discovered_outside_base_top12": 1,
+  "newly_discovered_outside_base_top12": 0,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
@@ -148,11 +148,11 @@
       "next_scan_gain_pct": 43.1
     }
   ],
-  "unselected_gainers_5pct_observations": 792,
-  "market_observations": 397769,
+  "unselected_gainers_5pct_observations": 753,
+  "market_observations": 398385,
   "market_price_coverage": 616,
-  "feature_rows": 7389,
-  "snapshots": 7509,
+  "feature_rows": 7400,
+  "snapshots": 7520,
   "outcomes": 26833,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
