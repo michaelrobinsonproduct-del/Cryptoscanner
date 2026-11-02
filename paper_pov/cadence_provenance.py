@@ -158,16 +158,29 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
             # is not a successful PAPER execution, even if supplied logs match.
             # Partial legacy job fixtures remain unverified, not attested.
             if isinstance(jobs, dict):
-                canonical = [j for j in jobs.get(str(rid), [])
-                             if isinstance(j, dict) and j.get("name") == "public-paper"
-                             and type(j.get("run_id")) is int and j["run_id"] == rid]
-                if len(canonical) == 1 and successful and (
-                        ("conclusion" in canonical[0] and canonical[0]["conclusion"] != "success") or
-                        ("status" in canonical[0] and canonical[0]["status"] != "completed")):
+                # Reject *all* ambiguous canonical jobs, including a forged
+                # second public-paper job with a different run_id. A matching
+                # first job must not authenticate a contradictory second job.
+                candidates = [j for j in jobs.get(str(rid), [])
+                              if isinstance(j, dict) and j.get("name") == "public-paper"]
+                if (len(candidates) != 1 or
+                        type(candidates[0].get("run_id")) is not int or
+                        candidates[0]["run_id"] != rid):
+                    evidence.append({"run_id": rid, "created_at": created.isoformat(),
+                                     "classification": "AMBIGUOUS_WRITER_JOB_METADATA"})
+                    continue
+                canonical = candidates[0]
+                if successful and (
+                        ("conclusion" in canonical and canonical["conclusion"] != "success") or
+                        ("status" in canonical and canonical["status"] != "completed")):
                     evidence.append({"run_id": rid, "created_at": created.isoformat(),
                                      "classification": "WRITER_JOB_NOT_SUCCESSFUL"})
                     continue
             queue_seconds = writer_job_queue_seconds(jobs, rid, created, now)
+            if isinstance(jobs, dict) and queue_seconds is None:
+                evidence.append({"run_id": rid, "created_at": created.isoformat(),
+                                 "classification": "INVALID_WRITER_JOB_TIMING"})
+                continue
             # If authentic job metadata is present, a log marker from before
             # the writer job began (or from the future) cannot certify this run.
             job_start = (created + dt.timedelta(seconds=queue_seconds)

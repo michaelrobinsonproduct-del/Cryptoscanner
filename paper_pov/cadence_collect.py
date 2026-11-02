@@ -206,12 +206,13 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
                 type(job_total) is not int or job_total != len(job_rows)):
             raise ValueError("truncated or malformed job page")
         jobs[str(rid)] = job_rows
-        matching = [j for j in job_rows if isinstance(j, dict)
-                    and j.get("name") == "public-paper"
-                    and type(j.get("run_id")) is int and j["run_id"] == rid
+        canonical = [j for j in job_rows if isinstance(j, dict)
+                     and j.get("name") == "public-paper"]
+        matching = [j for j in canonical
+                    if type(j.get("run_id")) is int and j["run_id"] == rid
                     and type(j.get("id")) is int and j["id"] > 0]
-        if len(matching) != 1:
-            continue  # Audit abstains without a unique writer job.
+        if len(canonical) != 1 or len(matching) != 1:
+            continue  # Any competing canonical writer job invalidates proof.
         # A green workflow is not evidence that its canonical writer job ran.
         # Bind log acquisition to a completed successful writer job with
         # coherent start/end timestamps, not a skipped or failed job.

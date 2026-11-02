@@ -110,6 +110,20 @@ class CadenceCollectorTests(unittest.TestCase):
                 self.assertEqual(delivery_log_claim(payload, 1, start, end)
                                  ["delivery_log_claim_status"], "UNVERIFIED")
 
+    def test_second_canonical_writer_with_wrong_run_id_blocks_collection(self):
+        get, calls = fixture()
+        def altered(path, text=False):
+            response = get(path, text)
+            if "/runs/1/jobs?" in path:
+                response["jobs"].append(dict(job(1), id=999, run_id=999))
+                response["total_count"] = len(response["jobs"])
+            return response
+        result = collect(altered, "owner/repo", NOW)
+        self.assertEqual(result["report"]["verified_native_count"], 0)
+        self.assertEqual(result["report"]["runs"][0]["classification"],
+                         "AMBIGUOUS_WRITER_JOB_METADATA")
+        self.assertFalse(any("/jobs/101/logs" in path for path, _ in calls))
+
     def test_no_writer_job_abstains_not_fabricates_native_success(self):
         get, _ = fixture(jobs=False)
         result = collect(get, "owner/repo", NOW)

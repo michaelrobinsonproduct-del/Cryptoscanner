@@ -189,6 +189,28 @@ class CadenceProvenanceTests(unittest.TestCase):
                 self.assertIsNone(result["max_verified_writer_job_queue_seconds"])
                 self.assertNotIn("writer_job_queue_seconds", result["runs"][0])
 
+    def test_direct_cli_duplicate_canonical_jobs_never_certify_native(self):
+        valid = {"run_id": 1, "name": "public-paper",
+                 "started_at": "2026-11-01T19:10:04Z"}
+        for candidates in ([valid, dict(valid, run_id=999)],
+                           [valid, dict(valid)],
+                           [dict(valid, run_id=999)],
+                           [], None):
+            with self.subTest(candidates=candidates):
+                report = self.check(jobs={"1": candidates})
+                self.assertEqual(report["verified_native_count"], 0)
+                self.assertEqual(report["verified_successful_writer_run_creation_count"], 0)
+                self.assertEqual(report["runs"][0]["classification"],
+                                 "AMBIGUOUS_WRITER_JOB_METADATA")
+
+    def test_direct_cli_invalid_job_start_cannot_fall_back_to_log(self):
+        job = {"run_id": 1, "name": "public-paper",
+               "started_at": "2026-11-01T19:09:00Z"}
+        report = self.check(jobs={"1": [job]})
+        self.assertEqual(report["verified_native_count"], 0)
+        self.assertEqual(report["runs"][0]["classification"],
+                         "INVALID_WRITER_JOB_TIMING")
+
     def test_cli_optional_jobs_metadata_produces_read_only_queue_metric(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
