@@ -294,6 +294,29 @@ class EpisodeTests(unittest.TestCase):
 
 
 
+    def test_episode_first_feature_coverage_has_explicit_denominators(self):
+        with patch("paper_pov.ledger.verify",return_value=None):
+            report=analyze(fixture())
+        for horizon in report["horizons"].values():
+            for threshold in (20,30):
+                total=horizon["unique_mover_episodes"+("_20" if threshold==20 else "")]
+                stats=horizon["episode_first_entry_feature_coverage_"+str(threshold)]
+                for lag in ("30m","60m","180m"):
+                    row=stats[lag]
+                    self.assertEqual(row["episodes"],total)
+                    self.assertEqual(row["with_asof_feature"]+row["without_asof_feature"],total)
+                    self.assertLessEqual(row["distinct_covered_pairs"],row["with_asof_feature"])
+                    self.assertEqual(row["covered_fraction"],
+                                     row["with_asof_feature"]/total if total else None)
+                    self.assertEqual(row["with_asof_feature"],
+                        horizon["episode_first_entry_feature_distributions"+
+                                ("_20" if threshold==20 else "")][lag]["n"])
+        # A positive case with no historical anchor must remain uncovered,
+        # not become an apparent zero-return historical feature.
+        one=report["horizons"]["1"]
+        self.assertGreater(one["episode_first_entry_feature_coverage_30"]["60m"]
+                           ["without_asof_feature"],0)
+
     def test_conflicting_same_timestamp_future_and_entry_quotes_abstain(self):
         baseline=fixture()
         with patch("paper_pov.ledger.verify",return_value=None):
