@@ -56,6 +56,13 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
         if digest(base / name) != expected[name]:
             raise ValueError("report checksum mismatch: " + name)
     ledger = load_strict_json((base / LEDGER))
+    # The already SHA-bound ledger provides the actual observed pair universe.
+    observations = ledger.get("observations")
+    if (not isinstance(observations,list) or
+        any(not isinstance(row,dict) or not isinstance(row.get("pair"),str)
+            or not row["pair"] for row in observations)):
+        raise ValueError("invalid ledger observed-pair inventory")
+    observed_pair_names = {row["pair"] for row in observations}
     outcomes = load_strict_json((base / FILES[0]))
     episodes = load_strict_json((base / FILES[1]))
     provenance = load_strict_json((base / FILES[2]))
@@ -112,6 +119,7 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
             pair.get("scope") != "observed PAPER pairs only; no inferred unobserved markets" or
             pair.get("top_gap_pairs_limit") != 10 or
             not natural(pair.get("observed_pairs")) or
+            pair["observed_pairs"] != len(observed_pair_names) or
             not natural(pair.get("pairs_with_gap")) or
             not isinstance(pair.get("totals"),dict) or
             set(pair["totals"]) != set(pair_keys) or
@@ -124,10 +132,10 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
             not (0 <= pair["pairs_with_gap"] <= pair["observed_pairs"] <= coverage["eligible"]) or
             (coverage["eligible"] > 0 and pair["observed_pairs"] == 0) or
             not isinstance(pair.get("top_gap_pairs"),list) or
-            len(pair["top_gap_pairs"]) > min(10,pair["pairs_with_gap"])):
+            len(pair["top_gap_pairs"]) != min(10,pair["pairs_with_gap"])):
             raise ValueError("invalid per-pair coverage conservation: " + horizon)
         top = pair["top_gap_pairs"]
-        if (any(not isinstance(row,dict) or not isinstance(row.get("pair"),str) or not row["pair"] or
+        if (any(not isinstance(row,dict) or not isinstance(row.get("pair"),str) or row["pair"] not in observed_pair_names or
                 any(not natural(row.get(k)) or row[k] > pair["totals"][k] for k in pair_keys) or
                 not isinstance(row.get("gap_reasons"),dict) or
                 set(row["gap_reasons"]) != set(reason_keys) or

@@ -21,7 +21,8 @@ def digest(path):
 
 def fixture(directory):
     base = Path(directory)
-    ledger = {"sha256": LEDGER_SHA, "generation": 51}
+    ledger = {"sha256": LEDGER_SHA, "generation": 51,
+              "observations":[{"pair":"SYNTHETICUSD"}]}
     window = {"eligible": 30872, "matured": 0, "immature": 30872,
               "abstain_gap": 0, "movers_20": 0, "movers_30": 0,
               "watch_eligible": 584, "watch_immature": 584,
@@ -234,7 +235,7 @@ class ArtifactContractTests(unittest.TestCase):
     def test_resealed_gap_reason_cannot_disagree_with_unknown_denominator(self):
         self.reseal_episode_change(lambda h: h["coverage"].update(
             abstain_no_future_observation=1))
-        with self.assertRaisesRegex(ValueError, "gap-reason partition"):
+        with self.assertRaisesRegex(ValueError, "per-pair coverage conservation"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
     def test_resealed_watch_gap_reason_cannot_exceed_market_reason(self):
@@ -367,6 +368,17 @@ class ArtifactContractTests(unittest.TestCase):
         self.reseal_episode_change(lambda h: h.update(
             watch_first_entry_recall_wilson_95_naive_30=[0.0,1.0]))
         with self.assertRaisesRegex(ValueError,"first-entry Wilson uncertainty"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+
+    def test_resealed_observed_pair_count_cannot_exceed_ledger_pair_universe(self):
+        self.reseal_episode_change(lambda h: h["pair_coverage"].update(observed_pairs=2))
+        with self.assertRaisesRegex(ValueError,"per-pair coverage conservation"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_pair_gap_rank_cannot_suppress_required_top_rows(self):
+        self.reseal_episode_change(lambda h: h["pair_coverage"].update(pairs_with_gap=1))
+        with self.assertRaisesRegex(ValueError,"per-pair coverage conservation"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
 
