@@ -3,7 +3,7 @@ import io
 import unittest
 from unittest.mock import patch
 
-from paper_pov.cadence_collect import collect, github_reader, delivery_log_claim, SafeLogRedirect, RejectApiRedirect
+from paper_pov.cadence_collect import collect, github_reader, delivery_log_claim, artifact_metadata_claim, SafeLogRedirect, RejectApiRedirect
 from urllib.request import Request
 
 SHA = "a" * 40
@@ -39,6 +39,15 @@ def fixture(native=None, dispatched=None, jobs=True):
         if "workflows/paper-pipeline.yml/runs?" in path:
             rows = native if "event=schedule" in path else dispatched
             return {"workflow_runs": rows, "total_count": len(rows)}
+        if "/runs/" in path and "/artifacts?" in path:
+            rid = int(path.split("/runs/")[1].split("/")[0])
+            source = {"id": rid, "head_sha": SHA, "head_branch": "main"}
+            artifacts = [
+                {"id": rid * 10 + i, "name": name + str(rid), "expired": False,
+                 "size_in_bytes": 1234, "workflow_run": source,
+                 "digest": "sha256:" + ("a" if i == 1 else "b") * 64}
+                for i, name in enumerate(("public-paper-ledger-", "public-paper-results-"), 1)]
+            return {"artifacts": artifacts, "total_count": len(artifacts)}
         if "/runs/" in path and "/jobs?" in path:
             rid = int(path.split("/runs/")[1].split("/")[0])
             rows = [job(rid)] if jobs else []
@@ -60,6 +69,9 @@ class CadenceCollectorTests(unittest.TestCase):
         self.assertEqual(len(result["evidence"]), 2)
         self.assertEqual(len(result["evidence"][0]["decoded_log_sha256"]), 64)
         self.assertFalse(result["evidence"][0]["raw_log_sha256_verified"])
+        self.assertEqual(result["evidence"][0]["artifact_metadata_status"],
+                         "GITHUB_METADATA_MATCHED_NOT_BYTES")
+        self.assertFalse(result["evidence"][0]["artifact_zip_bytes_independently_verified"])
         self.assertTrue(result["read_only"])
         self.assertFalse(result["raw_log_content_persisted"])
         self.assertTrue(all(path.startswith("/repos/") for path, _ in calls))
@@ -176,6 +188,41 @@ class CadenceCollectorTests(unittest.TestCase):
                 response["total_count"] += 1
             return response
         with self.assertRaisesRegex(ValueError, "truncated"):
+            collect(altered, "owner/repo", NOW)
+
+    def test_artifact_metadata_wrong_identity_and_duplicate_abstain(self):
+        get, _ = fixture()
+        for change in ("wrong_source", "duplicate", "missing", "wrong_digest", "expired"):
+            with self.subTest(change=change):
+                def altered(path, text=False):
+                    response = get(path, text)
+                    if "/artifacts?" in path:
+                        rows = response["artifacts"]
+                        if change == "wrong_source":
+                            rows[0]["workflow_run"]["head_sha"] = "f" * 40
+                        elif change == "duplicate":
+                            rows[1]["name"] = rows[0]["name"]
+                        elif change == "missing":
+                            rows.pop()
+                            response["total_count"] = len(rows)
+                        elif change == "wrong_digest":
+                            rows[0]["digest"] = "sha256:not-a-digest"
+                        else:
+                            rows[0]["expired"] = True
+                    return response
+                evidence = collect(altered, "owner/repo", NOW)["evidence"]
+                self.assertEqual(len(evidence), 2)
+                self.assertTrue(all(x["artifact_metadata_status"] == "UNVERIFIED"
+                                    for x in evidence if x["run_id"] == 1))
+
+    def test_artifact_metadata_truncation_abstains(self):
+        get, _ = fixture()
+        def altered(path, text=False):
+            response = get(path, text)
+            if "/artifacts?" in path:
+                response["total_count"] += 1
+            return response
+        with self.assertRaisesRegex(ValueError, "artifact metadata page"):
             collect(altered, "owner/repo", NOW)
 
     def test_lossy_non_utf8_job_log_is_rejected_before_provenance(self):
