@@ -4,6 +4,8 @@ on:
     paths:
       - 'research/kraken_prospective_provenance.py'
       - 'research/test_kraken_prospective_provenance.py'
+      - 'research/kraken_prospective_batch.py'
+      - 'research/test_kraken_prospective_batch.py'
       - '.github/workflows/research-kraken-prospective-probe.yml'
   workflow_dispatch:
 permissions:
@@ -29,7 +31,7 @@ jobs:
       - name: Offline adversarial tests
         run: |
           set -euo pipefail
-          python -m unittest research.test_kraken_prospective_provenance -v
+          python -m unittest research.test_kraken_prospective_provenance research.test_kraken_prospective_batch -v
       - name: One bounded public Kraken source capture
         run: |
           set -euo pipefail
@@ -43,10 +45,29 @@ jobs:
           print('KRAKEN_QUOTE_FRESHNESS',p['quote_event_fresh_le600s'])
           print('KRAKEN_TRADE_FRESHNESS',p['trade_event_fresh_le600s'])
           PY
+      - name: Bounded four-market raw receipt pilot (not continuous coverage)
+        run: |
+          set -euo pipefail
+          python -m research.kraken_prospective_batch --pairs XBTUSD,ETHUSD,SOLUSD,XRPUSD --output-dir /tmp/kraken-batch-evidence
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          root=Path('/tmp/kraken-batch-evidence')
+          m=json.loads((root/'manifest.json').read_text())
+          assert m['pairs_requested']==4
+          assert m['pairs_eligible']+m['pairs_stale']+m['pairs_invalid']+m['pairs_budget_skipped']==4
+          assert m['certified_first_entry_episodes']==0 and m['held_out_lift'] is None and not m['production_applied']
+          for entry in m['entries']:
+              for item in entry['raw']:
+                  assert hashlib.sha256((root/item['file']).read_bytes()).hexdigest()==item['sha256']
+          print('KRAKEN_BATCH_COVERAGE',json.dumps({k:m[k] for k in ('pairs_requested','pairs_eligible','pairs_stale','pairs_invalid','pairs_budget_skipped')},sort_keys=True))
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: kraken-prospective-evidence-${{ github.run_id }}
-          path: /tmp/kraken-prospective-evidence.json
+          path: |
+            /tmp/kraken-prospective-evidence.json
+            /tmp/kraken-batch-evidence/
           if-no-files-found: ignore
           retention-days: 14
