@@ -352,4 +352,22 @@ class Tests(unittest.TestCase):
         self.assertEqual(row["movers_30"],0)
         self.assertGreaterEqual(row["abstain_conflicting_quote"],1)
 
+    def test_resealed_late_scan_quote_is_unknown_not_matured_nonhit(self):
+        # The 104m quote was first observed by a valid 106m PAPER scan.
+        # The entry-0 1h+45m horizon cannot use it, even if +35%.
+        runs=[]; observations=[]
+        for minute,quote_at,price in ((0,0,100),(30,30,100),(60,60,100),
+                                      (106,104,135),(150,150,135),(180,180,135)):
+            rid=str(minute)
+            runs.append({"id":rid,"as_of":iso(minute)})
+            observations.append({"run_id":rid,"at":iso(quote_at),
+                                 "pair":"AAAUSD","price":price})
+        row=evaluate(sealed_fixture({"runs":runs,"observations":observations,
+                                     "predictions":[]}))["horizons"]["1"]
+        self.assertEqual(row["abstain_outcome_provenance"],1)
+        self.assertEqual(row["watch_abstain_outcome_provenance"],1)
+        self.assertEqual(row["watch_false_positive_30"],0)
+        self.assertEqual(row["watch_eligible"],
+                         row["watch_matured"]+row["watch_immature"]+row["watch_abstain_gap"])
+
 if __name__=="__main__":unittest.main()

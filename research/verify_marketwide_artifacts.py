@@ -119,6 +119,8 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
     matching = {
         "eligible": "eligible", "matured": "matured",
         "immature": "immature", "abstain_gap": "abstain_gap",
+        "abstain_outcome_provenance": "abstain_outcome_provenance",
+        "watch_abstain_outcome_provenance": "watch_abstain_outcome_provenance",
         "movers_20": "movers_20", "movers": "movers_30",
         "watch_eligible": "watch_eligible",
         "watch_immature": "watch_immature",

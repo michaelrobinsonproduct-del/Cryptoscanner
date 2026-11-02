@@ -50,7 +50,7 @@ def assert_same_cohorts(test, state):
             test.assertGreaterEqual(late,0,h)
             test.assertEqual(first+late,e[total],(h,suffix))
         reasons=("abstain_conflicting_quotes","abstain_future_entry_quotes",
-                 "abstain_no_future_observation","abstain_missing_horizon_anchor",
+                 "abstain_outcome_provenance","abstain_no_future_observation","abstain_missing_horizon_anchor",
                  "abstain_stale_entry","abstain_discontinuous_path")
         c=e["coverage"]
         test.assertEqual(sum(c[k] for k in reasons),c["abstain_gap"],h)
@@ -92,6 +92,25 @@ class CrossEvaluatorTests(unittest.TestCase):
         assert_same_cohorts(self,sealed_fixture({"runs":runs,"observations":observations,
                                                  "predictions":[]}))
 
+
+    def test_late_first_observation_abstains_in_both_evaluators(self):
+        # Valid sealed quote at minute 104 was FIRST observed at scan 106.
+        # For the minute-0 entry the 1h+45m acceptance limit is minute 105.
+        runs=[]; observations=[]
+        for minute,quote_at,price in ((0,0,100),(30,30,100),(60,60,100),
+                                      (106,104,135),(150,150,135),(180,180,135)):
+            rid=str(minute)
+            runs.append({"id":rid,"as_of":iso(minute)})
+            observations.append({"run_id":rid,"at":iso(quote_at),
+                                 "pair":"AAAUSD","price":price})
+        state=sealed_fixture({"runs":runs,"observations":observations,"predictions":[]})
+        assert_same_cohorts(self,state)
+        one=evaluate(state)["horizons"]["1"]
+        c=analyze(state)["horizons"]["1"]["coverage"]
+        self.assertEqual(one["abstain_outcome_provenance"],1)
+        self.assertEqual(one["watch_abstain_outcome_provenance"],1)
+        self.assertEqual(c["abstain_outcome_provenance"],1)
+        self.assertEqual(one["watch_false_positive_30"],0)
 
 if __name__ == "__main__":
     unittest.main()

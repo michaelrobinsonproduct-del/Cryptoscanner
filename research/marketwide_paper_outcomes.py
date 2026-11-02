@@ -24,6 +24,7 @@ def evaluate(state):
     from paper_pov.ledger import verify
     verify(state, 32_000_000)
     runs = {r["id"]: r for r in state["runs"]}
+    decision_times = {rid: timestamp(run["as_of"]) for rid, run in runs.items()}
     prices = defaultdict(list)
     for o in state["observations"]:
         prices[o["pair"]].append((timestamp(o["at"]), Decimal(str(o["price"])), o["run_id"]))
@@ -38,7 +39,9 @@ def evaluate(state):
                          "watch_eligible": 0, "watch_matured": 0,
                          "watch_abstain_gap": 0, "watch_immature": 0,
                          "abstain_conflicting_quote": 0,
-                         "watch_abstain_conflicting_quote": 0} for h in HORIZONS}
+                         "abstain_outcome_provenance": 0,
+                         "watch_abstain_conflicting_quote": 0,
+                         "watch_abstain_outcome_provenance": 0} for h in HORIZONS}
     latest = max((timestamp(r["as_of"]) for r in runs.values()), default=None)
     for pair, series in prices.items():
         times = [record[0] for record in series]
@@ -70,24 +73,33 @@ def evaluate(state):
                 end = bisect.bisect_right(times, target + MAX_GAP, lo=i+1)
                 # A quote can precede the PAPER decision by up to three minutes.
                 # Never label a pre-decision high as a future surge.
-                future = [(t, p) for t, p, _ in series[i+1:end]
+                future = [(t, p, source_rid) for t, p, source_rid in series[i+1:end]
                           if start < t]
-                before = [(t, p) for t, p in future if t <= target]
-                anchors = [(t, p) for t, p in future if target <= t <= target + MAX_GAP]
+                before = [(t, p) for t, p, _ in future if t <= target]
+                anchors = [(t, p) for t, p, _ in future if target <= t <= target + MAX_GAP]
                 # Continuity is measured from the immutable decision time,
                 # matching the production PAPER outcome contract.
                 timeline = [start] + [t for t, _ in before]
                 ambiguous = (at in conflicting_lookup or
                              bisect.bisect_right(conflicting_times, start) <
                              bisect.bisect_right(conflicting_times, target + MAX_GAP))
-                if (ambiguous or not before or not anchors or start - at > MAX_GAP
+                # A quote first observed after the horizon+gap, or with an
+                # event timestamp after its own scan, cannot label this entry.
+                # Match the episode evaluator: ambiguity takes precedence.
+                provenance_invalid = any(
+                    decision_times[source_rid] < t or
+                    decision_times[source_rid] > target + MAX_GAP
+                    for t, _, source_rid in future)
+                if (ambiguous or provenance_invalid or not before or not anchors or start - at > MAX_GAP
                     or any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
                     or anchors[0][0]-timeline[-1] > MAX_GAP):
                     row["abstain_gap"] += 1
                     if ambiguous: row["abstain_conflicting_quote"] += 1
+                    elif provenance_invalid: row["abstain_outcome_provenance"] += 1
                     if selected:
                         row["watch_abstain_gap"] += 1
                         if ambiguous: row["watch_abstain_conflicting_quote"] += 1
+                        elif provenance_invalid: row["watch_abstain_outcome_provenance"] += 1
                     continue
                 row["matured"] += 1
                 if selected: row["watch_matured"] += 1
@@ -109,6 +121,8 @@ def evaluate(state):
                 row["watch_abstain_gap"] + row["watch_immature"])
         assert row["abstain_conflicting_quote"] <= row["abstain_gap"]
         assert row["watch_abstain_conflicting_quote"] <= row["watch_abstain_gap"]
+        assert row["abstain_outcome_provenance"] <= row["abstain_gap"]
+        assert row["watch_abstain_outcome_provenance"] <= row["watch_abstain_gap"]
         row["watch_resolved_fraction"] = (row["watch_matured"] / row["watch_eligible"]
                 if row["watch_eligible"] else None)
         for suffix in ("20","30"):

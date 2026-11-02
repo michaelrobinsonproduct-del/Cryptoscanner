@@ -29,7 +29,9 @@ def fixture(directory):
               "predictions":[{"pair":"SYNTHETICUSD","run_id":str(i)}
                              for i in range(584)]}
     window = {"eligible": 30872, "matured": 0, "immature": 30872,
-              "abstain_gap": 0, "movers_20": 0, "movers_30": 0,
+              "abstain_gap": 0, "abstain_outcome_provenance": 0,
+              "watch_abstain_outcome_provenance": 0,
+              "movers_20": 0, "movers_30": 0,
               "watch_eligible": 584, "watch_immature": 584,
               "watch_abstain_gap": 0, "watch_matured": 0,
               "watch_20": 0, "watch_30": 0,
@@ -232,6 +234,19 @@ class ArtifactContractTests(unittest.TestCase):
         p = json.loads((self.base / FILES[2]).read_text())
         p["episode_report_sha256"] = digest(self.base / FILES[1])
         write_json(self.base / FILES[2], p)
+        reseal(self.base)
+        with self.assertRaisesRegex(ValueError, "cross-report outcome mismatch"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_primary_provenance_claim_must_match_episode(self):
+        path = self.base / FILES[0]
+        data = json.loads(path.read_text())
+        data["horizons"]["1"]["abstain_outcome_provenance"] = 1
+        write_json(path, data)
+        provenance_path = self.base / FILES[2]
+        provenance = json.loads(provenance_path.read_text())
+        provenance["outcome_report_sha256"] = digest(path)
+        write_json(provenance_path, provenance)
         reseal(self.base)
         with self.assertRaisesRegex(ValueError, "cross-report outcome mismatch"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
