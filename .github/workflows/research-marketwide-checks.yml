@@ -43,6 +43,17 @@ jobs:
           for horizon, row in d['horizons'].items():
               print('MARKETWIDE_OUTCOME',horizon,json.dumps(row,sort_keys=True))
               assert row['eligible']==row['matured']+row['abstain_gap']+row['immature']
+              assert row['eligible']==d['observed_entry_count']
+              assert row['watch_eligible']==d['watched_prediction_count']
+              assert row['watch_eligible']==row['watch_matured']+row['watch_abstain_gap']+row['watch_immature']
+              assert row['watch_20']+row['watch_false_positive_20']==row['watch_matured']
+              assert row['watch_30']+row['watch_false_positive_30']==row['watch_matured']
+              assert row['movers_20']==row['watch_20']+row['missed_20']
+              assert row['movers_30']==row['watch_30']+row['missed_30']
+          assert d['source_authenticated'] is False
+          assert d['complete_market_history'] is False
+          assert d['eligible_for_model_promotion'] is False
+          print('RESEARCH_EVIDENCE_FAIL_CLOSED',d['observed_run_count'],d['observed_pair_count'],d['observed_entry_count'],d['watched_prediction_count'])
           PY
       - name: Run exact-head evaluator tests
         run: |
