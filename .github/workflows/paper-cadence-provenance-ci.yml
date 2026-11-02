@@ -1,0 +1,26 @@
+name: Read-only PAPER cadence provenance contracts
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/cadence_provenance.py'
+      - 'paper_pov/test_cadence_provenance.py'
+      - '.github/workflows/paper-cadence-provenance-ci.yml'
+permissions:
+  contents: read
+jobs:
+  offline-provenance-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact-head provenance and adversarial contracts (no API writes)
+        run: |
+          set -euo pipefail
+          echo "PAPER_CADENCE_PROVENANCE_EXACT_SHA=$(git rev-parse HEAD)"
+          python -m unittest paper_pov.test_cadence_provenance -v
