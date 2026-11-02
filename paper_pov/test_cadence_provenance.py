@@ -159,15 +159,19 @@ class CadenceProvenanceTests(unittest.TestCase):
             with self.subTest(conclusion=conclusion, status=status):
                 jobs = {"1": [{"run_id": 1, "name": "public-paper",
                                "started_at": "2026-11-01T19:10:04Z",
+                               "completed_at": "2026-11-01T19:11:00Z",
                                "status": status, "conclusion": conclusion}]}
                 report = self.check(jobs=jobs)
                 self.assertEqual(report["verified_native_count"], 0)
                 self.assertEqual(report["runs"][0]["classification"],
-                                 "WRITER_JOB_NOT_SUCCESSFUL")
+                                 "WRITER_JOB_NOT_COMPLETED" if status != "completed"
+                                 else "WRITER_JOB_NOT_SUCCESSFUL")
 
     def test_authenticated_writer_job_queue_separates_from_cron_lateness(self):
         jobs = {"1": [{"run_id": 1, "name": "public-paper",
-                        "started_at": "2026-11-01T19:10:04Z"}]}
+                        "started_at": "2026-11-01T19:10:04Z",
+                        "completed_at": "2026-11-01T19:11:00Z",
+                        "status": "completed", "conclusion": "success"}]}
         result = self.check(jobs=jobs)
         self.assertEqual(result["writer_job_queue_sample_count"], 1)
         self.assertEqual(result["max_verified_writer_job_queue_seconds"], 3)
@@ -211,6 +215,31 @@ class CadenceProvenanceTests(unittest.TestCase):
         self.assertEqual(report["runs"][0]["classification"],
                          "INVALID_WRITER_JOB_TIMING")
 
+    def test_direct_cli_requires_complete_successful_writer_job(self):
+        valid = {"run_id": 1, "name": "public-paper",
+                 "started_at": "2026-11-01T19:10:04Z",
+                 "completed_at": "2026-11-01T19:11:00Z",
+                 "status": "completed", "conclusion": "success"}
+        cases = (({"status": None}, "WRITER_JOB_NOT_COMPLETED"),
+                 ({"status": "queued"}, "WRITER_JOB_NOT_COMPLETED"),
+                 ({"conclusion": None}, "WRITER_JOB_NOT_SUCCESSFUL"),
+                 ({"conclusion": "skipped"}, "WRITER_JOB_NOT_SUCCESSFUL"),
+                 ({"completed_at": None}, "INVALID_WRITER_JOB_COMPLETION"))
+        for changes, expected in cases:
+            with self.subTest(changes=changes):
+                report = self.check(jobs={"1": [{**valid, **changes}]})
+                self.assertEqual(report["verified_native_count"], 0)
+                self.assertEqual(report["runs"][0]["classification"], expected)
+
+    def test_direct_cli_missing_completion_abstains(self):
+        job = {"run_id": 1, "name": "public-paper",
+               "started_at": "2026-11-01T19:10:04Z",
+               "status": "completed", "conclusion": "success"}
+        report = self.check(jobs={"1": [job]})
+        self.assertEqual(report["verified_native_count"], 0)
+        self.assertEqual(report["runs"][0]["classification"],
+                         "INVALID_WRITER_JOB_COMPLETION")
+
     def test_cli_optional_jobs_metadata_produces_read_only_queue_metric(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
@@ -218,7 +247,9 @@ class CadenceProvenanceTests(unittest.TestCase):
             (root / "logs.json").write_text(json.dumps({"1": log()}))
             (root / "jobs.json").write_text(json.dumps({
                 "1": [{"run_id": 1, "name": "public-paper",
-                       "started_at": "2026-11-01T19:10:04Z"}]}))
+                       "started_at": "2026-11-01T19:10:04Z",
+                       "completed_at": "2026-11-01T19:11:00Z",
+                       "status": "completed", "conclusion": "success"}]}))
             argv = ["cadence_provenance", "--runs", str(root / "runs.json"),
                     "--logs", str(root / "logs.json"), "--jobs", str(root / "jobs.json"),
                     "--checked-at", NOW, "--output", str(root / "report.json")]

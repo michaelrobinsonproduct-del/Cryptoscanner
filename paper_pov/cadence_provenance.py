@@ -170,9 +170,15 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
                                      "classification": "AMBIGUOUS_WRITER_JOB_METADATA"})
                     continue
                 canonical = candidates[0]
-                if successful and (
-                        ("conclusion" in canonical and canonical["conclusion"] != "success") or
-                        ("status" in canonical and canonical["status"] != "completed")):
+                # Explicit job metadata must be as strong as the authenticated
+                # collector. Missing status or conclusion never proves success.
+                if canonical.get("status") != "completed":
+                    evidence.append({"run_id": rid, "created_at": created.isoformat(),
+                                     "classification": "WRITER_JOB_NOT_COMPLETED"})
+                    continue
+                if (canonical.get("conclusion") not in
+                        ("success", "failure", "cancelled", "timed_out", "skipped") or
+                        (successful and canonical["conclusion"] != "success")):
                     evidence.append({"run_id": rid, "created_at": created.isoformat(),
                                      "classification": "WRITER_JOB_NOT_SUCCESSFUL"})
                     continue
@@ -194,12 +200,13 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
                 matching_jobs = [j for j in jobs.get(str(rid), [])
                                  if isinstance(j, dict) and j.get("name") == "public-paper"
                                  and type(j.get("run_id")) is int and j["run_id"] == rid]
-                if len(matching_jobs) == 1 and "completed_at" in matching_jobs[0]:
+                if len(matching_jobs) == 1:
                     try:
+                        # Never substitute audit wall time for missing completion.
                         job_end = timestamp(matching_jobs[0]["completed_at"])
                         if not job_start <= job_end <= now:
                             raise ValueError("incoherent writer completion")
-                    except (ValueError, TypeError, OverflowError):
+                    except (ValueError, TypeError, KeyError, OverflowError):
                         evidence.append({"run_id": rid,
                                          "classification": "INVALID_WRITER_JOB_COMPLETION"})
                         continue
