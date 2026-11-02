@@ -40,6 +40,46 @@ def gh_pages(resource, per_page=100, max_pages=20):
             return result
     raise RuntimeError(f"GitHub pagination limit reached for {resource}: {max_pages} pages")
 
+def reconcile_pr_snapshot(triage, pr_rows, current_main_sha, fetch_pr=gh):
+    """Reconcile historical triage against CURRENT main, PR heads, and closed PRs.
+
+    A matching filename or an old classification is never current semantic evidence.
+    A snapshot classification is usable only while both main and PR head match.
+    """
+    prior_by_number={p["number"]:p for p in triage["prs"]}
+    main_matches=triage.get("main_sha")==current_main_sha
+    open_numbers=set()
+    for p in pr_rows:
+        n=p["number"]
+        open_numbers.add(n)
+        prior=prior_by_number.get(n,{})
+        head_matches=prior.get("head_sha")==p["head_sha"]
+        p["triage_snapshot_classification"]=prior.get("classification","unknown")
+        p["triage_snapshot_main_matches"]=main_matches
+        p["triage_snapshot_head_matches"]=head_matches
+        p["triage_classification"]=prior.get("classification","unknown") if main_matches and head_matches else "unknown"
+        p["classification_valid_for_current_main"]=main_matches and head_matches and bool(prior)
+        p["triage_stale_reason"]=(
+            "NEW_PR_NOT_IN_SNAPSHOT" if not prior else
+            "MAIN_CHANGED_REQUIRES_SEMANTIC_REVIEW" if not main_matches else
+            "PR_HEAD_CHANGED_REQUIRES_SEMANTIC_REVIEW" if not head_matches else None)
+    closed=[]
+    for n,prior in sorted(prior_by_number.items()):
+        if n in open_numbers: continue
+        current=fetch_pr(f"repos/michaelrobinsonproduct-del/Cryptoscanner/pulls/{n}")
+        if not isinstance(current,dict) or current.get("state")!="closed":
+            raise RuntimeError(f"PR #{n} missing from open list but closed state unverified: {current}")
+        closed.append({"number":n,"snapshot_head_sha":prior.get("head_sha"),
+                       "final_head_sha":current.get("head",{}).get("sha"),
+                       "state":current["state"],"merged":bool(current.get("merged_at")),
+                       "merged_at":current.get("merged_at"),
+                       "merge_commit_sha":current.get("merge_commit_sha"),
+                       "url":current.get("html_url"),
+                       "snapshot_classification":prior.get("classification","unknown"),
+                       "classification":"integrated" if current.get("merged_at") else "unknown",
+                       "classification_basis":"GitHub merged_at, NOT semantic equivalence of any other PR" if current.get("merged_at") else "Closed without merge; semantic outcome unknown"})
+    return closed
+
 def main():
     tracked=cmd("git","ls-files")
     if not tracked["ok"]:
@@ -90,6 +130,9 @@ def main():
     ledger_ref=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/git/ref/heads/paper-proof-ledger")
     runs_response=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/actions/runs?per_page=30")
     runs=runs_response.get("workflow_runs",[]) if isinstance(runs_response,dict) else []
+    closed_prs_since_snapshot=reconcile_pr_snapshot(triage,pr_rows,main_ref.get("object",{}).get("sha")) if isinstance(prs,list) else []
+    external_runtime=json.loads((ROOT/"audit_tools/external_runtime_20261102.json").read_text())
+    runtime_snapshot_main_matches=external_runtime.get("repo_main_sha")==main_ref.get("object",{}).get("sha")
     errors={"prs":prs.get("error") if isinstance(prs,dict) else None,
             "branches":branches.get("error") if isinstance(branches,dict) else None,
             "runs":runs_response.get("error") if isinstance(runs_response,dict) else "Invalid runs response",
@@ -109,6 +152,12 @@ def main():
         "files":files,"workflow_inventory":workflow_inventory,"python_imports":dict(imports),
         "package_scripts":package.get("scripts",{}),"legacy_files":legacy_files,
         "triage_snapshot_main_sha":triage.get("main_sha"),
+        "triage_snapshot_main_matches":triage.get("main_sha")==main_ref.get("object",{}).get("sha"),
+        "external_runtime_snapshot_utc":external_runtime.get("snapshot_utc"),
+        "external_runtime_snapshot_main_sha":external_runtime.get("repo_main_sha"),
+        "external_runtime_snapshot_main_matches":runtime_snapshot_main_matches,
+        "closed_prs_since_snapshot":closed_prs_since_snapshot,
+        "new_prs_since_snapshot":[p["number"] for p in pr_rows if p["triage_stale_reason"]=="NEW_PR_NOT_IN_SNAPSHOT"],
         "open_prs":pr_rows,"branches":branches,
         "recent_runs":[{"id":r.get("id"),"name":r.get("name"),"event":r.get("event"),"status":r.get("status"),
           "conclusion":r.get("conclusion"),"head_sha":r.get("head_sha"),"created_at":r.get("created_at"),
@@ -129,6 +178,13 @@ def main():
     lines+=["","## All open PRs (path overlap is NOT proof of equivalent behavior)","",
        "| PR | Head SHA | Triage | Snapshot head match | Changed files | Paths already present on main |","|---|---|---|---|---:|---:|"]
     for p in pr_rows:lines.append(f"| [#{p['number']}]({p['url']}) | `{p['head_sha'][:12]}` | {p['triage_classification']} | {p['triage_snapshot_head_matches']} | {len(p['files'])} | {len(p['already_on_main_paths'])} |")
+    lines+=["","## Snapshot drift / closed PR reconciliation","",
+      f"Triage snapshot main matches current main: {data['triage_snapshot_main_matches']}",
+      f"External runtime snapshot main matches current main: {data['external_runtime_snapshot_main_matches']}",
+      "A mismatch means historical runtime observations and PR classifications are NOT revalidated against current main.",
+      ""]
+    for p in closed_prs_since_snapshot:
+        lines.append(f"- PR #{p['number']}: {'MERGED' if p['merged'] else 'CLOSED WITHOUT MERGE'}, final head `{p['final_head_sha']}`, merge `{p['merge_commit_sha']}` (snapshot had `{p['snapshot_head_sha']}`).")
     lines+=["","## Evidence boundaries","",
       "- This is a machine-generated source and GitHub inventory, not proof of live deployment or functional equivalence.",
       "- PR triage is a dated human review snapshot; drifted heads revert to unknown. The audit PR's own head necessarily advances as this inventory evolves.",
