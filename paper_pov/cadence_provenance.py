@@ -199,12 +199,13 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
     # Same source code hours apart is not a meaningful paired-run comparison.
     # This is a time-comparability check only; it does not establish manual
     # origin, identical inputs, outcomes, or a successful persisted ledger.
-    cross_event_gap = (abs(int((timestamp(latest_native["created_at"]) -
-                                timestamp(latest_dispatch["created_at"])).total_seconds()))
+    # Preserve subsecond precision at the 30-minute comparability boundary.
+    cross_event_gap = (round(abs((timestamp(latest_native["created_at"]) -
+                                  timestamp(latest_dispatch["created_at"])).total_seconds()), 3)
                        if latest_native and latest_dispatch else None)
     cross_event_comparable = (cross_event_gap <= 1800
                               if cross_event_gap is not None else None)
-    max_creation_gap = max((int((b - a).total_seconds()) for a, b in
+    max_creation_gap = max((round((b - a).total_seconds(), 3) for a, b in
                             zip(creation_times, creation_times[1:])), default=None)
     latest_age = int((now - creation_times[-1]).total_seconds()) if creation_times else None
     # Distinguish absence of any authenticated attempt from an attempted scan
@@ -214,8 +215,37 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
     attempt_times = [timestamp(r["created_at"]) for r in attempts]
     latest_attempt_age = (int((now - attempt_times[-1]).total_seconds())
                           if attempt_times else None)
-    max_attempt_gap = max((int((b - a).total_seconds()) for a, b in
+    max_attempt_gap = max((round((b - a).total_seconds(), 3) for a, b in
                            zip(attempt_times, attempt_times[1:])), default=None)
+    # Find the most recent actual close-time, same-source native/dispatch
+    # candidate, rather than pairing two unrelated latest executions.
+    # This is NOT manual-origin or results-parity certification.
+    candidate_pairs = []
+    for n in native:
+        for d in dispatched:
+            gap = round(abs((timestamp(n["created_at"]) -
+                             timestamp(d["created_at"])).total_seconds()), 3)
+            if gap <= 1800 and n["verified_source_sha"] == d["verified_source_sha"]:
+                candidate_pairs.append((
+                    max(timestamp(n["created_at"]), timestamp(d["created_at"])),
+                    -gap, n["run_id"], d["run_id"], gap, n["verified_source_sha"]))
+    candidate_pairs.sort(reverse=True)
+    latest_pair = ({"native_run_id": candidate_pairs[0][2],
+                    "dispatch_run_id": candidate_pairs[0][3],
+                    "creation_gap_seconds": candidate_pairs[0][4],
+                    "verified_source_sha": candidate_pairs[0][5],
+                    "manual_origin_verified": False,
+                    "results_parity_verified": False}
+                   if candidate_pairs else None)
+    # Count nominal opportunities without inferring missed slots: GitHub does
+    # not expose the originating hour for delayed schedule events.
+    scheduled_opportunities = 0
+    hour = cutoff.replace(minute=0, second=0, microsecond=0)
+    while hour <= now:
+        for minute in CRONS.values():
+            slot = hour.replace(minute=minute)
+            scheduled_opportunities += int(cutoff <= slot <= now)
+        hour += dt.timedelta(hours=1)
     queue_samples = [r["writer_job_queue_seconds"] for r in successful
                      if "writer_job_queue_seconds" in r]
     evidence.sort(key=lambda r: (r.get("created_at", ""), str(r.get("run_id"))))
@@ -226,6 +256,9 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
             "latest_cross_event_source_sha_equal": source_match,
             "latest_cross_event_creation_gap_seconds": cross_event_gap,
             "latest_cross_event_within_30m": cross_event_comparable,
+            "latest_time_comparable_same_source_pair": latest_pair,
+            "time_comparable_same_source_pair_count": len(candidate_pairs),
+            "scheduled_slot_opportunities_in_window": scheduled_opportunities,
             "verified_successful_writer_run_creation_count": len(successful),
             "last_verified_successful_run_created_at": successful[-1]["created_at"] if successful else None,
             "seconds_since_last_verified_successful_run_creation": latest_age,
@@ -257,7 +290,9 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
                             "A successful workflow is not durable ledger or remote SHA256 readback proof",
                             "workflow_dispatch alone does not distinguish owner manual from external recovery",
                             "Cross-event source SHA equality is necessary but never proves manual/unattended result parity",
-                            "A cross-event pair more than 30 minutes apart is not time-comparable even if source SHAs match"]}
+                            "A cross-event pair more than 30 minutes apart is not time-comparable even if source SHAs match",
+                            "Close-time same-source pairs are candidates only; dispatch origin and results parity remain unverified",
+                            "Nominal slot opportunities are not a count of proven missed GitHub cron events"]}
 
 
 def main():
