@@ -629,6 +629,45 @@ class CadenceCollectorTests(unittest.TestCase):
                              "FAILED_CONFLICTING_AUTHENTICATED_LEDGER_CLAIMS")
             self.assertEqual((proof["first_run_id"], proof["second_run_id"]), (1, 2))
 
+    def test_unattested_failed_writer_prevents_monotonic_ledger_claim(self):
+        from paper_pov.cadence_collect import authenticated_ledger_claim_continuity
+        report = {"runs": [
+            {"run_id": 1, "classification": "VERIFIED_NATIVE_SCHEDULE",
+             "created_at": "2026-11-02T03:00:00Z"},
+            {"run_id": 3, "classification": "WRITER_JOB_NOT_SUCCESSFUL",
+             "created_at": "2026-11-02T03:05:00Z"},
+            {"run_id": 2, "classification": "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE",
+             "created_at": "2026-11-02T03:10:00Z"}]}
+        evidence = [
+            {"run_id": rid, "claimed_generation": generation,
+             "claimed_ledger_commit": SHA,
+             "delivery_log_claim_status": "MATCHED_LOG_MARKERS_NOT_REMOTE_BYTES"}
+            for rid, generation in ((1, 52), (2, 53))]
+        proof = authenticated_ledger_claim_continuity(report, evidence)
+        self.assertEqual(proof["status"],
+                         "UNVERIFIED_UNATTESTED_WRITER_BETWEEN_CLAIMS")
+        self.assertEqual(proof["unattested_writer_run_ids"], [3])
+        self.assertFalse(proof["remote_ledger_bytes_verified"])
+
+    def test_rerun_between_claims_does_not_establish_ledger_continuity(self):
+        from paper_pov.cadence_collect import authenticated_ledger_claim_continuity
+        report = {"runs": [
+            {"run_id": 1, "classification": "VERIFIED_NATIVE_SCHEDULE",
+             "created_at": "2026-11-02T03:00:00Z"},
+            {"run_id": 2, "classification": "MISSING_OR_RERUN_ATTEMPT_PROVENANCE",
+             "created_at": "2026-11-02T03:05:00Z"},
+            {"run_id": 3, "classification": "VERIFIED_NATIVE_SCHEDULE",
+             "created_at": "2026-11-02T03:10:00Z"}]}
+        evidence = [
+            {"run_id": rid, "claimed_generation": generation,
+             "claimed_ledger_commit": SHA,
+             "delivery_log_claim_status": "MATCHED_LOG_MARKERS_NOT_REMOTE_BYTES"}
+            for rid, generation in ((1, 52), (3, 53))]
+        proof = authenticated_ledger_claim_continuity(report, evidence)
+        self.assertEqual(proof["status"],
+                         "UNVERIFIED_UNATTESTED_WRITER_BETWEEN_CLAIMS")
+        self.assertEqual(proof["unattested_writer_run_ids"], [2])
+
     def test_repeated_generation_and_missing_claims_abstain(self):
         from paper_pov.cadence_collect import authenticated_ledger_claim_continuity
         report = {"runs": [

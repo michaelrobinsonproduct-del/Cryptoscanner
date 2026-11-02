@@ -414,10 +414,20 @@ def authenticated_ledger_claim_continuity(report, evidence):
         elif curr_gen > prev_gen + 1:
             gaps.append({"first_run_id": prev_id, "second_run_id": curr_id,
                          "missing_generation_count": curr_gen - prev_gen - 1})
+    # A failed, rerun or unauthenticated writer in this bounded sample may
+    # have attempted a ledger mutation without producing a trusted claim.
+    # Never describe authenticated endpoints as a continuous ledger sequence
+    # while another observed writer's persistence outcome is unknown.
+    uncertain = sorted({r.get("run_id") for r in rows
+                        if isinstance(r, dict) and
+                        type(r.get("run_id")) is int and
+                        r.get("classification") not in verified})
     return {
-        "status": ("UNVERIFIED_REPEATED_LEDGER_GENERATION" if repeated
+        "status": ("UNVERIFIED_UNATTESTED_WRITER_BETWEEN_CLAIMS" if uncertain
+                   else "UNVERIFIED_REPEATED_LEDGER_GENERATION" if repeated
                    else "UNVERIFIED_GENERATION_GAPS" if gaps
                    else "MONOTONIC_AUTHENTICATED_LOG_CLAIMS_NOT_REMOTE_BYTES"),
+        "unattested_writer_run_ids": uncertain,
         "authenticated_claim_count": len(candidates),
         "first_generation": candidates[0][2],
         "last_generation": candidates[-1][2],
