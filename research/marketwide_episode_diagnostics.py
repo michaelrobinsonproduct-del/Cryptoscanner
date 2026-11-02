@@ -186,7 +186,10 @@ def analyze(state):
             vals = [r["lagged_returns"][key] for r in records
                     if r["lagged_returns"][key] is not None]
             ordered = sorted(vals)
-            return {"n":len(vals),"mean":sum(vals)/len(vals) if vals else None,
+            return {"n":len(vals),
+                    "distinct_pairs":len({r["pair"] for r in records
+                                          if r["lagged_returns"][key] is not None}),
+                    "mean":sum(vals)/len(vals) if vals else None,
                     "positive_fraction":sum(v>0 for v in vals)/len(vals) if vals else None,
                     "median":((ordered[(len(ordered)-1)//2] + ordered[len(ordered)//2])/2
                               if ordered else None),
