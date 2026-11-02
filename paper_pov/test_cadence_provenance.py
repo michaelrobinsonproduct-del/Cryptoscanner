@@ -286,6 +286,46 @@ class CadenceProvenanceTests(unittest.TestCase):
         malformed[1] = malformed[1].replace("2026-11-01T", "not-a-timestamp")
         self.assertIsNone(provenance("\n".join(malformed) + "\n"))
 
+    def test_fractional_second_comparability_boundary_fails_closed(self):
+        rows = [run(1, "2026-11-02T01:10:01.000Z"),
+                run(2, "2026-11-02T01:40:01.001Z", event="workflow_dispatch")]
+        logs = {"1": log(), "2": log(event="workflow_dispatch", cron="MANUAL_DISPATCH")}
+        report = self.check(rows, logs)
+        self.assertEqual(report["latest_cross_event_creation_gap_seconds"], 1800.001)
+        self.assertIs(report["latest_cross_event_within_30m"], False)
+        self.assertEqual(report["time_comparable_same_source_pair_count"], 0)
+
+    def test_nearest_valid_historical_pair_not_masked_by_latest_dispatch(self):
+        rows = [run(1, "2026-11-02T01:10:01Z"),
+                run(2, "2026-11-02T01:20:01Z", event="workflow_dispatch"),
+                run(3, "2026-11-02T03:10:01Z", event="workflow_dispatch")]
+        logs = {"1": log(),
+                "2": log(event="workflow_dispatch", cron="MANUAL_DISPATCH"),
+                "3": log(event="workflow_dispatch", cron="MANUAL_DISPATCH")}
+        report = self.check(rows, logs)
+        self.assertIs(report["latest_cross_event_within_30m"], False)
+        self.assertEqual(report["time_comparable_same_source_pair_count"], 1)
+        pair = report["latest_time_comparable_same_source_pair"]
+        self.assertEqual((pair["native_run_id"], pair["dispatch_run_id"]), (1, 2))
+        self.assertEqual(pair["creation_gap_seconds"], 600)
+        self.assertFalse(pair["manual_origin_verified"])
+        self.assertFalse(pair["results_parity_verified"])
+
+    def test_source_drift_prevents_close_pair_even_when_timestamps_match(self):
+        other = "b" * 40
+        rows = [run(1, "2026-11-02T01:10:01Z"),
+                run(2, "2026-11-02T01:20:01Z", event="workflow_dispatch", sha=other)]
+        logs = {"1": log(), "2": log(event="workflow_dispatch", cron="MANUAL_DISPATCH", sha=other)}
+        report = self.check(rows, logs)
+        self.assertIsNone(report["latest_time_comparable_same_source_pair"])
+        self.assertEqual(report["time_comparable_same_source_pair_count"], 0)
+
+    def test_nominal_slots_are_not_reported_as_verified_misses(self):
+        report = self.check()
+        self.assertEqual(report["scheduled_slot_opportunities_in_window"], 48)
+        self.assertEqual(report["verified_native_count"], 1)
+        self.assertNotIn("missed_slots_verified", report)
+
     def test_no_false_ledger_or_trade_claims(self):
         result = self.check()
         self.assertNotIn("ledger_verified", result)
