@@ -1113,5 +1113,39 @@ class EpisodeTests(unittest.TestCase):
         self.assertTrue(all(x is None for x in
                             all_watch["nonwatch"]["gap_reason_fraction_of_eligible"].values()))
 
+    def test_backdated_quote_from_later_scan_cannot_enter_asof_history(self):
+        # A later scan can report an old exchange-event timestamp. Its quote
+        # was not observed by the scanner at the earlier decision.
+        from decimal import Decimal
+        series = [(BASE, Decimal("100"), "0"),
+                  (BASE + dt.timedelta(minutes=1), Decimal("101"), "45"),
+                  (BASE + dt.timedelta(minutes=30), Decimal("110"), "30")]
+        times = [row[0] for row in series]
+        decisions = {rid: BASE + dt.timedelta(minutes=int(rid))
+                     for rid in ("0", "30", "45")}
+        self.assertEqual(
+            lagged_return_diagnostic(series, times, 2, 30, decisions),
+            (None, "future_scan_observation"))
+        # The original quote-only API remains backwards-compatible; the
+        # provenance-aware analysis must explicitly supply scan decisions.
+        self.assertEqual(lagged_return_diagnostic(series, times, 2, 30)[1],
+                         "covered")
+
+    def test_episode_first_entry_abstains_on_future_scan_provenance(self):
+        runs = [{"id": str(m), "as_of": iso(m)} for m in range(0, 241, 15)]
+        observations = [
+            {"run_id": str(m), "at": iso(1 if m == 45 else m),
+             "pair": "AAAUSD", "price": 100 if m < 60 else 135}
+            for m in range(0, 241, 15)]
+        state = {"runs": runs, "observations": observations, "predictions": []}
+        with patch("paper_pov.ledger.verify", return_value=None):
+            report = analyze(state)["horizons"]["1"]
+        first = next(r for r in report["mover_cases"] if r["run_id"] == "30")
+        self.assertTrue(first["hit_30"])
+        self.assertIsNone(first["lagged_returns"]["30m"])
+        self.assertEqual(first["lagged_return_reasons"]["30m"],
+                         "future_scan_observation")
+        self.assertGreater(report["coverage"]["matured"], 0)
+
 if __name__=="__main__":
     unittest.main()
