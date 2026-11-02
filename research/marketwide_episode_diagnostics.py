@@ -84,15 +84,18 @@ def cluster_episodes(cases, hours):
     windows could otherwise merge unrelated moves days apart into one episode.
     """
     episodes = []
-    for case in sorted(cases,key=lambda x:(x["pair"],x["entry_at"])):
-        t = timestamp(case["entry_at"])
+    for case in sorted(cases,key=lambda x:(x["pair"],x.get("decision_at",x["entry_at"]))):
+        # An episode is defined by immutable PAPER decisions, not by stale
+        # quote timestamps that can predate those decisions by minutes.
+        t = timestamp(case.get("decision_at",case["entry_at"]))
         if (episodes and episodes[-1]["pair"]==case["pair"]
-            and t-timestamp(episodes[-1]["first_entry_at"]) <= dt.timedelta(hours=hours)):
+            and t-timestamp(episodes[-1]["first_decision_at"]) <= dt.timedelta(hours=hours)):
             episodes[-1]["entry_cases"] += 1
             episodes[-1]["last_entry_at"] = case["entry_at"]
             episodes[-1]["watch_captured"] |= case["watch"]
         else:
             episodes.append({"pair":case["pair"],"first_entry_at":case["entry_at"],
+                             "first_decision_at":t.isoformat(),
                              "last_entry_at":case["entry_at"],"entry_cases":1,
                              "watch_captured":case["watch"],
                              "first_lagged_60m":case["lagged_returns"]["60m"],
