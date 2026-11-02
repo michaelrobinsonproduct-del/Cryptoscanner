@@ -132,9 +132,12 @@ def build_consumer_graph(workflows, runtime, checkout_sha, main_sha, workflow_so
         raise ValueError("Unrecognized workflow source provenance")
     workflow_evidence=workflow_source+":"+(main_sha if workflow_source=="remote_main" else checkout_sha)
     edges=[]
-    def edge(source,target,kind,evidence,observed_runtime=False):
-        edges.append({"source":source,"target":target,"kind":kind,
-                      "evidence":evidence,"observed_runtime":observed_runtime})
+    def edge(source,target,kind,evidence,observed_runtime=False,target_checkout_ref=None):
+        record={"source":source,"target":target,"kind":kind,
+                "evidence":evidence,"observed_runtime":observed_runtime}
+        if target_checkout_ref is not None:
+            record["target_checkout_ref"]=target_checkout_ref
+        edges.append(record)
     names=collections.defaultdict(list)
     paths={w["path"] for w in workflows}
     for w in workflows:
@@ -143,12 +146,15 @@ def build_consumer_graph(workflows, runtime, checkout_sha, main_sha, workflow_so
     orchestration_unknowns=[]
     for w in workflows:
         source="github-workflow:"+w["path"]
+        branch_info=w.get("branch_references",{})
+        refs=branch_info.get("checkout_refs",[])
+        pinned_ref=(refs[0] if len(refs)==1 and not branch_info.get("unresolved_checkout_refs") else None)
         for script in w["scripts"]:
             edge(source,"repo-script:"+script,"invokes_script",
-                 workflow_evidence)
+                 workflow_evidence,target_checkout_ref=pinned_ref)
         for module in w["python_modules"]:
             edge(source,"python-module:"+module,"invokes_module",
-                 workflow_evidence)
+                 workflow_evidence,target_checkout_ref=pinned_ref)
         if w["ledger_ref"]:
             edge(source,"github-ref:paper-proof-ledger","mentions_ledger_ref",
                  workflow_evidence)
