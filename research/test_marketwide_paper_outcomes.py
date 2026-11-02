@@ -31,4 +31,37 @@ class Tests(unittest.TestCase):
             r=evaluate(f)["horizons"]["1"]
         self.assertGreater(r["abstain_gap"],0)
         self.assertEqual(r["matured"],0)
+    def test_pre_decision_spike_is_not_future_mover(self):
+        # A later scan can carry a slightly older quote than an earlier scan.
+        # A price seen BEFORE the as-of decision must not count as a hit.
+        runs=[{"id":"before","as_of":iso(-1)},
+              {"id":"decision","as_of":iso(0)}]
+        observations=[{"run_id":"before","at":iso(-1),"pair":"AAAUSD","price":150},
+                      {"run_id":"decision","at":iso(-2),"pair":"AAAUSD","price":100}]
+        for minute in (30,60,90,120):
+            rid=str(minute)
+            runs.append({"id":rid,"as_of":iso(minute)})
+            observations.append({"run_id":rid,"at":iso(minute),"pair":"AAAUSD","price":100})
+        with patch("paper_pov.ledger.verify",return_value=None):
+            row=evaluate({"runs":runs,"observations":observations,
+                          "predictions":[]})["horizons"]["1"]
+        self.assertEqual(row["movers_30"],0)
+        self.assertEqual(row["missed_30"],0)
+        self.assertEqual(row["matured"],2)
+
+    def test_continuity_starts_at_decision_not_stale_quote(self):
+        # Entry quote is 2 minutes old; 44 minutes after decision is within
+        # MAX_GAP even though 46 minutes have elapsed since that quote.
+        runs=[]
+        observations=[]
+        for minute,quote_at in ((0,-2),(44,44),(60,60),(120,120)):
+            rid=str(minute)
+            runs.append({"id":rid,"as_of":iso(minute)})
+            observations.append({"run_id":rid,"at":iso(quote_at),
+                                 "pair":"AAAUSD","price":100})
+        with patch("paper_pov.ledger.verify",return_value=None):
+            row=evaluate({"runs":runs,"observations":observations,
+                          "predictions":[]})["horizons"]["1"]
+        self.assertEqual(row["matured"],1)
+        self.assertEqual(row["abstain_gap"],0)
 if __name__=="__main__":unittest.main()
