@@ -1,7 +1,8 @@
 """Offline behavioral tests; synthetic fixtures are NOT predictive evidence."""
 import datetime as dt
+import hashlib
 import unittest
-from unittest.mock import patch
+from paper_pov.ledger import seal, verify
 from research.marketwide_paper_outcomes import evaluate
 
 BASE=dt.datetime(2026,1,1,tzinfo=dt.timezone.utc)
@@ -16,10 +17,45 @@ def fixture():
         for pair, price in (("AAAUSD",100 if i==0 else 135),("BBBUSD",100)):
             observations.append({"run_id":rid,"at":iso(i),"pair":pair,"price":price})
     return {"runs":runs,"observations":observations,"predictions":[{"run_id":"0","pair":"BBBUSD"}]}
+def sealed_fixture(raw):
+    """Construct a valid SHA-sealed PAPER ledger, not a mocked verifier."""
+    by_run = {}
+    for o in raw["observations"]:
+        by_run.setdefault(o["run_id"], []).append(o)
+    watches = {(p["run_id"], p["pair"]) for p in raw["predictions"]}
+    state = {"schema":1, "generation":0, "runs":[], "predictions":[],
+             "observations":[], "outcomes":[]}
+    for run in raw["runs"]:
+        observations = by_run.get(run["id"], [])
+        if not observations:
+            continue
+        run_id = hashlib.sha256(("test-run|" + run["id"]).encode()).hexdigest()
+        selected = [o for o in observations
+                    if (run["id"], o["pair"]) in watches]
+        selected = selected or observations[:1]
+        state["runs"].append({"id":run_id, "as_of":run["as_of"],
+                              "source_sha":"a"*40, "report_sha256":"b"*64,
+                              "watch_count":len(selected),
+                              "observation_count":len(observations)})
+        for rank, obs in enumerate(selected, 1):
+            pair = obs["pair"]
+            pid = hashlib.sha256(("paper-v1|" + run["as_of"] + "|" + pair).encode()).hexdigest()
+            state["predictions"].append({"prediction_id":pid, "run_id":run_id,
+                                          "as_of":run["as_of"], "pair":pair,
+                                          "price":obs["price"], "rank":rank,
+                                          "baseline_score":0.0,
+                                          "challenger_score":0.0})
+        for obs in observations:
+            state["observations"].append({"run_id":run_id, "at":obs["at"],
+                                           "pair":obs["pair"], "price":obs["price"]})
+    state["generation"] = len(state["runs"])
+    seal(state)
+    verify(state)
+    return state
+
 class Tests(unittest.TestCase):
     def test_marketwide_missed_mover(self):
-        with patch("paper_pov.ledger.verify",return_value=None):
-            result=evaluate(fixture())["horizons"]["1"]
+        result=evaluate(sealed_fixture(fixture()))["horizons"]["1"]
         self.assertGreater(result["missed_30"],0)
         self.assertEqual(result["watch_30"],0)
         self.assertGreater(result["watch_false_positive_30"],0)
@@ -27,8 +63,7 @@ class Tests(unittest.TestCase):
     def test_gap_is_not_negative(self):
         f=fixture()
         f["observations"]=[o for o in f["observations"] if o["run_id"] in ("0","180")]
-        with patch("paper_pov.ledger.verify",return_value=None):
-            r=evaluate(f)["horizons"]["1"]
+        r=evaluate(sealed_fixture(f))["horizons"]["1"]
         self.assertGreater(r["abstain_gap"],0)
         self.assertEqual(r["matured"],0)
     def test_pre_decision_spike_is_not_future_mover(self):
@@ -42,9 +77,8 @@ class Tests(unittest.TestCase):
             rid=str(minute)
             runs.append({"id":rid,"as_of":iso(minute)})
             observations.append({"run_id":rid,"at":iso(minute),"pair":"AAAUSD","price":100})
-        with patch("paper_pov.ledger.verify",return_value=None):
-            row=evaluate({"runs":runs,"observations":observations,
-                          "predictions":[]})["horizons"]["1"]
+        row=evaluate(sealed_fixture({"runs":runs,"observations":observations,
+                                     "predictions":[]}))["horizons"]["1"]
         self.assertEqual(row["movers_30"],0)
         self.assertEqual(row["missed_30"],0)
         self.assertEqual(row["matured"],2)
@@ -59,9 +93,41 @@ class Tests(unittest.TestCase):
             runs.append({"id":rid,"as_of":iso(minute)})
             observations.append({"run_id":rid,"at":iso(quote_at),
                                  "pair":"AAAUSD","price":100})
-        with patch("paper_pov.ledger.verify",return_value=None):
-            row=evaluate({"runs":runs,"observations":observations,
-                          "predictions":[]})["horizons"]["1"]
+        row=evaluate(sealed_fixture({"runs":runs,"observations":observations,
+                                     "predictions":[]}))["horizons"]["1"]
         self.assertEqual(row["matured"],1)
         self.assertEqual(row["abstain_gap"],0)
+    def test_exact_twenty_percent_boundary(self):
+        runs=[]; observations=[]
+        for minute,price in ((0,100),(30,120),(60,120),(120,120)):
+            rid=str(minute)
+            runs.append({"id":rid,"as_of":iso(minute)})
+            observations.append({"run_id":rid,"at":iso(minute),
+                                 "pair":"AAAUSD","price":price})
+        row=evaluate(sealed_fixture({"runs":runs,"observations":observations,
+                                     "predictions":[]}))["horizons"]["1"]
+        self.assertEqual(row["movers_20"],1)
+        self.assertEqual(row["movers_30"],0)
+        self.assertEqual(row["watch_20"],1)
+
+    def test_exact_thirty_percent_boundary(self):
+        runs=[]; observations=[]
+        for minute,price in ((0,100),(30,130),(60,130),(120,130)):
+            rid=str(minute)
+            runs.append({"id":rid,"as_of":iso(minute)})
+            observations.append({"run_id":rid,"at":iso(minute),
+                                 "pair":"AAAUSD","price":price})
+        row=evaluate(sealed_fixture({"runs":runs,"observations":observations,
+                                     "predictions":[]}))["horizons"]["1"]
+        self.assertEqual(row["movers_20"],1)
+        self.assertEqual(row["movers_30"],1)
+        self.assertEqual(row["watch_30"],1)
+
+    def test_authentic_ledger_verification_is_not_mocked(self):
+        state=sealed_fixture(fixture())
+        state["observations"][0]["price"]=999
+        seal(state)
+        with self.assertRaisesRegex(ValueError,"Prediction price differs"):
+            evaluate(state)
+
 if __name__=="__main__":unittest.main()
