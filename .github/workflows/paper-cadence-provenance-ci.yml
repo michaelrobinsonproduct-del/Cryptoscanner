@@ -4,6 +4,8 @@ on:
     paths:
       - 'paper_pov/cadence_provenance.py'
       - 'paper_pov/test_cadence_provenance.py'
+      - 'paper_pov/cadence_collect.py'
+      - 'paper_pov/test_cadence_collect.py'
       - '.github/workflows/paper-cadence-provenance-ci.yml'
 permissions:
   contents: read
@@ -23,4 +25,4 @@ jobs:
         run: |
           set -euo pipefail
           echo "PAPER_CADENCE_PROVENANCE_EXACT_SHA=$(git rev-parse HEAD)"
-          python -m unittest paper_pov.test_cadence_provenance -v
+          python -m unittest paper_pov.test_cadence_provenance paper_pov.test_cadence_collect -v
