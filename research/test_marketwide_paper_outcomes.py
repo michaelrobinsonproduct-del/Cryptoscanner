@@ -264,6 +264,8 @@ class Tests(unittest.TestCase):
                                      "predictions":[]}))["horizons"]["1"]
         self.assertEqual(row["movers_30"],0)
         self.assertGreaterEqual(row["abstain_gap"],1)
+        self.assertEqual(row["abstain_conflicting_quote"],1)
+        self.assertLessEqual(row["watch_abstain_conflicting_quote"],row["watch_abstain_gap"])
 
     def test_identical_same_timestamp_quote_remains_usable(self):
         runs=[]; observations=[]
@@ -277,6 +279,7 @@ class Tests(unittest.TestCase):
                                      "predictions":[]}))["horizons"]["1"]
         self.assertEqual(row["movers_30"],1)
         self.assertEqual(row["matured"],1)
+        self.assertEqual(row["abstain_conflicting_quote"],0)
 
     def test_other_pair_spike_never_leaks_into_watched_pair(self):
         runs=[]; observations=[]
@@ -317,5 +320,20 @@ class Tests(unittest.TestCase):
         self.assertIs(report["source_authenticated"],False)
         self.assertIs(report["complete_market_history"],False)
         self.assertIs(report["eligible_for_model_promotion"],False)
+
+
+    def test_resealed_future_quote_fails_source_timestamp_contract(self):
+        state=sealed_fixture(fixture())
+        state["observations"][0]["at"]=iso(1)
+        seal(state)
+        with self.assertRaisesRegex(ValueError,"Observation timestamp outside run"):
+            evaluate(state)
+
+    def test_resealed_nonmonotonic_runs_fail_before_labels(self):
+        state=sealed_fixture(fixture())
+        state["runs"][0],state["runs"][1]=state["runs"][1],state["runs"][0]
+        seal(state)
+        with self.assertRaisesRegex(ValueError,"Nonmonotonic run timestamps"):
+            evaluate(state)
 
 if __name__=="__main__":unittest.main()
