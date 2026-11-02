@@ -277,6 +277,75 @@ def canonical_writer_overlap_evidence(report, jobs):
             "global_exclusivity_verified": False}
 
 
+
+def canonical_writer_attempt_intervals(report, jobs):
+    """Detect overlapping GitHub canonical job *attempts*, even failed ones.
+
+    GitHub job intervals are independently returned metadata, not proof that
+    a scanner process wrote anything. Incomplete or unauthenticated intervals
+    can never establish single-writer safety.
+    """
+    rows = report.get("runs", [])
+    if not isinstance(rows, list) or not isinstance(jobs, dict):
+        return {"status": "UNVERIFIED_INVALID_JOB_COVERAGE",
+                "actual_ledger_write_overlap_verified": False}
+    verified = {"VERIFIED_NATIVE_SCHEDULE",
+                "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE"}
+    intervals, unknown, unverified_source = [], [], []
+    for row in rows:
+        rid = row.get("run_id") if isinstance(row, dict) else None
+        if type(rid) is not int or rid <= 0:
+            unknown.append(None)
+            continue
+        if row.get("classification") not in verified:
+            unverified_source.append(rid)
+        canonical = [j for j in jobs.get(str(rid), [])
+                     if isinstance(j, dict) and j.get("name") == "public-paper"]
+        if len(canonical) != 1:
+            unknown.append(rid)
+            continue
+        writer = canonical[0]
+        if (type(writer.get("id")) is not int or writer["id"] <= 0 or
+                type(writer.get("run_id")) is not int or writer["run_id"] != rid or
+                writer.get("status") != "completed"):
+            unknown.append(rid)
+            continue
+        try:
+            start = timestamp(writer["started_at"])
+            end = timestamp(writer["completed_at"])
+            created = timestamp(row["created_at"])
+            if not created <= start < end:
+                raise ValueError("incoherent job interval")
+        except (KeyError, TypeError, ValueError, OverflowError):
+            unknown.append(rid)
+            continue
+        intervals.append((start, end, rid))
+    intervals.sort()
+    overlaps = []
+    for i, (start, end, rid) in enumerate(intervals):
+        for next_start, next_end, next_rid in intervals[i + 1:]:
+            if next_start >= end:
+                break
+            duration = (min(end, next_end) - max(start, next_start)).total_seconds()
+            if duration > 0:
+                overlaps.append({"first_run_id": rid, "second_run_id": next_rid,
+                                 "overlap_seconds": round(duration, 3)})
+    return {
+        "status": ("FAILED_OVERLAPPING_GITHUB_CANONICAL_JOB_INTERVALS" if overlaps
+                   else "UNVERIFIED_INCOMPLETE_JOB_INTERVALS" if unknown
+                   else "UNVERIFIED_SOURCE_PROVENANCE_FOR_JOB_INTERVALS" if unverified_source
+                   else "NO_OVERLAP_OBSERVED_BOUNDED_JOB_INTERVALS" if len(intervals) >= 2
+                   else "UNVERIFIED_INSUFFICIENT_JOB_INTERVALS"),
+        "observed_job_interval_count": len(intervals),
+        "unverified_source_run_ids": sorted(set(unverified_source)),
+        "unknown_interval_run_ids": unknown,
+        "overlap_pair_count": len(overlaps),
+        "overlaps": overlaps,
+        "actual_ledger_write_overlap_verified": False,
+        "global_exclusivity_verified": False,
+    }
+
+
 def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
     """Return a reproducible audit plus SHA256 evidence index; no writes."""
     if not isinstance(repo, str) or len(repo.split("/")) != 2 or any(
@@ -320,7 +389,9 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
     logs, jobs, evidence = {}, {}, []
     for run in runs:
         rid = run["id"]
-        if run.get("status") != "completed" or run.get("run_attempt") != 1:
+        # Even failed/in-progress runs may contain concurrent canonical jobs.
+        # Read their job metadata, but never read/publish a success log for them.
+        if run.get("run_attempt") != 1:
             continue
         response = get(base + "/runs/" + str(rid) + "/jobs?per_page=100")
         job_rows = response.get("jobs") if isinstance(response, dict) else None
@@ -329,6 +400,8 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
                 type(job_total) is not int or job_total != len(job_rows)):
             raise ValueError("truncated or malformed job page")
         jobs[str(rid)] = job_rows
+        if run.get("status") != "completed":
+            continue
         canonical = [j for j in job_rows if isinstance(j, dict)
                      and j.get("name") == "public-paper"]
         matching = [j for j in canonical
@@ -371,7 +444,9 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
     result = audit(runs, logs, checked_at, lookback_hours, jobs=jobs)
     remote_ref = current_remote_ref_evidence(get, repo, evidence, runs, report=result)
     overlap = canonical_writer_overlap_evidence(result, jobs)
+    attempts = canonical_writer_attempt_intervals(result, jobs)
     return {"report": result, "evidence": evidence,
+            "writer_attempt_interval_evidence": attempts,
             "current_remote_ref_evidence": remote_ref,
             "writer_overlap_evidence": overlap,
             "raw_log_content_persisted": False,

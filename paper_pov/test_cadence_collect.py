@@ -480,6 +480,59 @@ class CadenceCollectorTests(unittest.TestCase):
         self.assertEqual(proof["status"], "UNVERIFIED_INCONSISTENT_WRITER_JOB")
         self.assertFalse(proof["global_exclusivity_verified"])
 
+    def test_failed_canonical_job_overlap_is_detected_without_claiming_duplicate_writes(self):
+        upstream, _ = fixture()
+        def altered(path, text=False):
+            response = upstream(path, text)
+            if "/runs/2/jobs?" in path:
+                response["jobs"][0]["conclusion"] = "failure"
+            return response
+        result = collect(altered, "owner/repo", NOW)
+        self.assertEqual(result["report"]["verified_dispatch_count"], 0)
+        evidence = result["writer_attempt_interval_evidence"]
+        self.assertEqual(evidence["status"],
+                         "FAILED_OVERLAPPING_GITHUB_CANONICAL_JOB_INTERVALS")
+        self.assertEqual(evidence["overlap_pair_count"], 1)
+        self.assertEqual(evidence["overlaps"][0]["overlap_seconds"], 56)
+        self.assertFalse(evidence["actual_ledger_write_overlap_verified"])
+
+    def test_nonoverlapping_failed_job_does_not_establish_clean_source_provenance(self):
+        upstream, _ = fixture()
+        def altered(path, text=False):
+            response = upstream(path, text)
+            if "/runs/2/jobs?" in path:
+                response["jobs"][0].update({
+                    "conclusion": "failure",
+                    "started_at": "2026-11-02T03:11:01Z",
+                    "completed_at": "2026-11-02T03:12:00Z"})
+            return response
+        evidence = collect(altered, "owner/repo", NOW)["writer_attempt_interval_evidence"]
+        self.assertEqual(evidence["status"],
+                         "UNVERIFIED_SOURCE_PROVENANCE_FOR_JOB_INTERVALS")
+        self.assertEqual(evidence["unverified_source_run_ids"], [2])
+        self.assertEqual(evidence["overlap_pair_count"], 0)
+        self.assertFalse(evidence["global_exclusivity_verified"])
+
+    def test_running_canonical_job_is_read_but_cannot_prove_no_overlap(self):
+        upstream, calls = fixture()
+        def altered(path, text=False):
+            response = upstream(path, text)
+            if "event=workflow_dispatch" in path:
+                response["workflow_runs"][0]["status"] = "in_progress"
+                response["workflow_runs"][0]["conclusion"] = None
+            if "/runs/2/jobs?" in path:
+                response["jobs"][0].update({
+                    "status": "in_progress", "conclusion": None,
+                    "completed_at": None})
+            return response
+        result = collect(altered, "owner/repo", NOW)
+        self.assertTrue(any("/runs/2/jobs?" in p for p, _ in calls))
+        self.assertFalse(any("/jobs/102/logs" in p for p, _ in calls))
+        self.assertEqual(result["writer_attempt_interval_evidence"]["status"],
+                         "UNVERIFIED_INCOMPLETE_JOB_INTERVALS")
+        self.assertEqual(result["writer_attempt_interval_evidence"]
+                         ["unknown_interval_run_ids"], [2])
+
     def test_no_writer_job_abstains_not_fabricates_native_success(self):
         get, _ = fixture(jobs=False)
         result = collect(get, "owner/repo", NOW)
