@@ -73,34 +73,32 @@ def chronological_readiness(records, runs, hours, positive_key="hit_30"):
     embargo = dt.timedelta(hours=hours) + MAX_GAP
     train = [r for r in records if runs[r["run_id"]] + embargo <= cutoff]
     test = [r for r in records if runs[r["run_id"]] >= cutoff]
-    def independent_positive_episodes(rows, require_first_feature=False):
-        """Count fixed-first-decision episodes, with strictly first-entry features.
-
-        Later entries in the same positive episode may have a lagged feature
-        only because the surge has already begun. They cannot retroactively
-        supply a missing pre-move feature for the episode's first entry.
-        """
-        first_by_pair = {}
-        count = 0
-        for r in sorted(rows, key=lambda x:(x["pair"], runs[x["run_id"]])):
-            decision = runs[r["run_id"]]
-            first = first_by_pair.get(r["pair"])
-            if first is None or decision-first > dt.timedelta(hours=hours):
-                first_by_pair[r["pair"]] = decision
-                if not require_first_feature or r["lagged_returns"]["60m"] is not None:
-                    count += 1
-        return count
+    # Identify episode first entries BEFORE partitioning, otherwise a later
+    # post-cutoff entry can masquerade as a fresh held-out opportunity and
+    # backfill a pre-surge feature missing from the actual first entry.
+    global_episode_first = set()
+    first_by_pair = {}
+    for r in sorted((r for r in records if r[positive_key]),
+                    key=lambda x:(x["pair"], runs[x["run_id"]])):
+        decision = runs[r["run_id"]]
+        first = first_by_pair.get(r["pair"])
+        if first is None or decision-first > dt.timedelta(hours=hours):
+            first_by_pair[r["pair"]] = decision
+            global_episode_first.add((r["pair"], r["run_id"]))
     def summary(rows):
         featured = [r for r in rows if r["lagged_returns"]["60m"] is not None]
         positive = [r for r in rows if r[positive_key]]
         featured_positive = [r for r in positive if r["lagged_returns"]["60m"] is not None]
         featured_negative = [r for r in featured if not r[positive_key]]
+        first_positives = [r for r in positive if
+                           (r["pair"], r["run_id"]) in global_episode_first]
         return {"matured_cases":len(rows), "positive_cases":len(positive),
                 "positive_pairs":len({r["pair"] for r in positive}),
-                "positive_episodes":independent_positive_episodes(positive),
+                "positive_episodes":len(first_positives),
                 "lag_60m_covered":len(featured),
                 "positive_lag_60m_covered":len(featured_positive),
-                "positive_lag_60m_episodes":independent_positive_episodes(positive, require_first_feature=True),
+                "positive_lag_60m_episodes":sum(r["lagged_returns"]["60m"] is not None
+                    for r in first_positives),
                 "negative_lag_60m_pairs":len({r["pair"] for r in featured_negative})}
     a,b=summary(train),summary(test)
     # Concrete missing sample requirements, not a fabricated trained model.
