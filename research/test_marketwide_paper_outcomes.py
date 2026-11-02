@@ -336,4 +336,20 @@ class Tests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"Nonmonotonic run timestamps"):
             evaluate(state)
 
+
+    def test_conflicting_entry_quote_abstains_even_when_future_clean(self):
+        # Two sealed run snapshots claim different entry prices for one
+        # quote timestamp. Neither is a trustworthy base for +30% labels.
+        runs=[]; observations=[]
+        for minute, quote_at, price in ((0,0,100),(1,0,140),
+                                        (30,30,130),(60,60,130),(120,120,130)):
+            rid=str(minute)
+            runs.append({"id":rid,"as_of":iso(minute)})
+            observations.append({"run_id":rid,"at":iso(quote_at),
+                                 "pair":"AAAUSD","price":price})
+        row=evaluate(sealed_fixture({"runs":runs,"observations":observations,
+                                     "predictions":[]}))["horizons"]["1"]
+        self.assertEqual(row["movers_30"],0)
+        self.assertGreaterEqual(row["abstain_conflicting_quote"],1)
+
 if __name__=="__main__":unittest.main()
