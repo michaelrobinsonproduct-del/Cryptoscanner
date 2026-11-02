@@ -34,3 +34,19 @@ Next research should compare pre-surge (price extension <5–10% from an authent
 ## Limitations
 
 Research is retrospective and exploratory, not untouched holdout or live scoring proof. Eight entry times have overlapping six-hour labels. The actual PAPER strategy has a different initial UTC-open/ohlc gate; comparison is not identical opportunity eligibility. Source prices are client-observed quotes, not exchange highs or executable fills; no independent historical order book. Feature availability excludes one possible actual WATCH outside the comparison only if its required lag history is missing; in this sample the count 95 matches delivered total. No trading, scoring promotion, second writer or ledger modification.
+
+## Additional *pre-surge* as-of signal investigation (exploratory, NOT fitted)
+
+Independently downloaded three original immutable per-run ledger artifacts [#41253370263](https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41253370263), [#41259778481](https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41259778481), and [#41263997201](https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41263997201), checked all SHA256SUMS. ESPORTS observations:
+
+| As-of UTC | Price | 24h notional | Spread |
+|---|---:|---:|---:|
+| Oct 31 23:38 | $0.00878 | $312,834 | 22.73bps |
+| Nov 1 01:09 | $0.00872 | $323,095 | 11.47bps |
+| Nov 1 02:10 | $0.00881 | $337,958 | 22.75bps |
+
+At **01:09**, ESPORTS price fell **0.68%** while 24h notional increased **3.28%** and spread compressed by approximately **49.5%** (prior/current spread ratio +98.2%). This is much earlier than the volatility ranker's 13:36 selection, when the price had already risen ~71% from 01:09. At **02:10**, price increased only **1.03%** while notional increased **4.60%**. These are concrete pre-surge features, not post-move observations.
+
+Against **all ~602 contemporaneous markets** at 01:09, there were **106** meeting the same as-of spread<=45bps, notional>=$100k and absolute price change<=3% screen. ESPORTS ranked **13th** on (24h notional % change minus absolute price % change), **13th** on spread ratio improvement, and **8th** on a *post-hoc exploratory* combination (notional growth minus absolute price change + 0.1 x percentage spread-ratio improvement). At 02:10, among **100** liquid/quiet markets, ESPORTS ranked **8th** on the first notional-change-minus-price-change metric but **50th** on the combined metric because its spread widened.
+
+**Crucial limitation:** these formulas and thresholds were examined *after* identifying ESPORTS; the 01:09-to-03:54 quote path contains >45-minute observation gaps, so this is a promising hypothesis **not** a valid backtested early-entry hit or proven recommendation improvement. A rolling 24h notional increase can reflect changing volume and price; it is not directly measured five-minute trade acceleration. Before any promotion, freeze the candidate, evaluate all liquid markets over independent future periods with proper target coverage, compare distinct +30% mover episodes, lead time and false positives, and include 5m trade-count/volume when independently available.
