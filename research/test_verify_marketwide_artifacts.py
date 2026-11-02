@@ -42,6 +42,17 @@ def fixture(directory):
                          "watch_abstain_conflicting_quotes", "watch_abstain_future_entry_quotes",
                          "watch_abstain_no_future_observation", "watch_abstain_missing_horizon_anchor",
                          "watch_abstain_stale_entry", "watch_abstain_discontinuous_path")}},
+        "pair_coverage":{"observed_pairs":1,"pairs_with_gap":0,
+            "totals":{"eligible":30872,"matured":0,"immature":30872,
+                      "abstain_gap":0,"watch_eligible":584,"watch_matured":0,
+                      "watch_immature":584,"watch_abstain_gap":0,
+                      "movers_20":0,"movers":0,"watch_positive_20":0,"watch_positive":0},
+            "gap_reason_totals":{k:0 for k in ("conflicting_quotes","future_entry_quotes",
+                 "no_future_observation","missing_horizon_anchor","stale_entry","discontinuous_path")},
+            "top_gap_pairs":[],"top_gap_pairs_limit":10,
+            "scope":"observed PAPER pairs only; no inferred unobserved markets"},
+        "watch_first_entry_recall_wilson_95_naive_20":None,
+        "watch_first_entry_recall_wilson_95_naive_30":None,
         "unique_mover_episodes_20": 0, "unique_mover_episodes": 0,
         "watch_nonhit_windows_20": 0, "watch_nonhit_windows_30": 0,
         "watch_nonhit_distinct_pairs_20": 0, "watch_nonhit_distinct_pairs_30": 0,
@@ -333,6 +344,29 @@ class ArtifactContractTests(unittest.TestCase):
         with (self.base / "marketwide-SHA256SUMS").open("a") as f:
             f.write(digest(self.base / FILES[0]) + "  " + FILES[0] + "\n")
         with self.assertRaisesRegex(ValueError, "repeated"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+
+    def test_resealed_pair_totals_cannot_forge_market_coverage(self):
+        self.reseal_episode_change(lambda h: h["pair_coverage"]["totals"].update(immature=30871))
+        with self.assertRaisesRegex(ValueError,"per-pair coverage conservation"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_pair_gap_reason_cannot_invent_missing_market_evidence(self):
+        self.reseal_episode_change(lambda h: h["pair_coverage"]["gap_reason_totals"].update(stale_entry=1))
+        with self.assertRaisesRegex(ValueError,"per-pair coverage conservation"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_pair_top_gap_cannot_invent_unobserved_pairs(self):
+        self.reseal_episode_change(lambda h: h["pair_coverage"].update(
+            pairs_with_gap=1, top_gap_pairs=[{"pair":"FABRICATEDUSD"}]))
+        with self.assertRaisesRegex(ValueError,"per-pair top-gap evidence"):
+            verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
+
+    def test_resealed_first_entry_uncertainty_cannot_fabricate_interval(self):
+        self.reseal_episode_change(lambda h: h.update(
+            watch_first_entry_recall_wilson_95_naive_30=[0.0,1.0]))
+        with self.assertRaisesRegex(ValueError,"first-entry Wilson uncertainty"):
             verify_artifacts(self.base, HEAD, LEDGER_COMMIT)
 
 

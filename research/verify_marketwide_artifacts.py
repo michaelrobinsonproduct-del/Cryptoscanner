@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+from research.marketwide_episode_diagnostics import wilson
 
 FILES = ("marketwide-outcomes.json", "marketwide-episodes.json",
          "marketwide-provenance.json")
@@ -98,6 +99,47 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
         window = outcomes["horizons"][horizon]
         episode = episodes["horizons"][horizon]
         coverage = episode["coverage"]
+        # Reconciles all observed pairs, not hypothetical missing exchange markets.
+        pair = episode.get("pair_coverage")
+        pair_keys = ("eligible","matured","immature","abstain_gap","watch_eligible",
+                     "watch_matured","watch_immature","watch_abstain_gap",
+                     "movers_20","movers","watch_positive_20","watch_positive")
+        reason_keys = ("conflicting_quotes","future_entry_quotes","no_future_observation",
+                       "missing_horizon_anchor","stale_entry","discontinuous_path")
+        def natural(value):
+            return type(value) is int and value >= 0
+        if (not isinstance(pair,dict) or
+            pair.get("scope") != "observed PAPER pairs only; no inferred unobserved markets" or
+            pair.get("top_gap_pairs_limit") != 10 or
+            not natural(pair.get("observed_pairs")) or
+            not natural(pair.get("pairs_with_gap")) or
+            not isinstance(pair.get("totals"),dict) or
+            set(pair["totals"]) != set(pair_keys) or
+            any(not natural(pair["totals"][k]) or pair["totals"][k] != coverage[k] for k in pair_keys) or
+            not isinstance(pair.get("gap_reason_totals"),dict) or
+            set(pair["gap_reason_totals"]) != set(reason_keys) or
+            any(not natural(pair["gap_reason_totals"][k]) or
+                pair["gap_reason_totals"][k] != coverage["abstain_"+k] for k in reason_keys) or
+            sum(pair["gap_reason_totals"].values()) != coverage["abstain_gap"] or
+            not (0 <= pair["pairs_with_gap"] <= pair["observed_pairs"] <= coverage["eligible"]) or
+            (coverage["eligible"] > 0 and pair["observed_pairs"] == 0) or
+            not isinstance(pair.get("top_gap_pairs"),list) or
+            len(pair["top_gap_pairs"]) > min(10,pair["pairs_with_gap"])):
+            raise ValueError("invalid per-pair coverage conservation: " + horizon)
+        top = pair["top_gap_pairs"]
+        if (any(not isinstance(row,dict) or not isinstance(row.get("pair"),str) or not row["pair"] or
+                any(not natural(row.get(k)) or row[k] > pair["totals"][k] for k in pair_keys) or
+                not isinstance(row.get("gap_reasons"),dict) or
+                set(row["gap_reasons"]) != set(reason_keys) or
+                any(not natural(row["gap_reasons"][k]) or
+                    row["gap_reasons"][k] > pair["gap_reason_totals"][k] for k in reason_keys) or
+                row["abstain_gap"] == 0 or
+                row["eligible"] != row["matured"]+row["immature"]+row["abstain_gap"] or
+                row["watch_eligible"] != row["watch_matured"]+row["watch_immature"]+row["watch_abstain_gap"] or
+                row["abstain_gap"] != sum(row["gap_reasons"].values()) for row in top) or
+            len({row["pair"] for row in top}) != len(top) or
+            top != sorted(top,key=lambda row:(-row["abstain_gap"],row["pair"]))):
+            raise ValueError("invalid per-pair top-gap evidence: " + horizon)
         if any(coverage.get(k) != window.get(v) for k, v in matching.items()):
             raise ValueError("cross-report outcome mismatch: " + horizon)
         if (coverage["eligible"] != outcomes["observed_entry_count"]
@@ -122,6 +164,11 @@ def verify_artifacts(directory, expected_head, expected_ledger_commit):
             if (not all(isinstance(x, int) and not isinstance(x, bool) and x >= 0
                         for x in (first, late, total)) or first + late != total):
                 raise ValueError("invalid first-entry versus late WATCH episode partition: " + horizon)
+            interval = episode.get("watch_first_entry_recall_wilson_95_naive_" + suffix)
+            expected_interval = wilson(first, episode["unique_mover_episodes_20"
+                if suffix == "20" else "unique_mover_episodes"])
+            if interval != expected_interval:
+                raise ValueError("invalid first-entry Wilson uncertainty: " + horizon)
         # First-entry recall and feature coverage are independently sealed
         # semantic contracts; checksums alone cannot detect fabricated ratios.
         for suffix, episodes_key, first_key, distributions_key in (
