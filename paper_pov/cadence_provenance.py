@@ -29,8 +29,12 @@ def timestamp(value):
     return result.astimezone(UTC)
 
 
-def provenance(log):
-    """Only unambiguous executed provenance lines are accepted."""
+def provenance(log, earliest=None, latest=None):
+    """Only unambiguous executed provenance lines are accepted.
+
+    Optional bounds tie markers to the independently fetched GitHub writer
+    job's start and the observation time; no bounds are invented if absent.
+    """
     if not isinstance(log, str):
         return None
     found = {}
@@ -53,6 +57,9 @@ def provenance(log):
     # Reject pasted/reordered historical fragments rather than joining them.
     if marker_times and (marker_times != sorted(marker_times) or
                          (marker_times[-1] - marker_times[0]).total_seconds() > 300):
+        return None
+    if marker_times and ((earliest is not None and marker_times[0] < earliest) or
+                         (latest is not None and marker_times[-1] > latest)):
         return None
     if set(found) != {"PAPER_VERIFIED_GITHUB_EVENT", "PAPER_VERIFIED_ORIGINATING_CRON", "PAPER_PIPELINE_SOURCE_SHA"}:
         return None
@@ -80,7 +87,8 @@ def writer_job_queue_seconds(jobs, run_id, created, checked_at):
     if not isinstance(candidates, list):
         return None
     matching = [job for job in candidates if isinstance(job, dict)
-                and job.get("run_id") == run_id and job.get("name") == "public-paper"]
+                and type(job.get("run_id")) is int and job["run_id"] == run_id
+                and job.get("name") == "public-paper"]
     if len(matching) != 1:
         return None
     try:
@@ -146,16 +154,22 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
                                  "classification": "UNKNOWN_WORKFLOW_CONCLUSION"})
                 continue
             successful = run["conclusion"] == "success"
-            p = provenance(logs.get(str(rid)))
+            queue_seconds = writer_job_queue_seconds(jobs, rid, created, now)
+            # If authentic job metadata is present, a log marker from before
+            # the writer job began (or from the future) cannot certify this run.
+            job_start = (created + dt.timedelta(seconds=queue_seconds)
+                         if queue_seconds is not None else None)
+            p = provenance(logs.get(str(rid)), earliest=job_start,
+                           latest=now if job_start is not None else None)
             row = {"run_id": rid, "event": event, "created_at": created.isoformat(),
                    "conclusion": run.get("conclusion"), "classification": "UNVERIFIED_PROVENANCE"}
             if (p is None or p["PAPER_VERIFIED_GITHUB_EVENT"] != event
                     or p["PAPER_PIPELINE_SOURCE_SHA"] != run.get("head_sha")):
                 evidence.append(row)
                 continue
-            queue_seconds = writer_job_queue_seconds(jobs, rid, created, now)
             if queue_seconds is not None:
                 row["writer_job_queue_seconds"] = queue_seconds
+                row["provenance_bound_to_writer_job_start"] = True
             row["verified_source_sha"] = p["PAPER_PIPELINE_SOURCE_SHA"]
             cron = p["PAPER_VERIFIED_ORIGINATING_CRON"]
             if event == "workflow_dispatch":
@@ -287,6 +301,8 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
                             "Created-at is not the job's completion time",
                             "Writer job queue delay is measured only from matching GitHub public-paper job started_at; missing metadata abstains",
                             "Job queue delay is separate from the native cron creation lateness lower bound",
+                            "When authentic writer-job metadata exists, executed log markers must fall after its start and before audit time",
+                            "Without writer-job metadata, executed log markers are not independently job-time-bound",
                             "A successful workflow is not durable ledger or remote SHA256 readback proof",
                             "workflow_dispatch alone does not distinguish owner manual from external recovery",
                             "Cross-event source SHA equality is necessary but never proves manual/unattended result parity",
