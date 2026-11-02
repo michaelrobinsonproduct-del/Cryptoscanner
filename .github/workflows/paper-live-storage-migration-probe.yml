@@ -1,0 +1,76 @@
+name: Real Paper Ledger Packed Migration Probe (read-only)
+on:
+  push:
+    branches: [proof-live-ledger-migration-rolea-20261031]
+    paths:
+      - 'paper_pov/live_storage_migration_probe.py'
+      - 'paper_pov/test_live_storage_migration_probe.py'
+      - '.github/workflows/paper-live-storage-migration-probe.yml'
+  pull_request:
+    paths:
+      - 'paper_pov/live_storage_migration_probe.py'
+      - 'paper_pov/test_live_storage_migration_probe.py'
+      - '.github/workflows/paper-live-storage-migration-probe.yml'
+permissions:
+  contents: read
+concurrency:
+  group: paper-live-migration-readonly-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify-real-ledger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact-source full paper contracts before live read
+        run: |
+          set -euo pipefail
+          echo "PAPER_MIGRATION_EXACT_SHA=$(git rev-parse HEAD)"
+          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+      - name: Read real remote ledger, fail closed on movement, verify lossless packed conversion
+        run: |
+          set -euo pipefail
+          mkdir -p paper_pov/migration_probe_output
+          git fetch --no-tags origin refs/heads/paper-proof-ledger
+          LEDGER_COMMIT="$(git rev-parse FETCH_HEAD)"
+          git show FETCH_HEAD:paper-ledger.json > /tmp/live-paper-ledger.json
+          python -m paper_pov.live_storage_migration_probe \
+            --ledger /tmp/live-paper-ledger.json \
+            --commit "$LEDGER_COMMIT" \
+            --report-out paper_pov/migration_probe_output/evidence.json \
+            --packed-out paper_pov/migration_probe_output/paper-ledger.packed.json
+          REMOTE_COMMIT="$(git ls-remote --heads origin refs/heads/paper-proof-ledger | cut -f1)"
+          test -n "$REMOTE_COMMIT"
+          if [ "$REMOTE_COMMIT" != "$LEDGER_COMMIT" ]; then
+            echo "PAPER_LEDGER_BRANCH_MOVED_ABORT"; exit 1
+          fi
+          (cd paper_pov/migration_probe_output && sha256sum evidence.json paper-ledger.packed.json > SHA256SUMS && sha256sum -c SHA256SUMS)
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          r=json.load(open("paper_pov/migration_probe_output/evidence.json"))
+          print("# Read-only REAL paper ledger migration acceptance")
+          print(f"**Status:** {r['status']} (no writer change)")
+          print(f"**Ledger commit:** `{r['ledger_commit']}`")
+          print(f"**Generation:** {r['ledger_generation']}; **scans:** {r['actual_scans']}; **predictions:** {r['immutable_predictions']}")
+          print(f"**Actual market observations:** {r['market_observations']}; **matured labels:** {r['matured_observed_labels']}")
+          print(f"**Raw bytes:** {r['raw_bytes']}; **packed bytes:** {r['packed_bytes']}")
+          print(f"**Original SHA256:** `{r['raw_file_sha256']}`")
+          print(f"**Packed SHA256:** `{r['packed_file_sha256']}`")
+          print("No real predictive lift, no cadence expansion, no ledger write, no production changes.")
+          PY
+      - name: Retain checksummed real-ledger migration evidence (not active storage)
+        uses: actions/upload-artifact@v4
+        with:
+          name: read-only-real-ledger-migration-${{ github.run_id }}
+          path: |
+            paper_pov/migration_probe_output/evidence.json
+            paper_pov/migration_probe_output/paper-ledger.packed.json
+            paper_pov/migration_probe_output/SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
