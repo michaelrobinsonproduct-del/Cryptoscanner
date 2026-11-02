@@ -85,6 +85,8 @@ def evaluate(state):
             denom = row["watch_"+suffix] + row["watch_false_positive_"+suffix]
             row["watch_precision_"+suffix] = row["watch_"+suffix] / denom if denom else None
     return {"status":"DESCRIPTIVE_ONLY_NOT_HELD_OUT_LIFT",
+            "metric_unit":"overlapping pair/run entry windows; NOT distinct surge episodes",
+            "source_provenance":"SHA-sealed PAPER observations, not independently authenticated complete Kraken historical candles",
             "coverage_warning":"Only observed run/pair timestamps; not complete historical market or intrabar highs. Incomplete periods abstain.",
             "horizons":results}
 
