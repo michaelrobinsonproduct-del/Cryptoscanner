@@ -21,13 +21,13 @@ def fixtures():
          "source_cases": cases, "main_legacy_writer": {"main_sha": A,
              "path": ".github/workflows/kraken-recovery-schedule.yml",
              "source": {"status": "VERIFIED_EXACT_HEAD_SOURCE"}}},
-        {"main_sha": A, "ledger_sha_read_only": B, "status": "NOT_CERTIFIED",
+        {"main_sha": A, "ledger_sha_read_only": B, "status": "NOT_CERTIFIED", "blockers": [],
          "unresolved_pr_count": 0, "unknown_consumer_count": 2,
          "unknown_write_destination_count": 1,
          "cleanup_authorized": False, "production_mutation_authorized": False},
         {"remote_main_sha": A, "audit_checkout_sha": C, "unknowns": ["ios", "supabase"]},
-        {"main_sha": A, "unknown_write_destinations": ["unknown.yml"]},
-        {"runtime_coverage_certified": False, "cleanup_authorized": False},
+        {"remote_main_sha": A, "unknown_write_destinations": ["unknown.yml"]},
+        {"current_main_sha": A, "runtime_coverage_certified": False, "cleanup_authorized": False},
     )
 
 class FreezeScopeTests(unittest.TestCase):
@@ -65,7 +65,7 @@ class FreezeScopeTests(unittest.TestCase):
 
     def test_main_ledger_checkout_identity_fail_closed(self):
         for index, key in ((1, "main_sha"), (2, "ledger_sha_read_only"),
-                           (4, "audit_checkout_sha"), (5, "main_sha")):
+                           (4, "audit_checkout_sha"), (5, "remote_main_sha")):
             data = list(fixtures())
             data[index][key] = "f" * 40
             with self.subTest(index=index, key=key):
@@ -90,6 +90,12 @@ class FreezeScopeTests(unittest.TestCase):
         self.assertEqual(result["scope_decisions"]["isolated_read_only_integration"],
                          "CONDITIONAL_PREPARE_TEST_ONLY")
         self.assertEqual(result["scope_decisions"]["production_activation"], "BLOCKED")
+
+    def test_runtime_assessment_bound_to_current_main(self):
+        data = list(fixtures())
+        data[6]["current_main_sha"] = "f" * 40
+        with self.assertRaisesRegex(ValueError, "runtime assessment main"):
+            freeze(*data)
 
     def test_no_external_snapshot_or_false_gate_approval(self):
         data = list(fixtures())

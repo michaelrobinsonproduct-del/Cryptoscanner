@@ -32,12 +32,15 @@ def freeze(inventory, semantic, bounded, gate, graph, writes, runtime):
             raise ValueError("Invalid " + k + " SHA")
     if (semantic.get("main_sha") != main or bounded.get("main_sha") != main or
         gate.get("main_sha") != main or graph.get("remote_main_sha") != main or
-        writes.get("main_sha") != main or
+        writes.get("remote_main_sha") != main or
         bounded.get("ledger_sha_read_only") != ledger or gate.get("ledger_sha_read_only") != ledger or
         bounded.get("audit_checkout_sha") != checkout or graph.get("audit_checkout_sha") != checkout):
         raise ValueError("Cross-artifact source/ledger identity mismatch")
-    if gate.get("status") != "NOT_CERTIFIED" or gate.get("cleanup_authorized") is not False or gate.get("production_mutation_authorized") is not False:
+    if (gate.get("status") != "NOT_CERTIFIED" or not isinstance(gate.get("blockers"), list) or
+        gate.get("cleanup_authorized") is not False or gate.get("production_mutation_authorized") is not False):
         raise ValueError("Unexpected authorization or certification claim")
+    if runtime.get("current_main_sha") != main:
+        raise ValueError("External runtime assessment main identity mismatch")
     if runtime.get("runtime_coverage_certified") is not False or runtime.get("cleanup_authorized") is not False:
         raise ValueError("External snapshot cannot certify deployed consumers")
     live = inventory.get("open_prs", [])
