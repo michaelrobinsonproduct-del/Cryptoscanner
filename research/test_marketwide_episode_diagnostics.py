@@ -448,5 +448,51 @@ class EpisodeTests(unittest.TestCase):
                          "DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER")
 
 
+
+    def test_three_equal_time_anchor_quotes_reject_hidden_conflict(self):
+        # The last two quotes agree, but the earliest at the same time does not.
+        series=[(BASE,100,"a"),(BASE,200,"b"),(BASE,200,"c"),
+                (BASE+dt.timedelta(minutes=30),225,"middle"),
+                (BASE+dt.timedelta(minutes=60),250,"entry")]
+        times=[r[0] for r in series]
+        self.assertIsNone(lagged_return(series,times,4,60))
+        series[0]=(BASE,200,"a")
+        self.assertAlmostEqual(lagged_return(series,times,4,60),0.25)
+
+    def test_watch_denominators_and_missed_episode_partition(self):
+        state=fixture()
+        state["predictions"].append({"run_id":"480","pair":"BBBUSD"})
+        state["predictions"].append({"run_id":"0","pair":"BBBUSD"})
+        state["observations"]=[o for o in state["observations"]
+            if not (o["pair"]=="BBBUSD" and o["run_id"] in ("60","90"))]
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        c=one["coverage"]
+        self.assertGreater(c["watch_immature"],0)
+        self.assertGreater(c["watch_abstain_gap"],0)
+        self.assertEqual(c["watch_eligible"],
+            c["watch_matured"]+c["watch_immature"]+c["watch_abstain_gap"])
+        self.assertEqual(c["missed_20"],c["movers_20"]-c["watch_positive_20"])
+        self.assertEqual(c["missed_30"],c["movers"]-c["watch_positive"])
+        self.assertEqual(one["missed_mover_episodes_20"],
+            one["unique_mover_episodes_20"]-one["watch_captured_episodes_20"])
+        self.assertEqual(one["missed_mover_episodes_30"],
+            one["unique_mover_episodes"]-one["watch_captured_episodes"])
+
+    def test_twenty_percent_feature_cohorts_are_not_thirty_percent_labels(self):
+        state=fixture()
+        for o in state["observations"]:
+            if o["pair"]=="AAAUSD" and o["price"]==135:
+                o["price"]=125
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        for lag in ("30m","60m","180m"):
+            d=one["pre_entry_price_feature_distributions"][lag]
+            self.assertEqual(d["positive_30"]["n"],0)
+            self.assertEqual(d["positive_20"]["n"]+d["negative_20"]["n"],
+                d["positive_30"]["n"]+d["negative_30"]["n"])
+            self.assertLessEqual(d["negative_20"]["n"],d["negative_30"]["n"])
+
+
 if __name__=="__main__":
     unittest.main()
