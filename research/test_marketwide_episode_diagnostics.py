@@ -121,6 +121,14 @@ class EpisodeTests(unittest.TestCase):
             self.assertEqual(split[part]["positive_pairs"],1)
             self.assertEqual(split[part]["negative_lag_60m_pairs"],1)
         self.assertFalse(split["model_evaluation_ready"])
+        self.assertEqual(
+            {(b["partition"],b["requirement"],b["required"],b["observed"])
+             for b in split["minimum_sample_requirements"]},
+            {(p,requirement,10,observed)
+             for p in ("train","test")
+             for requirement,observed in (
+                 ("episode_first_positive_lag_60m",split[p]["positive_lag_60m_episodes"]),
+                 ("distinct_negative_lag_60m_pairs",1))})
 
     def test_readiness_requires_both_independent_positive_and_negative_cohorts(self):
         runs={str(m):BASE+dt.timedelta(hours=m) for m in range(100)}
@@ -137,6 +145,7 @@ class EpisodeTests(unittest.TestCase):
             self.assertEqual(split[part]["positive_lag_60m_episodes"],12)
             self.assertEqual(split[part]["negative_lag_60m_pairs"],12)
         self.assertTrue(split["model_evaluation_ready"])
+        self.assertEqual(split["minimum_sample_requirements"],[])
         # This is sample-readiness only; no challenger was trained.
         self.assertEqual(split["status"],"DESCRIPTIVE_SPLIT_ONLY_NO_TRAINED_CHALLENGER")
 
