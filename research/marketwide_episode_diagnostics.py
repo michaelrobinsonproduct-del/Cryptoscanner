@@ -36,6 +36,10 @@ def lagged_return(series, times, index, minutes):
     segment = times[j:index+1]
     if any(b-a > MAX_GAP for a,b in zip(segment, segment[1:])):
         return None
+    # A contradictory same-time quote cannot define a reliable lagged return.
+    if any(times[k] == times[k+1] and series[k][1] != series[k+1][1]
+           for k in range(j, index)):
+        return None
     return entry / series[j][1] - 1
 
 
@@ -105,10 +109,19 @@ def analyze(state):
     by_pair = defaultdict(list)
     for o in state["observations"]:
         by_pair[o["pair"]].append((timestamp(o["at"]), float(o["price"]), o["run_id"]))
+    # The verified ledger may contain distinct runs with conflicting prices
+    # for the same pair/timestamp. Never select the most favorable quote.
+    conflicting_times = {}
+    for pair, series in by_pair.items():
+        series.sort()
+        conflicting_times[pair] = {series[k][0] for k in range(1, len(series))
+            if series[k][0] == series[k-1][0]
+            and Decimal(str(series[k][1])) != Decimal(str(series[k-1][1]))}
     output = {}
     for hours in HORIZONS:
         positives, negatives, cases, cases20 = [], [], [], []
-        coverage = {"eligible": 0, "immature": 0, "abstain_gap": 0, "matured": 0,
+        coverage = {"eligible": 0, "immature": 0, "abstain_gap": 0,
+                    "abstain_conflicting_quotes": 0, "matured": 0,
                     "watch_matured": 0, "watch_positive": 0, "movers": 0,
                     "watch_positive_20": 0, "movers_20": 0,
                     "feature_30m": 0, "feature_60m": 0, "feature_180m": 0,
@@ -131,6 +144,14 @@ def analyze(state):
                 before = [(t,p) for t,p,_ in future if start < t <= target]
                 anchors = [(t,p) for t,p,_ in future if target <= t <= target+MAX_GAP]
                 timeline = [start] + [t for t,_ in before]
+                # Conflicts at the entry, within the outcome window or at
+                # the maturity anchor invalidate the label (subset of gaps).
+                if (at in conflicting_times[pair]
+                    or any(t in conflicting_times[pair] for t,_ in before)
+                    or any(t in conflicting_times[pair] for t,_ in anchors)):
+                    coverage["abstain_gap"] += 1
+                    coverage["abstain_conflicting_quotes"] += 1
+                    continue
                 if (not before or not anchors or start-at > MAX_GAP
                     or any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
                     or anchors[0][0]-timeline[-1] > MAX_GAP):
