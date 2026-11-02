@@ -1,7 +1,55 @@
 """Offline fail-closed pagination tests for repository inventory (no network)."""
 import unittest
 from unittest.mock import patch
-from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph
+from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph, workflow_branch_references
+
+
+class BranchReferenceTests(unittest.TestCase):
+    def test_actual_legacy_checkout_and_durable_history(self):
+        source="""jobs:
+  scan:
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: simplified-scanner-recovery-20261011
+      - name: Restore
+        run: |
+          git fetch origin refs/heads/simple-history:refs/remotes/origin/simple-history
+          git push origin HEAD:refs/heads/simple-history
+"""
+        refs=workflow_branch_references(source)
+        self.assertEqual(refs["checkout_refs"],["simplified-scanner-recovery-20261011"])
+        self.assertEqual(refs["branch_ref_mentions"],["simple-history"])
+        self.assertEqual(refs["unresolved_checkout_refs"],[])
+
+    def test_dynamic_checkout_is_not_a_verified_static_ref(self):
+        source="""steps:
+  - uses: actions/checkout@v4
+    with:
+      ref: \${{ github.event.pull_request.head.sha || github.sha }}
+  - name: Done
+    run: echo done
+"""
+        refs=workflow_branch_references(source)
+        self.assertEqual(refs["checkout_refs"],[])
+        self.assertEqual(len(refs["unresolved_checkout_refs"]),1)
+
+    def test_default_checkout_does_not_invent_main(self):
+        refs=workflow_branch_references("- uses: actions/checkout@v4\n")
+        self.assertEqual(refs["checkout_refs"],[])
+        self.assertEqual(refs["branch_ref_mentions"],[])
+
+    def test_graph_preserves_static_vs_live_provenance(self):
+        workflow={"path":".github/workflows/kraken-recovery-schedule.yml",
+                  "scripts":[],"python_modules":[],"ledger_ref":False,
+                  "branch_references":{"checkout_refs":["simplified-scanner-recovery-20261011"],
+                    "branch_ref_mentions":["simple-history"],"unresolved_checkout_refs":[]}}
+        graph=build_consumer_graph([workflow],{"snapshot_utc":"2026-11-02T02:17:00Z"},"a"*40,"b"*40)
+        edges={(e["target"],e["kind"]) for e in graph["edges"]}
+        self.assertIn(("github-ref:simplified-scanner-recovery-20261011","explicit_checkout_ref"),edges)
+        self.assertIn(("github-ref:simple-history","static_branch_ref_mention"),edges)
+        self.assertTrue(all(not e["observed_runtime"] for e in graph["edges"]))
+        self.assertFalse(graph["cleanup_authorized"])
 
 class PaginationTests(unittest.TestCase):
     def test_multiple_pages_are_all_included(self):
