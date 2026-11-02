@@ -35,6 +35,10 @@ class EpisodeTests(unittest.TestCase):
         self.assertGreaterEqual(one["coverage"]["movers"],2)
         self.assertEqual(one["unique_mover_episodes"],1)
         self.assertEqual(one["unique_mover_pairs"],1)
+        self.assertEqual(one["watch_captured_episodes"],0)
+        self.assertEqual(one["watch_episode_recall_30"],0.0)
+        self.assertEqual(one["episode_first_lag_60m"]["n"],0)
+        self.assertEqual(one["episodes"][0]["entry_cases"],one["coverage"]["movers"])
         self.assertEqual(one["coverage"]["watch_positive"],0)
         self.assertEqual(one["coverage"]["eligible"],
             one["coverage"]["matured"]+one["coverage"]["abstain_gap"]+one["coverage"]["immature"])
