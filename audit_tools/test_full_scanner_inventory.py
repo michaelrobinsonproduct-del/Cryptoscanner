@@ -1,7 +1,7 @@
 """Offline fail-closed pagination tests for repository inventory (no network)."""
 import unittest
 from unittest.mock import patch
-from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph, workflow_branch_references, inventory_workflow_source, workflow_orchestration_references, apply_semantic_review
+from audit_tools.full_scanner_inventory import gh_pages, reconcile_pr_snapshot, remote_main_paths, remote_main_blobs, compare_pr_blobs, build_consumer_graph, workflow_branch_references, inventory_workflow_source, workflow_orchestration_references, apply_semantic_review, classify_declared_write_surfaces
 
 
 class BranchReferenceTests(unittest.TestCase):
@@ -475,6 +475,49 @@ class CurrentSemanticReviewTests(unittest.TestCase):
         matrix["schema"]="unknown"
         with self.assertRaisesRegex(ValueError,"schema"):
             apply_semantic_review(matrix,[self.row()],self.MAIN)
+
+
+class DeclaredWriteSurfaceTests(unittest.TestCase):
+    def test_canonical_and_legacy_writers_are_distinct(self):
+        source_main="""name: Paper
+on:
+  schedule:
+    - cron: '9,39 * * * *'
+permissions:
+  contents: write
+steps:
+  - run: git push origin HEAD:refs/heads/paper-proof-ledger
+"""
+        source_legacy="""name: Legacy
+on:
+  schedule:
+    - cron: '3,33 * * * *'
+permissions:
+  contents: write
+steps:
+  - uses: actions/checkout@v4
+    with:
+      ref: simplified-scanner-recovery-20261011
+  - run: git push origin HEAD:refs/heads/simple-history
+"""
+        workflows=[inventory_workflow_source(".github/workflows/paper-pipeline.yml",source_main),
+                   inventory_workflow_source(".github/workflows/kraken-recovery-schedule.yml",source_legacy)]
+        census=classify_declared_write_surfaces(workflows,"a"*40)
+        surfaces={r["workflow"]:r for r in census["surfaces"]}
+        self.assertEqual(surfaces[".github/workflows/paper-pipeline.yml"]["write_destination_evidence"],"PAPER_LEDGER_REFERENCE")
+        self.assertEqual(surfaces[".github/workflows/kraken-recovery-schedule.yml"]["write_destination_evidence"],"LEGACY_SIMPLE_HISTORY_REFERENCE")
+        self.assertTrue(all(not r["execution_proven"] for r in census["surfaces"]))
+        self.assertFalse(census["cleanup_authorized"])
+
+    def test_unknown_write_destination_not_silently_classified_as_dead(self):
+        unknown=inventory_workflow_source(".github/workflows/unknown.yml",
+            "name: Unknown\\npermissions:\\n  contents: write\\nsteps:\\n  - run: echo maybe\\n")
+        read_only=inventory_workflow_source(".github/workflows/read.yml",
+            "name: Read\\npermissions:\\n  contents: read\\n")
+        census=classify_declared_write_surfaces([unknown,read_only],"a"*40)
+        self.assertEqual(census["unknown_write_destinations"],[".github/workflows/unknown.yml"])
+        self.assertEqual(len(census["surfaces"]),1)
+        self.assertFalse(census["surfaces"][0]["safe_to_delete"])
 
 
 if __name__=="__main__":
