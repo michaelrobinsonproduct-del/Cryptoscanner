@@ -5,6 +5,7 @@ writes a ledger, contacts an exchange, or claims a complete historical cohort.
 Missing price coverage is an abstention, never a negative label.
 """
 import argparse
+import bisect
 import datetime as dt
 import json
 import math
@@ -36,6 +37,7 @@ def evaluate(state):
                          "watch_false_positive_30": 0} for h in HORIZONS}
     latest = max((timestamp(r["as_of"]) for r in runs.values()), default=None)
     for pair, series in prices.items():
+        times = [record[0] for record in series]
         for i, (at, entry, rid) in enumerate(series):
             # One point per actual market/run observation, not just WATCH.
             start = timestamp(runs[rid]["as_of"])
@@ -47,8 +49,9 @@ def evaluate(state):
                 if latest is None or latest < target + MAX_GAP:
                     row["immature"] += 1
                     continue
-                future = [(t, p) for t, p, _ in series[i+1:]
-                          if at < t <= target + MAX_GAP]
+                end = bisect.bisect_right(times, target + MAX_GAP, lo=i+1)
+                future = [(t, p) for t, p, _ in series[i+1:end]
+                          if at < t]
                 before = [(t, p) for t, p in future if t <= target]
                 anchors = [(t, p) for t, p in future if target <= t <= target + MAX_GAP]
                 timeline = [at] + [t for t, _ in before]
