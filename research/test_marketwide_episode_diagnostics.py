@@ -1184,5 +1184,91 @@ class EpisodeTests(unittest.TestCase):
         self.assertEqual([e["first_decision_at"] for e in episodes],
                          [iso(0),iso(80)])
         self.assertEqual([e["entry_cases"] for e in episodes],[1,1])
+    def test_gap_reason_selection_partition_conserves_every_pair_and_horizon(self):
+        state = fixture()
+        with patch("paper_pov.ledger.verify", return_value=None):
+            reports = analyze(state)["horizons"]
+        for report in reports.values():
+            p, c = report["pair_coverage"], report["coverage"]
+            for reason, n in p["gap_reason_totals"].items():
+                self.assertEqual(n, p["watch_gap_reason_totals"][reason] +
+                                 p["nonwatch_gap_reason_totals"][reason])
+                self.assertEqual(p["watch_gap_reason_totals"][reason],
+                                 c["watch_abstain_" + reason])
+            self.assertEqual(sum(p["watch_gap_reason_totals"].values()),
+                             c["watch_abstain_gap"])
+            for row in p["top_gap_pairs"]:
+                self.assertEqual(sum(row["watch_gap_reasons"].values()),
+                                 row["watch_abstain_gap"] - 0)
+                self.assertEqual(sum(row["nonwatch_gap_reasons"].values()),
+                                 row["abstain_gap"] - row["watch_abstain_gap"])
+
+    def test_all_watch_and_no_watch_gap_reasons_are_conserved(self):
+        state = fixture()
+        # Force a mature post-decision entry gap; the base fixture is continuous.
+        for row in state["observations"]:
+            if row["pair"] == "BBBUSD" and row["run_id"] == "0":
+                row["at"] = iso(1)
+        state["predictions"] = [{"run_id": o["run_id"], "pair": o["pair"]}
+                                for o in state["observations"]]
+        with patch("paper_pov.ledger.verify", return_value=None):
+            selected = analyze(state)["horizons"]
+        self.assertGreater(selected["1"]["coverage"]["abstain_gap"], 0)
+        for report in selected.values():
+            p = report["pair_coverage"]
+            self.assertEqual(sum(p["nonwatch_gap_reason_totals"].values()), 0)
+            self.assertEqual(p["watch_gap_reason_totals"], p["gap_reason_totals"])
+        state["predictions"] = []
+        with patch("paper_pov.ledger.verify", return_value=None):
+            unselected = analyze(state)["horizons"]
+        for report in unselected.values():
+            p = report["pair_coverage"]
+            self.assertEqual(sum(p["watch_gap_reason_totals"].values()), 0)
+            self.assertEqual(p["nonwatch_gap_reason_totals"], p["gap_reason_totals"])
+
+
+    def test_selection_gap_diagnostics_use_correct_group_denominators(self):
+        state = fixture()
+        with patch("paper_pov.ledger.verify", return_value=None):
+            reports = analyze(state)["horizons"]
+        for report in reports.values():
+            c = report["coverage"]
+            groups = c["selection_gap_diagnostics"]
+            self.assertEqual(groups["watch"]["eligible"] + groups["nonwatch"]["eligible"],
+                             c["eligible"])
+            for name, group in groups.items():
+                self.assertEqual(group["eligible"], group["matured"] +
+                                 group["immature"] + group["abstain_gap"])
+                self.assertEqual(sum(group["gap_reason_counts"].values()),
+                                 group["abstain_gap"])
+                self.assertEqual(group["gap_fraction_of_eligible"],
+                                 group["abstain_gap"] / group["eligible"]
+                                 if group["eligible"] else None)
+                for reason, count in group["gap_reason_counts"].items():
+                    self.assertEqual(group["gap_reason_fraction_of_gap"][reason],
+                                     count / group["abstain_gap"]
+                                     if group["abstain_gap"] else None)
+                    self.assertEqual(group["gap_reason_fraction_of_eligible"][reason],
+                                     count / group["eligible"]
+                                     if group["eligible"] else None)
+
+    def test_selection_gap_zero_denominators_abstain_not_zero_rates(self):
+        state = fixture()
+        state["predictions"] = []
+        with patch("paper_pov.ledger.verify", return_value=None):
+            no_watch = analyze(state)["horizons"]["1"]["coverage"]["selection_gap_diagnostics"]
+        self.assertEqual(no_watch["watch"]["eligible"], 0)
+        self.assertIsNone(no_watch["watch"]["gap_fraction_of_eligible"])
+        self.assertTrue(all(x is None for x in
+                            no_watch["watch"]["gap_reason_fraction_of_gap"].values()))
+        state["predictions"] = [{"run_id": o["run_id"], "pair": o["pair"]}
+                                for o in state["observations"]]
+        with patch("paper_pov.ledger.verify", return_value=None):
+            all_watch = analyze(state)["horizons"]["1"]["coverage"]["selection_gap_diagnostics"]
+        self.assertEqual(all_watch["nonwatch"]["eligible"], 0)
+        self.assertIsNone(all_watch["nonwatch"]["gap_fraction_of_eligible"])
+        self.assertTrue(all(x is None for x in
+                            all_watch["nonwatch"]["gap_reason_fraction_of_eligible"].values()))
+
 if __name__=="__main__":
     unittest.main()
