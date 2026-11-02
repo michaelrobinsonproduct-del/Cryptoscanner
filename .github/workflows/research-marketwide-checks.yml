@@ -54,12 +54,20 @@ jobs:
           assert e['source']['source_authenticated'] is False
           assert e['source']['complete_market_history'] is False
           assert e['source']['eligible_for_model_promotion'] is False
+          ledger=json.load(open('/tmp/verified-paper-ledger.json'))
+          assert e['source']['ledger_sha256'] == ledger['sha256']
+          assert e['source']['generation'] == ledger['generation']
           assert e['source']['runs'] == d['observed_run_count']
           assert e['source']['observations'] == d['observed_entry_count']
           for horizon, row in d['horizons'].items():
               erow=e['horizons'][horizon]
               assert erow['coverage']['eligible']==row['eligible']
               assert erow['coverage']['matured']==row['matured'], ('matured',horizon)
+              assert erow['coverage']['abstain_gap']==row['abstain_gap'], ('gap',horizon)
+              assert erow['coverage']['immature']==row['immature'], ('immature',horizon)
+              assert erow['coverage']['watch_matured']==row['watch_matured'], ('watch_matured',horizon)
+              assert erow['coverage']['watch_positive']==row['watch_30'], ('watch_30',horizon)
+              assert erow['coverage']['watch_positive_20']==row['watch_20'], ('watch_20',horizon)
               assert erow['coverage']['movers_20']==row['movers_20'], ('20',horizon)
               assert erow['coverage']['movers']==row['movers_30'], ('30',horizon)
               assert erow['unique_mover_episodes'] <= erow['coverage']['movers']
