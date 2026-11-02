@@ -326,12 +326,14 @@ class EpisodeTests(unittest.TestCase):
         # bisect_right selects the last of the two zero-minute quotes.
         # The earlier contradictory quote must still invalidate the feature.
         series=[(BASE,100,"first"),(BASE,200,"second"),
+                (BASE+dt.timedelta(minutes=30),125,"middle"),
                 (BASE+dt.timedelta(minutes=60),150,"entry")]
         times=[x[0] for x in series]
-        self.assertIsNone(lagged_return(series,times,2,60))
-        # Identical repeated quotes do not create artificial abstentions.
+        self.assertIsNone(lagged_return(series,times,3,60))
+        # Identical repeated quotes do not create artificial abstentions;
+        # the intermediate quote ensures the 45-minute coverage gate passes.
         series[1]=(BASE,100,"second")
-        self.assertAlmostEqual(lagged_return(series,times,2,60),0.5)
+        self.assertAlmostEqual(lagged_return(series,times,3,60),0.5)
 
     def test_watch_false_positives_require_matured_labels(self):
         with patch("paper_pov.ledger.verify",return_value=None):
