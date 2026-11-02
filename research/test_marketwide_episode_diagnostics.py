@@ -3,7 +3,7 @@ import datetime as dt
 import unittest
 from unittest.mock import patch
 
-from research.marketwide_episode_diagnostics import analyze, lagged_return, wilson, chronological_readiness
+from research.marketwide_episode_diagnostics import analyze, lagged_return, wilson, chronological_readiness, cluster_episodes
 
 BASE=dt.datetime(2026,1,1,tzinfo=dt.timezone.utc)
 
@@ -158,6 +158,47 @@ class EpisodeTests(unittest.TestCase):
         self.assertEqual(lo,0)
         self.assertGreater(hi,0)
         self.assertLess(hi,0.2)
+
+    def test_exact_20pct_threshold_from_decimal_quotes(self):
+        state=fixture()
+        for o in state["observations"]:
+            if o["pair"]=="AAAUSD" and o["price"]==135:
+                o["price"]=120.0
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        self.assertGreater(one["coverage"]["movers_20"],0)
+        self.assertEqual(one["coverage"]["movers"],0)
+        self.assertEqual(one["unique_mover_episodes_20"],1)
+
+    def test_exact_30pct_threshold_from_decimal_quotes(self):
+        state=fixture()
+        for o in state["observations"]:
+            if o["pair"]=="AAAUSD" and o["price"]==135:
+                o["price"]=130.0
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        self.assertGreater(one["coverage"]["movers"],0)
+        self.assertEqual(one["unique_mover_episodes"],1)
+
+    def test_episode_clustering_does_not_chain_indefinitely(self):
+        cases=[{"pair":"AAAUSD","entry_at":iso(m),"watch":False,
+                "lagged_returns":{"60m":None},"peak_observed_return":0.35}
+               for m in (0,50,100,150)]
+        episodes=cluster_episodes(cases,1)
+        self.assertEqual(len(episodes),2)
+        self.assertEqual([e["entry_cases"] for e in episodes],[2,2])
+
+    def test_multihorizon_pre_entry_distributions_have_explicit_coverage(self):
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(fixture())["horizons"]["1"]
+        dist=one["pre_entry_price_feature_distributions"]
+        self.assertEqual(set(dist),{"30m","60m","180m"})
+        for lag in dist:
+            for label in ("positive_30","negative_30"):
+                d=dist[lag][label]
+                self.assertEqual(set(d),{"n","mean","positive_fraction","median","min","max"})
+                self.assertLessEqual(d["n"],one["coverage"]["matured"])
+        self.assertEqual(dist["60m"]["positive_30"]["n"],one["coverage"]["mover_feature_60m"])
 
 
 if __name__=="__main__":
