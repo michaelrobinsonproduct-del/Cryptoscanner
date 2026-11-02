@@ -40,6 +40,23 @@ def assert_same_cohorts(test, state):
             cohorts=e["pre_entry_price_feature_distributions"][lag]
             test.assertEqual(cohorts["positive_20"]["n"]+cohorts["negative_20"]["n"],
                              cohorts["positive_30"]["n"]+cohorts["negative_30"]["n"], (h,lag))
+        # Validate episode-first WATCH capture independently on the sealed
+        # fixture, without equating later WATCH with early identification.
+        for suffix, total in (("20", "watch_captured_episodes_20"),
+                              ("30", "watch_captured_episodes")):
+            first=e["watch_first_entry_episodes_"+suffix]
+            late=e["watch_late_only_episodes_"+suffix]
+            test.assertGreaterEqual(first,0,h)
+            test.assertGreaterEqual(late,0,h)
+            test.assertEqual(first+late,e[total],(h,suffix))
+        reasons=("abstain_conflicting_quotes","abstain_future_entry_quotes",
+                 "abstain_no_future_observation","abstain_missing_horizon_anchor",
+                 "abstain_stale_entry","abstain_discontinuous_path")
+        c=e["coverage"]
+        test.assertEqual(sum(c[k] for k in reasons),c["abstain_gap"],h)
+        test.assertEqual(sum(c["watch_"+k] for k in reasons),c["watch_abstain_gap"],h)
+        for k in reasons:
+            test.assertLessEqual(c["watch_"+k],c[k],(h,k))
         test.assertEqual(e["missed_mover_episodes_20"],
             e["unique_mover_episodes_20"]-e["watch_captured_episodes_20"], h)
         test.assertEqual(e["missed_mover_episodes_30"],
