@@ -162,7 +162,8 @@
       "source_path": "simple_scanner/real_history_replay.py",
       "reason": "Legacy shadow/history replay and eligibility changes; no current-main parity or verified runtime consumer graph. Requires source-level independent comparison.",
       "release_authorized": false,
-      "cleanup_authorized": false
+      "cleanup_authorized": false,
+      "source_blob_sha": "71bad5e4486699c5aed496d1c0460b24ff3edbe4"
     },
     {
       "number": 11,
@@ -201,7 +202,8 @@
       "source_path": "evaluation/report-integrity-guard.mjs",
       "reason": "Legacy Bun/TypeScript report guard and SQL evidence; external callers and deployment state unresolved.",
       "release_authorized": false,
-      "cleanup_authorized": false
+      "cleanup_authorized": false,
+      "source_blob_sha": "f5ac90ee0a5d4ed9151c34e0edb1539d8f6b5a5d"
     },
     {
       "number": 4,
@@ -210,7 +212,8 @@
       "source_path": "production-recovery/market-evidence.ts",
       "reason": "Legacy TypeScript production-recovery contracts and Supabase SQL; not proven wired to canonical PAPER or safe to retire.",
       "release_authorized": false,
-      "cleanup_authorized": false
+      "cleanup_authorized": false,
+      "source_blob_sha": "359340e3bd302e2bf69c2d65ee8cf4dde6d06ed3"
     },
     {
       "number": 3,
@@ -219,7 +222,8 @@
       "source_path": "evaluation/early-mover-evaluation.mjs",
       "reason": "Shadow-only early mover evaluation script; no verified main integration or runtime consumer equivalence.",
       "release_authorized": false,
-      "cleanup_authorized": false
+      "cleanup_authorized": false,
+      "source_blob_sha": "af0978f88050fa6ee2c96728710d495f7a7ee303"
     }
   ]
 }
