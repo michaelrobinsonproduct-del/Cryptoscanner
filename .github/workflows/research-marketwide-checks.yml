@@ -7,6 +7,8 @@ on:
       - 'research/marketwide_episode_diagnostics.py'
       - 'research/test_marketwide_episode_diagnostics.py'
       - 'research/test_marketwide_integration.py'
+      - 'research/verify_marketwide_artifacts.py'
+      - 'research/test_verify_marketwide_artifacts.py'
       - '.github/workflows/research-marketwide-checks.yml'
   workflow_dispatch:
 permissions:
@@ -38,7 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           git rev-parse HEAD
-          python -m unittest research.test_marketwide_paper_outcomes research.test_marketwide_episode_diagnostics research.test_marketwide_integration -v
+          python -m unittest research.test_marketwide_paper_outcomes research.test_marketwide_episode_diagnostics research.test_marketwide_integration research.test_verify_marketwide_artifacts -v
           python -m compileall -q research/marketwide_paper_outcomes.py research/marketwide_episode_diagnostics.py
       - name: Verify existing segmented PAPER ledger read-only and evaluate authentic observations
         run: |
@@ -126,9 +128,11 @@ jobs:
           print('RESEARCH_PROVENANCE',json.dumps(evidence,sort_keys=True))
           PY
           (cd /tmp && sha256sum marketwide-outcomes.json marketwide-episodes.json marketwide-provenance.json > marketwide-SHA256SUMS && sha256sum -c marketwide-SHA256SUMS)
+          python -m research.verify_marketwide_artifacts --directory /tmp --expected-head "$(git rev-parse HEAD)"
 
+      # A failed replay/checksum must not publish an apparently valid research artifact.
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: success()
         with:
           name: marketwide-outcome-validation-${{ github.run_id }}
           path: |
@@ -136,5 +140,5 @@ jobs:
             /tmp/marketwide-episodes.json
             /tmp/marketwide-provenance.json
             /tmp/marketwide-SHA256SUMS
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14
