@@ -18,12 +18,16 @@ def fixtures():
     cases = [{"pr": n, "path": path, "head_sha": heads[n], "expected_head_sha": heads[n],
               "expected_blob_sha": C,
               "source": {"status": "VERIFIED_EXACT_HEAD_SOURCE",
-                         "calculated_sha": C, "github_contents_sha": C}}
+                         "calculated_sha": C, "github_contents_sha": C,
+                         "pr_files_api_sha": C, "pr_files_api_discrepancy": False}}
              for n, path in ((4, "evaluation/measure-forward.ts"),
                              (4, "evaluation/shadow-cycle.ts"),
                              (7, "simple_scanner/scan.py"),
                              (33, ".github/workflows/kraken-simple.yml"),
                              (40, ".github/workflows/paper-forward-audit.yml"))]
+    for case in cases:
+        next(p for p in live if p["number"] == case["pr"])["file_blob_comparisons"].append(
+            {"path": case["path"], "pr_blob_sha": C})
     return (
         {"main_sha": A, "ledger_sha": B, "checkout_sha": C, "open_prs": live,
          "main_blob_shas": {".github/workflows/kraken-recovery-schedule.yml": C}},
@@ -158,6 +162,7 @@ class FreezeScopeTests(unittest.TestCase):
         case = data[2]["source_cases"][2]  # PR 7: exact Contents blob remains valid
         case["source"]["pr_files_api_discrepancy"] = True
         case["source"]["pr_files_api_sha"] = "9" * 40
+        next(p for p in data[0]["open_prs"] if p["number"] == 7)["file_blob_comparisons"][1]["pr_blob_sha"] = "9" * 40
         result = freeze(*data)
         self.assertEqual(result["pr_files_api_discrepancies"], [7])
         row = next(x for x in result["source_evidence_matrix"] if x["pr"] == 7)
@@ -165,6 +170,26 @@ class FreezeScopeTests(unittest.TestCase):
         self.assertEqual(row["pr_files_api_blob_sha"], "9" * 40)
         self.assertFalse(row["blocks"]["isolated_read_only_integration"])
         self.assertTrue(row["blocks"]["legacy_deletion"])
+
+    def test_risk_case_api_sha_and_discrepancy_must_match_inventory(self):
+        for mutation in ("forged_api_sha", "hidden_discrepancy", "duplicate_case_path"):
+            data = list(fixtures())
+            case = data[2]["source_cases"][0]
+            if mutation == "forged_api_sha":
+                case["source"]["pr_files_api_sha"] = "9" * 40
+                case["source"]["pr_files_api_discrepancy"] = True
+                expected = "Risk source PR-files evidence mismatch"
+            elif mutation == "hidden_discrepancy":
+                case["source"]["pr_files_api_sha"] = "9" * 40
+                next(p for p in data[0]["open_prs"] if p["number"] == 4)["file_blob_comparisons"][1]["pr_blob_sha"] = "9" * 40
+                expected = "Risk source discrepancy flag mismatch"
+            else:
+                next(p for p in data[0]["open_prs"] if p["number"] == 4)["file_blob_comparisons"].append(
+                    {"path": case["path"], "pr_blob_sha": C})
+                expected = "Risk source PR-files evidence mismatch"
+            with self.subTest(mutation=mutation):
+                with self.assertRaisesRegex(ValueError, expected):
+                    freeze(*data)
 
     def test_scoped_matrix_never_promotes_unknown_runtime_to_deletion(self):
         data = list(fixtures())
