@@ -272,7 +272,8 @@ def analyze(state):
                            "no_future_observation", "missing_horizon_anchor",
                            "stale_entry", "discontinuous_path")
         per_pair = {pair: {**{key: 0 for key in pair_keys},
-                           "gap_reasons":{reason:0 for reason in gap_reason_keys}}
+                           "gap_reasons":{reason:0 for reason in gap_reason_keys},
+                           "watch_gap_reasons":{reason:0 for reason in gap_reason_keys}}
                     for pair in by_pair}
         for pair, series in by_pair.items():
             pair_counts = per_pair[pair]
@@ -303,6 +304,7 @@ def analyze(state):
                         coverage["watch_abstain_gap"] += 1
                         pair_counts["watch_abstain_gap"] += 1
                         coverage["watch_abstain_future_entry_quotes"] += 1
+                        pair_counts["watch_gap_reasons"]["future_entry_quotes"] += 1
                     coverage["abstain_future_entry_quotes"] += 1
                     pair_counts["gap_reasons"]["future_entry_quotes"] += 1
                     continue
@@ -325,6 +327,7 @@ def analyze(state):
                         coverage["watch_abstain_gap"] += 1
                         pair_counts["watch_abstain_gap"] += 1
                         coverage["watch_abstain_conflicting_quotes"] += 1
+                        pair_counts["watch_gap_reasons"]["conflicting_quotes"] += 1
                     coverage["abstain_conflicting_quotes"] += 1
                     pair_counts["gap_reasons"]["conflicting_quotes"] += 1
                     continue
@@ -349,6 +352,7 @@ def analyze(state):
                         coverage["watch_abstain_gap"] += 1
                         pair_counts["watch_abstain_gap"] += 1
                         coverage["watch_" + reason] += 1
+                        pair_counts["watch_gap_reasons"][reason.removeprefix("abstain_")] += 1
                     continue
                 coverage["matured"] += 1
                 pair_counts["matured"] += 1
@@ -413,6 +417,27 @@ def analyze(state):
                    for row in per_pair.values())
         assert all(sum(row["gap_reasons"][reason] for row in per_pair.values())
                    == coverage["abstain_" + reason] for reason in gap_reason_keys)
+        # Partition missing labels by selection, never treating unknowns as misses.
+        for row in per_pair.values():
+            row["nonwatch_gap_reasons"] = {
+                reason: row["gap_reasons"][reason] - row["watch_gap_reasons"][reason]
+                for reason in gap_reason_keys}
+            assert all(n >= 0 for n in row["nonwatch_gap_reasons"].values())
+            assert sum(row["watch_gap_reasons"].values()) == row["watch_abstain_gap"]
+            assert sum(row["nonwatch_gap_reasons"].values()) == (
+                row["abstain_gap"] - row["watch_abstain_gap"])
+        watch_gap_totals = {
+            reason: sum(row["watch_gap_reasons"][reason] for row in per_pair.values())
+            for reason in gap_reason_keys}
+        nonwatch_gap_totals = {
+            reason: sum(row["nonwatch_gap_reasons"][reason] for row in per_pair.values())
+            for reason in gap_reason_keys}
+        assert all(watch_gap_totals[r] == coverage["watch_abstain_" + r]
+                   and watch_gap_totals[r] + nonwatch_gap_totals[r] ==
+                   coverage["abstain_" + r] for r in gap_reason_keys)
+        assert sum(watch_gap_totals.values()) == coverage["watch_abstain_gap"]
+        assert sum(nonwatch_gap_totals.values()) == (
+            coverage["abstain_gap"] - coverage["watch_abstain_gap"])
         top_gap_pairs = [
             {"pair":pair, **per_pair[pair]}
             for pair in sorted(per_pair,
@@ -570,6 +595,8 @@ def analyze(state):
                                  reason:sum(row["gap_reasons"][reason]
                                             for row in per_pair.values())
                                  for reason in gap_reason_keys},
+                             "watch_gap_reason_totals":watch_gap_totals,
+                             "nonwatch_gap_reason_totals":nonwatch_gap_totals,
                              "top_gap_pairs":top_gap_pairs,
                              "top_gap_pairs_limit":10,
                              "scope":"observed PAPER pairs only; no inferred unobserved markets"},

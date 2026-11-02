@@ -1026,5 +1026,44 @@ class EpisodeTests(unittest.TestCase):
         self.assertEqual(b["duplicate_observation_keys"], 1)
         self.assertFalse(b["binding_complete"])
 
+
+    def test_gap_reason_selection_partition_conserves_every_pair_and_horizon(self):
+        state = fixture()
+        with patch("paper_pov.ledger.verify", return_value=None):
+            reports = analyze(state)["horizons"]
+        for report in reports.values():
+            p, c = report["pair_coverage"], report["coverage"]
+            for reason, n in p["gap_reason_totals"].items():
+                self.assertEqual(n, p["watch_gap_reason_totals"][reason] +
+                                 p["nonwatch_gap_reason_totals"][reason])
+                self.assertEqual(p["watch_gap_reason_totals"][reason],
+                                 c["watch_abstain_" + reason])
+            self.assertEqual(sum(p["watch_gap_reason_totals"].values()),
+                             c["watch_abstain_gap"])
+            for row in p["top_gap_pairs"]:
+                self.assertEqual(sum(row["watch_gap_reasons"].values()),
+                                 row["watch_abstain_gap"] - 0)
+                self.assertEqual(sum(row["nonwatch_gap_reasons"].values()),
+                                 row["abstain_gap"] - row["watch_abstain_gap"])
+
+    def test_all_watch_and_no_watch_gap_reasons_are_conserved(self):
+        state = fixture()
+        state["predictions"] = [{"run_id": o["run_id"], "pair": o["pair"]}
+                                for o in state["observations"]]
+        with patch("paper_pov.ledger.verify", return_value=None):
+            selected = analyze(state)["horizons"]
+        self.assertGreater(selected["1"]["coverage"]["abstain_gap"], 0)
+        for report in selected.values():
+            p = report["pair_coverage"]
+            self.assertEqual(sum(p["nonwatch_gap_reason_totals"].values()), 0)
+            self.assertEqual(p["watch_gap_reason_totals"], p["gap_reason_totals"])
+        state["predictions"] = []
+        with patch("paper_pov.ledger.verify", return_value=None):
+            unselected = analyze(state)["horizons"]
+        for report in unselected.values():
+            p = report["pair_coverage"]
+            self.assertEqual(sum(p["watch_gap_reason_totals"].values()), 0)
+            self.assertEqual(p["nonwatch_gap_reason_totals"], p["gap_reason_totals"])
+
 if __name__=="__main__":
     unittest.main()
