@@ -157,6 +157,39 @@ def github_reader(token, api_url="https://api.github.com"):
     return get
 
 
+def current_remote_ref_evidence(get, repo, evidence, runs):
+    """One authenticated GET checks the current Git ref against the newest log claim.
+
+    A matching ref SHA proves only GitHub's current branch pointer, NOT
+    independently rehashed ledger bytes or the writer's historical readback.
+    A differing ref can mean another legitimate writer advanced the branch.
+    """
+    created = {r["id"]: r.get("created_at", "") for r in runs}
+    claims = [e for e in evidence
+              if e.get("delivery_log_claim_status") ==
+              "MATCHED_LOG_MARKERS_NOT_REMOTE_BYTES"]
+    if not claims:
+        return {"status": "UNVERIFIED_NO_COMPLETE_LOG_CLAIM"}
+    latest = max(claims, key=lambda e: (created.get(e["run_id"], ""), e["run_id"]))
+    expected = latest["claimed_ledger_commit"]
+    try:
+        response = get("/repos/" + repo + "/git/ref/heads/paper-proof-ledger")
+        observed = response["object"]["sha"]
+        if (response.get("ref") != "refs/heads/paper-proof-ledger" or
+                response["object"].get("type") != "commit" or
+                not isinstance(observed, str) or
+                not re.fullmatch(r"[0-9a-f]{40}", observed)):
+            raise ValueError("invalid remote ref metadata")
+    except (OSError, ValueError, KeyError, TypeError):
+        return {"status": "UNVERIFIED_REMOTE_REF_UNAVAILABLE",
+                "claimed_run_id": latest["run_id"], "claimed_commit": expected}
+    return {"status": ("MATCHED_CURRENT_REF_SHA_NOT_LEDGER_BYTES"
+                       if observed == expected else
+                       "UNVERIFIED_REF_DIFFERENT_OR_ADVANCED"),
+            "claimed_run_id": latest["run_id"], "claimed_commit": expected,
+            "current_ref_sha": observed, "remote_ledger_bytes_verified": False}
+
+
 def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
     """Return a reproducible audit plus SHA256 evidence index; no writes."""
     if not isinstance(repo, str) or len(repo.split("/")) != 2 or any(
@@ -249,7 +282,9 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
                          "decoded_log_sha256": hashlib.sha256(raw.encode("utf-8")).hexdigest(),
                          "raw_log_sha256_verified": False})
     result = audit(runs, logs, checked_at, lookback_hours, jobs=jobs)
+    remote_ref = current_remote_ref_evidence(get, repo, evidence, runs)
     return {"report": result, "evidence": evidence,
+            "current_remote_ref_evidence": remote_ref,
             "raw_log_content_persisted": False,
             "read_only": True, "workflow": WORKFLOW}
 

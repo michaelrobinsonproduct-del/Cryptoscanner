@@ -48,6 +48,9 @@ def fixture(native=None, dispatched=None, jobs=True):
                  "digest": "sha256:" + ("a" if i == 1 else "b") * 64}
                 for i, name in enumerate(("public-paper-ledger-", "public-paper-results-"), 1)]
             return {"artifacts": artifacts, "total_count": len(artifacts)}
+        if path.endswith("/git/ref/heads/paper-proof-ledger"):
+            return {"ref": "refs/heads/paper-proof-ledger",
+                    "object": {"sha": SHA, "type": "commit"}}
         if "/runs/" in path and "/jobs?" in path:
             rid = int(path.split("/runs/")[1].split("/")[0])
             rows = [job(rid)] if jobs else []
@@ -224,12 +227,42 @@ class CadenceCollectorTests(unittest.TestCase):
             upstream, _ = fixture(native=[row(1, "schedule")], dispatched=[])
             value = upstream(path, text)
             return base + readback + result if "/logs" in path else value
-        evidence = collect(get, "owner/repo", NOW)["evidence"][0]
+        collected = collect(get, "owner/repo", NOW)
+        evidence = collected["evidence"][0]
+        self.assertEqual(collected["current_remote_ref_evidence"]["status"],
+                         "MATCHED_CURRENT_REF_SHA_NOT_LEDGER_BYTES")
+        self.assertFalse(collected["current_remote_ref_evidence"]["remote_ledger_bytes_verified"])
         self.assertEqual(evidence["delivery_log_claim_status"],
                          "MATCHED_LOG_MARKERS_NOT_REMOTE_BYTES")
         self.assertEqual((evidence["claimed_generation"], evidence["claimed_watch_count"]), (51, 11))
         self.assertFalse(evidence["remote_ledger_bytes_verified"])
         self.assertFalse(evidence["results_delivery_verified"])
+
+    def test_remote_ref_mismatch_and_unavailable_never_prove_remote_bytes(self):
+        base = log("schedule", "9 * * * *")
+        marker = ("2026-11-02T03:10:30Z PAPER_LEDGER_REMOTE_READBACK_VERIFIED " +
+                  SHA + "\n2026-11-02T03:10:40Z PAPER_RESULTS_VERIFIED 1 51 11\n")
+        for mode in ("advanced", "invalid", "unavailable"):
+            with self.subTest(mode=mode):
+                upstream, calls = fixture(native=[row(1, "schedule")], dispatched=[])
+                def altered(path, text=False):
+                    if "/logs" in path:
+                        return base + marker
+                    if path.endswith("/git/ref/heads/paper-proof-ledger"):
+                        if mode == "unavailable":
+                            raise OSError("read-only endpoint unavailable")
+                        if mode == "invalid":
+                            return {"ref": "refs/heads/other",
+                                    "object": {"sha": SHA, "type": "commit"}}
+                        return {"ref": "refs/heads/paper-proof-ledger",
+                                "object": {"sha": "b" * 40, "type": "commit"}}
+                    return upstream(path, text)
+                proof = collect(altered, "owner/repo", NOW)["current_remote_ref_evidence"]
+                self.assertEqual(proof["status"],
+                                 "UNVERIFIED_REF_DIFFERENT_OR_ADVANCED"
+                                 if mode == "advanced" else
+                                 "UNVERIFIED_REMOTE_REF_UNAVAILABLE")
+                self.assertFalse(proof.get("remote_ledger_bytes_verified", False))
 
     def test_delivery_log_claim_rejects_wrong_run_duplicate_and_reversed_order(self):
         start = __import__("datetime").datetime.fromisoformat("2026-11-02T03:10:04+00:00")
