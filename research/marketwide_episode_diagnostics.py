@@ -9,6 +9,7 @@ import bisect
 import datetime as dt
 import json
 import math
+from decimal import Decimal
 from collections import defaultdict
 
 from research.marketwide_paper_outcomes import MAX_GAP, HORIZONS, timestamp
@@ -73,12 +74,16 @@ def chronological_readiness(records, runs, hours):
 
 
 def cluster_episodes(cases, hours):
-    """Collapse overlapping same-pair entry windows into descriptive episodes."""
+    """Collapse overlapping same-pair entries within a fixed horizon from first entry.
+
+    Do not chain through last-entry time: a continuous series of overlapping
+    windows could otherwise merge unrelated moves days apart into one episode.
+    """
     episodes = []
     for case in sorted(cases,key=lambda x:(x["pair"],x["entry_at"])):
         t = timestamp(case["entry_at"])
         if (episodes and episodes[-1]["pair"]==case["pair"]
-            and t-timestamp(episodes[-1]["last_entry_at"]) <= dt.timedelta(hours=hours)):
+            and t-timestamp(episodes[-1]["first_entry_at"]) <= dt.timedelta(hours=hours)):
             episodes[-1]["entry_cases"] += 1
             episodes[-1]["last_entry_at"] = case["entry_at"]
             episodes[-1]["watch_captured"] |= case["watch"]
@@ -134,9 +139,14 @@ def analyze(state):
                 selected = (rid,pair) in watches
                 if selected:
                     coverage["watch_matured"] += 1
-                peak = max(p for _,p in before)/entry - 1
-                hit = peak >= 0.30
-                if peak >= 0.20:
+                peak_price = max(p for _,p in before)
+                peak = peak_price/entry - 1
+                # Convert the source's finite decimal price representation,
+                # not the rounded floating-point return, into exact labels.
+                # E.g. 120/100 must be a +20% hit, not 19.999999999999996%.
+                hit20 = Decimal(str(peak_price)) >= Decimal(str(entry))*Decimal('1.20')
+                hit = Decimal(str(peak_price)) >= Decimal(str(entry))*Decimal('1.30')
+                if hit20:
                     coverage["movers_20"] += 1
                     if selected:
                         coverage["watch_positive_20"] += 1
@@ -154,9 +164,9 @@ def analyze(state):
                     coverage["mover_feature_60m"] += 1
                 record = {"pair":pair,"entry_at":at.isoformat(),"run_id":rid,"decision_at":start.isoformat(),
                           "peak_observed_return":round(peak,8),
-                          "hit_20":peak>=0.20,"hit_30":hit,
+                          "hit_20":hit20,"hit_30":hit,
                           "watch":selected,"lagged_returns":lag}
-                if peak >= 0.20:
+                if hit20:
                     cases20.append(record)
                 if hit:
                     positives.append(record)
@@ -174,8 +184,12 @@ def analyze(state):
         def summarize_feature(records,key):
             vals = [r["lagged_returns"][key] for r in records
                     if r["lagged_returns"][key] is not None]
+            ordered = sorted(vals)
             return {"n":len(vals),"mean":sum(vals)/len(vals) if vals else None,
-                    "positive_fraction":sum(v>0 for v in vals)/len(vals) if vals else None}
+                    "positive_fraction":sum(v>0 for v in vals)/len(vals) if vals else None,
+                    "median":ordered[len(ordered)//2] if ordered else None,
+                    "min":ordered[0] if ordered else None,
+                    "max":ordered[-1] if ordered else None}
         assert coverage["eligible"]==coverage["matured"]+coverage["abstain_gap"]+coverage["immature"]
         assert coverage["movers"]==len(positives)
         assert coverage["movers_20"]==len(cases20)
@@ -201,7 +215,11 @@ def analyze(state):
             "watch_precision_wilson_95_naive":wilson(coverage["watch_positive"],coverage["watch_matured"]),
             "chronological_readiness":chronological_readiness(positives+negatives,runs,hours),
             "lag_60m_positive":summarize_feature(positives,"60m"),
-            "lag_60m_negative":summarize_feature(negatives,"60m")}
+            "lag_60m_negative":summarize_feature(negatives,"60m"),
+            "pre_entry_price_feature_distributions":{
+                key:{"positive_30":summarize_feature(positives,key),
+                     "negative_30":summarize_feature(negatives,key)}
+                for key in ("30m","60m","180m")}}
     return {"status":"DESCRIPTIVE_ONLY_NO_HELD_OUT_LIFT",
             "limitations":["Sampled PAPER ticker prices, not intrabar highs or complete Kraken history",
                            "Repeated pair/time entries and overlapping horizons are dependent",
