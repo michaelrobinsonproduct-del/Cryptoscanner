@@ -54,6 +54,29 @@ def sealed_fixture(raw):
     return state
 
 class Tests(unittest.TestCase):
+    def test_watch_resolution_denominator_excludes_immature(self):
+        row=evaluate(sealed_fixture(fixture()))["horizons"]["1"]
+        self.assertEqual(row["watch_eligible"],7)
+        self.assertEqual(row["watch_matured"],3)
+        self.assertEqual(row["watch_immature"],4)
+        self.assertEqual(row["watch_abstain_gap"],0)
+        self.assertEqual(row["watch_resolved_fraction"],3/7)
+        self.assertEqual(row["watch_eligible"],row["watch_matured"]+
+                         row["watch_immature"]+row["watch_abstain_gap"])
+        self.assertEqual(row["watch_30"]+row["watch_false_positive_30"],
+                         row["watch_matured"])
+
+    def test_watch_gap_is_unresolved_not_false_positive(self):
+        f=fixture()
+        f["observations"]=[o for o in f["observations"] if o["run_id"] in ("0","180")]
+        row=evaluate(sealed_fixture(f))["horizons"]["1"]
+        self.assertEqual(row["watch_eligible"],2)
+        self.assertEqual(row["watch_abstain_gap"],1)
+        self.assertEqual(row["watch_immature"],1)
+        self.assertEqual(row["watch_matured"],0)
+        self.assertEqual(row["watch_false_positive_30"],0)
+        self.assertIsNone(row["watch_precision_30"])
+
     def test_marketwide_missed_mover(self):
         result=evaluate(sealed_fixture(fixture()))["horizons"]["1"]
         self.assertGreater(result["missed_30"],0)
