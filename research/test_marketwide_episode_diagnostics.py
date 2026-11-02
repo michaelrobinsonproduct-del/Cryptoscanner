@@ -45,6 +45,45 @@ class EpisodeTests(unittest.TestCase):
         self.assertGreaterEqual(one["coverage"]["mover_feature_60m"],1)
         self.assertEqual(report["source"]["observations"],len(fixture()["observations"]))
 
+    def test_predecision_spike_is_not_a_future_mover(self):
+        # First quote is 2 minutes before the decision. Another run's
+        # quote rises 50% one minute BEFORE that decision, then falls.
+        # It cannot be counted as a post-decision +30% opportunity.
+        minutes = [0, 1, 30, 60, 90, 120, 150, 180]
+        runs = [{"id":str(m), "as_of":iso(m)} for m in minutes]
+        observations = [
+            {"run_id":str(m), "at":iso(-2 if m==0 else -1 if m==1 else m),
+             "pair":"AAAUSD", "price":150 if m==1 else 100}
+            for m in minutes
+        ]
+        state = {"schema":1,"generation":len(runs),"sha256":"0"*64,
+                 "runs":runs,"observations":observations,"predictions":[]}
+        with patch("paper_pov.ledger.verify",return_value=None):
+            report = analyze(state)
+        one = report["horizons"]["1"]
+        self.assertGreater(one["coverage"]["matured"],0)
+        self.assertEqual(one["coverage"]["movers"],0)
+        self.assertEqual(one["unique_mover_episodes"],0)
+
+    def test_continuity_starts_at_decision_not_stale_quote(self):
+        # A two-minute-old entry quote plus a 44-minute forward gap is
+        # valid as-of coverage; starting at quote time would falsely
+        # turn the gap into 46 minutes and abstain.
+        minutes = [0, 44, 60, 90, 120, 150, 180]
+        runs = [{"id":str(m), "as_of":iso(m)} for m in minutes]
+        observations = [
+            {"run_id":str(m), "at":iso(-2 if m==0 else m),
+             "pair":"AAAUSD", "price":100 if m==0 else 135}
+            for m in minutes
+        ]
+        state = {"schema":1,"generation":len(runs),"sha256":"0"*64,
+                 "runs":runs,"observations":observations,"predictions":[]}
+        with patch("paper_pov.ledger.verify",return_value=None):
+            report = analyze(state)
+        one = report["horizons"]["1"]
+        self.assertGreaterEqual(one["coverage"]["movers"],1)
+        self.assertEqual(one["unique_mover_episodes"],1)
+
     def test_gap_abstains_not_false_negative(self):
         state=fixture()
         state["observations"]=[o for o in state["observations"]
