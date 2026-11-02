@@ -225,6 +225,28 @@ class EpisodeTests(unittest.TestCase):
 
 
 
+    def test_conflicting_future_quote_abstains_in_episode_metrics(self):
+        # A second retained quote for the same pair/time disagrees. A
+        # sealed ledger cannot authenticate which is correct.
+        baseline=fixture()
+        altered=fixture()
+        altered["observations"].append({
+            "run_id":"120", "at":iso(90), "pair":"AAAUSD", "price":999})
+        with patch("paper_pov.ledger.verify",return_value=None):
+            clean=analyze(baseline)["horizons"]["1"]["coverage"]
+            ambiguous=analyze(altered)["horizons"]["1"]["coverage"]
+        self.assertLess(ambiguous["movers"],clean["movers"])
+        self.assertGreater(ambiguous["abstain_gap"],clean["abstain_gap"])
+
+    def test_conflicting_past_quote_abstains_from_lagged_feature(self):
+        series=[(BASE,100,"0"),
+                (BASE+dt.timedelta(minutes=30),105,"30"),
+                (BASE+dt.timedelta(minutes=60),110,"60")]
+        times=[v[0] for v in series]
+        self.assertIsNotNone(lagged_return(series,times,2,60))
+        self.assertIsNone(lagged_return(
+            series,times,2,60,[BASE+dt.timedelta(minutes=30)]))
+
     def test_provenance_and_coverage_are_not_model_evidence(self):
         with patch("paper_pov.ledger.verify",return_value=None):
             report=analyze(fixture())
