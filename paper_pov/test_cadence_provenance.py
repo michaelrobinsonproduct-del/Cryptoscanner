@@ -1,0 +1,73 @@
+"""Offline, adversarial contracts for read-only PAPER cadence provenance."""
+import unittest
+from paper_pov.cadence_provenance import audit, provenance
+
+SHA = "a" * 40
+
+def run(rid=1, when="2026-11-01T19:10:01Z", event="schedule", sha=SHA):
+    return {"id": rid, "created_at": when, "event": event, "head_sha": sha,
+            "status": "completed", "conclusion": "success"}
+
+def log(event="schedule", cron="39 * * * *", sha=SHA):
+    return ("2026-11-01T19:10:06Z PAPER_VERIFIED_GITHUB_EVENT=" + event + "\n"
+            "2026-11-01T19:10:06Z PAPER_VERIFIED_ORIGINATING_CRON=" + cron + "\n"
+            "2026-11-01T19:10:06Z PAPER_PIPELINE_SOURCE_SHA=" + sha + "\n")
+
+NOW = "2026-11-02T03:20:00Z"
+
+class CadenceProvenanceTests(unittest.TestCase):
+    def check(self, rows=None, logs=None):
+        return audit(rows if rows is not None else [run()], logs if logs is not None else {"1": log()}, NOW)
+
+    def test_actual_late_39_slot_is_not_misattributed_to_09_slot(self):
+        result = self.check()
+        self.assertEqual(result["verified_native_count"], 1)
+        self.assertEqual(result["runs"][0]["latest_possible_nominal_slot"], "2026-11-01T18:39:00+00:00")
+        self.assertEqual(result["runs"][0]["minimum_lateness_seconds"], 1861)
+        self.assertFalse(result["runs"][0]["originating_hour_verified"])
+
+    def test_late_09_slot_53_minutes(self):
+        result = self.check([run(2, "2026-11-01T15:02:07Z")], {"2": log(cron="9 * * * *")})
+        self.assertEqual(result["runs"][0]["latest_possible_nominal_slot"], "2026-11-01T14:09:00+00:00")
+        self.assertEqual(result["runs"][0]["minimum_lateness_seconds"], 3187)
+
+    def test_manual_dispatch_is_not_native_and_no_recovery_inference(self):
+        result = self.check([run(event="workflow_dispatch")], {"1": log(event="workflow_dispatch", cron="MANUAL_DISPATCH")})
+        self.assertEqual((result["verified_native_count"], result["verified_dispatch_count"]), (0, 1))
+        self.assertEqual(result["runs"][0]["classification"], "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE")
+
+    def test_missing_or_shell_echoed_log_cannot_verify(self):
+        for payload in ({}, {"1": 'echo "PAPER_VERIFIED_GITHUB_EVENT=schedule"'}):
+            with self.subTest(payload=payload):
+                self.assertEqual(self.check(logs=payload)["unverified_or_ambiguous_count"], 1)
+
+    def test_duplicate_or_conflicting_provenance_abstains(self):
+        self.assertIsNone(provenance(log() + log(event="workflow_dispatch")))
+        self.assertEqual(self.check(logs={"1": log() + log()})["verified_native_count"], 0)
+
+    def test_wrong_source_or_event_never_verified(self):
+        for payload in ({"1": log(sha="b"*40)}, {"1": log(event="workflow_dispatch", cron="MANUAL_DISPATCH")}):
+            with self.subTest(payload=payload):
+                self.assertEqual(self.check(logs=payload)["verified_native_count"], 0)
+
+    def test_missing_cron_or_wrong_cron_abstains(self):
+        self.assertEqual(self.check(logs={"1": log(cron="MANUAL_DISPATCH")})["verified_native_count"], 0)
+
+    def test_invalid_and_duplicate_run_ids_never_count_as_proven(self):
+        result = self.check([run(), run()], {"1": log()})
+        self.assertEqual(result["verified_native_count"], 1)
+        self.assertEqual(result["unverified_or_ambiguous_count"], 1)
+
+    def test_older_than_lookback_not_counted(self):
+        self.assertEqual(self.check([run(1, "2026-10-31T00:00:00Z")])["runs"], [])
+
+    def test_future_run_not_counted(self):
+        self.assertEqual(self.check([run(1, "2026-11-03T00:00:00Z")])["runs"][0]["classification"], "INVALID_RUN_METADATA")
+
+    def test_no_false_ledger_or_trade_claims(self):
+        result = self.check()
+        self.assertNotIn("ledger_verified", result)
+        self.assertNotIn("BUY", str(result))
+
+if __name__ == "__main__":
+    unittest.main()
