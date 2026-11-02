@@ -14,6 +14,7 @@ from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen, HTTPRedirectHandler, build_opener
 
 from paper_pov.cadence_provenance import audit, timestamp
+from paper_pov.native_gap_diagnostic import diagnose
 
 WORKFLOW = "paper-pipeline.yml"
 MAX_PAGE = 100
@@ -561,11 +562,13 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
                          "decoded_log_sha256": hashlib.sha256(raw.encode("utf-8")).hexdigest(),
                          "raw_log_sha256_verified": False})
     result = audit(runs, logs, checked_at, lookback_hours, jobs=jobs)
+    native_deficit = diagnose(runs, checked_at, lookback_hours, listing_complete=True)
     remote_ref = current_remote_ref_evidence(get, repo, evidence, runs, report=result)
     overlap = canonical_writer_overlap_evidence(result, jobs)
     attempts = canonical_writer_attempt_intervals(result, jobs)
     continuity = authenticated_ledger_claim_continuity(result, evidence)
     return {"report": result, "evidence": evidence,
+            "native_creation_gap_evidence": native_deficit,
             "ledger_log_claim_continuity": continuity,
             "writer_attempt_interval_evidence": attempts,
             "current_remote_ref_evidence": remote_ref,
@@ -594,6 +597,7 @@ def main():
         "ledger_claim_continuity": result["ledger_log_claim_continuity"],
         "canonical_writer_overlap": result["writer_overlap_evidence"],
         "current_remote_ref": result["current_remote_ref_evidence"],
+        "native_creation_gap": result["native_creation_gap_evidence"],
     }, sort_keys=True))
 
 

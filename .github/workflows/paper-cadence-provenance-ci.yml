@@ -5,6 +5,8 @@ on:
       - 'paper_pov/cadence_provenance.py'
       - 'paper_pov/test_cadence_provenance.py'
       - 'paper_pov/cadence_collect.py'
+      - 'paper_pov/native_gap_diagnostic.py'
+      - 'paper_pov/test_native_gap_diagnostic.py'
       - 'paper_pov/test_cadence_collect.py'
       - 'paper_pov/artifact_bytes_verify.py'
       - '.github/workflows/paper-cadence-provenance-ci.yml'
@@ -30,7 +32,7 @@ jobs:
           TREE_SHA="$(git rev-parse 'HEAD^{tree}')"
           test "$(git cat-file -t "$TREE_SHA")" = tree
           echo "PAPER_CADENCE_BASE_TREE_SHA=$TREE_SHA"
-          python -m unittest paper_pov.test_cadence_provenance paper_pov.test_cadence_collect -v
+          python -m unittest paper_pov.test_cadence_provenance paper_pov.test_cadence_collect paper_pov.test_native_gap_diagnostic -v
 
   authenticated-get-only-rehearsal:
     runs-on: ubuntu-latest
