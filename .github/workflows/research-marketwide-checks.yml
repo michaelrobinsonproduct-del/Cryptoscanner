@@ -1,0 +1,25 @@
+name: Research market-wide outcome evaluator checks
+on:
+  pull_request:
+    paths:
+      - 'research/marketwide_paper_outcomes.py'
+      - 'research/test_marketwide_paper_outcomes.py'
+      - '.github/workflows/research-marketwide-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  marketwide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run exact-head evaluator tests
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          python -m unittest research.test_marketwide_paper_outcomes -v
+          python -m compileall -q research/marketwide_paper_outcomes.py
