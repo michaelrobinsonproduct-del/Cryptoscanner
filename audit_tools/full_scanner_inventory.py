@@ -168,6 +168,10 @@ def build_consumer_graph(workflows, runtime, checkout_sha, main_sha):
             for source in static["bun"].get("sources",[]):
                 edge("bun:"+source,"railway-url:"+endpoint,
                      "reported_static_endpoint","external_snapshot:"+runtime["snapshot_utc"])
+    dynamic_checkouts=[
+        "Dynamic checkout ref unresolved in "+w["path"]
+        for w in workflows if w.get("branch_references",{}).get("unresolved_checkout_refs")
+    ]
     return {"schema":"cryptoscanner-consumer-graph-v1",
             "audit_checkout_sha":checkout_sha,"remote_main_sha":main_sha,
             "external_snapshot_utc":runtime["snapshot_utc"],
@@ -176,7 +180,7 @@ def build_consumer_graph(workflows, runtime, checkout_sha, main_sha):
             "unknowns":["Supabase invocation/pg_cron and database schema",
                         "iOS client deployment and users",
                         "Bun external callers and Railway retained storage consumers",
-                        "GitHub workflow dynamic shell dispatch and branch-pinned consumers"],
+                        "GitHub workflow dynamic shell dispatch and branch-pinned consumers"]+dynamic_checkouts,
             "cleanup_authorized":False}
 
 
