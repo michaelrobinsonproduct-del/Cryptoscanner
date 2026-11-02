@@ -346,6 +346,80 @@ def canonical_writer_attempt_intervals(report, jobs):
     }
 
 
+
+def authenticated_ledger_claim_continuity(report, evidence):
+    """Check monotonicity of source-authenticated log claims, NOT ledger bytes.
+
+    A duplicate generation can be an idempotent no-write retry, not a proven
+    duplicate persisted scan. Missing runs or generation gaps must abstain.
+    """
+    verified = {"VERIFIED_NATIVE_SCHEDULE",
+                "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE"}
+    rows = report.get("runs", [])
+    if not isinstance(rows, list) or not isinstance(evidence, list):
+        return {"status": "UNVERIFIED_INVALID_CLAIM_COVERAGE",
+                "remote_ledger_bytes_verified": False}
+    candidates = []
+    for row in rows:
+        if not isinstance(row, dict) or row.get("classification") not in verified:
+            continue
+        rid = row.get("run_id")
+        matches = [e for e in evidence if isinstance(e, dict) and
+                   type(e.get("run_id")) is int and e["run_id"] == rid and
+                   e.get("delivery_log_claim_status") ==
+                   "MATCHED_LOG_MARKERS_NOT_REMOTE_BYTES"]
+        if len(matches) != 1 or type(matches[0].get("claimed_generation")) is not int:
+            return {"status": "UNVERIFIED_INCOMPLETE_AUTHENTICATED_CLAIMS",
+                    "missing_run_id": rid, "remote_ledger_bytes_verified": False}
+        try:
+            created = timestamp(row["created_at"])
+        except (KeyError, ValueError, TypeError, OverflowError):
+            return {"status": "UNVERIFIED_INVALID_CLAIM_TIMESTAMPS",
+                    "remote_ledger_bytes_verified": False}
+        e = matches[0]
+        generation, commit = e["claimed_generation"], e.get("claimed_ledger_commit")
+        if generation <= 0 or not isinstance(commit, str) or not re.fullmatch(
+                r"[0-9a-f]{40}", commit):
+            return {"status": "UNVERIFIED_INVALID_LEDGER_CLAIM",
+                    "remote_ledger_bytes_verified": False}
+        candidates.append((created, rid, generation, commit))
+    candidates.sort()
+    if len(candidates) < 2:
+        return {"status": "UNVERIFIED_INSUFFICIENT_LEDGER_CLAIMS",
+                "authenticated_claim_count": len(candidates),
+                "remote_ledger_bytes_verified": False}
+    gaps, repeated = [], []
+    for previous, current in zip(candidates, candidates[1:]):
+        prev_time, prev_id, prev_gen, prev_commit = previous
+        curr_time, curr_id, curr_gen, curr_commit = current
+        if curr_time == prev_time:
+            return {"status": "UNVERIFIED_AMBIGUOUS_RUN_ORDER",
+                    "remote_ledger_bytes_verified": False}
+        if curr_gen < prev_gen or (curr_gen == prev_gen and curr_commit != prev_commit):
+            return {"status": "FAILED_CONFLICTING_AUTHENTICATED_LEDGER_CLAIMS",
+                    "first_run_id": prev_id, "second_run_id": curr_id,
+                    "first_generation": prev_gen, "second_generation": curr_gen,
+                    "remote_ledger_bytes_verified": False}
+        if curr_gen == prev_gen:
+            repeated.append({"first_run_id": prev_id, "second_run_id": curr_id,
+                             "generation": curr_gen})
+        elif curr_gen > prev_gen + 1:
+            gaps.append({"first_run_id": prev_id, "second_run_id": curr_id,
+                         "missing_generation_count": curr_gen - prev_gen - 1})
+    return {
+        "status": ("UNVERIFIED_REPEATED_LEDGER_GENERATION" if repeated
+                   else "UNVERIFIED_GENERATION_GAPS" if gaps
+                   else "MONOTONIC_AUTHENTICATED_LOG_CLAIMS_NOT_REMOTE_BYTES"),
+        "authenticated_claim_count": len(candidates),
+        "first_generation": candidates[0][2],
+        "last_generation": candidates[-1][2],
+        "repeated_generations": repeated,
+        "generation_gaps": gaps,
+        "remote_ledger_bytes_verified": False,
+        "duplicate_persisted_scan_verified": False,
+    }
+
+
 def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
     """Return a reproducible audit plus SHA256 evidence index; no writes."""
     if not isinstance(repo, str) or len(repo.split("/")) != 2 or any(
@@ -445,7 +519,9 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
     remote_ref = current_remote_ref_evidence(get, repo, evidence, runs, report=result)
     overlap = canonical_writer_overlap_evidence(result, jobs)
     attempts = canonical_writer_attempt_intervals(result, jobs)
+    continuity = authenticated_ledger_claim_continuity(result, evidence)
     return {"report": result, "evidence": evidence,
+            "ledger_log_claim_continuity": continuity,
             "writer_attempt_interval_evidence": attempts,
             "current_remote_ref_evidence": remote_ref,
             "writer_overlap_evidence": overlap,
