@@ -3,7 +3,8 @@ import io
 import unittest
 from unittest.mock import patch
 
-from paper_pov.cadence_collect import collect, github_reader, delivery_log_claim
+from paper_pov.cadence_collect import collect, github_reader, delivery_log_claim, SafeLogRedirect
+from urllib.request import Request
 
 SHA = "a" * 40
 NOW = "2026-11-02T03:20:00Z"
@@ -178,11 +179,26 @@ class CadenceCollectorTests(unittest.TestCase):
             collect(altered, "owner/repo", NOW)
 
     def test_lossy_non_utf8_job_log_is_rejected_before_provenance(self):
-        with patch("paper_pov.cadence_collect.urlopen",
-                   return_value=io.BytesIO(b"bad-utf8-" + bytes([255]))):
+        with patch("paper_pov.cadence_collect.build_opener") as opener:
+            opener.return_value.open.return_value.__enter__.return_value = io.BytesIO(
+                b"bad-utf8-" + bytes([255]))
             get = github_reader("test-readonly-token")
             with self.assertRaises(UnicodeDecodeError):
                 get("/repos/owner/repo/actions/jobs/123/logs", text=True)
+
+    def test_log_redirect_strips_bearer_and_rejects_untrusted_storage(self):
+        req = Request("https://api.github.com/repos/owner/repo/actions/jobs/123/logs",
+                      headers={"Authorization": "Bearer private-token"})
+        safe = SafeLogRedirect().redirect_request(
+            req, None, 302, "Found", {},
+            "https://pipelines.actions.githubusercontent.com/logs?sig=abc")
+        self.assertEqual(safe.get_method(), "GET")
+        self.assertIsNone(safe.get_header("Authorization"))
+        for target in ("http://pipelines.actions.githubusercontent.com/logs",
+                       "https://evil.example.com/logs",
+                       "https://githubusercontent.com.evil.example.com/logs"):
+            with self.subTest(target=target), self.assertRaises(ValueError):
+                SafeLogRedirect().redirect_request(req, None, 302, "Found", {}, target)
 
     def test_live_rehearsal_workflow_is_get_only_and_has_no_writer(self):
         from pathlib import Path

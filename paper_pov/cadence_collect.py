@@ -10,8 +10,8 @@ import json
 import os
 import re
 from pathlib import Path
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.parse import urlencode, urlsplit
+from urllib.request import Request, urlopen, HTTPRedirectHandler, build_opener
 
 from paper_pov.cadence_provenance import audit, timestamp
 
@@ -60,6 +60,24 @@ def delivery_log_claim(log, run_id, started, finished):
             "results_delivery_verified": False}
 
 
+class SafeLogRedirect(HTTPRedirectHandler):
+    """Allow signed GitHub log-storage redirects without forwarding API tokens."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        origin, target = urlsplit(req.full_url), urlsplit(newurl)
+        host = (target.hostname or "").lower()
+        if (target.scheme != "https" or
+                not (host.endswith(".githubusercontent.com") or
+                     host.endswith(".blob.core.windows.net"))):
+            raise ValueError("untrusted GitHub log redirect target")
+        redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if redirected is None:
+            raise ValueError("GitHub log redirect rejected")
+        if target.netloc != origin.netloc:
+            redirected.remove_header("Authorization")
+        return redirected
+
+
 def github_reader(token, api_url="https://api.github.com"):
     if not token:
         raise ValueError("read-only GitHub token required")
@@ -74,8 +92,14 @@ def github_reader(token, api_url="https://api.github.com"):
             "User-Agent": "Cryptoscanner-readonly-cadence"})
         if req.get_method() != "GET":
             raise ValueError("read-only GET required")
-        with urlopen(req, timeout=20) as response:
-            body = response.read(MAX_LOG_BYTES + 1)
+        # Job logs redirect to signed storage. Never forward the GitHub API
+        # bearer token to a different host; JSON API reads stay direct.
+        if text:
+            with build_opener(SafeLogRedirect()).open(req, timeout=20) as response:
+                body = response.read(MAX_LOG_BYTES + 1)
+        else:
+            with urlopen(req, timeout=20) as response:
+                body = response.read(MAX_LOG_BYTES + 1)
         if len(body) > MAX_LOG_BYTES:
             raise ValueError("GitHub response exceeds bounded size")
         # Lossy replacement would make a digest of modified log evidence.
