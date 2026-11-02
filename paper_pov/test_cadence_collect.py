@@ -456,6 +456,30 @@ class CadenceCollectorTests(unittest.TestCase):
         proof = canonical_writer_overlap_evidence(report, {"1": [invalid]})
         self.assertEqual(proof["status"], "UNVERIFIED_INVALID_WRITER_INTERVAL")
 
+    def test_malformed_unverified_run_cannot_disappear_from_overlap_coverage(self):
+        from paper_pov.cadence_collect import canonical_writer_overlap_evidence
+        report = {"runs": [
+            {"run_id": 1, "classification": "VERIFIED_NATIVE_SCHEDULE",
+             "created_at": "2026-11-02T03:10:01Z"},
+            {"run_id": 2, "classification": "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE",
+             "created_at": "2026-11-02T03:10:01Z"},
+            {"run_id": None, "classification": "INVALID_RUN_METADATA"}]}
+        second = dict(job(2), started_at="2026-11-02T03:11:01Z",
+                      completed_at="2026-11-02T03:12:00Z")
+        proof = canonical_writer_overlap_evidence(report, {"1": [job(1)], "2": [second]})
+        self.assertEqual(proof["status"], "UNVERIFIED_INCOMPLETE_WRITER_COVERAGE")
+        self.assertEqual(proof["incomplete_writer_run_count"], 1)
+        self.assertEqual(proof["incomplete_writer_run_ids"], [])
+
+    def test_foreign_second_canonical_writer_job_abstains_even_with_matching_first(self):
+        from paper_pov.cadence_collect import canonical_writer_overlap_evidence
+        report = {"runs": [{"run_id": 1, "classification": "VERIFIED_NATIVE_SCHEDULE",
+                            "created_at": "2026-11-02T03:10:01Z"}]}
+        forged = dict(job(1), id=999, run_id=999)
+        proof = canonical_writer_overlap_evidence(report, {"1": [job(1), forged]})
+        self.assertEqual(proof["status"], "UNVERIFIED_INCONSISTENT_WRITER_JOB")
+        self.assertFalse(proof["global_exclusivity_verified"])
+
     def test_no_writer_job_abstains_not_fabricates_native_success(self):
         get, _ = fixture(jobs=False)
         result = collect(get, "owner/repo", NOW)

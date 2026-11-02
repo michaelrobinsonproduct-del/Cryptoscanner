@@ -217,18 +217,22 @@ def canonical_writer_overlap_evidence(report, jobs):
     if not isinstance(rows, list) or not isinstance(jobs, dict):
         return {"status": "UNVERIFIED_INVALID_JOB_COVERAGE",
                 "global_exclusivity_verified": False}
-    incomplete = sorted({r["run_id"] for r in rows
-                         if isinstance(r, dict) and type(r.get("run_id")) is int
-                         and r.get("classification") not in verified})
+    incomplete_rows = [r for r in rows
+                       if not isinstance(r, dict) or
+                       r.get("classification") not in verified]
+    incomplete = sorted({r["run_id"] for r in incomplete_rows
+                         if isinstance(r, dict) and type(r.get("run_id")) is int})
     intervals, seen_job_ids = [], set()
     for row in rows:
         if not isinstance(row, dict) or row.get("classification") not in verified:
             continue
         rid = row["run_id"]
-        matching = [j for j in jobs.get(str(rid), [])
-                    if isinstance(j, dict) and j.get("name") == "public-paper"
-                    and type(j.get("run_id")) is int and j["run_id"] == rid]
-        if len(matching) != 1 or matching[0].get("conclusion") != "success":
+        canonical = [j for j in jobs.get(str(rid), [])
+                     if isinstance(j, dict) and j.get("name") == "public-paper"]
+        matching = [j for j in canonical
+                    if type(j.get("run_id")) is int and j["run_id"] == rid]
+        if (len(canonical) != 1 or len(matching) != 1 or
+                matching[0].get("conclusion") != "success"):
             return {"status": "UNVERIFIED_INCONSISTENT_WRITER_JOB",
                     "global_exclusivity_verified": False}
         writer = matching[0]
@@ -262,11 +266,11 @@ def canonical_writer_overlap_evidence(report, jobs):
                                      (min(end, next_end) -
                                       max(start, next_start)).total_seconds(), 3)})
     return {"status": ("FAILED_OVERLAPPING_CANONICAL_WRITER_JOBS" if overlaps
-                       else "UNVERIFIED_INCOMPLETE_WRITER_COVERAGE" if incomplete
+                       else "UNVERIFIED_INCOMPLETE_WRITER_COVERAGE" if incomplete_rows
                        else "NO_OVERLAP_OBSERVED_BOUNDED_SAMPLE" if len(intervals) >= 2
                        else "UNVERIFIED_INSUFFICIENT_AUTHENTICATED_JOBS"),
             "authenticated_writer_job_count": len(intervals),
-            "incomplete_writer_run_count": len(incomplete),
+            "incomplete_writer_run_count": len(incomplete_rows),
             "incomplete_writer_run_ids": incomplete,
             "overlap_pair_count": len(overlaps),
             "overlaps": overlaps,
