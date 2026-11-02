@@ -203,7 +203,7 @@ class EpisodeTests(unittest.TestCase):
 
     def test_episode_first_entry_feature_diversity_and_even_median(self):
         state=fixture()
-        for pair, at60, spike in (("XXXUSD",110,150),("YYYUSD",130,180)):
+        for pair, at60, spike in (("XXXUSD",110,150),("YYYUSD",120,170)):
             for o in list(state["observations"]):
                 if o["pair"]=="BBBUSD":
                     minute=int(o["run_id"])
@@ -214,8 +214,8 @@ class EpisodeTests(unittest.TestCase):
         stats=one["episode_first_entry_feature_distributions"]["60m"]
         self.assertEqual(stats["n"],2)
         self.assertEqual(stats["distinct_pairs"],2)
-        self.assertAlmostEqual(stats["median"],0.2)
-        self.assertAlmostEqual(stats["mean"],0.2)
+        self.assertAlmostEqual(stats["median"],0.15)
+        self.assertAlmostEqual(stats["mean"],0.15)
         self.assertEqual(one["episode_first_lag_60m"]["n"],stats["n"])
         self.assertLessEqual(stats["n"],one["unique_mover_episodes"])
         for lag in ("30m","60m","180m"):
