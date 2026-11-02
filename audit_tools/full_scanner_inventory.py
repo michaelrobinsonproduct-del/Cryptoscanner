@@ -237,7 +237,7 @@ def main():
           "writes_contents":bool(re.search(r"contents:\s*write",s)),
           "ledger_ref":"paper-proof-ledger" in s,
           "python_modules":sorted(set(re.findall(r"python\s+-m\s+([A-Za-z0-9_.]+)",s))),
-          "scripts":sorted(set(re.findall(r"(?:python|bun|node)\s+([A-Za-z0-9_./-]+\.(?:py|ts|mjs))",s)),
+          "scripts":sorted(set(re.findall(r"(?:python|bun|node)\s+([A-Za-z0-9_./-]+\.(?:py|ts|mjs))",s))),
           "branch_references":workflow_branch_references(s)})
     triage=json.loads((ROOT/"audit_tools/pr_triage_20261102.json").read_text())
     triage_by_number={p["number"]:p for p in triage["prs"]}
