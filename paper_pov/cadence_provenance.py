@@ -131,9 +131,21 @@ def audit(runs, logs, checked_at, lookback_hours=24):
     native_failed = [r for r in evidence if r["classification"] == "VERIFIED_NATIVE_SCHEDULE_UNSUCCESSFUL"]
     dispatch_failed = [r for r in evidence if r["classification"] == "VERIFIED_WORKFLOW_DISPATCH_UNSUCCESSFUL"]
     native.sort(key=lambda r: r["created_at"])
+    # This is only GitHub run-creation coverage, NOT proof of successful
+    # persistence, quote freshness, delivery, or expected cron-slot identity.
+    successful = sorted(native + dispatched, key=lambda r: r["created_at"])
+    creation_times = [timestamp(r["created_at"]) for r in successful]
+    max_creation_gap = max((int((b - a).total_seconds()) for a, b in
+                            zip(creation_times, creation_times[1:])), default=None)
+    latest_age = int((now - creation_times[-1]).total_seconds()) if creation_times else None
     evidence.sort(key=lambda r: (r.get("created_at", ""), str(r.get("run_id"))))
     return {"schema": 1, "checked_at": now.isoformat(), "lookback_hours": lookback_hours,
             "verified_native_count": len(native), "verified_dispatch_count": len(dispatched),
+            "verified_successful_writer_run_creation_count": len(successful),
+            "last_verified_successful_run_created_at": successful[-1]["created_at"] if successful else None,
+            "seconds_since_last_verified_successful_run_creation": latest_age,
+            "max_verified_successful_run_creation_gap_seconds": max_creation_gap,
+            "over_45m_since_verified_successful_run_creation": latest_age > 2700 if latest_age is not None else None,
             "verified_native_unsuccessful_count": len(native_failed),
             "verified_dispatch_unsuccessful_count": len(dispatch_failed),
             "unverified_or_ambiguous_count": len(evidence) - len(native) - len(dispatched) - len(native_failed) - len(dispatch_failed),
@@ -142,6 +154,7 @@ def audit(runs, logs, checked_at, lookback_hours=24):
             "limitations": ["Only the canonical main-branch PAPER writer workflow is counted; foreign workflow markers abstain",
                             "A completed failed workflow is an attempt, not a successful scan",
                             "A cron expression identifies a minute, not an hour; reported lateness is only a lower bound",
+                            "Creation gaps are observational and cannot certify missed cron slots or persisted ledger generations",
                             "Created-at is not the job's completion time",
                             "A successful workflow is not durable ledger or remote SHA256 readback proof",
                             "workflow_dispatch alone does not distinguish owner manual from external recovery"]}
