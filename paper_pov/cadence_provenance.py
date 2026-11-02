@@ -52,10 +52,36 @@ def last_nominal_slot(created, minute):
     return slot
 
 
-def audit(runs, logs, checked_at, lookback_hours=24):
+def writer_job_queue_seconds(jobs, run_id, created, checked_at):
+    """Bound queue delay to one authentic canonical writer job; otherwise abstain.
+
+    GitHub run_started_at is not a substitute for the job's started_at.
+    This does not establish nominal cron delivery or successful persistence.
+    """
+    if not isinstance(jobs, dict):
+        return None
+    candidates = jobs.get(str(run_id))
+    if not isinstance(candidates, list):
+        return None
+    matching = [job for job in candidates if isinstance(job, dict)
+                and job.get("run_id") == run_id and job.get("name") == "public-paper"]
+    if len(matching) != 1:
+        return None
+    try:
+        started = timestamp(matching[0]["started_at"])
+        if started < created or started > checked_at:
+            return None
+        return round((started - created).total_seconds(), 3)
+    except (ValueError, TypeError, KeyError, AttributeError):
+        return None
+
+
+def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
     """Report provable per-run minimum lateness; never assume cron hour.
 
-    logs maps run ID (as string) to raw GitHub job log. The report does not
+    logs maps run ID (as string) to raw GitHub job log. Optional jobs maps
+    run ID to GitHub job metadata for separately measured writer queue delay.
+    The report does not
     assume a completed job is a persisted ledger generation; that requires
     separate sealed ledger and remote readback verification.
     """
@@ -105,6 +131,9 @@ def audit(runs, logs, checked_at, lookback_hours=24):
                     or p["PAPER_PIPELINE_SOURCE_SHA"] != run.get("head_sha")):
                 evidence.append(row)
                 continue
+            queue_seconds = writer_job_queue_seconds(jobs, rid, created, now)
+            if queue_seconds is not None:
+                row["writer_job_queue_seconds"] = queue_seconds
             cron = p["PAPER_VERIFIED_ORIGINATING_CRON"]
             if event == "workflow_dispatch":
                 if cron == "MANUAL_DISPATCH":
@@ -141,6 +170,8 @@ def audit(runs, logs, checked_at, lookback_hours=24):
     max_creation_gap = max((int((b - a).total_seconds()) for a, b in
                             zip(creation_times, creation_times[1:])), default=None)
     latest_age = int((now - creation_times[-1]).total_seconds()) if creation_times else None
+    queue_samples = [r["writer_job_queue_seconds"] for r in successful
+                     if "writer_job_queue_seconds" in r]
     evidence.sort(key=lambda r: (r.get("created_at", ""), str(r.get("run_id"))))
     return {"schema": 1, "checked_at": now.isoformat(), "lookback_hours": lookback_hours,
             "verified_native_count": len(native), "verified_dispatch_count": len(dispatched),
@@ -148,6 +179,8 @@ def audit(runs, logs, checked_at, lookback_hours=24):
             "last_verified_successful_run_created_at": successful[-1]["created_at"] if successful else None,
             "seconds_since_last_verified_successful_run_creation": latest_age,
             "max_verified_successful_run_creation_gap_seconds": max_creation_gap,
+            "writer_job_queue_sample_count": len(queue_samples),
+            "max_verified_writer_job_queue_seconds": max(queue_samples, default=None),
             "over_45m_since_verified_successful_run_creation": latest_age > 2700 if latest_age is not None else None,
             "verified_native_unsuccessful_count": len(native_failed),
             "verified_dispatch_unsuccessful_count": len(dispatch_failed),
@@ -159,6 +192,8 @@ def audit(runs, logs, checked_at, lookback_hours=24):
                             "A cron expression identifies a minute, not an hour; reported lateness is only a lower bound",
                             "Creation gaps are observational and cannot certify missed cron slots or persisted ledger generations",
                             "Created-at is not the job's completion time",
+                            "Writer job queue delay is measured only from matching GitHub public-paper job started_at; missing metadata abstains",
+                            "Job queue delay is separate from the native cron creation lateness lower bound",
                             "A successful workflow is not durable ledger or remote SHA256 readback proof",
                             "workflow_dispatch alone does not distinguish owner manual from external recovery"]}
 
