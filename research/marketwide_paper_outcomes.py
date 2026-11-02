@@ -76,7 +76,8 @@ def evaluate(state):
                 # Continuity is measured from the immutable decision time,
                 # matching the production PAPER outcome contract.
                 timeline = [start] + [t for t, _ in before]
-                ambiguous = (bisect.bisect_right(conflicting_times, start) <
+                ambiguous = (at in conflicting_times or
+                             bisect.bisect_right(conflicting_times, start) <
                              bisect.bisect_right(conflicting_times, target + MAX_GAP))
                 if (ambiguous or not before or not anchors or start - at > MAX_GAP
                     or any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
