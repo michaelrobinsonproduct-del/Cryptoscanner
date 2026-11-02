@@ -231,15 +231,17 @@ class CadenceCollectorTests(unittest.TestCase):
 
     def test_artifact_metadata_duplicate_id_and_boolean_source_run_id_abstain(self):
         get, _ = fixture()
-        for kind in ("duplicate_id", "boolean_source_run_id"):
+        for kind in ("duplicate_id", "boolean_source_run_id", "unhashable_artifact_id"):
             with self.subTest(kind=kind):
                 def altered(path, text=False):
                     response = get(path, text)
                     if "/artifacts?" in path:
                         if kind == "duplicate_id":
                             response["artifacts"][1]["id"] = response["artifacts"][0]["id"]
-                        else:
+                        elif kind == "boolean_source_run_id":
                             response["artifacts"][0]["workflow_run"]["id"] = True
+                        else:
+                            response["artifacts"][0]["id"] = ["malformed"]
                     return response
                 evidence = collect(altered, "owner/repo", NOW)["evidence"]
                 self.assertEqual(evidence[0]["artifact_metadata_status"], "UNVERIFIED")

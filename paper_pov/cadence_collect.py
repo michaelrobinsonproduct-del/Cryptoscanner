@@ -79,7 +79,7 @@ def artifact_metadata_claim(artifacts, run):
         source = artifact.get("workflow_run")
         digest = artifact.get("digest")
         if (name not in expected or name in names or
-                artifact.get("id") in ids or
+                (type(artifact.get("id")) is int and artifact["id"] in ids) or
                 artifact.get("expired") is not False or
                 type(artifact.get("id")) is not int or artifact["id"] <= 0 or
                 type(artifact.get("size_in_bytes")) is not int or
