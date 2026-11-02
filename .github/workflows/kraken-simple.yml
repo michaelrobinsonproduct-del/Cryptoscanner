@@ -1,0 +1,134 @@
+name: Kraken Recovery Manual Test (isolated)
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: kraken-simple-history
+  cancel-in-progress: false
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile isolated scanner and regression suite
+        run: python -m compileall -q simple_scanner
+      - name: Offline ledger regression tests
+        run: python -m unittest discover -s simple_scanner -p 'test_*.py' -v
+      - name: Restore existing history from dedicated branch
+        run: |
+          set -euo pipefail
+          mkdir -p simple_scanner/output
+          set +e
+          git ls-remote --exit-code --heads origin simple-history >/dev/null
+          remote_status=$?
+          set -e
+          if [ "$remote_status" -eq 0 ]; then
+            git fetch origin refs/heads/simple-history:refs/remotes/origin/simple-history
+            git show origin/simple-history:history.sqlite3 > simple_scanner/output/history.sqlite3
+            python - <<'PY'
+          import sqlite3
+          c=sqlite3.connect("simple_scanner/output/history.sqlite3")
+          assert c.execute("PRAGMA integrity_check").fetchone()[0]=="ok"
+          count=c.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
+          open("simple_scanner/output/history_baseline.txt","w").write(str(count))
+          assert count > 0, "Existing history branch has no snapshots; refusing silent reset"
+          print("RESTORED_SNAPSHOTS",count)
+          PY
+          elif [ "$remote_status" -eq 2 ]; then
+            echo 0 > simple_scanner/output/history_baseline.txt
+            echo "NO_SIMPLE_HISTORY: first run starts a new paper-only ledger"
+          else
+            echo "HISTORY_REMOTE_CHECK_FAILED: status=$remote_status" >&2
+            exit 1
+          fi
+      - name: Run fresh public Kraken scan
+        run: python simple_scanner/scan.py
+      - name: Record paper-only snapshot and validate SQLite
+        run: python simple_scanner/history.py
+      - name: Validate freshness and result shape
+        run: |
+          python - <<'PY'
+          import datetime as dt,json
+          r=json.load(open("simple_scanner/output/latest.json"))
+          age=(dt.datetime.now(dt.timezone.utc)-dt.datetime.fromisoformat(r["completed_at"])).total_seconds()
+          assert 0<=age<180 and r["matched_tickers"]>=max(50,int(r["universe"]*.8)) and r["validated_watch"]>0
+          assert r["buy_approved"] is False
+          import json as _json
+          h=_json.load(open("simple_scanner/output/learning.json"))
+          baseline=int(open("simple_scanner/output/history_baseline.txt").read())
+          assert h["snapshots"]>=baseline and h["snapshots"]>=r["validated_watch"] and h["buy_approved"] is False
+          assert h["history_db_integrity"]=="ok"
+          assert h["snapshots"] > baseline, "New scan must append at least one snapshot"
+          if baseline > 0:
+            print("CROSS_RUN_RESTORE_AND_APPEND_VERIFIED",baseline,h["snapshots"])
+          print("HISTORY_NONREGRESSION",baseline,h["snapshots"])
+          assert all(c.get("research_rank")==i for i,c in enumerate(r["watch"],1)), "Research ranks must be sequential"
+          verified=[c for c in r["watch"] if c.get("status")=="WATCH_RESEARCH_ONLY"]
+          assert all(c.get("early_signal_score") is not None for c in verified), "Verified candidates must have early signal score"
+          assert all(c.get("early_signal_score") is None for c in r["watch"] if c.get("status")!="WATCH_RESEARCH_ONLY"), "Unverified candidates must not have early signal score"
+          assert [c["early_signal_score"] for c in verified]==sorted([c["early_signal_score"] for c in verified],reverse=True), "Verified candidates not ranked by early signal"
+          assert h["evaluation"]=="FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE"
+          assert h["market_price_coverage"]>=int(r["matched_tickers"]*.95), "Insufficient full-market price coverage"
+          assert h["model_updates"]=="DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"
+          print("FRESH_SCAN_VERIFIED",r["ticker_pairs"],r["universe"],r["status"])
+          PY
+      - name: Print concise research results
+        if: success()
+        run: |
+          python -c 'import json; r=json.load(open("simple_scanner/output/latest.json")); h=json.load(open("simple_scanner/output/learning.json")); print("SCAN",r["completed_at"],"PAIRS",r["matched_tickers"],"WATCH",r["validated_watch"],"OUTCOMES",h["outcomes"],"COVERAGE",h["forward_horizon_coverage"]); [print(c["research_rank"],c["symbol"],c["early_signal_score"]) for c in r["watch"]]'
+      - name: Publish durable history after successful scan
+        if: success() && ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'simplified-scanner-recovery-20261011') || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/simplified-scanner-recovery-20261011')))
+        run: |
+          set -euo pipefail
+          cp simple_scanner/output/history.sqlite3 /tmp/simple-history.sqlite3
+          cp simple_scanner/output/latest.json /tmp/simple-latest.json
+          cp simple_scanner/output/learning.json /tmp/simple-learning.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git show-ref --verify --quiet refs/remotes/origin/simple-history; then
+            git checkout -B simple-history origin/simple-history
+          else
+            git checkout --orphan simple-history
+            git rm -rf --ignore-unmatch . >/dev/null || true
+          fi
+          cp /tmp/simple-history.sqlite3 history.sqlite3
+          cp /tmp/simple-latest.json latest.json
+          cp /tmp/simple-learning.json learning.json
+          git add history.sqlite3 latest.json learning.json
+          git diff --cached --check
+          if ! git diff --cached --quiet; then
+            git commit -m "Update paper-only scan history"
+          else
+            echo "NO_NEW_HISTORY_COMMIT"
+          fi
+          git push origin HEAD:refs/heads/simple-history
+          git fetch origin refs/heads/simple-history:refs/remotes/origin/simple-history
+          test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/simple-history)"
+          git show refs/remotes/origin/simple-history:history.sqlite3 > /tmp/simple-history-remote.sqlite3
+          git show refs/remotes/origin/simple-history:latest.json > /tmp/simple-latest-remote.json
+          git show refs/remotes/origin/simple-history:learning.json > /tmp/simple-learning-remote.json
+          cmp /tmp/simple-latest.json /tmp/simple-latest-remote.json
+          cmp /tmp/simple-learning.json /tmp/simple-learning-remote.json
+          python - <<'PY'
+          import sqlite3
+          local=sqlite3.connect("/tmp/simple-history.sqlite3")
+          remote=sqlite3.connect("/tmp/simple-history-remote.sqlite3")
+          assert remote.execute("PRAGMA integrity_check").fetchone()[0]=="ok"
+          for table in ("snapshots","outcomes"):
+            assert remote.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]==local.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+          print("DURABLE_HISTORY_REMOTE_VERIFIED")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kraken-simple-result
+          path: |
+            simple_scanner/output/latest.json
+            simple_scanner/output/learning.json
+            simple_scanner/output/history.sqlite3
+          if-no-files-found: warn
