@@ -1,0 +1,41 @@
+name: Kraken Recovery Continuous QA
+on:
+  push:
+    branches:
+      - simplified-scanner-recovery-20261011
+    paths:
+      - 'simple_scanner/**'
+      - '.github/workflows/kraken-recovery-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: kraken-recovery-qa-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile all scanner modules
+        run: python -m compileall -q simple_scanner
+      - name: Execute full isolated regression suite
+        run: python -m unittest discover -s simple_scanner -p 'test_*.py' -v
+      - name: Validate scanner contract without market calls
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import ast
+          scan=Path("simple_scanner/scan.py").read_text()
+          history=Path("simple_scanner/history.py").read_text()
+          ast.parse(scan); ast.parse(history)
+          assert '"buy_approved":False' in scan
+          assert '"buy_approved":False' in history
+          assert "market_observations" in history
+          assert "HORIZONS = (1, 3, 6, 24)" in history
+          print("RECOVERY_QA_CONTRACT_PASS")
+          PY
