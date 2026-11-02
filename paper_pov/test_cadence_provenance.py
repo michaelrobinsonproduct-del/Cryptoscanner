@@ -275,6 +275,17 @@ class CadenceProvenanceTests(unittest.TestCase):
         self.assertEqual(result["verified_native_count"], 0)
         self.assertEqual(result["unverified_or_ambiguous_count"], 1)
 
+    def test_provenance_log_marker_order_and_temporal_span_fail_closed(self):
+        original = log().splitlines()
+        self.assertIsNotNone(provenance(log()))
+        self.assertIsNone(provenance("\n".join(reversed(original)) + "\n"))
+        stale = original.copy()
+        stale[2] = stale[2].replace("19:10:06Z", "19:20:06Z")
+        self.assertIsNone(provenance("\n".join(stale) + "\n"))
+        malformed = original.copy()
+        malformed[1] = malformed[1].replace("2026-11-01T", "not-a-timestamp")
+        self.assertIsNone(provenance("\n".join(malformed) + "\n"))
+
     def test_no_false_ledger_or_trade_claims(self):
         result = self.check()
         self.assertNotIn("ledger_verified", result)
