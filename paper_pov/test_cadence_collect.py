@@ -421,6 +421,41 @@ class CadenceCollectorTests(unittest.TestCase):
         self.assertEqual(proof["authenticated_writer_job_count"], 1)
         self.assertFalse(proof["global_exclusivity_verified"])
 
+    def test_incomplete_adjacent_writer_run_blocks_clean_no_overlap_claim(self):
+        get, _ = fixture()
+        def altered(path, text=False):
+            response = get(path, text)
+            if "/runs/2/jobs?" in path:
+                response["jobs"][0]["conclusion"] = "failure"
+            return response
+        proof = collect(altered, "owner/repo", NOW)["writer_overlap_evidence"]
+        self.assertEqual(proof["status"], "UNVERIFIED_INCOMPLETE_WRITER_COVERAGE")
+        self.assertEqual(proof["authenticated_writer_job_count"], 1)
+        self.assertEqual(proof["incomplete_writer_run_ids"], [2])
+        self.assertFalse(proof["global_exclusivity_verified"])
+
+    def test_reused_canonical_job_id_never_authenticates_distinct_runs(self):
+        from paper_pov.cadence_collect import canonical_writer_overlap_evidence
+        report = {"runs": [
+            {"run_id": 1, "classification": "VERIFIED_NATIVE_SCHEDULE",
+             "created_at": "2026-11-02T03:10:01Z"},
+            {"run_id": 2, "classification": "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE",
+             "created_at": "2026-11-02T03:10:01Z"}]}
+        second = dict(job(2), id=job(1)["id"],
+                      started_at="2026-11-02T03:11:01Z",
+                      completed_at="2026-11-02T03:12:00Z")
+        proof = canonical_writer_overlap_evidence(report, {"1": [job(1)], "2": [second]})
+        self.assertEqual(proof["status"], "UNVERIFIED_REUSED_WRITER_JOB_ID")
+        self.assertFalse(proof["global_exclusivity_verified"])
+
+    def test_incoherent_writer_job_interval_cannot_claim_no_overlap(self):
+        from paper_pov.cadence_collect import canonical_writer_overlap_evidence
+        report = {"runs": [{"run_id": 1, "classification": "VERIFIED_NATIVE_SCHEDULE",
+                            "created_at": "2026-11-02T03:10:01Z"}]}
+        invalid = dict(job(1), started_at="2026-11-02T03:09:00Z")
+        proof = canonical_writer_overlap_evidence(report, {"1": [invalid]})
+        self.assertEqual(proof["status"], "UNVERIFIED_INVALID_WRITER_INTERVAL")
+
     def test_no_writer_job_abstains_not_fabricates_native_success(self):
         get, _ = fixture(jobs=False)
         result = collect(get, "owner/repo", NOW)

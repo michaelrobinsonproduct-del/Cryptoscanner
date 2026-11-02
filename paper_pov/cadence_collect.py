@@ -205,16 +205,24 @@ def current_remote_ref_evidence(get, repo, evidence, runs, report=None):
 
 
 def canonical_writer_overlap_evidence(report, jobs):
-    """Compare independently authenticated canonical writer job intervals only.
+    """Bound authenticated canonical job overlap without assuming complete coverage.
 
-    An observed overlap fails the bounded sample. A nonoverlapping sample
-    does NOT prove global exclusivity or absence of an external writer.
+    A missing/failed/ambiguous adjacent writer attempt prevents a clean
+    no-overlap claim. Reused GitHub job IDs invalidate independent identity.
+    Even complete bounded coverage never proves external writer isolation.
     """
-    intervals = []
-    for row in report.get("runs", []):
-        if row.get("classification") not in (
-                "VERIFIED_NATIVE_SCHEDULE",
-                "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE"):
+    verified = {"VERIFIED_NATIVE_SCHEDULE",
+                "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE"}
+    rows = report.get("runs", [])
+    if not isinstance(rows, list) or not isinstance(jobs, dict):
+        return {"status": "UNVERIFIED_INVALID_JOB_COVERAGE",
+                "global_exclusivity_verified": False}
+    incomplete = sorted({r["run_id"] for r in rows
+                         if isinstance(r, dict) and type(r.get("run_id")) is int
+                         and r.get("classification") not in verified})
+    intervals, seen_job_ids = [], set()
+    for row in rows:
+        if not isinstance(row, dict) or row.get("classification") not in verified:
             continue
         rid = row["run_id"]
         matching = [j for j in jobs.get(str(rid), [])
@@ -223,11 +231,21 @@ def canonical_writer_overlap_evidence(report, jobs):
         if len(matching) != 1 or matching[0].get("conclusion") != "success":
             return {"status": "UNVERIFIED_INCONSISTENT_WRITER_JOB",
                     "global_exclusivity_verified": False}
+        writer = matching[0]
+        job_id = writer.get("id")
+        if type(job_id) is not int or job_id <= 0:
+            return {"status": "UNVERIFIED_INVALID_WRITER_JOB_ID",
+                    "global_exclusivity_verified": False}
+        if job_id in seen_job_ids:
+            return {"status": "UNVERIFIED_REUSED_WRITER_JOB_ID",
+                    "global_exclusivity_verified": False}
+        seen_job_ids.add(job_id)
         try:
-            start = timestamp(matching[0]["started_at"])
-            end = timestamp(matching[0]["completed_at"])
-            if start >= end:
-                raise ValueError("empty writer interval")
+            start = timestamp(writer["started_at"])
+            end = timestamp(writer["completed_at"])
+            created = timestamp(row["created_at"])
+            if writer.get("status") != "completed" or not created <= start < end:
+                raise ValueError("incoherent writer interval")
         except (KeyError, TypeError, ValueError, OverflowError):
             return {"status": "UNVERIFIED_INVALID_WRITER_INTERVAL",
                     "global_exclusivity_verified": False}
@@ -244,9 +262,12 @@ def canonical_writer_overlap_evidence(report, jobs):
                                      (min(end, next_end) -
                                       max(start, next_start)).total_seconds(), 3)})
     return {"status": ("FAILED_OVERLAPPING_CANONICAL_WRITER_JOBS" if overlaps
+                       else "UNVERIFIED_INCOMPLETE_WRITER_COVERAGE" if incomplete
                        else "NO_OVERLAP_OBSERVED_BOUNDED_SAMPLE" if len(intervals) >= 2
                        else "UNVERIFIED_INSUFFICIENT_AUTHENTICATED_JOBS"),
             "authenticated_writer_job_count": len(intervals),
+            "incomplete_writer_run_count": len(incomplete),
+            "incomplete_writer_run_ids": incomplete,
             "overlap_pair_count": len(overlaps),
             "overlaps": overlaps,
             "global_exclusivity_verified": False}
