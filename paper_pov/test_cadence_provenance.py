@@ -6,6 +6,7 @@ SHA = "a" * 40
 
 def run(rid=1, when="2026-11-01T19:10:01Z", event="schedule", sha=SHA):
     return {"id": rid, "created_at": when, "event": event, "head_sha": sha,
+            "path": ".github/workflows/paper-pipeline.yml", "head_branch": "main",
             "status": "completed", "conclusion": "success"}
 
 def log(event="schedule", cron="39 * * * *", sha=SHA):
@@ -63,6 +64,50 @@ class CadenceProvenanceTests(unittest.TestCase):
 
     def test_future_run_not_counted(self):
         self.assertEqual(self.check([run(1, "2026-11-03T00:00:00Z")])["runs"][0]["classification"], "INVALID_RUN_METADATA")
+
+
+    def test_foreign_workflow_markers_cannot_spoof_paper_writer(self):
+        for changed in ({"path": ".github/workflows/other.yml"},
+                        {"head_branch": "research-branch"},
+                        {"path": None}, {"head_branch": None}):
+            with self.subTest(changed=changed):
+                candidate = {**run(), **changed}
+                result = self.check([candidate])
+                self.assertEqual(result["verified_native_count"], 0)
+                self.assertEqual(result["runs"][0]["classification"], "WRONG_WORKFLOW_OR_REF")
+
+    def test_failed_native_is_attempt_not_successful_scan(self):
+        candidate = {**run(), "conclusion": "failure"}
+        result = self.check([candidate])
+        self.assertEqual(result["verified_native_count"], 0)
+        self.assertEqual(result["verified_native_unsuccessful_count"], 1)
+        self.assertEqual(result["runs"][0]["classification"], "VERIFIED_NATIVE_SCHEDULE_UNSUCCESSFUL")
+        self.assertEqual(result["runs"][0]["minimum_lateness_seconds"], 1861)
+        self.assertFalse(result["runs"][0]["durable_ledger_verified"])
+
+    def test_failed_dispatch_is_attempt_not_successful_scan(self):
+        candidate = {**run(event="workflow_dispatch"), "conclusion": "cancelled"}
+        result = self.check([candidate], {"1": log(event="workflow_dispatch", cron="MANUAL_DISPATCH")})
+        self.assertEqual(result["verified_dispatch_count"], 0)
+        self.assertEqual(result["verified_dispatch_unsuccessful_count"], 1)
+        self.assertEqual(result["runs"][0]["classification"], "VERIFIED_WORKFLOW_DISPATCH_UNSUCCESSFUL")
+
+    def test_incomplete_or_unknown_outcome_never_claimed_successful(self):
+        for changed, expected in (({"status": "in_progress", "conclusion": None}, "INCOMPLETE_WORKFLOW"),
+                                  ({"status": "completed", "conclusion": None}, "UNKNOWN_WORKFLOW_CONCLUSION"),
+                                  ({"status": "completed", "conclusion": "skipped"}, "UNKNOWN_WORKFLOW_CONCLUSION")):
+            with self.subTest(changed=changed):
+                result = self.check([{**run(), **changed}])
+                self.assertEqual(result["verified_native_count"], 0)
+                self.assertEqual(result["runs"][0]["classification"], expected)
+
+    def test_same_source_dispatch_and_schedule_does_not_prove_manual_parity(self):
+        rows = [run(), run(2, "2026-11-01T19:40:01Z", event="workflow_dispatch")]
+        logs = {"1": log(), "2": log(event="workflow_dispatch", cron="MANUAL_DISPATCH")}
+        result = self.check(rows, logs)
+        self.assertEqual((result["verified_native_count"], result["verified_dispatch_count"]), (1, 1))
+        self.assertNotIn("manual_parity_verified", result)
+        self.assertNotIn("ledger_verified", result)
 
     def test_no_false_ledger_or_trade_claims(self):
         result = self.check()
