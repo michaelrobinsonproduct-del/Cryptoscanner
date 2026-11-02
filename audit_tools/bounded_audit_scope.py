@@ -45,7 +45,7 @@ def source_identity(case, pr_row, payload):
     """Verify GitHub Contents GET at exact PR head, including raw bytes and blob identity."""
     if not pr_row or not re.fullmatch(r"[0-9a-f]{40}", str(pr_row.get("head_sha", ""))):
         return {"status": "MISSING_OR_INVALID_PR_HEAD"}
-    if pr_row["head_sha"] != case["head_sha"]:
+    if pr_row["head_sha"] != case["expected_head_sha"]:
         return {"status": "PR_HEAD_DRIFT", "actual_head_sha": pr_row["head_sha"]}
     if not isinstance(payload, dict) or payload.get("encoding") != "base64":
         return {"status": "UNVERIFIED_SOURCE_RESPONSE"}
