@@ -586,5 +586,97 @@ class EpisodeTests(unittest.TestCase):
             self.assertLessEqual(d["negative_20"]["n"],d["negative_30"]["n"])
 
 
+    def test_first_qualifying_entry_capture_is_not_later_watch(self):
+        cases=[{"pair":"AAAUSD","entry_at":iso(m),"decision_at":iso(m),
+                "watch":watch,"lagged_returns":{"60m":None},
+                "peak_observed_return":0.35} for m,watch in ((0,False),(30,True))]
+        episodes=cluster_episodes(cases,1)
+        self.assertEqual(len(episodes),1)
+        self.assertTrue(episodes[0]["watch_captured"])
+        self.assertFalse(episodes[0]["first_entry_watch"])
+        self.assertEqual(episodes[0]["first_watch_decision_at"],iso(30))
+        cases[0]["watch"]=True
+        episodes=cluster_episodes(cases,1)
+        self.assertTrue(episodes[0]["first_entry_watch"])
+        self.assertEqual(episodes[0]["first_watch_decision_at"],iso(0))
+
+    def test_episode_first_watch_accounting_preserves_any_watch_recall(self):
+        state=fixture()
+        state["predictions"].append({"run_id":"30","pair":"AAAUSD"})
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        self.assertGreater(one["watch_captured_episodes"],0)
+        self.assertEqual(one["watch_first_entry_episodes_30"],1)
+        self.assertEqual(one["watch_late_only_episodes_30"],0)
+        self.assertEqual(one["watch_captured_episodes"],
+                         one["watch_first_entry_episodes_30"]+one["watch_late_only_episodes_30"])
+        self.assertLessEqual(one["watch_first_entry_episodes_20"],
+                             one["watch_captured_episodes_20"])
+
+
+    def test_gap_reasons_partition_all_abstentions(self):
+        with patch("paper_pov.ledger.verify",return_value=None):
+            report=analyze(fixture())
+        keys=("abstain_conflicting_quotes","abstain_future_entry_quotes",
+              "abstain_no_future_observation","abstain_missing_horizon_anchor",
+              "abstain_stale_entry","abstain_discontinuous_path")
+        for horizon in report["horizons"].values():
+            c=horizon["coverage"]
+            self.assertEqual(c["abstain_gap"],sum(c[k] for k in keys))
+            self.assertEqual(c["eligible"],c["matured"]+c["immature"]+c["abstain_gap"])
+
+    def test_missing_anchor_and_stale_entry_are_not_false_positives(self):
+        state=fixture()
+        # Remove the exact 60m maturity anchor and the 90m fallback for AAA.
+        state["observations"]=[o for o in state["observations"] if not
+            (o["pair"]=="AAAUSD" and o["run_id"] in ("60","90"))]
+        # BBB's run-0 quote predates the decision by more than 45 minutes.
+        for o in state["observations"]:
+            if o["pair"]=="BBBUSD" and o["run_id"]=="0":
+                o["at"]=iso(-50)
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        c=one["coverage"]
+        self.assertGreater(c["abstain_missing_horizon_anchor"],0)
+        self.assertGreater(c["abstain_stale_entry"],0)
+        self.assertEqual(c["abstain_gap"],sum(c[k] for k in (
+            "abstain_conflicting_quotes","abstain_future_entry_quotes",
+            "abstain_no_future_observation","abstain_missing_horizon_anchor",
+            "abstain_stale_entry","abstain_discontinuous_path")))
+
+
+    def test_watch_gap_reasons_are_subset_of_market_gap_reasons(self):
+        state=fixture()
+        state["predictions"].extend([
+            {"run_id":"0","pair":"AAAUSD"},
+            {"run_id":"0","pair":"BBBUSD"}])
+        state["observations"]=[o for o in state["observations"] if not
+            (o["pair"]=="AAAUSD" and o["run_id"] in ("60","90"))]
+        for o in state["observations"]:
+            if o["pair"]=="BBBUSD" and o["run_id"]=="0":
+                o["at"]=iso(-50)
+        with patch("paper_pov.ledger.verify",return_value=None):
+            c=analyze(state)["horizons"]["1"]["coverage"]
+        keys=("abstain_conflicting_quotes","abstain_future_entry_quotes",
+              "abstain_no_future_observation","abstain_missing_horizon_anchor",
+              "abstain_stale_entry","abstain_discontinuous_path")
+        self.assertEqual(c["watch_abstain_gap"],sum(c["watch_"+k] for k in keys))
+        self.assertGreater(c["watch_abstain_missing_horizon_anchor"],0)
+        self.assertGreater(c["watch_abstain_stale_entry"],0)
+        for key in keys:
+            self.assertLessEqual(c["watch_"+key],c[key])
+
+    def test_late_watch_cannot_claim_first_entry_episode_capture(self):
+        state=fixture()
+        # AAA's first qualifying 1h entry is before the later WATCH.
+        state["predictions"].append({"run_id":"60","pair":"AAAUSD"})
+        with patch("paper_pov.ledger.verify",return_value=None):
+            row=analyze(state)["horizons"]["1"]
+        self.assertGreater(row["watch_captured_episodes"],0)
+        self.assertEqual(row["watch_first_entry_episodes_30"],0)
+        self.assertGreater(row["watch_late_only_episodes_30"],0)
+        self.assertEqual(row["watch_captured_episodes"],
+                         row["watch_first_entry_episodes_30"]+row["watch_late_only_episodes_30"])
+
 if __name__=="__main__":
     unittest.main()
