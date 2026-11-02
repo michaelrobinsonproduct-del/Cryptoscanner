@@ -50,11 +50,15 @@ def evaluate(state):
                     row["immature"] += 1
                     continue
                 end = bisect.bisect_right(times, target + MAX_GAP, lo=i+1)
+                # A quote can precede the PAPER decision by up to three minutes.
+                # Never label a pre-decision high as a future surge.
                 future = [(t, p) for t, p, _ in series[i+1:end]
-                          if at < t]
+                          if start < t]
                 before = [(t, p) for t, p in future if t <= target]
                 anchors = [(t, p) for t, p in future if target <= t <= target + MAX_GAP]
-                timeline = [at] + [t for t, _ in before]
+                # Continuity is measured from the immutable decision time,
+                # matching the production PAPER outcome contract.
+                timeline = [start] + [t for t, _ in before]
                 if (not before or not anchors or start - at > MAX_GAP
                     or any(b-a > MAX_GAP for a,b in zip(timeline,timeline[1:]))
                     or anchors[0][0]-timeline[-1] > MAX_GAP):
