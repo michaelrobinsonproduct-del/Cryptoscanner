@@ -35,12 +35,17 @@ jobs:
       - name: Reproduce point-in-time regime and interaction experiment
         run: |
           python historical/cross_sectional_regime_discovery.py /tmp/strict-kraken-training.zip --compact --output /tmp/cross_sectional_results.json
+          python historical/cross_sectional_regime_discovery.py /tmp/strict-kraken-training.zip --output /tmp/cross_sectional_full.json
           python -m json.tool /tmp/cross_sectional_results.json > /dev/null
-          sha256sum /tmp/cross_sectional_results.json
+          python -m json.tool /tmp/cross_sectional_full.json > /dev/null
+          sha256sum /tmp/cross_sectional_results.json /tmp/cross_sectional_full.json
           cat /tmp/cross_sectional_results.json
+          python -c 'import json; r=json.load(open("/tmp/cross_sectional_full.json")); print("ALL_SPLITS_TOP12",json.dumps({n:{s:{k:v[s][k] for k in ("picks","hits20","hits30","false_positives30","positive_pairdays","cooldown24h_hits30")} for s in ("train","validation","test")} for n,v in r["top12"].items()},sort_keys=True))'
           echo 'STRICT_CROSS_SECTIONAL_EXPERIMENT_COMPLETE'
       - uses: actions/upload-artifact@v4
         with:
           name: cross-sectional-research-${{ github.run_id }}
-          path: /tmp/cross_sectional_results.json
+          path: |
+            /tmp/cross_sectional_results.json
+            /tmp/cross_sectional_full.json
           retention-days: 90
