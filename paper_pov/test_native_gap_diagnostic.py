@@ -96,6 +96,66 @@ class NativeGapDiagnosticTests(unittest.TestCase):
             "marker_readback_verified": False, "dispatch_http_accepted": True}])
         self.assertEqual(d["dispatches"][0]["classification"], "UNVERIFIED_DISPATCH_ORIGIN")
 
+    def test_recovery_foreign_or_rerun_dispatch_abstains(self):
+        for changes in ({"path": ".github/workflows/other.yml"},
+                        {"head_branch": "other"}, {"run_attempt": 2},
+                        {"head_sha": "bad"}, {"id": True}):
+            with self.subTest(changes=changes):
+                d = recovery_candidates(
+                    [run(1, "2026-11-02T16:45:08Z", "workflow_dispatch", **changes)], [])
+                self.assertEqual(d["status"], "UNVERIFIED_INVALID_CORRELATION_INPUT")
+
+    def test_recovery_duplicate_dispatch_identity_abstains(self):
+        r = run(1, "2026-11-02T16:45:08Z", "workflow_dispatch")
+        self.assertEqual(recovery_candidates([r, r], [])["status"],
+                         "UNVERIFIED_INVALID_CORRELATION_INPUT")
+
+    def test_recovery_duplicate_authenticated_controller_id_abstains(self):
+        a = {"controller_run_id": 2, "accepted_at": "2026-11-02T16:45:09Z",
+             "marker_readback_verified": True, "dispatch_http_accepted": True}
+        r = run(1, "2026-11-02T16:45:08Z", "workflow_dispatch")
+        self.assertEqual(recovery_candidates([r], [a, dict(a)])["status"],
+                         "UNVERIFIED_INVALID_CORRELATION_INPUT")
+
+    def test_recovery_before_controller_acceptance_beyond_clock_skew_not_attributed(self):
+        a = {"controller_run_id": 2, "accepted_at": "2026-11-02T16:45:30Z",
+             "marker_readback_verified": True, "dispatch_http_accepted": True}
+        r = run(1, "2026-11-02T16:45:08Z", "workflow_dispatch")
+        d = recovery_candidates([r], [a])
+        self.assertEqual(d["dispatches"][0]["classification"], "UNVERIFIED_DISPATCH_ORIGIN")
+
+    def test_recovery_outside_bounded_lag_not_attributed(self):
+        a = {"controller_run_id": 2, "accepted_at": "2026-11-02T16:40:00Z",
+             "marker_readback_verified": True, "dispatch_http_accepted": True}
+        r = run(1, "2026-11-02T16:45:08Z", "workflow_dispatch")
+        d = recovery_candidates([r], [a])
+        self.assertEqual(d["dispatches"][0]["classification"], "UNVERIFIED_DISPATCH_ORIGIN")
+
+    def test_recovery_one_controller_matching_two_dispatches_is_ambiguous(self):
+        a = {"controller_run_id": 2, "accepted_at": "2026-11-02T16:45:09Z",
+             "marker_readback_verified": True, "dispatch_http_accepted": True}
+        runs = [run(1, "2026-11-02T16:45:08Z", "workflow_dispatch"),
+                run(3, "2026-11-02T16:45:10Z", "workflow_dispatch")]
+        d = recovery_candidates(runs, [a])
+        self.assertEqual(len(d["dispatches"]), 2)
+        self.assertTrue(all(x["classification"] == "AMBIGUOUS_RECOVERY_CORRELATION"
+                            for x in d["dispatches"]))
+
+    def test_recovery_optional_source_mismatch_never_attributed(self):
+        a = {"controller_run_id": 2, "accepted_at": "2026-11-02T16:45:09Z",
+             "marker_readback_verified": True, "dispatch_http_accepted": True,
+             "source_sha": "a" * 40}
+        r = run(1, "2026-11-02T16:45:08Z", "workflow_dispatch")
+        d = recovery_candidates([r], [a])
+        self.assertEqual(d["dispatches"][0]["classification"], "UNVERIFIED_DISPATCH_ORIGIN")
+
+    def test_recovery_bad_authenticated_controller_time_abstains(self):
+        a = {"controller_run_id": 2, "accepted_at": "not-a-timestamp",
+             "marker_readback_verified": True, "dispatch_http_accepted": True}
+        r = run(1, "2026-11-02T16:45:08Z", "workflow_dispatch")
+        self.assertEqual(recovery_candidates([r], [a])["status"],
+                         "UNVERIFIED_INVALID_CORRELATION_INPUT")
+
 
 if __name__ == "__main__":
     unittest.main()

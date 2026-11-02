@@ -92,39 +92,80 @@ def diagnose(runs, checked_at, lookback_hours=6, grace_minutes=15,
 
 
 def recovery_candidates(dispatch_runs, controller_attempts, max_gap_seconds=90):
-    """Correlate independently supplied controller logs; never assert causality.
+    """Bound timing candidates, never turn a dispatch into native/owner proof.
 
-    controller_attempts must be separately authenticated against GitHub job
-    logs and issue-marker readback; a close timestamp alone is insufficient.
+    Only a one-to-one, narrowly time-compatible *candidate* is reported.
+    GitHub does not expose a controller->dispatch causal identifier here.
     """
+    base = {"status": "UNVERIFIED_INVALID_CORRELATION_INPUT"}
     if not isinstance(dispatch_runs, list) or not isinstance(controller_attempts, list):
-        return {"status": "UNVERIFIED_INVALID_CORRELATION_INPUT"}
+        return base
     if type(max_gap_seconds) is not int or not 1 <= max_gap_seconds <= 300:
-        return {"status": "UNVERIFIED_INVALID_CORRELATION_INPUT"}
+        return base
     try:
-        output = []
+        seen_dispatch, seen_controller = set(), set()
+        valid_controllers = []
+        for attempt in controller_attempts:
+            if not isinstance(attempt, dict):
+                raise ValueError("invalid controller attempt")
+            # An unauthenticated controller marker is not a recovery request.
+            if (attempt.get("marker_readback_verified") is not True or
+                    attempt.get("dispatch_http_accepted") is not True):
+                continue
+            cid = attempt.get("controller_run_id")
+            if type(cid) is not int or cid <= 0 or cid in seen_controller:
+                raise ValueError("ambiguous controller identity")
+            seen_controller.add(cid)
+            accepted = timestamp(attempt["accepted_at"])
+            source = attempt.get("source_sha")
+            if source is not None and (not isinstance(source, str) or
+                    len(source) != 40 or
+                    any(c not in "0123456789abcdef" for c in source)):
+                raise ValueError("invalid optional controller source")
+            valid_controllers.append((cid, accepted, source))
+        provisional = []
         for run in dispatch_runs:
             if (not isinstance(run, dict) or run.get("event") != "workflow_dispatch" or
-                    type(run.get("id")) is not int):
-                raise ValueError("invalid dispatch")
+                    run.get("path") != WRITER_WORKFLOW or
+                    run.get("head_branch") != WRITER_BRANCH or
+                    type(run.get("run_attempt")) is not int or
+                    run["run_attempt"] != 1 or
+                    type(run.get("id")) is not int or run["id"] <= 0 or
+                    run["id"] in seen_dispatch or
+                    not isinstance(run.get("head_sha"), str) or
+                    len(run["head_sha"]) != 40 or
+                    any(c not in "0123456789abcdef" for c in run["head_sha"])):
+                raise ValueError("invalid or duplicate dispatch identity")
+            seen_dispatch.add(run["id"])
             when = timestamp(run["created_at"])
             matches = []
-            for attempt in controller_attempts:
-                if (not isinstance(attempt, dict) or
-                        type(attempt.get("controller_run_id")) is not int or
-                        attempt.get("marker_readback_verified") is not True or
-                        attempt.get("dispatch_http_accepted") is not True):
+            for cid, accepted, source in valid_controllers:
+                if source is not None and source != run["head_sha"]:
                     continue
-                lag = (when - timestamp(attempt["accepted_at"])).total_seconds()
-                if abs(lag) <= max_gap_seconds:
-                    matches.append(attempt["controller_run_id"])
-            output.append({"dispatch_run_id": run["id"],
-                           "candidate_controller_run_ids": sorted(set(matches)),
-                           "classification": ("AMBIGUOUS_RECOVERY_CORRELATION" if len(set(matches)) > 1
-                                              else "RECOVERY_TIMING_CANDIDATE_NOT_CAUSAL" if matches
-                                              else "UNVERIFIED_DISPATCH_ORIGIN"),
-                           "owner_manual_verified": False,
-                           "controller_causality_verified": False})
+                lag = (when - accepted).total_seconds()
+                # GitHub creation/HTTP logging may differ by a few seconds.
+                # A dispatch long BEFORE acceptance cannot be attributed.
+                if -5 <= lag <= max_gap_seconds:
+                    matches.append(cid)
+            provisional.append((run["id"], sorted(set(matches))))
+        # A single accepted controller request matching multiple writer runs
+        # cannot establish one-to-one recovery provenance.
+        controller_uses = {}
+        for _, matches in provisional:
+            for cid in matches:
+                controller_uses[cid] = controller_uses.get(cid, 0) + 1
+        output = []
+        for rid, matches in provisional:
+            ambiguous = (len(matches) > 1 or
+                         any(controller_uses[cid] > 1 for cid in matches))
+            output.append({
+                "dispatch_run_id": rid,
+                "candidate_controller_run_ids": matches,
+                "classification": ("AMBIGUOUS_RECOVERY_CORRELATION" if ambiguous
+                                   else "RECOVERY_TIMING_CANDIDATE_NOT_CAUSAL" if matches
+                                   else "UNVERIFIED_DISPATCH_ORIGIN"),
+                "owner_manual_verified": False,
+                "controller_causality_verified": False})
         return {"status": "CANDIDATES_ONLY_NOT_CAUSAL", "dispatches": output}
     except (ValueError, TypeError, KeyError, OverflowError, AttributeError):
-        return {"status": "UNVERIFIED_INVALID_CORRELATION_INPUT"}
+        return base
