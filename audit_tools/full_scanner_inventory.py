@@ -143,6 +143,12 @@ def build_consumer_graph(workflows, runtime, checkout_sha, main_sha):
         if w["ledger_ref"]:
             edge(source,"github-ref:paper-proof-ledger","mentions_ledger_ref",
                  "audit_checkout:"+checkout_sha)
+        for ref in w.get("branch_references",{}).get("checkout_refs",[]):
+            edge(source,"github-ref:"+ref,"explicit_checkout_ref",
+                 "audit_checkout:"+checkout_sha)
+        for ref in w.get("branch_references",{}).get("branch_ref_mentions",[]):
+            edge(source,"github-ref:"+ref,"static_branch_ref_mention",
+                 "audit_checkout:"+checkout_sha)
     sb=runtime.get("supabase",{})
     for item in sb.get("sample_source_consumers",[])+sb.get("source_review",{}).get("additional_direct_table_consumers",[]):
         source="supabase-edge:"+item["function"]
@@ -174,6 +180,39 @@ def build_consumer_graph(workflows, runtime, checkout_sha, main_sha):
             "cleanup_authorized":False}
 
 
+
+def workflow_branch_references(source):
+    """Static checkout and durable branch refs, not live invocation evidence."""
+    if not isinstance(source,str):
+        raise ValueError("Workflow source must be text")
+    lines=source.splitlines()
+    checkouts=set()
+    unresolved=[]
+    for i,line in enumerate(lines):
+        match=re.match(r"^(\s*)-\s+uses:\s*actions/checkout@[^\s#]+",line)
+        if not match:
+            continue
+        indent=len(match.group(1))
+        for following in lines[i+1:]:
+            if re.match(r"^\s*-\s+(?:uses|name|run):",following) and len(following)-len(following.lstrip())<=indent:
+                break
+            ref=re.match(r"^\s+ref:\s*(.*?)\s*(?:#.*)?$",following)
+            if ref:
+                value=ref.group(1).strip().strip("'\"")
+                if "$" in value or not re.fullmatch(r"[A-Za-z0-9._/-]+",value):
+                    unresolved.append(value)
+                else:
+                    checkouts.add(value)
+                break
+    mentions=set()
+    for line in lines:
+        if not line.lstrip().startswith("#"):
+            mentions.update(re.findall(r"refs/heads/([A-Za-z0-9._/-]+)",line))
+    return {"checkout_refs":sorted(checkouts),
+            "branch_ref_mentions":sorted(mentions),
+            "unresolved_checkout_refs":sorted(set(unresolved))}
+
+
 def main():
     tracked=cmd("git","ls-files")
     if not tracked["ok"]:
@@ -198,7 +237,8 @@ def main():
           "writes_contents":bool(re.search(r"contents:\s*write",s)),
           "ledger_ref":"paper-proof-ledger" in s,
           "python_modules":sorted(set(re.findall(r"python\s+-m\s+([A-Za-z0-9_.]+)",s))),
-          "scripts":sorted(set(re.findall(r"(?:python|bun|node)\s+([A-Za-z0-9_./-]+\.(?:py|ts|mjs))",s)))})
+          "scripts":sorted(set(re.findall(r"(?:python|bun|node)\s+([A-Za-z0-9_./-]+\.(?:py|ts|mjs))",s)),
+          "branch_references":workflow_branch_references(s)})
     triage=json.loads((ROOT/"audit_tools/pr_triage_20261102.json").read_text())
     triage_by_number={p["number"]:p for p in triage["prs"]}
     main_ref=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/git/ref/heads/main")
