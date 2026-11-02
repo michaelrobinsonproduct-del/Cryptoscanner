@@ -161,7 +161,7 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
                 # Reject *all* ambiguous canonical jobs, including a forged
                 # second public-paper job with a different run_id. A matching
                 # first job must not authenticate a contradictory second job.
-                candidates = [j for j in jobs.get(str(rid), [])
+                candidates = [j for j in (jobs.get(str(rid)) or [])
                               if isinstance(j, dict) and j.get("name") == "public-paper"]
                 if (len(candidates) != 1 or
                         type(candidates[0].get("run_id")) is not int or
