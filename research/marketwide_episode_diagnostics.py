@@ -73,7 +73,11 @@ def chronological_readiness(records, runs, hours, positive_key="hit_30"):
     """
     times = sorted(set(runs.values()))
     if len(times) < 2:
-        return {"status":"INSUFFICIENT_SCAN_TIMES","cutoff":None}
+        return {"status":"INSUFFICIENT_SCAN_TIMES","cutoff":None,
+                "model_evaluation_ready":False,"sample_thresholds_met":False,
+                "unmet_evidence_gates":["exchange_authenticated_market_history",
+                                        "point_in_time_execution_features",
+                                        "independent_held_out_challenger"]}
     cutoff = times[min(len(times)-1, max(1, int(len(times)*0.7)))]
     embargo = dt.timedelta(hours=hours) + MAX_GAP
     train = [r for r in records if runs[r["run_id"]] + embargo <= cutoff]
@@ -90,6 +94,29 @@ def chronological_readiness(records, runs, hours, positive_key="hit_30"):
         if first is None or decision-first > dt.timedelta(hours=hours):
             first_by_pair[r["pair"]] = decision
             global_episode_first.add((r["pair"], r["run_id"]))
+    def first_entry_feature_reasons(first_positives):
+        """Conserve missingness at globally identified first positive decisions.
+
+        Later overlapping positives cannot replace an embargoed first entry.
+        """
+        result = {lag:{"episodes":0,"with_asof_feature":0,
+                       "without_asof_feature":0,"missing_reasons":{}}
+                  for lag in ("30m","60m","180m")}
+        for r in first_positives:
+            for lag, stats in result.items():
+                stats["episodes"] += 1
+                if r["lagged_returns"].get(lag) is not None:
+                    stats["with_asof_feature"] += 1
+                else:
+                    stats["without_asof_feature"] += 1
+                    reason = r.get("lagged_return_reasons", {}).get(lag) or "reason_unavailable"
+                    stats["missing_reasons"][reason] = stats["missing_reasons"].get(reason,0)+1
+        for stats in result.values():
+            stats["missing_reasons"] = dict(sorted(stats["missing_reasons"].items()))
+            assert stats["episodes"] == stats["with_asof_feature"] + stats["without_asof_feature"]
+            assert stats["without_asof_feature"] == sum(stats["missing_reasons"].values())
+        return result
+
     def summary(rows):
         featured = [r for r in rows if r["lagged_returns"]["60m"] is not None]
         positive = [r for r in rows if r[positive_key]]
@@ -104,8 +131,13 @@ def chronological_readiness(records, runs, hours, positive_key="hit_30"):
                 "positive_lag_60m_covered":len(featured_positive),
                 "positive_lag_60m_episodes":sum(r["lagged_returns"]["60m"] is not None
                     for r in first_positives),
+                "positive_first_entry_feature_coverage":first_entry_feature_reasons(first_positives),
                 "negative_lag_60m_pairs":len({r["pair"] for r in featured_negative})}
     a,b=summary(train),summary(test)
+    for cohort in (a,b):
+        reasons = cohort["positive_first_entry_feature_coverage"]
+        assert reasons["60m"]["with_asof_feature"] == cohort["positive_lag_60m_episodes"]
+        assert all(stats["episodes"] == cohort["positive_episodes"] for stats in reasons.values())
     # Concrete missing sample requirements, not a fabricated trained model.
     # The >=10 thresholds are a minimal readiness diagnostic, not statistical
     # proof of generalization or independent exchange-authenticated coverage.
@@ -123,7 +155,11 @@ def chronological_readiness(records, runs, hours, positive_key="hit_30"):
             "excluded_crossing_cutoff":len(records)-len(train)-len(test),
             "train":a,"test":b,
             "minimum_sample_requirements":blockers,
-            "model_evaluation_ready":not blockers}
+            "sample_thresholds_met":not blockers,
+            "unmet_evidence_gates":["exchange_authenticated_market_history",
+                                    "point_in_time_execution_features",
+                                    "independent_held_out_challenger"],
+            "model_evaluation_ready":False}
 
 
 def cluster_episodes(cases, hours):
@@ -412,6 +448,8 @@ def analyze(state):
                                if coverage["movers_20"] else None),
             "watch_precision_20":(coverage["watch_positive_20"]/coverage["watch_matured"]
                                   if coverage["watch_matured"] else None),
+            "watch_recall_wilson_95_naive_20":wilson(coverage["watch_positive_20"],coverage["movers_20"]),
+            "watch_precision_wilson_95_naive_20":wilson(coverage["watch_positive_20"],coverage["watch_matured"]),
             "episodes":episodes,"mover_cases":cases,
             "watch_captured_episodes":episode_watch_count,
             "watch_first_entry_episodes_30":first_watch_count,
