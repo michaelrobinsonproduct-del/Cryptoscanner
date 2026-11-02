@@ -1,0 +1,47 @@
+name: Historical Role A UTC gate experiment (read only)
+on:
+  pull_request:
+    paths:
+      - 'historical/role_a_utc_gate_experiment.py'
+      - 'historical/test_role_a_utc_gate_experiment.py'
+      - 'historical/evidence/role_a_utc_gate_results_20261102.json'
+      - 'historical/evidence/role_a_utc_gate_analysis_20261102.md'
+      - '.github/workflows/historical-role-a-utc-gate-research.yml'
+  push:
+    branches:
+      - 'research/role-a-utc-gate-*'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  exact-source-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install offline numerical dependencies
+        run: python -m pip install 'numpy==2.2.6' 'pandas==2.2.3'
+      - name: Adversarial tests
+        run: python -m unittest discover -s historical -p 'test_role_a_utc_gate_experiment.py' -v
+      - name: Download exact retained historical source artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api --method GET -H 'Accept: application/vnd.github+json' "/repos/$REPO/actions/artifacts/11662155953/zip" > /tmp/strict-kraken-training.zip
+          test "$(stat -c %s /tmp/strict-kraken-training.zip)" -gt 1000000
+      - name: Replay strict source and compare committed result byte for byte
+        run: |
+          python historical/role_a_utc_gate_experiment.py /tmp/strict-kraken-training.zip --compact --output /tmp/replayed.json
+          cmp /tmp/replayed.json historical/evidence/role_a_utc_gate_results_20261102.json
+          sha256sum /tmp/replayed.json historical/evidence/role_a_utc_gate_results_20261102.json
+          echo 'STRICT_SOURCE_RESEARCH_REPLAY_VERIFIED'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: role-a-utc-gate-replay-${{ github.run_id }}
+          path: /tmp/replayed.json
+          retention-days: 14
