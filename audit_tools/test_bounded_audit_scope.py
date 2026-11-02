@@ -78,6 +78,24 @@ class BoundedAuditScopeTests(unittest.TestCase):
         self.assertTrue(all(c["block_production"] and c["block_deletion"] for c in CASES))
         self.assertTrue(all(c["expected_head_sha"] and len(c["sha"])==40 for c in CASES))
 
+    def test_finite_source_failures_do_not_globally_block_isolated_tests(self):
+        inventory={"main_sha":"a"*40,"ledger_sha":"b"*40,"checkout_sha":"c"*40,
+                   "open_prs":[]}
+        result=assess(inventory,{})
+        self.assertEqual(len(result["unverified_source_cases"]),len(CASES))
+        self.assertEqual(result["finite_blockers"][0]["scope"],"source_evidence")
+        self.assertEqual(len(result["finite_blockers"][0]["cases"]),len(CASES))
+        scopes={x["scope"]:x for x in result["scope_matrix"]}
+        self.assertEqual(scopes["isolated_read_only_integration"]["decision"],
+                         "CONDITIONAL_PREPARE_TEST_ONLY")
+        self.assertEqual(scopes["isolated_read_only_integration"]["blocking_findings"],[])
+        self.assertEqual(scopes["production_activation"]["decision"],"BLOCKED")
+        self.assertIn("CREDENTIAL_BACKED_EXTERNAL_WRITE",
+                      scopes["production_activation"]["blocking_findings"])
+        self.assertEqual(scopes["legacy_deletion"]["decision"],"BLOCKED")
+        self.assertIn("UNKNOWN_DEPLOYED_CONSUMERS",
+                      scopes["legacy_deletion"]["blocking_findings"])
+
     def test_scoped_decision_cannot_claim_full_certification(self):
         inventory={"main_sha":"a"*40,"ledger_sha":"b"*40,"checkout_sha":"c"*40,
                    "open_prs":[]}
@@ -88,7 +106,7 @@ class BoundedAuditScopeTests(unittest.TestCase):
         self.assertFalse(result["full_audit_certified"])
         self.assertFalse(result["cleanup_authorized"])
         self.assertFalse(result["production_mutation_authorized"])
-        self.assertEqual(len(result["finite_blockers"]),3)
+        self.assertEqual(len(result["finite_blockers"]),4)
 
 if __name__ == "__main__":
     unittest.main()
