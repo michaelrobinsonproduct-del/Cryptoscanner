@@ -406,6 +406,21 @@ class CurrentSemanticReviewTests(unittest.TestCase):
                         "reason":"Source-reviewed score/UTC behavior",
                         "release_authorized":False,"cleanup_authorized":False}]}
 
+    def test_checked_in_matrix_is_complete_and_sha_bound_before_network(self):
+        import json
+        from pathlib import Path
+        matrix=json.loads(Path("audit_tools/pr_semantic_current_20261102.json").read_text())
+        rows=matrix["prs"]
+        self.assertEqual(len(rows),22)
+        self.assertEqual(len({x["number"] for x in rows}),22)
+        self.assertEqual(len(matrix["main_sha"]),40)
+        self.assertTrue(all(len(x["head_sha"])==40 and
+                            len(x["source_blob_sha"])==40 and
+                            x["source_path"] and
+                            x["release_authorized"] is False and
+                            x["cleanup_authorized"] is False for x in rows))
+        self.assertEqual(matrix["review_status"],"PROVISIONAL_NOT_CERTIFIED")
+
     def test_exact_main_head_and_blob_give_provisional_disposition(self):
         rows=[self.row()]
         result=apply_semantic_review(self.matrix(),rows,self.MAIN)
