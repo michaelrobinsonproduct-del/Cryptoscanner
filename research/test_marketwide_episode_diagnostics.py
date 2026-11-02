@@ -259,6 +259,20 @@ class EpisodeTests(unittest.TestCase):
         series[2]=(series[2][0],100,"other")
         self.assertEqual(lagged_return(series,[r[0] for r in series],3,60),0.5)
 
+    def test_postdecision_entry_quote_is_not_an_asof_entry(self):
+        state=fixture()
+        for obs in state["observations"]:
+            if obs["run_id"]=="30" and obs["pair"]=="AAAUSD":
+                obs["at"]=iso(31)  # Quote from the future of the decision.
+        with patch("paper_pov.ledger.verify",return_value=None):
+            one=analyze(state)["horizons"]["1"]
+        cov=one["coverage"]
+        self.assertGreaterEqual(cov["abstain_future_entry_quotes"],1)
+        self.assertLessEqual(cov["abstain_future_entry_quotes"],cov["abstain_gap"])
+        self.assertEqual(cov["eligible"],cov["matured"]+cov["abstain_gap"]+cov["immature"])
+        self.assertTrue(all(case["entry_quote_age_minutes"]>=0
+                            for case in one["mover_cases"]))
+
     def test_provenance_and_coverage_are_not_model_evidence(self):
         with patch("paper_pov.ledger.verify",return_value=None):
             report=analyze(fixture())
