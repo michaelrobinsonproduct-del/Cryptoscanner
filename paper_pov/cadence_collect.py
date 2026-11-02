@@ -157,7 +157,7 @@ def github_reader(token, api_url="https://api.github.com"):
     return get
 
 
-def current_remote_ref_evidence(get, repo, evidence, runs):
+def current_remote_ref_evidence(get, repo, evidence, runs, report=None):
     """One authenticated GET checks the current Git ref against the newest log claim.
 
     A matching ref SHA proves only GitHub's current branch pointer, NOT
@@ -165,11 +165,20 @@ def current_remote_ref_evidence(get, repo, evidence, runs):
     A differing ref can mean another legitimate writer advanced the branch.
     """
     created = {r["id"]: r.get("created_at", "") for r in runs}
-    claims = [e for e in evidence
-              if e.get("delivery_log_claim_status") ==
-              "MATCHED_LOG_MARKERS_NOT_REMOTE_BYTES"]
+    # A well-formed readback line can occur in a job whose event/source
+    # provenance failed verification. It must not authenticate the remote ref.
+    verified_ids = {
+        row["run_id"] for row in (report or {}).get("runs", [])
+        if row.get("classification") in (
+            "VERIFIED_NATIVE_SCHEDULE", "VERIFIED_WORKFLOW_DISPATCH_NOT_NATIVE")
+    }
+    complete_claims = [e for e in evidence
+                       if e.get("delivery_log_claim_status") ==
+                       "MATCHED_LOG_MARKERS_NOT_REMOTE_BYTES"]
+    claims = [e for e in complete_claims if e.get("run_id") in verified_ids]
     if not claims:
-        return {"status": "UNVERIFIED_NO_COMPLETE_LOG_CLAIM"}
+        return {"status": ("UNVERIFIED_NO_SOURCE_AUTHENTICATED_LOG_CLAIM"
+                           if complete_claims else "UNVERIFIED_NO_COMPLETE_LOG_CLAIM")}
     latest = max(claims, key=lambda e: (created.get(e["run_id"], ""), e["run_id"]))
     expected = latest["claimed_ledger_commit"]
     try:
@@ -282,7 +291,7 @@ def collect(get, repo, checked_at, lookback_hours=24, max_runs=80):
                          "decoded_log_sha256": hashlib.sha256(raw.encode("utf-8")).hexdigest(),
                          "raw_log_sha256_verified": False})
     result = audit(runs, logs, checked_at, lookback_hours, jobs=jobs)
-    remote_ref = current_remote_ref_evidence(get, repo, evidence, runs)
+    remote_ref = current_remote_ref_evidence(get, repo, evidence, runs, report=result)
     return {"report": result, "evidence": evidence,
             "current_remote_ref_evidence": remote_ref,
             "raw_log_content_persisted": False,
