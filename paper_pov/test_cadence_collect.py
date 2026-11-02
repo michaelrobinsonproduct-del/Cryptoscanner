@@ -140,7 +140,7 @@ class CadenceCollectorTests(unittest.TestCase):
 
     def test_lossy_non_utf8_job_log_is_rejected_before_provenance(self):
         with patch("paper_pov.cadence_collect.urlopen",
-                   return_value=io.BytesIO(b"bad-utf8-\\xff")):
+                   return_value=io.BytesIO(b"bad-utf8-" + bytes([255])):
             get = github_reader("test-readonly-token")
             with self.assertRaises(UnicodeDecodeError):
                 get("/repos/owner/repo/actions/jobs/123/logs", text=True)
