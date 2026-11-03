@@ -49,12 +49,18 @@ class ReceiptTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "readback mismatch"):
             persist_report(self.latest, self.report)
 
-    def test_latest_failure_removes_new_receipt(self):
+    def test_latest_failure_preserves_sealed_receipt_and_retry_recovers(self):
         with patch("paper_pov.scanner.atomic_json", side_effect=OSError("disk full")):
             with self.assertRaisesRegex(OSError, "disk full"):
                 persist_report(self.latest, self.report)
         self.assertFalse(self.latest.exists())
-        self.assertEqual(list((self.latest.parent / "receipts").glob("*.json")), [])
+        receipts = list((self.latest.parent / "receipts").glob("*.json"))
+        self.assertEqual(len(receipts), 1)
+        self.assertEqual(json.loads(receipts[0].read_text()), self.report)
+        recovered = persist_report(self.latest, self.report)
+        self.assertEqual(recovered, receipts[0])
+        self.assertEqual(json.loads(self.latest.read_text()), self.report)
+        self.assertEqual(len(list((self.latest.parent / "receipts").glob("*.json"))), 1)
 
     def test_orphan_receipt_recovers_missing_latest_without_duplication(self):
         receipt = persist_report(self.latest, self.report)
@@ -95,11 +101,15 @@ class ReceiptTests(unittest.TestCase):
             persist_report(self.latest, older)
         self.assertEqual(json.loads(self.latest.read_text()), self.report)
 
-    def test_latest_readback_failure(self):
+    def test_latest_readback_failure_preserves_sealed_receipt(self):
         with patch("paper_pov.scanner.atomic_json", side_effect=lambda path, report: Path(path).write_text("{}")):
             with self.assertRaisesRegex(IOError, "latest report readback mismatch"):
                 persist_report(self.latest, self.report)
-        self.assertEqual(list((self.latest.parent / "receipts").glob("*.json")), [])
+        receipts = list((self.latest.parent / "receipts").glob("*.json"))
+        self.assertEqual(len(receipts), 1)
+        self.assertEqual(json.loads(receipts[0].read_text()), self.report)
+        self.assertEqual(persist_report(self.latest, self.report), receipts[0])
+        self.assertEqual(json.loads(self.latest.read_text()), self.report)
 
 if __name__ == "__main__":
     unittest.main()
