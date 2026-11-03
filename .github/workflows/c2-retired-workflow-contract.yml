@@ -9,6 +9,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   focused:
     runs-on: ubuntu-latest
@@ -18,3 +19,53 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m unittest paper_pov.test_retired_workflow_contract paper_pov.test_manual_schedule_contract -v
+
+  authentic-manual-scheduled:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download and authenticate two historical REAL scanner result artifacts (read-only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/c-real-receipts
+          for pair in "manual:41636714169:13231321360:workflow_dispatch" "scheduled:41626400391:13226916072:schedule"; do
+            IFS=: read -r label run artifact event <<< "$pair"
+            gh api "repos/$REPO/actions/runs/$run" > "/tmp/c-real-receipts/$label-run.json"
+            python - "$label" "$run" "$event" <<'PY'
+          import json,sys,os
+          label,run,event=sys.argv[1:]
+          data=json.load(open("/tmp/c-real-receipts/"+label+"-run.json"))
+          assert str(data["id"])==run and data["event"]==event, "GitHub authenticated event mismatch"
+          assert data["conclusion"]=="success", "Real scan did not succeed"
+          assert data["head_sha"]=="94929a544899ddec63c676b6d4d52539da8e3837", "Real scan source drift"
+          print("AUTHENTIC_RUN",label,run,event,data["head_sha"])
+          PY
+            gh api -H "Accept: application/vnd.github+json" "repos/$REPO/actions/artifacts/$artifact/zip" > "/tmp/c-real-receipts/$label.zip"
+          done
+      - name: Execute exact-code read-only dual ZIP acceptance
+        run: |
+          set -euo pipefail
+          python -m paper_pov.manual_schedule_contract --zip-artifacts \\
+            --manual /tmp/c-real-receipts/manual.zip \\
+            --scheduled /tmp/c-real-receipts/scheduled.zip > /tmp/c-real-receipts/parity.json
+          python - <<'PY'
+          import json
+          p=json.load(open("/tmp/c-real-receipts/parity.json"))
+          assert p["manual_run"]=="41636714169" and p["scheduled_run"]=="41626400391"
+          assert p["manual_watch_count"]==12 and p["scheduled_watch_count"]==12
+          assert p["same_source_sha"] is True and p["candidate_schema_parity"] is True
+          assert p["market_time_candidate_equality_claimed"] is False
+          print("REAL_MANUAL_SCHEDULED_CONTRACT_VERIFIED",json.dumps(p,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: c-real-manual-scheduled-contract
+          path: /tmp/c-real-receipts/parity.json
+          retention-days: 7
+          if-no-files-found: error
