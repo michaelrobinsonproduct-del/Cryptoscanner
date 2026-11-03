@@ -17,12 +17,13 @@ test("HTTP manual and scheduled both load read-only outcome artifacts and shadow
  const manual=await (await createCycleHttpHandler(runner)(new Request("http://localhost/cycle"))).json();
  const scheduled=await runner.run("scheduled");
  expect(manual).toEqual(scheduled.result);expect(gets).toBe(2);
+ expect(manual.shadow_artifact_status).toBe("VERIFIED");
  expect(manual.shadow_evaluation.candidates[0]).toMatchObject({status:"SCORED",challenger_score:89,production_promoted:false});
 });
 test("missing artifact URL and malformed or count-mismatched evidence abstain, baseline stays intact",async()=>{
  const missing=createCycleRunner(deps,createReadOnlyShadowLoader(undefined));
  const r=await missing.run("manual");expect(r.result.candidates).toHaveLength(1);
- expect(r.result.shadow_evaluation.candidates[0].status).toBe("ABSTAIN");
+ expect(r.result.shadow_evaluation.candidates[0].status).toBe("ABSTAIN");expect(r.result.shadow_artifact_status).toBe("UNAVAILABLE");
  const bad=createReadOnlyShadowLoader("https://example.org/ledger.json",async()=>new Response(JSON.stringify({evidence:{...evidence,outcome_rows:2},outcomes})) as any);
  await expect(bad()).rejects.toThrow("shadow_ledger_count_mismatch");
 });
@@ -54,4 +55,15 @@ test("score ledger tampering, duplicate and future-derived scores fail closed",a
  await expect(load([...scores,...scores])).rejects.toThrow("duplicate_shadow_score");
  await expect(load([{...scores[0],computed_at:"2026-11-03T04:01:00Z"}])).rejects.toThrow("untrusted_or_leaky_shadow_score");
  await expect(load([{...scores[0],source_sha:"c".repeat(64)}])).rejects.toThrow("untrusted_or_leaky_shadow_score");
+});
+
+test("corrupt authenticated ledger is visibly rejected by both manual and scheduled entry, preserving baseline",async()=>{
+ const loader=createReadOnlyShadowLoader("https://example.org/ledger.json",async()=>new Response(JSON.stringify({evidence,outcomes,scores})) as any,source);
+ const runner=createCycleRunner(deps,loader);
+ const manual=await (await createCycleHttpHandler(runner)(new Request("http://localhost/cycle"))).json();
+ const scheduled=await runner.run("scheduled");
+ expect(manual).toEqual(scheduled.result);
+ expect(manual.shadow_artifact_status).toBe("REJECTED");
+ expect(manual.candidates).toHaveLength(1);
+ expect(manual.shadow_evaluation.coverage).toMatchObject({scored:0,abstained:1});
 });
