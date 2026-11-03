@@ -177,11 +177,13 @@ class DepthAssociationTests(unittest.TestCase):
     def test_source_only_report(self, horizons):
         horizons.return_value = {"1": {"qualified": 0}}
         path = self.root / "source-only.json"
-        digest = source_only_coverage("index", path)
+        index = self.root / "source-index.jsonl"
+        index.write_text("fixture")
+        digest = source_only_coverage(str(index), path)
         self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), digest)
         self.assertFalse(json.loads(path.read_text())["production_applied"])
         with self.assertRaises(FileExistsError):
-            source_only_coverage("index", path)
+            source_only_coverage(str(index), path)
 
     @patch("research.acquisition_receipt_pipeline.evaluate_horizons")
     def test_source_cli(self, horizons):
