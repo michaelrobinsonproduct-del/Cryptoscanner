@@ -8,6 +8,7 @@ on:
       - 'paper_pov/test_stage_receipts.py'
       - 'paper_pov/test_segmented_live_writer.py'
       - 'paper_pov/results_report.py'
+      - '.github/workflows/paper-pipeline.yml'
       - 'paper_pov/test_results_report.py'
       - '.github/workflows/d1-stage-receipts.yml'
   workflow_dispatch:
@@ -27,4 +28,4 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          python -m unittest paper_pov.test_ledger_readback paper_pov.test_stage_receipts paper_pov.test_segmented_live_writer.LiveWriterTests.test_actual_bare_remote_push_fetch_and_verified_replay paper_pov.test_results_report.PaperResultsContracts.test_realistic_report_is_readable_and_not_a_buy_signal paper_pov.test_results_report.PaperResultsContracts.test_zero_qualifying_watch_is_successful_abstention paper_pov.test_results_report.PaperResultsContracts.test_zero_observations_disclose_unverified_freshness paper_pov.test_results_report.PaperResultsContracts.test_reject_inconsistent_market_evidence_before_reporting paper_pov.test_results_report.PaperResultsContracts.test_zero_observation_cli_artifact_and_checksums paper_pov.test_results_report.PaperResultsContracts.test_atomic_result_publication_rejects_existing_and_cleans_failed_stage -v
+          python -m unittest paper_pov.test_ledger_readback paper_pov.test_stage_receipts paper_pov.test_segmented_live_writer.LiveWriterTests.test_actual_bare_remote_push_fetch_and_verified_replay paper_pov.test_results_report.PaperResultsContracts.test_realistic_report_is_readable_and_not_a_buy_signal paper_pov.test_results_report.PaperResultsContracts.test_zero_qualifying_watch_is_successful_abstention paper_pov.test_results_report.PaperResultsContracts.test_zero_observations_disclose_unverified_freshness paper_pov.test_results_report.PaperResultsContracts.test_reject_inconsistent_market_evidence_before_reporting paper_pov.test_results_report.PaperResultsContracts.test_zero_observation_cli_artifact_and_checksums paper_pov.test_results_report.PaperResultsContracts.test_atomic_result_publication_rejects_existing_and_cleans_failed_stage paper_pov.test_results_report.PaperResultsContracts.test_published_result_readback_rejects_tamper_and_wrong_ledger -v
