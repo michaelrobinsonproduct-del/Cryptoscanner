@@ -68,8 +68,29 @@ jobs:
           assert r["production_applied"] is False
           print("E_REAL_PAPER_BRIDGE_VERIFIED", r["ledger_sha256"], r["horizons"])
           PY
+      - name: Acquire retained authenticated Kraken depth rounds read-only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/kraken-round-history
+          gh run download 41725038118 -R michaelrobinsonproduct-del/Cryptoscanner -n kraken-round-history-41725038118 -D /tmp/kraken-round-history
+          test -s /tmp/kraken-round-history/rounds.jsonl
+      - name: Evaluate actual source-qualified 1h 6h 24h 48h evidence
+        run: |
+          python -m research.acquisition_receipt_pipeline --round-index /tmp/kraken-round-history/rounds.jsonl --all-horizon-coverage --output real-paper/e-source-coverage.json
+          python - <<'PY'
+          import json
+          r=json.load(open("real-paper/e-source-coverage.json"))
+          assert r["mode"]=="RESEARCH_ONLY_SOURCE_COVERAGE"
+          assert set(r["horizon_coverage"])=={"1","6","24","48"}
+          assert all(v["production_applied"] is False for v in r["horizon_coverage"].values())
+          assert all(v["rounds_verified"] >= 19 for v in r["horizon_coverage"].values())
+          print("E_REAL_AUTHENTICATED_SOURCE_COVERAGE", json.dumps(r["horizon_coverage"],sort_keys=True))
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: e-real-paper-learning-report
-          path: real-paper/e-learning-report.json
+          path: |
+            real-paper/e-learning-report.json
+            real-paper/e-source-coverage.json
           retention-days: 7
