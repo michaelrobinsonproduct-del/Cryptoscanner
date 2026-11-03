@@ -173,8 +173,6 @@ def main():
     parser.add_argument("--challenger-version")
     parser.add_argument("--learning-ledger", help="Research-only append-only E3 decisions")
     args = parser.parse_args()
-    if args.associate_verified_depth and args.round_index:
-        parser.error("indexed association is not yet supported by the evaluation binder")
     if args.associate_verified_depth and not args.paper_ledger:
         parser.error("automatic association requires a paper ledger")
     if args.associate_verified_depth and args.all_horizon_coverage and not args.round_index:
@@ -186,7 +184,7 @@ def main():
     if args.associate_verified_depth and Path(args.output).exists():
         parser.error("output exists; refusing to create associations before report")
     if args.associate_verified_depth:
-        if not all((args.captures_directory, args.depth_directory, args.associations_directory)):
+        if not all((args.captures_directory, args.depth_directory or args.round_index, args.associations_directory)):
             parser.error("automatic association requires captures, depth and association directories")
         from research.depth_acquisition_associations import associate_captured_scores, associate_indexed_captures
         association_report = (associate_indexed_captures(
@@ -205,9 +203,11 @@ def main():
         print(json.dumps({"mode": "RESEARCH_ONLY_SOURCE_COVERAGE",
                           "report_sha256": digest}, sort_keys=True))
         return
-    if not all((args.paper_ledger, args.depth_directory,
+    if not all((args.paper_ledger, args.depth_directory or args.round_index,
                 args.captures_directory, args.associations_directory)):
         parser.error("score/depth evaluation requires all authenticated inputs")
+    if args.round_index:
+        args.depth_directory = args.round_index
     if args.all_horizon_learning:
         if not (args.round_index and args.split_at is not None and
                 args.baseline_version and args.challenger_version):
