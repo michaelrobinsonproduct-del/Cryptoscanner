@@ -25,10 +25,18 @@ class ScoreJoinTests(unittest.TestCase):
     def test_source_bound_early_score(self):
         result=self.run_join({"pair":"XBTUSD","entry_first_observed_at":1000,
                               "source_sha256":SHA,"observed_at":999,
-                              "baseline_score":0.1,"challenger_score":0.2})
+                              "baseline_score":0.1,"challenger_score":0.2,"entry_liquidity_usd":100.0})
         self.assertEqual(result["train_n"],1)
         self.assertEqual(result["source_snapshots_verified"],52)
         self.assertIsNone(result["held_out_lift"])
+
+    def test_missing_liquidity_is_explicit_abstention(self):
+        score={"pair":"XBTUSD","entry_first_observed_at":1000,
+               "source_sha256":SHA,"observed_at":999,
+               "baseline_score":0.1,"challenger_score":0.2}
+        result=self.run_join(score)
+        self.assertEqual(result["excluded"]["MISSING_ENTRY_LIQUIDITY"],1)
+        self.assertEqual(result["train_n"],0)
 
     def test_mismatched_sha_rejected(self):
         with self.assertRaisesRegex(ValueError,"does not match"):
