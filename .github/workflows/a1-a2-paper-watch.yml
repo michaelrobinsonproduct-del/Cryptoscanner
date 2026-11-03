@@ -48,6 +48,8 @@ jobs:
           assert sum(report["abstention_counts"].values()) == len(report["abstentions"])
           assert (report["observed_markets"] + sum(report["ticker_rejections"].values())
                   == report["eligible_pairs"]), "ticker coverage must reconcile"
+          assert 0 <= report["ohlc_screened"] <= report["screened_markets"] <= report["observed_markets"]
+          assert all(isinstance(v, int) and v >= 0 for v in report["screening_rejections"].values())
           assert len(report["watch"]) + len(report["abstentions"]) <= report["ohlc_screened"]
           assert len({x["prediction_id"] for x in report["watch"]}) == len(report["watch"])
           assert [x["rank"] for x in report["watch"]] == list(range(1, len(report["watch"]) + 1))
@@ -68,6 +70,8 @@ jobs:
               "observed_markets": report["observed_markets"],
               "ticker_rejections": report["ticker_rejections"],
               "ohlc_screened": report["ohlc_screened"],
+              "screened_markets": report["screened_markets"],
+              "screening_rejections": report["screening_rejections"],
               "watch_count": len(report["watch"]),
               "scan_status": report["scan_status"],
               "abstentions": len(report["abstentions"]),
