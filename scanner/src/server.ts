@@ -1,4 +1,5 @@
 import {createCycleHttpHandler} from "./cycle-http";
+import {createPaperReceiptReader} from "./paper-receipt";
 import {createReadOnlyShadowLoader} from "./shadow-artifacts";
 import {createCycleRunner} from "./cycle-runner";
 const port=Number(process.env.PORT||3000),controlUrl=process.env.CONTROL_COLLECTOR_URL||"https://kraken-collector-production.up.railway.app",confirmUrl=process.env.CONTROL_CONFIRM_URL||"https://kraken-rest-confirm-production.up.railway.app";
