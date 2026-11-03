@@ -1,6 +1,8 @@
 name: Autonomous Codex development loop
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '7,37 * * * *'
 permissions:
   contents: write
   pull-requests: write
@@ -9,198 +11,97 @@ concurrency:
   group: cryptoscanner-autonomous-development
   cancel-in-progress: false
 jobs:
-  implement:
-    if: github.ref == 'refs/heads/main'
+  develop:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: '3.11'
-      - name: Verify coding-agent credential exists
+          node-version: '22'
+      - name: Check credential and initialize persistent work branch
         env:
+          GH_TOKEN: ${{ github.token }}
           CODEX_KEY_PRESENT: ${{ secrets.OPENAI_API_KEY != '' }}
         run: |
-          if [ "$CODEX_KEY_PRESENT" != true ]; then
-            echo "::error::Set repository Actions secret OPENAI_API_KEY to enable autonomous code development"
-            exit 1
+          set -euo pipefail
+          test "$CODEX_KEY_PRESENT" = true || { echo "::error::Missing OPENAI_API_KEY"; exit 1; }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/autonomous-learning-work" --silent >/dev/null 2>&1; then
+            git fetch origin autonomous-learning-work
+            git checkout -B autonomous-learning-work FETCH_HEAD
+          else
+            if test "$GITHUB_EVENT_NAME" = schedule; then
+              echo "Awaiting initial manual dispatch" >> "$GITHUB_STEP_SUMMARY"
+              echo "complete=true" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            git checkout -B autonomous-learning-work
           fi
-      - name: Prepare dedicated non-sudo coding user
+          mkdir -p .autonomous
+          if test -f .autonomous/COMPLETE; then
+            echo "Project marked complete; no more coding required." >> "$GITHUB_STEP_SUMMARY"
+            echo "complete=true" >> "$GITHUB_ENV"
+          fi
+      - name: Install coding agent
+        if: env.complete != 'true'
+        run: npm install --global @openai/codex
+      - name: Implement next unfinished scanner and learning work
+        if: env.complete != 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          sudo useradd --create-home --shell /bin/bash codexagent
-          sudo usermod -a -G runner codexagent
-          sudo usermod -a -G codexagent runner
-          sudo chown -R runner:codexagent "$GITHUB_WORKSPACE"
-          sudo chmod -R g+rwX "$GITHUB_WORKSPACE"
-          sudo find "$GITHUB_WORKSPACE" -type d -exec chmod g+s {} +
-          sudo -u codexagent test -r "$GITHUB_WORKSPACE/.git/HEAD"
-          sudo -u codexagent test -w "$GITHUB_WORKSPACE"
-          sudo -u codexagent test -x /home/runner
-          sudo -u codexagent test -w /tmp
-          sudo -u codexagent test -x /tmp
-          sudo -u codexagent sh -c 'printf ready > "$1"; rm "$1"' sh "$GITHUB_WORKSPACE/.codex-write-preflight"
-      - name: Start 5h30m agent cutoff watchdog
-        run: |
-          cat > /tmp/codex-cutoff.sh <<'SH'
-          #!/usr/bin/env bash
-          sleep 19800
-          echo "Agent time budget reached; requesting graceful termination"
-          for pid in $(pgrep -f '[c]odex exec' || true); do
-            kill -INT "$pid" 2>/dev/null || true
-          done
-          sleep 60
-          for pid in $(pgrep -f '[c]odex exec' || true); do
-            kill -TERM "$pid" 2>/dev/null || true
-          done
-          SH
-          chmod +x /tmp/codex-cutoff.sh
-          nohup /tmp/codex-cutoff.sh >/tmp/codex-cutoff.log 2>&1 </dev/null &
-      - name: Implement scanner repairs and enhancements
-        id: codex
-        uses: openai/codex-action@v1
-        with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          sandbox: workspace-write
-          safety-strategy: unprivileged-user
-          codex-user: codexagent
-          output-file: ${{ github.workspace }}/.codex-last-message.md
-          prompt: |
-            You are the one-shot autonomous implementation agent. The user starts this workflow ONCE.
-            Your task is to COMPLETE the remaining scanner repair and enhancement work in this execution,
-            not to implement one delta, stop, and wait for another scheduled run.
-            Read repository implementation, tests, and issue #34 context available in the checkout.
-            Build an executable completion checklist from actual gaps, then ITERATE within this SAME run:
-            implement, run relevant tests, diagnose failures, repair, retest, and continue to the next
-            unfinished item. Do not stop after a single successful change, a plan, or an audit.
-            Prioritize a working GitHub-native Kraken paper scanner, reliable fresh ranked WATCH outputs,
-            and substantive historical/live hit-and-miss analysis with measurable held-out learning.
-            Preserve the canonical single-writer ledger and production schedule; do not trade, deploy,
-            change secrets, weaken safety gates, or mutate production ledger/history.
-            Fix all feasible problems and enhancements before exiting; keep tests passing. Where external
-            access or missing data prevents completion, document the precise blocker and continue on
-            independent work. Do not claim completion without tests and evidence. Leave all validated
-            changes in the working tree for a single reviewable PR at the end of THIS execution.
-      - name: Save resumable development checkpoint
-        if: always()
+          set -uo pipefail
+          cat > /tmp/agent-task.txt <<'PROMPT'
+          You are continuing a persistent autonomous Cryptoscanner implementation.
+          Work directly in this checkout. Inspect .autonomous/progress.md and issue #34
+          requirements. Do NOT redo already completed work. Spend this execution
+          implementing the highest-impact unfinished work, not planning or rerunning
+          redundant test suites. Focus on a working fresh Kraken paper scanner,
+          historical source-authenticated features and 1/6/24/48h outcomes,
+          chronological holdouts, measurable +30% hit/miss improvement, and real
+          continuous learning from each subsequent scan. Use targeted tests for
+          changed behavior and fix actual failures. Never invent data or lift.
+          Maintain single-writer production ledger, no trading, no deployment, no
+          secrets edits, no unvalidated promotion. Keep all changes reviewable.
+          Before exit, update .autonomous/progress.md with concrete implementation,
+          measured evidence, unfinished work and the NEXT specific implementation step.
+          ONLY create .autonomous/COMPLETE when all requested functionality is
+          genuinely implemented, tested as appropriate, integrated and supported
+          by real evidence. Do not mark completion merely because blocked.
+          PROMPT
+          timeout --signal=INT --kill-after=30s 30m codex exec --full-auto --skip-git-repo-check - < /tmp/agent-task.txt
+          result=$?
+          echo "Codex exit code: $result" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+      - name: Persist checkpoint and update development PR
+        if: always() && env.complete != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          sudo chown -R runner:runner "$GITHUB_WORKSPACE"
-          rm -f "$GITHUB_WORKSPACE/.codex-last-message.md"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          BRANCH="codex-development-${GITHUB_RUN_ID}"
+          mkdir -p .autonomous
           git add -A
           if ! git diff --cached --quiet; then
-            git commit -m "codex: save resumable checkpoint ${GITHUB_RUN_ID}"
+            git diff --cached --check
+            git commit -m "autonomous: implementation checkpoint run ${GITHUB_RUN_ID}"
           fi
           gh auth setup-git
-          git push origin "HEAD:refs/heads/$BRANCH"
-          echo "Saved checkpoint: $BRANCH" >> "$GITHUB_STEP_SUMMARY"
-          sudo chown -R runner:codexagent "$GITHUB_WORKSPACE"
-          sudo chmod -R g+rwX "$GITHUB_WORKSPACE"
-          sudo find "$GITHUB_WORKSPACE" -type d -exec chmod g+s {} +
-      - name: Continue historical learning implementation in the same run
-        uses: openai/codex-action@v1
-        with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          sandbox: workspace-write
-          safety-strategy: unprivileged-user
-          codex-user: codexagent
-          prompt: |
-            Continue work in THIS SAME CHECKOUT, retaining the previous agent's changes.
-            Implement remaining real-data historical learning: authenticated historical inputs,
-            point-in-time features, mature 1/6/24/48h outcomes, missing-trade abstentions,
-            chronological holdouts with embargo, baseline versus challenger, +30% hit/miss
-            analysis and numerical uncertainty. Build actual executable code and tests.
-            Run tests, repair failures and iterate; never invent source provenance, labels,
-            predictive lift, or positive results. A non-improving challenger must not promote.
-            Continue independent improvements even when a specific source is unavailable.
-            No live trading, production ledger mutation, deployment or weakened gates.
-      - name: Save resumable development checkpoint
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          sudo chown -R runner:runner "$GITHUB_WORKSPACE"
-          rm -f "$GITHUB_WORKSPACE/.codex-last-message.md"
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          BRANCH="codex-development-${GITHUB_RUN_ID}"
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "codex: save resumable checkpoint ${GITHUB_RUN_ID}"
+          git push origin HEAD:refs/heads/autonomous-learning-work
+          if ! gh pr list --head autonomous-learning-work --base main --state open --json number --jq '.[0].number' | grep -q '[0-9]'; then
+            if ! git diff --quiet origin/main...HEAD; then
+              gh pr create --base main --head autonomous-learning-work --title "Autonomous scanner implementation and historical learning" --body "Persistent development checkpoints. Review real learning metrics and normal CI before merging; no automatic production promotion."
+            fi
           fi
-          gh auth setup-git
-          git push origin "HEAD:refs/heads/$BRANCH"
-          echo "Saved checkpoint: $BRANCH" >> "$GITHUB_STEP_SUMMARY"
-          sudo chown -R runner:codexagent "$GITHUB_WORKSPACE"
-          sudo chmod -R g+rwX "$GITHUB_WORKSPACE"
-          sudo find "$GITHUB_WORKSPACE" -type d -exec chmod g+s {} +
-      - name: Continue live feedback and scan integration in the same run
-        uses: openai/codex-action@v1
-        with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          sandbox: workspace-write
-          safety-strategy: unprivileged-user
-          codex-user: codexagent
-          prompt: |
-            Continue working on the SAME uncommitted checkout after both previous phases.
-            Implement an actual automated feedback loop across successive paper scans:
-            persist immutable predictions, later observed outcomes and misses; compare
-            validated baseline/challenger metrics; apply ONLY independently qualified
-            versioned improvements through explicit safe promotion/rollback gates.
-            Make historical learning reusable in future scans without repeated manual runs.
-            Integrate with the existing single-writer paper scanner, not a competing writer.
-            Improve real ranked WATCH output, freshness and resilience. Implement, test,
-            repair, repeat until remaining feasible tasks are finished. Do not fake learning,
-            relax source verification, or claim promotion when no qualified rule exists.
-      - name: Save resumable development checkpoint
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          sudo chown -R runner:runner "$GITHUB_WORKSPACE"
-          rm -f "$GITHUB_WORKSPACE/.codex-last-message.md"
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          BRANCH="codex-development-${GITHUB_RUN_ID}"
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "codex: save resumable checkpoint ${GITHUB_RUN_ID}"
+          echo "Checkpoint saved on autonomous-learning-work" >> "$GITHUB_STEP_SUMMARY"
+          if test -f .autonomous/COMPLETE; then
+            echo "Agent reports completion; review evidence and PR." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Unfinished work: next scheduled run resumes this branch." >> "$GITHUB_STEP_SUMMARY"
           fi
-          gh auth setup-git
-          git push origin "HEAD:refs/heads/$BRANCH"
-          echo "Saved checkpoint: $BRANCH" >> "$GITHUB_STEP_SUMMARY"
-          sudo chown -R runner:codexagent "$GITHUB_WORKSPACE"
-          sudo chmod -R g+rwX "$GITHUB_WORKSPACE"
-          sudo find "$GITHUB_WORKSPACE" -type d -exec chmod g+s {} +
-      - name: Open isolated development PR if tested code changed
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          sudo chown -R runner:runner "$GITHUB_WORKSPACE"
-          rm -f "$GITHUB_WORKSPACE/.codex-last-message.md"
-          git diff --check
-          git add -A
-          if git diff --cached --quiet && ! git ls-remote --exit-code --heads origin "codex-development-${GITHUB_RUN_ID}" >/dev/null; then
-            echo "No code delta produced this run" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          BRANCH="codex-development-${GITHUB_RUN_ID}"
-          git checkout -B "$BRANCH"
-          if ! git diff --cached --quiet; then git commit -m "codex: autonomous scanner improvement ${GITHUB_RUN_ID}"; fi
-          gh auth setup-git
-          git push origin "HEAD:refs/heads/$BRANCH"
-          gh pr create --base main --head "$BRANCH" --title "Codex: autonomous scanner improvement ${GITHUB_RUN_ID}" --body "Autonomous bounded implementation. Requires normal CI and review before merge. No production mutation."
