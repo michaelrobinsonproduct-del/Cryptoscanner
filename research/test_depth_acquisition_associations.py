@@ -56,6 +56,7 @@ class DepthAssociationTests(unittest.TestCase):
     @patch("research.depth_acquisition_associations.verified_rows")
     def test_missing_and_unverified_source_abstain(self, rows):
         rows.return_value = ([self.row], [])
+        (self.root / "depth-links").mkdir()
         captures, exclusions, _ = verified_associations(
             self.root / "scores", self.root / "depth-links", self.root / "raw")
         self.assertEqual(captures, [])
