@@ -132,11 +132,11 @@ def write_new(path, report):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--paper-ledger", required=True)
-    parser.add_argument("--depth-directory", required=True)
-    parser.add_argument("--captures-directory", required=True)
+    parser.add_argument("--paper-ledger")
+    parser.add_argument("--depth-directory")
+    parser.add_argument("--captures-directory")
     parser.add_argument("--output", required=True)
-    parser.add_argument("--associations-directory", required=True)
+    parser.add_argument("--associations-directory")
     parser.add_argument("--round-index")
     parser.add_argument("--all-horizon-coverage", action="store_true")
     parser.add_argument("--split-at", type=float)
@@ -144,6 +144,18 @@ def main():
     parser.add_argument("--challenger-version")
     parser.add_argument("--learning-ledger", help="Research-only append-only E3 decisions")
     args = parser.parse_args()
+    source_only = (args.all_horizon_coverage and not any((
+        args.paper_ledger, args.depth_directory, args.captures_directory,
+        args.associations_directory, args.split_at is not None,
+        args.baseline_version, args.challenger_version, args.learning_ledger)))
+    if source_only:
+        digest = source_only_coverage(args.round_index, args.output)
+        print(json.dumps({"mode": "RESEARCH_ONLY_SOURCE_COVERAGE",
+                          "report_sha256": digest}, sort_keys=True))
+        return
+    if not all((args.paper_ledger, args.depth_directory,
+                args.captures_directory, args.associations_directory)):
+        parser.error("score/depth evaluation requires all authenticated inputs")
     ledger = json.loads(Path(args.paper_ledger).read_bytes())
     report = evaluate(ledger, args.depth_directory, args.captures_directory,
                       args.associations_directory)
