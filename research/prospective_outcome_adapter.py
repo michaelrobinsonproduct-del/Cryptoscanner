@@ -3,6 +3,7 @@
 No backdating a snapshot to a five-minute grid; observation time is factual.
 """
 import hashlib
+from decimal import Decimal, InvalidOperation
 import json
 from pathlib import Path
 
@@ -53,6 +54,17 @@ def verified_rows(batch_directory):
         ask_event = float(evidence["ask_level_event_at"])
         if not (0 <= observed - bid_event <= 600 and 0 <= observed - ask_event <= 600):
             raise ValueError("stale quote")
+        try:
+            bid = Decimal(str(evidence["best_bid"]))
+            ask = Decimal(str(evidence["best_ask"]))
+            trade_observed = float(evidence["trades_receipt"]["first_observed_at"])
+            trade_event = float(evidence["newest_trade_event_at"])
+        except (KeyError, TypeError, ValueError, InvalidOperation):
+            raise ValueError("invalid market evidence") from None
+        if not (bid.is_finite() and ask.is_finite() and 0 < bid <= ask):
+            raise ValueError("crossed or invalid market book")
+        if not (0 <= trade_observed - trade_event <= 600):
+            raise ValueError("stale trade evidence")
         rows.append({"pair": pair, "event_at": bid_event,
                      "first_observed_at": observed,
                      "source_sha256": depth["sha256"],
