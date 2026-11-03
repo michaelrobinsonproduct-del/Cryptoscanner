@@ -85,3 +85,44 @@ jobs:
           assert proof['certified'] is False, proof
           print('REAL_MANUAL_ARTIFACT_READBACK_VALID_LEGACY_ABSTENTION', proof)
           PY
+      - name: Publish independently recovered paper-run receipts
+        if: ${{ always() }}
+        run: |
+          mkdir -p /tmp/d2-recovery
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          inputs = {
+              "scheduled": Path("/tmp/d2-real/proof.json"),
+              "manual": Path("/tmp/d2-manual/proof.json"),
+          }
+          result = {"schema": "paper_recovery_v1", "production_applied": False,
+                    "source_sha": "94929a544899ddec63c676b6d4d52539da8e3837",
+                    "runs": {}, "all_recovered": True}
+          for name, path in inputs.items():
+              if not path.is_file():
+                  result["runs"][name] = {"status": "RECOVERY_FAILED", "certified": False}
+                  result["all_recovered"] = False
+                  continue
+              try:
+                  receipt = json.loads(path.read_text())
+                  if receipt.get("status") not in ("VERIFIED", "ABSTAIN_LEGACY_QUOTE_EVIDENCE"):
+                      raise ValueError("Unexpected recovery status")
+                  result["runs"][name] = receipt
+              except (ValueError, OSError) as exc:
+                  result["runs"][name] = {"status": "RECOVERY_FAILED", "certified": False,
+                                          "error": type(exc).__name__}
+                  result["all_recovered"] = False
+          Path("/tmp/d2-recovery/recovery.json").write_text(json.dumps(result, sort_keys=True, indent=2) + "\\n")
+          print("D2_RECOVERY_REPORT", json.dumps(result, sort_keys=True))
+          if not result["all_recovered"]:
+              raise SystemExit("D2 recovery incomplete")
+          PY
+      - name: Retain recovery receipts for B/C read-only consumption
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2-real-paper-recovery
+          path: /tmp/d2-recovery/recovery.json
+          if-no-files-found: error
+          retention-days: 7
