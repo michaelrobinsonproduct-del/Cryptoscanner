@@ -159,11 +159,13 @@ jobs:
       contents: read
     steps:
       - name: Download published D2 recovery artifact
+        id: recovery_download
         uses: actions/download-artifact@v4
         with:
           name: d2-real-paper-recovery
           path: /tmp/d2-consumer
       - name: Consume actual published recovery report and enforce fail-closed status
+        id: recovery_consume
         run: |
           python - <<'PY'
           import json
@@ -183,3 +185,35 @@ jobs:
               assert run["certified"] is False, run
           print("D2_PUBLISHED_RECOVERY_CONSUMED", json.dumps(result, sort_keys=True))
           PY
+      - name: Persist downstream readback outcome even after failure
+        if: ${{ always() }}
+        env:
+          DOWNLOAD_OUTCOME: ${{ steps.recovery_download.outcome }}
+          CONSUME_OUTCOME: ${{ steps.recovery_consume.outcome }}
+          SOURCE_RUN: ${{ github.run_id }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          mkdir -p /tmp/d2-readback-status
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          download = os.environ["DOWNLOAD_OUTCOME"]
+          consume = os.environ["CONSUME_OUTCOME"]
+          status = "VERIFIED_READBACK" if download == consume == "success" else "RECOVERY_CONSUMER_FAILED"
+          receipt = {"schema": "paper_recovery_consumer_v1", "status": status,
+                     "download_outcome": download, "consume_outcome": consume,
+                     "workflow_run_id": os.environ["SOURCE_RUN"],
+                     "workflow_sha": os.environ["SOURCE_SHA"],
+                     "production_applied": False}
+          Path("/tmp/d2-readback-status/status.json").write_text(json.dumps(receipt, sort_keys=True) + "\\n")
+          print("D2_CONSUMER_OUTCOME", json.dumps(receipt, sort_keys=True))
+          PY
+      - name: Publish failed-run visibility for operators
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2-recovery-consumer-status
+          path: /tmp/d2-readback-status/status.json
+          if-no-files-found: error
+          retention-days: 7
