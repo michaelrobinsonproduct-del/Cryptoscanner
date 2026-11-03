@@ -12,7 +12,7 @@ import re
 import tempfile
 import zipfile
 from pathlib import Path
-from .results_report import verify_published
+from .results_report import verify_published, render
 
 MAX_FILE = 16 * 1024 * 1024
 LEDGER_FILES = {"latest.json", "scoreboard.json", "ledger.json", "SHA256SUMS"}
@@ -75,6 +75,20 @@ def replay(ledger_zip, results_zip, *, run_id, source_sha, ledger_commit):
     if (score.get("ledger_sha256") != state.get("sha256")
             or score.get("generation") != state.get("generation")):
         raise ValueError("Ledger/scoreboard identity mismatch")
+    # A missing quote-evidence array is an abstention ONLY if the rest of the
+    # publication still agrees with independently retained, checksummed source.
+    # Otherwise erased evidence plus a recomputed checksum could hide forgery.
+    payload = json.loads(results["results.json"])
+    if isinstance(payload, dict) and "quote_evidence" not in payload:
+        expected, expected_md = render(
+            scan, score, run_id=run_id, source_sha=source_sha,
+            ledger_commit=ledger_commit, event=payload.get("github_event"),
+            originating_cron=payload.get("originating_cron"))
+        if (any(payload.get(key) != value for key, value in expected.items()
+                if key != "quote_evidence")
+                or results["results.md"] != (expected_md + "\n").encode()):
+            raise ValueError("Legacy publication differs from retained evidence")
+        raise ValueError("Missing independent quote evidence")
     with tempfile.TemporaryDirectory(prefix="paper-replay-") as tmp:
         directory = Path(tmp)
         for name, content in results.items():
