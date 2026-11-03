@@ -68,6 +68,20 @@ class GateTests(unittest.TestCase):
         r["status"] = "ABSTAIN"
         self.assertIn("abstain_with_candidates", validate_receipt(r, now=NOW))
 
+    def test_stablecoin_self_attestation_cannot_override_denylist(self):
+        for pair in ("USDTUSD", "XBT/USDT", "USDC-USD", "DAIUSD", "RLUSDUSD"):
+            with self.subTest(pair=pair):
+                r = valid()
+                r["candidates"][0]["pair"] = pair
+                self.assertIn("candidate_0_stablecoin_pair", validate_receipt(r, now=NOW))
+
+    def test_normal_pairs_not_denied(self):
+        for pair in ("XBTUSD", "ETHUSD", "SOL/EUR"):
+            with self.subTest(pair=pair):
+                r = valid()
+                r["candidates"][0]["pair"] = pair
+                self.assertEqual(validate_receipt(r, now=NOW), [])
+
     def test_malformed(self):
         self.assertEqual(validate_receipt(None, now=NOW), ["receipt_not_object"])
         self.assertIn("candidates_not_array", validate_receipt({**valid(), "candidates": None}, now=NOW))
