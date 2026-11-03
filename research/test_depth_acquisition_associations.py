@@ -46,6 +46,21 @@ class DepthAssociationTests(unittest.TestCase):
         self.assertEqual(bound[0]["source_sha256"], self.source)
 
     @patch("research.depth_acquisition_associations.verified_rows")
+    def test_connector_cli_persists_association_report(self, rows):
+        from research.depth_acquisition_associations import main as association_main
+        rows.return_value = ([self.row], [])
+        output = self.root / "association-report.json"
+        with patch.object(sys, "argv", ["associate",
+                "--captures-directory", str(self.root / "scores"),
+                "--depth-directory", str(self.root / "raw"),
+                "--associations-directory", str(self.root / "depth-links"),
+                "--report", str(output)]):
+            association_main()
+        report = json.loads(output.read_text())
+        self.assertEqual(report["associated"], [self.pid])
+        self.assertFalse(report["production_applied"])
+
+    @patch("research.depth_acquisition_associations.verified_rows")
     def test_connector_abstains_on_missing_depth(self, rows):
         from research.depth_acquisition_associations import associate_captured_scores
         rows.return_value = ([], [])
