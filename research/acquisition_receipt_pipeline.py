@@ -102,7 +102,13 @@ def evaluate_learning_horizons(ledger, depth_directory, captures_directory,
                            evidence_sha256=evidence_sha256,
                            score_receipts=binding["reconciliation_receipts"])
         results[str(hours)] = result
+    # A single versioned shadow decision is based on the longest fully observed
+    # horizon; shorter horizons are diagnostics, never independent promotions.
+    # No 48-hour held-out evidence means KEEP_BASELINE.
+    primary = results["48"]["shadow_decision"]
     return {"mode": "RESEARCH_ONLY_MULTI_HORIZON_LEARNING",
+            "primary_decision_horizon_hours": 48,
+            "shadow_decision": primary,
             "acquisition_coverage": {
                 "captures": binding["capture_count"],
                 "authenticated_receipts": binding["reconciliation_receipt_count"],
@@ -212,8 +218,6 @@ def main():
         if not (args.round_index and args.split_at is not None and
                 args.baseline_version and args.challenger_version):
             parser.error("multi-horizon learning requires index, split and versions")
-        if args.learning_ledger:
-            parser.error("multi-horizon learning cannot append multiple shadow decisions")
         ledger_bytes = Path(args.paper_ledger).read_bytes()
         index_bytes = Path(args.round_index).read_bytes()
         report = evaluate_learning_horizons(
@@ -222,8 +226,15 @@ def main():
             baseline_version=args.baseline_version,
             challenger_version=args.challenger_version,
             evidence_sha256=hashlib.sha256(ledger_bytes + index_bytes).hexdigest())
+        if args.learning_ledger:
+            from research.learning_feedback import append_decision
+            # Append exactly one decision for the 48-hour primary horizon.
+            report["learning_record"] = append_decision(
+                args.learning_ledger, report["shadow_decision"])
         digest = write_new(args.output, report)
-        print(json.dumps({"mode": report["mode"], "report_sha256": digest}, sort_keys=True))
+        print(json.dumps({"mode": report["mode"], "report_sha256": digest,
+                          "shadow_decision": report["shadow_decision"]["decision"]},
+                         sort_keys=True))
         return
     ledger = json.loads(Path(args.paper_ledger).read_bytes())
     report = evaluate(ledger, args.depth_directory, args.captures_directory,
