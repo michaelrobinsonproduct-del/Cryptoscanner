@@ -17,5 +17,7 @@ export function evaluateShadowCandidate(candidate:{pair:string;score:number;disc
  return {...base,status:"SCORED",reason:"qualified_shadow_only",challenger_score:matches[0].score,outcome_label:matching[0].label};
 }
 export function attachShadowEvaluation(cycle:any,evidence:ShadowEvidence|null,outcomes:ShadowOutcome[],scores:ShadowScore[]=[]){
- return {...cycle,shadow_evaluation:{evidence_version:evidence?.version??null,production_promoted:false,candidates:(cycle.candidates??[]).map((c:any)=>({pair:c.pair,...evaluateShadowCandidate(c,evidence,outcomes,scores)}))}};
+ const candidates=(cycle.candidates??[]).map((c:any)=>({pair:c.pair,...evaluateShadowCandidate(c,evidence,outcomes,scores)}));
+ const coverage={candidates:candidates.length,scored:candidates.filter((c:any)=>c.status==="SCORED").length,pending_outcome:candidates.filter((c:any)=>c.status==="PENDING_OUTCOME").length,abstained:candidates.filter((c:any)=>c.status==="ABSTAIN").length,authenticated_outcomes:outcomes.filter(o=>o.label==="HIT"||o.label==="MISS").length,source_qualified:!!evidence?.qualified};
+ return {...cycle,shadow_evaluation:{evidence_version:evidence?.version??null,production_promoted:false,coverage,candidates}};
 }
