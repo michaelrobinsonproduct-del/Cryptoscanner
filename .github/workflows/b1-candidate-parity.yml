@@ -118,3 +118,25 @@ jobs:
           bun test scanner/src/learning-report.test.ts
       - name: Verify exact B checkout
         run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+  authenticated-d-recovery-status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Download D's actual persisted downstream consumer outcome
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/b-real-d
+          gh run download 41736851502 -R michaelrobinsonproduct-del/Cryptoscanner -n d2-recovery-consumer-status -D /tmp/b-real-d
+          test -s /tmp/b-real-d/status.json
+      - name: Consume real D status through B manual and scheduled reporting
+        env:
+          B_REAL_D_STATUS_FILE: /tmp/b-real-d/status.json
+        run: |
+          export B_REAL_D_STATUS_SHA256="$(sha256sum "$B_REAL_D_STATUS_FILE" | cut -d ' ' -f 1)"
+          bun test scanner/src/recovery-status.test.ts
+      - name: Verify exact B checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
