@@ -17,7 +17,11 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
     stamp = dt.datetime.fromisoformat(report["as_of"].replace("Z", "+00:00"))
     if stamp.tzinfo is None or stamp.utcoffset() is None:
         raise ValueError("naive scan timestamp")
-    now = now or dt.datetime.now(dt.timezone.utc)
+    now = now if now is not None else dt.datetime.now(dt.timezone.utc)
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("naive verification clock")
+    if not isinstance(max_age_seconds, (int, float)) or isinstance(max_age_seconds, bool) or not math.isfinite(max_age_seconds) or max_age_seconds <= 0 or max_age_seconds > 600:
+        raise ValueError("invalid maximum quote age")
     age = (now - stamp).total_seconds()
     if not 0 <= age <= max_age_seconds:
         raise ValueError("stale or future paper snapshot")
@@ -59,6 +63,11 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
         quote = dt.datetime.fromisoformat(candidate["quote_observed_at"].replace("Z", "+00:00"))
         if quote.tzinfo is None or quote.utcoffset() is None or not 0 <= (stamp - quote).total_seconds() <= 600:
             raise ValueError("stale candidate quote")
+        # Scan freshness alone is insufficient: a quote may be 9m old at scan
+        # time and 9m old again when read. Enforce the actual read-time age.
+        quote_age = (now - quote).total_seconds()
+        if not 0 <= quote_age <= max_age_seconds:
+            raise ValueError("expired candidate quote at read time")
         for field in ("price", "move15_pct", "volume_accel", "baseline_score", "challenger_score", "spread_bps"):
             value = candidate.get(field)
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
@@ -70,7 +79,8 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
     return {"as_of": report["as_of"], "scan_status": report["scan_status"],
             "eligible_pairs": report.get("eligible_pairs"), "observed_markets": report.get("observed_markets"),
             "abstention_counts": report.get("abstention_counts", {}), "watch": watch,
-            "receipt_sha256": hashlib.sha256(raw).hexdigest(), "snapshot_age_seconds": round(age, 3)}
+            "receipt_sha256": hashlib.sha256(raw).hexdigest(), "snapshot_age_seconds": round(age, 3),
+            "quote_age_seconds": {c["pair"]: round((now - dt.datetime.fromisoformat(c["quote_observed_at"].replace("Z", "+00:00"))).total_seconds(), 3) for c in watch}}
 
 def main():
     parser = argparse.ArgumentParser(description="Verify and emit immutable A2 paper candidate snapshot")
