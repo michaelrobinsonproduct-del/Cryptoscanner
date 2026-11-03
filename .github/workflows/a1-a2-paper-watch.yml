@@ -31,7 +31,7 @@ jobs:
         run: |
           python -m paper_pov.scanner
           python - <<'PY'
-          import json, os
+          import datetime as dt, hashlib, json, math, os
           from pathlib import Path
           latest = Path(os.environ["PAPER_REPORT_PATH"])
           report = json.loads(latest.read_text())
@@ -40,6 +40,21 @@ jobs:
           assert json.loads(receipts[0].read_text()) == report, "receipt readback mismatch"
           assert report["mode"] == "PAPER_ONLY" and report["production_applied"] is False
           assert report["watch"] and all(not x["buy_approved"] for x in report["watch"])
+          assert sum(report["abstention_counts"].values()) == len(report["abstentions"])
+          assert len(report["watch"]) + len(report["abstentions"]) <= report["ohlc_screened"]
+          assert len({x["prediction_id"] for x in report["watch"]}) == len(report["watch"])
+          assert [x["rank"] for x in report["watch"]] == list(range(1, len(report["watch"]) + 1))
+          for x in report["watch"]:
+              assert x["status"] == "PAPER_WATCH" and x["risk"] in ("HIGH", "ELEVATED")
+              assert x["quote_timestamp_semantics"] == "client_observed_not_exchange_event_time"
+              assert 0 <= x["quote_age_seconds"] <= 600
+              assert 0 <= x["ohlc_age_seconds"] <= 600
+              assert all(math.isfinite(float(x[k])) for k in (
+                  "price", "move15_pct", "volume_accel", "baseline_score",
+                  "challenger_score", "spread_bps", "notional_24h_usd"))
+              assert x["price"] > 0 and x["volume_accel"] > 0
+              assert dt.datetime.fromisoformat(x["quote_observed_at"]) <= dt.datetime.fromisoformat(x["as_of"])
+          receipt_sha256 = hashlib.sha256(receipts[0].read_bytes()).hexdigest()
           print("LIVE_PAPER_EVIDENCE " + json.dumps({
               "as_of": report["as_of"],
               "eligible_pairs": report["eligible_pairs"],
@@ -50,6 +65,7 @@ jobs:
               "abstention_counts": report["abstention_counts"],
               "stablecoins_excluded": report["excluded_stablecoin_pairs"],
               "receipt_verified": True,
+              "receipt_sha256": receipt_sha256,
               "production_applied": False,
           }, sort_keys=True))
           PY
