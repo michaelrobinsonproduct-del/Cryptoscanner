@@ -1,0 +1,76 @@
+name: Research prospective outcomes integrated acceptance
+on:
+  pull_request:
+    paths:
+      - 'research/prospective_*.py'
+      - 'research/source_qualified_outcomes.py'
+      - 'research/kraken_capture_rounds.py'
+      - 'research/kraken_prospective_batch.py'
+      - 'research/test_kraken_capture_rounds.py'
+      - 'research/test_kraken_round_index_wiring.py'
+      - '.github/workflows/research-prospective-outcomes-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prospective-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Exact source head
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          echo "PROSPECTIVE_EXACT_HEAD=$EXPECTED_SHA"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Integrated offline source and outcome acceptance
+        run: |
+          set -euo pipefail
+          python -m unittest -v \
+            research.test_kraken_prospective_provenance \
+            research.test_kraken_prospective_batch \
+            research.test_prospective_outcome_adapter \
+            research.test_source_qualified_outcomes \
+            research.test_prospective_round_assembler \
+            research.test_prospective_round_store \
+            research.test_prospective_end_to_end \
+            research.test_kraken_capture_rounds \
+            research.test_kraken_round_index_wiring
+      - name: One-shot source collection and indexed evidence
+        run: |
+          set -euo pipefail
+          python -m research.kraken_prospective_batch --pairs XBTUSD,ETHUSD,SOLUSD,XRPUSD \
+            --output-dir /tmp/prospective-source --round-index /tmp/prospective-rounds.jsonl
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research.prospective_round_store import evaluate_index
+          index=Path('/tmp/prospective-rounds.jsonl')
+          records=[json.loads(line) for line in index.read_text().splitlines()]
+          assert len(records)==1
+          result=evaluate_index(index)
+          assert result['rounds_verified']==1
+          assert result['qualified_first_entry_episodes']==0
+          assert result['held_out_lift'] is None
+          print('PROSPECTIVE_SOURCE_COVERAGE',json.dumps({
+              'snapshots_verified':result['snapshots_verified'],
+              'abstentions':result['abstentions'],
+              'qualified_first_entry_episodes':result['qualified_first_entry_episodes']
+          },sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prospective-integration-${{ github.run_id }}
+          path: |
+            /tmp/prospective-source/
+            /tmp/prospective-rounds.jsonl
+          if-no-files-found: ignore
+          retention-days: 7
