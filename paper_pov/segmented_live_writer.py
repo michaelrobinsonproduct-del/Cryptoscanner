@@ -216,6 +216,40 @@ def verify_remote(root, base, new_commit, staged):
             "remote_commit": new_commit, "verified_files": paths}
 
 
+def publish_stage_outputs(next_ledger, state, scoreboard_path, score):
+    """Publish both stage receipts or fail with no partial successful receipt.
+
+    The staging tree is immutable and independently verified by stage().
+    Check all destinations BEFORE writing either file, then verify the
+    actual persisted bytes; clean up only files created by this invocation.
+    """
+    entries = [(Path(next_ledger), ledger.canonical(state)),
+               (Path(scoreboard_path), ledger.canonical(score))]
+    if entries[0][0] == entries[1][0]:
+        raise ValueError("Ledger and scoreboard destinations must differ")
+    if any(path.exists() or path.is_symlink() for path, _ in entries):
+        raise FileExistsError("Refuse to replace staged output")
+    written = []
+    try:
+        for path, data in entries:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            # Register first so a writer that creates a file then raises
+            # cannot leave a partial success artifact.
+            written.append(path)
+            segments._write(path, data)
+            if path.read_bytes() != data:
+                raise ValueError("Staged output readback mismatch")
+        ledger.verify(json.loads(entries[0][0].read_bytes()), storage.MAX_RAW_BYTES)
+        if json.loads(entries[1][0].read_bytes()) != ledger.scoreboard(
+                state, storage.MAX_RAW_BYTES):
+            raise ValueError("Persisted scoreboard mismatch")
+    except Exception:
+        for path in reversed(written):
+            if path.is_file() and not path.is_symlink():
+                path.unlink()
+        raise
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description="Git-only paper ledger single-writer staging")
     sub = p.add_subparsers(dest="command", required=True)
@@ -235,13 +269,7 @@ def main(argv=None):
     if a.command == "stage":
         report = json.loads(Path(a.report).read_bytes())
         state, info = stage(a.repository, a.base, report, a.source_sha, a.staged)
-        for path, data in ((a.next_ledger, ledger.canonical(state)),
-                           (a.scoreboard, ledger.canonical(info["scoreboard"]))):
-            target = Path(path)
-            if target.exists():
-                raise FileExistsError("Refuse to replace staged output")
-            target.parent.mkdir(parents=True, exist_ok=True)
-            segments._write(target, data)
+        publish_stage_outputs(a.next_ledger, state, a.scoreboard, info["scoreboard"])
         result = {"generation": state["generation"], "ledger_sha256": state["sha256"],
                   "snapshot_sha256": info["snapshot_sha256"]}
     elif a.command == "apply":
