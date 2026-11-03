@@ -1,5 +1,11 @@
 name: C2 retired workflow caller contract
 on:
+  push:
+    branches:
+      - owner-c-c2-remove-superseded-continuation-20261103
+    paths:
+      - '.github/workflows/c2-retired-workflow-contract.yml'
+      - 'paper_pov/c_read_only_integration.py'
   pull_request:
     paths:
       - '.github/workflows/**'
