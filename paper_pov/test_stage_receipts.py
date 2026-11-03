@@ -79,6 +79,44 @@ class StageReceiptTests(unittest.TestCase):
         self.assertFalse(a.exists())
         self.assertEqual(b.read_bytes(), b"another writer")
 
+    def test_competing_replacement_during_readback_is_preserved(self):
+        a, b = self.paths()
+        original = writer._exclusive_receipt
+        def replace_after_creation(path, data):
+            original(path, data)
+            if Path(path) == a:
+                path = Path(path)
+                path.unlink()
+                path.write_bytes(b"competitor")
+        with patch.object(writer, "_exclusive_receipt", side_effect=replace_after_creation):
+            with self.assertRaises(ValueError):
+                self.publish()
+        self.assertEqual(a.read_bytes(), b"competitor")
+        self.assertFalse(b.exists())
+
+    def test_competing_replacement_after_failed_write_is_preserved(self):
+        a, _ = self.paths()
+        real_fdopen = writer.os.fdopen
+        class FailingStream:
+            def __init__(self, stream):
+                self.stream = stream
+            def __enter__(self):
+                self.stream.__enter__()
+                return self
+            def __exit__(self, *args):
+                return self.stream.__exit__(*args)
+            def write(self, data):
+                self.stream.write(data)
+                a.unlink()
+                a.write_bytes(b"competitor")
+                raise OSError("interrupted")
+        def failed_fdopen(fd, mode):
+            return FailingStream(real_fdopen(fd, mode))
+        with patch.object(writer.os, "fdopen", side_effect=failed_fdopen):
+            with self.assertRaises(OSError):
+                writer._exclusive_receipt(a, b"ours")
+        self.assertEqual(a.read_bytes(), b"competitor")
+
     def test_symlinked_parent_is_rejected(self):
         outside = self.root / "outside"
         outside.mkdir()
