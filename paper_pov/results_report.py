@@ -123,8 +123,9 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         f"**Ledger commit:** {ledger_commit}  ",
         f"**Ledger generation:** {score['generation']} (remote push/readback verified)",
         "",
-        f"**Freshness:** Kraken public ticker client-observed, max quote age {max(ages):.0f}s (limit 600s). "
-        "Ticker exchange-event freshness is NOT independently proven.",
+        ("**Freshness:** Kraken public ticker client-observed, max quote age "
+         + (f"{max(ages):.0f}s (limit 600s)." if ages else "NOT VERIFIED (zero observations).")
+         + " Ticker exchange-event freshness is NOT independently proven."),
         f"**Kraken online /USD pairs:** {scan['online_usd_pairs']}; "
         f"stablecoin-base exclusions: {scan['excluded_stablecoin_pairs']}; "
         f"other suffix exclusions: {scan['excluded_other_pairs']}; "
