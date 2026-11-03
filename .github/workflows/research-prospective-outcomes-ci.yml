@@ -6,6 +6,8 @@ on:
       - 'research/chronological_challenger.py'
       - 'research/evaluate_challenger.py'
       - 'research/learning_feedback.py'
+      - 'research/report_qualified_coverage.py'
+      - 'research/test_report_qualified_coverage.py'
       - 'research/test_learning_feedback.py'
       - 'research/test_evaluate_challenger.py'
       - 'research/test_chronological_challenger.py'
@@ -41,7 +43,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: E2 focused chronological challenger regression
-        run: python -m unittest -v research.test_chronological_challenger research.test_evaluate_challenger research.test_learning_feedback
+        run: python -m unittest -v research.test_chronological_challenger research.test_evaluate_challenger research.test_learning_feedback research.test_report_qualified_coverage
       - name: Integrated offline source and outcome acceptance
         run: |
           set -euo pipefail
@@ -72,6 +74,8 @@ jobs:
           assert result['rounds_verified']==1
           assert result['qualified_first_entry_episodes']==0
           assert result['held_out_lift'] is None
+          from research.report_qualified_coverage import coverage
+          print('PROSPECTIVE_SOURCE_QUALIFIED_COVERAGE',json.dumps(coverage(result),sort_keys=True))
           print('PROSPECTIVE_SOURCE_COVERAGE',json.dumps({
               'snapshots_verified':result['snapshots_verified'],
               'abstentions':result['abstentions'],
