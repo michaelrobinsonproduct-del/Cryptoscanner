@@ -33,3 +33,18 @@ test("no invented uplift and no post-discovery challenger scoring",()=>{
  expect(evaluateShadowCandidate(c,evidence,outcomes).reason).toBe("missing_or_leaky_challenger_score");
  expect(evaluateShadowCandidate(c,evidence,outcomes,[{...scores[0],computed_at:"2026-11-03T04:01:00Z"}]).status).toBe("ABSTAIN");
 });
+
+test("qualified pre-discovery challenger score is visible pending outcome, never counted as hit",async()=>{
+ const r=createCycleRunner(deps,async()=>({evidence,outcomes:[],scores}));
+ const manual=await r.run("manual"),scheduled=await r.run("scheduled");
+ expect(manual.result).toEqual(scheduled.result);
+ expect(manual.result.shadow_evaluation.candidates[0]).toMatchObject({status:"PENDING_OUTCOME",reason:"outcome_not_mature",challenger_score:89,outcome_label:null,production_promoted:false});
+ expect(manual.result.candidates[0].score).toBe(85);
+});
+test("gap-abstaining outcomes remain pending, duplicates or mismatched provenance fail closed",()=>{
+ const c={pair:"TAOUSD",score:85,discovered_at:discovered,decision:"WATCH"};
+ expect(evaluateShadowCandidate(c,evidence,[{...outcomes[0],label:"ABSTAIN"}],scores).status).toBe("PENDING_OUTCOME");
+ expect(evaluateShadowCandidate(c,evidence,[...outcomes,...outcomes],scores).status).toBe("ABSTAIN");
+ expect(evaluateShadowCandidate(c,evidence,[{...outcomes[0],source_sha:"c".repeat(64)}],scores).status).toBe("ABSTAIN");
+ expect(evaluateShadowCandidate(c,{...evidence,qualified:false},[],scores).status).toBe("ABSTAIN");
+});
