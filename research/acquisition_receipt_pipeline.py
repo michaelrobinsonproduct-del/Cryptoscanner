@@ -43,21 +43,47 @@ def evaluate(ledger, depth_directory, captures_directory, associations_directory
     captures = load_captures(captures_directory)
     # Independently verified source rows are selected by binder; raw capture
     # claims are not sufficient to establish authenticated depth.
+    if associations_directory is None:
+        raise ValueError("authenticated depth associations required")
     original_captures = captures
     association_exclusions = []
     if associations_directory is not None:
         captures, association_exclusions, _ = verified_associations(
             captures_directory, associations_directory, depth_directory)
-    if associations_directory is None:\n        raise ValueError("authenticated depth associations required")\n    report = bind(ledger, depth_directory, captures)
+    report = bind(ledger, depth_directory, captures)
     report["association_exclusions"] = association_exclusions
     report["association_excluded_count"] = len(association_exclusions)
     report["capture_count"] = len(original_captures)
     report["capture_sha256"] = hashlib.sha256(
         json.dumps(original_captures, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
-    # These independently bound receipts are the only allowable input to E2/E3.\n    # Never export raw captures or caller-supplied depth claims as authenticated.\n    report["reconciliation_receipts"] = [dict(r) for r in report["accepted"]]\n    report["reconciliation_receipt_count"] = len(report["reconciliation_receipts"])\n    report["mode"] = "RESEARCH_ONLY_ACQUISITION_PIPELINE"
+    # These independently bound receipts are the only allowable input to E2/E3.
+    # Never export raw captures or caller-supplied depth claims as authenticated.
+    report["reconciliation_receipts"] = [dict(r) for r in report["accepted"]]
+    report["reconciliation_receipt_count"] = len(report["reconciliation_receipts"])
+    report["mode"] = "RESEARCH_ONLY_ACQUISITION_PIPELINE"
     report["production_applied"] = False
     return report
+
+def evaluate_learning(ledger, depth_directory, captures_directory, associations_directory,
+                      evidence, *, split_at, baseline_version, challenger_version,
+                      evidence_sha256):
+    """Authenticate score/depth, reconcile source outcomes, then decide shadow only."""
+    from research.reconcile_paper_scores import reconcile
+    binding = evaluate(ledger, depth_directory, captures_directory, associations_directory)
+    result = reconcile(
+        ledger, evidence, split_at=split_at, baseline_version=baseline_version,
+        challenger_version=challenger_version, evidence_sha256=evidence_sha256,
+        score_receipts=binding["reconciliation_receipts"])
+    result["acquisition_coverage"] = {
+        "captures": binding["capture_count"],
+        "authenticated_receipts": binding["reconciliation_receipt_count"],
+        "association_exclusions": binding["association_excluded_count"],
+        "binder_exclusions": binding["excluded_count"],
+        "verified_depth_rows": binding["verified_depth_rows"],
+        "depth_abstentions": len(binding["source_abstentions"])}
+    result["production_applied"] = False
+    return result
 
 
 def write_new(path, report):
@@ -80,14 +106,40 @@ def main():
     parser.add_argument("--captures-directory", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--associations-directory", required=True)
+    parser.add_argument("--round-index")
+    parser.add_argument("--split-at", type=float)
+    parser.add_argument("--baseline-version")
+    parser.add_argument("--challenger-version")
+    parser.add_argument("--learning-ledger", help="Research-only append-only E3 decisions")
     args = parser.parse_args()
     ledger = json.loads(Path(args.paper_ledger).read_bytes())
     report = evaluate(ledger, args.depth_directory, args.captures_directory,
                       args.associations_directory)
+    requested = [args.round_index is not None, args.split_at is not None,
+                 args.baseline_version is not None, args.challenger_version is not None]
+    if any(requested):
+        if not all(requested):
+            parser.error("round-index, split-at and both versions must be supplied together")
+        from research.prospective_round_store import evaluate_index
+        from research.learning_feedback import append_decision
+        index_bytes = Path(args.round_index).read_bytes()
+        evidence = evaluate_index(args.round_index, 1)
+        report = evaluate_learning(
+            ledger, args.depth_directory, args.captures_directory,
+            args.associations_directory, evidence, split_at=args.split_at,
+            baseline_version=args.baseline_version,
+            challenger_version=args.challenger_version,
+            evidence_sha256=hashlib.sha256(
+                Path(args.paper_ledger).read_bytes() + index_bytes).hexdigest())
+        if args.learning_ledger:
+            report["learning_record"] = append_decision(
+                args.learning_ledger, report["shadow_decision"])
+    elif args.learning_ledger:
+        parser.error("learning-ledger requires complete E2/E3 evaluation arguments")
     digest = write_new(args.output, report)
-    print(json.dumps({"accepted": report["accepted_count"],
-                      "excluded": report["excluded_count"],
-                      "source_abstentions": len(report["source_abstentions"]),
+    print(json.dumps({"authenticated_receipts": report.get("reconciliation_receipt_count",
+                           report.get("acquisition_coverage", {}).get("authenticated_receipts", 0)),
+                      "shadow_decision": report.get("shadow_decision", {}).get("decision"),
                       "report_sha256": digest}, sort_keys=True))
 
 
