@@ -130,7 +130,25 @@ class DownloadedArtifactReplayTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "identity"):
             self.cli(run_id="999")
 
-    def test_legacy_wrong_source_identity_is_hard_failure(self):\n        payload = json.loads(self.results["results.json"])\n        payload.pop("quote_evidence")\n        payload["source_sha"] = "f" * 40\n        self.results["results.json"] = json.dumps(payload).encode()\n        self.save()\n        with self.assertRaisesRegex(ValueError, "identity"):\n            self.cli()\n\n    def test_legacy_wrong_ledger_identity_is_hard_failure(self):\n        payload = json.loads(self.results["results.json"])\n        payload.pop("quote_evidence")\n        payload["ledger_commit"] = "f" * 40\n        self.results["results.json"] = json.dumps(payload).encode()\n        self.save()\n        with self.assertRaisesRegex(ValueError, "identity"):\n            self.cli()\n\n    def test_rechecksummed_legacy_forged_candidate_is_hard_failure(self):
+    def test_legacy_wrong_source_identity_is_hard_failure(self):
+        payload = json.loads(self.results["results.json"])
+        payload.pop("quote_evidence")
+        payload["source_sha"] = "f" * 40
+        self.results["results.json"] = json.dumps(payload).encode()
+        self.save()
+        with self.assertRaisesRegex(ValueError, "identity"):
+            self.cli()
+
+    def test_legacy_wrong_ledger_identity_is_hard_failure(self):
+        payload = json.loads(self.results["results.json"])
+        payload.pop("quote_evidence")
+        payload["ledger_commit"] = "f" * 40
+        self.results["results.json"] = json.dumps(payload).encode()
+        self.save()
+        with self.assertRaisesRegex(ValueError, "identity"):
+            self.cli()
+
+    def test_rechecksummed_legacy_forged_candidate_is_hard_failure(self):
         payload = json.loads(self.results["results.json"])
         payload.pop("quote_evidence")
         payload["candidates"][0]["challenger_score"] += 500
