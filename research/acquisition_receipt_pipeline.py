@@ -138,12 +138,12 @@ def main():
     ledger = json.loads(Path(args.paper_ledger).read_bytes())
     report = evaluate(ledger, args.depth_directory, args.captures_directory,
                       args.associations_directory)
-    requested = [args.round_index is not None, args.split_at is not None,
+    requested = [args.split_at is not None,
                  args.baseline_version is not None, args.challenger_version is not None]
     if args.all_horizon_coverage and not args.round_index:
         parser.error("--all-horizon-coverage requires --round-index")
     if any(requested):
-        if not all(requested):
+        if not all(requested) or args.round_index is None:
             parser.error("round-index, split-at and both versions must be supplied together")
         from research.prospective_round_store import evaluate_index
         from research.learning_feedback import append_decision
