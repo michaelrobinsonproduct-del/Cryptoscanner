@@ -8,7 +8,7 @@ import json
 import re
 from pathlib import Path
 
-PAIR = re.compile(r"[A-Z0-9]{3,12}\\Z")
+PAIR = re.compile(r"[A-Z0-9]{3,12}\Z")
 
 
 def plan(raw, *, expected=48, batch_size=8):
@@ -42,7 +42,7 @@ def main():
     out = Path(args.output)
     if out.exists():
         raise ValueError("refuse to overwrite prior plan")
-    out.write_text(json.dumps(result, sort_keys=True, indent=2) + "\\n")
+    out.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
 
 
 if __name__ == "__main__":
