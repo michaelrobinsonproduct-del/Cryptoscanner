@@ -38,7 +38,7 @@ def evaluate(index_path, scores_path, split_at):
         joined.append({**outcome,
                        "baseline_score":scores.get("baseline_score"),
                        "challenger_score":scores.get("challenger_score"),
-                       "entry_liquidity_usd":scores.get("entry_liquidity_usd")})
+                       "entry_liquidity_usd":outcome.get("entry_liquidity_usd")})
     result=compare(joined,split_at=split_at)
     result["source_rounds_verified"]=evidence["rounds_verified"]
     result["source_snapshots_verified"]=evidence["snapshots_verified"]
