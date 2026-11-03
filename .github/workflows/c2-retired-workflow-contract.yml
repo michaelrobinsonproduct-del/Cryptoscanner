@@ -144,7 +144,11 @@ jobs:
           python - <<'PY'
           import json
           p=json.load(open("/tmp/c-real-receipts/integration.json"))
-          assert p["a2_snapshot_attached"] and p["a2_watch_count"]>0
+          assert p["a2_snapshot_attached"] and p["a2_watch_count"]==12
+          assert p["a2_eligible_pairs"]==605 and p["a2_observed_markets"]==602
+          assert p["a2_source_cohort"]=="authenticated_snapshot_distinct_from_historical_manual_scheduled"
+          assert isinstance(p["a2_abstention_counts"],dict)
+          assert p["a2_as_of"]
           assert p["recovery_verified"] and p["status"]=="ABSTAIN_LEGACY_QUOTE_EVIDENCE"
           assert not p["trading_approved"] and not p["production_applied"]
           print("C_B_A2_RECOVERY_CONNECTED",json.dumps(p,sort_keys=True))
@@ -155,5 +159,6 @@ jobs:
           path: |
             /tmp/c-real-receipts/parity.json
             /tmp/c-real-receipts/integration.json
+            /tmp/c-real-receipts/a2.json
           retention-days: 7
           if-no-files-found: error
