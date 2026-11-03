@@ -43,6 +43,28 @@ class VerifiedDepthLiquidityTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"depth/evidence ask mismatch"):
                 verified_rows(tmp)
 
+    def test_tampered_bid_evidence_rejected_despite_valid_depth_sha(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            fixture(root)
+            path=root/"evidence.json"
+            evidence=json.loads(path.read_text())
+            evidence["best_bid"]="98"
+            path.write_text(json.dumps(evidence))
+            with self.assertRaisesRegex(ValueError,"depth/evidence bid mismatch"):
+                verified_rows(tmp)
+
+    def test_tampered_quote_event_rejected_despite_valid_depth_sha(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            fixture(root)
+            path=root/"evidence.json"
+            evidence=json.loads(path.read_text())
+            evidence["ask_level_event_at"]="1700000001"
+            path.write_text(json.dumps(evidence))
+            with self.assertRaisesRegex(ValueError,"depth/evidence ask timestamp mismatch"):
+                verified_rows(tmp)
+
     def test_missing_liquidity_cannot_be_invented_by_scores(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
