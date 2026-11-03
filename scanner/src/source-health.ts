@@ -11,6 +11,7 @@ export function createSourceHealthReader(path:string|undefined,sha:string|undefi
   const x=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));
   const statuses=["SOURCE_QUERY_FAILED","FAILURES_OBSERVED","RUNS_PENDING","NO_RECENT_RUNS","NO_FAILURES_OBSERVED"];
   if(x.schema!=="paper_source_run_health_v1"||x.production_applied!==false||x.window_hours!==24||!statuses.includes(x.status)||typeof x.query_verified!=="boolean"||!Array.isArray(x.runs)||x.runs.length>100||!Number.isFinite(Date.parse(x.observed_at)))throw Error("invalid_source_health");
+  if(x.runs.some((r:any)=>!Number.isInteger(r.run_id)||r.run_id<=0||!["schedule","workflow_dispatch"].includes(r.event)||!["completed","queued","in_progress","waiting","pending","requested"].includes(r.status)||!Number.isFinite(Date.parse(r.created_at))||!/^[a-f0-9]{40}$/i.test(r.source_sha||"")||typeof r.url!=="string"||!r.url.startsWith("https://github.com/")))throw Error("invalid_source_health_run");
   if((x.status==="SOURCE_QUERY_FAILED")!==(!x.query_verified))throw Error("source_health_query_status_mismatch");
   const failed=x.runs.filter((r:any)=>["failure","timed_out","cancelled","action_required","startup_failure"].includes(r.conclusion)).length;
   const pending=x.runs.filter((r:any)=>r.status!=="completed").length;
