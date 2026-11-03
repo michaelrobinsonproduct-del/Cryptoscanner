@@ -308,8 +308,17 @@ def persist_report(latest_path, report):
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
         if latest_path.exists():
             current = json.loads(latest_path.read_text())
-            if utc(current["as_of"]) > stamp:
+            current_stamp = utc(current["as_of"])
+            if current_stamp > stamp:
                 raise ValueError("out-of-order scan cannot replace newer latest")
+            if current_stamp == stamp:
+                # A retried job must not create another receipt or rewrite latest.
+                # Same timestamp with different bytes is a conflict, not a replay.
+                if latest_path.read_bytes() != payload or not receipt.exists():
+                    raise ValueError("conflicting or incomplete same-timestamp scan replay")
+                if receipt.read_bytes() != payload:
+                    raise ValueError("same-timestamp receipt readback mismatch")
+                return receipt
         fd = os.open(receipt, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         identity = os.fstat(fd)
         try:
