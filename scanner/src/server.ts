@@ -1,3 +1,4 @@
+import {createCycleHttpHandler} from "./cycle-http";
 import {createCycleRunner} from "./cycle-runner";
 const port=Number(process.env.PORT||3000),controlUrl=process.env.CONTROL_COLLECTOR_URL||"https://kraken-collector-production.up.railway.app",confirmUrl=process.env.CONTROL_CONFIRM_URL||"https://kraken-rest-confirm-production.up.railway.app";
 async function json(url:string){const r=await fetch(url,{signal:AbortSignal.timeout(45000)});if(!r.ok)throw Error(`HTTP ${r.status}`);return r.json() as Promise<any>}
@@ -5,4 +6,4 @@ async function confirm(pair:string){const x=await json(`${confirmUrl}/confirm?pa
 const deps={scan:()=>json(`${controlUrl}/scan`),confirm,pause:(ms:number)=>Bun.sleep(ms),now:()=>new Date()};
 const runner=createCycleRunner(deps);
 setTimeout(()=>{void(async()=>{for(;;){await runner.run("scheduled");await Bun.sleep(300000)}})()},5000);
-Bun.serve({port,async fetch(req){const u=new URL(req.url);if(u.pathname==="/health"){const s=runner.snapshot();return Response.json({mode:"shadow",running:s.running,cycles:s.cycles,lastError:s.lastError})}if(u.pathname==="/dashboard"){const s=runner.snapshot();return Response.json({mode:"shadow",running:s.running,cycles:s.cycles,last_error:s.lastError,last_result:s.last})}if(u.pathname==="/cycle"){const result=await runner.run("manual");return Response.json(result.ok?result.result:{error:result.error},{status:result.status})}return Response.json({endpoints:["/health","/dashboard","/cycle"]})}});
+Bun.serve({port,fetch:createCycleHttpHandler(runner)});
