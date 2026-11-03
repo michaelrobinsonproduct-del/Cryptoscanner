@@ -6,6 +6,8 @@ on:
       - 'scanner/src/candidate-contract.test.ts'
       - 'scanner/src/candidate-cycle.ts'
       - 'scanner/src/candidate-cycle.test.ts'
+      - 'scanner/src/cycle-runner.ts'
+      - 'scanner/src/cycle-runner.test.ts'
       - 'scanner/src/server.ts'
       - '.github/workflows/b1-candidate-parity.yml'
 permissions:
@@ -17,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - name: Focused B1 regression
-        run: bun test scanner/src/candidate-contract.test.ts scanner/src/candidate-cycle.test.ts
+      - name: Focused B1 candidate and native-entry parity regression
+        run: bun test scanner/src/candidate-contract.test.ts scanner/src/candidate-cycle.test.ts scanner/src/cycle-runner.test.ts
       - name: Verify exact checkout
         run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
