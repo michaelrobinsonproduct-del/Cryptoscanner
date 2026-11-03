@@ -1,11 +1,16 @@
 name: Research retained Kraken rounds (manual, no production writes)
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/research-retained-kraken-rounds.yml'
+      - 'research/kraken_prospective_batch.py'
+      - 'research/prospective_round_store.py'
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: kraken-research-retained-rounds
+  group: kraken-research-retained-rounds-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: false
 jobs:
   capture-and-retain:
@@ -13,6 +18,12 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact head
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -30,7 +41,7 @@ jobs:
               'Accept':'application/vnd.github+json'})
           with urllib.request.urlopen(request,timeout=30) as response:
               artifacts=json.load(response).get('artifacts',[])
-          matches=[a for a in artifacts if a['name'].startswith('kraken-round-history-') and not a['expired'] and a.get('workflow_run',{}).get('head_repository_id') == int(os.environ.get('GITHUB_REPOSITORY_ID','0')) and a.get('workflow_run',{}).get('head_branch') == os.environ['GITHUB_REF_NAME']]
+          matches=[a for a in artifacts if a['name'].startswith('kraken-round-history-') and not a['expired'] and (a.get('workflow_run') or {}).get('head_repository_id') == int(os.environ.get('GITHUB_REPOSITORY_ID','0')) and (a.get('workflow_run') or {}).get('head_branch') == os.environ.get('GITHUB_HEAD_REF',os.environ['GITHUB_REF_NAME'])]
           if not matches:
               print('ROUND_HISTORY_INIT_EMPTY')
           else:
