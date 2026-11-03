@@ -186,9 +186,11 @@ def main():
     if args.associate_verified_depth:
         if not all((args.captures_directory, args.depth_directory, args.associations_directory)):
             parser.error("automatic association requires captures, depth and association directories")
-        from research.depth_acquisition_associations import associate_captured_scores
-        association_report = associate_captured_scores(
-            args.captures_directory, args.depth_directory, args.associations_directory)
+        from research.depth_acquisition_associations import associate_captured_scores, associate_indexed_captures
+        association_report = (associate_indexed_captures(
+            args.captures_directory, args.round_index, args.associations_directory)
+            if args.round_index else associate_captured_scores(
+                args.captures_directory, args.depth_directory, args.associations_directory))
         print(json.dumps({"association_attempted": True,
                           "associated": len(association_report["associated"]),
                           "excluded": len(association_report["excluded"])}, sort_keys=True))
