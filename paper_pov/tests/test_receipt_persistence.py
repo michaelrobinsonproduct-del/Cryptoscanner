@@ -41,5 +41,18 @@ class ReceiptTests(unittest.TestCase):
             persist_report(self.latest, {**self.report, "bad": float("nan")})
         self.assertFalse(self.latest.exists())
 
+    def test_older_scan_does_not_regress_latest(self):
+        persist_report(self.latest, self.report)
+        older = dict(self.report, as_of="2026-11-03T01:59:59+00:00")
+        with self.assertRaisesRegex(ValueError, "out-of-order"):
+            persist_report(self.latest, older)
+        self.assertEqual(json.loads(self.latest.read_text()), self.report)
+
+    def test_latest_readback_failure(self):
+        with patch("paper_pov.scanner.atomic_json", side_effect=lambda path, report: Path(path).write_text("{}")):
+            with self.assertRaisesRegex(IOError, "latest report readback mismatch"):
+                persist_report(self.latest, self.report)
+        self.assertEqual(list((self.latest.parent / "receipts").glob("*.json")), [])
+
 if __name__ == "__main__":
     unittest.main()
