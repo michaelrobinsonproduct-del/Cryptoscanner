@@ -44,6 +44,26 @@ def fetch(path):
         raise ValueError("Kraken response error or invalid schema")
     return payload["result"]
 
+def watch_contract(item, quote_at, completed):
+    """Conservative, deterministic paper WATCH evidence; never implies exchange tick age."""
+    age = (completed - quote_at).total_seconds()
+    if not 0 <= age <= 600:
+        raise ValueError("client-observed ticker quote outside 10-minute freshness window")
+    spread = finite(item["spread_bps"])
+    accel = finite(item["volume_accel"])
+    move15 = finite(item["move15_pct"])
+    if spread < 0 or accel <= 0:
+        raise ValueError("invalid WATCH liquidity metrics")
+    risk = "HIGH" if spread > 30 or accel < 0.8 or abs(move15) > 8 else "ELEVATED"
+    return {
+        "status": "PAPER_WATCH", "risk": risk,
+        "quote_age_seconds": round(age),
+        "quote_timestamp_semantics": "client_observed_not_exchange_event_time",
+        "volume_acceleration_reference": "last_30m_over_prior_30m",
+        "momentum_reference": "completed_5m_candles_15m",
+        "buy_approved": False,
+    }
+
 def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     """All timestamps are client-observed; no Kraken ticker exchange timestamp is asserted."""
     clock = clock or (lambda: dt.datetime.now(UTC))
@@ -196,6 +216,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     watch = watch[:12]
     as_of = completed.isoformat()
     for rank, item in enumerate(watch, 1):
+        item.update(watch_contract(item, quote_at, completed))
         item["rank"] = rank
         item["as_of"] = as_of
         item["quote_observed_at"] = quote_at.isoformat()
