@@ -6,7 +6,7 @@ class ChallengerTests(unittest.TestCase):
     def row(self, i, t, hit=False, b=0.1, c=0.1):
         return {"pair":f"P{i}", "entry_first_observed_at":t,
                 "status":"QUALIFIED_OBSERVED_PATH","ge30pct":hit,
-                "baseline_score":b,"challenger_score":c}
+                "baseline_score":b,"challenger_score":c,"entry_liquidity_usd":100.0}
 
     def test_purge_and_identical_held_out_cohort(self):
         split=1_000_000
@@ -32,6 +32,18 @@ class ChallengerTests(unittest.TestCase):
         rows[0]["status"]="QUALIFIED_OBSERVED_PATH"
         del rows[0]["challenger_score"]
         self.assertEqual(compare(rows,split_at=2)["excluded"]["MISSING_POINT_IN_TIME_SCORES"],1)
+
+    def test_liquidity_gate_never_counts_missing_or_unfillable_entries(self):
+        split=1_000_000
+        rows=[self.row(i,split-PURGE_SECONDS-100-i) for i in range(20)]
+        rows += [self.row(100+i,split+300*i,i==0) for i in range(20)]
+        rows[20]["entry_liquidity_usd"]=None
+        rows[21]["entry_liquidity_usd"]=19.99
+        result=compare(rows,split_at=split)
+        self.assertEqual(result["excluded"]["MISSING_ENTRY_LIQUIDITY"],1)
+        self.assertEqual(result["excluded"]["INSUFFICIENT_ENTRY_LIQUIDITY"],1)
+        self.assertEqual(result["held_out_n"],18)
+        self.assertIsNone(result["held_out_lift"])
 
     def test_duplicate_rejected(self):
         row=self.row(1,100)
