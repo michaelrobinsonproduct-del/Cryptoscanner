@@ -34,3 +34,50 @@ jobs:
         run: bun test scanner/src/a2-snapshot.test.ts scanner/src/shadow-artifacts.test.ts
       - name: Verify exact checkout
         run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+  authenticated-a2-manual-scheduled:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrobinsonproduct-del/Cryptoscanner
+          ref: f11ff7260a504e9580e38b329958238654c8aaaa
+          path: a2-source
+          persist-credentials: false
+      - name: Acquire one live public Kraken paper snapshot and verify immutable receipt
+        env:
+          PAPER_REPORT_PATH: ${{ runner.temp }}/b1-real-a2/latest.json
+          PYTHONPATH: a2-source
+        run: |
+          python -m paper_pov.scanner
+          python - <<'PY'
+          import json, os, zipfile
+          from pathlib import Path
+          from paper_pov.a2_artifact_consumer import read_artifact_zip
+          from paper_pov.candidate_snapshot import read_snapshot
+          latest=Path(os.environ["PAPER_REPORT_PATH"])
+          verified=read_snapshot(latest)
+          export=latest.parent/"verified-snapshot.json"
+          export.write_text(json.dumps(verified,sort_keys=True,allow_nan=False)+"\\n")
+          receipt=list((latest.parent/"receipts").glob("*.json"))
+          assert len(receipt)==1
+          archive=latest.parent/"transport.zip"
+          with zipfile.ZipFile(archive,"w",compression=zipfile.ZIP_DEFLATED) as z:
+              z.write(latest,"latest.json")
+              z.write(export,"verified-snapshot.json")
+              z.write(receipt[0],"receipts/"+receipt[0].name)
+          checked=read_artifact_zip(archive)
+          assert checked["receipt_sha256"]==verified["receipt_sha256"]
+          assert checked["watch"]==verified["watch"]
+          export.write_text(json.dumps(checked,sort_keys=True,allow_nan=False)+"\\n")
+          print("B1_A2_AUTHENTICATED_TRANSPORT",json.dumps({"watch_count":len(checked["watch"]),"eligible_pairs":checked["eligible_pairs"],"observed_markets":checked["observed_markets"],"abstention_counts":checked["abstention_counts"],"receipt_sha256":checked["receipt_sha256"]},sort_keys=True))
+          PY
+      - name: Actual authenticated A2 into B shared HTTP and scheduled runner
+        env:
+          B1_REAL_A2_VERIFIED_FILE: ${{ runner.temp }}/b1-real-a2/verified-snapshot.json
+        run: bun test scanner/src/a2-snapshot.test.ts
+      - name: Verify exact B checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
