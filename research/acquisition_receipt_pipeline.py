@@ -86,6 +86,27 @@ def evaluate_learning(ledger, depth_directory, captures_directory, associations_
     return result
 
 
+def evaluate_horizons(round_index, horizons=(1, 6, 24, 48)):
+    """Read-only qualified horizon coverage; missing future data is never a miss."""
+    from research.prospective_round_store import evaluate_index
+    result = {}
+    for hours in horizons:
+        if hours not in (1, 6, 24, 48):
+            raise ValueError("unsupported evaluation horizon")
+        evidence = evaluate_index(round_index, hours)
+        outcomes = evidence["outcomes"]
+        qualified = [r for r in outcomes if r.get("status") == "QUALIFIED_OBSERVED_PATH"]
+        result[str(hours)] = {
+            "rounds_verified": evidence["rounds_verified"],
+            "snapshots_verified": evidence["snapshots_verified"],
+            "qualified": len(qualified),
+            "observed_ge30pct": sum(r.get("ge30pct") is True for r in qualified),
+            "incomplete_or_unqualified": len(outcomes) - len(qualified),
+            "source_abstentions": len(evidence["abstentions"]),
+            "production_applied": False}
+    return result
+
+
 def write_new(path, report):
     """Exclusive create; no silent replacement of a previous evaluation."""
     path = Path(path)
@@ -106,7 +127,7 @@ def main():
     parser.add_argument("--captures-directory", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--associations-directory", required=True)
-    parser.add_argument("--round-index")
+    parser.add_argument("--round-index")\n    parser.add_argument("--all-horizon-coverage", action="store_true")
     parser.add_argument("--split-at", type=float)
     parser.add_argument("--baseline-version")
     parser.add_argument("--challenger-version")
@@ -117,7 +138,7 @@ def main():
                       args.associations_directory)
     requested = [args.round_index is not None, args.split_at is not None,
                  args.baseline_version is not None, args.challenger_version is not None]
-    if any(requested):
+    if args.all_horizon_coverage and not args.round_index:\n        parser.error("--all-horizon-coverage requires --round-index")\n    if any(requested):
         if not all(requested):
             parser.error("round-index, split-at and both versions must be supplied together")
         from research.prospective_round_store import evaluate_index
@@ -136,7 +157,7 @@ def main():
                 args.learning_ledger, report["shadow_decision"])
     elif args.learning_ledger:
         parser.error("learning-ledger requires complete E2/E3 evaluation arguments")
-    digest = write_new(args.output, report)
+    if args.all_horizon_coverage:\n        report["horizon_coverage"] = evaluate_horizons(args.round_index)\n    digest = write_new(args.output, report)
     print(json.dumps({"authenticated_receipts": report.get("reconciliation_receipt_count",
                            report.get("acquisition_coverage", {}).get("authenticated_receipts", 0)),
                       "shadow_decision": report.get("shadow_decision", {}).get("decision"),
