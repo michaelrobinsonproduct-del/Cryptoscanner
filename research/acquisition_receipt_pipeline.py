@@ -86,6 +86,31 @@ def evaluate_learning(ledger, depth_directory, captures_directory, associations_
     return result
 
 
+def evaluate_learning_horizons(ledger, depth_directory, captures_directory,
+                               associations_directory, round_index, *, split_at,
+                               baseline_version, challenger_version, evidence_sha256):
+    """One authenticated score binding, four independent held-out horizons."""
+    from research.reconcile_paper_scores import reconcile
+    from research.prospective_round_store import evaluate_index
+    binding = evaluate(ledger, depth_directory, captures_directory, associations_directory)
+    results = {}
+    for hours in (1, 6, 24, 48):
+        evidence = evaluate_index(round_index, hours)
+        result = reconcile(ledger, evidence, split_at=split_at,
+                           baseline_version=baseline_version,
+                           challenger_version=challenger_version,
+                           evidence_sha256=evidence_sha256,
+                           score_receipts=binding["reconciliation_receipts"])
+        results[str(hours)] = result
+    return {"mode": "RESEARCH_ONLY_MULTI_HORIZON_LEARNING",
+            "acquisition_coverage": {
+                "captures": binding["capture_count"],
+                "authenticated_receipts": binding["reconciliation_receipt_count"],
+                "association_exclusions": binding["association_excluded_count"],
+                "binder_exclusions": binding["excluded_count"]},
+            "horizon_comparisons": results, "production_applied": False}
+
+
 def evaluate_horizons(round_index, horizons=(1, 6, 24, 48)):
     """Read-only qualified horizon coverage; missing future data is never a miss."""
     from research.prospective_round_store import evaluate_index
@@ -139,6 +164,7 @@ def main():
     parser.add_argument("--associations-directory")
     parser.add_argument("--round-index")
     parser.add_argument("--all-horizon-coverage", action="store_true")
+    parser.add_argument("--all-horizon-learning", action="store_true")
     parser.add_argument("--split-at", type=float)
     parser.add_argument("--baseline-version")
     parser.add_argument("--challenger-version")
@@ -156,6 +182,23 @@ def main():
     if not all((args.paper_ledger, args.depth_directory,
                 args.captures_directory, args.associations_directory)):
         parser.error("score/depth evaluation requires all authenticated inputs")
+    if args.all_horizon_learning:
+        if not (args.round_index and args.split_at is not None and
+                args.baseline_version and args.challenger_version):
+            parser.error("multi-horizon learning requires index, split and versions")
+        if args.learning_ledger:
+            parser.error("multi-horizon learning cannot append multiple shadow decisions")
+        ledger_bytes = Path(args.paper_ledger).read_bytes()
+        index_bytes = Path(args.round_index).read_bytes()
+        report = evaluate_learning_horizons(
+            json.loads(ledger_bytes), args.depth_directory, args.captures_directory,
+            args.associations_directory, args.round_index, split_at=args.split_at,
+            baseline_version=args.baseline_version,
+            challenger_version=args.challenger_version,
+            evidence_sha256=hashlib.sha256(ledger_bytes + index_bytes).hexdigest())
+        digest = write_new(args.output, report)
+        print(json.dumps({"mode": report["mode"], "report_sha256": digest}, sort_keys=True))
+        return
     ledger = json.loads(Path(args.paper_ledger).read_bytes())
     report = evaluate(ledger, args.depth_directory, args.captures_directory,
                       args.associations_directory)
