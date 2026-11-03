@@ -173,6 +173,16 @@ def main():
     parser.add_argument("--challenger-version")
     parser.add_argument("--learning-ledger", help="Research-only append-only E3 decisions")
     args = parser.parse_args()
+    if args.associate_verified_depth and not args.paper_ledger:
+        parser.error("automatic association requires a paper ledger")
+    if args.associate_verified_depth and args.all_horizon_coverage and not args.round_index:
+        parser.error("coverage evaluation requires round index")
+    if args.associate_verified_depth and args.all_horizon_learning and not (
+            args.round_index and args.split_at is not None and
+            args.baseline_version and args.challenger_version):
+        parser.error("multi-horizon learning requires index, split and versions")
+    if args.associate_verified_depth and Path(args.output).exists():
+        parser.error("output exists; refusing to create associations before report")
     if args.associate_verified_depth:
         if not all((args.captures_directory, args.depth_directory, args.associations_directory)):
             parser.error("automatic association requires captures, depth and association directories")
