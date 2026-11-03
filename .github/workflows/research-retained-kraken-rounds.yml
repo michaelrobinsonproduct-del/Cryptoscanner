@@ -41,7 +41,10 @@ jobs:
                   raise RuntimeError('prior artifact exceeds bounded size')
               root=pathlib.Path('/tmp/kraken-round-history')
               with zipfile.ZipFile(io.BytesIO(data)) as archive:
-                  for item in archive.infolist():
+                  members=archive.infolist()
+                  if sum(i.file_size for i in members)>100_000_000:
+                      raise RuntimeError('uncompressed history exceeds bounded size')
+                  for item in members:
                       target=(root/item.filename).resolve()
                       if not target.is_relative_to(root.resolve()):
                           raise ValueError('unsafe artifact path')
