@@ -5,6 +5,8 @@ on:
       - 'research/prospective_*.py'
       - 'research/chronological_challenger.py'
       - 'research/evaluate_challenger.py'
+      - 'research/learning_feedback.py'
+      - 'research/test_learning_feedback.py'
       - 'research/test_evaluate_challenger.py'
       - 'research/test_chronological_challenger.py'
       - 'research/evaluate_prospective_rounds.py'
@@ -39,7 +41,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: E2 focused chronological challenger regression
-        run: python -m unittest -v research.test_chronological_challenger research.test_evaluate_challenger
+        run: python -m unittest -v research.test_chronological_challenger research.test_evaluate_challenger research.test_learning_feedback
       - name: Integrated offline source and outcome acceptance
         run: |
           set -euo pipefail
