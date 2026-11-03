@@ -1,5 +1,6 @@
 """Public Kraken, paper-only early-mover observations. No credentials or orders."""
 import datetime as dt
+import fcntl
 import hashlib
 import json
 import math
@@ -251,25 +252,44 @@ def atomic_json(path, report):
             os.unlink(tmp)
 
 def persist_report(latest_path, report):
-    """Persist immutable scan receipt before advancing latest; fail on collisions."""
+    """Serialize local paper receipt commits; never regress latest or delete another writer's file."""
     latest_path = Path(latest_path)
     stamp = utc(report["as_of"])
+    payload = json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    latest_path.parent.mkdir(parents=True, exist_ok=True)
     receipt_dir = latest_path.parent / "receipts"
     receipt_dir.mkdir(parents=True, exist_ok=True)
     receipt = receipt_dir / (stamp.strftime("%Y%m%dT%H%M%S%fZ") + ".json")
-    payload = json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
-    fd = os.open(receipt, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    try:
-        with os.fdopen(fd, "wb") as handle:
-            handle.write(payload)
-            handle.flush()
-            os.fsync(handle.fileno())
-        if receipt.read_bytes() != payload:
-            raise IOError("scan receipt readback mismatch")
-        atomic_json(latest_path, report)
-    except BaseException:
-        receipt.unlink(missing_ok=True)
-        raise
+    # Advisory lock is held across receipt creation, readback and latest update.
+    # Separate lock inode is stable even as latest.json is atomically replaced.
+    lock_path = latest_path.parent / ".paper-receipt.lock"
+    with open(lock_path, "a+b") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        if latest_path.exists():
+            current = json.loads(latest_path.read_text())
+            if utc(current["as_of"]) > stamp:
+                raise ValueError("out-of-order scan cannot replace newer latest")
+        fd = os.open(receipt, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        identity = os.fstat(fd)
+        try:
+            with os.fdopen(fd, "wb") as handle:
+                handle.write(payload)
+                handle.flush()
+                os.fsync(handle.fileno())
+            if receipt.read_bytes() != payload:
+                raise IOError("scan receipt readback mismatch")
+            atomic_json(latest_path, report)
+            if latest_path.read_bytes() != payload:
+                raise IOError("latest report readback mismatch")
+        except BaseException:
+            # Never unlink a receipt that another process has replaced.
+            try:
+                actual = receipt.stat()
+                if (actual.st_dev, actual.st_ino) == (identity.st_dev, identity.st_ino):
+                    receipt.unlink()
+            except FileNotFoundError:
+                pass
+            raise
     return receipt
 
 def main():
