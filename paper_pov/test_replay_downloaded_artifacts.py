@@ -169,4 +169,14 @@ class DownloadedArtifactReplayTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main()    # Check immutable identity before classifying missing evidence. A forged
+    # run/source/ledger reference is an integrity failure, never an abstention.
+    payload = json.loads(results["results.json"])
+    if not isinstance(payload, dict) or any(
+            payload.get(key) != expected for key, expected in (
+                ("run_id", str(run_id)), ("source_sha", source_sha),
+                ("ledger_commit", ledger_commit),
+                ("ledger_generation", score["generation"]),
+                ("ledger_sha256", score["ledger_sha256"]))):
+        raise ValueError("Published artifact identity mismatch")
+
