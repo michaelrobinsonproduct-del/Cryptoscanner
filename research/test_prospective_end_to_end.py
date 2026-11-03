@@ -19,6 +19,9 @@ class EndToEndObservedRounds(unittest.TestCase):
         evidence["bid_level_event_at"] = str(1699999998 + 300 * number + (number % 4))
         evidence["ask_level_event_at"] = str(1699999999 + 300 * number + (number % 3))
         evidence["best_bid"] = price
+        evidence["best_ask"] = "132" if price == "131" else "100"
+        evidence["trades_receipt"]["first_observed_at"] = 1700000002 + 300 * number
+        evidence["newest_trade_event_at"] = str(1700000000 + 300 * number)
         (batch / "00-XBTUSD-evidence.json").write_text(json.dumps(evidence))
         if not skip:
             append_round(root / "rounds.jsonl", batch)
