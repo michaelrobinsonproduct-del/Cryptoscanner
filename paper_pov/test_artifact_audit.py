@@ -42,6 +42,17 @@ class ArtifactAuditTests(unittest.TestCase):
             proof = audit(ledger, results)
             self.assertEqual(proof["max_client_quote_age_seconds"], 8)
             self.assertFalse(proof["published_quote_evidence"])
+            self.assertFalse(proof["certified"])
+            self.assertEqual(proof["status"], "ABSTAIN_LEGACY_QUOTE_EVIDENCE")
+            report["candidates"][0]["symbol"] = "ETH/USD"
+            results = publication()
+            with self.assertRaisesRegex(ValueError, "membership/order"):
+                audit(ledger, results)
+            report["candidates"][0]["symbol"] = "XBT/USD"
+            report["quote_evidence"] = [quote]
+            results = publication()
+            self.assertTrue(audit(ledger, results)["certified"])
+            report.pop("quote_evidence")
             report["candidates"][0]["price_usd"] = 1
             results = publication()
             with self.assertRaisesRegex(ValueError, "lacks retained quote"):
