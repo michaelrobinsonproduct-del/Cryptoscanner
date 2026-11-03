@@ -238,6 +238,7 @@ def _exclusive_receipt(path, data):
         except FileNotFoundError:
             pass
         raise
+    return identity.st_dev, identity.st_ino
 
 
 def publish_stage_outputs(next_ledger, state, scoreboard_path, score):
@@ -251,9 +252,13 @@ def publish_stage_outputs(next_ledger, state, scoreboard_path, score):
     created = []
     try:
         for path, data in entries:
-            _exclusive_receipt(path, data)
-            identity = path.lstat()
-            created.append((path, identity.st_dev, identity.st_ino))
+            identity = _exclusive_receipt(path, data)
+            if identity is None:
+                raise ValueError("Missing exclusive receipt identity")
+            created.append((path, *identity))
+            current = path.lstat()
+            if (current.st_dev, current.st_ino) != identity:
+                raise ValueError("Receipt replaced before readback")
             if path.read_bytes() != data:
                 raise ValueError("Staged output readback mismatch")
         ledger.verify(json.loads(entries[0][0].read_bytes()), storage.MAX_RAW_BYTES)
