@@ -216,27 +216,37 @@ def verify_remote(root, base, new_commit, staged):
             "remote_commit": new_commit, "verified_files": paths}
 
 
-def publish_stage_outputs(next_ledger, state, scoreboard_path, score):
-    """Publish both stage receipts or fail with no partial successful receipt.
+def _exclusive_receipt(path, data):
+    """Exclusive durable receipt; remove partial bytes only if this call created it."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if any(p.is_symlink() for p in (path, *path.parents)):
+        raise ValueError("Unsafe receipt destination")
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+    except BaseException:
+        if path.is_file() and not path.is_symlink():
+            path.unlink()
+        raise
 
-    The staging tree is immutable and independently verified by stage().
-    Check all destinations BEFORE writing either file, then verify the
-    actual persisted bytes; clean up only files created by this invocation.
-    """
+
+def publish_stage_outputs(next_ledger, state, scoreboard_path, score):
+    """Publish exclusively and read back both receipts; never overwrite a competitor."""
     entries = [(Path(next_ledger), ledger.canonical(state)),
                (Path(scoreboard_path), ledger.canonical(score))]
-    if entries[0][0] == entries[1][0]:
+    if entries[0][0].resolve(strict=False) == entries[1][0].resolve(strict=False):
         raise ValueError("Ledger and scoreboard destinations must differ")
     if any(path.exists() or path.is_symlink() for path, _ in entries):
         raise FileExistsError("Refuse to replace staged output")
-    written = []
+    created = []
     try:
         for path, data in entries:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            # Register first so a writer that creates a file then raises
-            # cannot leave a partial success artifact.
-            written.append(path)
-            segments._write(path, data)
+            _exclusive_receipt(path, data)
+            created.append(path)
             if path.read_bytes() != data:
                 raise ValueError("Staged output readback mismatch")
         ledger.verify(json.loads(entries[0][0].read_bytes()), storage.MAX_RAW_BYTES)
@@ -244,7 +254,7 @@ def publish_stage_outputs(next_ledger, state, scoreboard_path, score):
                 state, storage.MAX_RAW_BYTES):
             raise ValueError("Persisted scoreboard mismatch")
     except Exception:
-        for path in reversed(written):
+        for path in reversed(created):
             if path.is_file() and not path.is_symlink():
                 path.unlink()
         raise
