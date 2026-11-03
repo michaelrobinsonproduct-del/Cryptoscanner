@@ -1,3 +1,4 @@
+import {createLearningReportReader} from "./learning-report";
 import {test,expect} from "bun:test";
 import {createReadOnlyShadowLoader} from "./shadow-artifacts";
 import {createCycleRunner} from "./cycle-runner";
@@ -188,4 +189,21 @@ test("equivalent-instant scores remain subject to pre-discovery leakage rejectio
  expect(manual.shadow_artifact_status).toBe("REJECTED");
  expect(manual.candidates).toHaveLength(1);
  expect(manual.shadow_evaluation.coverage).toMatchObject({scored:0,abstained:1});
+});
+
+test("B2 authenticated E KEEP_BASELINE is identical on manual HTTP and scheduled with no promotion",async()=>{
+ const raw=new TextEncoder().encode(JSON.stringify({production_applied:false,comparison:{held_out_n:0},shadow_decision:{decision:"KEEP_BASELINE",production_applied:false}}));
+ const sha=await crypto.subtle.digest("SHA-256",raw);
+ const pin=Array.from(new Uint8Array(sha)).map(x=>x.toString(16).padStart(2,"0")).join("");
+ const loader=createLearningReportReader("/read-only/e-report.json",pin,async()=>raw);
+ const runner=createCycleRunner(deps,undefined,undefined,undefined,loader);
+ const manual=await (await createCycleHttpHandler(runner)(new Request("http://localhost/cycle"))).json();
+ const scheduled=await runner.run("scheduled");
+ expect(manual).toEqual(scheduled.result);
+ expect(manual.learning_gate).toEqual({status:"VERIFIED_RESEARCH_ONLY",decision:"KEEP_BASELINE",held_out_n:0,production_applied:false});
+ expect(manual.candidates).toHaveLength(1);
+ const corrupted=createCycleRunner(deps,undefined,undefined,undefined,createLearningReportReader("/read-only/e-report.json",pin,async()=>new TextEncoder().encode("{}")));
+ const failed=await corrupted.run("manual");
+ expect(failed.result.learning_gate).toMatchObject({status:"REJECTED",decision:"KEEP_BASELINE",production_applied:false});
+ expect(failed.result.candidates).toHaveLength(1);
 });
