@@ -32,7 +32,7 @@ class CaptureRoundsTests(unittest.TestCase):
 
     def test_unbounded_or_too_fast_capture_rejected_before_io(self):
         with tempfile.TemporaryDirectory() as tmp:
-            for options in ({"rounds": 13}, {"rounds": 0},
+            for options in ({"rounds": 14}, {"rounds": 0},
                             {"interval_seconds": 299}):
                 with self.assertRaises(ValueError):
                     capture_rounds(["XBTUSD"], Path(tmp) / "not-created", **options)
