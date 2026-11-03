@@ -1,0 +1,22 @@
+name: B1 isolated candidate parity acceptance
+on:
+  pull_request:
+    paths:
+      - 'scanner/src/candidate-contract.ts'
+      - 'scanner/src/candidate-contract.test.ts'
+      - 'scanner/src/server.ts'
+      - '.github/workflows/b1-candidate-parity.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Focused B1 regression
+        run: bun test scanner/src/candidate-contract.test.ts
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
