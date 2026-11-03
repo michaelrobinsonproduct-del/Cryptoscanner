@@ -5,6 +5,7 @@ Both ZIPs must originate from the same run; the caller supplies the expected
 immutable run/source/ledger identities from independently inspected job logs.
 """
 import argparse
+import sys
 import hashlib
 import json
 import re
@@ -99,10 +100,25 @@ def main():
     parser.add_argument("--source-sha", required=True)
     parser.add_argument("--ledger-commit", required=True)
     args = parser.parse_args()
-    print(json.dumps(replay(args.ledger_zip, args.results_zip, run_id=args.run_id,
-                            source_sha=args.source_sha,
-                            ledger_commit=args.ledger_commit), sort_keys=True))
+    try:
+        result = replay(args.ledger_zip, args.results_zip, run_id=args.run_id,
+                        source_sha=args.source_sha, ledger_commit=args.ledger_commit)
+    except ValueError as exc:
+        # A legacy publication lacks per-quote evidence. Report non-certification
+        # without treating any other integrity or identity failure as legacy.
+        if str(exc) != "Missing independent quote evidence":
+            raise
+        print(json.dumps({
+            "status": "ABSTAIN_LEGACY_QUOTE_EVIDENCE",
+            "certified": False,
+            "run_id": str(args.run_id),
+            "reason": "Missing independent quote evidence",
+            "exchange_event_freshness_verified": False,
+        }, sort_keys=True))
+        return 2
+    print(json.dumps({"certified": True, **result}, sort_keys=True))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
