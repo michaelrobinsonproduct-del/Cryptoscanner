@@ -46,6 +46,8 @@ jobs:
               print('ROUND_HISTORY_INIT_EMPTY')
           else:
               latest=max(matches,key=lambda a:a['created_at'])
+              if latest['id'] == int(os.environ.get('GITHUB_RUN_ID','0')):
+                  raise RuntimeError('cannot restore current run artifact')
               request=urllib.request.Request(latest['archive_download_url'],headers={
                   'Authorization':f"Bearer {os.environ['GH_TOKEN']}",
                   'Accept':'application/vnd.github+json'})
@@ -56,9 +58,13 @@ jobs:
               root=pathlib.Path('/tmp/kraken-round-history')
               with zipfile.ZipFile(io.BytesIO(data)) as archive:
                   members=archive.infolist()
+                  if len(members)>2000:
+                      raise RuntimeError('too many restored artifact members')
                   if sum(i.file_size for i in members)>100_000_000:
                       raise RuntimeError('uncompressed history exceeds bounded size')
                   for item in members:
+                      if (item.external_attr >> 16) & 0o170000 == 0o120000:
+                          raise ValueError('symlink in artifact')
                       target=(root/item.filename).resolve()
                       if not target.is_relative_to(root.resolve()) or item.filename.startswith('/'):
                           raise ValueError('unsafe artifact path')
@@ -74,6 +80,8 @@ jobs:
                   raise RuntimeError('restored artifact missing rounds index')
               # Verify source hashes and index integrity before any new append.
               prior=evaluate_index(index,1)
+              if prior['rounds_verified'] < 1 or prior['snapshots_verified'] < 1:
+                  raise RuntimeError('restored history has no verified observations')
               print('ROUND_HISTORY_VERIFIED',prior['rounds_verified'],prior['snapshots_verified'])
           PY
       - name: Capture one new bounded source round and evaluate retained history
