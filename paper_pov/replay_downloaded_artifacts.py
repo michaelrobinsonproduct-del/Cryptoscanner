@@ -75,7 +75,7 @@ def replay(ledger_zip, results_zip, *, run_id, source_sha, ledger_commit):
     if (score.get("ledger_sha256") != state.get("sha256")
             or score.get("generation") != state.get("generation")):
         raise ValueError("Ledger/scoreboard identity mismatch")
-    # A missing quote-evidence array is an abstention ONLY if the rest of the
+    # Check immutable identity before classifying missing evidence. A forged\n    # run/source/ledger reference is an integrity failure, never an abstention.\n    payload = json.loads(results["results.json"])\n    if not isinstance(payload, dict) or any((\n            payload.get(key) != expected for key, expected in (\n                ("run_id", str(run_id)), ("source_sha", source_sha),\n                ("ledger_commit", ledger_commit),\n                ("ledger_generation", score["generation"]),\n                ("ledger_sha256", score["ledger_sha256"]))):\n        raise ValueError("Published artifact identity mismatch")\n    # A missing quote-evidence array is an abstention ONLY if the rest of the
     # publication still agrees with independently retained, checksummed source.
     # Otherwise erased evidence plus a recomputed checksum could hide forgery.
     payload = json.loads(results["results.json"])
