@@ -98,15 +98,19 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     observations = []
     screened = []
     matched = 0
+    ticker_rejections = {"missing_or_invalid_payload": 0, "invalid_price_or_volume": 0,
+                         "nonfinite_derived_metric": 0}
     for pair, name in sorted(eligible.items()):
         t = ticker.get(pair)
         if not isinstance(t, dict):
+            ticker_rejections["missing_or_invalid_payload"] += 1
             continue
         matched += 1
         try:
             price, bid, ask, op, volume = (finite(t["c"][0]), finite(t["b"][0]),
                 finite(t["a"][0]), finite(t["o"]), finite(t["v"][1]))
             if min(price, bid, ask, op) <= 0 or ask < bid or volume < 0:
+                ticker_rejections["invalid_price_or_volume"] += 1
                 continue
             # Kraken Ticker 'o' is today's UTC opening price, NOT the
             # rolling 24-hour opening price. Keep ranking arithmetic unchanged
@@ -117,6 +121,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             # Individually finite ticker inputs can overflow in arithmetic.
             # Never emit nonfinite market evidence or fail during JSON sealing.
             if not all(map(math.isfinite, (move_since_utc_open, spread, notional))):
+                ticker_rejections["nonfinite_derived_metric"] += 1
                 continue
             observations.append({"pair": pair, "symbol": name, "price": price,
                 "spread_bps": round(spread, 4), "notional_24h_usd": round(notional, 2),
@@ -131,7 +136,10 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                 "spread_bps": round(spread, 4),
                 "notional_24h_usd": round(notional, 2), "baseline_score": baseline})
         except (KeyError, ValueError, TypeError, IndexError, ZeroDivisionError):
+            ticker_rejections["missing_or_invalid_payload"] += 1
             continue
+    if len(observations) + sum(ticker_rejections.values()) != len(eligible):
+        raise RuntimeError("Ticker coverage accounting mismatch")
     if matched < max(20, math.ceil(len(eligible) * 0.8)):
         raise RuntimeError("Incomplete Kraken ticker universe coverage")
     if len(observations) < max(20, math.ceil(matched * 0.8)):
@@ -249,7 +257,8 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         "eligible_pairs": len(eligible), "online_usd_pairs": online_usd_pairs,
         "excluded_stablecoin_pairs": excluded_stablecoin_pairs,
         "excluded_other_pairs": excluded_other_pairs, "matched_tickers": matched,
-        "observed_markets": len(observations), "ohlc_screened": len(selected),
+        "observed_markets": len(observations), "ticker_rejections": ticker_rejections,
+        "ohlc_screened": len(selected),
         "watch": watch, "observations": observations, "abstentions": abstentions,
         "abstention_counts": abstention_counts,
         "forward_labels": 0, "held_out_lift": None, "production_applied": False}
@@ -316,7 +325,7 @@ def main():
     print("PAPER_SCAN " + json.dumps({k: report[k] for k in (
         "as_of", "online_usd_pairs", "excluded_stablecoin_pairs",
         "excluded_other_pairs", "eligible_pairs", "matched_tickers",
-        "observed_markets", "ohlc_screened", "abstention_counts", "forward_labels", "production_applied")}, sort_keys=True))
+        "observed_markets", "ticker_rejections", "ohlc_screened", "abstention_counts", "forward_labels", "production_applied")}, sort_keys=True))
     print("PAPER_WATCH " + json.dumps([{"symbol": x["symbol"], "rank": x["rank"],
         "prediction_id": x["prediction_id"], "baseline_score": x["baseline_score"],
         "challenger_score": x["challenger_score"]} for x in report["watch"]]))
