@@ -138,26 +138,7 @@ def verified_index_rows(round_index):
 def associate_indexed_captures(captures_directory, round_index, associations_directory):
     """Match captured scores across immutable, manifest-verified prospective rounds."""
     from research.acquisition_receipt_pipeline import load_captures
-    index = Path(round_index)
-    records = [json.loads(line) for line in index.read_text().splitlines() if line.strip()]
-    if len({r["batch"] for r in records}) != len(records):
-        raise ValueError("duplicate indexed batch")
-    rows, abstentions = [], []
-    for record in records:
-        batch = Path(record["batch"])
-        if not batch.is_dir() or batch.is_symlink():
-            raise ValueError("unsafe indexed batch directory")
-        manifest = batch / "manifest.json"
-        if manifest.is_symlink() or not manifest.is_file():
-            raise ValueError("unsafe indexed manifest")
-        manifest_sha = hashlib.sha256(manifest.read_bytes()).hexdigest()
-        if manifest_sha != record["manifest_sha256"]:
-            raise ValueError("indexed manifest mismatch")
-        verified, excluded = verified_rows(batch)
-        if len(verified) != record["snapshots_verified"] or len(excluded) != record["abstentions"]:
-            raise ValueError("indexed source coverage mismatch")
-        rows.extend(verified)
-        abstentions.extend(excluded)
+    rows, abstentions, round_count = verified_index_rows(round_index)
     accepted, excluded = [], []
     for capture in load_captures(captures_directory):
         pid = capture["prediction_id"]
@@ -173,7 +154,7 @@ def associate_indexed_captures(captures_directory, round_index, associations_dir
                           score_receipt_sha256=receipt)
         accepted.append(pid)
     return {"associated": accepted, "excluded": excluded, "source_abstentions": abstentions,
-            "rounds_verified": len(records), "production_applied": False}
+            "rounds_verified": round_count, "production_applied": False}
 
 
 def main():
