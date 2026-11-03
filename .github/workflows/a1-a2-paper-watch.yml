@@ -39,7 +39,9 @@ jobs:
           assert len(receipts) == 1, "expected one immutable receipt"
           assert json.loads(receipts[0].read_text()) == report, "receipt readback mismatch"
           assert report["mode"] == "PAPER_ONLY" and report["production_applied"] is False
-          assert report["watch"] and all(not x["buy_approved"] for x in report["watch"])
+          assert all(not x["buy_approved"] for x in report["watch"])
+          assert report["scan_status"] == ("WATCH" if report["watch"] else "ABSTAIN_NO_QUALIFIED_OHLC")
+          assert report["watch"] or report["abstentions"]
           assert sum(report["abstention_counts"].values()) == len(report["abstentions"])
           assert len(report["watch"]) + len(report["abstentions"]) <= report["ohlc_screened"]
           assert len({x["prediction_id"] for x in report["watch"]}) == len(report["watch"])
@@ -61,6 +63,7 @@ jobs:
               "observed_markets": report["observed_markets"],
               "ohlc_screened": report["ohlc_screened"],
               "watch_count": len(report["watch"]),
+              "scan_status": report["scan_status"],
               "abstentions": len(report["abstentions"]),
               "abstention_counts": report["abstention_counts"],
               "stablecoins_excluded": report["excluded_stablecoin_pairs"],
