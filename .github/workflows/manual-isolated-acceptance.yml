@@ -20,12 +20,12 @@ jobs:
       - name: Check out exact isolated candidate commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.target == 'B-source-health' && 'b26880bfef228ab3d8a844e3d06cd1faa77047cf' || '125a9ea71547b668e269796bbd31279e773b2fba' }}
+          ref: ${{ inputs.target == 'B-source-health' && 'd1b7eb1a0c563e284fa63309f0f6a232a18c44a2' || 'fe9648b8eac9a19e70282c3d4f50f6e24c879aaa' }}
           persist-credentials: false
       - name: Report immutable source
         run: |
           git rev-parse HEAD
-          test "$(git rev-parse HEAD)" = "${{ inputs.target == 'B-source-health' && 'b26880bfef228ab3d8a844e3d06cd1faa77047cf' || '125a9ea71547b668e269796bbd31279e773b2fba' }}"
+          test "$(git rev-parse HEAD)" = "${{ inputs.target == 'B-source-health' && 'd1b7eb1a0c563e284fa63309f0f6a232a18c44a2' || 'fe9648b8eac9a19e70282c3d4f50f6e24c879aaa' }}"
       - uses: oven-sh/setup-bun@v2
         if: inputs.target == 'B-source-health'
       - name: Run B source-health and entrypoint parity acceptance
