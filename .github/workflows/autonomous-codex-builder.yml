@@ -35,6 +35,11 @@ jobs:
             git fetch origin autonomous-learning-work
             git checkout -B autonomous-learning-work FETCH_HEAD
           else
+            if test "$GITHUB_EVENT_NAME" = schedule; then
+              echo "Awaiting initial manual dispatch" >> "$GITHUB_STEP_SUMMARY"
+              echo "complete=true" >> "$GITHUB_ENV"
+              exit 0
+            fi
             git checkout -B autonomous-learning-work
           fi
           mkdir -p .autonomous
