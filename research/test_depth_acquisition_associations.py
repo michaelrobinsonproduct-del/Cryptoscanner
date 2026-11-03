@@ -187,7 +187,8 @@ class DepthAssociationTests(unittest.TestCase):
     def test_source_cli(self, horizons):
         horizons.return_value = {"1": {"qualified": 0}}
         output = self.root / "source-cli.json"
-        with patch.object(sys, "argv", ["pipeline", "--round-index", "index",
+        (self.root / "index").write_text("fixture")
+        with patch.object(sys, "argv", ["pipeline", "--round-index", str(self.root / "index"),
                                        "--all-horizon-coverage", "--output", str(output)]):
             main()
         self.assertEqual(json.loads(output.read_text())["horizon_coverage"]["1"]["qualified"], 0)
