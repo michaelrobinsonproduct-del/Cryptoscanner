@@ -68,6 +68,47 @@ jobs:
             access or missing data prevents completion, document the precise blocker and continue on
             independent work. Do not claim completion without tests and evidence. Leave all validated
             changes in the working tree for a single reviewable PR at the end of THIS execution.
+      - name: Continue historical learning implementation in the same run
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          sandbox: workspace-write
+          safety-strategy: unprivileged-user
+          codex-user: codexagent
+          prompt: |
+            Continue work in THIS SAME CHECKOUT, retaining the previous agent's changes.
+            Implement remaining real-data historical learning: authenticated historical inputs,
+            point-in-time features, mature 1/6/24/48h outcomes, missing-trade abstentions,
+            chronological holdouts with embargo, baseline versus challenger, +30% hit/miss
+            analysis and numerical uncertainty. Build actual executable code and tests.
+            Run tests, repair failures and iterate; never invent source provenance, labels,
+            predictive lift, or positive results. A non-improving challenger must not promote.
+            Continue independent improvements even when a specific source is unavailable.
+            No live trading, production ledger mutation, deployment or weakened gates.
+      - name: Continue live feedback and scan integration in the same run
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          sandbox: workspace-write
+          safety-strategy: unprivileged-user
+          codex-user: codexagent
+          prompt: |
+            Continue working on the SAME uncommitted checkout after both previous phases.
+            Implement an actual automated feedback loop across successive paper scans:
+            persist immutable predictions, later observed outcomes and misses; compare
+            validated baseline/challenger metrics; apply ONLY independently qualified
+            versioned improvements through explicit safe promotion/rollback gates.
+            Make historical learning reusable in future scans without repeated manual runs.
+            Integrate with the existing single-writer paper scanner, not a competing writer.
+            Improve real ranked WATCH output, freshness and resilience. Implement, test,
+            repair, repeat until remaining feasible tasks are finished. Do not fake learning,
+            relax source verification, or claim promotion when no qualified rule exists.
+      - name: Verify implementation and tests before opening PR
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+          python -m compileall -q paper_pov research
+          git diff --check
       - name: Open isolated development PR if tested code changed
         env:
           GH_TOKEN: ${{ github.token }}
