@@ -21,9 +21,12 @@ on:
       - 'scanner/src/server.ts'
       - 'scanner/src/a2-snapshot.ts'
       - 'scanner/src/a2-snapshot.test.ts'
+      - 'scanner/src/learning-report.ts'
+      - 'scanner/src/learning-report.test.ts'
       - '.github/workflows/b1-candidate-parity.yml'
 permissions:
   contents: read
+  actions: read
 jobs:
   focused:
     runs-on: ubuntu-latest
@@ -90,5 +93,28 @@ jobs:
         env:
           B1_REAL_A2_VERIFIED_FILE: ${{ runner.temp }}/b1-real-a2/verified-snapshot.json
         run: bun test scanner/src/a2-snapshot.test.ts
+      - name: Verify exact B checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+  authenticated-e-learning-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Download E's real authenticated Kraken paper research artifact read-only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/b2-real-e
+          gh run download 41733502574 -R michaelrobinsonproduct-del/Cryptoscanner -n e-real-paper-learning-report -D /tmp/b2-real-e
+          test -s /tmp/b2-real-e/e-learning-report.json
+          sha256sum /tmp/b2-real-e/e-learning-report.json
+      - name: Verify E's actual unqualified evidence is KEEP_BASELINE for manual and scheduled
+        env:
+          B2_REAL_E_REPORT_FILE: /tmp/b2-real-e/e-learning-report.json
+        run: |
+          export B2_REAL_E_REPORT_SHA256="$(sha256sum "$B2_REAL_E_REPORT_FILE" | cut -d ' ' -f 1)"
+          bun test scanner/src/learning-report.test.ts
       - name: Verify exact B checkout
         run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
