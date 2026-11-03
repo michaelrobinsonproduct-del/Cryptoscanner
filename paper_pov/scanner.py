@@ -278,6 +278,14 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         "abstention_counts": abstention_counts,
         "forward_labels": 0, "held_out_lift": None, "production_applied": False}
 
+def sync_directory(path):
+    """Persist directory entries after rename/receipt creation on POSIX filesystems."""
+    fd = os.open(str(path), os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
 def atomic_json(path, report):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -288,6 +296,7 @@ def atomic_json(path, report):
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(tmp, path)
+        sync_directory(path.parent)
     finally:
         if os.path.exists(tmp):
             os.unlink(tmp)
@@ -343,6 +352,7 @@ def persist_report(latest_path, report):
                 os.fsync(handle.fileno())
             if receipt.read_bytes() != payload:
                 raise IOError("scan receipt readback mismatch")
+            sync_directory(receipt_dir)
             atomic_json(latest_path, report)
             if latest_path.read_bytes() != payload:
                 raise IOError("latest report readback mismatch")
