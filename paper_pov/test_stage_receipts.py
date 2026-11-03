@@ -1,5 +1,6 @@
 """Focused D1 receipt publication regression tests (no Git or network)."""
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -86,8 +87,9 @@ class StageReceiptTests(unittest.TestCase):
             identity = original(path, data)
             if Path(path) == a:
                 path = Path(path)
-                path.unlink()
-                path.write_bytes(b"competitor")
+                candidate = self.root / "other-competitor"
+                candidate.write_bytes(b"competitor")
+                os.replace(candidate, path)
             return identity
         with patch.object(writer, "_exclusive_receipt", side_effect=replace_after_creation):
             with self.assertRaises(ValueError):
@@ -101,8 +103,9 @@ class StageReceiptTests(unittest.TestCase):
         def swapped(path, data):
             identity = original(path, data)
             if Path(path) == a:
-                Path(path).unlink()
-                Path(path).write_bytes(data)
+                candidate = self.root / "other-identical"
+                candidate.write_bytes(data)
+                os.replace(candidate, path)
             return identity
         with patch.object(writer, "_exclusive_receipt", side_effect=swapped):
             with self.assertRaisesRegex(ValueError, "replaced before readback"):
