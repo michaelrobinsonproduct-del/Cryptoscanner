@@ -113,7 +113,7 @@ jobs:
                   result["runs"][name] = {"status": "RECOVERY_FAILED", "certified": False,
                                           "error": type(exc).__name__}
                   result["all_recovered"] = False
-          Path("/tmp/d2-recovery/recovery.json").write_text(json.dumps(result, sort_keys=True, indent=2) + "\\n")
+          Path("/tmp/d2-recovery/recovery.json").write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
           print("D2_RECOVERY_REPORT", json.dumps(result, sort_keys=True))
           if not result["all_recovered"]:
               raise SystemExit("D2 recovery incomplete")
@@ -126,3 +126,36 @@ jobs:
           path: /tmp/d2-recovery/recovery.json
           if-no-files-found: error
           retention-days: 7
+  downstream-readback:
+    needs: focused
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Download published D2 recovery artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: d2-real-paper-recovery
+          path: /tmp/d2-consumer
+      - name: Consume actual published recovery report and enforce fail-closed status
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("/tmp/d2-consumer/recovery.json")
+          result = json.loads(p.read_text())
+          assert result["schema"] == "paper_recovery_v1", result
+          assert result["production_applied"] is False, result
+          assert result["all_recovered"] is True, result
+          assert result["source_sha"] == "94929a544899ddec63c676b6d4d52539da8e3837", result
+          for name, run_id, generation in (("scheduled", "41626400391", 64),
+                                           ("manual", "41636714169", 65)):
+              run = result["runs"][name]
+              assert str(run["run_id"]) == run_id, run
+              assert run["generation"] == generation and run["watch"] == 12, run
+              assert run["status"] == "ABSTAIN_LEGACY_QUOTE_EVIDENCE", run
+              assert run["certified"] is False, run
+          print("D2_PUBLISHED_RECOVERY_CONSUMED", json.dumps(result, sort_keys=True))
+          PY
