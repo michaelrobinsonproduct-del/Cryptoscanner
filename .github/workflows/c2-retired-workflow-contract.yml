@@ -100,17 +100,25 @@ jobs:
           set -euo pipefail
           gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/13279054170/zip" > /tmp/c-real-receipts/a2.zip
           python - <<'PY'
-          import json, zipfile
+          import hashlib, json, zipfile
           from pathlib import Path
-          with zipfile.ZipFile("/tmp/c-real-receipts/a2.zip") as z:
-              names=z.namelist()
-              matches=[n for n in names if n.endswith("verified-snapshot.json")]
-              assert len(matches)==1, names
-              data=z.read(matches[0])
-              assert len(data)<500000
-              snapshot=json.loads(data)
-              assert snapshot.get("receipt_sha256") and isinstance(snapshot.get("watch"),list)
-              Path("/tmp/c-real-receipts/a2.json").write_bytes(data)
+          with zipfile.ZipFile("/tmp/c-real-receipts/a2.zip") as outer:
+              names=outer.namelist()
+              transport=[n for n in names if n.endswith("transport.zip")]
+              exports=[n for n in names if n.endswith("verified-snapshot.json")]
+              assert len(transport)==1 and len(exports)==1, names
+              with zipfile.ZipFile(__import__("io").BytesIO(outer.read(transport[0]))) as inner:
+                  members=inner.namelist()
+                  receipts=[n for n in members if n.startswith("receipts/") and n.endswith(".json")]
+                  assert len(members)==3 and len(receipts)==1 and "latest.json" in members and "verified-snapshot.json" in members
+                  receipt=inner.read(receipts[0])
+                  assert inner.read("latest.json")==receipt
+                  verified=json.loads(inner.read("verified-snapshot.json"))
+                  assert verified==json.loads(outer.read(exports[0]))
+                  assert verified["receipt_sha256"]==hashlib.sha256(receipt).hexdigest()
+                  assert verified["watch"] and isinstance(verified["watch"],list)
+                  assert verified["scan_status"]!="BUY"
+                  Path("/tmp/c-real-receipts/a2.json").write_text(json.dumps(verified,sort_keys=True)+"\\n")
           PY
           python -m paper_pov.c_read_only_integration --parity /tmp/c-real-receipts/parity.json --recovery /tmp/c-real-receipts/recovery.json --a2 /tmp/c-real-receipts/a2.json --output /tmp/c-real-receipts/integration.json
           python - <<'PY'
