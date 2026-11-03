@@ -19,6 +19,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   focused:
     runs-on: ubuntu-latest
@@ -34,3 +35,28 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           python -m unittest paper_pov.test_ledger_readback paper_pov.test_stage_receipts paper_pov.test_segmented_live_writer.LiveWriterTests.test_actual_bare_remote_push_fetch_and_verified_replay paper_pov.test_results_report.PaperResultsContracts.test_realistic_report_is_readable_and_not_a_buy_signal paper_pov.test_results_report.PaperResultsContracts.test_zero_qualifying_watch_is_successful_abstention paper_pov.test_results_report.PaperResultsContracts.test_zero_observations_disclose_unverified_freshness paper_pov.test_results_report.PaperResultsContracts.test_reject_inconsistent_market_evidence_before_reporting paper_pov.test_results_report.PaperResultsContracts.test_zero_observation_cli_artifact_and_checksums paper_pov.test_results_report.PaperResultsContracts.test_atomic_result_publication_rejects_existing_and_cleans_failed_stage paper_pov.test_results_report.PaperResultsContracts.test_published_result_readback_rejects_tamper_and_wrong_ledger paper_pov.test_results_report.PaperResultsContracts.test_independent_quote_freshness_and_candidate_provenance_readback paper_pov.test_source_bound_publication paper_pov.test_replay_downloaded_artifacts paper_pov.test_artifact_audit -v
+      - name: Real scheduled Kraken artifact readback (read only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/d2-real
+          gh api -H 'Accept: application/vnd.github+json' 'repos/${{ github.repository }}/actions/artifacts/13225349128/zip' > /tmp/d2-real/ledger.zip
+          gh api -H 'Accept: application/vnd.github+json' 'repos/${{ github.repository }}/actions/artifacts/13226916072/zip' > /tmp/d2-real/results.zip
+          python -m paper_pov.artifact_audit \
+            --ledger-zip /tmp/d2-real/ledger.zip \
+            --results-zip /tmp/d2-real/results.zip \
+            --run-id 41626400391 \
+            --source-sha 94929a544899ddec63c676b6d4d52539da8e3837 \
+            --ledger-commit c3aa7b863ac1a7befd40b465589df86f8347c042 | tee /tmp/d2-real/proof.json
+          python - <<'PY'
+          import json
+          with open('/tmp/d2-real/proof.json') as f:
+              proof = json.load(f)
+          assert proof['run_id'] == '41626400391', proof
+          assert proof['generation'] == 64, proof
+          assert proof['watch'] == 12, proof
+          assert proof['status'] == 'ABSTAIN_LEGACY_QUOTE_EVIDENCE', proof
+          assert proof['certified'] is False, proof
+          print('REAL_SCHEDULED_ARTIFACT_READBACK_VALID_LEGACY_ABSTENTION', proof)
+          PY
