@@ -149,8 +149,6 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                 selected.append(item.copy())
                 seen.add(item["pair"])
                 limit -= 1
-    if not selected:
-        raise RuntimeError("No liquid early-stage candidates")
     watch = []
     abstentions = []
     abstention_counts = {"request_failure": 0, "stale_or_future_ohlc": 0,
@@ -195,7 +193,10 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             age = clock().astimezone(UTC).timestamp() - (starts[-1] + 300)
             if not 0 <= age <= 600:
                 raise ValueError("stale or future completed OHLC")
-            accel = sum(volumes[-6:]) / sum(volumes[-12:-6])
+            prior_volume = sum(volumes[-12:-6])
+            if prior_volume <= 0:
+                raise ValueError("invalid or no-trade OHLC prior volume")
+            accel = sum(volumes[-6:]) / prior_volume
             move15 = 100 * (closes[-1] / closes[-4] - 1)
             if not all(map(math.isfinite, (accel, move15))):
                 raise ValueError("nonfinite OHLC derived metric")
@@ -239,7 +240,9 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         item["prediction_id"] = hashlib.sha256(
             ("paper-v1|" + as_of + "|" + item["pair"]).encode()).hexdigest()
     return {"schema": 1, "mode": "PAPER_ONLY", "buy_approved": False,
-        "scan_status": "WATCH" if watch else "ABSTAIN_NO_QUALIFIED_OHLC",
+        "scan_status": ("WATCH" if watch else
+                        "ABSTAIN_NO_LIQUID_CANDIDATES" if not selected else
+                        "ABSTAIN_NO_QUALIFIED_OHLC"),
         "source": "Kraken public REST (ticker client-observed; OHLC completed)",
         "started_at": started.isoformat(), "as_of": as_of,
         "ticker_move_reference": "kraken_ticker_today_open_utc",
