@@ -34,14 +34,14 @@ export async function verifyShadowLedger(artifacts:ShadowArtifacts):Promise<Shad
  return artifacts;
 }
 export type ResearchGate={comparison:{held_out_n:number;held_out_lift:number|null;paper_predictions_examined:number;excluded:Record<string,number>};shadow_decision:{decision:string;challenger_version:string; evidence_sha256:string;production_applied:boolean;held_out_n:number;held_out_lift:number|null;active_shadow_version:string}};
-export function verifyResearchGate(raw:unknown,artifacts:ShadowArtifacts):ShadowArtifacts{
+export function verifyResearchGate(raw:unknown,artifacts:ShadowArtifacts,trustedResearchSha:string):ShadowArtifacts{
  if(!raw||typeof raw!=="object")throw Error("missing_research_gate");
  const gate=raw as ResearchGate,c=gate.comparison,d=gate.shadow_decision,e=artifacts.evidence;
- if(!c||!d||!e||!Number.isInteger(c.held_out_n)||c.held_out_n<=0||!Number.isInteger(c.paper_predictions_examined)||c.paper_predictions_examined<c.held_out_n||!c.excluded||typeof c.excluded!=="object"||Object.values(c.excluded).some(v=>!Number.isInteger(v)||v<0)||d.challenger_version!==e.version||!sha(d.evidence_sha256)||d.evidence_sha256.toLowerCase()!==e.source_sha.toLowerCase())throw Error("unqualified_research_gate");
+ if(!c||!d||!e||!Number.isInteger(c.held_out_n)||c.held_out_n<=0||!Number.isInteger(c.paper_predictions_examined)||c.paper_predictions_examined<c.held_out_n||!c.excluded||typeof c.excluded!=="object"||Object.values(c.excluded).some(v=>!Number.isInteger(v)||v<0)||d.challenger_version!==e.version||!sha(d.evidence_sha256)||!sha(trustedResearchSha)||d.evidence_sha256.toLowerCase()!==trustedResearchSha.toLowerCase())throw Error("unqualified_research_gate");
  if(d.decision!=="SHADOW_ELIGIBLE_REVIEW"||d.production_applied!==false||d.active_shadow_version!==e.version||d.held_out_n!==c.held_out_n||d.held_out_lift!==c.held_out_lift||!e.qualified||c.held_out_n!==e.held_out_samples||typeof c.held_out_lift!=="number"||!Number.isFinite(c.held_out_lift)||c.held_out_lift!==e.held_out_lift)throw Error("research_gate_not_qualified");
  return artifacts;
 }
-export function createReadOnlyShadowLoader(url:string|undefined,fetcher:typeof fetch=fetch,trustedSourceSha?:string,researchGateUrl?:string):()=>Promise<ShadowArtifacts>{
+export function createReadOnlyShadowLoader(url:string|undefined,fetcher:typeof fetch=fetch,trustedSourceSha?:string,researchGateUrl?:string,trustedResearchSha?:string):()=>Promise<ShadowArtifacts>{
  return async()=>{
   if(!url)return {evidence:null,outcomes:[],scores:[]};
   const u=new URL(url);
@@ -59,6 +59,6 @@ export function createReadOnlyShadowLoader(url:string|undefined,fetcher:typeof f
   if(!gateResponse.ok)throw Error(`research_gate_http_${gateResponse.status}`);
   const gateText=await gateResponse.text();
   if(gateText.length>200000)throw Error("research_gate_too_large");
-  return verifyResearchGate(JSON.parse(gateText),verified);
+  return verifyResearchGate(JSON.parse(gateText),verified,trustedResearchSha??"");
  };
 }
