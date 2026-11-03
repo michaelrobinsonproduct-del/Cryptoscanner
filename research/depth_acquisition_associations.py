@@ -45,7 +45,10 @@ def verified_associations(captures_directory, associations_directory, depth_dire
     association_root = Path(associations_directory)
     if not association_root.is_dir():
         raise ValueError("association directory missing")
-    rows, source_abstentions = verified_rows(depth_directory)
+    if Path(depth_directory).is_file():
+        rows, source_abstentions, _ = verified_index_rows(depth_directory)
+    else:
+        rows, source_abstentions = verified_rows(depth_directory)
     verified = {(r["pair"], r["source_sha256"]): r for r in rows}
     enriched, exclusions = [], []
     for path in sorted(capture_root.glob("*.json")):
