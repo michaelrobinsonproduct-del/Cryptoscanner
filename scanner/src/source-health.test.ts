@@ -27,3 +27,13 @@ test("source health rejects malformed run provenance",async()=>{
 test("expired source health cannot masquerade as healthy",async()=>{
  await expect(reader({...report,observed_at:"2026-11-03T22:00:00Z",runs:[],failed_count:0,observed_run_count:0,status:"NO_RECENT_RUNS"})()).rejects.toThrow("stale_source_health");
 });
+
+test("D schedule gap remains visible despite successful manual scans",async()=>{
+ const manual={...run,event:"workflow_dispatch",conclusion:"success"};
+ const x={...report,runs:[manual],failed_count:0,scheduled_run_count:0,schedule_gap_observed:true,status:"SCHEDULE_GAP_OBSERVED"};
+ const result=await reader(x)();
+ expect(result.status).toBe("SCHEDULE_GAP_OBSERVED");
+ expect(result.failed_count).toBe(0);
+ await expect(reader({...x,status:"NO_FAILURES_OBSERVED"})()).rejects.toThrow("source_health_state_mismatch");
+ await expect(reader({...x,schedule_gap_observed:false,status:"NO_FAILURES_OBSERVED"})()).rejects.toThrow("source_schedule_gap_mismatch");
+});
