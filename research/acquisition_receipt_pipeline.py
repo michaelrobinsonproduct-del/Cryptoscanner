@@ -163,6 +163,8 @@ def main():
     parser.add_argument("--captures-directory")
     parser.add_argument("--output", required=True)
     parser.add_argument("--associations-directory")
+    parser.add_argument("--associate-verified-depth", action="store_true",
+                        help="Bind scoring-time receipts to verified source before E1-E3")
     parser.add_argument("--round-index")
     parser.add_argument("--all-horizon-coverage", action="store_true")
     parser.add_argument("--all-horizon-learning", action="store_true")
@@ -171,6 +173,15 @@ def main():
     parser.add_argument("--challenger-version")
     parser.add_argument("--learning-ledger", help="Research-only append-only E3 decisions")
     args = parser.parse_args()
+    if args.associate_verified_depth:
+        if not all((args.captures_directory, args.depth_directory, args.associations_directory)):
+            parser.error("automatic association requires captures, depth and association directories")
+        from research.depth_acquisition_associations import associate_captured_scores
+        association_report = associate_captured_scores(
+            args.captures_directory, args.depth_directory, args.associations_directory)
+        print(json.dumps({"association_attempted": True,
+                          "associated": len(association_report["associated"]),
+                          "excluded": len(association_report["excluded"])}, sort_keys=True))
     source_only = (args.all_horizon_coverage and not any((
         args.paper_ledger, args.depth_directory, args.captures_directory,
         args.associations_directory, args.split_at is not None,
