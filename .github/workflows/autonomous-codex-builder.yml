@@ -63,5 +63,6 @@ jobs:
           BRANCH="codex-development-${GITHUB_RUN_ID}"
           git checkout -b "$BRANCH"
           git commit -m "codex: autonomous scanner improvement ${GITHUB_RUN_ID}"
-          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push origin "HEAD:refs/heads/$BRANCH"
+          gh auth setup-git
+          git push origin "HEAD:refs/heads/$BRANCH"
           gh pr create --base main --head "$BRANCH" --title "Codex: autonomous scanner improvement ${GITHUB_RUN_ID}" --body "Autonomous bounded implementation. Requires normal CI and review before merge. No production mutation."
