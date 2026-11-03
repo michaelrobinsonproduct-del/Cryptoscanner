@@ -61,3 +61,22 @@ test("B1 verified A2 file is shared by manual HTTP and scheduled, and expires fa
   expect(failure.result.scan_status).toBe("NO_DISCOVERY_CANDIDATES");
  }finally{await rm(dir,{recursive:true,force:true})}
 });
+
+test("B1 actual authenticated A2 export feeds both entry points (CI real Kraken)",async()=>{
+ const path=process.env.B1_REAL_A2_VERIFIED_FILE;
+ if(!path)return;
+ const raw=JSON.parse(await (await import("node:fs/promises")).readFile(path,"utf8"));
+ const captured=new Date(Date.parse(raw.as_of)+2000);
+ const actualDeps={...deps,now:()=>captured};
+ const runner=createCycleRunner(actualDeps,undefined,undefined,createA2VerifiedFileReader(path,()=>captured));
+ const http=createCycleHttpHandler(runner);
+ const manual=await (await http(new Request("http://localhost/cycle"))).json();
+ const scheduled=await runner.run("scheduled");
+ expect(manual).toEqual(scheduled.result);
+ expect(manual.a2_snapshot).toMatchObject({status:"VERIFIED_SNAPSHOT",receipt_sha256:raw.receipt_sha256,eligible_pairs:raw.eligible_pairs,observed_markets:raw.observed_markets});
+ expect(manual.a2_snapshot.watch.length).toBe(raw.watch.length);
+ expect(manual.a2_snapshot.watch.map((c:any)=>c.prediction_id)).toEqual(raw.watch.map((c:any)=>c.prediction_id));
+ expect(manual.a2_snapshot.buy_approved).toBe(false);
+ expect((await (await http(new Request("http://localhost/dashboard"))).json()).last_result.a2_snapshot).toEqual(manual.a2_snapshot);
+ console.log("B1_REAL_A2_MANUAL_SCHEDULED_PARITY",JSON.stringify({receipt_sha256:raw.receipt_sha256,eligible_pairs:raw.eligible_pairs,observed_markets:raw.observed_markets,watch_count:raw.watch.length,abstention_counts:raw.abstention_counts,source_time:raw.as_of,replay_clock:captured.toISOString()}));
+});
