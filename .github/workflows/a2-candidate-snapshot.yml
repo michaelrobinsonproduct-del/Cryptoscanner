@@ -52,7 +52,7 @@ jobs:
           # Exercise the same ZIP transport consumed by B, using real Kraken data.
           import zipfile
           from paper_pov.a2_artifact_consumer import read_artifact_zip
-          transport = latest.parent.parent / "a2-transport-check.zip"
+          transport = latest.parent / "a2-verified-transport.zip"
           with zipfile.ZipFile(transport, "w", compression=zipfile.ZIP_DEFLATED) as archive:
               archive.write(latest, "latest.json")
               archive.write(export_path, "verified-snapshot.json")
@@ -63,6 +63,7 @@ jobs:
           assert downloaded["watch"] == snapshot["watch"]
           assert downloaded["receipt_sha256"] == snapshot["receipt_sha256"]
           assert downloaded["scan_status"] == snapshot["scan_status"]
+          assert transport.is_file() and transport.stat().st_size > 0
           print("A2_ZIP_TRANSPORT_VERIFIED " + json.dumps({
               "watch_count": len(downloaded["watch"]),
               "receipt_sha256": downloaded["receipt_sha256"],
@@ -84,7 +85,7 @@ jobs:
               "consumer_verified": True, "production_applied": False,
           }, sort_keys=True))
           PY
-      - name: Retain public paper readback evidence
+      - name: Retain B-consumable authenticated transport ZIP and paper readback evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
