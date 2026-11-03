@@ -328,9 +328,19 @@ def verify_published(directory, *, run_id, source_sha, ledger_commit, ledger_sha
         raise ValueError("WATCH abstention status mismatch")
     if status == "SUCCESS_PAPER_ONLY" and not candidates:
         raise ValueError("Success without candidates")
-    for candidate in candidates:
+    if len(candidates) > 12 or len(candidates) > len(evidence):
+        raise ValueError("Candidate count exceeds verified quote evidence")
+    seen_predictions = set()
+    for rank, candidate in enumerate(candidates, 1):
         if not isinstance(candidate, dict):
             raise ValueError("Malformed candidate")
+        prediction_id = candidate.get("prediction_id")
+        if (type(candidate.get("rank")) is not int or candidate["rank"] != rank
+                or candidate.get("status") != "WATCH_PAPER_ONLY"
+                or not isinstance(prediction_id, str) or not prediction_id
+                or prediction_id in seen_predictions):
+            raise ValueError("Invalid or duplicate published WATCH identity")
+        seen_predictions.add(prediction_id)
         quote = by_symbol.get(candidate.get("symbol"))
         if (quote is None or candidate.get("price_usd") != quote["price"]
                 or _utc(candidate.get("quote_observed_at")) != _utc(quote["observed_at"])):
