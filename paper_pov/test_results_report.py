@@ -310,6 +310,8 @@ class PaperResultsContracts(unittest.TestCase):
                 verify_published(output, **expected)
 
     def test_independent_quote_freshness_and_candidate_provenance_readback(self):
+        import json
+        import hashlib
         import tempfile
         from pathlib import Path
         from unittest.mock import patch
