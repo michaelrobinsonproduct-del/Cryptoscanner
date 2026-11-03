@@ -83,6 +83,8 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
     if (scan["online_usd_pairs"] != scan["eligible_pairs"] +
             scan["excluded_stablecoin_pairs"] + scan["excluded_other_pairs"]):
         raise ValueError("Kraken USD eligibility partition mismatch")
+    if not observations and (scan["ohlc_screened"] or watches):
+        raise ValueError("No quote observations for OHLC/WATCH evidence")
     if not len(observations) <= scan["eligible_pairs"] or not scan["ohlc_screened"] <= len(observations):
         raise ValueError("Market coverage exceeds observed/eligible universe")
     if score["market_observations"] < len(observations):
@@ -108,11 +110,6 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
             raise ValueError("Stale, future, or invalid quote")
         ages.append(age)
         quotes[pair] = o
-    # Do not turn malformed partial market coverage into a green abstention.
-    # The scanner may legitimately return zero observations, but a report
-    # claiming OHLC screens or WATCH candidates without quotes is corrupt.
-    if not observations and (scan["ohlc_screened"] or watches):
-        raise ValueError("No quote observations for OHLC/WATCH evidence")
     if len(watches) > scan["ohlc_screened"]:
         raise ValueError("WATCH count exceeds screened OHLC evidence")
     result_status = ("ABSTAIN_NO_OBSERVATIONS" if not observations else
