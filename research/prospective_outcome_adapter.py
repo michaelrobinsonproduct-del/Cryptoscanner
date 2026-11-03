@@ -10,7 +10,7 @@ from pathlib import Path
 from research.source_qualified_outcomes import qualify
 
 
-def _entry_ask_liquidity(raw, market, expected_ask):
+def _entry_ask_liquidity(raw, market, expected_ask, expected_bid=None, expected_ask_event=None, expected_bid_event=None):
     """Executable USD notional at first ask level, from SHA-verified raw depth.
 
     Only USD-quoted pairs qualify; other quote currencies require FX evidence.
@@ -20,16 +20,29 @@ def _entry_ask_liquidity(raw, market, expected_ask):
     if not isinstance(book, dict):
         return None
     asks = book.get("asks")
+    bids = book.get("bids")
+    if not isinstance(bids, list) or not bids or len(bids[0]) < 3:
+        raise ValueError("missing executable bid depth")
     if not isinstance(asks, list) or not asks or len(asks[0]) < 2:
         raise ValueError("missing executable ask depth")
     try:
         price, size = Decimal(str(asks[0][0])), Decimal(str(asks[0][1]))
         expected = Decimal(str(expected_ask))
+        bid_price = Decimal(str(bids[0][0]))
+        bid_time = Decimal(str(bids[0][2]))
+        ask_time = Decimal(str(asks[0][2]))
     except (InvalidOperation, ValueError, TypeError, IndexError):
         raise ValueError("invalid executable ask depth") from None
-    if not (price.is_finite() and size.is_finite() and
+    if not (bid_price.is_finite() and bid_time.is_finite() and ask_time.is_finite() and
+            price.is_finite() and size.is_finite() and
             price > 0 and size > 0 and price == expected):
         raise ValueError("depth/evidence ask mismatch")
+    if expected_bid is not None and bid_price != Decimal(str(expected_bid)):
+        raise ValueError("depth/evidence bid mismatch")
+    if expected_bid_event is not None and bid_time != Decimal(str(expected_bid_event)):
+        raise ValueError("depth/evidence bid timestamp mismatch")
+    if expected_ask_event is not None and ask_time != Decimal(str(expected_ask_event)):
+        raise ValueError("depth/evidence ask timestamp mismatch")
     return price * size
 
 
@@ -89,7 +102,8 @@ def verified_rows(batch_directory):
         if not (0 <= trade_observed - trade_event <= 600):
             raise ValueError("stale trade evidence")
         depth_raw = (root / depth["file"]).read_bytes()
-        liquidity = _entry_ask_liquidity(depth_raw, entry["source_market"], evidence["best_ask"])
+        liquidity = _entry_ask_liquidity(depth_raw, entry["source_market"], evidence["best_ask"],
+                                          evidence["best_bid"], ask_event, bid_event)
         if liquidity is not None and not pair.endswith("USD"):
             liquidity = None  # No quote-to-USD FX conversion is available.
         rows.append({"pair": pair, "event_at": bid_event,
