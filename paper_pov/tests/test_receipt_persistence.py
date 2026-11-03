@@ -56,6 +56,33 @@ class ReceiptTests(unittest.TestCase):
         self.assertFalse(self.latest.exists())
         self.assertEqual(list((self.latest.parent / "receipts").glob("*.json")), [])
 
+    def test_orphan_receipt_recovers_missing_latest_without_duplication(self):
+        receipt = persist_report(self.latest, self.report)
+        self.latest.unlink()
+        with patch("paper_pov.scanner.os.open", wraps=__import__("os").open) as open_mock:
+            self.assertEqual(persist_report(self.latest, self.report), receipt)
+            self.assertFalse(any(call.args and call.args[0] == receipt
+                                 for call in open_mock.call_args_list))
+        self.assertEqual(json.loads(self.latest.read_text()), self.report)
+        self.assertEqual(len(list((self.latest.parent / "receipts").glob("*.json"))), 1)
+
+    def test_orphan_receipt_recovers_after_older_latest(self):
+        older = {**self.report, "as_of": "2026-11-03T01:59:59+00:00"}
+        persist_report(self.latest, older)
+        receipt = persist_report(self.latest, self.report)
+        self.latest.write_text(json.dumps(older))
+        self.assertEqual(persist_report(self.latest, self.report), receipt)
+        self.assertEqual(json.loads(self.latest.read_text()), self.report)
+
+    def test_conflicting_orphan_never_overwrites(self):
+        receipt = persist_report(self.latest, self.report)
+        self.latest.unlink()
+        receipt.write_text("{}")
+        with self.assertRaisesRegex(ValueError, "conflicting orphan"):
+            persist_report(self.latest, self.report)
+        self.assertFalse(self.latest.exists())
+        self.assertEqual(receipt.read_text(), "{}")
+
     def test_invalid_report_never_writes(self):
         with self.assertRaises(ValueError):
             persist_report(self.latest, {**self.report, "bad": float("nan")})
