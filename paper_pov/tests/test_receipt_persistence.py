@@ -125,6 +125,30 @@ class ReceiptTests(unittest.TestCase):
                          [receipts[0].parent, self.latest.parent])
         self.assertEqual(len(list((self.latest.parent / "receipts").glob("*.json"))), 1)
 
+    def test_orphan_recovery_syncs_receipt_before_publishing_latest(self):
+        receipt = persist_report(self.latest, self.report)
+        self.latest.unlink()
+        real_sync = __import__("paper_pov.scanner", fromlist=["sync_directory"]).sync_directory
+        with patch("paper_pov.scanner.sync_directory", wraps=real_sync) as sync:
+            with patch("paper_pov.scanner.atomic_json", wraps=__import__(
+                    "paper_pov.scanner", fromlist=["atomic_json"]).atomic_json) as publish:
+                self.assertEqual(persist_report(self.latest, self.report), receipt)
+        self.assertGreaterEqual(sync.call_count, 2)
+        self.assertEqual(sync.call_args_list[0].args[0], receipt.parent)
+        self.assertEqual(publish.call_count, 1)
+        self.assertEqual(json.loads(self.latest.read_text()), self.report)
+
+    def test_orphan_sync_failure_never_publishes_latest(self):
+        receipt = persist_report(self.latest, self.report)
+        self.latest.unlink()
+        with patch("paper_pov.scanner.sync_directory", side_effect=OSError("fsync interrupted")):
+            with self.assertRaisesRegex(OSError, "fsync interrupted"):
+                persist_report(self.latest, self.report)
+        self.assertFalse(self.latest.exists())
+        self.assertEqual(json.loads(receipt.read_text()), self.report)
+        self.assertEqual(persist_report(self.latest, self.report), receipt)
+        self.assertEqual(json.loads(self.latest.read_text()), self.report)
+
     def test_invalid_report_never_writes(self):
         with self.assertRaises(ValueError):
             persist_report(self.latest, {**self.report, "bad": float("nan")})
