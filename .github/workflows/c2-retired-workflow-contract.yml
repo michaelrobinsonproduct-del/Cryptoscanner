@@ -92,6 +92,35 @@ jobs:
           assert r["production_applied"] is False and r["trading_approved"] is False
           print("C_REAL_RECOVERY_AND_PARITY_CONSUMED",json.dumps(r,sort_keys=True))
           PY
+      - name: Attach B authenticated A2 snapshot to recovered C report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/13279054170/zip" > /tmp/c-real-receipts/a2.zip
+          python - <<'PY'
+          import json, zipfile
+          from pathlib import Path
+          with zipfile.ZipFile("/tmp/c-real-receipts/a2.zip") as z:
+              names=z.namelist()
+              matches=[n for n in names if n.endswith("verified-snapshot.json")]
+              assert len(matches)==1, names
+              data=z.read(matches[0])
+              assert len(data)<500000
+              snapshot=json.loads(data)
+              assert snapshot.get("receipt_sha256") and isinstance(snapshot.get("watch"),list)
+              Path("/tmp/c-real-receipts/a2.json").write_bytes(data)
+          PY
+          python -m paper_pov.c_read_only_integration --parity /tmp/c-real-receipts/parity.json --recovery /tmp/c-real-receipts/recovery.json --a2 /tmp/c-real-receipts/a2.json --output /tmp/c-real-receipts/integration.json
+          python - <<'PY'
+          import json
+          p=json.load(open("/tmp/c-real-receipts/integration.json"))
+          assert p["a2_snapshot_attached"] and p["a2_watch_count"]>0
+          assert p["recovery_verified"] and p["status"]=="ABSTAIN_LEGACY_QUOTE_EVIDENCE"
+          assert not p["trading_approved"] and not p["production_applied"]
+          print("C_B_A2_RECOVERY_CONNECTED",json.dumps(p,sort_keys=True))
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: c-real-manual-scheduled-contract
