@@ -5,10 +5,13 @@ on:
       - 'research/depth_acquisition_associations.py'
       - 'research/acquisition_receipt_pipeline.py'
       - 'research/test_depth_acquisition_associations.py'
+      - 'research/public_paper_learning_bridge.py'
+      - 'research/test_public_paper_learning_bridge.py'
       - '.github/workflows/e2-depth-binding.yml'
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   focused-depth-binding:
     runs-on: ubuntu-latest
@@ -28,3 +31,45 @@ jobs:
           python-version: '3.11'
       - name: Focused immutable depth association acceptance
         run: python -m unittest -v research.test_depth_acquisition_associations
+
+  real-paper-learning-bridge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact E head
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Focused E paper bridge acceptance
+        run: python -m unittest -v research.test_public_paper_learning_bridge
+      - name: Acquire actual sealed public Kraken paper artifact read-only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p real-paper
+          gh run download 41717229720 -R michaelrobinsonproduct-del/Cryptoscanner -n public-paper-ledger-41717229720 -D real-paper
+          test -s real-paper/ledger.json
+      - name: Execute E1-E3 real-paper bridge and assert truthful abstention
+        run: |
+          python -m research.public_paper_learning_bridge --ledger real-paper/ledger.json --output real-paper/e-learning-report.json
+          python - <<'PY'
+          import json
+          r=json.load(open("real-paper/e-learning-report.json"))
+          assert r["paper_predictions"] > 0
+          assert r["paper_observations"] > 0
+          assert all(r["horizons"][str(h)]["authenticated_entry_labels"] == 0 for h in (1,6,24,48))
+          assert r["shadow_decision"]["decision"] == "KEEP_BASELINE"
+          assert r["production_applied"] is False
+          print("E_REAL_PAPER_BRIDGE_VERIFIED", r["ledger_sha256"], r["horizons"])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e-real-paper-learning-report
+          path: real-paper/e-learning-report.json
+          retention-days: 7
