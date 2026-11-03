@@ -50,19 +50,19 @@ class ArtifactAuditTests(unittest.TestCase):
             report["candidates"][0]["symbol"] = "ETH/USD"
             results = publication()
             with self.assertRaisesRegex(ValueError, "membership/order"):
-                audit(ledger, results)
+                audit(ledger, results, run_id="123", source_sha="b" * 40, ledger_commit="c" * 40)
             report["candidates"][0]["symbol"] = "XBT/USD"
             report["quote_evidence"] = [quote]
             results = publication()
-            verified = audit(ledger, results)
+            verified = audit(ledger, results, run_id="123", source_sha="b" * 40, ledger_commit="c" * 40)
             self.assertTrue(verified["certified"])
             self.assertTrue(verified["client_quote_evidence_verified"])
             report.pop("quote_evidence")
             report["candidates"] = None
             results = publication()
             with self.assertRaisesRegex(ValueError, "Missing WATCH arrays"):
-                audit(ledger, results)
-            report["candidates"] = [{"symbol": "XBT/USD", "price_usd": 50000,
+                audit(ledger, results, run_id="123", source_sha="b" * 40, ledger_commit="c" * 40)
+            report["candidates"] = [{"rank": 1, "status": "WATCH_PAPER_ONLY", "symbol": "XBT/USD", "price_usd": 50000,
                                      "quote_observed_at": quote["observed_at"]}]
             with self.assertRaisesRegex(ValueError, "identity mismatch"):
                 audit(ledger, results, run_id="124", source_sha="b" * 40,
@@ -75,7 +75,7 @@ class ArtifactAuditTests(unittest.TestCase):
             report["candidates"][0]["price_usd"] = 1
             results = publication()
             with self.assertRaisesRegex(ValueError, "lacks retained quote"):
-                audit(ledger, results)
+                audit(ledger, results, run_id="123", source_sha="b" * 40, ledger_commit="c" * 40)
 
 
 if __name__ == "__main__":
