@@ -11,7 +11,7 @@ import time
 from research.kraken_prospective_batch import collect, MAX_PAIRS
 from research.prospective_round_store import append_round, evaluate_index
 
-MAX_ROUNDS = 12
+MAX_ROUNDS = 13  # entry plus twelve five-minute forward slots for a 1h outcome
 MIN_INTERVAL_SECONDS = 300
 
 
