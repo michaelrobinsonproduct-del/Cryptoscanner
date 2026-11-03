@@ -166,7 +166,7 @@ class PaperResultsContracts(unittest.TestCase):
         scan, score = fixture()
         scan["watch"] = []
         payload, markdown = self.report(scan, score)
-        self.assertEqual(payload["status"], "SUCCESS_PAPER_ONLY")
+        self.assertEqual(payload["status"], "ABSTAIN_NO_WATCH")
         self.assertEqual(payload["candidates"], [])
         self.assertTrue(payload["remote_readback_verified"])
         self.assertIn("No qualifying WATCH candidates", markdown)
@@ -182,6 +182,8 @@ class PaperResultsContracts(unittest.TestCase):
         scan["ohlc_screened"] = 0
         payload, markdown = self.report(scan, score)
         self.assertEqual(payload["candidates"], [])
+        self.assertEqual(payload["status"], "ABSTAIN_NO_OBSERVATIONS")
+        self.assertIn("ABSTAIN_NO_OBSERVATIONS", markdown)
         self.assertIn("NOT VERIFIED (zero observations)", markdown)
         self.assertIn("No qualifying WATCH candidates", markdown)
 
