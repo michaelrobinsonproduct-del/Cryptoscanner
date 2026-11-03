@@ -226,8 +226,8 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     completed = clock().astimezone(UTC)
     if not 0 <= (completed - quote_at).total_seconds() <= 180:
         raise RuntimeError("Quote observations expired during OHLC screening")
-    if not watch:
-        raise RuntimeError("No fresh contiguous liquid OHLC candidates")
+    # A valid scan may have no qualified market: preserve its coverage and abstentions.
+    # This is a successful paper observation, never a BUY or an invented WATCH.
     watch.sort(key=lambda x: (-x["challenger_score"], x["pair"]))
     watch = watch[:12]
     as_of = completed.isoformat()
@@ -239,6 +239,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         item["prediction_id"] = hashlib.sha256(
             ("paper-v1|" + as_of + "|" + item["pair"]).encode()).hexdigest()
     return {"schema": 1, "mode": "PAPER_ONLY", "buy_approved": False,
+        "scan_status": "WATCH" if watch else "ABSTAIN_NO_QUALIFIED_OHLC",
         "source": "Kraken public REST (ticker client-observed; OHLC completed)",
         "started_at": started.isoformat(), "as_of": as_of,
         "ticker_move_reference": "kraken_ticker_today_open_utc",
