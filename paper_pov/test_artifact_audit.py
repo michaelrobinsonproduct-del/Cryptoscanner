@@ -45,6 +45,7 @@ class ArtifactAuditTests(unittest.TestCase):
             self.assertEqual(proof["max_client_quote_age_seconds"], 8)
             self.assertFalse(proof["published_quote_evidence"])
             self.assertFalse(proof["certified"])
+            self.assertFalse(proof["client_quote_evidence_verified"])
             self.assertEqual(proof["status"], "ABSTAIN_LEGACY_QUOTE_EVIDENCE")
             report["candidates"][0]["symbol"] = "ETH/USD"
             results = publication()
@@ -53,8 +54,16 @@ class ArtifactAuditTests(unittest.TestCase):
             report["candidates"][0]["symbol"] = "XBT/USD"
             report["quote_evidence"] = [quote]
             results = publication()
-            self.assertTrue(audit(ledger, results)["certified"])
+            verified = audit(ledger, results)
+            self.assertTrue(verified["certified"])
+            self.assertTrue(verified["client_quote_evidence_verified"])
             report.pop("quote_evidence")
+            report["candidates"] = None
+            results = publication()
+            with self.assertRaisesRegex(ValueError, "Missing WATCH arrays"):
+                audit(ledger, results)
+            report["candidates"] = [{"symbol": "XBT/USD", "price_usd": 50000,
+                                     "quote_observed_at": quote["observed_at"]}]
             with self.assertRaisesRegex(ValueError, "identity mismatch"):
                 audit(ledger, results, run_id="124", source_sha="b" * 40,
                       ledger_commit="c" * 40)
