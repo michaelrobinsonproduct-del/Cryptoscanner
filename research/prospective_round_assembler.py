@@ -5,7 +5,7 @@ The adapter verifies source bytes and receipt identities for every round.
 """
 from collections import defaultdict
 from research.prospective_outcome_adapter import verified_rows
-from research.source_qualified_outcomes import qualify, STEP
+from research.source_qualified_outcomes import qualify, STEP, SLOT_TOLERANCE
 
 
 def evaluate_rounds(batch_directories, horizon_hours=1):
@@ -27,18 +27,18 @@ def evaluate_rounds(batch_directories, horizon_hours=1):
         rows.sort(key=lambda r: (int(r["first_observed_at"]), int(r["event_at"])))
         for index, entry in enumerate(rows):
             # Never round exchange event times into fictitious grid slots.
-            # Select exactly the expected source-event timestamps; duplicates
+            # Select actual first-observed receipts in each bounded cadence slot; duplicates
             # and missing slots must abstain rather than be silently dropped.
-            start = int(entry["event_at"])
+            start = float(entry["first_observed_at"])
             selected = []
             for offset in range(1, forward_count + 1):
                 target = start + offset * STEP
-                matching = [r for r in rows[index + 1:] if int(r["event_at"]) == target]
+                matching = [r for r in rows[index + 1:] if abs(float(r["first_observed_at"]) - target) <= SLOT_TOLERANCE]
                 if len(matching) != 1:
                     break
                 selected.append(matching[0])
             result = qualify(entry, selected, horizon_hours)
-            outcomes.append({"pair": pair, "entry_event_at": start,
+            outcomes.append({"pair": pair, "entry_event_at": entry["event_at"],
                              "entry_first_observed_at": entry["first_observed_at"],
                              **result})
     return {"rounds_verified": len(paths),
