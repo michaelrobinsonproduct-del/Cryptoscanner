@@ -49,6 +49,7 @@ class RecoveryReconciliationTests(unittest.TestCase):
 
     def test_claim_without_receipt_is_stranded_and_not_retried(self):
         a = fixture(); a["receipts"] = []
+        a["coverage"]["receipt_run_ids"] = []
         r = reconcile(**a)
         self.assertEqual(r["reason"], "CLAIMED_WITHOUT_DISPATCH_RECEIPT")
         self.assertFalse(r["retry_authorized"])
