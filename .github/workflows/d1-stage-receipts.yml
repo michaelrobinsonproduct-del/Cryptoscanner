@@ -206,7 +206,7 @@ jobs:
                      "workflow_run_id": os.environ["SOURCE_RUN"],
                      "workflow_sha": os.environ["SOURCE_SHA"],
                      "production_applied": False}
-          Path("/tmp/d2-readback-status/status.json").write_text(json.dumps(receipt, sort_keys=True) + "\\n")
+          Path("/tmp/d2-readback-status/status.json").write_text(json.dumps(receipt, sort_keys=True) + "\n")
           print("D2_CONSUMER_OUTCOME", json.dumps(receipt, sort_keys=True))
           PY
       - name: Publish failed-run visibility for operators
