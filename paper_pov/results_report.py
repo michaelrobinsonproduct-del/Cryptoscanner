@@ -241,6 +241,9 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
                "excluded_other_pairs": scan["excluded_other_pairs"],
                "observed_markets": len(observations),
                "max_client_quote_age_seconds": max(ages) if ages else None,
+               "quote_evidence": [{"pair": o["pair"], "symbol": o["symbol"],
+                                   "observed_at": o["observed_at"], "price": o["price"]}
+                                  for o in observations],
                "exchange_event_freshness_verified": False, "candidates": records,
                "stablecoin_exclusion_count": scan["excluded_stablecoin_pairs"],
                "abstentions": len(abstentions),
@@ -288,8 +291,51 @@ def verify_published(directory, *, run_id, source_sha, ledger_commit, ledger_sha
     if payload.get("status") not in ("SUCCESS_PAPER_ONLY", "ABSTAIN_NO_WATCH",
                                       "ABSTAIN_NO_OBSERVATIONS"):
         raise ValueError("Invalid persisted result status")
+    # Independent, checksum-bound freshness replay from the published artifact.
+    # Never accept an aggregate max-age assertion without individual quotes.
+    evidence = payload.get("quote_evidence")
+    if not isinstance(evidence, list) or len(evidence) != payload.get("observed_markets"):
+        raise ValueError("Missing independent quote evidence")
+    as_of = _utc(payload.get("as_of"))
+    ages = []
+    by_symbol = {}
+    pairs = set()
+    for quote in evidence:
+        if not isinstance(quote, dict):
+            raise ValueError("Malformed quote evidence")
+        pair, symbol = quote.get("pair"), quote.get("symbol")
+        if (not isinstance(pair, str) or not PAIR.fullmatch(pair) or pair in pairs
+                or not isinstance(symbol, str) or not PAIR.fullmatch(symbol)
+                or symbol.count("/") != 1 or not symbol.endswith("/USD")
+                or symbol.split("/")[0].upper() in STABLE or symbol in by_symbol):
+            raise ValueError("Duplicate or excluded quote evidence")
+        age = (as_of - _utc(quote.get("observed_at"))).total_seconds()
+        if not 0 <= age <= 600 or _number(quote.get("price"), "quote price") <= 0:
+            raise ValueError("Stale or invalid independent quote evidence")
+        ages.append(age)
+        pairs.add(pair)
+        by_symbol[symbol] = quote
+    actual_max = max(ages) if ages else None
+    if payload.get("max_client_quote_age_seconds") != actual_max:
+        raise ValueError("Quote freshness summary mismatch")
+    status = payload["status"]
+    if (status == "ABSTAIN_NO_OBSERVATIONS") != (len(evidence) == 0):
+        raise ValueError("Observation abstention status mismatch")
+    candidates = payload.get("candidates")
+    if not isinstance(candidates, list):
+        raise ValueError("Missing candidates")
+    if (status == "ABSTAIN_NO_WATCH") != (bool(evidence) and not candidates):
+        raise ValueError("WATCH abstention status mismatch")
+    if status == "SUCCESS_PAPER_ONLY" and not candidates:
+        raise ValueError("Success without candidates")
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            raise ValueError("Malformed candidate")
+        quote = by_symbol.get(candidate.get("symbol"))
+        if (quote is None or candidate.get("price_usd") != quote["price"]
+                or _utc(candidate.get("quote_observed_at")) != _utc(quote["observed_at"])):
+            raise ValueError("Candidate lacks independently verified quote")
     return payload
-
 
 
 def main():
