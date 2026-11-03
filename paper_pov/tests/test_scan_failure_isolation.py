@@ -3,6 +3,10 @@ import datetime as dt
 import unittest
 import tempfile
 import json
+import io
+from contextlib import redirect_stdout
+from unittest.mock import patch
+from paper_pov import scanner
 from pathlib import Path
 from paper_pov.scanner import UTC, scan, persist_report
 
@@ -124,6 +128,45 @@ class ScanFailureIsolationTests(unittest.TestCase):
             self.assertEqual(json.loads(receipt.read_text()), json.loads(latest.read_text()))
             self.assertEqual(json.loads(latest.read_text())["scan_status"],
                              "ABSTAIN_NO_QUALIFIED_OHLC")
+
+
+    def test_cli_persists_and_prints_complete_ranked_watch_evidence(self):
+        now = dt.datetime(2026, 11, 3, 5, 7, tzinfo=UTC)
+        # Use the same contract as the real CLI, without network or a second writer.
+        watch = {
+            "symbol": "X00/USD", "rank": 1, "prediction_id": "fixture-prediction",
+            "baseline_score": 45.5, "challenger_score": 52.5, "price": 102.0,
+            "quote_observed_at": now.isoformat(),
+            "quote_timestamp_semantics": "client_observed_not_exchange_event_time",
+            "ohlc_last_closed_at": now.isoformat(), "move15_pct": 1.2,
+            "volume_accel": 1.8, "spread_bps": 4.0, "notional_24h_usd": 250000,
+            "status": "PAPER_WATCH", "risk": "ELEVATED", "buy_approved": False
+        }
+        report = {
+            "as_of": now.isoformat(), "scan_status": "WATCH", "mode": "PAPER_ONLY",
+            "online_usd_pairs": 21, "excluded_stablecoin_pairs": 1,
+            "excluded_other_pairs": 0, "eligible_pairs": 20, "matched_tickers": 20,
+            "observed_markets": 20, "ticker_rejections": {
+                "missing_or_invalid_payload": 0, "invalid_price_or_volume": 0,
+                "nonfinite_derived_metric": 0},
+            "ohlc_screened": 1, "abstention_counts": {}, "forward_labels": 0,
+            "production_applied": False, "watch": [watch]
+        }
+        with tempfile.TemporaryDirectory() as root:
+            latest = Path(root) / "latest.json"
+            output = io.StringIO()
+            with patch.object(scanner, "scan", return_value=report), patch.dict(
+                    "os.environ", {"PAPER_REPORT_PATH": str(latest)}), redirect_stdout(output):
+                scanner.main()
+            lines = output.getvalue().splitlines()
+            printed_status = json.loads(next(x[len("PAPER_SCAN "):] for x in lines
+                                             if x.startswith("PAPER_SCAN ")))
+            printed_watch = json.loads(next(x[len("PAPER_WATCH "):] for x in lines
+                                            if x.startswith("PAPER_WATCH ")))
+            self.assertEqual(printed_status["scan_status"], "WATCH")
+            self.assertEqual(printed_watch, [watch])
+            self.assertEqual(json.loads(latest.read_text()), report)
+            self.assertEqual(len(list((latest.parent / "receipts").glob("*.json"))), 1)
 
 if __name__ == "__main__":
     unittest.main()
