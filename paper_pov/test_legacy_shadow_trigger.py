@@ -85,7 +85,8 @@ class OwnerFallbackTests(unittest.TestCase):
             (root / names["event"]).write_text(json.dumps(f["event"]))
             shadow = {"workflow_runs": [{"id": []}]}
             (root / names["shadow_runs"]).write_text(json.dumps(shadow))
-            gate.main(argv, now=NOW)
+            with patch.object(gate.ledger, "verify"):
+                gate.main(argv, now=NOW)
             self.assertEqual(json.loads(output.read_text())["action"], "ABSTAIN")
 
     def test_valid_completed_sealed_dispatch_and_native(self):
