@@ -40,8 +40,11 @@ jobs:
           assert json.loads(receipts[0].read_text()) == report, "receipt readback mismatch"
           assert report["mode"] == "PAPER_ONLY" and report["production_applied"] is False
           assert all(not x["buy_approved"] for x in report["watch"])
-          assert report["scan_status"] == ("WATCH" if report["watch"] else "ABSTAIN_NO_QUALIFIED_OHLC")
-          assert report["watch"] or report["abstentions"]
+          expected_status = ("WATCH" if report["watch"] else
+                             "ABSTAIN_NO_LIQUID_CANDIDATES" if report["ohlc_screened"] == 0 else
+                             "ABSTAIN_NO_QUALIFIED_OHLC")
+          assert report["scan_status"] == expected_status
+          assert report["watch"] or report["abstentions"] or report["ohlc_screened"] == 0
           assert sum(report["abstention_counts"].values()) == len(report["abstentions"])
           assert len(report["watch"]) + len(report["abstentions"]) <= report["ohlc_screened"]
           assert len({x["prediction_id"] for x in report["watch"]}) == len(report["watch"])
