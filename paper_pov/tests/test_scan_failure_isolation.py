@@ -1,7 +1,10 @@
 """A1/A2 integrated fixture: one Kraken OHLC outage must not erase valid WATCH."""
 import datetime as dt
 import unittest
-from paper_pov.scanner import UTC, scan
+import tempfile
+import json
+from pathlib import Path
+from paper_pov.scanner import UTC, scan, persist_report
 
 class ScanFailureIsolationTests(unittest.TestCase):
     def test_failed_market_abstains_but_valid_market_persists(self):
@@ -36,6 +39,17 @@ class ScanFailureIsolationTests(unittest.TestCase):
         self.assertTrue(all(x["status"] == "PAPER_WATCH" and not x["buy_approved"]
                             for x in report["watch"]))
         self.assertEqual(report["excluded_stablecoin_pairs"], 0)
+        with tempfile.TemporaryDirectory() as root:
+            latest = Path(root) / "latest.json"
+            receipt = persist_report(latest, report)
+            restored = json.loads(receipt.read_text())
+            self.assertEqual(restored, json.loads(latest.read_text()))
+            self.assertEqual(restored["watch"], report["watch"])
+            self.assertEqual(restored["abstentions"], report["abstentions"])
+            self.assertEqual(len(restored["watch"]), 3)
+            self.assertEqual(len(restored["abstentions"]), 1)
+            self.assertEqual(restored["forward_labels"], 0)
+            self.assertFalse(restored["production_applied"])
 
 if __name__ == "__main__":
     unittest.main()
