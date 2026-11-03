@@ -107,6 +107,31 @@ class DepthAssociationTests(unittest.TestCase):
         self.assertTrue((self.root / "depth-links" / (self.pid + ".json")).exists())
         self.assertEqual(Path(binder.call_args.args[1]), index)
 
+    @patch("research.acquisition_receipt_pipeline.evaluate")
+    @patch("research.prospective_round_store.evaluate_index")
+    @patch("research.reconcile_paper_scores.reconcile")
+    def test_multi_horizon_primary_48h_shadow_fallback(self, reconcile, evidence, binding):
+        from research.acquisition_receipt_pipeline import evaluate_learning_horizons
+        binding.return_value = {"capture_count": 1, "reconciliation_receipt_count": 1,
+                                "association_excluded_count": 0, "excluded_count": 0,
+                                "reconciliation_receipts": [{"prediction_id": self.pid}]}
+        evidence.side_effect = lambda index, hours: {"horizon": hours}
+        def decision(ledger, source, **kwargs):
+            hours = source["horizon"]
+            return {"shadow_decision": {"decision": "SHADOW_ELIGIBLE_REVIEW"
+                    if hours < 48 else "KEEP_BASELINE",
+                    "active_shadow_version": "challenger" if hours < 48 else "baseline",
+                    "production_applied": False}}
+        reconcile.side_effect = decision
+        report = evaluate_learning_horizons({}, "index", "captures", "associations",
+                                            "index", split_at=100, baseline_version="baseline",
+                                            challenger_version="challenger",
+                                            evidence_sha256="a" * 64)
+        self.assertEqual(report["primary_decision_horizon_hours"], 48)
+        self.assertEqual(report["shadow_decision"]["decision"], "KEEP_BASELINE")
+        self.assertEqual(len(report["horizon_comparisons"]), 4)
+        self.assertFalse(report["production_applied"])
+
     def test_auto_association_invalid_arguments_do_not_write(self):
         with patch.object(sys, "argv", ["pipeline",
                 "--captures-directory", str(self.root / "scores"),
