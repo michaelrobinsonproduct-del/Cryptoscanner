@@ -13,7 +13,7 @@ class ChallengerTests(unittest.TestCase):
         rows=[self.row(i,split-PURGE_SECONDS-100-i) for i in range(20)]
         rows += [self.row(30,split-10,True)]
         rows += [self.row(100+i,split+300*i,i==0,
-                          1.0 if i==1 else 0.1,1.0 if i==0 else 0.1)
+                          1.0 if i in (1,2) else 0.1,1.0 if i in (0,3) else 0.1)
                  for i in range(20)]
         result=compare(rows,split_at=split)
         self.assertEqual(result["train_n"],20)
