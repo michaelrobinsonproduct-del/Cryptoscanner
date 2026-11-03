@@ -103,7 +103,7 @@ test("research comparison cannot claim more excluded plus held-out predictions t
  const verified={...evidence,outcome_ledger_sha:await digest(outcomes),score_ledger_sha:await digest(scores)};
  const impossible={...researchGate,comparison:{...researchGate.comparison,excluded:{stale:1}}};
  const loader=createReadOnlyShadowLoader("https://example.org/ledger.json",async(url:any)=>new Response(JSON.stringify(url===gateUrl?impossible:{evidence:verified,outcomes,scores})) as any,source,gateUrl,researchDigest);
- await expect(loader()).rejects.toThrow("research_gate_content_digest_mismatch");
+ await expect(loader()).rejects.toThrow("unqualified_research_gate");
  const runner=createCycleRunner(deps,loader);
  const result=await runner.run("manual");
  expect(result.result.shadow_artifact_status).toBe("REJECTED");
@@ -138,6 +138,23 @@ test("tampered comparison with unchanged trusted digest is rejected before manua
  const altered={...researchGate,comparison:{...comparison,held_out_lift:5},shadow_decision:{...researchGate.shadow_decision,held_out_lift:5}};
  const loader=createReadOnlyShadowLoader("https://example.org/ledger.json",async(url:any)=>new Response(JSON.stringify(url===gateUrl?altered:{evidence:verified,outcomes,scores})) as any,source,gateUrl,researchDigest);
  await expect(loader()).rejects.toThrow("research_gate_content_digest_mismatch");
+ const runner=createCycleRunner(deps,loader);
+ const manual=await (await createCycleHttpHandler(runner)(new Request("http://localhost/cycle"))).json();
+ const scheduled=await runner.run("scheduled");
+ expect(manual).toEqual(scheduled.result);
+ expect(manual.shadow_artifact_status).toBe("REJECTED");
+ expect(manual.candidates).toHaveLength(1);
+ expect(manual.shadow_evaluation.coverage).toMatchObject({scored:0,abstained:1});
+});
+
+// A self-consistent digest must not override impossible cohort accounting.
+test("rehashing an impossible cohort cannot bypass held-out accounting and both entry points abstain",async()=>{
+ const verified={...evidence,outcome_ledger_sha:await digest(outcomes),score_ledger_sha:await digest(scores)};
+ const impossible={...comparison,excluded:{late:1}};
+ const pinned=await digest(impossible);
+ const gate={comparison:impossible,shadow_decision:{...researchGate.shadow_decision,evidence_sha256:pinned}};
+ const loader=createReadOnlyShadowLoader("https://example.org/ledger.json",async(url:any)=>new Response(JSON.stringify(url===gateUrl?gate:{evidence:verified,outcomes,scores})) as any,source,gateUrl,pinned);
+ await expect(loader()).rejects.toThrow("unqualified_research_gate");
  const runner=createCycleRunner(deps,loader);
  const manual=await (await createCycleHttpHandler(runner)(new Request("http://localhost/cycle"))).json();
  const scheduled=await runner.run("scheduled");
