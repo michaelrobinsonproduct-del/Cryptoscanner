@@ -38,7 +38,7 @@ export function createA2SnapshotReader(url:string|undefined,now:()=>Date,fetcher
 export function createA2VerifiedFileReader(path:string|undefined,now:()=>Date):()=>Promise<A2Snapshot>{
  return async()=>{
   if(!path)return unavailableA2Snapshot("not_configured");
-  if(!path.startsWith("/")||path.includes("\\0"))throw Error("unsafe_a2_file_path");
+  if(!path.startsWith("/")||path.includes("\\u0000"))throw Error("unsafe_a2_file_path");
   const bytes=await readFile(path);if(bytes.byteLength>200000)throw Error("a2_oversized");
   return parseA2Snapshot(JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes)),now());
  };
