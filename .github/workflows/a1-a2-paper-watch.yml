@@ -17,3 +17,46 @@ jobs:
       - uses: actions/checkout@v4
       - name: Focused A1/A2 integration and persistence tests
         run: python -m unittest paper_pov.tests.test_scan_failure_isolation paper_pov.tests.test_watch_contract paper_pov.tests.test_receipt_persistence -v
+
+  public-kraken-paper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    env:
+      PAPER_REPORT_PATH: ${{ runner.temp }}/kraken-paper/latest.json
+    steps:
+      - uses: actions/checkout@v4
+      - name: Capture public Kraken PAPER scan and verify local receipt
+        run: |
+          python -m paper_pov.scanner
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          latest = Path(os.environ["PAPER_REPORT_PATH"])
+          report = json.loads(latest.read_text())
+          receipts = sorted((latest.parent / "receipts").glob("*.json"))
+          assert len(receipts) == 1, "expected one immutable receipt"
+          assert json.loads(receipts[0].read_text()) == report, "receipt readback mismatch"
+          assert report["mode"] == "PAPER_ONLY" and report["production_applied"] is False
+          assert report["watch"] and all(not x["buy_approved"] for x in report["watch"])
+          print("LIVE_PAPER_EVIDENCE " + json.dumps({
+              "as_of": report["as_of"],
+              "eligible_pairs": report["eligible_pairs"],
+              "observed_markets": report["observed_markets"],
+              "ohlc_screened": report["ohlc_screened"],
+              "watch_count": len(report["watch"]),
+              "abstentions": len(report["abstentions"]),
+              "stablecoins_excluded": report["excluded_stablecoin_pairs"],
+              "receipt_verified": True,
+              "production_applied": False,
+          }, sort_keys=True))
+          PY
+      - name: Retain isolated paper evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-a2-live-paper-evidence
+          path: ${{ runner.temp }}/kraken-paper/
+          retention-days: 7
+          if-no-files-found: warn
