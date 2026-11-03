@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from research.capture_acquisition_scores import capture_score
 from research.depth_acquisition_associations import write_association, verified_associations
-from research.acquisition_receipt_pipeline import evaluate, evaluate_learning, evaluate_horizons, write_new, main
+from research.acquisition_receipt_pipeline import evaluate, evaluate_learning, evaluate_horizons, source_only_coverage, write_new, main
 
 
 class DepthAssociationTests(unittest.TestCase):
@@ -150,6 +150,16 @@ class DepthAssociationTests(unittest.TestCase):
         horizons.assert_called_once_with(str(index))
         with patch.object(sys, "argv", args), self.assertRaises(FileExistsError):
             main()
+
+    @patch("research.acquisition_receipt_pipeline.evaluate_horizons")
+    def test_source_only_report(self, horizons):
+        horizons.return_value = {"1": {"qualified": 0}}
+        path = self.root / "source-only.json"
+        digest = source_only_coverage("index", path)
+        self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), digest)
+        self.assertFalse(json.loads(path.read_text())["production_applied"])
+        with self.assertRaises(FileExistsError):
+            source_only_coverage("index", path)
 
     def test_exclusive_create(self):
         self.associate()
