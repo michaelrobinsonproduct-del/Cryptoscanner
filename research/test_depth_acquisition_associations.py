@@ -61,6 +61,24 @@ class DepthAssociationTests(unittest.TestCase):
         self.assertFalse(report["production_applied"])
 
     @patch("research.depth_acquisition_associations.verified_rows")
+    @patch("research.acquisition_receipt_pipeline.bind")
+    def test_pipeline_auto_associates_before_evaluation(self, binder, rows):
+        rows.return_value = ([self.row], [])
+        binder.return_value = {"accepted": [], "excluded_count": 0,
+                               "source_abstentions": [], "verified_depth_rows": 1}
+        ledger = self.root / "paper.json"
+        ledger.write_text("{}")
+        output = self.root / "auto-evaluation.json"
+        with patch.object(sys, "argv", ["pipeline", "--paper-ledger", str(ledger),
+                "--captures-directory", str(self.root / "scores"),
+                "--depth-directory", str(self.root / "raw"),
+                "--associations-directory", str(self.root / "depth-links"),
+                "--associate-verified-depth", "--output", str(output)]):
+            main()
+        self.assertTrue((self.root / "depth-links" / (self.pid + ".json")).exists())
+        self.assertEqual(json.loads(output.read_text())["capture_count"], 1)
+
+    @patch("research.depth_acquisition_associations.verified_rows")
     def test_connector_abstains_on_missing_depth(self, rows):
         from research.depth_acquisition_associations import associate_captured_scores
         rows.return_value = ([], [])
