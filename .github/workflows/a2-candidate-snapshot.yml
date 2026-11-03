@@ -49,6 +49,25 @@ jobs:
           export_path = latest.parent / "verified-snapshot.json"
           export_path.write_text(json.dumps(snapshot, sort_keys=True, allow_nan=False) + "\n")
           assert json.loads(export_path.read_text()) == snapshot
+          # Exercise the same ZIP transport consumed by B, using real Kraken data.
+          import zipfile
+          from paper_pov.a2_artifact_consumer import read_artifact_zip
+          transport = latest.parent.parent / "a2-transport-check.zip"
+          with zipfile.ZipFile(transport, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+              archive.write(latest, "latest.json")
+              archive.write(export_path, "verified-snapshot.json")
+              receipts = sorted((latest.parent / "receipts").glob("*.json"))
+              assert len(receipts) == 1
+              archive.write(receipts[0], "receipts/" + receipts[0].name)
+          downloaded = read_artifact_zip(transport)
+          assert downloaded["watch"] == snapshot["watch"]
+          assert downloaded["receipt_sha256"] == snapshot["receipt_sha256"]
+          assert downloaded["scan_status"] == snapshot["scan_status"]
+          print("A2_ZIP_TRANSPORT_VERIFIED " + json.dumps({
+              "watch_count": len(downloaded["watch"]),
+              "receipt_sha256": downloaded["receipt_sha256"],
+              "snapshot_age_seconds": downloaded["snapshot_age_seconds"],
+          }, sort_keys=True))
           print("A2_LIVE_CONSUMER_EVIDENCE " + json.dumps({
               "as_of": snapshot["as_of"],
               "eligible_pairs": snapshot["eligible_pairs"],
