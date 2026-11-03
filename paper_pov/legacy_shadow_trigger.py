@@ -36,6 +36,22 @@ def _abstain(reason):
     return {"action": "ABSTAIN", "reason": reason}
 
 
+def _history_error(rows, identity_reason, order_reason):
+    """Validate every history identity before sorting or trusting a partial page."""
+    ids = [row.get("id") if isinstance(row, dict) else None for row in rows]
+    if any(type(run_id) is not int or run_id < 1 for run_id in ids):
+        return identity_reason
+    if len(set(ids)) != len(ids):
+        return identity_reason
+    try:
+        times = [stamp(row.get("created_at")) for row in rows]
+    except (ValueError, TypeError, AttributeError, OverflowError):
+        return order_reason
+    if any(times[i] < times[i + 1] for i in range(len(times) - 1)):
+        return order_reason
+    return None
+
+
 def decide(event, paper_runs, shadow_runs, state, manifest, ledger_message,
            *, repository, current_run_id, checkout_sha, now):
     if (repository != REPO or event.get("repository", {}).get("full_name") != REPO
@@ -67,13 +83,10 @@ def decide(event, paper_runs, shadow_runs, state, manifest, ledger_message,
         return _abstain("EMPTY_OR_PAGINATION_AMBIGUITY")
     # GitHub's first page is newest-first. A full 100-run page is valid for
     # finding the latest writer if its ordering and identities are unambiguous.
-    if (len({r.get("id") for r in papers}) != len(papers)
-            or any(type(r.get("id")) is not int for r in papers)):
-        return _abstain("DUPLICATE_OR_INVALID_WRITER_RUN_ID")
-    if any(stamp(papers[i].get("created_at")) <
-           stamp(papers[i + 1].get("created_at"))
-           for i in range(len(papers) - 1)):
-        return _abstain("UNSORTED_WRITER_HISTORY")
+    issue = _history_error(papers, "DUPLICATE_OR_INVALID_WRITER_RUN_ID",
+                           "UNSORTED_WRITER_HISTORY")
+    if issue:
+        return _abstain(issue)
     if len(papers) > 1 and stamp(papers[0].get("created_at")) == stamp(papers[1].get("created_at")):
         return _abstain("AMBIGUOUS_LATEST_WRITER")
     # GitHub's workflow-specific history includes older successful push/PR
@@ -112,21 +125,14 @@ def decide(event, paper_runs, shadow_runs, state, manifest, ledger_message,
     shadows = shadow_runs["workflow_runs"]
     # Reject ambiguous identities/order on every page, not just a full page.
     # An incomplete page can otherwise hide a duplicate shadow execution.
-    if (len({r.get("id") for r in shadows}) != len(shadows)
-            or any(type(r.get("id")) is not int for r in shadows)):
-        return _abstain("DUPLICATE_OR_INVALID_SHADOW_RUN_ID")
-    if any(stamp(shadows[i].get("created_at")) <
-           stamp(shadows[i + 1].get("created_at"))
-           for i in range(len(shadows) - 1)):
-        return _abstain("UNSORTED_SHADOW_HISTORY")
+    issue = _history_error(shadows, "DUPLICATE_OR_INVALID_SHADOW_RUN_ID",
+                           "UNSORTED_SHADOW_HISTORY")
+    if issue:
+        return _abstain(issue)
     if len(shadows) >= 100:
         # A full page is safe only if the oldest included run predates this
         # writer: all relevant post-writer runs must then be on page one.
-        if (any(stamp(shadows[i].get("created_at")) <
-                stamp(shadows[i + 1].get("created_at"))
-                for i in range(len(shadows) - 1))
-                or stamp(shadows[-1].get("created_at")) >=
-                stamp(writer["created_at"])):
+        if stamp(shadows[-1].get("created_at")) >= stamp(writer["created_at"]):
             return _abstain("SHADOW_PAGINATION_AMBIGUITY")
     for shadow in shadows:
         if shadow.get("id") == current_run_id:
