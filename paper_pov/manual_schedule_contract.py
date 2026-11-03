@@ -8,8 +8,8 @@ import json
 import re
 from pathlib import Path
 
-SHA40 = re.compile(r"[0-9a-f]{40}\\Z")
-SHA64 = re.compile(r"[0-9a-f]{64}\\Z")
+SHA40 = re.compile(r"[0-9a-f]{40}\Z")
+SHA64 = re.compile(r"[0-9a-f]{64}\Z")
 CANDIDATE_KEYS = frozenset(("rank", "symbol", "price_usd", "status", "confidence",
     "risk", "move_since_utc_open_pct", "move15_pct", "volume_accel", "spread_bps",
     "baseline_score", "challenger_score", "quote_observed_at", "ohlc_age_seconds",
