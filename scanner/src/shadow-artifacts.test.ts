@@ -163,3 +163,29 @@ test("rehashing an impossible cohort cannot bypass held-out accounting and both 
  expect(manual.candidates).toHaveLength(1);
  expect(manual.shadow_evaluation.coverage).toMatchObject({scored:0,abstained:1});
 });
+
+test("authenticated equivalent-instant timestamps score identically across manual HTTP and scheduled paths",async()=>{
+ const alternateScores=[{...scores[0],observed_at:"2026-11-02T22:59:00-05:00"}];
+ const alternateOutcomes=[{...outcomes[0],observed_at:"2026-11-03T03:59:00.000Z"}];
+ const verified={...evidence,outcome_ledger_sha:await digest(alternateOutcomes),score_ledger_sha:await digest(alternateScores)};
+ const loader=createReadOnlyShadowLoader("https://example.org/ledger.json",async(url:any)=>new Response(JSON.stringify(url===gateUrl?researchGate:{evidence:verified,outcomes:alternateOutcomes,scores:alternateScores})) as any,source,gateUrl,researchDigest);
+ const runner=createCycleRunner(deps,loader);
+ const manual=await (await createCycleHttpHandler(runner)(new Request("http://localhost/cycle"))).json();
+ const scheduled=await runner.run("scheduled");
+ expect(manual).toEqual(scheduled.result);
+ expect(manual.shadow_artifact_status).toBe("VERIFIED");
+ expect(manual.shadow_evaluation.coverage).toMatchObject({scored:1,abstained:0});
+ expect(manual.shadow_evaluation.candidates[0]).toMatchObject({status:"SCORED",challenger_score:89,outcome_label:"HIT",production_promoted:false});
+});
+test("equivalent-instant scores remain subject to pre-discovery leakage rejection",async()=>{
+ const altered=[{...scores[0],observed_at:"2026-11-02T22:59:00-05:00",computed_at:"2026-11-03T04:00:00Z"}];
+ const verified={...evidence,outcome_ledger_sha:await digest(outcomes),score_ledger_sha:await digest(altered)};
+ const loader=createReadOnlyShadowLoader("https://example.org/ledger.json",async(url:any)=>new Response(JSON.stringify(url===gateUrl?researchGate:{evidence:verified,outcomes,scores:altered})) as any,source,gateUrl,researchDigest);
+ const runner=createCycleRunner(deps,loader);
+ const manual=await (await createCycleHttpHandler(runner)(new Request("http://localhost/cycle"))).json();
+ const scheduled=await runner.run("scheduled");
+ expect(manual).toEqual(scheduled.result);
+ expect(manual.shadow_artifact_status).toBe("REJECTED");
+ expect(manual.candidates).toHaveLength(1);
+ expect(manual.shadow_evaluation.coverage).toMatchObject({scored:0,abstained:1});
+});
