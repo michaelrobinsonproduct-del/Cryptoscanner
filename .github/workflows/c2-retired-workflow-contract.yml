@@ -51,9 +51,7 @@ jobs:
       - name: Execute exact-code read-only dual ZIP acceptance
         run: |
           set -euo pipefail
-          python -m paper_pov.manual_schedule_contract --zip-artifacts \\
-            --manual /tmp/c-real-receipts/manual.zip \\
-            --scheduled /tmp/c-real-receipts/scheduled.zip > /tmp/c-real-receipts/parity.json
+          python -m paper_pov.manual_schedule_contract --zip-artifacts --manual /tmp/c-real-receipts/manual.zip --scheduled /tmp/c-real-receipts/scheduled.zip > /tmp/c-real-receipts/parity.json
           python - <<'PY'
           import json
           p=json.load(open("/tmp/c-real-receipts/parity.json"))
