@@ -274,14 +274,14 @@ def main():
     try:
         atomic_json(staged / "results.json", payload)
         with (staged / "results.md").open("w") as stream:
-            stream.write(markdown + "\\n")
+            stream.write(markdown + "\n")
             stream.flush()
             os.fsync(stream.fileno())
         digests = []
         for name in ("results.json", "results.md"):
             digests.append(hashlib.sha256((staged / name).read_bytes()).hexdigest() + "  " + name)
         with (staged / "SHA256SUMS").open("w") as stream:
-            stream.write("\\n".join(digests) + "\\n")
+            stream.write("\n".join(digests) + "\n")
             stream.flush()
             os.fsync(stream.fileno())
         for record in digests:
