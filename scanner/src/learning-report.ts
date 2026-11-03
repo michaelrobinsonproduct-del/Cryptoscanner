@@ -9,8 +9,21 @@ export function createLearningReportReader(path:string|undefined,expectedSha:str
   const report=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));
   if(!report||typeof report!=="object"||report.production_applied!==false)throw Error("invalid_learning_report");
   const decision=report.shadow_decision;
-  const comparison=report.comparison;
-  if(!decision||decision.decision!=="KEEP_BASELINE"||decision.production_applied!==false||!comparison||comparison.held_out_n!==0)throw Error("learning_report_not_baseline");
+  if(!decision||decision.decision!=="KEEP_BASELINE"||decision.production_applied!==false)throw Error("learning_report_not_baseline");
+  // E's actual authenticated paper bridge emits per-horizon coverage, not a
+  // synthetic comparison. Never convert descriptive labels into learning uplift.
+  if(report.mode==="REAL_PAPER_DESCRIPTIVE_NOT_AUTHENTICATED_DEPTH"){
+   if(!Number.isSafeInteger(report.paper_predictions)||report.paper_predictions<=0||
+      !Number.isSafeInteger(report.paper_observations)||report.paper_observations<=0||
+      !/^[a-f0-9]{64}$/.test(report.ledger_sha256)||!report.horizons||
+      [1,6,24,48].some(h=>{
+       const row=report.horizons[String(h)];
+       return !row||row.held_out_n!==0||row.authenticated_entry_labels!==0||
+         row.rule!=="NO QUALIFIED RULE"||!Number.isSafeInteger(row.paper_outcomes)||row.paper_outcomes<0;
+      }))throw Error("unqualified_learning_horizon");
+  }else if(!report.comparison||report.comparison.held_out_n!==0){
+   throw Error("learning_report_not_baseline");
+  }
   return {decision:"KEEP_BASELINE",held_out_n:0,production_applied:false as const};
  };
 }
