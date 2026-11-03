@@ -108,8 +108,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--pairs", default="XBTUSD,ETHUSD,SOLUSD,XRPUSD")
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--round-index", help="append verified batch to durable research index")
     args = parser.parse_args()
     result = collect(args.pairs.split(","), args.output_dir)
+    if args.round_index:
+        from research.prospective_round_store import append_round
+        receipt = append_round(args.round_index, args.output_dir)
+        print("KRAKEN_ROUND_INDEXED", json.dumps(receipt, sort_keys=True))
     print("KRAKEN_PROSPECTIVE_BATCH", json.dumps({k: result[k] for k in
           ("pairs_requested", "pairs_eligible", "pairs_stale", "pairs_invalid", "pairs_budget_skipped")},
           sort_keys=True))
