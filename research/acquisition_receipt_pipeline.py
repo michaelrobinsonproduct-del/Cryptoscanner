@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 
 from research.bind_acquisition_receipts import bind
+from research.depth_acquisition_associations import verified_associations
 
 
 def load_captures(directory):
@@ -38,11 +39,17 @@ def load_captures(directory):
     return receipts
 
 
-def evaluate(ledger, depth_directory, captures_directory):
+def evaluate(ledger, depth_directory, captures_directory, associations_directory=None):
     captures = load_captures(captures_directory)
     # Independently verified source rows are selected by binder; raw capture
     # claims are not sufficient to establish authenticated depth.
+    association_exclusions = []
+    if associations_directory is not None:
+        captures, association_exclusions, _ = verified_associations(
+            captures_directory, associations_directory, depth_directory)
     report = bind(ledger, depth_directory, captures)
+    report["association_exclusions"] = association_exclusions
+    report["association_excluded_count"] = len(association_exclusions)
     report["capture_count"] = len(captures)
     report["capture_sha256"] = hashlib.sha256(
         json.dumps(captures, sort_keys=True, separators=(",", ":")).encode()
@@ -71,9 +78,11 @@ def main():
     parser.add_argument("--depth-directory", required=True)
     parser.add_argument("--captures-directory", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--associations-directory")
     args = parser.parse_args()
     ledger = json.loads(Path(args.paper_ledger).read_bytes())
-    report = evaluate(ledger, args.depth_directory, args.captures_directory)
+    report = evaluate(ledger, args.depth_directory, args.captures_directory,
+                      args.associations_directory)
     digest = write_new(args.output, report)
     print(json.dumps({"accepted": report["accepted_count"],
                       "excluded": report["excluded_count"],
