@@ -6,7 +6,12 @@ function validTime(value:unknown,now:number){if(typeof value!=="string"||!Number
 function validQuote(x:any,pair:string,now:number){return x&&x.pair===pair&&validTime(x.fetchedAt,now)&&Number.isFinite(Number(x.bestAsk))&&Number(x.bestAsk)>0}
 export async function executeCandidateCycle(d:Dependencies){
  const at=d.now().toISOString(), candidates:any[]=[];
- for(const x of selectDiscoveryCandidates(await d.scan())){
+ const scan=await d.scan();
+ if(!scan||typeof scan!=="object"||Array.isArray(scan))throw Error("invalid_discovery_response");
+ const raw=scan.candidates??scan.results??scan.shortlist;
+ if(!Array.isArray(raw))throw Error("missing_discovery_candidates");
+ const selected=selectDiscoveryCandidates(scan);
+ for(const x of selected){
   const {pair,score,displacementPct,discoveredAt}=x;
   if(!validTime(discoveredAt,d.now().getTime())){candidates.push({pair,decision:"ABSTAIN",reason:"stale_or_invalid_discovery"});continue}
   try {
@@ -21,5 +26,9 @@ export async function executeCandidateCycle(d:Dependencies){
    candidates.push({pair,score,displacement_pct:displacementPct,discovered_at:discoveredAt,...result,first,second});
   }catch(e){candidates.push(classifyConfirmationFailure(pair,e))}
  }
- return {mode:"shadow",control_untouched:true,at,candidates};
+ const abstentions=candidates.filter(x=>x.decision==="ABSTAIN").length;
+ const watches=candidates.filter(x=>x.decision==="WATCH").length;
+ const eligible=candidates.filter(x=>x.decision==="PROMOTION_ELIGIBLE").length;
+ const status=raw.length===0?"NO_DISCOVERY_CANDIDATES":selected.length===0?"NO_QUALIFIED_DISCOVERY":eligible+watches===0?"ABSTAIN_NO_QUALIFIED_CONFIRMATION":"CANDIDATES_EVALUATED";
+ return {mode:"shadow",control_untouched:true,at,scan_status:status,coverage:{discovery_rows:raw.length,selected_candidates:selected.length,watch:watches,promotion_eligible:eligible,abstentions,discarded_discovery_rows:raw.length-selected.length},candidates};
 }
