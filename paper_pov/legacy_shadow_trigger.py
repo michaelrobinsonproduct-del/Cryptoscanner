@@ -162,7 +162,7 @@ def decide(event, paper_runs, shadow_runs, state, manifest, ledger_message,
             "ledger_sha256": state["sha256"], "mode": "READ_ONLY_OWNER_FALLBACK"}
 
 
-def main(argv=None):
+def main(argv=None, *, now=None):
     p = argparse.ArgumentParser()
     for arg in ("event", "paper-runs", "shadow-runs", "ledger", "manifest",
                 "ledger-message", "repository", "current-run-id", "checkout-sha",
@@ -177,7 +177,7 @@ def main(argv=None):
                     read(a.ledger), read(a.manifest),
                     Path(a.ledger_message).read_text(),
                     repository=a.repository, current_run_id=int(a.current_run_id),
-                    checkout_sha=a.checkout_sha, now=dt.datetime.now(dt.timezone.utc))
+                    checkout_sha=a.checkout_sha, now=(dt.datetime.now(dt.timezone.utc) if now is None else now))
     # Publish a complete decision atomically; partial files must never authorize a run.
     tmp = None
     try:
