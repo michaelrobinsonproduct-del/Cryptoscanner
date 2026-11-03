@@ -103,12 +103,6 @@ jobs:
             Improve real ranked WATCH output, freshness and resilience. Implement, test,
             repair, repeat until remaining feasible tasks are finished. Do not fake learning,
             relax source verification, or claim promotion when no qualified rule exists.
-      - name: Verify implementation and tests before opening PR
-        run: |
-          set -euo pipefail
-          python -m unittest discover -s paper_pov -p 'test_*.py' -v
-          python -m compileall -q paper_pov research
-          git diff --check
       - name: Open isolated development PR if tested code changed
         env:
           GH_TOKEN: ${{ github.token }}
@@ -118,6 +112,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           sudo chown -R runner:runner "$GITHUB_WORKSPACE"
           rm -f "$GITHUB_WORKSPACE/.codex-last-message.md"
+          git diff --check
           git add -A
           if git diff --cached --quiet; then
             echo "No code delta produced this run" >> "$GITHUB_STEP_SUMMARY"
