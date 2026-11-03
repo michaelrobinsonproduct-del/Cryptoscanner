@@ -25,7 +25,7 @@ export function parseA2Snapshot(raw:unknown,now:Date):A2Snapshot{
 }
 export function createA2SnapshotReader(url:string|undefined,now:()=>Date,fetcher:typeof fetch=fetch):()=>Promise<A2Snapshot>{
  return async()=>{if(!url)return unavailableA2Snapshot("not_configured");const u=new URL(url);if(u.protocol!=="https:"||u.username||u.password||u.hash)throw Error("unsafe_a2_url");
- const response=await fetcher(u.toString(),{method:"GET",redirect:"error",signal:AbortSignal.timeout(8000),headers:{accept:"application/json"}});if(!response.ok)throw Error("a2_http_"+response.status);const length=response.headers.get("content-length");if(length!==null&&(!/^\\d+$/.test(length)||Number(length)>200000))throw Error("a2_oversized");
+ const response=await fetcher(u.toString(),{method:"GET",redirect:"error",signal:AbortSignal.timeout(8000),headers:{accept:"application/json"}});if(!response.ok)throw Error("a2_http_"+response.status);const length=response.headers.get("content-length");if(length!==null&&(!/^\d+$/.test(length)||Number(length)>200000))throw Error("a2_oversized");
  const reader=response.body?.getReader();if(!reader)throw Error("a2_empty_body");let bytes=0;const chunks:Uint8Array[]=[];
  try{for(;;){const part=await reader.read();if(part.done)break;bytes+=part.value.byteLength;if(bytes>200000)throw Error("a2_oversized");chunks.push(part.value)}}finally{await reader.cancel().catch(()=>{})}
  const body=new TextDecoder("utf-8",{fatal:true}).decode(Buffer.concat(chunks));return parseA2Snapshot(JSON.parse(body),now());};
