@@ -1,0 +1,82 @@
+name: Research retained Kraken rounds (manual, no production writes)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  capture-and-retain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Restore prior immutable capture archive if present
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/kraken-round-history
+          python - <<'PY'
+          import json,os,subprocess,urllib.request,zipfile,io,pathlib
+          api=f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/actions/artifacts?per_page=100"
+          request=urllib.request.Request(api,headers={
+              'Authorization':f"Bearer {os.environ['GH_TOKEN']}",
+              'Accept':'application/vnd.github+json'})
+          with urllib.request.urlopen(request,timeout=30) as response:
+              artifacts=json.load(response).get('artifacts',[])
+          matches=[a for a in artifacts if a['name'].startswith('kraken-round-history-') and not a['expired']]
+          if not matches:
+              print('ROUND_HISTORY_INIT_EMPTY')
+          else:
+              latest=max(matches,key=lambda a:a['created_at'])
+              request=urllib.request.Request(latest['archive_download_url'],headers={
+                  'Authorization':f"Bearer {os.environ['GH_TOKEN']}",
+                  'Accept':'application/vnd.github+json'})
+              with urllib.request.urlopen(request,timeout=60) as response:
+                  data=response.read(30_000_001)
+              if len(data)>30_000_000:
+                  raise RuntimeError('prior artifact exceeds bounded size')
+              root=pathlib.Path('/tmp/kraken-round-history')
+              with zipfile.ZipFile(io.BytesIO(data)) as archive:
+                  for item in archive.infolist():
+                      target=(root/item.filename).resolve()
+                      if not target.is_relative_to(root.resolve()):
+                          raise ValueError('unsafe artifact path')
+                      if item.is_dir():
+                          target.mkdir(parents=True,exist_ok=True)
+                      else:
+                          target.parent.mkdir(parents=True,exist_ok=True)
+                          target.write_bytes(archive.read(item))
+              print('ROUND_HISTORY_RESTORED',latest['id'])
+          PY
+      - name: Capture one new bounded source round and evaluate retained history
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/kraken-round-history/rounds
+          python - <<'PY'
+          import json,os,pathlib,time
+          from research.kraken_prospective_batch import collect
+          from research.prospective_round_store import append_round,evaluate_index
+          root=pathlib.Path('/tmp/kraken-round-history')
+          directory=root/'rounds'/('capture-'+str(time.time_ns()))
+          collect(['XBTUSD','ETHUSD','SOLUSD','XRPUSD'],directory)
+          record=append_round(root/'rounds.jsonl',directory)
+          result=evaluate_index(root/'rounds.jsonl',1)
+          assert not result['production_applied']
+          print('KRAKEN_RETAINED_ROUND',json.dumps({
+              'rounds_verified':result['rounds_verified'],
+              'snapshots_verified':result['snapshots_verified'],
+              'qualified_first_entry_episodes':result['qualified_first_entry_episodes'],
+              'abstentions':len(result['abstentions']),
+              'held_out_lift':result['held_out_lift']},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: kraken-round-history-${{ github.run_id }}
+          path: /tmp/kraken-round-history/
+          retention-days: 30
+          if-no-files-found: error
