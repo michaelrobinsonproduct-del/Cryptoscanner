@@ -12,7 +12,7 @@ from paper_pov.ledger import verify
 from paper_pov.scanner import utc
 from research.prospective_round_store import evaluate_index
 from research.chronological_challenger import compare
-from research.learning_feedback import decide
+from research.learning_feedback import decide, append_decision
 
 
 def reconcile(ledger, evidence, *, split_at, baseline_version, challenger_version,
@@ -30,6 +30,7 @@ def reconcile(ledger, evidence, *, split_at, baseline_version, challenger_versio
         by_pair[key]=outcome
     receipts=[]
     excluded=Counter()
+    seen_receipts=set()
     # A paper prediction is timestamped by the scanner run, not by a depth
     # receipt. Even a same-pair, same-second match is not source authentication.
     for p in predictions:
@@ -46,11 +47,16 @@ def reconcile(ledger, evidence, *, split_at, baseline_version, challenger_versio
             continue
         # Historical ledger cannot gain a source receipt after the fact:
         # a valid pre-entry receipt must be explicitly persisted.
-        if "score_observed_at" not in p or p["score_observed_at"]>o["entry_first_observed_at"]:
+        timestamp=p.get("score_observed_at")
+        if type(timestamp) not in (int,float) or not __import__("math").isfinite(timestamp) or timestamp<0 or timestamp>o["entry_first_observed_at"]:
             excluded["NO_PRE_ENTRY_SCORE_RECEIPT"]+=1
             continue
-        receipts.append({**o,"baseline_score":p["baseline_score"],
-                         "challenger_score":p["challenger_score"]})
+        if key in seen_receipts:
+            excluded["DUPLICATE_AUTHENTICATED_PREDICTION"]+=1
+            continue
+        seen_receipts.add(key)
+        receipts.append({**o,"baseline_score":p.get("baseline_score"),
+                         "challenger_score":p.get("challenger_score")})
     comparison=compare(receipts,split_at=split_at)
     comparison["excluded"].update(excluded)
     comparison["source_rounds_verified"]=evidence["rounds_verified"]
@@ -71,6 +77,7 @@ def main():
     parser.add_argument("--split-at",required=True,type=float)
     parser.add_argument("--baseline-version",required=True)
     parser.add_argument("--challenger-version",required=True)
+    parser.add_argument("--learning-ledger",help="Optional append-only research decision ledger")
     args=parser.parse_args()
     ledger_bytes=Path(args.paper_ledger).read_bytes()
     index_bytes=Path(args.round_index).read_bytes()
@@ -80,6 +87,8 @@ def main():
                      baseline_version=args.baseline_version,
                      challenger_version=args.challenger_version,
                      evidence_sha256=hashlib.sha256(ledger_bytes+index_bytes).hexdigest())
+    if args.learning_ledger:
+        result["learning_record"]=append_decision(args.learning_ledger,result["shadow_decision"])
     print(json.dumps(result,sort_keys=True,allow_nan=False))
 
 
