@@ -172,6 +172,21 @@ class OwnerFallbackTests(unittest.TestCase):
         self.assertEqual(decide(**f)["reason"],
                          "SHADOW_ALREADY_TRIGGERED_OR_IN_PROGRESS")
 
+    def test_partial_shadow_page_duplicate_or_unsorted_fails_closed(self):
+        f = fixture()
+        row = {"id": CURRENT_ID + 1, "name": gate.SHADOW,
+               "path": gate.SHADOW_PATH,
+               "repository": {"full_name": gate.REPO},
+               "created_at": iso(-2), "event": "issue_comment",
+               "status": "completed", "conclusion": "skipped"}
+        f["shadow_runs"]["workflow_runs"] = [copy.deepcopy(row), copy.deepcopy(row)]
+        self.assertEqual(decide(**f)["reason"], "DUPLICATE_OR_INVALID_SHADOW_RUN_ID")
+        f["shadow_runs"]["workflow_runs"][1]["id"] += 1
+        f["shadow_runs"]["workflow_runs"][1]["created_at"] = iso(-1)
+        self.assertEqual(decide(**f)["reason"], "UNSORTED_SHADOW_HISTORY")
+        f["shadow_runs"]["workflow_runs"][1]["created_at"] = iso(-3)
+        self.assertEqual(decide(**f)["action"], "RUN_SHADOW")
+
     def test_unknown_shadow_event_fails_closed(self):
         f = fixture()
         f["shadow_runs"]["workflow_runs"] = [{
