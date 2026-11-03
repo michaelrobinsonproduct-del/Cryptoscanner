@@ -47,6 +47,38 @@ class SnapshotTests(unittest.TestCase):
         self.seal()
         self.assertEqual(read_snapshot(self.latest, NOW)["watch"], [])
 
+    def test_read_time_quote_expiration_rejected_even_when_scan_fresh(self):
+        # Scan is only 30 seconds old, but the quote is older than 10m.
+        self.report["watch"][0]["quote_observed_at"] = "2026-11-03T16:50:00+00:00"
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "expired candidate quote"):
+            read_snapshot(self.latest, NOW)
+
+    def test_quote_age_exposed_in_read_only_output(self):
+        self.report["watch"][0]["quote_observed_at"] = "2026-11-03T16:59:00+00:00"
+        self.seal()
+        result = read_snapshot(self.latest, NOW)
+        self.assertEqual(result["quote_age_seconds"], {"TESTUSD": 90.0})
+        self.assertEqual(result["snapshot_age_seconds"], 30)
+
+    def test_future_quote_relative_to_reader_rejected(self):
+        self.report["watch"][0]["quote_observed_at"] = "2026-11-03T17:00:15+00:00"
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "stale candidate quote"):
+            read_snapshot(self.latest, NOW)
+
+    def test_invalid_verification_clock_and_age_policy_rejected(self):
+        with self.assertRaisesRegex(ValueError, "naive verification clock"):
+            read_snapshot(self.latest, dt.datetime(2026, 11, 3, 17, 0, 30))
+        for limit in (0, -1, True, float("nan"), 601):
+            with self.subTest(limit=limit), self.assertRaisesRegex(ValueError, "invalid maximum quote age"):
+                read_snapshot(self.latest, NOW, max_age_seconds=limit)
+
+    def test_zero_watch_has_empty_quote_ages(self):
+        self.report.update(watch=[], scan_status="ABSTAIN_NO_QUALIFIED_OHLC")
+        self.seal()
+        self.assertEqual(read_snapshot(self.latest, NOW)["quote_age_seconds"], {})
+
     def test_missing_receipt_rejected(self):
         next((self.latest.parent / "receipts").glob("*.json")).unlink()
         with self.assertRaisesRegex(ValueError, "immutable receipt"):
