@@ -9,23 +9,23 @@ SHA="a"*64
 
 
 class ScoreJoinTests(unittest.TestCase):
-    def outcome(self):
+    def outcome(self, verified_liquidity=None):
         return {"rounds_verified":13,"snapshots_verified":52,"abstentions":[],
                 "outcomes":[{"pair":"XBTUSD","entry_first_observed_at":1000,
                              "entry_source_sha256":SHA,"status":"QUALIFIED_OBSERVED_PATH",
-                             "ge30pct":False}]}
+                             "ge30pct":False,"entry_liquidity_usd":verified_liquidity}]}
 
-    def run_join(self, score):
+    def run_join(self, score, verified_liquidity=None):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/"scores.json"
             path.write_text(json.dumps([score]))
-            with patch("research.evaluate_challenger.evaluate_index",return_value=self.outcome()):
+            with patch("research.evaluate_challenger.evaluate_index",return_value=self.outcome(verified_liquidity)):
                 return evaluate("unused",path,200000)
 
     def test_source_bound_early_score(self):
         result=self.run_join({"pair":"XBTUSD","entry_first_observed_at":1000,
                               "source_sha256":SHA,"observed_at":999,
-                              "baseline_score":0.1,"challenger_score":0.2,"entry_liquidity_usd":100.0})
+                              "baseline_score":0.1,"challenger_score":0.2,"entry_liquidity_usd":100.0}, verified_liquidity=100.0)
         self.assertEqual(result["train_n"],1)
         self.assertEqual(result["source_snapshots_verified"],52)
         self.assertIsNone(result["held_out_lift"])
