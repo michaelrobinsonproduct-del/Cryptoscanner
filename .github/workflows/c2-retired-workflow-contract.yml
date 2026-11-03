@@ -4,6 +4,8 @@ on:
     paths:
       - '.github/workflows/**'
       - 'paper_pov/test_retired_workflow_contract.py'
+      - 'paper_pov/manual_schedule_contract.py'
+      - 'paper_pov/test_manual_schedule_contract.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,4 +17,4 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m unittest paper_pov.test_retired_workflow_contract -v
+      - run: python -m unittest paper_pov.test_retired_workflow_contract paper_pov.test_manual_schedule_contract -v
