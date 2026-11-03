@@ -47,6 +47,7 @@ jobs:
               "ohlc_screened": report["ohlc_screened"],
               "watch_count": len(report["watch"]),
               "abstentions": len(report["abstentions"]),
+              "abstention_counts": report["abstention_counts"],
               "stablecoins_excluded": report["excluded_stablecoin_pairs"],
               "receipt_verified": True,
               "production_applied": False,
