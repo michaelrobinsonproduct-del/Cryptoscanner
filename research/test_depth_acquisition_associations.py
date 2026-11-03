@@ -121,6 +121,22 @@ class DepthAssociationTests(unittest.TestCase):
         self.assertFalse(result["production_applied"])
 
     @patch("research.depth_acquisition_associations.verified_rows")
+    def test_indexed_manifest_mismatch_prevents_association(self, rows):
+        from research.depth_acquisition_associations import associate_indexed_captures
+        rows.return_value = ([self.row], [])
+        batch = self.root / "tampered-round"
+        batch.mkdir()
+        (batch / "manifest.json").write_text("{}")
+        index = self.root / "tampered-index.jsonl"
+        index.write_text(json.dumps({
+            "batch": str(batch), "manifest_sha256": "0" * 64,
+            "snapshots_verified": 1, "abstentions": 0}) + "\n")
+        with self.assertRaisesRegex(ValueError, "indexed manifest mismatch"):
+            associate_indexed_captures(self.root / "scores", index,
+                                       self.root / "depth-links")
+        self.assertFalse((self.root / "depth-links").exists())
+
+    @patch("research.depth_acquisition_associations.verified_rows")
     def test_connector_abstains_on_missing_depth(self, rows):
         from research.depth_acquisition_associations import associate_captured_scores
         rows.return_value = ([], [])
