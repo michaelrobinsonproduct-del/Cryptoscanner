@@ -97,6 +97,8 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         raise RuntimeError("Ticker request stale")
     observations = []
     screened = []
+    screening_rejections = {"below_early_move": 0, "above_early_move": 0,
+                            "wide_spread": 0, "low_notional": 0}
     matched = 0
     ticker_rejections = {"missing_or_invalid_payload": 0, "invalid_price_or_volume": 0,
                          "nonfinite_derived_metric": 0}
@@ -126,7 +128,18 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             observations.append({"pair": pair, "symbol": name, "price": price,
                 "spread_bps": round(spread, 4), "notional_24h_usd": round(notional, 2),
                 "observed_at": quote_at.isoformat(), "source": "kraken_public_ticker_client_observed"})
-            if not (0.25 <= move_since_utc_open <= 12 and spread <= 45 and notional >= 100000):
+            # Count every failed screen independently; one market can fail several.
+            failed = False
+            for rejected, condition in (
+                ("below_early_move", move_since_utc_open < 0.25),
+                ("above_early_move", move_since_utc_open > 12),
+                ("wide_spread", spread > 45),
+                ("low_notional", notional < 100000),
+            ):
+                if condition:
+                    screening_rejections[rejected] += 1
+                    failed = True
+            if failed:
                 continue
             baseline = round(min(45, move_since_utc_open * 7) + min(25, notional / 150000)
                              + max(0, 30 - spread / 2), 4)
@@ -258,6 +271,8 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         "excluded_stablecoin_pairs": excluded_stablecoin_pairs,
         "excluded_other_pairs": excluded_other_pairs, "matched_tickers": matched,
         "observed_markets": len(observations), "ticker_rejections": ticker_rejections,
+        "screening_rejections": screening_rejections,
+        "screened_markets": len(screened),
         "ohlc_screened": len(selected),
         "watch": watch, "observations": observations, "abstentions": abstentions,
         "abstention_counts": abstention_counts,
@@ -325,7 +340,8 @@ def main():
     print("PAPER_SCAN " + json.dumps({k: report[k] for k in (
         "as_of", "scan_status", "online_usd_pairs", "excluded_stablecoin_pairs",
         "excluded_other_pairs", "eligible_pairs", "matched_tickers",
-        "observed_markets", "ticker_rejections", "ohlc_screened", "abstention_counts", "forward_labels", "production_applied")}, sort_keys=True))
+        "observed_markets", "ticker_rejections", "screening_rejections",
+        "screened_markets", "ohlc_screened", "abstention_counts", "forward_labels", "production_applied")}, sort_keys=True))
     print("PAPER_WATCH " + json.dumps([{"symbol": x["symbol"], "rank": x["rank"],
         "prediction_id": x["prediction_id"], "baseline_score": x["baseline_score"],
         "challenger_score": x["challenger_score"], "price": x["price"],
