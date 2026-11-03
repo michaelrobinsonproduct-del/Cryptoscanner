@@ -33,7 +33,15 @@ export async function verifyShadowLedger(artifacts:ShadowArtifacts):Promise<Shad
  if((await digest(artifacts.scores)).toLowerCase()!==artifacts.evidence.score_ledger_sha.toLowerCase())throw Error("shadow_score_digest_mismatch");
  return artifacts;
 }
-export function createReadOnlyShadowLoader(url:string|undefined,fetcher:typeof fetch=fetch,trustedSourceSha?:string):()=>Promise<ShadowArtifacts>{
+export type ResearchGate={comparison:{held_out_n:number;held_out_lift:number|null;paper_predictions_examined:number;excluded:Record<string,number>};shadow_decision:{decision:string;challenger_version:string; evidence_sha256:string}};
+export function verifyResearchGate(raw:unknown,artifacts:ShadowArtifacts):ShadowArtifacts{
+ if(!raw||typeof raw!=="object")throw Error("missing_research_gate");
+ const gate=raw as ResearchGate,c=gate.comparison,d=gate.shadow_decision,e=artifacts.evidence;
+ if(!c||!d||!e||!Number.isInteger(c.held_out_n)||c.held_out_n<=0||!Number.isInteger(c.paper_predictions_examined)||c.paper_predictions_examined<c.held_out_n||!c.excluded||typeof c.excluded!=="object"||Object.values(c.excluded).some(v=>!Number.isInteger(v)||v<0)||d.challenger_version!==e.version||!sha(d.evidence_sha256)||d.evidence_sha256.toLowerCase()!==e.source_sha.toLowerCase())throw Error("unqualified_research_gate");
+ if(d.decision!=="PROMOTE_CHALLENGER"||!e.qualified||c.held_out_n!==e.held_out_samples||typeof c.held_out_lift!=="number"||!Number.isFinite(c.held_out_lift)||c.held_out_lift!==e.held_out_lift)throw Error("research_gate_not_qualified");
+ return artifacts;
+}
+export function createReadOnlyShadowLoader(url:string|undefined,fetcher:typeof fetch=fetch,trustedSourceSha?:string,researchGateUrl?:string):()=>Promise<ShadowArtifacts>{
  return async()=>{
   if(!url)return {evidence:null,outcomes:[],scores:[]};
   const u=new URL(url);
@@ -44,6 +52,13 @@ export function createReadOnlyShadowLoader(url:string|undefined,fetcher:typeof f
   if(text.length>2000000)throw Error("shadow_artifact_too_large");
   const verified=await verifyShadowLedger(parseShadowArtifacts(JSON.parse(text)));
   if(!trustedSourceSha||!sha(trustedSourceSha)||verified.evidence?.source_sha.toLowerCase()!==trustedSourceSha.toLowerCase())throw Error("untrusted_shadow_source");
-  return verified;
+  if(!researchGateUrl)throw Error("missing_independent_research_gate");
+  const gateUrl=new URL(researchGateUrl);
+  if(gateUrl.protocol!=="https:"||gateUrl.username||gateUrl.password||gateUrl.hash)throw Error("unsafe_research_gate_url");
+  const gateResponse=await fetcher(gateUrl.toString(),{method:"GET",redirect:"error",signal:AbortSignal.timeout(8000),headers:{accept:"application/json"}});
+  if(!gateResponse.ok)throw Error(`research_gate_http_${gateResponse.status}`);
+  const gateText=await gateResponse.text();
+  if(gateText.length>200000)throw Error("research_gate_too_large");
+  return verifyResearchGate(JSON.parse(gateText),verified);
  };
 }
