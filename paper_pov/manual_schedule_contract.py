@@ -4,8 +4,11 @@ Compares schema and provenance, NOT candidate equality across different market t
 Never dispatches, fetches, writes ledger, or asserts live Kraken freshness.
 """
 import argparse
+import hashlib
+import io
 import json
 import re
+import zipfile
 from pathlib import Path
 
 SHA40 = re.compile(r"[0-9a-f]{40}\Z")
@@ -70,12 +73,55 @@ def inspect(manual, scheduled):
             "candidate_schema_parity": True, "market_time_candidate_equality_claimed": False}
 
 
+MAX_ZIP_BYTES = 2_000_000
+MAX_RESULT_BYTES = 500_000
+EXPECTED_MEMBERS = frozenset(("results.json", "results.md", "SHA256SUMS"))
+
+
+def load_verified_artifact(path):
+    """Read an immutable GitHub results ZIP; reject unsigned, ambiguous or unsafe input."""
+    if path.stat().st_size > MAX_ZIP_BYTES:
+        raise ValueError("Oversized results ZIP")
+    with zipfile.ZipFile(path) as archive:
+        entries = archive.infolist()
+        names = [entry.filename for entry in entries]
+        if len(names) != 3 or frozenset(names) != EXPECTED_MEMBERS:
+            raise ValueError("Unexpected or duplicate ZIP members")
+        for entry in entries:
+            if entry.is_dir() or entry.file_size > MAX_RESULT_BYTES:
+                raise ValueError("Invalid or oversized ZIP member")
+            if (entry.external_attr >> 16) & 0o170000 == 0o120000:
+                raise ValueError("ZIP symlink prohibited")
+        raw = {name: archive.read(name) for name in EXPECTED_MEMBERS}
+    try:
+        manifest = raw["SHA256SUMS"].decode("ascii").splitlines()
+        if len(manifest) != 2:
+            raise ValueError("Invalid checksum manifest")
+        found = {}
+        for line in manifest:
+            digest, name = line.split("  ", 1)
+            if name not in ("results.json", "results.md") or name in found or not SHA64.fullmatch(digest):
+                raise ValueError("Invalid checksum entry")
+            found[name] = digest
+        if frozenset(found) != EXPECTED_MEMBERS - {"SHA256SUMS"}:
+            raise ValueError("Incomplete checksum manifest")
+        for name, digest in found.items():
+            if hashlib.sha256(raw[name]).hexdigest() != digest:
+                raise ValueError("Artifact checksum mismatch: " + name)
+        return json.loads(raw["results.json"])
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("Invalid result artifact encoding") from exc
+
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--manual", type=Path, required=True)
     p.add_argument("--scheduled", type=Path, required=True)
+    p.add_argument("--zip-artifacts", action="store_true", help="Require checksummed GitHub Actions result ZIPs")
     args = p.parse_args()
-    print(json.dumps(inspect(json.loads(args.manual.read_text()), json.loads(args.scheduled.read_text())), sort_keys=True))
+    loader = load_verified_artifact if args.zip_artifacts else lambda path: json.loads(path.read_text())
+    print(json.dumps(inspect(loader(args.manual), loader(args.scheduled)), sort_keys=True))
 
 
 if __name__ == "__main__":
