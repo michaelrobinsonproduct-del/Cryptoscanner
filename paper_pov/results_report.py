@@ -256,7 +256,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
 
 
 
-def verify_published(directory, *, run_id, source_sha, ledger_commit, ledger_sha256):
+def verify_published(directory, *, run_id, source_sha, ledger_commit, ledger_sha256, scan=None, scoreboard=None):
     """Independent on-disk result readback before artifact upload."""
     directory = Path(directory)
     required = {"results.json", "results.md", "SHA256SUMS"}
@@ -335,6 +335,20 @@ def verify_published(directory, *, run_id, source_sha, ledger_commit, ledger_sha
         if (quote is None or candidate.get("price_usd") != quote["price"]
                 or _utc(candidate.get("quote_observed_at")) != _utc(quote["observed_at"])):
             raise ValueError("Candidate lacks independently verified quote")
+    if (scan is None) != (scoreboard is None):
+        raise ValueError("Scan and scoreboard must be supplied together")
+    if scan is not None:
+        # Bind the downloaded publication to its independently retained scan
+        # and ledger scoreboard. Recomputed checksums alone cannot prove that
+        # a publication has not omitted or relabelled a real WATCH candidate.
+        expected_payload, expected_markdown = render(
+            scan, scoreboard, run_id=run_id, source_sha=source_sha,
+            ledger_commit=ledger_commit, event=payload.get("github_event"),
+            originating_cron=payload.get("originating_cron"))
+        if payload != expected_payload:
+            raise ValueError("Published results differ from retained scan/scoreboard")
+        if (directory / "results.md").read_text() != expected_markdown + "\\n":
+            raise ValueError("Published markdown differs from retained evidence")
     return payload
 
 
@@ -351,7 +365,9 @@ def main():
         if not a.ledger_sha256:
             raise ValueError("Missing expected ledger SHA256")
         verify_published(a.output_dir, run_id=a.run_id, source_sha=a.source_sha,
-                         ledger_commit=a.ledger_commit, ledger_sha256=a.ledger_sha256)
+                         ledger_commit=a.ledger_commit, ledger_sha256=a.ledger_sha256,
+                         scan=json.loads(Path(a.scan).read_text()) if a.scan else None,
+                         scoreboard=json.loads(Path(a.scoreboard).read_text()) if a.scoreboard else None)
         print("PAPER_RESULTS_REMOTE_LINK_VERIFIED", a.run_id)
         return
     if not a.scan or not a.scoreboard or not a.event:
