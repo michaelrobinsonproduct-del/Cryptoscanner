@@ -1,5 +1,12 @@
 name: B1 isolated candidate parity acceptance
 on:
+  push:
+    branches:
+      - owner-b-b2-research-gate-content-binding
+    paths:
+      - 'scanner/src/**'
+      - '.github/workflows/b1-candidate-parity.yml'
+  workflow_dispatch:
   pull_request:
     paths:
       - 'scanner/src/candidate-contract.ts'
