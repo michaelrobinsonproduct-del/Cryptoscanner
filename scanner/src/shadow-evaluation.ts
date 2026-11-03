@@ -8,9 +8,10 @@ export function evaluateShadowCandidate(candidate:{pair:string;score:number;disc
  const abstain=(reason:string):ShadowDecision=>({...base,status:"ABSTAIN",reason,challenger_score:null,outcome_label:null});
  if(candidate.decision==="ABSTAIN"||!Number.isFinite(candidate.score)||!candidate.pair||!Number.isFinite(Date.parse(candidate.discovered_at)))return abstain("invalid_candidate");
  if(!evidence||!/^[-.a-zA-Z0-9_]{1,64}$/.test(evidence.version)||!sha(evidence.source_sha)||!sha(evidence.outcome_ledger_sha)||!evidence.qualified||!Number.isInteger(evidence.held_out_samples)||evidence.held_out_samples<=0||!Number.isInteger(evidence.outcome_rows)||evidence.outcome_rows<=0||!Number.isFinite(evidence.held_out_lift))return abstain("unqualified_challenger");
- const matches=scores.filter(s=>s.pair===candidate.pair&&s.observed_at===candidate.discovered_at&&s.version===evidence.version&&s.source_sha===evidence.source_sha);
+ const discoveryMs=Date.parse(candidate.discovered_at);
+ const matches=scores.filter(s=>s.pair===candidate.pair&&Date.parse(s.observed_at)===discoveryMs&&s.version===evidence.version&&s.source_sha===evidence.source_sha);
  if(matches.length!==1||!Number.isFinite(matches[0].score)||matches[0].score<0||matches[0].score>100||!Number.isFinite(Date.parse(matches[0].computed_at))||Date.parse(matches[0].computed_at)>Date.parse(candidate.discovered_at))return abstain("missing_or_leaky_challenger_score");
- const matching=outcomes.filter(x=>x.pair===candidate.pair&&x.observed_at===candidate.discovered_at);
+ const matching=outcomes.filter(x=>x.pair===candidate.pair&&Date.parse(x.observed_at)===discoveryMs);
  if(matching.length===0||matching.length===1&&matching[0].label==="ABSTAIN"&&matching[0].source_sha===evidence.source_sha)
   return {...base,status:"PENDING_OUTCOME",reason:"outcome_not_mature",challenger_score:matches[0].score,outcome_label:null};
  if(matching.length!==1||matching[0].source_sha!==evidence.source_sha||!["HIT","MISS"].includes(matching[0].label))return abstain("missing_or_ambiguous_outcome");
