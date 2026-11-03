@@ -96,3 +96,15 @@ test("missing research pin and missing independent gate fail closed across share
   expect(manual.shadow_evaluation.coverage).toMatchObject({scored:0,abstained:1});
  }
 });
+
+test("research comparison cannot claim more excluded plus held-out predictions than examined",async()=>{
+ const verified={...evidence,outcome_ledger_sha:await digest(outcomes),score_ledger_sha:await digest(scores)};
+ const impossible={...researchGate,comparison:{...researchGate.comparison,excluded:{stale:1}}};
+ const loader=createReadOnlyShadowLoader("https://example.org/ledger.json",async(url:any)=>new Response(JSON.stringify(url===gateUrl?impossible:{evidence:verified,outcomes,scores})) as any,source,gateUrl,source);
+ await expect(loader()).rejects.toThrow("unqualified_research_gate");
+ const runner=createCycleRunner(deps,loader);
+ const result=await runner.run("manual");
+ expect(result.result.shadow_artifact_status).toBe("REJECTED");
+ expect(result.result.candidates).toHaveLength(1);
+ expect(result.result.shadow_evaluation.coverage).toMatchObject({scored:0,abstained:1});
+});
