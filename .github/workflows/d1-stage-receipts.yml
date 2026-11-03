@@ -209,6 +209,23 @@ jobs:
           Path("/tmp/d2-readback-status/status.json").write_text(json.dumps(receipt, sort_keys=True) + "\n")
           print("D2_CONSUMER_OUTCOME", json.dumps(receipt, sort_keys=True))
           PY
+      - name: Verify negative recovery-consumer outcome mapping (no production changes)
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("/tmp/d2-readback-status/status.json")
+          live = json.loads(path.read_text())
+          assert live["schema"] == "paper_recovery_consumer_v1"
+          assert live["production_applied"] is False
+          for download, consume in (("failure", "skipped"), ("success", "failure"),
+                                    ("cancelled", "skipped"), ("success", "skipped")):
+              status = "VERIFIED_READBACK" if download == consume == "success" else "RECOVERY_CONSUMER_FAILED"
+              assert status == "RECOVERY_CONSUMER_FAILED", (download, consume)
+          assert (live["status"] == "VERIFIED_READBACK") == (
+              live["download_outcome"] == live["consume_outcome"] == "success")
+          print("D2_FAILURE_OUTCOME_MAPPING_VERIFIED")
+          PY
       - name: Publish failed-run visibility for operators
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
