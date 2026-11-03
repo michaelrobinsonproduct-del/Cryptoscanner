@@ -59,7 +59,7 @@ class StageReceiptTests(unittest.TestCase):
     def test_corrupt_first_write_fails_readback_and_cleans(self):
         a, b = self.paths()
         with patch.object(writer, "_exclusive_receipt",
-                          side_effect=lambda path, data: Path(path).write_bytes(b"corrupt")):
+                          side_effect=lambda path, data: (Path(path).write_bytes(b"corrupt"), (Path(path).stat().st_dev, Path(path).stat().st_ino))[1]):
             with self.assertRaises(ValueError):
                 self.publish()
         self.assertFalse(a.exists())
@@ -83,15 +83,31 @@ class StageReceiptTests(unittest.TestCase):
         a, b = self.paths()
         original = writer._exclusive_receipt
         def replace_after_creation(path, data):
-            original(path, data)
+            identity = original(path, data)
             if Path(path) == a:
                 path = Path(path)
                 path.unlink()
                 path.write_bytes(b"competitor")
+            return identity
         with patch.object(writer, "_exclusive_receipt", side_effect=replace_after_creation):
             with self.assertRaises(ValueError):
                 self.publish()
         self.assertEqual(a.read_bytes(), b"competitor")
+        self.assertFalse(b.exists())
+
+    def test_same_bytes_replacement_is_detected_by_inode(self):
+        a, b = self.paths()
+        original = writer._exclusive_receipt
+        def swapped(path, data):
+            identity = original(path, data)
+            if Path(path) == a:
+                Path(path).unlink()
+                Path(path).write_bytes(data)
+            return identity
+        with patch.object(writer, "_exclusive_receipt", side_effect=swapped):
+            with self.assertRaisesRegex(ValueError, "replaced before readback"):
+                self.publish()
+        self.assertEqual(a.read_bytes(), ledger.canonical(self.state))
         self.assertFalse(b.exists())
 
     def test_competing_replacement_after_failed_write_is_preserved(self):
