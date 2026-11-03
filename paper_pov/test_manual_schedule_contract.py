@@ -1,8 +1,14 @@
 """Fixture-backed end-to-end read-only result contract tests."""
 import copy
+import hashlib
+import io
+import json
+import tempfile
+import zipfile
+from pathlib import Path
 import unittest
 
-from paper_pov.manual_schedule_contract import inspect
+from paper_pov.manual_schedule_contract import inspect, load_verified_artifact
 from paper_pov.results_report import render
 from paper_pov.test_results_report import fixture
 
@@ -54,6 +60,46 @@ class ManualScheduledContractTests(unittest.TestCase):
         s["untrusted_extra"] = True
         with self.assertRaisesRegex(ValueError, "result schema"):
             inspect(m, s)
+
+
+    def test_signed_zip_real_renderer_roundtrip_and_tamper(self):
+        manual, scheduled = self.pair()
+        def archive(path, payload, *, corrupt=False, extra=False):
+            data = json.dumps(payload, sort_keys=True).encode()
+            markdown = b"# verified paper result\\n"
+            manifest = (hashlib.sha256(data).hexdigest() + "  results.json\\n"
+                        + hashlib.sha256(markdown).hexdigest() + "  results.md\\n").encode()
+            with zipfile.ZipFile(path, "w") as z:
+                z.writestr("results.json", data + (b" " if corrupt else b""))
+                z.writestr("results.md", markdown)
+                z.writestr("SHA256SUMS", manifest)
+                if extra:
+                    z.writestr("unexpected.json", b"{}")
+        with tempfile.TemporaryDirectory() as tmp:
+            m, s = Path(tmp) / "manual.zip", Path(tmp) / "scheduled.zip"
+            archive(m, manual)
+            archive(s, scheduled)
+            self.assertTrue(inspect(load_verified_artifact(m), load_verified_artifact(s))["candidate_schema_parity"])
+            archive(s, scheduled, corrupt=True)
+            with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                load_verified_artifact(s)
+            archive(s, scheduled, extra=True)
+            with self.assertRaisesRegex(ValueError, "ZIP members"):
+                load_verified_artifact(s)
+
+    def test_zip_rejects_duplicate_member_and_oversized_input(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "bad.zip"
+            with zipfile.ZipFile(path, "w") as z:
+                z.writestr("results.json", b"{}")
+                z.writestr("results.json", b"{}")
+                z.writestr("results.md", b"")
+                z.writestr("SHA256SUMS", b"")
+            with self.assertRaisesRegex(ValueError, "ZIP members"):
+                load_verified_artifact(path)
+            path.write_bytes(b"x" * 2_000_001)
+            with self.assertRaisesRegex(ValueError, "Oversized results ZIP"):
+                load_verified_artifact(path)
 
 
 if __name__ == "__main__":
