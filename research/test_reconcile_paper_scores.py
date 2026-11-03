@@ -15,8 +15,8 @@ EVIDENCE={"rounds_verified":13,"snapshots_verified":52,"qualified_first_entry_ep
                        "status":"QUALIFIED_OBSERVED_PATH","ge30pct":False}]}
 
 
-def run(ledger,evidence=EVIDENCE):
-    return reconcile(ledger,evidence,split_at=200000,baseline_version="base-v1",
+def run(ledger,evidence=EVIDENCE,score_receipts=None):
+    return reconcile(ledger,evidence,score_receipts=score_receipts,split_at=200000,baseline_version="base-v1",
                      challenger_version="candidate-v1",evidence_sha256="b"*64)
 
 
@@ -44,7 +44,7 @@ class PaperScoreReconciliationTests(unittest.TestCase):
                                 "source_sha256":SHA,"score_observed_at":1001,
                                 "baseline_score":2,"challenger_score":3}]}
         with patch("research.reconcile_paper_scores.verify"):
-            result=run(ledger)
+            result=run({"predictions":[{**p,"prediction_id":str(i)*64} for i,p in enumerate(ledger["predictions"],1)]},score_receipts=[{**p,"prediction_id":str(i)*64} for i,p in enumerate(ledger["predictions"],1)])
         self.assertEqual(result["comparison"]["excluded"]["DEPTH_SOURCE_SHA_MISMATCH"],1)
         self.assertEqual(result["comparison"]["excluded"]["NO_PRE_ENTRY_SCORE_RECEIPT"],1)
         self.assertEqual(result["comparison"]["held_out_n"],0)
@@ -54,7 +54,7 @@ class PaperScoreReconciliationTests(unittest.TestCase):
                                 "source_sha256":SHA,"score_observed_at":999,
                                 "baseline_score":2,"challenger_score":3}]}
         with patch("research.reconcile_paper_scores.verify"):
-            result=run(ledger)
+            result=run({"predictions":[{**ledger["predictions"][0],"prediction_id":"d"*64}]},score_receipts=[{**ledger["predictions"][0],"prediction_id":"d"*64}])
         self.assertEqual(result["comparison"]["train_n"],1)
         self.assertEqual(result["comparison"]["held_out_n"],0)
         self.assertEqual(result["shadow_decision"]["decision"],"KEEP_BASELINE")
@@ -64,7 +64,7 @@ class PaperScoreReconciliationTests(unittest.TestCase):
                  "source_sha256":SHA,"score_observed_at":999,
                  "baseline_score":2,"challenger_score":3}
         with patch("research.reconcile_paper_scores.verify"):
-            result=run({"predictions":[receipt,receipt]})
+            result=run({"predictions":[{**receipt,"prediction_id":"d"*64},{**receipt,"prediction_id":"e"*64}]},score_receipts=[{**receipt,"prediction_id":"d"*64},{**receipt,"prediction_id":"e"*64}])
         self.assertEqual(result["comparison"]["train_n"],1)
         self.assertEqual(result["comparison"]["excluded"]["DUPLICATE_AUTHENTICATED_PREDICTION"],1)
 
@@ -72,8 +72,8 @@ class PaperScoreReconciliationTests(unittest.TestCase):
         base={"pair":"XBTUSD","entry_first_observed_at":1000,
               "source_sha256":SHA,"baseline_score":2,"challenger_score":3}
         with patch("research.reconcile_paper_scores.verify"):
-            result=run({"predictions":[{**base,"score_observed_at":v}
-                        for v in (None,float("nan"),float("inf"),-1,"999")]})
+            receipts=[{**base,"prediction_id":str(i)*64,"score_observed_at":v} for i,v in enumerate((None,float("nan"),float("inf"),-1,"999"),1)]
+            result=run({"predictions":receipts},score_receipts=receipts)
         self.assertEqual(result["comparison"]["excluded"]["NO_PRE_ENTRY_SCORE_RECEIPT"],5)
         self.assertEqual(result["comparison"]["train_n"],0)
 
@@ -85,6 +85,22 @@ class PaperScoreReconciliationTests(unittest.TestCase):
             record=append_decision(path,decision)
             self.assertEqual(record["decision"]["decision"],"KEEP_BASELINE")
             self.assertEqual(json.loads(path.read_text())["record_sha256"],record["record_sha256"])
+
+    def test_separate_receipt_score_mismatch_abstains(self):
+        paper={"prediction_id":"d"*64,"pair":"XBTUSD","baseline_score":2,"challenger_score":3}
+        receipt={**paper,"challenger_score":999,"entry_first_observed_at":1000,
+                 "source_sha256":SHA,"score_observed_at":999}
+        with patch("research.reconcile_paper_scores.verify"):
+            result=run({"predictions":[paper]},score_receipts=[receipt])
+        self.assertEqual(result["comparison"]["excluded"]["ACQUISITION_SCORE_MISMATCH"],1)
+        self.assertEqual(result["comparison"]["train_n"],0)
+
+    def test_inline_receipt_never_authenticates(self):
+        paper={"prediction_id":"d"*64,"pair":"XBTUSD","baseline_score":2,"challenger_score":3,
+               "entry_first_observed_at":1000,"source_sha256":SHA,"score_observed_at":999}
+        with patch("research.reconcile_paper_scores.verify"):
+            result=run({"predictions":[paper]})
+        self.assertEqual(result["comparison"]["train_n"],0)
 
     def test_nonresearch_source_rejected(self):
         with self.assertRaisesRegex(ValueError,"nonresearch"):
