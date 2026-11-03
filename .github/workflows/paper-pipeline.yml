@@ -173,6 +173,8 @@ jobs:
           python -m paper_pov.results_report --verify-only \
             --run-id "$GITHUB_RUN_ID" --source-sha "$GITHUB_SHA" \
             --ledger-commit "$LEDGER_COMMIT" --ledger-sha256 "$LEDGER_SHA" \
+            --scan paper_pov/output/latest.json \
+            --scoreboard paper_pov/output/scoreboard.json \
             --output-dir paper_pov/output/results
       - name: Preserve public human-readable paper results
         uses: actions/upload-artifact@v4
