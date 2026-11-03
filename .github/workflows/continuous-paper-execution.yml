@@ -1,0 +1,56 @@
+name: Continuous GitHub scanner execution (isolated research)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+permissions:
+  contents: read
+concurrency:
+  group: continuous-paper-research-one-run
+  cancel-in-progress: false
+jobs:
+  continuous-execution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Execute repeated scanner tests and real read-only market research
+        run: |
+          set -euo pipefail
+          echo "CONTINUOUS_EXECUTION_SOURCE_SHA=$(git rev-parse HEAD)"
+          END=$((SECONDS + 3000))
+          ITERATION=0
+          while (( SECONDS < END )); do
+            ITERATION=$((ITERATION + 1))
+            echo "::group::Iteration $ITERATION at $(date -u +%FT%TZ)"
+            python -m unittest discover -s paper_pov -p 'test_*.py' -q
+            # Actual Kraken scan in isolated workspace: no canonical ledger writer.
+            python -m paper_pov.scanner
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("paper_pov/output/latest.json")
+          data=json.loads(p.read_text())
+          print("CONTINUOUS_PAPER_RESEARCH",json.dumps({
+            "report_bytes":p.stat().st_size,
+            "keys":sorted(data)[:30]
+          }))
+          PY
+            echo "::endgroup::"
+            if (( SECONDS + 180 >= END )); then break; fi
+            sleep 180
+          done
+          echo "CONTINUOUS_EXECUTION_ITERATIONS=$ITERATION" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: continuous-paper-research-${{ github.run_id }}
+          path: paper_pov/output/latest.json
+          if-no-files-found: warn
+          retention-days: 7
