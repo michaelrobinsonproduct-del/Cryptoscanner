@@ -4,6 +4,7 @@ Never turns legacy quote evidence into a certified trade signal.
 """
 import argparse
 import json
+import re
 from pathlib import Path
 
 
@@ -45,10 +46,14 @@ def combine(parity, recovery, snapshot=None):
         "a2_snapshot_attached": False,
     }
     if snapshot is not None:
-        if not isinstance(snapshot, dict) or not isinstance(snapshot.get("receipt_sha256"), str) or len(snapshot["receipt_sha256"]) != 64:
+        if not isinstance(snapshot, dict) or not isinstance(snapshot.get("receipt_sha256"), str) or re.fullmatch(r"[0-9a-f]{64}", snapshot["receipt_sha256"]) is None:
             raise ValueError("Missing A2 immutable receipt provenance")
         if snapshot.get("buy_approved") is True or snapshot.get("production_applied") is True:
             raise ValueError("A2 consumer attempted production approval")
+        if not isinstance(snapshot.get("watch"), list) or not snapshot["watch"]:
+            raise ValueError("A2 snapshot lacks WATCH candidates")
+        if snapshot.get("scan_status") != "WATCH":
+            raise ValueError("A2 snapshot has unexpected scan status")
         result["a2_snapshot_attached"] = True
         result["a2_receipt_sha256"] = snapshot["receipt_sha256"]
         result["a2_watch_count"] = len(snapshot["watch"]) if isinstance(snapshot.get("watch"), list) else 0
