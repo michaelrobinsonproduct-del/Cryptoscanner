@@ -281,7 +281,7 @@ jobs:
                     "status": "FAILURES_OBSERVED" if failed else
                               "RUNS_PENDING" if pending else
                               "NO_RECENT_RUNS" if not runs else "NO_FAILURES_OBSERVED"}
-          Path("/tmp/d2-source-health/health.json").write_text(json.dumps(report, sort_keys=True, indent=2) + "\\n")
+          Path("/tmp/d2-source-health/health.json").write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
           print("D2_SOURCE_RUN_HEALTH", json.dumps(report, sort_keys=True))
           PY
       - name: Retain source-run failure visibility even when scan history is incomplete
