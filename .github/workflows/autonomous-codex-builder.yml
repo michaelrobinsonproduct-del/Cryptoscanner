@@ -74,8 +74,11 @@ jobs:
           genuinely implemented, tested as appropriate, integrated and supported
           by real evidence. Do not mark completion merely because blocked.
           PROMPT
-          timeout --signal=INT --kill-after=30s 30m codex exec --full-auto --skip-git-repo-check - < /tmp/agent-task.txt
-          result=$?
+          if timeout --signal=INT --kill-after=30s 30m codex --full-auto exec --skip-git-repo-check - < /tmp/agent-task.txt; then
+            result=0
+          else
+            result=$?
+          fi
           echo "Codex exit code: $result" >> "$GITHUB_STEP_SUMMARY"
           exit 0
       - name: Persist checkpoint and update development PR
