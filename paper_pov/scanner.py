@@ -153,6 +153,8 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         raise RuntimeError("No liquid early-stage candidates")
     watch = []
     abstentions = []
+    abstention_counts = {"request_failure": 0, "stale_or_future_ohlc": 0,
+                         "ohlc_gap_or_schema": 0, "invalid_market_metrics": 0}
     for item in selected:
         try:
             bars = api("OHLC?pair=" + urllib.parse.quote(item["pair"], safe="") + "&interval=5")
@@ -209,7 +211,17 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                 OSError, TimeoutError, RuntimeError) as exc:
             # A failed Kraken OHLC request abstains this market rather than
             # discarding other independently validated candidates.
-            abstentions.append({"pair": item["pair"], "reason": str(exc)[:100]})
+            reason = str(exc)[:100]
+            if isinstance(exc, (OSError, TimeoutError, RuntimeError)):
+                category = "request_failure"
+            elif "stale or future completed OHLC" in reason:
+                category = "stale_or_future_ohlc"
+            elif any(term in reason for term in ("OHLC", "candle", "tail", "interval", "timestamp")):
+                category = "ohlc_gap_or_schema"
+            else:
+                category = "invalid_market_metrics"
+            abstention_counts[category] += 1
+            abstentions.append({"pair": item["pair"], "category": category, "reason": reason})
         sleep(0.15)
     completed = clock().astimezone(UTC)
     if not 0 <= (completed - quote_at).total_seconds() <= 180:
@@ -235,6 +247,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         "excluded_other_pairs": excluded_other_pairs, "matched_tickers": matched,
         "observed_markets": len(observations), "ohlc_screened": len(selected),
         "watch": watch, "observations": observations, "abstentions": abstentions,
+        "abstention_counts": abstention_counts,
         "forward_labels": 0, "held_out_lift": None, "production_applied": False}
 
 def atomic_json(path, report):
@@ -299,7 +312,7 @@ def main():
     print("PAPER_SCAN " + json.dumps({k: report[k] for k in (
         "as_of", "online_usd_pairs", "excluded_stablecoin_pairs",
         "excluded_other_pairs", "eligible_pairs", "matched_tickers",
-        "observed_markets", "ohlc_screened", "forward_labels", "production_applied")}, sort_keys=True))
+        "observed_markets", "ohlc_screened", "abstention_counts", "forward_labels", "production_applied")}, sort_keys=True))
     print("PAPER_WATCH " + json.dumps([{"symbol": x["symbol"], "rank": x["rank"],
         "prediction_id": x["prediction_id"], "baseline_score": x["baseline_score"],
         "challenger_score": x["challenger_score"]} for x in report["watch"]]))
