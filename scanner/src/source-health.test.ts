@@ -4,7 +4,7 @@ import {createSourceHealthReader} from "./source-health";
 import {createCycleRunner} from "./cycle-runner";
 const run={run_id:12,event:"schedule",created_at:"2026-11-03T23:00:00Z",status:"completed",conclusion:"failure",source_sha:"a".repeat(40),url:"https://github.com/example/repo/actions/runs/12"};
 const report={schema:"paper_source_run_health_v1",window_hours:24,observed_at:"2026-11-03T23:10:00Z",runs:[run],failed_count:1,pending_count:0,observed_run_count:1,production_applied:false,query_verified:true,status:"FAILURES_OBSERVED"};
-function reader(x:any){const bytes=Buffer.from(JSON.stringify(x));const sha=createHash("sha256").update(bytes).digest("hex");return createSourceHealthReader("/tmp/health.json",sha,async()=>bytes)}
+function reader(x:any){const bytes=Buffer.from(JSON.stringify(x));const sha=createHash("sha256").update(bytes).digest("hex");return createSourceHealthReader("/tmp/health.json",sha,async()=>bytes,()=>new Date("2026-11-03T23:12:00Z"))}
 test("authenticated source-run failure is visible without implying production changes",async()=>{
  const x=await reader(report)();expect(x.status).toBe("FAILURES_OBSERVED");expect(x.failed_count).toBe(1);expect(x.production_applied).toBe(false);
 });
@@ -22,4 +22,8 @@ test("manual and scheduled share authenticated source health reporting",async()=
 test("source health rejects malformed run provenance",async()=>{
  await expect(reader({...report,runs:[{...run,source_sha:"not-a-sha"}]})()).rejects.toThrow("invalid_source_health_run");
  await expect(reader({...report,runs:[{...run,event:"pull_request"}]})()).rejects.toThrow("invalid_source_health_run");
+});
+
+test("expired source health cannot masquerade as healthy",async()=>{
+ await expect(reader({...report,observed_at:"2026-11-03T22:00:00Z",runs:[],failed_count:0,observed_run_count:0,status:"NO_RECENT_RUNS"})()).rejects.toThrow("stale_source_health");
 });
