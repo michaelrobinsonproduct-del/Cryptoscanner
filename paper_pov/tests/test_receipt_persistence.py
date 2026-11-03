@@ -89,6 +89,13 @@ class ReceiptTests(unittest.TestCase):
         self.assertFalse(self.latest.exists())
         self.assertEqual(receipt.read_text(), "{}")
 
+    def test_corrupt_latest_without_matching_receipt_fails_closed(self):
+        self.latest.write_text("{}")
+        with self.assertRaisesRegex(ValueError, "invalid latest without matching sealed receipt"):
+            persist_report(self.latest, self.report)
+        self.assertEqual(self.latest.read_text(), "{}")
+        self.assertEqual(list((self.latest.parent / "receipts").glob("*.json")), [])
+
     def test_invalid_report_never_writes(self):
         with self.assertRaises(ValueError):
             persist_report(self.latest, {**self.report, "bad": float("nan")})
