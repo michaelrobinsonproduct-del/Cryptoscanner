@@ -241,18 +241,22 @@ jobs:
       contents: read
     steps:
       - name: Inspect actual scheduled paper pipeline runs (read only)
+        id: source_query
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           mkdir -p /tmp/d2-source-health
-          gh api "repos/$REPO/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/d2-source-health/runs.json
+          if ! gh api "repos/$REPO/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/d2-source-health/runs.json; then
+            printf '{"workflow_runs": [], "query_failed": true}\\n' > /tmp/d2-source-health/runs.json
+          fi
           python - <<'PY'
           import datetime as dt
           import json
           from pathlib import Path
           source = json.loads(Path("/tmp/d2-source-health/runs.json").read_text())
+          query_failed = source.get("query_failed") is True
           now = dt.datetime.now(dt.timezone.utc)
           cutoff = now - dt.timedelta(hours=24)
           runs = []
@@ -278,11 +282,15 @@ jobs:
                     "pending_count": len(pending),
                     "observed_run_count": len(runs),
                     "production_applied": False,
-                    "status": "FAILURES_OBSERVED" if failed else
+                    "query_verified": not query_failed,
+                    "status": "SOURCE_QUERY_FAILED" if query_failed else
+                              "FAILURES_OBSERVED" if failed else
                               "RUNS_PENDING" if pending else
                               "NO_RECENT_RUNS" if not runs else "NO_FAILURES_OBSERVED"}
           Path("/tmp/d2-source-health/health.json").write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
           print("D2_SOURCE_RUN_HEALTH", json.dumps(report, sort_keys=True))
+          if query_failed:
+              raise SystemExit("GitHub source-run history unavailable; report persisted")
           PY
       - name: Retain source-run failure visibility even when scan history is incomplete
         if: ${{ always() }}
