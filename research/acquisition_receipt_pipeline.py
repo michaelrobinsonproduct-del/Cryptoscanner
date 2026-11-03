@@ -111,7 +111,8 @@ def write_new(path, report):
     """Exclusive create; no silent replacement of a previous evaluation."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = (json.dumps(report, sort_keys=True, allow_nan=False) + "\n").encode()
+    payload = (json.dumps(report, sort_keys=True, allow_nan=False) + "
+").encode()
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "wb") as stream:
         stream.write(payload)
@@ -127,7 +128,8 @@ def main():
     parser.add_argument("--captures-directory", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--associations-directory", required=True)
-    parser.add_argument("--round-index")\n    parser.add_argument("--all-horizon-coverage", action="store_true")
+    parser.add_argument("--round-index")
+    parser.add_argument("--all-horizon-coverage", action="store_true")
     parser.add_argument("--split-at", type=float)
     parser.add_argument("--baseline-version")
     parser.add_argument("--challenger-version")
@@ -138,7 +140,9 @@ def main():
                       args.associations_directory)
     requested = [args.round_index is not None, args.split_at is not None,
                  args.baseline_version is not None, args.challenger_version is not None]
-    if args.all_horizon_coverage and not args.round_index:\n        parser.error("--all-horizon-coverage requires --round-index")\n    if any(requested):
+    if args.all_horizon_coverage and not args.round_index:
+        parser.error("--all-horizon-coverage requires --round-index")
+    if any(requested):
         if not all(requested):
             parser.error("round-index, split-at and both versions must be supplied together")
         from research.prospective_round_store import evaluate_index
@@ -157,7 +161,9 @@ def main():
                 args.learning_ledger, report["shadow_decision"])
     elif args.learning_ledger:
         parser.error("learning-ledger requires complete E2/E3 evaluation arguments")
-    if args.all_horizon_coverage:\n        report["horizon_coverage"] = evaluate_horizons(args.round_index)\n    digest = write_new(args.output, report)
+    if args.all_horizon_coverage:
+        report["horizon_coverage"] = evaluate_horizons(args.round_index)
+    digest = write_new(args.output, report)
     print(json.dumps({"authenticated_receipts": report.get("reconciliation_receipt_count",
                            report.get("acquisition_coverage", {}).get("authenticated_receipts", 0)),
                       "shadow_decision": report.get("shadow_decision", {}).get("decision"),
