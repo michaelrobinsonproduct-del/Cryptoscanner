@@ -99,7 +99,7 @@ class DepthAssociationTests(unittest.TestCase):
         index.write_text(json.dumps({
             "batch": str(batch),
             "manifest_sha256": hashlib.sha256(b"{}").hexdigest(),
-            "snapshots_verified": 1, "abstentions": 0}) + "\\n")
+            "snapshots_verified": 1, "abstentions": 0}) + "\n")
         result = associate_indexed_captures(self.root / "scores", index,
                                             self.root / "depth-links")
         self.assertEqual(result["associated"], [self.pid])
