@@ -38,8 +38,15 @@ def read_artifact_zip(archive, now=None):
         (root / "latest.json").write_bytes(latest)
         (root / receipts[0]).write_bytes(receipt)
         verified = read_snapshot(root / "latest.json", now=now)
-    if exported != verified:
-        raise ValueError("A2 exported consumer snapshot mismatch or expired")
+    # Ages legitimately increase between export and download. Validate immutable fields
+    # against the receipt, and enforce the *current* read-time freshness separately.
+    for key in ("as_of", "scan_status", "eligible_pairs", "observed_markets", "abstention_counts", "watch", "receipt_sha256"):
+        if exported.get(key) != verified[key]:
+            raise ValueError("A2 exported consumer snapshot mismatch: " + key)
+    if exported.get("snapshot_age_seconds", -1) < 0 or not isinstance(exported.get("quote_age_seconds"), dict):
+        raise ValueError("invalid exported age evidence")
+    if set(exported["quote_age_seconds"]) != set(verified["quote_age_seconds"]):
+        raise ValueError("A2 quote age coverage mismatch")
     if exported["receipt_sha256"] != hashlib.sha256(receipt).hexdigest():
         raise ValueError("A2 artifact digest mismatch")
     return verified
