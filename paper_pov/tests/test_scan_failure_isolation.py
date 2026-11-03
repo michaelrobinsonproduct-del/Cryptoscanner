@@ -64,5 +64,33 @@ class ScanFailureIsolationTests(unittest.TestCase):
             self.assertEqual(restored["forward_labels"], 0)
             self.assertFalse(restored["production_applied"])
 
+    def test_all_ohlc_failures_persist_truthful_zero_watch(self):
+        now = dt.datetime(2026, 11, 3, 5, 7, tzinfo=UTC)
+        pairs = {f"X{i:02d}USD": {"status": "online", "wsname": f"X{i:02d}/USD"}
+                 for i in range(20)}
+        ticker = {k: {"c": ["102"], "b": ["101.9"], "a": ["102.1"],
+                      "o": "100", "v": ["1", "10000"]} for k in pairs}
+        def api(path):
+            if path == "AssetPairs":
+                return pairs
+            if path == "Ticker":
+                return ticker
+            if path.startswith("OHLC?pair="):
+                raise OSError("Kraken OHLC unavailable")
+            raise AssertionError(path)
+        report = scan(api=api, clock=lambda: now, sleep=lambda _: None, max_ohlc=4)
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["ohlc_screened"], 4)
+        self.assertEqual(report["abstention_counts"]["request_failure"], 4)
+        self.assertEqual(len(report["abstentions"]), 4)
+        self.assertFalse(report["buy_approved"])
+        with tempfile.TemporaryDirectory() as root:
+            latest = Path(root) / "latest.json"
+            receipt = persist_report(latest, report)
+            self.assertEqual(json.loads(receipt.read_text()), json.loads(latest.read_text()))
+            self.assertEqual(json.loads(latest.read_text())["scan_status"],
+                             "ABSTAIN_NO_QUALIFIED_OHLC")
+
 if __name__ == "__main__":
     unittest.main()
