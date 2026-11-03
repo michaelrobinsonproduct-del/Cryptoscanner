@@ -39,7 +39,10 @@ jobs:
           sudo find "$GITHUB_WORKSPACE" -type d -exec chmod g+s {} +
           sudo -u codexagent test -r "$GITHUB_WORKSPACE/.git/HEAD"
           sudo -u codexagent test -w "$GITHUB_WORKSPACE"
-      - name: Implement next issue 34 development delta
+          sudo -u codexagent test -x /home/runner
+          sudo -u codexagent test -w /tmp
+          sudo -u codexagent test -x /tmp
+      - name: Implement scanner repairs and enhancements
         id: codex
         uses: openai/codex-action@v1
         with:
