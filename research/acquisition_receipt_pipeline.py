@@ -111,7 +111,7 @@ def write_new(path, report):
     """Exclusive create; no silent replacement of a previous evaluation."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = (json.dumps(report, sort_keys=True, allow_nan=False) + "\\n").encode()
+    payload = (json.dumps(report, sort_keys=True, allow_nan=False) + "\n").encode()
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "wb") as stream:
         stream.write(payload)
