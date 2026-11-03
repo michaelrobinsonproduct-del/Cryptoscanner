@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from research.capture_acquisition_scores import capture_score
 from research.depth_acquisition_associations import write_association, verified_associations
-from research.acquisition_receipt_pipeline import evaluate, evaluate_learning, evaluate_horizons, source_only_coverage, write_new, main
+from research.acquisition_receipt_pipeline import evaluate, evaluate_learning, evaluate_horizons, evaluate_learning_horizons, source_only_coverage, write_new, main
 
 
 class DepthAssociationTests(unittest.TestCase):
@@ -169,6 +169,30 @@ class DepthAssociationTests(unittest.TestCase):
                                        "--all-horizon-coverage", "--output", str(output)]):
             main()
         self.assertEqual(json.loads(output.read_text())["horizon_coverage"]["1"]["qualified"], 0)
+
+    @patch("research.reconcile_paper_scores.reconcile")
+    @patch("research.prospective_round_store.evaluate_index")
+    @patch("research.acquisition_receipt_pipeline.evaluate")
+    def test_four_horizon_learning_reuses_authenticated_receipts(self, binding, index, reconcile):
+        binding.return_value = {"capture_count": 1, "reconciliation_receipt_count": 1,
+                                "association_excluded_count": 0, "excluded_count": 0,
+                                "reconciliation_receipts": [{"prediction_id": self.pid}]}
+        index.side_effect = lambda path, hours: {"horizon": hours}
+        reconcile.side_effect = lambda ledger, evidence, **kw: {
+            "comparison": {"held_out_n": 0, "rule": "NO QUALIFIED RULE"},
+            "shadow_decision": {"decision": "KEEP_BASELINE"},
+            "horizon": evidence["horizon"]}
+        report = evaluate_learning_horizons({}, "depth", "scores", "links", "index",
+                    split_at=1000, baseline_version="b", challenger_version="c",
+                    evidence_sha256="f" * 64)
+        self.assertEqual(list(report["horizon_comparisons"]), ["1", "6", "24", "48"])
+        self.assertEqual([x["horizon"] for x in report["horizon_comparisons"].values()],
+                         [1, 6, 24, 48])
+        self.assertEqual(binding.call_count, 1)
+        self.assertEqual(reconcile.call_count, 4)
+        self.assertTrue(all(call.kwargs["score_receipts"][0]["prediction_id"] == self.pid
+                            for call in reconcile.call_args_list))
+        self.assertFalse(report["production_applied"])
 
     def test_exclusive_create(self):
         self.associate()
