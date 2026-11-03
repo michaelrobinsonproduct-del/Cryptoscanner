@@ -269,7 +269,7 @@ def verify_published(directory, *, run_id, source_sha, ledger_commit, ledger_sha
         raise ValueError("Invalid result checksum manifest")
     seen = set()
     for record in records:
-        match = re.fullmatch(r"([0-9a-f]{64})  (results\\.(?:json|md))", record)
+        match = re.fullmatch(r"([0-9a-f]{64})  (results[.](?:json|md))", record)
         if not match or match[2] in seen:
             raise ValueError("Invalid or duplicate result checksum entry")
         seen.add(match[2])
