@@ -9,7 +9,7 @@ export function createCycleRunner(deps:Dependencies,shadow?:()=>Promise<{evidenc
   try{
    const result=await executeCandidateCycle(deps);
    let output=result;
-   if(shadow){try{const {evidence,outcomes,scores}=await shadow();output=attachShadowEvaluation(result,evidence,outcomes,scores)}catch{output=attachShadowEvaluation(result,null,[])}}
+   if(shadow){try{const {evidence,outcomes,scores}=await shadow();output={...attachShadowEvaluation(result,evidence,outcomes,scores),shadow_artifact_status:evidence?"VERIFIED":"UNAVAILABLE"}}catch{output={...attachShadowEvaluation(result,null,[]),shadow_artifact_status:"REJECTED"}}}
    if(paperReceipt){let receipt:PaperReceipt;try{receipt=await paperReceipt()}catch(error){receipt=unavailablePaperReceipt("read_or_validation_failed")};output={...output,paper_receipt:receipt}}
    last=output;lastError=null;cycles++;
    return {ok:true,status:200,origin,result:output};
