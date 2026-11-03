@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'research/prospective_*.py'
+      - 'research/chronological_challenger.py'
+      - 'research/test_chronological_challenger.py'
       - 'research/evaluate_prospective_rounds.py'
       - 'research/test_evaluate_prospective_rounds.py'
       - '.github/workflows/research-retained-kraken-rounds.yml'
@@ -34,6 +36,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: E2 focused chronological challenger regression
+        run: python -m unittest -v research.test_chronological_challenger
       - name: Integrated offline source and outcome acceptance
         run: |
           set -euo pipefail
