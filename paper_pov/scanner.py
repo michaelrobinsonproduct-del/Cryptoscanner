@@ -341,6 +341,9 @@ def persist_report(latest_path, report):
         if receipt.exists():
             if receipt.read_bytes() != payload:
                 raise ValueError("conflicting orphan scan receipt")
+            # Crash recovery must durably seal the orphan's directory entry
+            # before publishing latest, including after an interrupted fsync.
+            sync_directory(receipt_dir)
             atomic_json(latest_path, report)
             if latest_path.read_bytes() != payload:
                 raise IOError("recovered latest report readback mismatch")
