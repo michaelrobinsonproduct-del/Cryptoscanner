@@ -40,6 +40,7 @@ def evaluate_rounds(batch_directories, horizon_hours=1):
             result = qualify(entry, selected, horizon_hours)
             outcomes.append({"pair": pair, "entry_event_at": entry["event_at"],
                              "entry_first_observed_at": entry["first_observed_at"],
+                             "entry_source_sha256": entry["source_sha256"],
                              **result})
     return {"rounds_verified": len(paths),
             "snapshots_verified": sum(len(v) for v in by_pair.values()),
