@@ -15,7 +15,11 @@ from paper_pov.ledger import verify, canonical
 
 def bind(ledger, batch_directory, score_receipts):
     verify(ledger)
-    rows, abstentions = verified_rows(batch_directory)
+    if Path(batch_directory).is_file():
+        from research.depth_acquisition_associations import verified_index_rows
+        rows, abstentions, _ = verified_index_rows(batch_directory)
+    else:
+        rows, abstentions = verified_rows(batch_directory)
     by_source = {(r["pair"], r["source_sha256"]): r for r in rows}
     predictions = {p["prediction_id"]: p for p in ledger["predictions"]}
     accepted, excluded, seen = [], [], set()
