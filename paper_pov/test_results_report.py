@@ -309,6 +309,51 @@ class PaperResultsContracts(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "unexpected result"):
                 verify_published(output, **expected)
 
+    def test_independent_quote_freshness_and_candidate_provenance_readback(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from paper_pov.results_report import main, verify_published
+        scan, score = fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source, board, output = root / "scan.json", root / "score.json", root / "results"
+            source.write_text(json.dumps(scan))
+            board.write_text(json.dumps(score))
+            args = ["results", "--scan", str(source), "--scoreboard", str(board),
+                    "--run-id", "41235442591", "--source-sha", SHA,
+                    "--ledger-commit", LEDGER, "--event", "workflow_dispatch",
+                    "--output-dir", str(output)]
+            with patch("sys.argv", args):
+                main()
+            expected = dict(run_id="41235442591", source_sha=SHA,
+                            ledger_commit=LEDGER, ledger_sha256=score["ledger_sha256"])
+            original = json.loads((output / "results.json").read_text())
+            self.assertEqual(len(verify_published(output, **expected)["quote_evidence"]), 2)
+            for mode in ("stale", "future", "wrong_max", "wrong_price", "missing", "duplicate"):
+                with self.subTest(mode=mode):
+                    payload = json.loads(json.dumps(original))
+                    if mode == "stale":
+                        payload["quote_evidence"][0]["observed_at"] = "2026-10-31T20:00:00+00:00"
+                    elif mode == "future":
+                        payload["quote_evidence"][0]["observed_at"] = "2026-10-31T21:00:00+00:00"
+                    elif mode == "wrong_max":
+                        payload["max_client_quote_age_seconds"] = 0
+                    elif mode == "wrong_price":
+                        payload["quote_evidence"][0]["price"] += 1
+                    elif mode == "missing":
+                        payload["quote_evidence"].pop()
+                    else:
+                        payload["quote_evidence"][1]["pair"] = payload["quote_evidence"][0]["pair"]
+                    raw = json.dumps(payload).encode()
+                    (output / "results.json").write_bytes(raw)
+                    md = (output / "results.md").read_bytes()
+                    (output / "SHA256SUMS").write_text(
+                        hashlib.sha256(raw).hexdigest() + "  results.json\\n" +
+                        hashlib.sha256(md).hexdigest() + "  results.md\\n")
+                    with self.assertRaises(ValueError):
+                        verify_published(output, **expected)
+
     def test_reject_trading_authorization(self):
         s, b = fixture()
         s["buy_approved"] = True
