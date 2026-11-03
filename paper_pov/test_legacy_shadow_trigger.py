@@ -322,5 +322,32 @@ class OwnerFallbackTests(unittest.TestCase):
                 gate.decide(**f)
 
 
+
+    def test_malformed_history_abstains_instead_of_crashing(self):
+        for kind in ("paper_runs", "shadow_runs"):
+            for malformed in ({"id": []}, {"id": True}, {"id": 0},
+                              {"id": 999, "created_at": "invalid"}, None):
+                f = fixture()
+                f[kind]["workflow_runs"].append(malformed)
+                result = decide(**f)
+                self.assertEqual(result["action"], "ABSTAIN")
+                self.assertIn(result["reason"], (
+                    "DUPLICATE_OR_INVALID_WRITER_RUN_ID",
+                    "DUPLICATE_OR_INVALID_SHADOW_RUN_ID",
+                    "UNSORTED_WRITER_HISTORY", "UNSORTED_SHADOW_HISTORY"))
+
+    def test_partial_history_valid_skipped_shadow_still_allows_fallback(self):
+        f = fixture()
+        f["shadow_runs"]["workflow_runs"] = [
+            {"id": CURRENT_ID + 3, "name": gate.SHADOW,
+             "path": gate.SHADOW_PATH, "repository": {"full_name": gate.REPO},
+             "created_at": iso(-2), "event": "issue_comment",
+             "status": "completed", "conclusion": "skipped"},
+            {"id": CURRENT_ID + 2, "name": gate.SHADOW,
+             "path": gate.SHADOW_PATH, "repository": {"full_name": gate.REPO},
+             "created_at": iso(-8), "event": "workflow_run",
+             "status": "completed", "conclusion": "success"}]
+        self.assertEqual(decide(**f)["action"], "RUN_SHADOW")
+
 if __name__ == "__main__":
     unittest.main()
