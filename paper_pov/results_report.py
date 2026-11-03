@@ -10,6 +10,7 @@ import json
 import math
 import os
 import re
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -263,23 +264,37 @@ def main():
     payload, markdown = render(scan, score, run_id=a.run_id,
                                source_sha=a.source_sha, ledger_commit=a.ledger_commit,
                                event=a.event, originating_cron=a.originating_cron)
+    # Build a complete checksummed publication outside the visible destination.
+    # A failed write cannot expose a half-published result or overwrite a prior run.
     directory = Path(a.output_dir)
-    directory.mkdir(parents=True, exist_ok=True)
-    atomic_json(directory / "results.json", payload)
-    fd, tmp = tempfile.mkstemp(dir=directory, prefix=".results-", suffix=".tmp")
+    directory.parent.mkdir(parents=True, exist_ok=True)
+    if directory.exists() or directory.is_symlink():
+        raise FileExistsError("Refuse to replace published paper results")
+    staged = Path(tempfile.mkdtemp(prefix=".paper-results-", dir=directory.parent))
     try:
-        with os.fdopen(fd, "w") as f:
-            f.write(markdown + "\n")
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, directory / "results.md")
+        atomic_json(staged / "results.json", payload)
+        with (staged / "results.md").open("w") as stream:
+            stream.write(markdown + "\\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        digests = []
+        for name in ("results.json", "results.md"):
+            digests.append(hashlib.sha256((staged / name).read_bytes()).hexdigest() + "  " + name)
+        with (staged / "SHA256SUMS").open("w") as stream:
+            stream.write("\\n".join(digests) + "\\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        for record in digests:
+            digest, name = record.split("  ", 1)
+            if hashlib.sha256((staged / name).read_bytes()).hexdigest() != digest:
+                raise ValueError("Staged paper result checksum readback mismatch")
+        # Destination is private to this job; never replace an existing result.
+        if directory.exists() or directory.is_symlink():
+            raise FileExistsError("Competing paper result publication")
+        staged.rename(directory)
     finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
-    digests = []
-    for name in ("results.json", "results.md"):
-        digests.append(hashlib.sha256((directory / name).read_bytes()).hexdigest() + "  " + name)
-    (directory / "SHA256SUMS").write_text("\n".join(digests) + "\n")
+        if staged.exists():
+            shutil.rmtree(staged)
     print("PAPER_RESULTS_VERIFIED", a.run_id, payload["ledger_generation"],
           len(payload["candidates"]))
 
