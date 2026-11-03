@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 
 STEP = 300
 MAX_AGE = 600
+SLOT_TOLERANCE = 60  # observed capture cadence, not exchange quote-update cadence
 
 
 def _decimal(value):
@@ -33,19 +34,21 @@ def qualify(entry, observations, horizon_hours=1):
         return {"status": "ABSTAIN_INCOMPLETE", "expected_forward_slots": expected,
                 "observed_forward_slots": len(observations)}
     try:
-        start = int(entry["event_at"])
+        start = float(entry["first_observed_at"])
         entry_price = _decimal(entry["ask"])
         max_price = entry_price
         for i, row in enumerate(rows):
-            event = int(row["event_at"])
-            observed = int(row["first_observed_at"])
+            event = float(row["event_at"])
+            observed = float(row["first_observed_at"])
             receipt = row["source_sha256"]
             if not isinstance(receipt, str) or len(receipt) != 64 or any(c not in "0123456789abcdef" for c in receipt):
                 return {"status": "ABSTAIN_SOURCE_RECEIPT"}
-            if row["pair"] != entry["pair"] or event != start + i * STEP:
+            if row["pair"] != entry["pair"] or abs(observed - (start + i * STEP)) > SLOT_TOLERANCE:
                 return {"status": "ABSTAIN_PATH_GAP"}
             if observed < event or observed - event > MAX_AGE:
                 return {"status": "ABSTAIN_OBSERVATION_TIME"}
+            if i and observed <= float(rows[i - 1]["first_observed_at"]):
+                return {"status": "ABSTAIN_PATH_GAP"}
             if i:
                 # Bid is executable sell-side proxy, not an OHLC hindsight high.
                 max_price = max(max_price, _decimal(row["bid"]))
