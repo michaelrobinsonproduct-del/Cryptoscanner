@@ -10,6 +10,29 @@ from pathlib import Path
 from research.source_qualified_outcomes import qualify
 
 
+def _entry_ask_liquidity(raw, market, expected_ask):
+    """Executable USD notional at first ask level, from SHA-verified raw depth.
+
+    Only USD-quoted pairs qualify; other quote currencies require FX evidence.
+    """
+    doc = json.loads(raw)
+    book = doc.get("result", {}).get(market)
+    if not isinstance(book, dict):
+        return None
+    asks = book.get("asks")
+    if not isinstance(asks, list) or not asks or len(asks[0]) < 2:
+        raise ValueError("missing executable ask depth")
+    try:
+        price, size = Decimal(str(asks[0][0])), Decimal(str(asks[0][1]))
+        expected = Decimal(str(expected_ask))
+    except (InvalidOperation, ValueError, TypeError, IndexError):
+        raise ValueError("invalid executable ask depth") from None
+    if not (price.is_finite() and size.is_finite() and
+            price > 0 and size > 0 and price == expected):
+        raise ValueError("depth/evidence ask mismatch")
+    return price * size
+
+
 def verified_rows(batch_directory):
     root = Path(batch_directory)
     manifest = json.loads((root / "manifest.json").read_bytes())
@@ -65,12 +88,17 @@ def verified_rows(batch_directory):
             raise ValueError("crossed or invalid market book")
         if not (0 <= trade_observed - trade_event <= 600):
             raise ValueError("stale trade evidence")
+        depth_raw = (root / depth["file"]).read_bytes()
+        liquidity = _entry_ask_liquidity(depth_raw, entry["source_market"], evidence["best_ask"])
+        if liquidity is not None and not pair.endswith("USD"):
+            liquidity = None  # No quote-to-USD FX conversion is available.
         rows.append({"pair": pair, "event_at": bid_event,
                      "first_observed_at": observed,
                      "source_sha256": depth["sha256"],
                      "bid": evidence["best_bid"], "ask": evidence["best_ask"],
                      "ask_event_at": ask_event,
-                     "trade_source_sha256": trades["sha256"]})
+                     "trade_source_sha256": trades["sha256"],
+                     "entry_liquidity_usd": float(liquidity) if liquidity is not None else None})
     return rows, abstentions
 
 
