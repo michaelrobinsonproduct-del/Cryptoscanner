@@ -23,7 +23,7 @@ class ArtifactAuditTests(unittest.TestCase):
                       "ledger_generation": 1, "eligible_pairs": 1,
                       "observed_markets": 1, "buy_approved": False,
                       "production_applied": False,
-                      "candidates": [{"symbol": "XBT/USD", "price_usd": 50000,
+                      "candidates": [{"rank": 1, "status": "WATCH_PAPER_ONLY", "symbol": "XBT/USD", "price_usd": 50000,
                                       "quote_observed_at": quote["observed_at"]}]}
             def pack(name, payload):
                 path = root / name
@@ -67,6 +67,11 @@ class ArtifactAuditTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "identity mismatch"):
                 audit(ledger, results, run_id="124", source_sha="b" * 40,
                       ledger_commit="c" * 40)
+            report["candidates"][0]["status"] = "BUY"
+            with self.assertRaisesRegex(ValueError, "rank/status mismatch"):
+                audit(ledger, publication(), run_id="123", source_sha="b" * 40,
+                      ledger_commit="c" * 40)
+            report["candidates"][0]["status"] = "WATCH_PAPER_ONLY"
             report["candidates"][0]["price_usd"] = 1
             results = publication()
             with self.assertRaisesRegex(ValueError, "lacks retained quote"):
