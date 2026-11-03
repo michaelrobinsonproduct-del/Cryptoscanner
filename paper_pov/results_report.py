@@ -252,13 +252,64 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
     return payload, "\n".join(lines)
 
 
+
+def verify_published(directory, *, run_id, source_sha, ledger_commit, ledger_sha256):
+    """Independent on-disk result readback before artifact upload."""
+    directory = Path(directory)
+    required = {"results.json", "results.md", "SHA256SUMS"}
+    if directory.is_symlink() or not directory.is_dir():
+        raise ValueError("Missing or redirected results directory")
+    if {p.name for p in directory.iterdir()} != required:
+        raise ValueError("Missing or unexpected result artifact")
+    for name in required:
+        if (directory / name).is_symlink() or not (directory / name).is_file():
+            raise ValueError("Redirected or missing result file")
+    records = (directory / "SHA256SUMS").read_text().splitlines()
+    if len(records) != 2:
+        raise ValueError("Invalid result checksum manifest")
+    seen = set()
+    for record in records:
+        match = re.fullmatch(r"([0-9a-f]{64})  (results\\.(?:json|md))", record)
+        if not match or match[2] in seen:
+            raise ValueError("Invalid or duplicate result checksum entry")
+        seen.add(match[2])
+        if hashlib.sha256((directory / match[2]).read_bytes()).hexdigest() != match[1]:
+            raise ValueError("Result artifact checksum mismatch")
+    if seen != {"results.json", "results.md"}:
+        raise ValueError("Incomplete result checksum manifest")
+    payload = json.loads((directory / "results.json").read_bytes())
+    expected = {"run_id": str(run_id), "source_sha": source_sha,
+                "ledger_commit": ledger_commit, "ledger_sha256": ledger_sha256,
+                "remote_readback_verified": True, "buy_approved": False,
+                "production_applied": False}
+    if any(payload.get(k) != v or type(payload.get(k)) is not type(v)
+           for k, v in expected.items()):
+        raise ValueError("Result identity or persistence mismatch")
+    if payload.get("status") not in ("SUCCESS_PAPER_ONLY", "ABSTAIN_NO_WATCH",
+                                      "ABSTAIN_NO_OBSERVATIONS"):
+        raise ValueError("Invalid persisted result status")
+    return payload
+
+
+
 def main():
     p = argparse.ArgumentParser()
+    p.add_argument("--verify-only", action="store_true")
+    p.add_argument("--ledger-sha256")
     for arg in ("scan", "scoreboard", "run-id", "source-sha", "ledger-commit", "output-dir", "event"):
-        p.add_argument("--" + arg, required=True)
+        p.add_argument("--" + arg, required=arg not in ("scan", "scoreboard", "event"))
     p.add_argument("--originating-cron", default=None,
                    help="Exact github.event.schedule, empty for manual dispatch")
     a = p.parse_args()
+    if a.verify_only:
+        if not a.ledger_sha256:
+            raise ValueError("Missing expected ledger SHA256")
+        verify_published(a.output_dir, run_id=a.run_id, source_sha=a.source_sha,
+                         ledger_commit=a.ledger_commit, ledger_sha256=a.ledger_sha256)
+        print("PAPER_RESULTS_REMOTE_LINK_VERIFIED", a.run_id)
+        return
+    if not a.scan or not a.scoreboard or not a.event:
+        raise ValueError("Missing inputs for results publication")
     scan = json.loads(Path(a.scan).read_text())
     score = json.loads(Path(a.scoreboard).read_text())
     payload, markdown = render(scan, score, run_id=a.run_id,
