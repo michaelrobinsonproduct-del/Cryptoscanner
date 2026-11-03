@@ -173,6 +173,18 @@ class PaperResultsContracts(unittest.TestCase):
         self.assertIn("ABSTAIN", markdown)
         self.assertNotIn("FAILED run", markdown)
 
+
+    def test_zero_observations_disclose_unverified_freshness(self):
+        scan, score = fixture()
+        scan["watch"] = []
+        scan["observations"] = []
+        scan["observed_markets"] = 0
+        scan["ohlc_screened"] = 0
+        payload, markdown = self.report(scan, score)
+        self.assertEqual(payload["candidates"], [])
+        self.assertIn("NOT VERIFIED (zero observations)", markdown)
+        self.assertIn("No qualifying WATCH candidates", markdown)
+
     def test_reject_trading_authorization(self):
         s, b = fixture()
         s["buy_approved"] = True
