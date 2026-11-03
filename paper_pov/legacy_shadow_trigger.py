@@ -110,6 +110,15 @@ def decide(event, paper_runs, shadow_runs, state, manifest, ledger_message,
             or manifest.get("head", {}).get("ledger_sha256") != state.get("sha256")):
         return _abstain("SEALED_LEDGER_SOURCE_OR_SHA_MISMATCH")
     shadows = shadow_runs["workflow_runs"]
+    # Reject ambiguous identities/order on every page, not just a full page.
+    # An incomplete page can otherwise hide a duplicate shadow execution.
+    if (len({r.get("id") for r in shadows}) != len(shadows)
+            or any(type(r.get("id")) is not int for r in shadows)):
+        return _abstain("DUPLICATE_OR_INVALID_SHADOW_RUN_ID")
+    if any(stamp(shadows[i].get("created_at")) <
+           stamp(shadows[i + 1].get("created_at"))
+           for i in range(len(shadows) - 1)):
+        return _abstain("UNSORTED_SHADOW_HISTORY")
     if len(shadows) >= 100:
         # A full page is safe only if the oldest included run predates this
         # writer: all relevant post-writer runs must then be on page one.
