@@ -3,8 +3,9 @@ import hashlib
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
-from paper_pov.results_report import render, verify_published
+from paper_pov.results_report import render, verify_published, main
 from paper_pov.test_results_report import fixture, SHA, LEDGER
 
 RUN = "41235442591"
@@ -34,6 +35,30 @@ class SourceBoundPublicationTests(unittest.TestCase):
                                 ledger_commit=LEDGER,
                                 ledger_sha256=self.score["ledger_sha256"],
                                 scan=self.scan, scoreboard=self.score)
+
+    def test_actual_cli_publish_then_verify_against_retained_inputs(self):
+        source = self.directory / "retained-scan.json"
+        board = self.directory / "retained-scoreboard.json"
+        output = self.directory / "published"
+        source.write_text(json.dumps(self.scan))
+        board.write_text(json.dumps(self.score))
+        args = ["results", "--scan", str(source), "--scoreboard", str(board),
+                "--run-id", RUN, "--source-sha", SHA, "--ledger-commit", LEDGER,
+                "--event", "schedule", "--originating-cron", "9 * * * *",
+                "--output-dir", str(output)]
+        with patch("sys.argv", args):
+            main()
+        verify_args = ["results", "--verify-only", "--scan", str(source),
+                       "--scoreboard", str(board), "--run-id", RUN,
+                       "--source-sha", SHA, "--ledger-commit", LEDGER,
+                       "--ledger-sha256", self.score["ledger_sha256"],
+                       "--output-dir", str(output)]
+        with patch("sys.argv", verify_args):
+            main()
+        self.assertEqual(len(verify_published(
+            output, run_id=RUN, source_sha=SHA, ledger_commit=LEDGER,
+            ledger_sha256=self.score["ledger_sha256"],
+            scan=self.scan, scoreboard=self.score)["candidates"]), 2)
 
     def test_valid_source_bound_publication(self):
         self.assertEqual(len(self.verify()["candidates"]), 2)
