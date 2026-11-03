@@ -38,10 +38,11 @@ test("tampered ledger digest is rejected before challenger scoring",async()=>{
 });
 
 test("self-consistent but untrusted source and missing challenger scores cannot score",async()=>{
- const verified={...evidence,outcome_ledger_sha:await digest(outcomes)};
+ const verified={...evidence,outcome_ledger_sha:await digest(outcomes),score_ledger_sha:await digest(scores)};
  const response=async()=>new Response(JSON.stringify({evidence:verified,outcomes,scores})) as any;
  await expect(createReadOnlyShadowLoader("https://example.org/ledger.json",response,"c".repeat(64))()).rejects.toThrow("untrusted_shadow_source");
- const loader=createReadOnlyShadowLoader("https://example.org/ledger.json",async()=>new Response(JSON.stringify({evidence:verified,outcomes})) as any,source);
+ const empty={...verified,score_ledger_sha:await digest([])};
+ const loader=createReadOnlyShadowLoader("https://example.org/ledger.json",async()=>new Response(JSON.stringify({evidence:empty,outcomes,scores:[]})) as any,source);
  const runner=createCycleRunner(deps,loader);const result=await runner.run("manual");
  expect(result.result.shadow_evaluation.candidates[0].reason).toBe("missing_or_leaky_challenger_score");
 });
