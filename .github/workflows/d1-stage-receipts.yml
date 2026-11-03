@@ -6,6 +6,7 @@ on:
       - 'paper_pov/segmented_live_writer.py'
       - 'paper_pov/test_ledger_readback.py'
       - 'paper_pov/test_stage_receipts.py'
+      - 'paper_pov/test_segmented_live_writer.py'
       - '.github/workflows/d1-stage-receipts.yml'
   workflow_dispatch:
 permissions:
@@ -24,4 +25,4 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          python -m unittest paper_pov.test_ledger_readback paper_pov.test_stage_receipts -v
+          python -m unittest paper_pov.test_ledger_readback paper_pov.test_stage_receipts paper_pov.test_segmented_live_writer.LiveWriterTests.test_actual_bare_remote_push_fetch_and_verified_replay -v
