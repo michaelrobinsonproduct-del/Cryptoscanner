@@ -18,6 +18,7 @@ class ScanFailureIsolationTests(unittest.TestCase):
                             "100", "3"])
         pairs = {f"X{i:02d}USD": {"status": "online", "wsname": f"X{i:02d}/USD"}
                  for i in range(20)}
+        pairs["USDTUSD"] = {"status": "online", "wsname": "USDT/USD"}
         ticker = {k: {"c": ["102"], "b": ["101.9"], "a": ["102.1"],
                       "o": "100", "v": ["1", "10000"]} for k in pairs}
         def api(path):
@@ -27,6 +28,11 @@ class ScanFailureIsolationTests(unittest.TestCase):
                 return ticker
             if path.startswith("OHLC?pair=X00USD"):
                 raise OSError("transient Kraken timeout")
+            if path.startswith("OHLC?pair=X01USD"):
+                old = [list(c) for c in candles]
+                for c in old:
+                    c[0] -= 3600
+                return {"X01USD": old, "last": start + 13 * 300 - 3600}
             if path.startswith("OHLC?pair="):
                 key = path.split("pair=", 1)[1].split("&", 1)[0]
                 return {key: candles, "last": start + 13 * 300}
@@ -38,7 +44,9 @@ class ScanFailureIsolationTests(unittest.TestCase):
                             for x in report["abstentions"]))
         self.assertTrue(all(x["status"] == "PAPER_WATCH" and not x["buy_approved"]
                             for x in report["watch"]))
-        self.assertEqual(report["excluded_stablecoin_pairs"], 0)
+        self.assertEqual(report["excluded_stablecoin_pairs"], 1)
+        self.assertTrue(any(x["pair"] == "X01USD" and "stale" in x["reason"] for x in report["abstentions"]))
+        self.assertTrue(all(x["pair"] != "USDTUSD" for x in report["watch"]))
         with tempfile.TemporaryDirectory() as root:
             latest = Path(root) / "latest.json"
             receipt = persist_report(latest, report)
@@ -46,8 +54,8 @@ class ScanFailureIsolationTests(unittest.TestCase):
             self.assertEqual(restored, json.loads(latest.read_text()))
             self.assertEqual(restored["watch"], report["watch"])
             self.assertEqual(restored["abstentions"], report["abstentions"])
-            self.assertEqual(len(restored["watch"]), 3)
-            self.assertEqual(len(restored["abstentions"]), 1)
+            self.assertEqual(len(restored["watch"]), 2)
+            self.assertEqual(len(restored["abstentions"]), 2)
             self.assertEqual(restored["forward_labels"], 0)
             self.assertFalse(restored["production_applied"])
 
