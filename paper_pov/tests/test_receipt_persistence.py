@@ -96,6 +96,32 @@ class ReceiptTests(unittest.TestCase):
         self.assertEqual(self.latest.read_text(), "{}")
         self.assertEqual(list((self.latest.parent / "receipts").glob("*.json")), [])
 
+    def test_receipt_and_latest_directories_are_synced(self):
+        with patch("paper_pov.scanner.sync_directory", wraps=__import__(
+                "paper_pov.scanner", fromlist=["sync_directory"]).sync_directory) as sync:
+            receipt = persist_report(self.latest, self.report)
+        self.assertEqual([call.args[0] for call in sync.call_args_list],
+                         [receipt.parent, self.latest.parent])
+        self.assertEqual(json.loads(self.latest.read_text()), self.report)
+
+    def test_latest_directory_sync_failure_recovers_without_duplicate_receipt(self):
+        real_sync = __import__("paper_pov.scanner", fromlist=["sync_directory"]).sync_directory
+        calls = 0
+        def fail_second(path):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise OSError("directory sync failed")
+            real_sync(path)
+        with patch("paper_pov.scanner.sync_directory", side_effect=fail_second):
+            with self.assertRaisesRegex(OSError, "directory sync failed"):
+                persist_report(self.latest, self.report)
+        receipts = list((self.latest.parent / "receipts").glob("*.json"))
+        self.assertEqual(len(receipts), 1)
+        self.assertEqual(json.loads(receipts[0].read_text()), self.report)
+        self.assertEqual(persist_report(self.latest, self.report), receipts[0])
+        self.assertEqual(len(list((self.latest.parent / "receipts").glob("*.json"))), 1)
+
     def test_invalid_report_never_writes(self):
         with self.assertRaises(ValueError):
             persist_report(self.latest, {**self.report, "bad": float("nan")})
