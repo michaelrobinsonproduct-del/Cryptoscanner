@@ -45,6 +45,11 @@ class ScanFailureIsolationTests(unittest.TestCase):
         self.assertTrue(all(x["status"] == "PAPER_WATCH" and not x["buy_approved"]
                             for x in report["watch"]))
         self.assertEqual(report["excluded_stablecoin_pairs"], 1)
+        self.assertEqual(report["abstention_counts"]["request_failure"], 1)
+        self.assertEqual(report["abstention_counts"]["stale_or_future_ohlc"], 1)
+        self.assertEqual(sum(report["abstention_counts"].values()), len(report["abstentions"]))
+        self.assertEqual({x["category"] for x in report["abstentions"]},
+                         {"request_failure", "stale_or_future_ohlc"})
         self.assertTrue(any(x["pair"] == "X01USD" and "stale" in x["reason"] for x in report["abstentions"]))
         self.assertTrue(all(x["pair"] != "USDTUSD" for x in report["watch"]))
         with tempfile.TemporaryDirectory() as root:
