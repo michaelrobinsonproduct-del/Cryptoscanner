@@ -4,6 +4,9 @@ on:
 permissions:
   contents: read
   actions: read
+concurrency:
+  group: kraken-research-retained-rounds
+  cancel-in-progress: false
 jobs:
   capture-and-retain:
     runs-on: ubuntu-latest
@@ -20,14 +23,14 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/kraken-round-history
           python - <<'PY'
-          import json,os,subprocess,urllib.request,zipfile,io,pathlib
+          import json,os,urllib.request,zipfile,io,pathlib
           api=f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/actions/artifacts?per_page=100"
           request=urllib.request.Request(api,headers={
               'Authorization':f"Bearer {os.environ['GH_TOKEN']}",
               'Accept':'application/vnd.github+json'})
           with urllib.request.urlopen(request,timeout=30) as response:
               artifacts=json.load(response).get('artifacts',[])
-          matches=[a for a in artifacts if a['name'].startswith('kraken-round-history-') and not a['expired']]
+          matches=[a for a in artifacts if a['name'].startswith('kraken-round-history-') and not a['expired'] and a.get('workflow_run',{}).get('head_repository_id') == int(os.environ.get('GITHUB_REPOSITORY_ID','0')) and a.get('workflow_run',{}).get('head_branch') == os.environ['GITHUB_REF_NAME']]
           if not matches:
               print('ROUND_HISTORY_INIT_EMPTY')
           else:
@@ -46,7 +49,7 @@ jobs:
                       raise RuntimeError('uncompressed history exceeds bounded size')
                   for item in members:
                       target=(root/item.filename).resolve()
-                      if not target.is_relative_to(root.resolve()):
+                      if not target.is_relative_to(root.resolve()) or item.filename.startswith('/'):
                           raise ValueError('unsafe artifact path')
                       if item.is_dir():
                           target.mkdir(parents=True,exist_ok=True)
@@ -54,6 +57,13 @@ jobs:
                           target.parent.mkdir(parents=True,exist_ok=True)
                           target.write_bytes(archive.read(item))
               print('ROUND_HISTORY_RESTORED',latest['id'])
+              from research.prospective_round_store import evaluate_index
+              index=root/'rounds.jsonl'
+              if not index.is_file():
+                  raise RuntimeError('restored artifact missing rounds index')
+              # Verify source hashes and index integrity before any new append.
+              prior=evaluate_index(index,1)
+              print('ROUND_HISTORY_VERIFIED',prior['rounds_verified'],prior['snapshots_verified'])
           PY
       - name: Capture one new bounded source round and evaluate retained history
         run: |
