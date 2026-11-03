@@ -110,6 +110,43 @@ def associate_captured_scores(captures_directory, depth_directory, associations_
             'source_abstentions': abstentions, 'production_applied': False}
 
 
+
+def associate_indexed_captures(captures_directory, round_index, associations_directory):
+    """Match captured scores across immutable, manifest-verified prospective rounds."""
+    from research.acquisition_receipt_pipeline import load_captures
+    index = Path(round_index)
+    records = [json.loads(line) for line in index.read_text().splitlines() if line.strip()]
+    if len({r["batch"] for r in records}) != len(records):
+        raise ValueError("duplicate indexed batch")
+    rows, abstentions = [], []
+    for record in records:
+        batch = Path(record["batch"])
+        manifest_sha = hashlib.sha256((batch / "manifest.json").read_bytes()).hexdigest()
+        if manifest_sha != record["manifest_sha256"]:
+            raise ValueError("indexed manifest mismatch")
+        verified, excluded = verified_rows(batch)
+        if len(verified) != record["snapshots_verified"] or len(excluded) != record["abstentions"]:
+            raise ValueError("indexed source coverage mismatch")
+        rows.extend(verified)
+        abstentions.extend(excluded)
+    accepted, excluded = [], []
+    for capture in load_captures(captures_directory):
+        pid = capture["prediction_id"]
+        observed = capture["score_observed_at"]
+        matches = [row for row in rows if row["pair"] == capture["pair"]
+                   and observed <= row["first_observed_at"] <= observed + 600]
+        if len(matches) != 1:
+            excluded.append({"prediction_id": pid, "reason": "NO_UNIQUE_TIMELY_DEPTH"})
+            continue
+        receipt = hashlib.sha256((Path(captures_directory) / (pid + ".json")).read_bytes()).hexdigest()
+        write_association(associations_directory, prediction_id=pid,
+                          pair=capture["pair"], source_sha256=matches[0]["source_sha256"],
+                          score_receipt_sha256=receipt)
+        accepted.append(pid)
+    return {"associated": accepted, "excluded": excluded, "source_abstentions": abstentions,
+            "rounds_verified": len(records), "production_applied": False}
+
+
 def main():
     import argparse
     from research.acquisition_receipt_pipeline import write_new
