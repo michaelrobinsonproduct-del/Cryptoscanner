@@ -52,6 +52,7 @@ jobs:
           PAPER_REPORT_PATH: ${{ runner.temp }}/b1-real-a2/latest.json
           PYTHONPATH: a2-source
         run: |
+          cd a2-source
           python -m paper_pov.scanner
           python - <<'PY'
           import json, os, zipfile
