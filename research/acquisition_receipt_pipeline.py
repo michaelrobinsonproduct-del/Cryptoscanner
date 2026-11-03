@@ -107,6 +107,16 @@ def evaluate_horizons(round_index, horizons=(1, 6, 24, 48)):
     return result
 
 
+def source_only_coverage(round_index, output):
+    """Execute E1 without requiring unrelated paper score/depth receipts."""
+    if not round_index:
+        raise ValueError("authenticated round index required")
+    report = {"mode": "RESEARCH_ONLY_SOURCE_COVERAGE",
+              "horizon_coverage": evaluate_horizons(round_index),
+              "production_applied": False}
+    return write_new(output, report)
+
+
 def write_new(path, report):
     """Exclusive create; no silent replacement of a previous evaluation."""
     path = Path(path)
