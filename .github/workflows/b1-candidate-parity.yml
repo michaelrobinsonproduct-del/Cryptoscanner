@@ -6,6 +6,8 @@ on:
       - 'scanner/src/candidate-contract.test.ts'
       - 'scanner/src/candidate-cycle.ts'
       - 'scanner/src/candidate-cycle.test.ts'
+      - 'scanner/src/shadow-evaluation.ts'
+      - 'scanner/src/shadow-evaluation.test.ts'
       - 'scanner/src/cycle-http.ts'
       - 'scanner/src/cycle-http.test.ts'
       - 'scanner/src/cycle-runner.ts'
@@ -22,6 +24,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - name: Focused B1 candidate and native-entry parity regression
-        run: bun test scanner/src/candidate-contract.test.ts scanner/src/candidate-cycle.test.ts scanner/src/cycle-runner.test.ts scanner/src/cycle-http.test.ts
+        run: bun test scanner/src/candidate-contract.test.ts scanner/src/candidate-cycle.test.ts scanner/src/cycle-runner.test.ts scanner/src/cycle-http.test.ts scanner/src/shadow-evaluation.test.ts
       - name: Verify exact checkout
         run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
