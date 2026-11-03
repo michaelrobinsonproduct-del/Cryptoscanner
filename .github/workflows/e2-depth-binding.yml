@@ -1,0 +1,30 @@
+name: E2 authenticated acquisition depth binding
+on:
+  pull_request:
+    paths:
+      - 'research/depth_acquisition_associations.py'
+      - 'research/acquisition_receipt_pipeline.py'
+      - 'research/test_depth_acquisition_associations.py'
+      - '.github/workflows/e2-depth-binding.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused-depth-binding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact head
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          echo "E2_EXACT_HEAD=$EXPECTED_SHA"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Focused immutable depth association acceptance
+        run: python -m unittest -v research.test_depth_acquisition_associations
