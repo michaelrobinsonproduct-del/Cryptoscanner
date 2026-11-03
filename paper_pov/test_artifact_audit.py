@@ -18,7 +18,8 @@ class ArtifactAuditTests(unittest.TestCase):
                     "eligible_pairs": 1, "observations": [quote], "watch": [quote]}
             board = {"generation": 1, "ledger_sha256": "a" * 64}
             state = {"generation": 1, "sha256": "a" * 64}
-            report = {"run_id": "123", "ledger_sha256": "a" * 64,
+            report = {"run_id": "123", "source_sha": "b" * 40,
+                      "ledger_commit": "c" * 40, "ledger_sha256": "a" * 64,
                       "ledger_generation": 1, "eligible_pairs": 1,
                       "observed_markets": 1, "buy_approved": False,
                       "production_applied": False,
@@ -39,7 +40,8 @@ class ArtifactAuditTests(unittest.TestCase):
             def publication():
                 return pack("results.zip", {"results.json": report, "results.md": "paper"})
             results = publication()
-            proof = audit(ledger, results)
+            proof = audit(ledger, results, run_id="123", source_sha="b" * 40,
+                          ledger_commit="c" * 40)
             self.assertEqual(proof["max_client_quote_age_seconds"], 8)
             self.assertFalse(proof["published_quote_evidence"])
             self.assertFalse(proof["certified"])
@@ -53,6 +55,9 @@ class ArtifactAuditTests(unittest.TestCase):
             results = publication()
             self.assertTrue(audit(ledger, results)["certified"])
             report.pop("quote_evidence")
+            with self.assertRaisesRegex(ValueError, "identity mismatch"):
+                audit(ledger, results, run_id="124", source_sha="b" * 40,
+                      ledger_commit="c" * 40)
             report["candidates"][0]["price_usd"] = 1
             results = publication()
             with self.assertRaisesRegex(ValueError, "lacks retained quote"):
