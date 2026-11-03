@@ -223,14 +223,20 @@ def _exclusive_receipt(path, data):
     if any(p.is_symlink() for p in (path, *path.parents)):
         raise ValueError("Unsafe receipt destination")
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    identity = os.fstat(fd)
     try:
         with os.fdopen(fd, "wb") as stream:
             stream.write(data)
             stream.flush()
             os.fsync(stream.fileno())
     except BaseException:
-        if path.is_file() and not path.is_symlink():
-            path.unlink()
+        # Never unlink a replacement installed by a competing process.
+        try:
+            current = path.lstat()
+            if (current.st_dev, current.st_ino) == (identity.st_dev, identity.st_ino):
+                path.unlink()
+        except FileNotFoundError:
+            pass
         raise
 
 
@@ -246,7 +252,8 @@ def publish_stage_outputs(next_ledger, state, scoreboard_path, score):
     try:
         for path, data in entries:
             _exclusive_receipt(path, data)
-            created.append(path)
+            identity = path.lstat()
+            created.append((path, identity.st_dev, identity.st_ino))
             if path.read_bytes() != data:
                 raise ValueError("Staged output readback mismatch")
         ledger.verify(json.loads(entries[0][0].read_bytes()), storage.MAX_RAW_BYTES)
@@ -254,9 +261,13 @@ def publish_stage_outputs(next_ledger, state, scoreboard_path, score):
                 state, storage.MAX_RAW_BYTES):
             raise ValueError("Persisted scoreboard mismatch")
     except Exception:
-        for path in reversed(created):
-            if path.is_file() and not path.is_symlink():
-                path.unlink()
+        for path, device, inode in reversed(created):
+            try:
+                current = path.lstat()
+                if (current.st_dev, current.st_ino) == (device, inode):
+                    path.unlink()
+            except FileNotFoundError:
+                pass
         raise
 
 
