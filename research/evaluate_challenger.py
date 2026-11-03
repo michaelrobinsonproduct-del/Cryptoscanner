@@ -13,16 +13,26 @@ def evaluate(index_path, scores_path, split_at):
         raise ValueError("score receipts must be a list")
     by_key={}
     for score in score_rows:
+        if not isinstance(score, dict):
+            raise ValueError("invalid score receipt")
+        if not isinstance(score.get("source_sha256"), str) or len(score["source_sha256"]) != 64 or any(c not in "0123456789abcdef" for c in score["source_sha256"]):
+            raise ValueError("score receipt missing authenticated source hash")
         key=(score["pair"],score["entry_first_observed_at"])
         if key in by_key:
             raise ValueError("duplicate score receipt")
-        if score.get("observed_at",float("inf")) > score["entry_first_observed_at"]:
+        if (type(score.get("observed_at")) not in (int,float)
+                or score["observed_at"] > score["entry_first_observed_at"]
+                or score["observed_at"] < 0):
             raise ValueError("score was not available at entry")
+        if score["source_sha256"] != score.get("entry_source_sha256",score["source_sha256"]):
+            raise ValueError("score source receipt mismatch")
         by_key[key]=score
     joined=[]
     for outcome in evidence["outcomes"]:
         key=(outcome["pair"],outcome["entry_first_observed_at"])
         scores=by_key.get(key,{})
+        if scores and scores["source_sha256"] != outcome.get("entry_source_sha256"):
+            raise ValueError("prediction source receipt does not match verified entry")
         joined.append({**outcome,
                        "baseline_score":scores.get("baseline_score"),
                        "challenger_score":scores.get("challenger_score")})
