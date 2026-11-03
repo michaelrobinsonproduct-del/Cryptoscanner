@@ -161,6 +161,15 @@ class DepthAssociationTests(unittest.TestCase):
         with self.assertRaises(FileExistsError):
             source_only_coverage("index", path)
 
+    @patch("research.acquisition_receipt_pipeline.evaluate_horizons")
+    def test_source_cli(self, horizons):
+        horizons.return_value = {"1": {"qualified": 0}}
+        output = self.root / "source-cli.json"
+        with patch.object(sys, "argv", ["pipeline", "--round-index", "index",
+                                       "--all-horizon-coverage", "--output", str(output)]):
+            main()
+        self.assertEqual(json.loads(output.read_text())["horizon_coverage"]["1"]["qualified"], 0)
+
     def test_exclusive_create(self):
         self.associate()
         with self.assertRaises(FileExistsError):
