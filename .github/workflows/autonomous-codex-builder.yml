@@ -1,8 +1,6 @@
 name: Autonomous Codex development loop
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '7,27,47 * * * *'
 permissions:
   contents: write
   pull-requests: write
@@ -14,7 +12,7 @@ jobs:
   implement:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,16 +48,21 @@ jobs:
           safety-strategy: unprivileged-user
           codex-user: codexagent
           prompt: |
-            You are the autonomous developer for this repository. Implement actual code now.
-            Objective: complete the GitHub-native Kraken paper scanner and continuous measured learning.
-            Read issue #34 context from existing repo files and current source. Select the highest-value
-            unfinished executable development delta. Implement it, run appropriate local tests, fix failures,
-            and leave only tested changes in the working tree. Prioritize learning from historical/live
-            hits and misses, real measurable out-of-sample uplift, reliable scan results and single writer.
-            No production deploys, trading, secret access, ledger mutations, release gate weakening,
-            or changing existing canonical paper schedule. Do not merely audit or write a plan.
-            Make one meaningful bounded improvement per invocation. If work is truly complete,
-            make no changes and explain what proof establishes completion.
+            You are the one-shot autonomous implementation agent. The user starts this workflow ONCE.
+            Your task is to COMPLETE the remaining scanner repair and enhancement work in this execution,
+            not to implement one delta, stop, and wait for another scheduled run.
+            Read repository implementation, tests, and issue #34 context available in the checkout.
+            Build an executable completion checklist from actual gaps, then ITERATE within this SAME run:
+            implement, run relevant tests, diagnose failures, repair, retest, and continue to the next
+            unfinished item. Do not stop after a single successful change, a plan, or an audit.
+            Prioritize a working GitHub-native Kraken paper scanner, reliable fresh ranked WATCH outputs,
+            and substantive historical/live hit-and-miss analysis with measurable held-out learning.
+            Preserve the canonical single-writer ledger and production schedule; do not trade, deploy,
+            change secrets, weaken safety gates, or mutate production ledger/history.
+            Fix all feasible problems and enhancements before exiting; keep tests passing. Where external
+            access or missing data prevents completion, document the precise blocker and continue on
+            independent work. Do not claim completion without tests and evidence. Leave all validated
+            changes in the working tree for a single reviewable PR at the end of THIS execution.
       - name: Open isolated development PR if tested code changed
         env:
           GH_TOKEN: ${{ github.token }}
@@ -67,6 +70,7 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          sudo chown -R runner:runner "$GITHUB_WORKSPACE"
           git add -A
           if git diff --cached --quiet; then
             echo "No code delta produced this run" >> "$GITHUB_STEP_SUMMARY"
