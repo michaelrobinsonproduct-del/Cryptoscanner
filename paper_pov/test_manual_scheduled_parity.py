@@ -2,6 +2,8 @@
 import copy
 import unittest
 from paper_pov.manual_scheduled_parity import compare
+from paper_pov import scanner
+from paper_pov.test_scanner import fixture, NOW
 
 
 def report():
@@ -16,6 +18,25 @@ def report():
 
 
 class ParityTests(unittest.TestCase):
+    def test_real_scanner_fixture_manual_scheduled_equivalence(self):
+        # Exercise the actual Kraken paper scanner's filtering, OHLC ranking,
+        # timestamp and immutable prediction-ID generation on both entry paths.
+        manual = scanner.scan(api=fixture(stable=True), clock=lambda: NOW,
+                              sleep=lambda _: None)
+        scheduled = scanner.scan(api=fixture(stable=True), clock=lambda: NOW,
+                                 sleep=lambda _: None)
+        self.assertEqual(manual["excluded_stablecoin_pairs"], 13)
+        self.assertEqual(len(manual["watch"]), 12)
+        self.assertEqual(len(compare(manual, scheduled)), 64)
+
+    def test_real_scanner_fixture_detects_changed_ranked_score(self):
+        manual = scanner.scan(api=fixture(), clock=lambda: NOW,
+                              sleep=lambda _: None)
+        scheduled = copy.deepcopy(manual)
+        scheduled["watch"][0]["challenger_score"] += 0.01
+        with self.assertRaisesRegex(ValueError, "watch"):
+            compare(manual, scheduled)
+
     def test_equal_fixture(self):
         self.assertEqual(len(compare(report(), copy.deepcopy(report()))), 64)
 
