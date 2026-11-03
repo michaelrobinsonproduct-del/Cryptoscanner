@@ -1,0 +1,88 @@
+"""Research-only immutable depth associations, independently verified against raw Kraken bytes.
+
+Capture must happen when the source is acquired, not from historical predictions.
+Association files do not modify sealed score captures or the production ledger.
+"""
+import hashlib
+import json
+import os
+from pathlib import Path
+
+from research.prospective_outcome_adapter import verified_rows
+
+
+def _digest(value):
+    return isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value)
+
+
+def write_association(directory, *, prediction_id, pair, source_sha256, score_receipt_sha256):
+    if not all(map(_digest, (prediction_id, source_sha256, score_receipt_sha256))):
+        raise ValueError("invalid receipt digest")
+    if not isinstance(pair, str) or not pair.strip():
+        raise ValueError("invalid pair")
+    record = {"schema": 1, "mode": "RESEARCH_ONLY", "prediction_id": prediction_id,
+              "pair": pair, "source_sha256": source_sha256,
+              "score_receipt_sha256": score_receipt_sha256}
+    raw = (json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n").encode()
+    root = Path(directory)
+    root.mkdir(parents=True, exist_ok=True)
+    target = root / (prediction_id + ".json")
+    fd = os.open(target, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    with os.fdopen(fd, "wb") as out:
+        out.write(raw)
+        out.flush()
+        os.fsync(out.fileno())
+    return {"path": str(target), "sha256": hashlib.sha256(raw).hexdigest()}
+
+
+def verified_associations(captures_directory, associations_directory, depth_directory):
+    """Fail closed: association must match score bytes AND independently verified depth.
+
+    Missing associations are explicit abstentions; malformed or forged records
+    never silently become qualified evidence.
+    """
+    capture_root = Path(captures_directory)
+    association_root = Path(associations_directory)
+    if not association_root.is_dir():
+        raise ValueError("association directory missing")
+    rows, source_abstentions = verified_rows(depth_directory)
+    verified = {(r["pair"], r["source_sha256"]): r for r in rows}
+    enriched, exclusions = [], []
+    for path in sorted(capture_root.glob("*.json")):
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("unsafe capture path")
+        raw = path.read_bytes()
+        if len(raw) > 16384:
+            raise ValueError("oversized capture")
+        capture = json.loads(raw)
+        pid = capture.get("prediction_id")
+        if not _digest(pid) or path.name != pid + ".json":
+            raise ValueError("invalid capture identity")
+        association_path = association_root / path.name
+        if not association_path.exists():
+            exclusions.append({"prediction_id": pid, "reason": "MISSING_DEPTH_ASSOCIATION"})
+            continue
+        if association_path.is_symlink() or not association_path.is_file():
+            raise ValueError("unsafe association path")
+        association_raw = association_path.read_bytes()
+        if len(association_raw) > 16384:
+            raise ValueError("oversized association")
+        association = json.loads(association_raw)
+        if (association.get("schema") != 1 or association.get("mode") != "RESEARCH_ONLY"
+                or association.get("prediction_id") != pid
+                or association.get("pair") != capture.get("pair")
+                or association.get("score_receipt_sha256") != hashlib.sha256(raw).hexdigest()):
+            exclusions.append({"prediction_id": pid, "reason": "SCORE_ASSOCIATION_MISMATCH"})
+            continue
+        source = association.get("source_sha256")
+        row = verified.get((capture.get("pair"), source))
+        if row is None:
+            exclusions.append({"prediction_id": pid, "reason": "UNVERIFIED_DEPTH_ASSOCIATION"})
+            continue
+        observed = capture.get("score_observed_at")
+        if type(observed) not in (int, float) or not 0 <= observed <= row["first_observed_at"]:
+            exclusions.append({"prediction_id": pid, "reason": "SCORE_NOT_PRE_ENTRY"})
+            continue
+        enriched.append({**capture, "source_sha256": source})
+    return enriched, exclusions, {"verified_depth_rows": len(rows),
+                                  "source_abstentions": source_abstentions}
