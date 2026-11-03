@@ -37,11 +37,23 @@ class ParityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "missing"):
             compare(report(), other)
 
-    def test_empty_watch_fails(self):
+    def test_empty_watch_parity_is_valid_abstention(self):
         other = report()
         other["watch"] = []
-        with self.assertRaisesRegex(ValueError, "no WATCH"):
-            compare(other, other)
+        self.assertEqual(len(compare(other, copy.deepcopy(other))), 64)
+
+    def test_extra_source_metadata_divergence(self):
+        a, b = report(), report()
+        a["ticker_move_reference"] = "kraken_ticker_today_open_utc"
+        b["ticker_move_reference"] = "rolling_24h"
+        with self.assertRaisesRegex(ValueError, "ticker_move_reference"):
+            compare(a, b)
+
+    def test_missing_extra_field_divergence(self):
+        a, b = report(), report()
+        a["excluded_stablecoin_pairs"] = 2
+        with self.assertRaisesRegex(ValueError, "excluded_stablecoin_pairs"):
+            compare(a, b)
 
     def test_unsafe_mode_fails(self):
         other = report()
