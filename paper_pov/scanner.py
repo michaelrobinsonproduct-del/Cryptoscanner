@@ -247,9 +247,32 @@ def atomic_json(path, report):
         if os.path.exists(tmp):
             os.unlink(tmp)
 
+def persist_report(latest_path, report):
+    """Persist immutable scan receipt before advancing latest; fail on collisions."""
+    latest_path = Path(latest_path)
+    stamp = utc(report["as_of"])
+    receipt_dir = latest_path.parent / "receipts"
+    receipt_dir.mkdir(parents=True, exist_ok=True)
+    receipt = receipt_dir / (stamp.strftime("%Y%m%dT%H%M%S%fZ") + ".json")
+    payload = json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    fd = os.open(receipt, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        if receipt.read_bytes() != payload:
+            raise IOError("scan receipt readback mismatch")
+        atomic_json(latest_path, report)
+    except BaseException:
+        receipt.unlink(missing_ok=True)
+        raise
+    return receipt
+
 def main():
     report = scan()
-    atomic_json(os.getenv("PAPER_REPORT_PATH", "paper_pov/output/latest.json"), report)
+    receipt = persist_report(os.getenv("PAPER_REPORT_PATH", "paper_pov/output/latest.json"), report)
+    print("PAPER_RECEIPT " + str(receipt))
     print("PAPER_SCAN " + json.dumps({k: report[k] for k in (
         "as_of", "online_usd_pairs", "excluded_stablecoin_pairs",
         "excluded_other_pairs", "eligible_pairs", "matched_tickers",
