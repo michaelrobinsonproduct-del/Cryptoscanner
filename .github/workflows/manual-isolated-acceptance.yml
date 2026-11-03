@@ -1,0 +1,79 @@
+name: Manual isolated branch acceptance
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Isolated verification target
+        type: choice
+        required: true
+        options:
+          - B-source-health
+          - D-source-health
+permissions:
+  contents: read
+  actions: read
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact isolated candidate commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target == 'B-source-health' && 'b26880bfef228ab3d8a844e3d06cd1faa77047cf' || '125a9ea71547b668e269796bbd31279e773b2fba' }}
+          persist-credentials: false
+      - name: Report immutable source
+        run: |
+          git rev-parse HEAD
+          test "$(git rev-parse HEAD)" = "${{ inputs.target == 'B-source-health' && 'b26880bfef228ab3d8a844e3d06cd1faa77047cf' || '125a9ea71547b668e269796bbd31279e773b2fba' }}"
+      - uses: oven-sh/setup-bun@v2
+        if: inputs.target == 'B-source-health'
+      - name: Run B source-health and entrypoint parity acceptance
+        if: inputs.target == 'B-source-health'
+        run: bun test scanner/src/source-health.test.ts scanner/src/cycle-runner.test.ts scanner/src/cycle-http.test.ts
+      - uses: actions/setup-python@v5
+        if: inputs.target == 'D-source-health'
+        with:
+          python-version: '3.11'
+      - name: Run D focused source and recovery tests
+        if: inputs.target == 'D-source-health'
+        run: python -m unittest paper_pov.test_ledger_readback paper_pov.test_stage_receipts paper_pov.test_replay_downloaded_artifacts -v
+      - name: Query actual main paper pipeline history (read only)
+        if: inputs.target == 'D-source-health'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/source-health
+          gh api "repos/$REPO/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/source-health/runs.json
+          python - <<'PY'
+          import datetime as dt, json
+          from pathlib import Path
+          source=json.loads(Path('/tmp/source-health/runs.json').read_text())
+          now=dt.datetime.now(dt.timezone.utc)
+          cutoff=now-dt.timedelta(hours=24)
+          runs=[]
+          for x in source.get('workflow_runs',[]):
+              if x.get('event') not in ('schedule','workflow_dispatch') or x.get('head_branch')!='main':
+                  continue
+              if dt.datetime.fromisoformat(x['created_at'].replace('Z','+00:00'))<cutoff:
+                  continue
+              runs.append(dict(run_id=x['id'],event=x['event'],created_at=x['created_at'],status=x['status'],conclusion=x.get('conclusion'),source_sha=x.get('head_sha'),url=x.get('html_url')))
+          failures={'failure','timed_out','cancelled','action_required','startup_failure'}
+          failed=sum(x['conclusion'] in failures for x in runs)
+          pending=sum(x['status']!='completed' for x in runs)
+          report=dict(schema='paper_source_run_health_v1',window_hours=24,observed_at=now.isoformat(),runs=runs,failed_count=failed,pending_count=pending,observed_run_count=len(runs),production_applied=False,query_verified=True,status='FAILURES_OBSERVED' if failed else 'RUNS_PENDING' if pending else 'NO_RECENT_RUNS' if not runs else 'NO_FAILURES_OBSERVED')
+          path=Path('/tmp/source-health/health.json')
+          path.write_text(json.dumps(report,sort_keys=True)+'\n')
+          print('D_SOURCE_HEALTH',json.dumps({k:v for k,v in report.items() if k!='runs'},sort_keys=True))
+          PY
+          sha256sum /tmp/source-health/health.json
+      - name: Publish D authenticated source health for B
+        if: inputs.target == 'D-source-health'
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2-source-run-health
+          path: /tmp/source-health/health.json
+          if-no-files-found: error
+          retention-days: 7
