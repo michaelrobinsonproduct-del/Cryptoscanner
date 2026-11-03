@@ -173,6 +173,8 @@ def main():
     parser.add_argument("--challenger-version")
     parser.add_argument("--learning-ledger", help="Research-only append-only E3 decisions")
     args = parser.parse_args()
+    if args.associate_verified_depth and args.round_index:
+        parser.error("indexed association is not yet supported by the evaluation binder")
     if args.associate_verified_depth and not args.paper_ledger:
         parser.error("automatic association requires a paper ledger")
     if args.associate_verified_depth and args.all_horizon_coverage and not args.round_index:
