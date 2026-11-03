@@ -33,6 +33,28 @@ class DepthAssociationTests(unittest.TestCase):
         return write_association(self.root / "depth-links", **args)
 
     @patch("research.depth_acquisition_associations.verified_rows")
+    def test_connect_score_to_verified_depth(self, rows):
+        from research.depth_acquisition_associations import associate_captured_scores
+        rows.return_value = ([self.row], [])
+        result = associate_captured_scores(self.root / "scores", self.root / "raw",
+                                           self.root / "depth-links")
+        self.assertEqual(result["associated"], [self.pid])
+        self.assertEqual(result["excluded"], [])
+        bound, exclusions, _ = verified_associations(
+            self.root / "scores", self.root / "depth-links", self.root / "raw")
+        self.assertEqual((len(bound), exclusions), (1, []))
+        self.assertEqual(bound[0]["source_sha256"], self.source)
+
+    @patch("research.depth_acquisition_associations.verified_rows")
+    def test_connector_abstains_on_missing_depth(self, rows):
+        from research.depth_acquisition_associations import associate_captured_scores
+        rows.return_value = ([], [])
+        result = associate_captured_scores(self.root / "scores", self.root / "raw",
+                                           self.root / "depth-links")
+        self.assertEqual(result["associated"], [])
+        self.assertEqual(result["excluded"][0]["reason"], "NO_UNIQUE_TIMELY_DEPTH")
+
+    @patch("research.depth_acquisition_associations.verified_rows")
     def test_real_score_bytes_to_verified_depth_and_report(self, rows):
         rows.return_value = ([self.row], [])
         self.associate()
