@@ -61,7 +61,7 @@ jobs:
           latest=Path(os.environ["PAPER_REPORT_PATH"])
           verified=read_snapshot(latest)
           export=latest.parent/"verified-snapshot.json"
-          export.write_text(json.dumps(verified,sort_keys=True,allow_nan=False)+"\\n")
+          export.write_text(json.dumps(verified,sort_keys=True,allow_nan=False)+"\n")
           receipt=list((latest.parent/"receipts").glob("*.json"))
           assert len(receipt)==1
           archive=latest.parent/"transport.zip"
@@ -72,7 +72,7 @@ jobs:
           checked=read_artifact_zip(archive)
           assert checked["receipt_sha256"]==verified["receipt_sha256"]
           assert checked["watch"]==verified["watch"]
-          export.write_text(json.dumps(checked,sort_keys=True,allow_nan=False)+"\\n")
+          export.write_text(json.dumps(checked,sort_keys=True,allow_nan=False)+"\n")
           print("B1_A2_AUTHENTICATED_TRANSPORT",json.dumps({"watch_count":len(checked["watch"]),"eligible_pairs":checked["eligible_pairs"],"observed_markets":checked["observed_markets"],"abstention_counts":checked["abstention_counts"],"receipt_sha256":checked["receipt_sha256"]},sort_keys=True))
           PY
       - name: Actual authenticated A2 into B shared HTTP and scheduled runner
