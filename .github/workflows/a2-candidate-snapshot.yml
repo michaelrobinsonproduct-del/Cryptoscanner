@@ -1,9 +1,11 @@
-name: A2 immutable snapshot focused acceptance
+name: A2 immutable snapshot and scanner-to-consumer acceptance
 on:
   pull_request:
     paths:
+      - 'paper_pov/scanner.py'
       - 'paper_pov/candidate_snapshot.py'
       - 'paper_pov/test_candidate_snapshot.py'
+      - 'paper_pov/test_a1_a2_end_to_end.py'
       - '.github/workflows/a2-candidate-snapshot.yml'
   workflow_dispatch:
 jobs:
@@ -13,5 +15,55 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - name: Verify immutable WATCH candidate readback
-        run: python -m unittest paper_pov.test_candidate_snapshot -v
+      - name: Focused A1-to-A2 durable readback and snapshot regression
+        run: python -m unittest paper_pov.test_a1_a2_end_to_end paper_pov.test_candidate_snapshot -v
+  live-consumer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Public Kraken scan to sealed receipt to verified consumer
+        env:
+          PAPER_REPORT_PATH: ${{ runner.temp }}/paper-a2/latest.json
+        run: |
+          python -m paper_pov.scanner
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from paper_pov.candidate_snapshot import read_snapshot
+          latest = Path(os.environ["PAPER_REPORT_PATH"])
+          report = json.loads(latest.read_text())
+          snapshot = read_snapshot(latest)
+          assert snapshot["watch"] == report["watch"]
+          assert snapshot["eligible_pairs"] == report["eligible_pairs"]
+          assert snapshot["observed_markets"] == report["observed_markets"]
+          assert snapshot["abstention_counts"] == report["abstention_counts"]
+          assert snapshot["scan_status"] == report["scan_status"]
+          assert all(0 <= age <= 600 for age in snapshot["quote_age_seconds"].values())
+          assert report["mode"] == "PAPER_ONLY" and not report["production_applied"]
+          print("A2_LIVE_CONSUMER_EVIDENCE " + json.dumps({
+              "as_of": snapshot["as_of"],
+              "eligible_pairs": snapshot["eligible_pairs"],
+              "observed_markets": snapshot["observed_markets"],
+              "stablecoin_exclusions": report["excluded_stablecoin_pairs"],
+              "screened_markets": report["screened_markets"],
+              "ohlc_screened": report["ohlc_screened"],
+              "watch_count": len(snapshot["watch"]),
+              "abstention_counts": snapshot["abstention_counts"],
+              "scan_status": snapshot["scan_status"],
+              "receipt_sha256": snapshot["receipt_sha256"],
+              "snapshot_age_seconds": snapshot["snapshot_age_seconds"],
+              "max_quote_age_seconds": max(snapshot["quote_age_seconds"].values(), default=None),
+              "consumer_verified": True, "production_applied": False,
+          }, sort_keys=True))
+          PY
+      - name: Retain public paper readback evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a2-live-consumer-evidence
+          path: ${{ runner.temp }}/paper-a2/
+          retention-days: 7
+          if-no-files-found: warn
