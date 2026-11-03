@@ -12,17 +12,20 @@ export function parseShadowArtifacts(raw:unknown):ShadowArtifacts{
   if(!v||typeof v!=="object")throw Error("invalid_outcome");
   const x=v as Record<string,unknown>;
   if(typeof x.pair!=="string"||!/^[A-Z0-9]{3,24}$/.test(x.pair)||typeof x.observed_at!=="string"||!Number.isFinite(Date.parse(x.observed_at))||!["HIT","MISS","ABSTAIN"].includes(String(x.label))||!sha(x.source_sha))throw Error("invalid_outcome");
+  if(x.source_sha!==e.source_sha||!Number.isFinite(Date.parse(x.observed_at as string)))throw Error("untrusted_shadow_outcome");
   return {pair:x.pair,observed_at:x.observed_at,label:x.label as ShadowOutcome["label"],source_sha:x.source_sha as string};
  });
+ const outcomeKeys=new Set(outcomes.map(x=>x.pair+"|"+new Date(x.observed_at).toISOString()));
+ if(outcomeKeys.size!==outcomes.length)throw Error("duplicate_shadow_outcome");
  if(!Array.isArray(s)||s.length>10000)throw Error("invalid_shadow_scores");
  const scores:ShadowScore[]=s.map((v:unknown)=>{
   if(!v||typeof v!=="object")throw Error("invalid_shadow_score");
   const x=v as Record<string,unknown>;
   if(typeof x.pair!=="string"||typeof x.observed_at!=="string"||typeof x.computed_at!=="string"||typeof x.version!=="string"||!Number.isFinite(Date.parse(x.observed_at))||!Number.isFinite(Date.parse(x.computed_at))||typeof x.score!=="number"||!Number.isFinite(x.score)||x.score<0||x.score>100||!sha(x.source_sha))throw Error("invalid_shadow_score");
-  if(x.source_sha!==e.source_sha||x.version!==e.version||Date.parse(x.computed_at as string)>Date.parse(x.observed_at as string))throw Error("untrusted_or_leaky_shadow_score");
+  if(!/^[A-Z0-9]{3,24}$/.test(x.pair as string)||x.source_sha!==e.source_sha||x.version!==e.version||Date.parse(x.computed_at as string)>Date.parse(x.observed_at as string))throw Error("untrusted_or_leaky_shadow_score");
   return x as ShadowScore;
  });
- const scoreKeys=new Set(scores.map(x=>x.pair+"|"+x.observed_at+"|"+x.version));
+ const scoreKeys=new Set(scores.map(x=>x.pair+"|"+new Date(x.observed_at).toISOString()+"|"+x.version));
  if(scoreKeys.size!==scores.length)throw Error("duplicate_shadow_score");
  return {evidence:e as unknown as ShadowEvidence,outcomes,scores};
 }
