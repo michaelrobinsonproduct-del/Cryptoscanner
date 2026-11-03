@@ -34,7 +34,13 @@ jobs:
       - name: Prepare dedicated non-sudo coding user
         run: |
           sudo useradd --create-home --shell /bin/bash codexagent
-          sudo chown -R codexagent:codexagent "$GITHUB_WORKSPACE"
+          sudo usermod -a -G runner codexagent
+          sudo usermod -a -G codexagent runner
+          sudo chown -R runner:codexagent "$GITHUB_WORKSPACE"
+          sudo chmod -R g+rwX "$GITHUB_WORKSPACE"
+          sudo find "$GITHUB_WORKSPACE" -type d -exec chmod g+s {} +
+          sudo -u codexagent test -r "$GITHUB_WORKSPACE/.git/HEAD"
+          sudo -u codexagent test -w "$GITHUB_WORKSPACE"
       - name: Implement next issue 34 development delta
         id: codex
         uses: openai/codex-action@v1
