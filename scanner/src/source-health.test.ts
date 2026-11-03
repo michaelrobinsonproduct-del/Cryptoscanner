@@ -18,3 +18,8 @@ test("manual and scheduled share authenticated source health reporting",async()=
  expect(manual.result.source_run_health).toEqual(scheduled.result.source_run_health);
  expect(manual.result.source_run_health.status).toBe("FAILURES_OBSERVED");
 });
+
+test("source health rejects malformed run provenance",async()=>{
+ await expect(reader({...report,runs:[{...run,source_sha:"not-a-sha"}]})()).rejects.toThrow("invalid_source_health_run");
+ await expect(reader({...report,runs:[{...run,event:"pull_request"}]})()).rejects.toThrow("invalid_source_health_run");
+});
