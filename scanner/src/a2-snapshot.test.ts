@@ -9,7 +9,7 @@ const row={rank:1,status:"PAPER_WATCH",buy_approved:false,pair,as_of:at,quote_ob
 const fixture={as_of:at,scan_status:"WATCH",receipt_sha256:"a".repeat(64),eligible_pairs:3,observed_markets:2,abstention_counts:{stale:1},watch:[row]};
 const deps={scan:async()=>({candidates:[]}),confirm:async()=>{throw Error("not called")},pause:async()=>{},now:()=>now};
 test("B1 HTTP and scheduled consume same A2 read-only snapshot, persist dashboard and preserve independent baseline",async()=>{
- let reads=0;const reader=createA2SnapshotReader("https://example.org/verified-a2",()=>now,async(_url,options)=>{reads++;expect(options?.method).toBe("GET");return new Response(JSON.stringify(fixture))} as any);
+ let reads=0;const reader=createA2SnapshotReader("https://example.org/verified-a2",()=>now,(async(_url,options)=>{reads++;expect(options?.method).toBe("GET");return new Response(JSON.stringify(fixture))}) as any);
  const runner=createCycleRunner(deps,undefined,undefined,reader),http=createCycleHttpHandler(runner);
  const manual=await (await http(new Request("http://localhost/cycle"))).json(),scheduled=await runner.run("scheduled");
  expect(manual).toEqual(scheduled.result);expect(reads).toBe(2);expect(manual.scan_status).toBe("NO_DISCOVERY_CANDIDATES");
@@ -19,6 +19,7 @@ test("B1 HTTP and scheduled consume same A2 read-only snapshot, persist dashboar
 test("stale read-time quotes and malformed coverage fail closed, never invent WATCH",async()=>{
  expect(()=>parseA2Snapshot({...fixture,watch:[{...row,quote_observed_at:"2026-11-03T19:45:00Z"}]},now)).toThrow("stale_a2_quote");
  expect(()=>parseA2Snapshot({...fixture,observed_markets:0},now)).toThrow("invalid_a2_snapshot_coverage");
+ expect(()=>parseA2Snapshot({...fixture,watch:[{...row,prediction_id:"b".repeat(64)}]},now)).toThrow("invalid_a2_market_metric");
  const runner=createCycleRunner(deps,undefined,undefined,createA2SnapshotReader("https://example.org/a2",()=>now,async()=>new Response(JSON.stringify({...fixture,watch:[{...row,price:-1}]})) as any));
  const result=await runner.run("manual");expect(result.ok).toBe(true);expect(result.result.a2_snapshot).toMatchObject({status:"UNAVAILABLE",watch:[],reason:"read_or_validation_failed"});expect(result.result.scan_status).toBe("NO_DISCOVERY_CANDIDATES");
 });
