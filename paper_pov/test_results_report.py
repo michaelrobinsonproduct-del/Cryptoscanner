@@ -266,6 +266,49 @@ class PaperResultsContracts(unittest.TestCase):
             self.assertFalse(fresh.exists())
             self.assertFalse(list(root.glob(".paper-results-*")))
 
+
+    def test_published_result_readback_rejects_tamper_and_wrong_ledger(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from paper_pov.results_report import main, verify_published
+        scan, score = fixture()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, board, output = root / "scan.json", root / "score.json", root / "results"
+            source.write_text(json.dumps(scan))
+            board.write_text(json.dumps(score))
+            args = ["results", "--scan", str(source), "--scoreboard", str(board),
+                    "--run-id", "41235442591", "--source-sha", SHA,
+                    "--ledger-commit", LEDGER, "--event", "workflow_dispatch",
+                    "--output-dir", str(output)]
+            with patch("sys.argv", args):
+                main()
+            expected = dict(run_id="41235442591", source_sha=SHA,
+                            ledger_commit=LEDGER, ledger_sha256=score["ledger_sha256"])
+            self.assertEqual(verify_published(output, **expected)["status"], "SUCCESS_PAPER_ONLY")
+            verify_args = ["results", "--verify-only", "--run-id", expected["run_id"],
+                           "--source-sha", SHA, "--ledger-commit", LEDGER,
+                           "--ledger-sha256", score["ledger_sha256"],
+                           "--output-dir", str(output)]
+            with patch("sys.argv", verify_args):
+                main()
+            for field, bad in (("run_id", "1"), ("ledger_commit", SHA),
+                               ("ledger_sha256", "0" * 64)):
+                wrong = dict(expected)
+                wrong[field] = bad
+                with self.subTest(field=field), self.assertRaisesRegex(ValueError, "identity"):
+                    verify_published(output, **wrong)
+            original = (output / "results.md").read_bytes()
+            (output / "results.md").write_bytes(original + b"tampered")
+            with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                verify_published(output, **expected)
+            (output / "results.md").write_bytes(original)
+            (output / "unexpected.txt").write_text("extra")
+            with self.assertRaisesRegex(ValueError, "unexpected result"):
+                verify_published(output, **expected)
+
     def test_reject_trading_authorization(self):
         s, b = fixture()
         s["buy_approved"] = True
