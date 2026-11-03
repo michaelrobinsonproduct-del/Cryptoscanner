@@ -1,5 +1,10 @@
 name: D1 focused durable stage receipts
 on:
+  push:
+    branches:
+      - 'owner-d-d1-ledger-readback-20261103'
+    paths:
+      - '.github/workflows/d1-stage-receipts.yml'
   pull_request:
     paths:
       - 'paper_pov/ledger.py'
