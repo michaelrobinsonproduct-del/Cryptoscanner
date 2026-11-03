@@ -11,7 +11,7 @@ test("authenticated source-run failure is visible without implying production ch
 test("forged no-failures report fails closed",async()=>{await expect(reader({...report,status:"NO_FAILURES_OBSERVED"})()).rejects.toThrow("source_health_state_mismatch")});
 test("unverified source query fails closed on contradictory status",async()=>{await expect(reader({...report,query_verified:false})()).rejects.toThrow("source_health_query_status_mismatch")});
 test("manual and scheduled share authenticated source health reporting",async()=>{
- const deps:any={scan:async()=>({markets:[]}),confirm:async()=>({}),pause:async()=>{},now:()=>new Date("2026-11-03T23:10:00Z")};
+ const deps:any={scan:async()=>({candidates:[]}),confirm:async()=>({}),pause:async()=>{},now:()=>new Date("2026-11-03T23:10:00Z")};
  const runner=createCycleRunner(deps,undefined,undefined,undefined,undefined,undefined,reader(report));
  const manual=await runner.run("manual"),scheduled=await runner.run("scheduled");
  expect(manual.ok).toBe(true);expect(scheduled.ok).toBe(true);
