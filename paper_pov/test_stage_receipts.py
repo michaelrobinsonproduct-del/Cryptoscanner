@@ -45,13 +45,13 @@ class StageReceiptTests(unittest.TestCase):
 
     def test_second_write_failure_cleans_first_and_partial_second(self):
         a, b = self.paths()
-        original = writer.segments._write
+        original = writer._exclusive_receipt
         def broken(path, data):
             if Path(path) == b:
                 Path(path).write_bytes(b"partial")
                 raise OSError("disk full")
             return original(path, data)
-        with patch.object(writer.segments, "_write", side_effect=broken):
+        with patch.object(writer, "_exclusive_receipt", side_effect=broken):
             with self.assertRaises(OSError):
                 self.publish()
         self.assertFalse(a.exists())
@@ -59,12 +59,43 @@ class StageReceiptTests(unittest.TestCase):
 
     def test_corrupt_first_write_fails_readback_and_cleans(self):
         a, b = self.paths()
-        with patch.object(writer.segments, "_write",
+        with patch.object(writer, "_exclusive_receipt",
                           side_effect=lambda path, data: Path(path).write_bytes(b"corrupt")):
             with self.assertRaises(ValueError):
                 self.publish()
         self.assertFalse(a.exists())
         self.assertFalse(b.exists())
+
+    def test_racing_second_destination_is_not_deleted(self):
+        a, b = self.paths()
+        original = writer._exclusive_receipt
+        def competing(path, data):
+            if Path(path) == b:
+                b.write_bytes(b"another writer")
+                raise FileExistsError("competing publication")
+            return original(path, data)
+        with patch.object(writer, "_exclusive_receipt", side_effect=competing):
+            with self.assertRaises(FileExistsError):
+                self.publish()
+        self.assertFalse(a.exists())
+        self.assertEqual(b.read_bytes(), b"another writer")
+
+    def test_symlinked_parent_is_rejected(self):
+        outside = self.root / "outside"
+        outside.mkdir()
+        redirected = self.root / "redirected"
+        redirected.symlink_to(outside, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "Unsafe receipt"):
+            writer.publish_stage_outputs(redirected / "ledger.json", self.state,
+                                         self.root / "score.json", self.score)
+        self.assertFalse((outside / "ledger.json").exists())
+
+    def test_exclusive_open_refuses_existing_file(self):
+        a, _ = self.paths()
+        a.write_text("other writer")
+        with self.assertRaises(FileExistsError):
+            writer._exclusive_receipt(a, b"ours")
+        self.assertEqual(a.read_text(), "other writer")
 
     def test_existing_symlink_destination_is_never_overwritten(self):
         a, b = self.paths()
