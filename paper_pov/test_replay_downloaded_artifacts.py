@@ -130,6 +130,33 @@ class DownloadedArtifactReplayTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "identity"):
             self.cli(run_id="999")
 
+    def test_rechecksummed_legacy_forged_candidate_is_hard_failure(self):
+        payload = json.loads(self.results["results.json"])
+        payload.pop("quote_evidence")
+        payload["candidates"][0]["challenger_score"] += 500
+        self.results["results.json"] = json.dumps(payload).encode()
+        self.save()
+        with self.assertRaisesRegex(ValueError, "Legacy publication differs"):
+            self.cli()
+
+    def test_rechecksummed_legacy_forged_markdown_is_hard_failure(self):
+        payload = json.loads(self.results["results.json"])
+        payload.pop("quote_evidence")
+        self.results["results.json"] = json.dumps(payload).encode()
+        self.results["results.md"] += b"FAKE WATCH BUY\\n"
+        self.save()
+        with self.assertRaisesRegex(ValueError, "Legacy publication differs"):
+            self.cli()
+
+    def test_rechecksummed_legacy_missing_watch_is_hard_failure(self):
+        payload = json.loads(self.results["results.json"])
+        payload.pop("quote_evidence")
+        payload["candidates"].pop()
+        self.results["results.json"] = json.dumps(payload).encode()
+        self.save()
+        with self.assertRaisesRegex(ValueError, "Legacy publication differs"):
+            self.cli()
+
     def test_corrupt_legacy_manifest_is_hard_failure(self):
         payload = json.loads(self.results["results.json"])
         payload.pop("quote_evidence")
