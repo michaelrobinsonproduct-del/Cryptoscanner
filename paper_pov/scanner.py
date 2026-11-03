@@ -342,13 +342,17 @@ def persist_report(latest_path, report):
             if latest_path.read_bytes() != payload:
                 raise IOError("latest report readback mismatch")
         except BaseException:
-            # Never unlink a receipt that another process has replaced.
-            try:
-                actual = receipt.stat()
-                if (actual.st_dev, actual.st_ino) == (identity.st_dev, identity.st_ino):
-                    receipt.unlink()
-            except FileNotFoundError:
-                pass
+            # Once a receipt is sealed and byte-verified, preserve it on
+            # latest publication failure: a retry can recover this exact scan.
+            # Only discard an incomplete/unverified receipt owned by this call.
+            sealed = receipt.exists() and receipt.read_bytes() == payload
+            if not sealed:
+                try:
+                    actual = receipt.stat()
+                    if (actual.st_dev, actual.st_ino) == (identity.st_dev, identity.st_ino):
+                        receipt.unlink()
+                except FileNotFoundError:
+                    pass
             raise
     return receipt
 
