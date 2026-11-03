@@ -6,6 +6,8 @@ on:
       - 'research/chronological_challenger.py'
       - 'research/evaluate_challenger.py'
       - 'research/learning_feedback.py'
+      - 'research/reconcile_paper_scores.py'
+      - 'research/test_reconcile_paper_scores.py'
       - 'research/report_qualified_coverage.py'
       - 'research/test_report_qualified_coverage.py'
       - 'research/test_learning_feedback.py'
@@ -43,8 +45,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: E2 focused chronological challenger regression
-        run: python -m unittest -v research.test_chronological_challenger research.test_evaluate_challenger research.test_learning_feedback research.test_report_qualified_coverage research.test_verified_depth_liquidity
+      - name: E2 E3 focused paper-score reconciliation regression
+        run: python -m unittest -v research.test_reconcile_paper_scores
       - name: Integrated offline source and outcome acceptance
         run: |
           set -euo pipefail
