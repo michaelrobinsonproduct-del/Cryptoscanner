@@ -62,8 +62,8 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         raise ValueError("Invalid scan clock")
     watches = scan["watch"]
     observations = scan["observations"]
-    if not isinstance(watches, list) or not 1 <= len(watches) <= 12:
-        raise ValueError("Missing or excessive watch candidates")
+    if not isinstance(watches, list) or not 0 <= len(watches) <= 12:
+        raise ValueError("Invalid or excessive watch candidates")
     if not isinstance(observations, list) or len(observations) != scan.get("observed_markets"):
         raise ValueError("Missing market universe evidence")
     if type(score.get("generation")) is not int or score["generation"] < 1:
@@ -136,6 +136,8 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         "| # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | Confidence / risk | Status |",
         "|---:|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|",
     ]
+    if not watches:
+        lines.append("| — | No qualifying WATCH candidates | — | — | — | — | — | — | — | — | — | ABSTAIN |")
     records = []
     seen = set()
     for index, p in enumerate(watches, 1):
