@@ -233,6 +233,39 @@ class PaperResultsContracts(unittest.TestCase):
                 digest, name = line.split("  ", 1)
                 self.assertEqual(hashlib.sha256((output / name).read_bytes()).hexdigest(), digest)
 
+
+    def test_atomic_result_publication_rejects_existing_and_cleans_failed_stage(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from paper_pov.results_report import main
+        scan, score = fixture()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, board, output = root / "scan.json", root / "score.json", root / "results"
+            source.write_text(json.dumps(scan))
+            board.write_text(json.dumps(score))
+            args = ["results", "--scan", str(source), "--scoreboard", str(board),
+                    "--run-id", "41235442591", "--source-sha", SHA,
+                    "--ledger-commit", LEDGER, "--event", "workflow_dispatch",
+                    "--output-dir", str(output)]
+            with patch("sys.argv", args):
+                main()
+            old = {p.name: p.read_bytes() for p in output.iterdir()}
+            with patch("sys.argv", args), self.assertRaises(FileExistsError):
+                main()
+            self.assertEqual({p.name: p.read_bytes() for p in output.iterdir()}, old)
+            self.assertFalse(list(root.glob(".paper-results-*")))
+            fresh = root / "fresh"
+            args[-1] = str(fresh)
+            with patch("sys.argv", args), patch(
+                "paper_pov.results_report.hashlib.sha256", side_effect=OSError("checksum failure")
+            ), self.assertRaisesRegex(OSError, "checksum failure"):
+                main()
+            self.assertFalse(fresh.exists())
+            self.assertFalse(list(root.glob(".paper-results-*")))
+
     def test_reject_trading_authorization(self):
         s, b = fixture()
         s["buy_approved"] = True
