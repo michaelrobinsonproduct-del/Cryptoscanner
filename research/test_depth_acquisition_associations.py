@@ -110,8 +110,7 @@ class DepthAssociationTests(unittest.TestCase):
         def fixture(_, hours):
             return {"rounds_verified": 13, "snapshots_verified": 52,
                     "outcomes": ([{"status": "QUALIFIED_OBSERVED_PATH", "ge30pct": False}]
-                                 if hours == 1 else []) +
-                                [{"status": "INCOMPLETE_FUTURE_PATH"}] * (48 if hours == 1 else 52),
+                                 if hours == 1 else []) + [{"status": "INCOMPLETE_FUTURE_PATH"}] * (48 if hours == 1 else 52),
                     "abstentions": []}
         evaluate_index.side_effect = fixture
         result = evaluate_horizons("fixture-index")
