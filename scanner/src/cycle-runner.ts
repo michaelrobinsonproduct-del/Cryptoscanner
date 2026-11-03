@@ -1,6 +1,7 @@
 import {executeCandidateCycle,type Dependencies} from "./candidate-cycle";
+import {unavailablePaperReceipt,type PaperReceipt} from "./paper-receipt";
 import {attachShadowEvaluation,type ShadowEvidence,type ShadowOutcome,type ShadowScore} from "./shadow-evaluation";
-export function createCycleRunner(deps:Dependencies,shadow?:()=>Promise<{evidence:ShadowEvidence|null;outcomes:ShadowOutcome[];scores:ShadowScore[]}>){
+export function createCycleRunner(deps:Dependencies,shadow?:()=>Promise<{evidence:ShadowEvidence|null;outcomes:ShadowOutcome[];scores:ShadowScore[]}>,paperReceipt?:()=>Promise<PaperReceipt>){
  let running=false,cycles=0,last:any=null,lastError:string|null=null;
  async function run(origin:"manual"|"scheduled"){
   if(running)return {ok:false,status:409,error:"cycle_already_running",origin};
@@ -9,6 +10,7 @@ export function createCycleRunner(deps:Dependencies,shadow?:()=>Promise<{evidenc
    const result=await executeCandidateCycle(deps);
    let output=result;
    if(shadow){try{const {evidence,outcomes,scores}=await shadow();output=attachShadowEvaluation(result,evidence,outcomes,scores)}catch{output=attachShadowEvaluation(result,null,[])}}
+   if(paperReceipt){let receipt:PaperReceipt;try{receipt=await paperReceipt()}catch(error){receipt=unavailablePaperReceipt("read_or_validation_failed")};output={...output,paper_receipt:receipt}}
    last=output;lastError=null;cycles++;
    return {ok:true,status:200,origin,result:output};
   }catch(error){
