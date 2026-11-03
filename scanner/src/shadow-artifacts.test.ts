@@ -108,3 +108,25 @@ test("research comparison cannot claim more excluded plus held-out predictions t
  expect(result.result.candidates).toHaveLength(1);
  expect(result.result.shadow_evaluation.coverage).toMatchObject({scored:0,abstained:1});
 });
+
+test("outcome source substitution and equivalent-timestamp duplicate identities abstain without baseline impact",async()=>{
+ const verified={...evidence,outcome_ledger_sha:await digest(outcomes),score_ledger_sha:await digest(scores)};
+ const badSource=[{...outcomes[0],source_sha:"c".repeat(64)}];
+ const duplicates=[outcomes[0],{...outcomes[0],observed_at:"2026-11-03T03:59:00.000Z"}];
+ const build=(rows:unknown[])=>createReadOnlyShadowLoader("https://example.org/ledger.json",async()=>new Response(JSON.stringify({evidence:{...verified,outcome_rows:rows.length},outcomes:rows,scores})) as any,source);
+ await expect(build(badSource)()).rejects.toThrow("untrusted_shadow_outcome");
+ await expect(build(duplicates)()).rejects.toThrow("duplicate_shadow_outcome");
+ const runner=createCycleRunner(deps,build(badSource));
+ const manual=await (await createCycleHttpHandler(runner)(new Request("http://localhost/cycle"))).json();
+ const scheduled=await runner.run("scheduled");
+ expect(manual).toEqual(scheduled.result);
+ expect(manual.candidates).toHaveLength(1);
+ expect(manual.shadow_artifact_status).toBe("REJECTED");
+ expect(manual.shadow_evaluation.coverage).toMatchObject({scored:0,abstained:1});
+});
+test("score duplicate identities normalize timestamp precision and malformed pairs are rejected",async()=>{
+ const verified={...evidence,outcome_ledger_sha:await digest(outcomes),score_ledger_sha:await digest(scores)};
+ const load=(rows:unknown[])=>createReadOnlyShadowLoader("https://example.org/ledger.json",async()=>new Response(JSON.stringify({evidence:verified,outcomes,scores:rows})) as any,source)();
+ await expect(load([scores[0],{...scores[0],observed_at:"2026-11-03T03:59:00.000Z"}])).rejects.toThrow("duplicate_shadow_score");
+ await expect(load([{...scores[0],pair:"../BAD"}])).rejects.toThrow("untrusted_or_leaky_shadow_score");
+});
