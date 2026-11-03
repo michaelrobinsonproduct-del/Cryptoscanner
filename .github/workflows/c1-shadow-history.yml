@@ -1,0 +1,26 @@
+name: C1 shadow history focused acceptance
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/legacy_shadow_trigger.py'
+      - 'paper_pov/test_legacy_shadow_trigger.py'
+      - '.github/workflows/c1-shadow-history.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Focused shadow fallback regression
+        run: |
+          set -euo pipefail
+          echo "SOURCE_SHA=$(git rev-parse HEAD)"
+          python -m unittest paper_pov.test_legacy_shadow_trigger -v
