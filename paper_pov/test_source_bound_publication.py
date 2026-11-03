@@ -81,6 +81,30 @@ class SourceBoundPublicationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "markdown differs"):
             self.verify()
 
+    def verify_without_retained_sources(self):
+        return verify_published(self.directory, run_id=RUN, source_sha=SHA,
+                                ledger_commit=LEDGER,
+                                ledger_sha256=self.score["ledger_sha256"])
+
+    def test_independent_replay_rejects_duplicate_prediction_identity(self):
+        self.publish(lambda p: p["candidates"][1].update(
+            prediction_id=p["candidates"][0]["prediction_id"]))
+        with self.assertRaisesRegex(ValueError, "published WATCH identity"):
+            self.verify_without_retained_sources()
+
+    def test_independent_replay_rejects_reordered_rank(self):
+        self.publish(lambda p: p["candidates"][0].update(rank=2))
+        with self.assertRaisesRegex(ValueError, "published WATCH identity"):
+            self.verify_without_retained_sources()
+
+    def test_independent_replay_rejects_forged_watch_status(self):
+        self.publish(lambda p: p["candidates"][0].update(status="BUY"))
+        with self.assertRaisesRegex(ValueError, "published WATCH identity"):
+            self.verify_without_retained_sources()
+
+    def test_independent_replay_accepts_valid_published_candidates(self):
+        self.assertEqual(len(self.verify_without_retained_sources()["candidates"]), 2)
+
     def test_wrong_retained_source_fails(self):
         self.scan["watch"][0]["challenger_score"] += 1
         with self.assertRaisesRegex(ValueError, "retained scan"):
