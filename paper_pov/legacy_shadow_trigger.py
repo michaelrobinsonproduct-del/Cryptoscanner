@@ -6,7 +6,9 @@ the writer, modifies the ledger, trades, promotes scores, or claims predictive l
 import argparse
 import datetime as dt
 import json
+import os
 import re
+import tempfile
 from pathlib import Path
 
 from paper_pov import ledger
@@ -167,13 +169,28 @@ def main(argv=None):
                 "output"):
         p.add_argument("--" + arg, required=True)
     a = p.parse_args(argv)
+    # Never leave a previous RUN_SHADOW authorization available after a failed invocation.
+    output = Path(a.output)
+    output.unlink(missing_ok=True)
     read = lambda x: json.loads(Path(x).read_text())
     result = decide(read(a.event), read(a.paper_runs), read(a.shadow_runs),
                     read(a.ledger), read(a.manifest),
                     Path(a.ledger_message).read_text(),
                     repository=a.repository, current_run_id=int(a.current_run_id),
                     checkout_sha=a.checkout_sha, now=dt.datetime.now(dt.timezone.utc))
-    Path(a.output).write_text(json.dumps(result, sort_keys=True) + "\n")
+    # Publish a complete decision atomically; partial files must never authorize a run.
+    tmp = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=output.parent,
+                                         prefix=".shadow-decision-", delete=False) as handle:
+            tmp = Path(handle.name)
+            handle.write(json.dumps(result, sort_keys=True) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, output)
+    finally:
+        if tmp is not None:
+            tmp.unlink(missing_ok=True)
     print("LEGACY_OWNER_FALLBACK " + json.dumps(result, sort_keys=True))
 
 
