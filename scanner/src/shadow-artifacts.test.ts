@@ -103,7 +103,7 @@ test("research comparison cannot claim more excluded plus held-out predictions t
  const verified={...evidence,outcome_ledger_sha:await digest(outcomes),score_ledger_sha:await digest(scores)};
  const impossible={...researchGate,comparison:{...researchGate.comparison,excluded:{stale:1}}};
  const loader=createReadOnlyShadowLoader("https://example.org/ledger.json",async(url:any)=>new Response(JSON.stringify(url===gateUrl?impossible:{evidence:verified,outcomes,scores})) as any,source,gateUrl,researchDigest);
- await expect(loader()).rejects.toThrow("unqualified_research_gate");
+ await expect(loader()).rejects.toThrow("research_gate_content_digest_mismatch");
  const runner=createCycleRunner(deps,loader);
  const result=await runner.run("manual");
  expect(result.result.shadow_artifact_status).toBe("REJECTED");
