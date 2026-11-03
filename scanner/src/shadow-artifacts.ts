@@ -37,7 +37,7 @@ export type ResearchGate={comparison:{held_out_n:number;held_out_lift:number|nul
 export function verifyResearchGate(raw:unknown,artifacts:ShadowArtifacts,trustedResearchSha:string):ShadowArtifacts{
  if(!raw||typeof raw!=="object")throw Error("missing_research_gate");
  const gate=raw as ResearchGate,c=gate.comparison,d=gate.shadow_decision,e=artifacts.evidence;
- if(!c||!d||!e||!Number.isInteger(c.held_out_n)||c.held_out_n<=0||!Number.isInteger(c.paper_predictions_examined)||c.paper_predictions_examined<c.held_out_n||!c.excluded||typeof c.excluded!=="object"||Object.values(c.excluded).some(v=>!Number.isInteger(v)||v<0)||d.challenger_version!==e.version||!sha(d.evidence_sha256)||!sha(trustedResearchSha)||d.evidence_sha256.toLowerCase()!==trustedResearchSha.toLowerCase())throw Error("unqualified_research_gate");
+ if(!c||!d||!e||!Number.isInteger(c.held_out_n)||c.held_out_n<=0||!Number.isInteger(c.paper_predictions_examined)||c.paper_predictions_examined<c.held_out_n||!c.excluded||typeof c.excluded!=="object"||Object.values(c.excluded).some(v=>!Number.isInteger(v)||v<0)||Object.values(c.excluded).reduce((n,v)=>n+v,0)+c.held_out_n>c.paper_predictions_examined||d.challenger_version!==e.version||!sha(d.evidence_sha256)||!sha(trustedResearchSha)||d.evidence_sha256.toLowerCase()!==trustedResearchSha.toLowerCase())throw Error("unqualified_research_gate");
  if(d.decision!=="SHADOW_ELIGIBLE_REVIEW"||d.production_applied!==false||d.active_shadow_version!==e.version||d.held_out_n!==c.held_out_n||d.held_out_lift!==c.held_out_lift||!e.qualified||c.held_out_n!==e.held_out_samples||typeof c.held_out_lift!=="number"||!Number.isFinite(c.held_out_lift)||c.held_out_lift!==e.held_out_lift)throw Error("research_gate_not_qualified");
  return artifacts;
 }
