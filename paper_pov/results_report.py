@@ -108,10 +108,12 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
             raise ValueError("Stale, future, or invalid quote")
         ages.append(age)
         quotes[pair] = o
+    result_status = ("ABSTAIN_NO_OBSERVATIONS" if not observations else
+                     "ABSTAIN_NO_WATCH" if not watches else "SUCCESS_PAPER_ONLY")
     lines = [
         "# Kraken paper scanner — verified results",
         "",
-        "**Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders",
+        f"**Scan:** {result_status} — PAPER ONLY, no trades or approved BUY orders",
         "",
         f"**UTC as-of:** {as_of.isoformat()}  ",
         f"**GitHub trigger:** {'scheduled' if event == 'schedule' else 'manual dispatch'} (verified event={event}; "
@@ -217,10 +219,10 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         "details in immutable scan JSON artifact.",
         "- Storage: checksum-sealed ledger pushed non-force and read back before this report. "
         "Independent artifact recovery is NOT VERIFIED by this scan alone.",
-        "- Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.",
+        "- Scan result is an explicit abstention when market coverage or WATCH candidates are absent; a failed workflow must not publish a SUCCESS report.",
         "",
     ])
-    payload = {"schema": 1, "status": "SUCCESS_PAPER_ONLY", "run_id": str(run_id),
+    payload = {"schema": 1, "status": result_status, "run_id": str(run_id),
                "as_of": as_of.isoformat(), "source_sha": source_sha,
                "github_event": event, "originating_cron": originating_cron or None,
                "scheduled_slot_utc_minute": scheduled_minute,
