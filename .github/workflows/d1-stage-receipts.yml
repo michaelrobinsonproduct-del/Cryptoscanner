@@ -234,3 +234,61 @@ jobs:
           path: /tmp/d2-readback-status/status.json
           if-no-files-found: error
           retention-days: 7
+  source-run-health:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Inspect actual scheduled paper pipeline runs (read only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/d2-source-health
+          gh api "repos/$REPO/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/d2-source-health/runs.json
+          python - <<'PY'
+          import datetime as dt
+          import json
+          from pathlib import Path
+          source = json.loads(Path("/tmp/d2-source-health/runs.json").read_text())
+          now = dt.datetime.now(dt.timezone.utc)
+          cutoff = now - dt.timedelta(hours=24)
+          runs = []
+          for item in source.get("workflow_runs", []):
+              if item.get("event") not in ("schedule", "workflow_dispatch"):
+                  continue
+              if item.get("head_branch") != "main":
+                  continue
+              created = dt.datetime.fromisoformat(item["created_at"].replace("Z", "+00:00"))
+              if created < cutoff:
+                  continue
+              runs.append({"run_id": item["id"], "event": item["event"],
+                           "created_at": item["created_at"], "status": item["status"],
+                           "conclusion": item.get("conclusion"),
+                           "source_sha": item.get("head_sha"),
+                           "url": item.get("html_url")})
+          failed = [v for v in runs if v["conclusion"] in
+                    ("failure", "timed_out", "cancelled", "action_required", "startup_failure")]
+          pending = [v for v in runs if v["status"] != "completed"]
+          report = {"schema": "paper_source_run_health_v1",
+                    "window_hours": 24, "observed_at": now.isoformat(),
+                    "runs": runs, "failed_count": len(failed),
+                    "pending_count": len(pending),
+                    "observed_run_count": len(runs),
+                    "production_applied": False,
+                    "status": "FAILURES_OBSERVED" if failed else
+                              "RUNS_PENDING" if pending else
+                              "NO_RECENT_RUNS" if not runs else "NO_FAILURES_OBSERVED"}
+          Path("/tmp/d2-source-health/health.json").write_text(json.dumps(report, sort_keys=True, indent=2) + "\\n")
+          print("D2_SOURCE_RUN_HEALTH", json.dumps(report, sort_keys=True))
+          PY
+      - name: Retain source-run failure visibility even when scan history is incomplete
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2-source-run-health
+          path: /tmp/d2-source-health/health.json
+          if-no-files-found: error
+          retention-days: 7
