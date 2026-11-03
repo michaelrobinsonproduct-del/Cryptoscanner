@@ -9,7 +9,7 @@ export function selectDiscoveryCandidates(scan: any): SelectedCandidate[] {
   if (!Array.isArray(raw)) return [];
   const out: SelectedCandidate[] = [];
   const seen = new Set<string>();
-  for (const x of raw.slice(0, 20)) {
+  for (const x of raw) {
     if (!x || typeof x !== "object") continue;
     const pair = x.pair ?? x.symbol;
     const score = Number(x.score ?? x.discovery_score);
@@ -23,6 +23,7 @@ export function selectDiscoveryCandidates(scan: any): SelectedCandidate[] {
     if (seen.has(pair)) continue;
     seen.add(pair);
     out.push({ pair, score, displacementPct, discoveredAt });
+    if (out.length === 20) break;
   }
   return out;
 }
