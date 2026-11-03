@@ -43,6 +43,7 @@ def evaluate(ledger, depth_directory, captures_directory, associations_directory
     captures = load_captures(captures_directory)
     # Independently verified source rows are selected by binder; raw capture
     # claims are not sufficient to establish authenticated depth.
+    original_captures = captures
     association_exclusions = []
     if associations_directory is not None:
         captures, association_exclusions, _ = verified_associations(
@@ -50,9 +51,9 @@ def evaluate(ledger, depth_directory, captures_directory, associations_directory
     report = bind(ledger, depth_directory, captures)
     report["association_exclusions"] = association_exclusions
     report["association_excluded_count"] = len(association_exclusions)
-    report["capture_count"] = len(captures)
+    report["capture_count"] = len(original_captures)
     report["capture_sha256"] = hashlib.sha256(
-        json.dumps(captures, sort_keys=True, separators=(",", ":")).encode()
+        json.dumps(original_captures, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
     report["mode"] = "RESEARCH_ONLY_ACQUISITION_PIPELINE"
     report["production_applied"] = False
