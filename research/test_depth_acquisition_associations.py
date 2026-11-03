@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from research.capture_acquisition_scores import capture_score
 from research.depth_acquisition_associations import write_association, verified_associations
-from research.acquisition_receipt_pipeline import evaluate, evaluate_learning, write_new
+from research.acquisition_receipt_pipeline import evaluate, evaluate_learning, evaluate_horizons, write_new
 
 
 class DepthAssociationTests(unittest.TestCase):
@@ -104,6 +104,29 @@ class DepthAssociationTests(unittest.TestCase):
             self.assertEqual(report["reconciliation_receipts"], [])
             self.assertEqual(report["association_excluded_count"], 1)
             self.assertEqual(binder.call_args.args[2], [])
+
+    @patch("research.prospective_round_store.evaluate_index")
+    def test_all_horizons_keep_censored_paths_out_of_hit_denominator(self, evaluate_index):
+        def fixture(_, hours):
+            return {"rounds_verified": 13, "snapshots_verified": 52,
+                    "outcomes": ([{"status": "QUALIFIED_OBSERVED_PATH", "ge30pct": False}]
+                                 if hours == 1 else []) +
+                                [{"status": "INCOMPLETE_FUTURE_PATH"}] * (48 if hours == 1 else 52),
+                    "abstentions": []}
+        evaluate_index.side_effect = fixture
+        result = evaluate_horizons("fixture-index")
+        self.assertEqual(list(result), ["1", "6", "24", "48"])
+        self.assertEqual(result["1"]["qualified"], 1)
+        self.assertEqual(result["1"]["observed_ge30pct"], 0)
+        self.assertEqual(result["1"]["incomplete_or_unqualified"], 48)
+        self.assertEqual(result["48"]["qualified"], 0)
+        self.assertEqual(result["48"]["incomplete_or_unqualified"], 52)
+        self.assertTrue(all(not v["production_applied"] for v in result.values()))
+        self.assertEqual(evaluate_index.call_count, 4)
+
+    def test_unsupported_horizon_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, "unsupported evaluation horizon"):
+            evaluate_horizons("unused", (72,))
 
     def test_exclusive_create(self):
         self.associate()
