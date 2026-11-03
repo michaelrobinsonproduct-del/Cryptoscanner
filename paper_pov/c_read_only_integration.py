@@ -56,7 +56,12 @@ def combine(parity, recovery, snapshot=None):
             raise ValueError("A2 snapshot has unexpected scan status")
         result["a2_snapshot_attached"] = True
         result["a2_receipt_sha256"] = snapshot["receipt_sha256"]
-        result["a2_watch_count"] = len(snapshot["watch"]) if isinstance(snapshot.get("watch"), list) else 0
+        result["a2_watch_count"] = len(snapshot["watch"])
+        result["a2_as_of"] = snapshot.get("as_of")
+        result["a2_eligible_pairs"] = snapshot.get("eligible_pairs")
+        result["a2_observed_markets"] = snapshot.get("observed_markets")
+        result["a2_abstention_counts"] = snapshot.get("abstention_counts")
+        result["a2_source_cohort"] = "authenticated_snapshot_distinct_from_historical_manual_scheduled"
         # A2 capture and legacy runs are different cohorts; never assert identity or freshness parity.
     return result
 
