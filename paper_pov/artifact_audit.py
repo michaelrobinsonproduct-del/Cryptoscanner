@@ -24,8 +24,12 @@ def audit(ledger_zip, results_zip, *, run_id=None, source_sha=None, ledger_commi
         raise ValueError("Ledger identities disagree")
     if report["eligible_pairs"] != scan["eligible_pairs"] or report["observed_markets"] != len(scan["observations"]):
         raise ValueError("Scan coverage differs from publication")
+    if not isinstance(report.get("candidates"), list) or not isinstance(scan.get("watch"), list):
+        raise ValueError("Missing WATCH arrays")
     if len(report["candidates"]) != len(scan["watch"]):
         raise ValueError("WATCH count differs")
+    if not isinstance(scan.get("observations"), list):
+        raise ValueError("Missing retained observations")
     as_of = datetime.fromisoformat(scan["as_of"])
     quotes = scan["observations"]
     ages = [(as_of - datetime.fromisoformat(q["observed_at"])).total_seconds() for q in quotes]
@@ -50,6 +54,7 @@ def audit(ledger_zip, results_zip, *, run_id=None, source_sha=None, ledger_commi
         if published != expected:
             raise ValueError("Published quote evidence differs")
     return {"status": "VERIFIED" if published is not None else "ABSTAIN_LEGACY_QUOTE_EVIDENCE",
+            "client_quote_evidence_verified": published is not None,
             "certified": published is not None,
             "run_id": report["run_id"], "generation": board["generation"],
             "observed": len(quotes), "watch": len(report["candidates"]),
