@@ -192,7 +192,7 @@ test("equivalent-instant scores remain subject to pre-discovery leakage rejectio
 });
 
 test("B2 authenticated E KEEP_BASELINE is identical on manual HTTP and scheduled with no promotion",async()=>{
- const raw=new TextEncoder().encode(JSON.stringify({production_applied:false,comparison:{held_out_n:0},shadow_decision:{decision:"KEEP_BASELINE",production_applied:false}}));
+ const raw=new TextEncoder().encode(JSON.stringify({production_applied:false,horizons:Object.fromEntries([1,6,24,48].map(h=>[h,{held_out_n:0,authenticated_entry_labels:0,rule:"NO QUALIFIED RULE"}])),shadow_decision:{decision:"KEEP_BASELINE",held_out_n:0,production_applied:false}}));
  const sha=await crypto.subtle.digest("SHA-256",raw);
  const pin=Array.from(new Uint8Array(sha)).map(x=>x.toString(16).padStart(2,"0")).join("");
  const loader=createLearningReportReader("/read-only/e-report.json",pin,async()=>raw);
