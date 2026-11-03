@@ -45,6 +45,8 @@ class DepthAssociationTests(unittest.TestCase):
             report = evaluate({}, self.root / "raw", self.root / "scores",
                               self.root / "depth-links")
             self.assertEqual(report["capture_count"], 1)
+            self.assertEqual(report["reconciliation_receipt_count"], 1)
+            self.assertEqual(report["reconciliation_receipts"][0]["source_sha256"], self.source)
             self.assertEqual(report["association_excluded_count"], 0)
             self.assertFalse(report["production_applied"])
             self.assertEqual(binder.call_args.args[2][0]["source_sha256"], self.source)
@@ -84,6 +86,24 @@ class DepthAssociationTests(unittest.TestCase):
         captures, excluded, _ = verified_associations(
             self.root / "scores", self.root / "depth-links", self.root / "raw")
         self.assertEqual(excluded[0]["reason"], "SCORE_NOT_PRE_ENTRY")
+
+    def test_no_association_directory_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, "authenticated depth associations required"):
+            evaluate({}, self.root / "raw", self.root / "scores")
+
+    @patch("research.depth_acquisition_associations.verified_rows")
+    def test_unverified_association_never_exported_to_reconciliation(self, rows):
+        rows.return_value = ([self.row], [])
+        self.associate(source_sha256="c" * 64)
+        with patch("research.acquisition_receipt_pipeline.bind") as binder:
+            binder.return_value = {"accepted": [], "accepted_count": 0,
+                                   "excluded_count": 0, "source_abstentions": []}
+            report = evaluate({}, self.root / "raw", self.root / "scores",
+                              self.root / "depth-links")
+            self.assertEqual(report["capture_count"], 1)
+            self.assertEqual(report["reconciliation_receipts"], [])
+            self.assertEqual(report["association_excluded_count"], 1)
+            self.assertEqual(binder.call_args.args[2], [])
 
     def test_exclusive_create(self):
         self.associate()
