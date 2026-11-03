@@ -20,7 +20,8 @@ def fixture(root):
         "pair_requested": "XBTUSD", "pair_source": "XXBTZUSD",
         "eligible_point_in_time_snapshot": True,
         "depth_receipt": {"sha256": receipts[0]["sha256"], "first_observed_at": 1700000002},
-        "trades_receipt": {"sha256": receipts[1]["sha256"]},
+        "trades_receipt": {"sha256": receipts[1]["sha256"], "first_observed_at": 1700000002},
+        "newest_trade_event_at": "1700000000",
         "bid_level_event_at": "1700000000", "ask_level_event_at": "1700000000",
         "best_bid": "99", "best_ask": "100"
     }
@@ -79,6 +80,24 @@ class AdapterTests(unittest.TestCase):
             evidence["ask_level_event_at"] = "1699999000"
             (root / "00-XBTUSD-evidence.json").write_text(json.dumps(evidence))
             with self.assertRaisesRegex(ValueError, "stale quote"):
+                verified_rows(root)
+
+    def test_crossed_book_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _, evidence = fixture(root)
+            evidence["best_bid"] = "101"
+            (root / "00-XBTUSD-evidence.json").write_text(json.dumps(evidence))
+            with self.assertRaisesRegex(ValueError, "crossed or invalid"):
+                verified_rows(root)
+
+    def test_stale_trade_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _, evidence = fixture(root)
+            evidence["newest_trade_event_at"] = "1699999000"
+            (root / "00-XBTUSD-evidence.json").write_text(json.dumps(evidence))
+            with self.assertRaisesRegex(ValueError, "stale trade"):
                 verified_rows(root)
 
     def test_invalid_snapshot_is_explicit_abstention(self):
