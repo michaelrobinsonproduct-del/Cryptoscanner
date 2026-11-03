@@ -138,7 +138,7 @@ jobs:
                   assert verified["receipt_sha256"]==hashlib.sha256(receipt).hexdigest()
                   assert verified["watch"] and isinstance(verified["watch"],list)
                   assert verified["scan_status"]!="BUY"
-                  Path("/tmp/c-real-receipts/a2.json").write_text(json.dumps(verified,sort_keys=True)+"\\n")
+                  Path("/tmp/c-real-receipts/a2.json").write_text(json.dumps(verified,sort_keys=True))
           PY
           python -m paper_pov.c_read_only_integration --parity /tmp/c-real-receipts/parity.json --recovery /tmp/c-real-receipts/recovery.json --a2 /tmp/c-real-receipts/a2.json --output /tmp/c-real-receipts/integration.json
           python - <<'PY'
