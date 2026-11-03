@@ -23,11 +23,11 @@ jobs:
     timeout-minutes: 12
     permissions:
       contents: read
-    env:
-      PAPER_REPORT_PATH: ${{ runner.temp }}/kraken-paper/latest.json
     steps:
       - uses: actions/checkout@v4
       - name: Capture public Kraken PAPER scan and verify local receipt
+        env:
+          PAPER_REPORT_PATH: ${{ runner.temp }}/kraken-paper/latest.json
         run: |
           python -m paper_pov.scanner
           python - <<'PY'
