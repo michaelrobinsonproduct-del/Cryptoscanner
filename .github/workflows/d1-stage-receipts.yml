@@ -60,3 +60,28 @@ jobs:
           assert proof['certified'] is False, proof
           print('REAL_SCHEDULED_ARTIFACT_READBACK_VALID_LEGACY_ABSTENTION', proof)
           PY
+      - name: Real manual Kraken artifact readback (read only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/d2-manual
+          gh api -H 'Accept: application/vnd.github+json' 'repos/${{ github.repository }}/actions/artifacts/13231431070/zip' > /tmp/d2-manual/ledger.zip
+          gh api -H 'Accept: application/vnd.github+json' 'repos/${{ github.repository }}/actions/artifacts/13231321360/zip' > /tmp/d2-manual/results.zip
+          python -m paper_pov.artifact_audit \
+            --ledger-zip /tmp/d2-manual/ledger.zip \
+            --results-zip /tmp/d2-manual/results.zip \
+            --run-id 41636714169 \
+            --source-sha 94929a544899ddec63c676b6d4d52539da8e3837 \
+            --ledger-commit 27ceb38b5b6c8186e804af0aae537a2de0091da6 | tee /tmp/d2-manual/proof.json
+          python - <<'PY'
+          import json
+          with open('/tmp/d2-manual/proof.json') as f:
+              proof = json.load(f)
+          assert str(proof['run_id']) == '41636714169', proof
+          assert proof['generation'] == 65 and proof['observed'] == 596, proof
+          assert proof['watch'] == 12, proof
+          assert proof['status'] == 'ABSTAIN_LEGACY_QUOTE_EVIDENCE', proof
+          assert proof['certified'] is False, proof
+          print('REAL_MANUAL_ARTIFACT_READBACK_VALID_LEGACY_ABSTENTION', proof)
+          PY
