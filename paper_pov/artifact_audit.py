@@ -32,6 +32,10 @@ def audit(ledger_zip, results_zip):
     by_symbol = {q["symbol"]: q for q in quotes}
     if len(by_symbol) != len(quotes):
         raise ValueError("Duplicate quote symbol")
+    watch_symbols = [item["symbol"] for item in scan["watch"]]
+    reported_symbols = [item["symbol"] for item in report["candidates"]]
+    if len(set(watch_symbols)) != len(watch_symbols) or reported_symbols != watch_symbols:
+        raise ValueError("Published WATCH membership/order differs from retained scan")
     for candidate in report["candidates"]:
         quote = by_symbol.get(candidate["symbol"])
         if quote is None or candidate["price_usd"] != quote["price"] or candidate["quote_observed_at"] != quote["observed_at"]:
@@ -43,7 +47,9 @@ def audit(ledger_zip, results_zip):
         expected = [{k: q[k] for k in ("pair", "symbol", "observed_at", "price")} for q in quotes]
         if published != expected:
             raise ValueError("Published quote evidence differs")
-    return {"run_id": report["run_id"], "generation": board["generation"],
+    return {"status": "VERIFIED" if published is not None else "ABSTAIN_LEGACY_QUOTE_EVIDENCE",
+            "certified": published is not None,
+            "run_id": report["run_id"], "generation": board["generation"],
             "observed": len(quotes), "watch": len(report["candidates"]),
             "max_client_quote_age_seconds": max(ages) if ages else None,
             "published_quote_evidence": published is not None,
