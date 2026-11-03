@@ -107,6 +107,16 @@ class OwnerFallbackTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unauthenticated"):
             decide(**f)
 
+    def test_shared_owner_identity_rejects_boolean_and_string_ids(self):
+        # Python bool compares equal to 1; GitHub identity must be an exact integer.
+        for role in ("sender", "comment"):
+            for bad in (True, str(gate.OWNER_ID), None):
+                f = fixture()
+                identity = f["event"]["sender"] if role == "sender" else f["event"]["comment"]["user"]
+                identity["id"] = bad
+                with self.assertRaisesRegex(ValueError, "Unauthenticated"):
+                    decide(**f)
+
     def test_wrong_issue_repository_and_pr_abstain(self):
         for change in ("number", "repository", "pull_request"):
             f = fixture()
