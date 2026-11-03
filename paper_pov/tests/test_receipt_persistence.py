@@ -119,7 +119,10 @@ class ReceiptTests(unittest.TestCase):
         receipts = list((self.latest.parent / "receipts").glob("*.json"))
         self.assertEqual(len(receipts), 1)
         self.assertEqual(json.loads(receipts[0].read_text()), self.report)
-        self.assertEqual(persist_report(self.latest, self.report), receipts[0])
+        with patch("paper_pov.scanner.sync_directory", wraps=real_sync) as sync_retry:
+            self.assertEqual(persist_report(self.latest, self.report), receipts[0])
+        self.assertEqual([call.args[0] for call in sync_retry.call_args_list],
+                         [receipts[0].parent, self.latest.parent])
         self.assertEqual(len(list((self.latest.parent / "receipts").glob("*.json"))), 1)
 
     def test_invalid_report_never_writes(self):
