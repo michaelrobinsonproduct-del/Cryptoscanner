@@ -10,6 +10,7 @@ on:
       - 'research/test_report_qualified_coverage.py'
       - 'research/test_learning_feedback.py'
       - 'research/test_evaluate_challenger.py'
+      - 'research/test_verified_depth_liquidity.py'
       - 'research/test_chronological_challenger.py'
       - 'research/evaluate_prospective_rounds.py'
       - 'research/test_evaluate_prospective_rounds.py'
@@ -43,7 +44,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: E2 focused chronological challenger regression
-        run: python -m unittest -v research.test_chronological_challenger research.test_evaluate_challenger research.test_learning_feedback research.test_report_qualified_coverage
+        run: python -m unittest -v research.test_chronological_challenger research.test_evaluate_challenger research.test_learning_feedback research.test_report_qualified_coverage research.test_verified_depth_liquidity
       - name: Integrated offline source and outcome acceptance
         run: |
           set -euo pipefail
