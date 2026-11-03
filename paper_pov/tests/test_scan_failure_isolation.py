@@ -64,6 +64,33 @@ class ScanFailureIsolationTests(unittest.TestCase):
             self.assertEqual(restored["forward_labels"], 0)
             self.assertFalse(restored["production_applied"])
 
+    def test_no_liquid_candidates_persist_distinct_coverage_abstention(self):
+        now = dt.datetime(2026, 11, 3, 5, 7, tzinfo=UTC)
+        pairs = {f"X{i:02d}USD": {"status": "online", "wsname": f"X{i:02d}/USD"}
+                 for i in range(20)}
+        ticker = {k: {"c": ["100"], "b": ["99.9"], "a": ["100.1"],
+                      "o": "100", "v": ["1", "10000"]} for k in pairs}
+        calls = []
+        def api(path):
+            calls.append(path)
+            if path == "AssetPairs":
+                return pairs
+            if path == "Ticker":
+                return ticker
+            raise AssertionError("OHLC should not be requested without candidates")
+        report = scan(api=api, clock=lambda: now, sleep=lambda _: None)
+        self.assertEqual(calls, ["AssetPairs", "Ticker"])
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_LIQUID_CANDIDATES")
+        self.assertEqual(report["observed_markets"], 20)
+        self.assertEqual(report["ohlc_screened"], 0)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["abstentions"], [])
+        self.assertFalse(report["buy_approved"])
+        with tempfile.TemporaryDirectory() as root:
+            latest = Path(root) / "latest.json"
+            receipt = persist_report(latest, report)
+            self.assertEqual(json.loads(receipt.read_text()), json.loads(latest.read_text()))
+
     def test_all_ohlc_failures_persist_truthful_zero_watch(self):
         now = dt.datetime(2026, 11, 3, 5, 7, tzinfo=UTC)
         pairs = {f"X{i:02d}USD": {"status": "online", "wsname": f"X{i:02d}/USD"}
