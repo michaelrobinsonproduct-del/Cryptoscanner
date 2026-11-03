@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import math
 
 PURGE_SECONDS = 48 * 3600
+MIN_ENTRY_LIQUIDITY_USD = 20.0
 
 
 def compare(rows, *, split_at, min_test=20):
@@ -27,6 +28,14 @@ def compare(rows, *, split_at, min_test=20):
             continue
         if not isinstance(row["ge30pct"], bool):
             raise ValueError("nonboolean qualified outcome")
+        # Entry liquidity is mandatory: never infer fillability from future depth.
+        liquidity = row.get("entry_liquidity_usd")
+        if type(liquidity) not in (int, float) or not math.isfinite(liquidity):
+            excluded["MISSING_ENTRY_LIQUIDITY"] += 1
+            continue
+        if liquidity < MIN_ENTRY_LIQUIDITY_USD:
+            excluded["INSUFFICIENT_ENTRY_LIQUIDITY"] += 1
+            continue
         scores = [row.get("baseline_score"), row.get("challenger_score")]
         if any(type(s) not in (int, float) or not math.isfinite(s) for s in scores):
             excluded["MISSING_POINT_IN_TIME_SCORES"] += 1
@@ -44,7 +53,7 @@ def compare(rows, *, split_at, min_test=20):
         return {"top_decile_n":len(top),"top_decile_hits":sum(r["ge30pct"] for r in top),
                 "top_decile_hit_rate":sum(r["ge30pct"] for r in top)/len(top) if top else None}
     result={"train_n":len(train),"held_out_n":len(held),"excluded":dict(excluded),
-            "purge_seconds":PURGE_SECONDS,"production_applied":False,
+            "purge_seconds":PURGE_SECONDS,"min_entry_liquidity_usd":MIN_ENTRY_LIQUIDITY_USD,"production_applied":False,
             "rule":"NO QUALIFIED RULE","held_out_lift":None}
     if len(train)<min_test or len(held)<min_test:
         return result
