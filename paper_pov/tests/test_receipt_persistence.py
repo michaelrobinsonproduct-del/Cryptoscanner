@@ -24,10 +24,30 @@ class ReceiptTests(unittest.TestCase):
 
     def test_duplicate_scan_does_not_replace_latest(self):
         receipt = persist_report(self.latest, self.report)
-        with self.assertRaises(FileExistsError):
+        with self.assertRaisesRegex(ValueError, "conflicting"):
             persist_report(self.latest, {**self.report, "watch": []})
         self.assertEqual(json.loads(receipt.read_text()), self.report)
         self.assertEqual(json.loads(self.latest.read_text()), self.report)
+
+    def test_exact_retry_is_idempotent_and_does_not_rewrite_latest(self):
+        receipt = persist_report(self.latest, self.report)
+        original = self.latest.read_bytes()
+        with patch("paper_pov.scanner.atomic_json", side_effect=AssertionError("unexpected rewrite")):
+            self.assertEqual(persist_report(self.latest, self.report), receipt)
+        self.assertEqual(self.latest.read_bytes(), original)
+        self.assertEqual(len(list((self.latest.parent / "receipts").glob("*.json"))), 1)
+
+    def test_missing_receipt_same_timestamp_rejected(self):
+        receipt = persist_report(self.latest, self.report)
+        receipt.unlink()
+        with self.assertRaisesRegex(ValueError, "incomplete"):
+            persist_report(self.latest, self.report)
+
+    def test_tampered_receipt_same_timestamp_rejected(self):
+        receipt = persist_report(self.latest, self.report)
+        receipt.write_text("{}")
+        with self.assertRaisesRegex(ValueError, "readback mismatch"):
+            persist_report(self.latest, self.report)
 
     def test_latest_failure_removes_new_receipt(self):
         with patch("paper_pov.scanner.atomic_json", side_effect=OSError("disk full")):
