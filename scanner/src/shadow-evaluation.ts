@@ -1,4 +1,4 @@
-export type ShadowEvidence={version:string;source_sha:string;qualified:boolean;held_out_samples:number;held_out_lift:number|null;outcome_ledger_sha:string;outcome_rows:number};
+export type ShadowEvidence={version:string;source_sha:string;qualified:boolean;held_out_samples:number;held_out_lift:number|null;outcome_ledger_sha:string;score_ledger_sha:string;outcome_rows:number};
 export type ShadowScore={pair:string;observed_at:string;version:string;score:number;computed_at:string;source_sha:string};
 export type ShadowOutcome={pair:string;observed_at:string;label:"HIT"|"MISS"|"ABSTAIN";source_sha:string};
 export type ShadowDecision={mode:"shadow_only";status:"SCORED"|"PENDING_OUTCOME"|"ABSTAIN";reason:string;challenger_version:string|null;baseline_score:number;challenger_score:number|null;outcome_label:string|null;production_promoted:false};
