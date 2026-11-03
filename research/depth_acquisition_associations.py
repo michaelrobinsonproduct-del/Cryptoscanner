@@ -111,6 +111,30 @@ def associate_captured_scores(captures_directory, depth_directory, associations_
 
 
 
+def verified_index_rows(round_index):
+    """Authenticate all indexed prospective source batches without writing."""
+    index = Path(round_index)
+    records = [json.loads(line) for line in index.read_text().splitlines() if line.strip()]
+    if len({r["batch"] for r in records}) != len(records):
+        raise ValueError("duplicate indexed batch")
+    rows, abstentions = [], []
+    for record in records:
+        batch = Path(record["batch"])
+        if not batch.is_dir() or batch.is_symlink():
+            raise ValueError("unsafe indexed batch directory")
+        manifest = batch / "manifest.json"
+        if manifest.is_symlink() or not manifest.is_file():
+            raise ValueError("unsafe indexed manifest")
+        if hashlib.sha256(manifest.read_bytes()).hexdigest() != record["manifest_sha256"]:
+            raise ValueError("indexed manifest mismatch")
+        verified, excluded = verified_rows(batch)
+        if len(verified) != record["snapshots_verified"] or len(excluded) != record["abstentions"]:
+            raise ValueError("indexed source coverage mismatch")
+        rows.extend(verified)
+        abstentions.extend(excluded)
+    return rows, abstentions, len(records)
+
+
 def associate_indexed_captures(captures_directory, round_index, associations_directory):
     """Match captured scores across immutable, manifest-verified prospective rounds."""
     from research.acquisition_receipt_pipeline import load_captures
