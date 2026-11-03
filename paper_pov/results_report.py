@@ -233,7 +233,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
                "excluded_stablecoin_pairs": scan["excluded_stablecoin_pairs"],
                "excluded_other_pairs": scan["excluded_other_pairs"],
                "observed_markets": len(observations),
-               "max_client_quote_age_seconds": max(ages),
+               "max_client_quote_age_seconds": max(ages) if ages else None,
                "exchange_event_freshness_verified": False, "candidates": records,
                "stablecoin_exclusion_count": scan["excluded_stablecoin_pairs"],
                "abstentions": len(abstentions),
