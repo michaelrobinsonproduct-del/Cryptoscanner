@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'research/prospective_*.py'
+      - 'research/evaluate_prospective_rounds.py'
+      - 'research/test_evaluate_prospective_rounds.py'
       - 'research/source_qualified_outcomes.py'
       - 'research/kraken_capture_rounds.py'
       - 'research/kraken_prospective_batch.py'
@@ -42,7 +44,8 @@ jobs:
             research.test_prospective_round_store \
             research.test_prospective_end_to_end \
             research.test_kraken_capture_rounds \
-            research.test_kraken_round_index_wiring
+            research.test_kraken_round_index_wiring \
+            research.test_evaluate_prospective_rounds
       - name: One-shot source collection and indexed evidence
         run: |
           set -euo pipefail
