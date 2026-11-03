@@ -60,6 +60,16 @@ class DepthAssociationTests(unittest.TestCase):
         self.assertEqual(report["associated"], [self.pid])
         self.assertFalse(report["production_applied"])
 
+    def test_auto_association_invalid_arguments_do_not_write(self):
+        with patch.object(sys, "argv", ["pipeline",
+                "--captures-directory", str(self.root / "scores"),
+                "--depth-directory", str(self.root / "raw"),
+                "--associations-directory", str(self.root / "depth-links"),
+                "--associate-verified-depth", "--output", str(self.root / "report.json")]):
+            with self.assertRaises(SystemExit):
+                main()
+        self.assertFalse((self.root / "depth-links").exists())
+
     @patch("research.depth_acquisition_associations.verified_rows")
     @patch("research.acquisition_receipt_pipeline.bind")
     def test_pipeline_auto_associates_before_evaluation(self, binder, rows):
