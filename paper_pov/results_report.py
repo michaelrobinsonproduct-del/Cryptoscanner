@@ -347,7 +347,7 @@ def verify_published(directory, *, run_id, source_sha, ledger_commit, ledger_sha
             originating_cron=payload.get("originating_cron"))
         if payload != expected_payload:
             raise ValueError("Published results differ from retained scan/scoreboard")
-        if (directory / "results.md").read_text() != expected_markdown + "\\n":
+        if (directory / "results.md").read_text() != expected_markdown + "\n":
             raise ValueError("Published markdown differs from retained evidence")
     return payload
 
