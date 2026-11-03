@@ -1,6 +1,9 @@
 """Adversarial offline owner fallback tests; no GitHub calls or ledger writes."""
 import copy
 import datetime as dt
+import json
+import tempfile
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 
@@ -48,6 +51,47 @@ def decide(**changes):
 
 
 class OwnerFallbackTests(unittest.TestCase):
+    def test_cli_atomic_decision_and_stale_authorization_removal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            f = fixture()
+            names = {
+                "event": "event.json", "paper_runs": "paper.json",
+                "shadow_runs": "shadow.json", "state": "ledger.json",
+                "manifest": "manifest.json",
+            }
+            for key, filename in names.items():
+                (root / filename).write_text(json.dumps(f[key]))
+            (root / "message.txt").write_text(f["ledger_message"])
+            output = root / "decision.json"
+            argv = []
+            for flag, filename in (
+                ("event", names["event"]), ("paper-runs", names["paper_runs"]),
+                ("shadow-runs", names["shadow_runs"]), ("ledger", names["state"]),
+                ("manifest", names["manifest"]), ("ledger-message", "message.txt"),
+            ):
+                argv.extend(["--" + flag, str(root / filename)])
+            argv.extend(["--repository", gate.REPO, "--current-run-id", str(CURRENT_ID),
+                         "--checkout-sha", SHA, "--output", str(output)])
+            with patch.object(gate.ledger, "verify"), patch.object(
+                    gate.dt, "datetime", wraps=dt.datetime) as clock:
+                clock.now.return_value = NOW
+                gate.main(argv)
+            self.assertEqual(json.loads(output.read_text())["action"], "RUN_SHADOW")
+            # A failed second invocation must remove stale authorization.
+            (root / names["event"]).write_text("{broken json")
+            with self.assertRaises(json.JSONDecodeError):
+                gate.main(argv)
+            self.assertFalse(output.exists())
+            # An ambiguous run history must publish a complete ABSTAIN decision.
+            (root / names["event"]).write_text(json.dumps(f["event"]))
+            shadow = {"workflow_runs": [{"id": []}]}
+            (root / names["shadow_runs"]).write_text(json.dumps(shadow))
+            with patch.object(gate.dt, "datetime", wraps=dt.datetime) as clock:
+                clock.now.return_value = NOW
+                gate.main(argv)
+            self.assertEqual(json.loads(output.read_text())["action"], "ABSTAIN")
+
     def test_valid_completed_sealed_dispatch_and_native(self):
         self.assertEqual(decide()["action"], "RUN_SHADOW")
         f = fixture()
