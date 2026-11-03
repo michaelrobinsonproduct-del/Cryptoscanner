@@ -12,12 +12,10 @@ import tempfile
 from pathlib import Path
 
 from paper_pov import ledger
-from paper_pov.external_heartbeat_guard import _owner_identity
+from paper_pov.external_heartbeat_guard import _owner_identity, OWNER, OWNER_ID, REPOSITORY
 from paper_pov.segmented_storage import MAX_RAW_BYTES
 
-REPO = "michaelrobinsonproduct-del/Cryptoscanner"
-OWNER = "michaelrobinsonproduct-del"
-OWNER_ID = 336805669
+REPO = REPOSITORY
 PAPER = "Public Kraken Paper POV (scheduled, isolated ledger)"
 PAPER_PATH = ".github/workflows/paper-pipeline.yml"
 SHADOW = "Independent legacy-inspired PAPER shadow (read only)"
