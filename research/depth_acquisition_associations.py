@@ -151,6 +151,9 @@ def associate_indexed_captures(captures_directory, round_index, associations_dir
         if len(matches) != 1:
             excluded.append({"prediction_id": pid, "reason": "NO_UNIQUE_TIMELY_DEPTH"})
             continue
+        if matches[0].get("entry_liquidity_usd") is None or matches[0]["entry_liquidity_usd"] < 20:
+            excluded.append({"prediction_id": pid, "reason": "INSUFFICIENT_VERIFIED_LIQUIDITY"})
+            continue
         receipt = hashlib.sha256((Path(captures_directory) / (pid + ".json")).read_bytes()).hexdigest()
         write_association(associations_directory, prediction_id=pid,
                           pair=capture["pair"], source_sha256=matches[0]["source_sha256"],
