@@ -31,12 +31,18 @@ jobs:
             echo "::error::Set repository Actions secret OPENAI_API_KEY to enable autonomous code development"
             exit 1
           fi
+      - name: Prepare dedicated non-sudo coding user
+        run: |
+          sudo useradd --create-home --shell /bin/bash codexagent
+          sudo chown -R codexagent:codexagent "$GITHUB_WORKSPACE"
       - name: Implement next issue 34 development delta
         id: codex
         uses: openai/codex-action@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           sandbox: workspace-write
+          safety-strategy: unprivileged-user
+          codex-user: codexagent
           prompt: |
             You are the autonomous developer for this repository. Implement actual code now.
             Objective: complete the GitHub-native Kraken paper scanner and continuous measured learning.
