@@ -74,5 +74,38 @@ class SnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate"):
             read_snapshot(self.latest, NOW)
 
+    def test_coverage_cannot_exceed_eligible(self):
+        self.report["observed_markets"] = 21
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "coverage exceeds"):
+            read_snapshot(self.latest, NOW)
+
+    def test_abstention_counts_reject_negative_and_boolean(self):
+        for bad in (-1, True, 1.5):
+            with self.subTest(bad=bad):
+                self.report["abstention_counts"] = {"ohlc_gap_or_schema": bad}
+                self.seal()
+                with self.assertRaisesRegex(ValueError, "invalid abstention"):
+                    read_snapshot(self.latest, NOW)
+
+    def test_watch_cannot_exceed_observed(self):
+        self.report["observed_markets"] = 0
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "watch exceeds"):
+            read_snapshot(self.latest, NOW)
+
+    def test_receipt_directory_symlink_rejected(self):
+        receipt_dir = self.latest.parent / "receipts"
+        target = self.latest.parent / "external"
+        receipt_dir.rename(target)
+        receipt_dir.symlink_to(target, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "immutable receipt"):
+            read_snapshot(self.latest, NOW)
+
+    def test_non_object_json_rejected(self):
+        self.latest.write_text("[]")
+        with self.assertRaisesRegex(ValueError, "invalid snapshot object"):
+            read_snapshot(self.latest, NOW)
+
 if __name__ == "__main__":
     unittest.main()
