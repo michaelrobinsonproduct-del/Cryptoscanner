@@ -281,17 +281,32 @@ jobs:
           failed = [v for v in runs if v["conclusion"] in
                     ("failure", "timed_out", "cancelled", "action_required", "startup_failure")]
           pending = [v for v in runs if v["status"] != "completed"]
+          # A green completed run does not establish unattended schedule coverage.
+          # Detect missing schedule execution independently of manual dispatches.
+          scheduled = [v for v in runs if v["event"] == "schedule"]
+          last_schedule = max((dt.datetime.fromisoformat(
+              v["created_at"].replace("Z", "+00:00")) for v in scheduled),
+              default=None)
+          schedule_gap_minutes = (round((now - last_schedule).total_seconds() / 60, 1)
+                                  if last_schedule else None)
+          schedule_gap = last_schedule is None or schedule_gap_minutes > 90
           report = {"schema": "paper_source_run_health_v1",
                     "window_hours": 24, "observed_at": now.isoformat(),
                     "runs": runs, "failed_count": len(failed),
                     "pending_count": len(pending),
                     "observed_run_count": len(runs),
+                    "scheduled_run_count": len(scheduled),
+                    "last_scheduled_at": last_schedule.isoformat() if last_schedule else None,
+                    "schedule_gap_minutes": schedule_gap_minutes,
+                    "schedule_gap_observed": schedule_gap,
                     "production_applied": False,
                     "query_verified": not query_failed,
                     "status": "SOURCE_QUERY_FAILED" if query_failed else
                               "FAILURES_OBSERVED" if failed else
                               "RUNS_PENDING" if pending else
-                              "NO_RECENT_RUNS" if not runs else "NO_FAILURES_OBSERVED"}
+                              "NO_RECENT_RUNS" if not runs else
+                              "SCHEDULE_GAP_OBSERVED" if schedule_gap else
+                              "NO_FAILURES_OBSERVED"}
           Path("/tmp/d2-source-health/health.json").write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
           print("D2_SOURCE_RUN_HEALTH", json.dumps(report, sort_keys=True))
           if query_failed:
