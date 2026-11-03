@@ -204,7 +204,10 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                 "ohlc_last_closed_at": dt.datetime.fromtimestamp(starts[-1] + 300, UTC).isoformat(),
                 "ohlc_age_seconds": round(age), "status": "PAPER_WATCH"})
             watch.append(item)
-        except (ValueError, TypeError, KeyError, StopIteration, IndexError, ZeroDivisionError) as exc:
+        except (ValueError, TypeError, KeyError, StopIteration, IndexError, ZeroDivisionError,
+                OSError, TimeoutError, RuntimeError) as exc:
+            # A failed Kraken OHLC request abstains this market rather than
+            # discarding other independently validated candidates.
             abstentions.append({"pair": item["pair"], "reason": str(exc)[:100]})
         sleep(0.15)
     completed = clock().astimezone(UTC)
