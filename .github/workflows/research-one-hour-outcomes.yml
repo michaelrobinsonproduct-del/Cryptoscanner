@@ -1,10 +1,13 @@
 name: Research one-hour source-qualified outcome capture (manual only)
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/research-one-hour-outcomes.yml'
 permissions:
   contents: read
 concurrency:
-  group: research-one-hour-outcomes
+  group: research-one-hour-outcomes-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: false
 jobs:
   observed-one-hour:
@@ -13,10 +16,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Assert exact source SHA
         env:
-          EXPECTED_SHA: ${{ github.sha }}
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
