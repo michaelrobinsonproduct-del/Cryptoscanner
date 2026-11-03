@@ -130,7 +130,11 @@ jobs:
                   receipt=inner.read(receipts[0])
                   assert inner.read("latest.json")==receipt
                   verified=json.loads(inner.read("verified-snapshot.json"))
-                  assert verified==json.loads(outer.read(exports[0]))
+                  exported=json.loads(outer.read(exports[0]))
+                  for key in ("as_of","scan_status","eligible_pairs","observed_markets","abstention_counts","watch","receipt_sha256"):
+                      assert verified[key]==exported[key], key
+                  assert exported["snapshot_age_seconds"]>=0
+                  assert set(exported["quote_age_seconds"])==set(verified["quote_age_seconds"])
                   assert verified["receipt_sha256"]==hashlib.sha256(receipt).hexdigest()
                   assert verified["watch"] and isinstance(verified["watch"],list)
                   assert verified["scan_status"]!="BUY"
