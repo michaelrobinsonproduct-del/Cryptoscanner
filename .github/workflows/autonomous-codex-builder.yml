@@ -42,6 +42,7 @@ jobs:
           sudo -u codexagent test -x /home/runner
           sudo -u codexagent test -w /tmp
           sudo -u codexagent test -x /tmp
+          sudo -u codexagent sh -c 'printf ready > "$1"; rm "$1"' sh "$GITHUB_WORKSPACE/.codex-write-preflight"
       - name: Implement scanner repairs and enhancements
         id: codex
         uses: openai/codex-action@v1
@@ -50,6 +51,7 @@ jobs:
           sandbox: workspace-write
           safety-strategy: unprivileged-user
           codex-user: codexagent
+          output-file: ${{ github.workspace }}/.codex-last-message.md
           prompt: |
             You are the one-shot autonomous implementation agent. The user starts this workflow ONCE.
             Your task is to COMPLETE the remaining scanner repair and enhancement work in this execution,
@@ -74,6 +76,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           sudo chown -R runner:runner "$GITHUB_WORKSPACE"
+          rm -f "$GITHUB_WORKSPACE/.codex-last-message.md"
           git add -A
           if git diff --cached --quiet; then
             echo "No code delta produced this run" >> "$GITHUB_STEP_SUMMARY"
