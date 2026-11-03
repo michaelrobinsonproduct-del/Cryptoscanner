@@ -187,6 +187,52 @@ class PaperResultsContracts(unittest.TestCase):
         self.assertIn("NOT VERIFIED (zero observations)", markdown)
         self.assertIn("No qualifying WATCH candidates", markdown)
 
+
+    def test_reject_inconsistent_market_evidence_before_reporting(self):
+        for mode in ("screened_without_quotes", "watch_exceeds_screened"):
+            with self.subTest(mode=mode):
+                scan, score = fixture()
+                if mode == "screened_without_quotes":
+                    scan["observations"] = []
+                    scan["observed_markets"] = 0
+                    scan["watch"] = []
+                    scan["ohlc_screened"] = 1
+                    error = "No quote observations"
+                else:
+                    scan["ohlc_screened"] = 1
+                    error = "WATCH count exceeds screened"
+                with self.assertRaisesRegex(ValueError, error):
+                    self.report(scan, score)
+
+    def test_zero_observation_cli_artifact_and_checksums(self):
+        import hashlib
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from paper_pov.results_report import main
+        scan, score = fixture()
+        scan.update(observations=[], observed_markets=0, ohlc_screened=0, watch=[])
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, board, output = root / "scan.json", root / "score.json", root / "results"
+            source.write_text(json.dumps(scan))
+            board.write_text(json.dumps(score))
+            args = ["results", "--scan", str(source), "--scoreboard", str(board),
+                    "--run-id", "41235442591", "--source-sha", SHA,
+                    "--ledger-commit", LEDGER, "--event", "workflow_dispatch",
+                    "--output-dir", str(output)]
+            with patch("sys.argv", args):
+                main()
+            payload = json.loads((output / "results.json").read_text())
+            self.assertEqual(payload["status"], "ABSTAIN_NO_OBSERVATIONS")
+            self.assertIsNone(payload["max_client_quote_age_seconds"])
+            self.assertEqual(payload["candidates"], [])
+            self.assertFalse(payload["buy_approved"])
+            for line in (output / "SHA256SUMS").read_text().splitlines():
+                digest, name = line.split("  ", 1)
+                self.assertEqual(hashlib.sha256((output / name).read_bytes()).hexdigest(), digest)
+
     def test_reject_trading_authorization(self):
         s, b = fixture()
         s["buy_approved"] = True
