@@ -20,8 +20,8 @@ def fixture():
         "excluded_other_pairs": 2,
         "ohlc_screened": 2, "abstentions": [{"pair": "XYZUSD", "reason": "gap"}],
         "observations": [
-            {"pair": "XBTUSD", "symbol": "XBT/USD", "price": 71000.0, "observed_at": QUOTE},
-            {"pair": "ETHUSD", "symbol": "ETH/USD", "price": 4000.0, "observed_at": QUOTE},
+            {"pair": "XBTUSD", "symbol": "XBT/USD", "price": 71000.0, "observed_at": QUOTE, "source": "kraken_public_ticker_client_observed"},
+            {"pair": "ETHUSD", "symbol": "ETH/USD", "price": 4000.0, "observed_at": QUOTE, "source": "kraken_public_ticker_client_observed"},
         ],
         "watch": [],
     }
