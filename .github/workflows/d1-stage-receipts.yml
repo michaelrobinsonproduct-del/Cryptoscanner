@@ -254,7 +254,7 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/d2-source-health
           if ! gh api "repos/$REPO/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/d2-source-health/runs.json; then
-            printf '{"workflow_runs": [], "query_failed": true}\\n' > /tmp/d2-source-health/runs.json
+            echo '{"workflow_runs": [], "query_failed": true}' > /tmp/d2-source-health/runs.json
           fi
           python - <<'PY'
           import datetime as dt
