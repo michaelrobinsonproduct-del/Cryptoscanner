@@ -151,10 +151,15 @@ def main():
     import argparse
     from research.acquisition_receipt_pipeline import write_new
     p = argparse.ArgumentParser()
-    for name in ("captures-directory", "depth-directory", "associations-directory", "report"):
+    for name in ("captures-directory", "associations-directory", "report"):
         p.add_argument("--" + name, required=True)
+    source = p.add_mutually_exclusive_group(required=True)
+    source.add_argument("--depth-directory")
+    source.add_argument("--round-index")
     a = p.parse_args()
-    report = associate_captured_scores(a.captures_directory, a.depth_directory, a.associations_directory)
+    report = (associate_indexed_captures(a.captures_directory, a.round_index, a.associations_directory)
+              if a.round_index else associate_captured_scores(
+                  a.captures_directory, a.depth_directory, a.associations_directory))
     write_new(a.report, report)
     print(json.dumps({"associated": len(report["associated"]), "excluded": len(report["excluded"])}))
 
