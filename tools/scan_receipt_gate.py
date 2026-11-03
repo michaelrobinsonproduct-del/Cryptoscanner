@@ -18,6 +18,18 @@ def parse_time(value):
     return stamp.astimezone(dt.timezone.utc)
 
 
+STABLECOIN_SYMBOLS = frozenset(("USDT", "USDC", "DAI", "PYUSD", "TUSD", "USDD", "FDUSD", "USDE", "RLUSD", "EURC", "GUSD", "USDP"))
+
+
+def is_stablecoin_pair(pair):
+    """Conservative independent denylist for Kraken compact or slash pairs."""
+    if not isinstance(pair, str):
+        return False
+    normalized = pair.upper().replace("/", "").replace("-", "")
+    return any(normalized.startswith(token) or normalized.endswith(token)
+               for token in STABLECOIN_SYMBOLS)
+
+
 def validate_receipt(receipt, *, now, max_age_seconds=600):
     """Return machine-readable failures; accept only explicit source evidence."""
     if not isinstance(receipt, dict):
@@ -57,6 +69,8 @@ def validate_receipt(receipt, *, now, max_age_seconds=600):
         pair = candidate.get("pair")
         if not isinstance(pair, str) or not pair.strip():
             errors.append(prefix + "invalid_pair")
+        elif is_stablecoin_pair(pair):
+            errors.append(prefix + "stablecoin_pair")
         elif pair in seen:
             errors.append(prefix + "duplicate_pair")
         else:
