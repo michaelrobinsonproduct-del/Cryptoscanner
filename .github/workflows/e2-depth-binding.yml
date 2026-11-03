@@ -31,6 +31,11 @@ jobs:
           python-version: '3.11'
       - name: Focused immutable depth association acceptance
         run: python -m unittest -v research.test_depth_acquisition_associations
+      - name: Exercise research association CLI help and no-write guard
+        run: |
+          python -m research.depth_acquisition_associations --help > /tmp/e-association-cli.txt
+          grep -q -- '--captures-directory' /tmp/e-association-cli.txt
+          grep -q -- '--associations-directory' /tmp/e-association-cli.txt
 
   real-paper-learning-bridge:
     runs-on: ubuntu-latest
