@@ -307,13 +307,18 @@ def persist_report(latest_path, report):
     with open(lock_path, "a+b") as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
         if latest_path.exists():
-            current = json.loads(latest_path.read_text())
-            current_stamp = utc(current["as_of"])
-            if current_stamp > stamp:
+            try:
+                current = json.loads(latest_path.read_text())
+                current_stamp = utc(current["as_of"])
+            except (ValueError, KeyError, TypeError, UnicodeError):
+                # A torn/invalid latest may be repaired ONLY from the exact
+                # independently sealed immutable receipt for this report.
+                if not receipt.exists() or receipt.read_bytes() != payload:
+                    raise ValueError("invalid latest without matching sealed receipt")
+                current_stamp = None
+            if current_stamp is not None and current_stamp > stamp:
                 raise ValueError("out-of-order scan cannot replace newer latest")
             if current_stamp == stamp:
-                # A retried job must not create another receipt or rewrite latest.
-                # Same timestamp with different bytes is a conflict, not a replay.
                 if latest_path.read_bytes() != payload or not receipt.exists():
                     raise ValueError("conflicting or incomplete same-timestamp scan replay")
                 if receipt.read_bytes() != payload:
