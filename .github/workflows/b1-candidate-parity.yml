@@ -93,6 +93,16 @@ jobs:
         env:
           B1_REAL_A2_VERIFIED_FILE: ${{ runner.temp }}/b1-real-a2/verified-snapshot.json
         run: bun test scanner/src/a2-snapshot.test.ts
+      - name: Publish authenticated A2 snapshot for C read-only integration
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b-authenticated-a2-snapshot
+          path: |
+            ${{ runner.temp }}/b1-real-a2/authenticated-consumer/transport.zip
+            ${{ runner.temp }}/b1-real-a2/verified-snapshot.json
+          if-no-files-found: error
+          retention-days: 7
       - name: Verify exact B checkout
         run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 
