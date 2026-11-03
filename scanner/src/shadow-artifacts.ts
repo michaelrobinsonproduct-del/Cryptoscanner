@@ -30,6 +30,7 @@ export async function verifyShadowLedger(artifacts:ShadowArtifacts):Promise<Shad
  if(!artifacts.evidence)return artifacts;
  const digest=async(v:unknown)=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(JSON.stringify(v))))).map(x=>x.toString(16).padStart(2,"0")).join("");
  if((await digest(artifacts.outcomes)).toLowerCase()!==artifacts.evidence.outcome_ledger_sha.toLowerCase())throw Error("shadow_ledger_digest_mismatch");
+ if((await digest(artifacts.scores)).toLowerCase()!==artifacts.evidence.score_ledger_sha.toLowerCase())throw Error("shadow_score_digest_mismatch");
  return artifacts;
 }
 export function createReadOnlyShadowLoader(url:string|undefined,fetcher:typeof fetch=fetch,trustedSourceSha?:string):()=>Promise<ShadowArtifacts>{
