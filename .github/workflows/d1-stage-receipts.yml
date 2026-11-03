@@ -1,0 +1,27 @@
+name: D1 focused durable stage receipts
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/ledger.py'
+      - 'paper_pov/segmented_live_writer.py'
+      - 'paper_pov/test_ledger_readback.py'
+      - 'paper_pov/test_stage_receipts.py'
+      - '.github/workflows/d1-stage-receipts.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact-head focused tests
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python -m unittest paper_pov.test_ledger_readback paper_pov.test_stage_receipts -v
