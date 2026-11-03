@@ -114,7 +114,11 @@ jobs:
                                           "error": type(exc).__name__}
                   result["all_recovered"] = False
           Path("/tmp/d2-recovery/recovery.json").write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
-          print("D2_RECOVERY_REPORT", json.dumps(result, sort_keys=True))
+          # Reopen the exact bytes downstream consumers download, not the in-memory object.
+          persisted = json.loads(Path("/tmp/d2-recovery/recovery.json").read_text())
+          if persisted != result:
+              raise SystemExit("D2 persisted recovery receipt differs from source")
+          print("D2_RECOVERY_REPORT", json.dumps(persisted, sort_keys=True))
           if not result["all_recovered"]:
               raise SystemExit("D2 recovery incomplete")
           PY
