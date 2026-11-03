@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from research.prospective_round_store import evaluate_index
 from research.chronological_challenger import compare
+from research.learning_feedback import decide, append_decision
+import hashlib
 
 
 def evaluate(index_path, scores_path, split_at):
@@ -48,8 +50,22 @@ def main():
     p.add_argument("--round-index",required=True)
     p.add_argument("--score-receipts",required=True)
     p.add_argument("--split-at",required=True,type=float)
+    p.add_argument("--baseline-version")
+    p.add_argument("--challenger-version")
+    p.add_argument("--learning-ledger")
     args=p.parse_args()
-    print("CHRONOLOGICAL_CHALLENGER",json.dumps(evaluate(args.round_index,args.score_receipts,args.split_at),sort_keys=True))
+    result=evaluate(args.round_index,args.score_receipts,args.split_at)
+    print("CHRONOLOGICAL_CHALLENGER",json.dumps(result,sort_keys=True))
+    if args.learning_ledger:
+        if not args.baseline_version or not args.challenger_version:
+            p.error("learning ledger requires both version IDs")
+        evidence_hash=hashlib.sha256(
+            (Path(args.round_index).read_bytes()+Path(args.score_receipts).read_bytes())).hexdigest()
+        decision=decide(result,baseline_version=args.baseline_version,
+                        challenger_version=args.challenger_version,
+                        evidence_sha256=evidence_hash)
+        record=append_decision(args.learning_ledger,decision)
+        print("SHADOW_LEARNING_DECISION",json.dumps(record,sort_keys=True))
 
 
 if __name__=="__main__":
