@@ -1,5 +1,5 @@
 import {createCycleHttpHandler} from "./cycle-http";
-import {createA2SnapshotReader} from "./a2-snapshot";
+import {createA2SnapshotReader,createA2VerifiedFileReader} from "./a2-snapshot";
 import {createPaperReceiptReader} from "./paper-receipt";
 import {createReadOnlyShadowLoader} from "./shadow-artifacts";
 import {createCycleRunner} from "./cycle-runner";
@@ -7,6 +7,6 @@ const port=Number(process.env.PORT||3000),controlUrl=process.env.CONTROL_COLLECT
 async function json(url:string){const r=await fetch(url,{signal:AbortSignal.timeout(45000)});if(!r.ok)throw Error(`HTTP ${r.status}`);return r.json() as Promise<any>}
 async function confirm(pair:string){const x=await json(`${confirmUrl}/confirm?pair=${encodeURIComponent(pair)}`);return {pair:x.pair??x.symbol??pair,success:!!x.success,twoSidedBook:!!(x.two_sided_book??x.twoSidedBook),executableBbo:!!(x.executable_bbo??x.executableBbo),recentTradeConfirmation:!!(x.recent_trade_confirmation??x.recentTradeConfirmation),newestTradeAgeSeconds:x.newest_trade_age_seconds??x.newestTradeAgeSeconds??null,bestBid:x.best_bid??x.bestBid??null,bestAsk:x.best_ask??x.bestAsk??null,fetchedAt:x.fetched_at??x.fetchedAt??""}}
 const deps={scan:()=>json(`${controlUrl}/scan`),confirm,pause:(ms:number)=>Bun.sleep(ms),now:()=>new Date()};
-const runner=createCycleRunner(deps,createReadOnlyShadowLoader(process.env.SHADOW_ARTIFACT_URL,fetch,process.env.SHADOW_TRUSTED_SOURCE_SHA,process.env.SHADOW_RESEARCH_GATE_URL,process.env.SHADOW_TRUSTED_RESEARCH_SHA),createPaperReceiptReader(process.env.PAPER_RECEIPT_URL,()=>new Date()),createA2SnapshotReader(process.env.A2_VERIFIED_SNAPSHOT_URL,()=>new Date()));
+const runner=createCycleRunner(deps,createReadOnlyShadowLoader(process.env.SHADOW_ARTIFACT_URL,fetch,process.env.SHADOW_TRUSTED_SOURCE_SHA,process.env.SHADOW_RESEARCH_GATE_URL,process.env.SHADOW_TRUSTED_RESEARCH_SHA),createPaperReceiptReader(process.env.PAPER_RECEIPT_URL,()=>new Date()),process.env.A2_VERIFIED_SNAPSHOT_FILE ? createA2VerifiedFileReader(process.env.A2_VERIFIED_SNAPSHOT_FILE,()=>new Date()) : createA2SnapshotReader(process.env.A2_VERIFIED_SNAPSHOT_URL,()=>new Date()));
 setTimeout(()=>{void(async()=>{for(;;){await runner.run("scheduled");await Bun.sleep(300000)}})()},5000);
 Bun.serve({port,fetch:createCycleHttpHandler(runner)});
