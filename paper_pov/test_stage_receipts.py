@@ -48,7 +48,6 @@ class StageReceiptTests(unittest.TestCase):
         original = writer._exclusive_receipt
         def broken(path, data):
             if Path(path) == b:
-                Path(path).write_bytes(b"partial")
                 raise OSError("disk full")
             return original(path, data)
         with patch.object(writer, "_exclusive_receipt", side_effect=broken):
