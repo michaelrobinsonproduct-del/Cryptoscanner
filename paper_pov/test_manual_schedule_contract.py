@@ -66,9 +66,9 @@ class ManualScheduledContractTests(unittest.TestCase):
         manual, scheduled = self.pair()
         def archive(path, payload, *, corrupt=False, extra=False):
             data = json.dumps(payload, sort_keys=True).encode()
-            markdown = b"# verified paper result\\n"
-            manifest = (hashlib.sha256(data).hexdigest() + "  results.json\\n"
-                        + hashlib.sha256(markdown).hexdigest() + "  results.md\\n").encode()
+            markdown = b"# verified paper result\n"
+            manifest = (hashlib.sha256(data).hexdigest() + "  results.json\n"
+                        + hashlib.sha256(markdown).hexdigest() + "  results.md\n").encode()
             with zipfile.ZipFile(path, "w") as z:
                 z.writestr("results.json", data + (b" " if corrupt else b""))
                 z.writestr("results.md", markdown)
