@@ -43,10 +43,10 @@ def qualify(entry, observations, horizon_hours=1):
             receipt = row["source_sha256"]
             if not isinstance(receipt, str) or len(receipt) != 64 or any(c not in "0123456789abcdef" for c in receipt):
                 return {"status": "ABSTAIN_SOURCE_RECEIPT"}
-            if row["pair"] != entry["pair"] or abs(observed - (start + i * STEP)) > SLOT_TOLERANCE:
-                return {"status": "ABSTAIN_PATH_GAP"}
             if observed < event or observed - event > MAX_AGE:
                 return {"status": "ABSTAIN_OBSERVATION_TIME"}
+            if row["pair"] != entry["pair"] or abs(observed - (start + i * STEP)) > SLOT_TOLERANCE:
+                return {"status": "ABSTAIN_PATH_GAP"}
             if i and observed <= float(rows[i - 1]["first_observed_at"]):
                 return {"status": "ABSTAIN_PATH_GAP"}
             if i:
