@@ -50,6 +50,15 @@ jobs:
       - name: Install coding agent
         if: env.complete != 'true'
         run: npm install --global @openai/codex
+      - name: Authenticate Codex with existing API key
+        if: env.complete != 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$OPENAI_API_KEY" || { echo "::error::OpenAI API key is empty"; exit 1; }
+          printf '%s' "$OPENAI_API_KEY" | codex login --with-api-key
+          codex login status
       - name: Implement next unfinished scanner and learning work
         if: env.complete != 'true'
         env:
