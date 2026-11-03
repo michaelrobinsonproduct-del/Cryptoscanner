@@ -179,6 +179,9 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
                         "spread_bps": p["spread_bps"], "baseline_score": p["baseline_score"],
                         "challenger_score": p["challenger_score"],
                         "quote_observed_at": quote["observed_at"],
+                        "quote_source": quote["source"],
+                        "client_quote_age_seconds": (as_of - _utc(quote["observed_at"])).total_seconds(),
+                        "exchange_event_freshness_verified": False,
                         "ohlc_age_seconds": p["ohlc_age_seconds"],
                         "prediction_id": p["prediction_id"]})
         lines.append(f"| {index} | {symbol} | {price:.8g} | "
