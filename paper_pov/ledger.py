@@ -305,4 +305,11 @@ def update_file(input_path, report_path, source_sha, output_path):
     report = json.loads(Path(report_path).read_text())
     next_state = advance(state, report, source_sha)
     atomic_json(output_path, next_state)
-    return scoreboard(next_state)
+    # Local persistence is not successful until the exact bytes are readable
+    # and the complete ledger contract still holds. Do not emit a green
+    # scoreboard for a missing, truncated or silently replaced write.
+    persisted = json.loads(Path(output_path).read_text())
+    verify(persisted)
+    if canonical(persisted) != canonical(next_state):
+        raise ValueError("Persisted ledger readback differs from proposed generation")
+    return scoreboard(persisted)

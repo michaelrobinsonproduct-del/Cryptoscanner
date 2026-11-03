@@ -165,6 +165,17 @@ jobs:
             --output-dir paper_pov/output/results
           (cd paper_pov/output/results && sha256sum -c SHA256SUMS)
           cat paper_pov/output/results/results.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Independently verify published results and remote ledger identity
+        run: |
+          set -euo pipefail
+          LEDGER_COMMIT="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+          LEDGER_SHA="$(python -c 'import json;print(json.load(open("paper_pov/output/scoreboard.json"))["ledger_sha256"])')"
+          python -m paper_pov.results_report --verify-only \
+            --run-id "$GITHUB_RUN_ID" --source-sha "$GITHUB_SHA" \
+            --ledger-commit "$LEDGER_COMMIT" --ledger-sha256 "$LEDGER_SHA" \
+            --scan paper_pov/output/latest.json \
+            --scoreboard paper_pov/output/scoreboard.json \
+            --output-dir paper_pov/output/results
       - name: Preserve public human-readable paper results
         uses: actions/upload-artifact@v4
         with:

@@ -1,0 +1,34 @@
+name: D1 focused durable stage receipts
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/ledger.py'
+      - 'paper_pov/segmented_live_writer.py'
+      - 'paper_pov/test_ledger_readback.py'
+      - 'paper_pov/test_stage_receipts.py'
+      - 'paper_pov/test_segmented_live_writer.py'
+      - 'paper_pov/results_report.py'
+      - '.github/workflows/paper-pipeline.yml'
+      - 'paper_pov/test_results_report.py'
+      - 'paper_pov/test_source_bound_publication.py'
+      - 'paper_pov/replay_downloaded_artifacts.py'
+      - 'paper_pov/test_replay_downloaded_artifacts.py'
+      - '.github/workflows/d1-stage-receipts.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact-head focused tests
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python -m unittest paper_pov.test_ledger_readback paper_pov.test_stage_receipts paper_pov.test_segmented_live_writer.LiveWriterTests.test_actual_bare_remote_push_fetch_and_verified_replay paper_pov.test_results_report.PaperResultsContracts.test_realistic_report_is_readable_and_not_a_buy_signal paper_pov.test_results_report.PaperResultsContracts.test_zero_qualifying_watch_is_successful_abstention paper_pov.test_results_report.PaperResultsContracts.test_zero_observations_disclose_unverified_freshness paper_pov.test_results_report.PaperResultsContracts.test_reject_inconsistent_market_evidence_before_reporting paper_pov.test_results_report.PaperResultsContracts.test_zero_observation_cli_artifact_and_checksums paper_pov.test_results_report.PaperResultsContracts.test_atomic_result_publication_rejects_existing_and_cleans_failed_stage paper_pov.test_results_report.PaperResultsContracts.test_published_result_readback_rejects_tamper_and_wrong_ledger paper_pov.test_results_report.PaperResultsContracts.test_independent_quote_freshness_and_candidate_provenance_readback paper_pov.test_source_bound_publication paper_pov.test_replay_downloaded_artifacts -v
