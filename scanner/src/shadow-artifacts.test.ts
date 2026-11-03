@@ -15,7 +15,7 @@ test("HTTP manual and scheduled both load read-only outcome artifacts and shadow
  let gets=0;
  const verifiedEvidence={...evidence,outcome_ledger_sha:await digest(outcomes),score_ledger_sha:await digest(scores)};
  const fetcher=async(url:any,opts:any)=>{gets++;expect(opts.method).toBe("GET");expect(opts.redirect).toBe("error");return new Response(JSON.stringify(url===gateUrl?researchGate:{evidence:verifiedEvidence,outcomes,scores}),{status:200})};
- const runner=createCycleRunner(deps,createReadOnlyShadowLoader("https://example.org/ledger.json",fetcher as any,source,gateUrl));
+ const runner=createCycleRunner(deps,createReadOnlyShadowLoader("https://example.org/ledger.json",fetcher as any,source,gateUrl,source));
  const manual=await (await createCycleHttpHandler(runner)(new Request("http://localhost/cycle"))).json();
  const scheduled=await runner.run("scheduled");
  expect(manual).toEqual(scheduled.result);expect(gets).toBe(4);
@@ -72,7 +72,7 @@ test("corrupt authenticated ledger is visibly rejected by both manual and schedu
 
 test("independent E3 decision gate rejects KEEP_BASELINE and source mismatch before shadow scoring",async()=>{
  const verified={...evidence,outcome_ledger_sha:await digest(outcomes),score_ledger_sha:await digest(scores)};
- const loader=(gate:unknown)=>createReadOnlyShadowLoader("https://example.org/ledger.json",async(url:any)=>new Response(JSON.stringify(url===gateUrl?gate:{evidence:verified,outcomes,scores})) as any,source,gateUrl);
+ const loader=(gate:unknown)=>createReadOnlyShadowLoader("https://example.org/ledger.json",async(url:any)=>new Response(JSON.stringify(url===gateUrl?gate:{evidence:verified,outcomes,scores})) as any,source,gateUrl,source);
  await expect(loader({...researchGate,shadow_decision:{...researchGate.shadow_decision,decision:"KEEP_BASELINE"}})()).rejects.toThrow("research_gate_not_qualified");
  await expect(loader({...researchGate,shadow_decision:{...researchGate.shadow_decision,evidence_sha256:"c".repeat(64)}})()).rejects.toThrow("unqualified_research_gate");
  const runner=createCycleRunner(deps,loader({...researchGate,shadow_decision:{...researchGate.shadow_decision,decision:"KEEP_BASELINE"}}));
