@@ -108,6 +108,13 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
             raise ValueError("Stale, future, or invalid quote")
         ages.append(age)
         quotes[pair] = o
+    # Do not turn malformed partial market coverage into a green abstention.
+    # The scanner may legitimately return zero observations, but a report
+    # claiming OHLC screens or WATCH candidates without quotes is corrupt.
+    if not observations and (scan["ohlc_screened"] or watches):
+        raise ValueError("No quote observations for OHLC/WATCH evidence")
+    if len(watches) > scan["ohlc_screened"]:
+        raise ValueError("WATCH count exceeds screened OHLC evidence")
     result_status = ("ABSTAIN_NO_OBSERVATIONS" if not observations else
                      "ABSTAIN_NO_WATCH" if not watches else "SUCCESS_PAPER_ONLY")
     lines = [
