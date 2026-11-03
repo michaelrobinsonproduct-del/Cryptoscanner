@@ -136,7 +136,8 @@ def source_only_coverage(round_index, output):
     """Execute E1 without requiring unrelated paper score/depth receipts."""
     if not round_index:
         raise ValueError("authenticated round index required")
-    report = {"mode": "RESEARCH_ONLY_SOURCE_COVERAGE",
+    report = {"round_index_sha256": hashlib.sha256(Path(round_index).read_bytes()).hexdigest(),
+              "mode": "RESEARCH_ONLY_SOURCE_COVERAGE",
               "horizon_coverage": evaluate_horizons(round_index),
               "production_applied": False}
     return write_new(output, report)
