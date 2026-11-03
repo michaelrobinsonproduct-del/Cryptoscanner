@@ -6,7 +6,7 @@ from pathlib import Path
 from .replay_downloaded_artifacts import read_archive, verify_checksums, LEDGER_FILES, RESULT_FILES
 
 
-def audit(ledger_zip, results_zip):
+def audit(ledger_zip, results_zip, *, run_id=None, source_sha=None, ledger_commit=None):
     ledger = read_archive(ledger_zip, LEDGER_FILES)
     results = read_archive(results_zip, RESULT_FILES)
     verify_checksums(ledger, LEDGER_FILES - {"SHA256SUMS"})
@@ -15,6 +15,8 @@ def audit(ledger_zip, results_zip):
     board = json.loads(ledger["scoreboard.json"])
     state = json.loads(ledger["ledger.json"])
     report = json.loads(results["results.json"])
+    if (run_id is not None and str(report.get("run_id")) != str(run_id)) or (source_sha is not None and report.get("source_sha") != source_sha) or (ledger_commit is not None and report.get("ledger_commit") != ledger_commit):
+        raise ValueError("Downloaded artifact run/source/remote identity mismatch")
     if (board["ledger_sha256"] != report["ledger_sha256"]
             or board["generation"] != report["ledger_generation"]
             or state["sha256"] != board["ledger_sha256"]
@@ -60,8 +62,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--ledger-zip", required=True)
     parser.add_argument("--results-zip", required=True)
+    parser.add_argument("--run-id")
+    parser.add_argument("--source-sha")
+    parser.add_argument("--ledger-commit")
     args = parser.parse_args()
-    print(json.dumps(audit(Path(args.ledger_zip), Path(args.results_zip)), sort_keys=True))
+    print(json.dumps(audit(Path(args.ledger_zip), Path(args.results_zip), run_id=args.run_id,
+                          source_sha=args.source_sha, ledger_commit=args.ledger_commit), sort_keys=True))
 
 
 if __name__ == "__main__":
