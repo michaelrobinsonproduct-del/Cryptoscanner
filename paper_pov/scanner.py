@@ -323,12 +323,18 @@ def main():
     receipt = persist_report(os.getenv("PAPER_REPORT_PATH", "paper_pov/output/latest.json"), report)
     print("PAPER_RECEIPT " + str(receipt))
     print("PAPER_SCAN " + json.dumps({k: report[k] for k in (
-        "as_of", "online_usd_pairs", "excluded_stablecoin_pairs",
+        "as_of", "scan_status", "online_usd_pairs", "excluded_stablecoin_pairs",
         "excluded_other_pairs", "eligible_pairs", "matched_tickers",
         "observed_markets", "ticker_rejections", "ohlc_screened", "abstention_counts", "forward_labels", "production_applied")}, sort_keys=True))
     print("PAPER_WATCH " + json.dumps([{"symbol": x["symbol"], "rank": x["rank"],
         "prediction_id": x["prediction_id"], "baseline_score": x["baseline_score"],
-        "challenger_score": x["challenger_score"]} for x in report["watch"]]))
+        "challenger_score": x["challenger_score"], "price": x["price"],
+        "quote_observed_at": x["quote_observed_at"],
+        "quote_timestamp_semantics": x["quote_timestamp_semantics"],
+        "ohlc_last_closed_at": x["ohlc_last_closed_at"],
+        "move15_pct": x["move15_pct"], "volume_accel": x["volume_accel"],
+        "spread_bps": x["spread_bps"], "notional_24h_usd": x["notional_24h_usd"],
+        "status": x["status"], "risk": x["risk"], "buy_approved": x["buy_approved"]} for x in report["watch"]]))
 
 if __name__ == "__main__":
     main()
