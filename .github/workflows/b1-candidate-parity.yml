@@ -60,6 +60,15 @@ jobs:
           from paper_pov.a2_artifact_consumer import read_artifact_zip
           from paper_pov.candidate_snapshot import read_snapshot
           latest=Path(os.environ["PAPER_REPORT_PATH"])
+          receipts=list((latest.parent/"receipts").glob("*.json"))
+          assert len(receipts)==1, "expected exactly one immutable receipt"
+          receipt=receipts[0]
+          assert json.loads(latest.read_bytes())==json.loads(receipt.read_bytes()), "producer latest/receipt payload drift"
+          staging=latest.parent/"authenticated-consumer"
+          (staging/"receipts").mkdir(parents=True,exist_ok=False)
+          (staging/"latest.json").write_bytes(receipt.read_bytes())
+          (staging/"receipts"/receipt.name).write_bytes(receipt.read_bytes())
+          latest=staging/"latest.json"
           verified=read_snapshot(latest)
           export=latest.parent/"verified-snapshot.json"
           export.write_text(json.dumps(verified,sort_keys=True,allow_nan=False)+"\n")
@@ -73,7 +82,7 @@ jobs:
           checked=read_artifact_zip(archive)
           assert checked["receipt_sha256"]==verified["receipt_sha256"]
           assert checked["watch"]==verified["watch"]
-          export.write_text(json.dumps(checked,sort_keys=True,allow_nan=False)+"\n")
+          Path(os.environ["PAPER_REPORT_PATH"]).parent.joinpath("verified-snapshot.json").write_text(json.dumps(checked,sort_keys=True,allow_nan=False)+"\n")
           print("B1_A2_AUTHENTICATED_TRANSPORT",json.dumps({"watch_count":len(checked["watch"]),"eligible_pairs":checked["eligible_pairs"],"observed_markets":checked["observed_markets"],"abstention_counts":checked["abstention_counts"],"receipt_sha256":checked["receipt_sha256"]},sort_keys=True))
           PY
       - name: Actual authenticated A2 into B shared HTTP and scheduled runner
