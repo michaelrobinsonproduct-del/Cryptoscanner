@@ -81,6 +81,32 @@ class DepthAssociationTests(unittest.TestCase):
         self.assertEqual(result["verified_depth_rows"], 1)
         self.assertFalse(result["production_applied"])
 
+    @patch("research.depth_acquisition_associations.verified_rows")
+    @patch("research.acquisition_receipt_pipeline.bind")
+    def test_indexed_pipeline_auto_associates_and_evaluates(self, binder, rows):
+        rows.return_value = ([self.row], [])
+        binder.return_value = {"accepted": [], "excluded_count": 0,
+                               "source_abstentions": [], "verified_depth_rows": 1}
+        batch = self.root / "indexed-round"
+        batch.mkdir()
+        (batch / "manifest.json").write_text("{}")
+        index = self.root / "indexed-rounds.jsonl"
+        index.write_text(json.dumps({
+            "batch": str(batch), "manifest_sha256": hashlib.sha256(b"{}").hexdigest(),
+            "snapshots_verified": 1, "abstentions": 0}) + "\n")
+        ledger = self.root / "indexed-paper.json"
+        ledger.write_text("{}")
+        output = self.root / "indexed-report.json"
+        with patch.object(sys, "argv", ["pipeline", "--paper-ledger", str(ledger),
+                "--round-index", str(index),
+                "--captures-directory", str(self.root / "scores"),
+                "--associations-directory", str(self.root / "depth-links"),
+                "--associate-verified-depth", "--output", str(output)]):
+            main()
+        self.assertEqual(json.loads(output.read_text())["capture_count"], 1)
+        self.assertTrue((self.root / "depth-links" / (self.pid + ".json")).exists())
+        self.assertEqual(Path(binder.call_args.args[1]), index)
+
     def test_auto_association_invalid_arguments_do_not_write(self):
         with patch.object(sys, "argv", ["pipeline",
                 "--captures-directory", str(self.root / "scores"),
