@@ -15,6 +15,13 @@ export function parseShadowArtifacts(raw:unknown):ShadowArtifacts{
  });
  return {evidence:e as unknown as ShadowEvidence,outcomes};
 }
+export async function verifyShadowLedger(artifacts:ShadowArtifacts):Promise<ShadowArtifacts>{
+ if(!artifacts.evidence)return artifacts;
+ const bytes=new TextEncoder().encode(JSON.stringify(artifacts.outcomes));
+ const digest=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))).map(x=>x.toString(16).padStart(2,"0")).join("");
+ if(digest.toLowerCase()!==artifacts.evidence.outcome_ledger_sha.toLowerCase())throw Error("shadow_ledger_digest_mismatch");
+ return artifacts;
+}
 export function createReadOnlyShadowLoader(url:string|undefined,fetcher:typeof fetch=fetch):()=>Promise<ShadowArtifacts>{
  return async()=>{
   if(!url)return {evidence:null,outcomes:[]};
@@ -24,6 +31,6 @@ export function createReadOnlyShadowLoader(url:string|undefined,fetcher:typeof f
   if(!response.ok)throw Error(`shadow_artifact_http_${response.status}`);
   const text=await response.text();
   if(text.length>2000000)throw Error("shadow_artifact_too_large");
-  return parseShadowArtifacts(JSON.parse(text));
+  return verifyShadowLedger(parseShadowArtifacts(JSON.parse(text)));
  };
 }
