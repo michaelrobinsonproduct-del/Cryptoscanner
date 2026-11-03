@@ -43,6 +43,22 @@ jobs:
           sudo -u codexagent test -w /tmp
           sudo -u codexagent test -x /tmp
           sudo -u codexagent sh -c 'printf ready > "$1"; rm "$1"' sh "$GITHUB_WORKSPACE/.codex-write-preflight"
+      - name: Start 5h30m agent cutoff watchdog
+        run: |
+          cat > /tmp/codex-cutoff.sh <<'SH'
+          #!/usr/bin/env bash
+          sleep 19800
+          echo "Agent time budget reached; requesting graceful termination" >> "$GITHUB_STEP_SUMMARY"
+          for pid in $(pgrep -f '[c]odex exec' || true); do
+            kill -INT "$pid" 2>/dev/null || true
+          done
+          sleep 60
+          for pid in $(pgrep -f '[c]odex exec' || true); do
+            kill -TERM "$pid" 2>/dev/null || true
+          done
+          SH
+          chmod +x /tmp/codex-cutoff.sh
+          nohup /tmp/codex-cutoff.sh >/tmp/codex-cutoff.log 2>&1 </dev/null &
       - name: Implement scanner repairs and enhancements
         id: codex
         uses: openai/codex-action@v1
@@ -167,6 +183,7 @@ jobs:
           sudo chmod -R g+rwX "$GITHUB_WORKSPACE"
           sudo find "$GITHUB_WORKSPACE" -type d -exec chmod g+s {} +
       - name: Open isolated development PR if tested code changed
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -177,7 +194,7 @@ jobs:
           rm -f "$GITHUB_WORKSPACE/.codex-last-message.md"
           git diff --check
           git add -A
-          if git diff --cached --quiet && ! git ls-remote --exit-code --heads origin "codex-development-${GITHUB_RUN_ID}" >/dev/null; then then
+          if git diff --cached --quiet && ! git ls-remote --exit-code --heads origin "codex-development-${GITHUB_RUN_ID}" >/dev/null; then
             echo "No code delta produced this run" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
