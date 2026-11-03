@@ -12,7 +12,7 @@ jobs:
   implement:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,7 +48,7 @@ jobs:
           cat > /tmp/codex-cutoff.sh <<'SH'
           #!/usr/bin/env bash
           sleep 19800
-          echo "Agent time budget reached; requesting graceful termination" >> "$GITHUB_STEP_SUMMARY"
+          echo "Agent time budget reached; requesting graceful termination"
           for pid in $(pgrep -f '[c]odex exec' || true); do
             kill -INT "$pid" 2>/dev/null || true
           done

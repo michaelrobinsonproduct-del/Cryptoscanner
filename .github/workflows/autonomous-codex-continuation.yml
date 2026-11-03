@@ -17,7 +17,7 @@ jobs:
   implement:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 350
     env:
       FIRST_RUN_ID: ${{ inputs.first_run_id }}
     steps:
@@ -64,6 +64,22 @@ jobs:
           sudo -u codexagent test -w /tmp
           sudo -u codexagent test -x /tmp
           sudo -u codexagent sh -c 'printf ready > "$1"; rm "$1"' sh "$GITHUB_WORKSPACE/.codex-write-preflight"
+      - name: Start 5h30m agent cutoff watchdog
+        run: |
+          cat > /tmp/codex-cutoff.sh <<'SH'
+          #!/usr/bin/env bash
+          sleep 19800
+          echo "Agent time budget reached; requesting graceful termination"
+          for pid in $(pgrep -f '[c]odex exec' || true); do
+            kill -INT "$pid" 2>/dev/null || true
+          done
+          sleep 60
+          for pid in $(pgrep -f '[c]odex exec' || true); do
+            kill -TERM "$pid" 2>/dev/null || true
+          done
+          SH
+          chmod +x /tmp/codex-cutoff.sh
+          nohup /tmp/codex-cutoff.sh >/tmp/codex-cutoff.log 2>&1 </dev/null &
       - name: Implement scanner repairs and enhancements
         id: codex
         uses: openai/codex-action@v1
@@ -89,6 +105,27 @@ jobs:
             access or missing data prevents completion, document the precise blocker and continue on
             independent work. Do not claim completion without tests and evidence. Leave all validated
             changes in the working tree for a single reviewable PR at the end of THIS execution.
+      - name: Save resumable development checkpoint
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sudo chown -R runner:runner "$GITHUB_WORKSPACE"
+          rm -f "$GITHUB_WORKSPACE/.codex-last-message.md"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          BRANCH="codex-development-${GITHUB_RUN_ID}"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "codex: save resumable checkpoint ${GITHUB_RUN_ID}"
+          fi
+          gh auth setup-git
+          git push origin "HEAD:refs/heads/$BRANCH"
+          echo "Saved checkpoint: $BRANCH" >> "$GITHUB_STEP_SUMMARY"
+          sudo chown -R runner:codexagent "$GITHUB_WORKSPACE"
+          sudo chmod -R g+rwX "$GITHUB_WORKSPACE"
+          sudo find "$GITHUB_WORKSPACE" -type d -exec chmod g+s {} +
       - name: Continue historical learning implementation in the same run
         uses: openai/codex-action@v1
         with:
@@ -106,6 +143,27 @@ jobs:
             predictive lift, or positive results. A non-improving challenger must not promote.
             Continue independent improvements even when a specific source is unavailable.
             No live trading, production ledger mutation, deployment or weakened gates.
+      - name: Save resumable development checkpoint
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sudo chown -R runner:runner "$GITHUB_WORKSPACE"
+          rm -f "$GITHUB_WORKSPACE/.codex-last-message.md"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          BRANCH="codex-development-${GITHUB_RUN_ID}"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "codex: save resumable checkpoint ${GITHUB_RUN_ID}"
+          fi
+          gh auth setup-git
+          git push origin "HEAD:refs/heads/$BRANCH"
+          echo "Saved checkpoint: $BRANCH" >> "$GITHUB_STEP_SUMMARY"
+          sudo chown -R runner:codexagent "$GITHUB_WORKSPACE"
+          sudo chmod -R g+rwX "$GITHUB_WORKSPACE"
+          sudo find "$GITHUB_WORKSPACE" -type d -exec chmod g+s {} +
       - name: Continue live feedback and scan integration in the same run
         uses: openai/codex-action@v1
         with:
@@ -124,7 +182,29 @@ jobs:
             Improve real ranked WATCH output, freshness and resilience. Implement, test,
             repair, repeat until remaining feasible tasks are finished. Do not fake learning,
             relax source verification, or claim promotion when no qualified rule exists.
+      - name: Save resumable development checkpoint
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sudo chown -R runner:runner "$GITHUB_WORKSPACE"
+          rm -f "$GITHUB_WORKSPACE/.codex-last-message.md"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          BRANCH="codex-development-${GITHUB_RUN_ID}"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "codex: save resumable checkpoint ${GITHUB_RUN_ID}"
+          fi
+          gh auth setup-git
+          git push origin "HEAD:refs/heads/$BRANCH"
+          echo "Saved checkpoint: $BRANCH" >> "$GITHUB_STEP_SUMMARY"
+          sudo chown -R runner:codexagent "$GITHUB_WORKSPACE"
+          sudo chmod -R g+rwX "$GITHUB_WORKSPACE"
+          sudo find "$GITHUB_WORKSPACE" -type d -exec chmod g+s {} +
       - name: Open isolated development PR if tested code changed
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -140,8 +220,8 @@ jobs:
             exit 0
           fi
           BRANCH="codex-development-${GITHUB_RUN_ID}"
-          git checkout -b "$BRANCH"
-          git commit -m "codex: autonomous scanner improvement ${GITHUB_RUN_ID}"
+          git checkout -B "$BRANCH"
+          if ! git diff --cached --quiet; then git commit -m "codex: autonomous scanner improvement ${GITHUB_RUN_ID}"; fi
           gh auth setup-git
           git push origin "HEAD:refs/heads/$BRANCH"
           gh pr create --base main --head "$BRANCH" --title "Codex: scanner continuation from run ${FIRST_RUN_ID}" --body "Continuation of first-run branch codex-development-${FIRST_RUN_ID}. Includes inherited first-run work and second-run changes; review full combined diff and CI before merge."
