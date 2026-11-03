@@ -1,0 +1,19 @@
+name: A1 A2 focused Kraken paper scan acceptance
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/scanner.py'
+      - 'paper_pov/tests/test_scan_failure_isolation.py'
+      - 'paper_pov/tests/test_watch_contract.py'
+      - 'paper_pov/tests/test_receipt_persistence.py'
+      - '.github/workflows/a1-a2-paper-watch.yml'
+  workflow_dispatch:
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Focused A1/A2 integration and persistence tests
+        run: python -m unittest paper_pov.tests.test_scan_failure_isolation paper_pov.tests.test_watch_contract paper_pov.tests.test_receipt_persistence -v
