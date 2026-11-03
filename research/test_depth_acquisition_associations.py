@@ -1,6 +1,7 @@
 """Focused end-to-end score bytes -> immutable association -> verified depth -> binder."""
 import hashlib
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,7 +9,7 @@ from unittest.mock import patch
 
 from research.capture_acquisition_scores import capture_score
 from research.depth_acquisition_associations import write_association, verified_associations
-from research.acquisition_receipt_pipeline import evaluate, evaluate_learning, evaluate_horizons, write_new
+from research.acquisition_receipt_pipeline import evaluate, evaluate_learning, evaluate_horizons, write_new, main
 
 
 class DepthAssociationTests(unittest.TestCase):
@@ -126,6 +127,29 @@ class DepthAssociationTests(unittest.TestCase):
     def test_unsupported_horizon_fails_closed(self):
         with self.assertRaisesRegex(ValueError, "unsupported evaluation horizon"):
             evaluate_horizons("unused", (72,))
+
+    @patch("research.acquisition_receipt_pipeline.evaluate_horizons")
+    @patch("research.acquisition_receipt_pipeline.evaluate")
+    def test_coverage_only_cli_persists_readable_report(self, evaluate, horizons):
+        ledger = self.root / "ledger.json"
+        ledger.write_text("{}")
+        index = self.root / "round-index.jsonl"
+        index.write_text("")
+        output = self.root / "coverage.json"
+        evaluate.return_value = {"capture_count": 0, "reconciliation_receipt_count": 0}
+        horizons.return_value = {"1": {"qualified": 0, "incomplete_or_unqualified": 1,
+                                       "source_abstentions": 0, "production_applied": False}}
+        args = ["pipeline", "--paper-ledger", str(ledger), "--depth-directory", str(self.root),
+                "--captures-directory", str(self.root), "--associations-directory", str(self.root),
+                "--round-index", str(index), "--all-horizon-coverage", "--output", str(output)]
+        with patch.object(sys, "argv", args):
+            main()
+        result = json.loads(output.read_text())
+        self.assertEqual(result["horizon_coverage"]["1"]["qualified"], 0)
+        self.assertEqual(result["horizon_coverage"]["1"]["incomplete_or_unqualified"], 1)
+        horizons.assert_called_once_with(str(index))
+        with patch.object(sys, "argv", args), self.assertRaises(FileExistsError):
+            main()
 
     def test_exclusive_create(self):
         self.associate()
