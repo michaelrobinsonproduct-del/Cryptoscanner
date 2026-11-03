@@ -26,21 +26,19 @@ def canonical(report):
         raise ValueError("unexpected production application")
     if not isinstance(report["watch"], list) or not isinstance(report["observations"], list):
         raise ValueError("invalid candidate or observation list")
-    if not report["watch"]:
-        raise ValueError("no WATCH candidates")
     ids = [item.get("prediction_id") for item in report["watch"] if isinstance(item, dict)]
     if len(ids) != len(report["watch"]) or any(not isinstance(x, str) or not x for x in ids):
         raise ValueError("invalid prediction IDs")
     if len(set(ids)) != len(ids):
         raise ValueError("duplicate prediction IDs")
-    return json.dumps({k: report[k] for k in FIELDS}, sort_keys=True,
+    return json.dumps(report, sort_keys=True,
                       separators=(",", ":"), allow_nan=False).encode()
 
 
 def compare(manual, scheduled):
     a, b = canonical(manual), canonical(scheduled)
     if a != b:
-        differences = [key for key in FIELDS if manual[key] != scheduled[key]]
+        differences = [key for key in sorted(set(manual) | set(scheduled)) if manual.get(key) != scheduled.get(key) or (key in manual) != (key in scheduled)]
         raise ValueError("manual/scheduled fixture divergence: " + ", ".join(differences))
     return hashlib.sha256(a).hexdigest()
 
