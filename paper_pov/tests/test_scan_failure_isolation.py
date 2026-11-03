@@ -155,7 +155,10 @@ class ScanFailureIsolationTests(unittest.TestCase):
             "observed_markets": 20, "ticker_rejections": {
                 "missing_or_invalid_payload": 0, "invalid_price_or_volume": 0,
                 "nonfinite_derived_metric": 0},
-            "ohlc_screened": 1, "abstention_counts": {}, "forward_labels": 0,
+            "ohlc_screened": 1, "screened_markets": 1,
+            "screening_rejections": {"below_early_move": 0, "above_early_move": 0,
+                                     "wide_spread": 0, "low_notional": 0},
+            "abstention_counts": {}, "forward_labels": 0,
             "production_applied": False, "watch": [watch]
         }
         with tempfile.TemporaryDirectory() as root:
