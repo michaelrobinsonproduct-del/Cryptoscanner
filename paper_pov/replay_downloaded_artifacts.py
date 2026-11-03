@@ -5,13 +5,14 @@ Both ZIPs must originate from the same run; the caller supplies the expected
 immutable run/source/ledger identities from independently inspected job logs.
 """
 import argparse
+import sys
 import hashlib
 import json
 import re
 import tempfile
 import zipfile
 from pathlib import Path
-from .results_report import verify_published
+from .results_report import verify_published, render
 
 MAX_FILE = 16 * 1024 * 1024
 LEDGER_FILES = {"latest.json", "scoreboard.json", "ledger.json", "SHA256SUMS"}
@@ -74,6 +75,30 @@ def replay(ledger_zip, results_zip, *, run_id, source_sha, ledger_commit):
     if (score.get("ledger_sha256") != state.get("sha256")
             or score.get("generation") != state.get("generation")):
         raise ValueError("Ledger/scoreboard identity mismatch")
+    # Check immutable identity before classifying missing evidence. A forged
+    # run/source/ledger reference is an integrity failure, never an abstention.
+    payload = json.loads(results["results.json"])
+    if not isinstance(payload, dict) or any(
+            payload.get(key) != expected for key, expected in (
+                ("run_id", str(run_id)), ("source_sha", source_sha),
+                ("ledger_commit", ledger_commit),
+                ("ledger_generation", score["generation"]),
+                ("ledger_sha256", score["ledger_sha256"]))):
+        raise ValueError("Published artifact identity mismatch")
+    # A missing quote-evidence array is an abstention ONLY if the rest of the
+    # publication still agrees with independently retained, checksummed source.
+    # Otherwise erased evidence plus a recomputed checksum could hide forgery.
+    payload = json.loads(results["results.json"])
+    if isinstance(payload, dict) and "quote_evidence" not in payload:
+        expected, expected_md = render(
+            scan, score, run_id=run_id, source_sha=source_sha,
+            ledger_commit=ledger_commit, event=payload.get("github_event"),
+            originating_cron=payload.get("originating_cron"))
+        if (any(payload.get(key) != value for key, value in expected.items()
+                if key != "quote_evidence")
+                or results["results.md"] != (expected_md + "\n").encode()):
+            raise ValueError("Legacy publication differs from retained evidence")
+        raise ValueError("Missing independent quote evidence")
     with tempfile.TemporaryDirectory(prefix="paper-replay-") as tmp:
         directory = Path(tmp)
         for name, content in results.items():
@@ -99,10 +124,25 @@ def main():
     parser.add_argument("--source-sha", required=True)
     parser.add_argument("--ledger-commit", required=True)
     args = parser.parse_args()
-    print(json.dumps(replay(args.ledger_zip, args.results_zip, run_id=args.run_id,
-                            source_sha=args.source_sha,
-                            ledger_commit=args.ledger_commit), sort_keys=True))
+    try:
+        result = replay(args.ledger_zip, args.results_zip, run_id=args.run_id,
+                        source_sha=args.source_sha, ledger_commit=args.ledger_commit)
+    except ValueError as exc:
+        # A legacy publication lacks per-quote evidence. Report non-certification
+        # without treating any other integrity or identity failure as legacy.
+        if str(exc) != "Missing independent quote evidence":
+            raise
+        print(json.dumps({
+            "status": "ABSTAIN_LEGACY_QUOTE_EVIDENCE",
+            "certified": False,
+            "run_id": str(args.run_id),
+            "reason": "Missing independent quote evidence",
+            "exchange_event_freshness_verified": False,
+        }, sort_keys=True))
+        return 2
+    print(json.dumps({"certified": True, **result}, sort_keys=True))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
