@@ -32,7 +32,7 @@ class ArtifactAuditTests(unittest.TestCase):
                         data = json.dumps(value).encode() if filename.endswith(".json") else value.encode()
                         z.writestr(filename, data)
                         checksums.append(hashlib.sha256(data).hexdigest() + "  " + filename)
-                    z.writestr("SHA256SUMS", "\\n".join(checksums) + "\\n")
+                    z.writestr("SHA256SUMS", "\n".join(checksums) + "\n")
                 return path
             ledger = pack("ledger.zip", {"latest.json": scan, "scoreboard.json": board,
                                          "ledger.json": state})
