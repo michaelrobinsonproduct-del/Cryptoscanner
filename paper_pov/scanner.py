@@ -332,6 +332,8 @@ def persist_report(latest_path, report):
                     raise ValueError("conflicting or incomplete same-timestamp scan replay")
                 if receipt.read_bytes() != payload:
                     raise ValueError("same-timestamp receipt readback mismatch")
+                sync_directory(receipt_dir)
+                sync_directory(latest_path.parent)
                 return receipt
         # Recover a crash after the immutable receipt was sealed but before
         # latest.json was published. Never overwrite an existing conflicting
