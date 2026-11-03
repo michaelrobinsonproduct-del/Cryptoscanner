@@ -1,3 +1,4 @@
+import {readFile} from "node:fs/promises";
 import {createHash} from "node:crypto";
 /** Read-only consumer of Owner A's read_snapshot() output, not the mutable latest.json. */
 export type A2Snapshot={status:"VERIFIED_SNAPSHOT"|"UNAVAILABLE";as_of:string|null;scan_status:string|null;receipt_sha256:string|null;watch:Array<{pair:string;rank:number;status:"PAPER_WATCH";price:number;move15_pct:number;volume_accel:number;baseline_score:number;challenger_score:number;quote_observed_at:string;prediction_id:string}>;eligible_pairs:number|null;observed_markets:number|null;abstention_counts:Record<string,number>|null;source:"a2_verified_readonly";buy_approved:false;reason?:string};
@@ -29,4 +30,16 @@ export function createA2SnapshotReader(url:string|undefined,now:()=>Date,fetcher
  const reader=response.body?.getReader();if(!reader)throw Error("a2_empty_body");let bytes=0;const chunks:Uint8Array[]=[];
  try{for(;;){const part=await reader.read();if(part.done)break;bytes+=part.value.byteLength;if(bytes>200000)throw Error("a2_oversized");chunks.push(part.value)}}finally{await reader.cancel().catch(()=>{})}
  const body=new TextDecoder("utf-8",{fatal:true}).decode(Buffer.concat(chunks));return parseA2Snapshot(JSON.parse(body),now());};
+}
+
+/** Consume the JSON emitted by A's authenticated ZIP verifier, without an HTTP service.
+ * The verifier must refresh this file atomically; every read revalidates age and quotes.
+ */
+export function createA2VerifiedFileReader(path:string|undefined,now:()=>Date):()=>Promise<A2Snapshot>{
+ return async()=>{
+  if(!path)return unavailableA2Snapshot("not_configured");
+  if(!path.startsWith("/")||path.includes("\\0"))throw Error("unsafe_a2_file_path");
+  const bytes=await readFile(path);if(bytes.byteLength>200000)throw Error("a2_oversized");
+  return parseA2Snapshot(JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes)),now());
+ };
 }
