@@ -1,0 +1,147 @@
+name: Continue Codex scanner development - Run 2
+on:
+  workflow_dispatch:
+    inputs:
+      first_run_id:
+        description: 'GitHub Actions run ID of first builder execution'
+        required: true
+        type: string
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+concurrency:
+  group: cryptoscanner-autonomous-development
+  cancel-in-progress: false
+jobs:
+  implement:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      FIRST_RUN_ID: ${{ inputs.first_run_id }}
+    steps:
+      - name: Find first-run checkpoint branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$FIRST_RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::first_run_id must be numeric"; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$FIRST_RUN_ID" --jq '.id,.name,.head_branch,.status' > /tmp/first-run-meta
+          test "$(sed -n '1p' /tmp/first-run-meta)" = "$FIRST_RUN_ID"
+          test "$(sed -n '2p' /tmp/first-run-meta)" = "Autonomous Codex development loop"
+          test "$(sed -n '3p' /tmp/first-run-meta)" = "main"
+          test "$(sed -n '4p' /tmp/first-run-meta)" = "completed" || { echo "::error::First run has not finished"; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/codex-development-$FIRST_RUN_ID" --jq '.object.sha' > /tmp/first-run-sha
+          test -s /tmp/first-run-sha
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: codex-development-${{ inputs.first_run_id }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify coding-agent credential exists
+        env:
+          CODEX_KEY_PRESENT: ${{ secrets.OPENAI_API_KEY != '' }}
+        run: |
+          if [ "$CODEX_KEY_PRESENT" != true ]; then
+            echo "::error::Set repository Actions secret OPENAI_API_KEY to enable autonomous code development"
+            exit 1
+          fi
+      - name: Prepare dedicated non-sudo coding user
+        run: |
+          sudo useradd --create-home --shell /bin/bash codexagent
+          sudo usermod -a -G runner codexagent
+          sudo usermod -a -G codexagent runner
+          sudo chown -R runner:codexagent "$GITHUB_WORKSPACE"
+          sudo chmod -R g+rwX "$GITHUB_WORKSPACE"
+          sudo find "$GITHUB_WORKSPACE" -type d -exec chmod g+s {} +
+          sudo -u codexagent test -r "$GITHUB_WORKSPACE/.git/HEAD"
+          sudo -u codexagent test -w "$GITHUB_WORKSPACE"
+          sudo -u codexagent test -x /home/runner
+          sudo -u codexagent test -w /tmp
+          sudo -u codexagent test -x /tmp
+          sudo -u codexagent sh -c 'printf ready > "$1"; rm "$1"' sh "$GITHUB_WORKSPACE/.codex-write-preflight"
+      - name: Implement scanner repairs and enhancements
+        id: codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          sandbox: workspace-write
+          safety-strategy: unprivileged-user
+          codex-user: codexagent
+          output-file: ${{ github.workspace }}/.codex-last-message.md
+          prompt: |
+            This is RUN TWO. Continue from the first run's saved code branch, NOT main.\n            Review the exact inherited commits and unfinished issue #34 work.\n            Do not redo completed changes; continue implementation from the inherited checkpoint.\n            You are the autonomous implementation agent.
+            Your task is to COMPLETE the remaining scanner repair and enhancement work in this execution,
+            not to implement one delta, stop, and wait for another scheduled run.
+            Read repository implementation, tests, and issue #34 context available in the checkout.
+            Build an executable completion checklist from actual gaps, then ITERATE within this SAME run:
+            implement, run relevant tests, diagnose failures, repair, retest, and continue to the next
+            unfinished item. Do not stop after a single successful change, a plan, or an audit.
+            Prioritize a working GitHub-native Kraken paper scanner, reliable fresh ranked WATCH outputs,
+            and substantive historical/live hit-and-miss analysis with measurable held-out learning.
+            Preserve the canonical single-writer ledger and production schedule; do not trade, deploy,
+            change secrets, weaken safety gates, or mutate production ledger/history.
+            Fix all feasible problems and enhancements before exiting; keep tests passing. Where external
+            access or missing data prevents completion, document the precise blocker and continue on
+            independent work. Do not claim completion without tests and evidence. Leave all validated
+            changes in the working tree for a single reviewable PR at the end of THIS execution.
+      - name: Continue historical learning implementation in the same run
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          sandbox: workspace-write
+          safety-strategy: unprivileged-user
+          codex-user: codexagent
+          prompt: |
+            Continue work in THIS SAME CHECKOUT, retaining the previous agent's changes.
+            Implement remaining real-data historical learning: authenticated historical inputs,
+            point-in-time features, mature 1/6/24/48h outcomes, missing-trade abstentions,
+            chronological holdouts with embargo, baseline versus challenger, +30% hit/miss
+            analysis and numerical uncertainty. Build actual executable code and tests.
+            Run tests, repair failures and iterate; never invent source provenance, labels,
+            predictive lift, or positive results. A non-improving challenger must not promote.
+            Continue independent improvements even when a specific source is unavailable.
+            No live trading, production ledger mutation, deployment or weakened gates.
+      - name: Continue live feedback and scan integration in the same run
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          sandbox: workspace-write
+          safety-strategy: unprivileged-user
+          codex-user: codexagent
+          prompt: |
+            Continue working on the SAME uncommitted checkout after both previous phases.
+            Implement an actual automated feedback loop across successive paper scans:
+            persist immutable predictions, later observed outcomes and misses; compare
+            validated baseline/challenger metrics; apply ONLY independently qualified
+            versioned improvements through explicit safe promotion/rollback gates.
+            Make historical learning reusable in future scans without repeated manual runs.
+            Integrate with the existing single-writer paper scanner, not a competing writer.
+            Improve real ranked WATCH output, freshness and resilience. Implement, test,
+            repair, repeat until remaining feasible tasks are finished. Do not fake learning,
+            relax source verification, or claim promotion when no qualified rule exists.
+      - name: Open isolated development PR if tested code changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          sudo chown -R runner:runner "$GITHUB_WORKSPACE"
+          rm -f "$GITHUB_WORKSPACE/.codex-last-message.md"
+          git diff --check
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No new code delta produced in continuation; first-run branch remains intact" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          BRANCH="codex-development-${GITHUB_RUN_ID}"
+          git checkout -b "$BRANCH"
+          git commit -m "codex: autonomous scanner improvement ${GITHUB_RUN_ID}"
+          gh auth setup-git
+          git push origin "HEAD:refs/heads/$BRANCH"
+          gh pr create --base main --head "$BRANCH" --title "Codex: scanner continuation from run ${FIRST_RUN_ID}" --body "Continuation of first-run branch codex-development-${FIRST_RUN_ID}. Includes inherited first-run work and second-run changes; review full combined diff and CI before merge."
