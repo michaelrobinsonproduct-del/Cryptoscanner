@@ -1,0 +1,74 @@
+name: Autonomous Codex development loop
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7,27,47 * * * *'
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+concurrency:
+  group: cryptoscanner-autonomous-development
+  cancel-in-progress: false
+jobs:
+  implement:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify coding-agent credential exists
+        env:
+          CODEX_KEY_PRESENT: ${{ secrets.OPENAI_API_KEY != '' }}
+        run: |
+          if [ "$CODEX_KEY_PRESENT" != true ]; then
+            echo "::error::Set repository Actions secret OPENAI_API_KEY to enable autonomous code development"
+            exit 1
+          fi
+      - name: Prepare dedicated non-sudo coding user
+        run: |
+          sudo useradd --create-home --shell /bin/bash codexagent
+          sudo chown -R codexagent:codexagent "$GITHUB_WORKSPACE"
+      - name: Implement next issue 34 development delta
+        id: codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          sandbox: workspace-write
+          safety-strategy: unprivileged-user
+          codex-user: codexagent
+          prompt: |
+            You are the autonomous developer for this repository. Implement actual code now.
+            Objective: complete the GitHub-native Kraken paper scanner and continuous measured learning.
+            Read issue #34 context from existing repo files and current source. Select the highest-value
+            unfinished executable development delta. Implement it, run appropriate local tests, fix failures,
+            and leave only tested changes in the working tree. Prioritize learning from historical/live
+            hits and misses, real measurable out-of-sample uplift, reliable scan results and single writer.
+            No production deploys, trading, secret access, ledger mutations, release gate weakening,
+            or changing existing canonical paper schedule. Do not merely audit or write a plan.
+            Make one meaningful bounded improvement per invocation. If work is truly complete,
+            make no changes and explain what proof establishes completion.
+      - name: Open isolated development PR if tested code changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No code delta produced this run" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          BRANCH="codex-development-${GITHUB_RUN_ID}"
+          git checkout -b "$BRANCH"
+          git commit -m "codex: autonomous scanner improvement ${GITHUB_RUN_ID}"
+          gh auth setup-git
+          git push origin "HEAD:refs/heads/$BRANCH"
+          gh pr create --base main --head "$BRANCH" --title "Codex: autonomous scanner improvement ${GITHUB_RUN_ID}" --body "Autonomous bounded implementation. Requires normal CI and review before merge. No production mutation."

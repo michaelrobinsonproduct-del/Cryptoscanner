@@ -95,13 +95,16 @@ jobs:
           before=verify(json.loads(Path("/tmp/paper-ledger-input.json").read_text()),MAX_RAW_BYTES)
           after=verify(json.loads(Path("/tmp/paper-ledger-next.json").read_text()),MAX_RAW_BYTES)
           score=scoreboard(after,MAX_RAW_BYTES)
-          assert after["generation"]==before["generation"]+1
+          import os
+          from paper_pov.retention_acceptance import verify_transition
+          report=json.loads(Path("paper_pov/output/latest.json").read_text())
+          retention=verify_transition(before,after,report,os.environ["GITHUB_SHA"])
           assert score["actual_scans"]==after["generation"]
           assert score["immutable_predictions"]>=len(before["predictions"])
           assert score["market_observations"]>=len(before["observations"])
-          assert after["runs"][-1]["source_sha"]==__import__("os").environ["GITHUB_SHA"]
+          assert after["runs"][-1]["source_sha"]==os.environ["GITHUB_SHA"]
           assert score["held_out_lift"] is None and score["production_applied"] is False
-          print("PAPER_CROSS_RUN_VERIFIED",before["generation"],after["generation"],score["ledger_sha256"])
+          print("PAPER_CROSS_RUN_VERIFIED",before["generation"],after["generation"],score["ledger_sha256"],retention)
           PY
       - name: Preserve independently downloadable checked artifact
         uses: actions/upload-artifact@v4
