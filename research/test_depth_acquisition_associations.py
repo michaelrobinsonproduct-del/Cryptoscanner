@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from research.capture_acquisition_scores import capture_score
 from research.depth_acquisition_associations import write_association, verified_associations
-from research.acquisition_receipt_pipeline import evaluate, write_new
+from research.acquisition_receipt_pipeline import evaluate, evaluate_learning, write_new
 
 
 class DepthAssociationTests(unittest.TestCase):
@@ -109,6 +109,62 @@ class DepthAssociationTests(unittest.TestCase):
         self.associate()
         with self.assertRaises(FileExistsError):
             self.associate()
+
+
+    @patch("research.reconcile_paper_scores.verify")
+    @patch("research.bind_acquisition_receipts.verify")
+    @patch("research.bind_acquisition_receipts.verified_rows")
+    @patch("research.depth_acquisition_associations.verified_rows")
+    def test_authenticated_capture_to_held_out_shadow_no_qualified_rule(
+            self, association_rows, binder_rows, binder_verify, ledger_verify):
+        """One real fixture score/depth/outcome flows through E2/E3; no fake lift."""
+        association_rows.return_value = ([self.row], [])
+        binder_rows.return_value = ([self.row], [])
+        self.associate()
+        ledger = {"predictions": [{"prediction_id": self.pid, "pair": "XBTUSD",
+                                  "baseline_score": 0.2, "challenger_score": 0.3}]}
+        evidence = {"production_applied": False,
+                    "outcomes": [{"pair": "XBTUSD", "entry_first_observed_at": 101,
+                                  "entry_source_sha256": self.source,
+                                  "entry_liquidity_usd": 25,
+                                  "status": "QUALIFIED_OBSERVED_PATH",
+                                  "ge30pct": False}],
+                    "rounds_verified": 1, "snapshots_verified": 1,
+                    "qualified_first_entry_episodes": 1, "abstentions": []}
+        report = evaluate_learning(
+            ledger, self.root / "raw", self.root / "scores",
+            self.root / "depth-links", evidence, split_at=101,
+            baseline_version="base-v1", challenger_version="challenger-v2",
+            evidence_sha256="f" * 64)
+        self.assertEqual(report["acquisition_coverage"]["authenticated_receipts"], 1)
+        self.assertEqual(report["comparison"]["held_out_n"], 1)
+        self.assertEqual(report["comparison"]["rule"], "NO QUALIFIED RULE")
+        self.assertEqual(report["shadow_decision"]["decision"], "KEEP_BASELINE")
+        self.assertFalse(report["production_applied"])
+
+    @patch("research.reconcile_paper_scores.verify")
+    @patch("research.bind_acquisition_receipts.verify")
+    @patch("research.bind_acquisition_receipts.verified_rows")
+    @patch("research.depth_acquisition_associations.verified_rows")
+    def test_unverified_source_cannot_enter_held_out(
+            self, association_rows, binder_rows, binder_verify, ledger_verify):
+        association_rows.return_value = ([self.row], [])
+        binder_rows.return_value = ([self.row], [])
+        self.associate(source_sha256="c" * 64)
+        ledger = {"predictions": [{"prediction_id": self.pid, "pair": "XBTUSD",
+                                  "baseline_score": 0.2, "challenger_score": 0.3}]}
+        evidence = {"production_applied": False, "outcomes": [],
+                    "rounds_verified": 1, "snapshots_verified": 1,
+                    "qualified_first_entry_episodes": 0, "abstentions": []}
+        report = evaluate_learning(
+            ledger, self.root / "raw", self.root / "scores",
+            self.root / "depth-links", evidence, split_at=101,
+            baseline_version="base-v1", challenger_version="challenger-v2",
+            evidence_sha256="f" * 64)
+        self.assertEqual(report["acquisition_coverage"]["authenticated_receipts"], 0)
+        self.assertEqual(report["acquisition_coverage"]["association_exclusions"], 1)
+        self.assertEqual(report["comparison"]["held_out_n"], 0)
+        self.assertEqual(report["shadow_decision"]["decision"], "KEEP_BASELINE")
 
 
 if __name__ == "__main__":
