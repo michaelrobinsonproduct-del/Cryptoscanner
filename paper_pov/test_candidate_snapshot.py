@@ -62,7 +62,7 @@ class SnapshotTests(unittest.TestCase):
         self.assertEqual(result["snapshot_age_seconds"], 30)
 
     def test_future_quote_relative_to_reader_rejected(self):
-        self.report["watch"][0]["quote_observed_at"] = "2026-11-03T17:00:15+00:00"
+        self.report["watch"][0]["quote_observed_at"] = "2026-11-03T17:00:45+00:00"
         self.seal()
         with self.assertRaisesRegex(ValueError, "stale candidate quote"):
             read_snapshot(self.latest, NOW)
