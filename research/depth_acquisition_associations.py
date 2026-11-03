@@ -108,3 +108,19 @@ def associate_captured_scores(captures_directory, depth_directory, associations_
         accepted.append(pid)
     return {'associated': accepted, 'excluded': excluded,
             'source_abstentions': abstentions, 'production_applied': False}
+
+
+def main():
+    import argparse
+    from research.acquisition_receipt_pipeline import write_new
+    p = argparse.ArgumentParser()
+    for name in ("captures-directory", "depth-directory", "associations-directory", "report"):
+        p.add_argument("--" + name, required=True)
+    a = p.parse_args()
+    report = associate_captured_scores(a.captures_directory, a.depth_directory, a.associations_directory)
+    write_new(a.report, report)
+    print(json.dumps({"associated": len(report["associated"]), "excluded": len(report["excluded"])}))
+
+
+if __name__ == "__main__":
+    main()
