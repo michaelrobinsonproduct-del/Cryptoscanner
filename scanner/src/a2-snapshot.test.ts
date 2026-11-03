@@ -1,6 +1,6 @@
 import {test,expect} from "bun:test";
 import {createHash} from "node:crypto";
-import {parseA2Snapshot,createA2SnapshotReader} from "./a2-snapshot";
+import {parseA2Snapshot,createA2SnapshotReader,createA2VerifiedFileReader} from "./a2-snapshot";
 import {createCycleRunner} from "./cycle-runner";
 import {createCycleHttpHandler} from "./cycle-http";
 const now=new Date("2026-11-03T20:00:00Z"),at="2026-11-03T19:59:00Z",quote="2026-11-03T19:58:00Z",pair="TAOUSD";
@@ -39,4 +39,25 @@ test("A2 rejects stablecoin candidates and impossible spread without altering ba
  expect(manual.result.a2_snapshot).toMatchObject({status:"UNAVAILABLE",watch:[]});
  expect(scheduled.result).toEqual(manual.result);
  expect(manual.result.scan_status).toBe("NO_DISCOVERY_CANDIDATES");
+});
+
+import {mkdtemp,writeFile,rm} from "node:fs/promises";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
+test("B1 verified A2 file is shared by manual HTTP and scheduled, and expires fail closed",async()=>{
+ const dir=await mkdtemp(join(tmpdir(),"a2-verified-"));
+ try{
+  const path=join(dir,"verified-snapshot.json");await writeFile(path,JSON.stringify(fixture));
+  const runner=createCycleRunner(deps,undefined,undefined,createA2VerifiedFileReader(path,()=>now));
+  const http=createCycleHttpHandler(runner);
+  const manual=await (await http(new Request("http://localhost/cycle"))).json();
+  const scheduled=await runner.run("scheduled");
+  expect(manual).toEqual(scheduled.result);
+  expect(manual.a2_snapshot).toMatchObject({status:"VERIFIED_SNAPSHOT",receipt_sha256:fixture.receipt_sha256,watch:[{pair:"TAOUSD"}]});
+  expect((await (await http(new Request("http://localhost/dashboard"))).json()).last_result.a2_snapshot).toEqual(manual.a2_snapshot);
+  const expired=createCycleRunner(deps,undefined,undefined,createA2VerifiedFileReader(path,()=>new Date("2026-11-03T20:20:00Z")));
+  const failure=await expired.run("manual");
+  expect(failure.result.a2_snapshot).toMatchObject({status:"UNAVAILABLE",reason:"read_or_validation_failed",watch:[]});
+  expect(failure.result.scan_status).toBe("NO_DISCOVERY_CANDIDATES");
+ }finally{await rm(dir,{recursive:true,force:true})}
 });
