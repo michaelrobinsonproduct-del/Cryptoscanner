@@ -27,4 +27,4 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          python -m unittest paper_pov.test_ledger_readback paper_pov.test_stage_receipts paper_pov.test_segmented_live_writer.LiveWriterTests.test_actual_bare_remote_push_fetch_and_verified_replay paper_pov.test_results_report.PaperResultsContracts.test_zero_qualifying_watch_is_successful_abstention -v
+          python -m unittest paper_pov.test_ledger_readback paper_pov.test_stage_receipts paper_pov.test_segmented_live_writer.LiveWriterTests.test_actual_bare_remote_push_fetch_and_verified_replay paper_pov.test_results_report.PaperResultsContracts.test_zero_qualifying_watch_is_successful_abstention paper_pov.test_results_report.PaperResultsContracts.test_zero_observations_disclose_unverified_freshness -v
