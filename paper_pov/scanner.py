@@ -319,6 +319,16 @@ def persist_report(latest_path, report):
                 if receipt.read_bytes() != payload:
                     raise ValueError("same-timestamp receipt readback mismatch")
                 return receipt
+        # Recover a crash after the immutable receipt was sealed but before
+        # latest.json was published. Never overwrite an existing conflicting
+        # receipt, and never regress a newer latest snapshot.
+        if receipt.exists():
+            if receipt.read_bytes() != payload:
+                raise ValueError("conflicting orphan scan receipt")
+            atomic_json(latest_path, report)
+            if latest_path.read_bytes() != payload:
+                raise IOError("recovered latest report readback mismatch")
+            return receipt
         fd = os.open(receipt, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         identity = os.fstat(fd)
         try:
