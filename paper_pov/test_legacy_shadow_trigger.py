@@ -220,7 +220,7 @@ class OwnerFallbackTests(unittest.TestCase):
         f = fixture()
         f["shadow_runs"]["workflow_runs"] = [{
             "id": CURRENT_ID, "created_at": iso(0)}] * 100
-        self.assertEqual(decide(**f)["reason"], "SHADOW_PAGINATION_AMBIGUITY")
+        self.assertEqual(decide(**f)["reason"], "DUPLICATE_OR_INVALID_SHADOW_RUN_ID")
         f = fixture()
         f["paper_runs"]["workflow_runs"] *= 100
         self.assertEqual(decide(**f)["reason"], "DUPLICATE_OR_INVALID_WRITER_RUN_ID")
@@ -303,7 +303,7 @@ class OwnerFallbackTests(unittest.TestCase):
             old["created_at"] = iso(-2)
         self.assertEqual(decide(**f)["reason"], "SHADOW_PAGINATION_AMBIGUITY")
         history[1]["created_at"] = iso(-1)
-        self.assertEqual(decide(**f)["reason"], "SHADOW_PAGINATION_AMBIGUITY")
+        self.assertEqual(decide(**f)["reason"], "UNSORTED_SHADOW_HISTORY")
 
     def test_invalid_clock_and_utc_timestamp_rejected(self):
         f = fixture()
