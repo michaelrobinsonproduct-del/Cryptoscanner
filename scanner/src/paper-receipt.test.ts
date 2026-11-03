@@ -6,7 +6,7 @@ const now=new Date("2026-11-03T08:00:00Z"),asOf="2026-11-03T07:59:00Z";
 const receipt={schema:1,mode:"PAPER_ONLY",buy_approved:false,scan_status:"WATCH",as_of:asOf,observed_markets:596,ohlc_screened:10,watch:[{pair:"TAOUSD"}],abstentions:[{pair:"ETHUSD"}]};
 const deps={scan:async()=>({candidates:[]}),confirm:async()=>{throw Error("not called")},pause:async()=>{},now:()=>now};
 test("real manual HTTP and scheduled paths read same Owner A receipt, retain independent scan status and no BUY",async()=>{
- let reads=0;const reader=createPaperReceiptReader("https://example.org/paper/latest.json",()=>now,async(_url,options)=>{reads++;expect(options?.method).toBe("GET");expect(options?.redirect).toBe("error");return new Response(JSON.stringify(receipt))} as any);
+ let reads=0;const reader=createPaperReceiptReader("https://example.org/paper/latest.json",()=>now,(async(_url,options)=>{reads++;expect(options?.method).toBe("GET");expect(options?.redirect).toBe("error");return new Response(JSON.stringify(receipt))}) as any);
  const runner=createCycleRunner(deps,undefined,reader),http=createCycleHttpHandler(runner);
  const manual=await (await http(new Request("http://localhost/cycle"))).json(),scheduled=await runner.run("scheduled");
  expect(manual).toEqual(scheduled.result);expect(reads).toBe(2);
