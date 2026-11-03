@@ -21,6 +21,8 @@ class ScanFailureIsolationTests(unittest.TestCase):
         pairs["USDTUSD"] = {"status": "online", "wsname": "USDT/USD"}
         ticker = {k: {"c": ["102"], "b": ["101.9"], "a": ["102.1"],
                       "o": "100", "v": ["1", "10000"]} for k in pairs}
+        ticker["X18USD"]["a"] = ["100"]  # crossed bid/ask
+        ticker["X19USD"]["c"] = ["not-a-number"]  # malformed ticker
         def api(path):
             if path == "AssetPairs":
                 return pairs
@@ -45,6 +47,10 @@ class ScanFailureIsolationTests(unittest.TestCase):
         self.assertTrue(all(x["status"] == "PAPER_WATCH" and not x["buy_approved"]
                             for x in report["watch"]))
         self.assertEqual(report["excluded_stablecoin_pairs"], 1)
+        self.assertEqual(report["observed_markets"], 18)
+        self.assertEqual(report["ticker_rejections"]["invalid_price_or_volume"], 1)
+        self.assertEqual(report["ticker_rejections"]["missing_or_invalid_payload"], 1)
+        self.assertEqual(report["observed_markets"] + sum(report["ticker_rejections"].values()), report["eligible_pairs"])
         self.assertEqual(report["abstention_counts"]["request_failure"], 1)
         self.assertEqual(report["abstention_counts"]["stale_or_future_ohlc"], 1)
         self.assertEqual(sum(report["abstention_counts"].values()), len(report["abstentions"]))
