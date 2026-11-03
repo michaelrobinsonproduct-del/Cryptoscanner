@@ -73,10 +73,8 @@ class OwnerFallbackTests(unittest.TestCase):
                 argv.extend(["--" + flag, str(root / filename)])
             argv.extend(["--repository", gate.REPO, "--current-run-id", str(CURRENT_ID),
                          "--checkout-sha", SHA, "--output", str(output)])
-            with patch.object(gate.ledger, "verify"), patch.object(
-                    gate.dt, "datetime", wraps=dt.datetime) as clock:
-                clock.now.return_value = NOW
-                gate.main(argv)
+            with patch.object(gate.ledger, "verify"):
+                gate.main(argv, now=NOW)
             self.assertEqual(json.loads(output.read_text())["action"], "RUN_SHADOW")
             # A failed second invocation must remove stale authorization.
             (root / names["event"]).write_text("{broken json")
@@ -87,9 +85,7 @@ class OwnerFallbackTests(unittest.TestCase):
             (root / names["event"]).write_text(json.dumps(f["event"]))
             shadow = {"workflow_runs": [{"id": []}]}
             (root / names["shadow_runs"]).write_text(json.dumps(shadow))
-            with patch.object(gate.dt, "datetime", wraps=dt.datetime) as clock:
-                clock.now.return_value = NOW
-                gate.main(argv)
+            gate.main(argv, now=NOW)
             self.assertEqual(json.loads(output.read_text())["action"], "ABSTAIN")
 
     def test_valid_completed_sealed_dispatch_and_native(self):
