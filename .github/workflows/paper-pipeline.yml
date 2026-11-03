@@ -170,9 +170,9 @@ jobs:
           set -euo pipefail
           LEDGER_COMMIT="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
           LEDGER_SHA="$(python -c 'import json;print(json.load(open("paper_pov/output/scoreboard.json"))["ledger_sha256"])')"
-          python -m paper_pov.results_report --verify-only \\
-            --run-id "$GITHUB_RUN_ID" --source-sha "$GITHUB_SHA" \\
-            --ledger-commit "$LEDGER_COMMIT" --ledger-sha256 "$LEDGER_SHA" \\
+          python -m paper_pov.results_report --verify-only \
+            --run-id "$GITHUB_RUN_ID" --source-sha "$GITHUB_SHA" \
+            --ledger-commit "$LEDGER_COMMIT" --ledger-sha256 "$LEDGER_SHA" \
             --output-dir paper_pov/output/results
       - name: Preserve public human-readable paper results
         uses: actions/upload-artifact@v4
