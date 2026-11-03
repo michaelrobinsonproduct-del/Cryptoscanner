@@ -54,6 +54,22 @@ def combine(parity, recovery, snapshot=None):
             raise ValueError("A2 snapshot lacks WATCH candidates")
         if snapshot.get("scan_status") != "WATCH":
             raise ValueError("A2 snapshot has unexpected scan status")
+        # Treat snapshot metadata as untrusted even after transport authentication.
+        # Contradictory counts must never be published as a verified C report.
+        eligible = snapshot.get("eligible_pairs")
+        observed = snapshot.get("observed_markets")
+        abstentions = snapshot.get("abstention_counts")
+        if any(type(n) is not int or n < 0 for n in (eligible, observed)):
+            raise ValueError("Invalid A2 market coverage")
+        if observed > eligible or len(snapshot["watch"]) > observed:
+            raise ValueError("Contradictory A2 market coverage")
+        if not isinstance(abstentions, dict) or any(
+            not isinstance(k, str) or not k or type(v) is not int or v < 0
+            for k, v in abstentions.items()
+        ):
+            raise ValueError("Invalid A2 abstention breakdown")
+        if not isinstance(snapshot.get("as_of"), str) or not snapshot["as_of"].strip():
+            raise ValueError("Missing A2 source time")
         result["a2_snapshot_attached"] = True
         result["a2_receipt_sha256"] = snapshot["receipt_sha256"]
         result["a2_watch_count"] = len(snapshot["watch"])
