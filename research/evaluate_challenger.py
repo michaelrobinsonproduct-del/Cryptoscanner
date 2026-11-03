@@ -1,0 +1,46 @@
+"""Research-only E2 CLI: join authenticated E1 labels to point-in-time score receipts."""
+import argparse
+import json
+from pathlib import Path
+from research.prospective_round_store import evaluate_index
+from research.chronological_challenger import compare
+
+
+def evaluate(index_path, scores_path, split_at):
+    evidence=evaluate_index(index_path,1)
+    score_rows=json.loads(Path(scores_path).read_text())
+    if not isinstance(score_rows,list):
+        raise ValueError("score receipts must be a list")
+    by_key={}
+    for score in score_rows:
+        key=(score["pair"],score["entry_first_observed_at"])
+        if key in by_key:
+            raise ValueError("duplicate score receipt")
+        if score.get("observed_at",float("inf")) > score["entry_first_observed_at"]:
+            raise ValueError("score was not available at entry")
+        by_key[key]=score
+    joined=[]
+    for outcome in evidence["outcomes"]:
+        key=(outcome["pair"],outcome["entry_first_observed_at"])
+        scores=by_key.get(key,{})
+        joined.append({**outcome,
+                       "baseline_score":scores.get("baseline_score"),
+                       "challenger_score":scores.get("challenger_score")})
+    result=compare(joined,split_at=split_at)
+    result["source_rounds_verified"]=evidence["rounds_verified"]
+    result["source_snapshots_verified"]=evidence["snapshots_verified"]
+    result["source_abstentions"]=len(evidence["abstentions"])
+    return result
+
+
+def main():
+    p=argparse.ArgumentParser()
+    p.add_argument("--round-index",required=True)
+    p.add_argument("--score-receipts",required=True)
+    p.add_argument("--split-at",required=True,type=float)
+    args=p.parse_args()
+    print("CHRONOLOGICAL_CHALLENGER",json.dumps(evaluate(args.round_index,args.score_receipts,args.split_at),sort_keys=True))
+
+
+if __name__=="__main__":
+    main()
