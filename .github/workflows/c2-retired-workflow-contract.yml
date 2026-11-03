@@ -78,7 +78,7 @@ jobs:
               assert names == ["recovery.json"], names
               payload=z.read("recovery.json")
               assert len(payload) < 100000
-              Path("/tmp/c-real-receipts/recovery.json").write_bytes(payload)
+              # D artifact 13276401753 ends with literal backslash-n after JSON.\n              # Normalize ONLY this observed transport defect; do not relax JSON parsing.\n              if payload.endswith(bytes((92, 110))):\n                  payload = payload[:-2] + bytes((10,))\n              Path("/tmp/c-real-receipts/recovery.json").write_bytes(payload)
           PY
           python -m paper_pov.c_read_only_integration --parity /tmp/c-real-receipts/parity.json --recovery /tmp/c-real-receipts/recovery.json --output /tmp/c-real-receipts/integration.json
           python - <<'PY'
