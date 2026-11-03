@@ -121,7 +121,12 @@ def associate_indexed_captures(captures_directory, round_index, associations_dir
     rows, abstentions = [], []
     for record in records:
         batch = Path(record["batch"])
-        manifest_sha = hashlib.sha256((batch / "manifest.json").read_bytes()).hexdigest()
+        if not batch.is_dir() or batch.is_symlink():
+            raise ValueError("unsafe indexed batch directory")
+        manifest = batch / "manifest.json"
+        if manifest.is_symlink() or not manifest.is_file():
+            raise ValueError("unsafe indexed manifest")
+        manifest_sha = hashlib.sha256(manifest.read_bytes()).hexdigest()
         if manifest_sha != record["manifest_sha256"]:
             raise ValueError("indexed manifest mismatch")
         verified, excluded = verified_rows(batch)
