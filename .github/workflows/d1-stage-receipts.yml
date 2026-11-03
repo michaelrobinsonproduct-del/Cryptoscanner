@@ -290,6 +290,29 @@ jobs:
           schedule_gap_minutes = (round((now - last_schedule).total_seconds() / 60, 1)
                                   if last_schedule else None)
           schedule_gap = last_schedule is None or schedule_gap_minutes > 90
+          # GitHub cron can be delayed or skipped. Count actual missing UTC slots,
+          # not just time since the last scheduled run; no second writer is created.
+          # Exclude the most recent 15 minutes to allow normal runner delay.
+          grace = dt.timedelta(minutes=15)
+          matured_cutoff = now - grace
+          missing_slots = []
+          for hours_ago in range(25):
+              hour = (now - dt.timedelta(hours=hours_ago)).replace(
+                  minute=0, second=0, microsecond=0)
+              for minute in (9, 39):
+                  slot = hour.replace(minute=minute)
+                  if slot < cutoff or slot > matured_cutoff:
+                      continue
+                  # Match the actual originating schedule's UTC creation time
+                  # with up to 15 minutes of scheduler/queue delay.
+                  matched = any(
+                      slot <= dt.datetime.fromisoformat(
+                          v["created_at"].replace("Z", "+00:00")) <= slot + grace
+                      for v in scheduled)
+                  if not matched:
+                      missing_slots.append(slot.isoformat())
+          missing_slots.sort()
+          schedule_gap = schedule_gap or bool(missing_slots)
           report = {"schema": "paper_source_run_health_v1",
                     "window_hours": 24, "observed_at": now.isoformat(),
                     "runs": runs, "failed_count": len(failed),
@@ -299,6 +322,9 @@ jobs:
                     "last_scheduled_at": last_schedule.isoformat() if last_schedule else None,
                     "schedule_gap_minutes": schedule_gap_minutes,
                     "schedule_gap_observed": schedule_gap,
+                    "expected_slots_checked": len([1 for hours_ago in range(25) for minute in (9, 39) if cutoff <= (now - dt.timedelta(hours=hours_ago)).replace(minute=minute, second=0, microsecond=0) <= matured_cutoff]),
+                    "missing_scheduled_slots": missing_slots,
+                    "missing_scheduled_slot_count": len(missing_slots),
                     "production_applied": False,
                     "query_verified": not query_failed,
                     "status": "SOURCE_QUERY_FAILED" if query_failed else
