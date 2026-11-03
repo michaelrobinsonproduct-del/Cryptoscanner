@@ -45,7 +45,7 @@ test("self-consistent but untrusted source and missing challenger scores cannot 
  const response=async()=>new Response(JSON.stringify({evidence:verified,outcomes,scores})) as any;
  await expect(createReadOnlyShadowLoader("https://example.org/ledger.json",response,"c".repeat(64))()).rejects.toThrow("untrusted_shadow_source");
  const empty={...verified,score_ledger_sha:await digest([])};
- const loader=createReadOnlyShadowLoader("https://example.org/ledger.json",async()=>new Response(JSON.stringify({evidence:empty,outcomes,scores:[]})) as any,source);
+ const loader=createReadOnlyShadowLoader("https://example.org/ledger.json",async(url:any)=>new Response(JSON.stringify(url===gateUrl?researchGate:{evidence:empty,outcomes,scores:[]})) as any,source,gateUrl,source);
  const runner=createCycleRunner(deps,loader);const result=await runner.run("manual");
  expect(result.result.shadow_evaluation.candidates[0].reason).toBe("missing_or_leaky_challenger_score");
 });
@@ -80,4 +80,19 @@ test("independent E3 decision gate rejects KEEP_BASELINE and source mismatch bef
  expect(result.result.shadow_artifact_status).toBe("REJECTED");
  expect(result.result.shadow_evaluation.coverage).toMatchObject({scored:0,abstained:1});
  expect(result.result.candidates).toHaveLength(1);
+});
+
+test("missing research pin and missing independent gate fail closed across shared HTTP and scheduled entry",async()=>{
+ const verified={...evidence,outcome_ledger_sha:await digest(outcomes),score_ledger_sha:await digest(scores)};
+ const fetcher=async(url:any)=>new Response(JSON.stringify(url===gateUrl?researchGate:{evidence:verified,outcomes,scores})) as any;
+ const missingPin=createCycleRunner(deps,createReadOnlyShadowLoader("https://example.org/ledger.json",fetcher as any,source,gateUrl));
+ const missingGate=createCycleRunner(deps,createReadOnlyShadowLoader("https://example.org/ledger.json",fetcher as any,source));
+ for(const runner of [missingPin,missingGate]){
+  const manual=await (await createCycleHttpHandler(runner)(new Request("http://localhost/cycle"))).json();
+  const scheduled=await runner.run("scheduled");
+  expect(manual).toEqual(scheduled.result);
+  expect(manual.shadow_artifact_status).toBe("REJECTED");
+  expect(manual.candidates).toHaveLength(1);
+  expect(manual.shadow_evaluation.coverage).toMatchObject({scored:0,abstained:1});
+ }
 });
