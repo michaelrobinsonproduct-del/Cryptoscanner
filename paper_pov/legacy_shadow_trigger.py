@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 
 from paper_pov import ledger
+from paper_pov.external_heartbeat_guard import _owner_identity
 from paper_pov.segmented_storage import MAX_RAW_BYTES
 
 REPO = "michaelrobinsonproduct-del/Cryptoscanner"
@@ -62,11 +63,9 @@ def decide(event, paper_runs, shadow_runs, state, manifest, ledger_message,
             or event.get("issue", {}).get("number") != 34
             or event.get("issue", {}).get("pull_request") is not None
             or event.get("comment", {}).get("body") != COMMAND
-            or event.get("comment", {}).get("user", {}).get("login") != OWNER
-            or event.get("comment", {}).get("user", {}).get("id") != OWNER_ID
             or event.get("comment", {}).get("author_association") != "OWNER"
-            or event.get("sender", {}).get("login") != OWNER
-            or event.get("sender", {}).get("id") != OWNER_ID
+            or not _owner_identity(event.get("comment", {}).get("user"))
+            or not _owner_identity(event.get("sender"))
             or not isinstance(checkout_sha, str) or not SHA.fullmatch(checkout_sha)
             or type(current_run_id) is not int or current_run_id < 1):
         raise ValueError("Unauthenticated owner shadow fallback")
