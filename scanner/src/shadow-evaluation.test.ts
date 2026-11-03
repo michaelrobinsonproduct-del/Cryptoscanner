@@ -5,7 +5,7 @@ const stamp="2026-11-03T04:00:00Z",discovered="2026-11-03T03:59:00Z",source="a".
 const row={pair:"TAOUSD",score:85,displacement_pct:1,discovered_at:discovered};
 const quote={pair:"TAOUSD",success:true,twoSidedBook:true,executableBbo:true,recentTradeConfirmation:true,newestTradeAgeSeconds:5,bestAsk:100,bestBid:99,fetchedAt:"2026-11-03T03:59:30Z"};
 const deps={scan:async()=>({candidates:[row]}),confirm:async()=>quote,pause:async()=>{},now:()=>new Date(stamp)};
-const evidence={version:"challenger-v2",source_sha:source,outcome_ledger_sha:ledger,qualified:true,held_out_samples:42,held_out_lift:4,outcome_rows:1};
+const evidence={version:"challenger-v2",source_sha:source,outcome_ledger_sha:ledger,score_ledger_sha:ledger,qualified:true,held_out_samples:42,held_out_lift:4,outcome_rows:1};
 const scores=[{pair:"TAOUSD",observed_at:discovered,computed_at:"2026-11-03T03:58:00Z",version:"challenger-v2",score:89,source_sha:source}];
 const outcomes=[{pair:"TAOUSD",observed_at:discovered,label:"HIT" as const,source_sha:source}];
 test("manual and scheduled cycles attach same qualified versioned shadow result without changing baseline",async()=>{
