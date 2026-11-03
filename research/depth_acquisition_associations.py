@@ -86,3 +86,25 @@ def verified_associations(captures_directory, associations_directory, depth_dire
         enriched.append({**capture, "source_sha256": source})
     return enriched, exclusions, {"verified_depth_rows": len(rows),
                                   "source_abstentions": source_abstentions}
+
+
+def associate_captured_scores(captures_directory, depth_directory, associations_directory):
+    from research.acquisition_receipt_pipeline import load_captures
+    captures = load_captures(captures_directory)
+    rows, abstentions = verified_rows(depth_directory)
+    accepted, excluded = [], []
+    for capture in captures:
+        pid = capture['prediction_id']
+        timestamp = capture['score_observed_at']
+        matches = [row for row in rows if row['pair'] == capture['pair']
+                   and timestamp <= row['first_observed_at'] <= timestamp + 600]
+        if len(matches) != 1:
+            excluded.append({'prediction_id': pid, 'reason': 'NO_UNIQUE_TIMELY_DEPTH'})
+            continue
+        digest = hashlib.sha256((Path(captures_directory) / (pid + '.json')).read_bytes()).hexdigest()
+        write_association(associations_directory, prediction_id=pid,
+                          pair=capture['pair'], source_sha256=matches[0]['source_sha256'],
+                          score_receipt_sha256=digest)
+        accepted.append(pid)
+    return {'associated': accepted, 'excluded': excluded,
+            'source_abstentions': abstentions, 'production_applied': False}
