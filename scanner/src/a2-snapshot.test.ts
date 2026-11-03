@@ -24,3 +24,19 @@ test("stale read-time quotes and malformed coverage fail closed, never invent WA
  const result=await runner.run("manual");expect(result.ok).toBe(true);expect(result.result.a2_snapshot).toMatchObject({status:"UNAVAILABLE",watch:[],reason:"read_or_validation_failed"});expect(result.result.scan_status).toBe("NO_DISCOVERY_CANDIDATES");
 });
 test("missing A2 endpoint and unsafe URL abstain",async()=>{expect(await createA2SnapshotReader(undefined,()=>now)()).toMatchObject({status:"UNAVAILABLE",reason:"not_configured"});await expect(createA2SnapshotReader("http://example.org",()=>now)()).rejects.toThrow("unsafe_a2_url")});
+
+test("A2 reader bounds streamed bytes and rejects oversized declared content",async()=>{
+ const oversized=()=>new Response("x".repeat(200001));
+ await expect(createA2SnapshotReader("https://example.org/a2",()=>now,async()=>oversized())()).rejects.toThrow("a2_oversized");
+ await expect(createA2SnapshotReader("https://example.org/a2",()=>now,async()=>new Response("{}",{headers:{"content-length":"200001"}}))()).rejects.toThrow("a2_oversized");
+});
+test("A2 rejects stablecoin candidates and impossible spread without altering baseline",async()=>{
+ const coin="USDTUSD",id=createHash("sha256").update("paper-v1|"+at+"|"+coin).digest("hex");
+ expect(()=>parseA2Snapshot({...fixture,watch:[{...row,pair:coin,prediction_id:id}]},now)).toThrow("invalid_a2_candidate");
+ expect(()=>parseA2Snapshot({...fixture,watch:[{...row,spread_bps:10001}]},now)).toThrow("invalid_a2_market_metric");
+ const runner=createCycleRunner(deps,undefined,undefined,createA2SnapshotReader("https://example.org/a2",()=>now,async()=>new Response(JSON.stringify({...fixture,watch:[{...row,pair:coin,prediction_id:id}]}))));
+ const manual=await runner.run("manual"),scheduled=await runner.run("scheduled");
+ expect(manual.result.a2_snapshot).toMatchObject({status:"UNAVAILABLE",watch:[]});
+ expect(scheduled.result).toEqual(manual.result);
+ expect(manual.result.scan_status).toBe("NO_DISCOVERY_CANDIDATES");
+});
