@@ -161,6 +161,18 @@ class PaperResultsContracts(unittest.TestCase):
         self.assertIn("stablecoin-base exclusions: 10", md)
         self.assertIn("counted from this scan's online AssetPairs metadata", md)
 
+
+    def test_zero_qualifying_watch_is_successful_abstention(self):
+        scan, score = fixture()
+        scan["watch"] = []
+        payload, markdown = self.report(scan, score)
+        self.assertEqual(payload["status"], "SUCCESS_PAPER_ONLY")
+        self.assertEqual(payload["candidates"], [])
+        self.assertTrue(payload["remote_readback_verified"])
+        self.assertIn("No qualifying WATCH candidates", markdown)
+        self.assertIn("ABSTAIN", markdown)
+        self.assertNotIn("FAILED run", markdown)
+
     def test_reject_trading_authorization(self):
         s, b = fixture()
         s["buy_approved"] = True
