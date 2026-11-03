@@ -48,14 +48,14 @@ def evaluate(ledger, depth_directory, captures_directory, associations_directory
     if associations_directory is not None:
         captures, association_exclusions, _ = verified_associations(
             captures_directory, associations_directory, depth_directory)
-    report = bind(ledger, depth_directory, captures)
+    if associations_directory is None:\n        raise ValueError("authenticated depth associations required")\n    report = bind(ledger, depth_directory, captures)
     report["association_exclusions"] = association_exclusions
     report["association_excluded_count"] = len(association_exclusions)
     report["capture_count"] = len(original_captures)
     report["capture_sha256"] = hashlib.sha256(
         json.dumps(original_captures, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
-    report["mode"] = "RESEARCH_ONLY_ACQUISITION_PIPELINE"
+    # These independently bound receipts are the only allowable input to E2/E3.\n    # Never export raw captures or caller-supplied depth claims as authenticated.\n    report["reconciliation_receipts"] = [dict(r) for r in report["accepted"]]\n    report["reconciliation_receipt_count"] = len(report["reconciliation_receipts"])\n    report["mode"] = "RESEARCH_ONLY_ACQUISITION_PIPELINE"
     report["production_applied"] = False
     return report
 
@@ -79,7 +79,7 @@ def main():
     parser.add_argument("--depth-directory", required=True)
     parser.add_argument("--captures-directory", required=True)
     parser.add_argument("--output", required=True)
-    parser.add_argument("--associations-directory")
+    parser.add_argument("--associations-directory", required=True)
     args = parser.parse_args()
     ledger = json.loads(Path(args.paper_ledger).read_bytes())
     report = evaluate(ledger, args.depth_directory, args.captures_directory,
