@@ -80,6 +80,22 @@ jobs:
           mkdir -p /tmp/kraken-round-history
           gh run download 41725038118 -R michaelrobinsonproduct-del/Cryptoscanner -n kraken-round-history-41725038118 -D /tmp/kraken-round-history
           test -s /tmp/kraken-round-history/rounds.jsonl
+      - name: Persist research-only acquisition association coverage
+        run: |
+          mkdir -p real-paper/score-captures real-paper/depth-associations
+          python -m research.depth_acquisition_associations \
+            --captures-directory real-paper/score-captures \
+            --depth-directory /tmp/kraken-round-history \
+            --associations-directory real-paper/depth-associations \
+            --report real-paper/e-association-coverage.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("real-paper/e-association-coverage.json").read_text())
+          assert report["production_applied"] is False
+          assert report["associated"] == []
+          print("E_ASSOCIATION_COVERAGE", json.dumps(report, sort_keys=True))
+          PY
       - name: Evaluate actual source-qualified 1h 6h 24h 48h evidence
         run: |
           python -m research.acquisition_receipt_pipeline --round-index /tmp/kraken-round-history/rounds.jsonl --all-horizon-coverage --output real-paper/e-source-coverage.json
@@ -98,4 +114,5 @@ jobs:
           path: |
             real-paper/e-learning-report.json
             real-paper/e-source-coverage.json
+            real-paper/e-association-coverage.json
           retention-days: 7
