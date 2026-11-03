@@ -104,7 +104,17 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          gh api "repos/$REPO/actions/artifacts/13279054170" > /tmp/c-real-receipts/a2-metadata.json
+          python - <<'PY'
+          import json
+          meta=json.load(open("/tmp/c-real-receipts/a2-metadata.json"))
+          assert meta["id"]==13279054170 and meta["name"]=="b-authenticated-a2-snapshot"
+          assert meta["expired"] is False and meta["workflow_run"]["id"]==41737629448
+          assert meta["workflow_run"]["head_sha"]=="4341b748cf9d937a17255d58f0cfbdf267c7054f"
+          assert meta["digest"]=="sha256:e11e719458e679fecec6402d626e42b0b900f2211d7fe4c8dfb79852a542bb50"
+          PY
           gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/13279054170/zip" > /tmp/c-real-receipts/a2.zip
+          echo 'e11e719458e679fecec6402d626e42b0b900f2211d7fe4c8dfb79852a542bb50  /tmp/c-real-receipts/a2.zip' | sha256sum --check --status
           python - <<'PY'
           import hashlib, json, zipfile
           from pathlib import Path
