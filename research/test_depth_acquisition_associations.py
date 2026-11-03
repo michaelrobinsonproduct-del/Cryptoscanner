@@ -89,6 +89,24 @@ class DepthAssociationTests(unittest.TestCase):
         self.assertEqual(json.loads(output.read_text())["capture_count"], 1)
 
     @patch("research.depth_acquisition_associations.verified_rows")
+    def test_indexed_round_association(self, rows):
+        from research.depth_acquisition_associations import associate_indexed_captures
+        rows.return_value = ([self.row], [])
+        batch = self.root / "round"
+        batch.mkdir()
+        (batch / "manifest.json").write_text("{}")
+        index = self.root / "rounds.jsonl"
+        index.write_text(json.dumps({
+            "batch": str(batch),
+            "manifest_sha256": hashlib.sha256(b"{}").hexdigest(),
+            "snapshots_verified": 1, "abstentions": 0}) + "\\n")
+        result = associate_indexed_captures(self.root / "scores", index,
+                                            self.root / "depth-links")
+        self.assertEqual(result["associated"], [self.pid])
+        self.assertEqual(result["rounds_verified"], 1)
+        self.assertFalse(result["production_applied"])
+
+    @patch("research.depth_acquisition_associations.verified_rows")
     def test_connector_abstains_on_missing_depth(self, rows):
         from research.depth_acquisition_associations import associate_captured_scores
         rows.return_value = ([], [])
