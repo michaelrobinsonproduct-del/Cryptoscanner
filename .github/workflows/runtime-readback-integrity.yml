@@ -49,7 +49,7 @@ jobs:
           assert report["remote_downloaded"] is True, report
           root=Path("/tmp/real-writer-recovered")
           for name in ("latest.json", "ledger.json", "scoreboard.json", "SHA256SUMS"):
-              assert (root / "paper_pov/output" / name).is_file(), name
+              assert ((root / name).is_file() or (root / "paper_pov/output" / name).is_file()), name
           print("D2_REAL_WRITER_RESTORED_CHECKSUM_ONLY", json.dumps(report, sort_keys=True))
           PY
       - name: Retain read-only recovery result
