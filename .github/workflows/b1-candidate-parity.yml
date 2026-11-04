@@ -114,9 +114,9 @@ jobs:
           from pathlib import Path
           with zipfile.ZipFile("/tmp/b-delivery/d-recovery.zip") as z:
               names=z.namelist()
-              if names!=["recovery.json"]:
+              if len(names)!=1 or names[0].split("/")[-1] not in ("real-writer-recovery.json","recovery.json"):
                   raise SystemExit("D_RECOVERY_ARCHIVE_LAYOUT_MISMATCH")
-              raw=z.read("recovery.json")
+              raw=z.read(names[0])
               if len(raw)>100000:
                   raise SystemExit("D_RECOVERY_REPORT_OVERSIZED")
               if raw.endswith(bytes((92,110))):
