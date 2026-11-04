@@ -118,7 +118,7 @@ jobs:
           cd b-delivery-consumer
           python -m paper_pov.github_delivery_projection \
             --repo "${{ github.repository }}" \
-            --run-id 41636714169 \
+            --run-id "$WRITER_RUN_ID" \
             --writer-readback /tmp/real-writer-recovery.json \
             --output /tmp/d2-b-delivery.json
           python - <<'PY'
