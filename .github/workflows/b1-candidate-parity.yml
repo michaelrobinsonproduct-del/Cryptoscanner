@@ -372,6 +372,10 @@ jobs:
               raise SystemExit("A2_EVIDENCE_NOT_CONSUMED")
           if bool(projected.get("learning")) != bool(e_path.exists()):
               raise SystemExit("E_LEARNING_NOT_CONSUMED")
+          expected_learning="NO_QUALIFIED_RULE" if e_path.exists() else "LEARNING_EVIDENCE_UNAVAILABLE"
+          if (projected.get("learning_status")!=expected_learning or
+                  projected.get("scoring_promotion_applied") is not False):
+              raise SystemExit("E_FALLBACK_OR_PROMOTION_STATUS_MISMATCH")
           status={"schema":"b_integrated_delivery_status_v1",
                   "source_run_id":projected["source_run_id"],
                   "source_sha":projected["source_sha"],
@@ -388,6 +392,8 @@ jobs:
                   "writer_source_identity_matches_delivery":projected["writer_source_identity_matches_delivery"],
                   "a2":a2_status,"e":e_status,
                   "learning_qualified":False,
+                  "learning_status":projected["learning_status"],
+                  "scoring_promotion_applied":False,
                   "production_applied":False}
           Path("/tmp/b-delivery/integration-status.json").write_text(json.dumps(status,sort_keys=True))
           print("SHARED_MANUAL_SCHEDULED_DELIVERY",projected["source_run_id"],projected["status"])
@@ -412,6 +418,7 @@ jobs:
                      f"- D same-source run: {data['writer_same_scan_as_delivery']}",
                      f"- Writer reconciliation: {data['writer_reconciliation_status']}",
                      f"- A2: {data['a2']['status']}; E: {data['e']['status']}",
+                     f"- Learning: {data['learning_status']}; scoring promotion applied: false",
                      "- Paper only; no scoring promotion or second writer"]
           else:
               lines=["### B authenticated manual/scheduled delivery",
