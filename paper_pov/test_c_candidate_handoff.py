@@ -1,7 +1,7 @@
 """C -> B/D executable candidate handoff acceptance."""
 import copy
 import unittest
-from paper_pov.c_candidate_handoff import consume
+from paper_pov.c_candidate_handoff import consume, from_integration
 
 
 def fixture():
@@ -32,6 +32,37 @@ class HandoffTests(unittest.TestCase):
         self.assertEqual(out["status"], "WATCH_REPLAY_ONLY_NOT_LIVE")
         self.assertFalse(out["live_watch_certified"])
         self.assertFalse(out["production_applied"])
+
+    def test_integration_to_bd_roundtrip(self):
+        src = fixture()
+        integration = {
+            "schema": "c_read_only_integration_v1",
+            "status": "ABSTAIN_LEGACY_QUOTE_EVIDENCE",
+            "recovery_verified": True,
+            "a2_snapshot_attached": True,
+            "exchange_event_freshness_verified": False,
+            "production_applied": False,
+            "trading_approved": False,
+            "a2_receipt_sha256": src["receipt_sha256"],
+            "a2_as_of": src["source_as_of"],
+            "a2_source_cohort": src["source_cohort"],
+            "a2_eligible_pairs": src["eligible_pairs"],
+            "a2_observed_markets": src["observed_markets"],
+            "a2_watch_count": src["watch_count"],
+            "a2_watch_candidates": src["watch"],
+        }
+        self.assertEqual(from_integration(integration), src)
+        for key, bad in (("recovery_verified", False),
+                         ("a2_snapshot_attached", False),
+                         ("exchange_event_freshness_verified", True),
+                         ("a2_receipt_sha256", "bad"),
+                         ("a2_watch_count", 3),
+                         ("production_applied", True)):
+            with self.subTest(key=key):
+                mutated = copy.deepcopy(integration)
+                mutated[key] = bad
+                with self.assertRaises(ValueError):
+                    from_integration(mutated)
 
     def test_fail_closed_on_bad_contract(self):
         changes = [("watch_count", 3), ("observed_markets", 1),
