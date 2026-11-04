@@ -90,7 +90,39 @@ def project_delivery(transport, writer_readback=None, historical_a2=None):
             "historical_a2": replay}
 
 
-def project_published_result(result, writer_readback=None):
+def _a2_evidence(delivery):
+    """Carry A's independently receipt-verified client quote cohort, not writer output."""
+    import re
+    if not isinstance(delivery, dict) or delivery.get("schema") != "a2_published_watch_delivery_v1":
+        raise ValueError("invalid A2 delivery evidence")
+    if any(delivery.get(key) is not False for key in ("single_writer_ledger_verified", "exchange_event_freshness_verified", "production_applied", "buy_approved")):
+        raise ValueError("A2 falsely claims writer, exchange freshness or production approval")
+    if delivery.get("client_quote_freshness_verified") is not True or delivery.get("source") != "kraken_public_rest_client_observed":
+        raise ValueError("A2 freshness/source evidence absent")
+    digest = delivery.get("receipt_sha256")
+    if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+        raise ValueError("A2 receipt identity missing")
+    watch = delivery.get("watch")
+    count = delivery.get("watch_count")
+    if not isinstance(watch, list) or type(count) is not int or count != len(watch) or count > 12:
+        raise ValueError("A2 WATCH count mismatch")
+    if delivery.get("scan_status") not in ("WATCH", "ABSTAIN_NO_WATCH", "ABSTAIN_NO_OBSERVATIONS"):
+        raise ValueError("A2 scan status invalid")
+    if (delivery["scan_status"] == "WATCH") != bool(watch):
+        raise ValueError("A2 WATCH/status mismatch")
+    eligible, observed = delivery.get("eligible_pairs"), delivery.get("observed_markets")
+    if any(type(v) is not int or v < 0 for v in (eligible, observed)) or observed > eligible or count > observed:
+        raise ValueError("A2 coverage mismatch")
+    if any(not isinstance(c, dict) or type(c.get("rank")) is not int or c["rank"] != i or c.get("buy_approved") is not False for i, c in enumerate(watch, 1)):
+        raise ValueError("A2 candidate ranking or approval invalid")
+    return {"receipt_sha256": digest, "as_of": delivery.get("as_of"),
+            "status": delivery["scan_status"], "watch_count": count, "watch": watch,
+            "eligible_pairs": eligible, "observed_markets": observed,
+            "same_scan_as_writer": False, "single_writer_ledger_verified": False,
+            "exchange_event_freshness_verified": False, "production_applied": False}
+
+
+def project_published_result(result, writer_readback=None, a2_delivery=None):
     """Consume the real results.json emitted by the ONE paper-pipeline writer.
 
     This is the same schema for scheduled and manual dispatch; it does not
@@ -135,11 +167,12 @@ def project_published_result(result, writer_readback=None):
             if key not in candidate:
                 raise ValueError("incomplete WATCH candidate")
     writer = _writer_evidence(writer_readback) if writer_readback is not None else None
+    a2 = _a2_evidence(a2_delivery) if a2_delivery is not None else None
     return {"schema": "paper_delivery_readback_v1", "source_run_id": int(run_id),
             "source_sha": sha, "github_event": event, "status": status,
             "ledger_generation": generation, "ledger_commit": result["ledger_commit"],
             "writer_reconciliation_status": writer["reconciliation_status"] if writer else "UNAVAILABLE",
-            "writer_recovery": writer, "historical_watch_count": None, "historical_coverage": None,
+            "writer_recovery": writer, "a2_receipt_cohort": a2, "historical_watch_count": None, "historical_coverage": None,
             "live_watch": candidates, "live_watch_authorized": False,
             "client_quote_freshness_verified": bool(candidates),
             "exchange_event_freshness_verified": False,
@@ -154,14 +187,18 @@ def main():
     parser.add_argument("--historical-a2", help="Existing C/B historical WATCH handoff JSON")
     parser.add_argument("--output", help="Write read-only delivery JSON; never a ledger")
     parser.add_argument("--published-result", help="Actual verified paper-pipeline results.json")
+    parser.add_argument("--a2-delivery", help="A verified downloaded artifact projection, separate from writer cohort")
     args = parser.parse_args()
     writer = json.loads(open(args.writer_readback, encoding="utf-8").read()) if args.writer_readback else None
     historical = json.loads(open(args.historical_a2, encoding="utf-8").read()) if args.historical_a2 else None
     if args.published_result:
         if args.run_id or args.repo or historical is not None:
             parser.error("--published-result is exclusive of historical artifact transport")
-        result = project_published_result(json.loads(open(args.published_result, encoding="utf-8").read()), writer)
+        a2 = json.loads(open(args.a2_delivery, encoding="utf-8").read()) if args.a2_delivery else None
+        result = project_published_result(json.loads(open(args.published_result, encoding="utf-8").read()), writer, a2)
     else:
+        if args.a2_delivery:
+            parser.error("--a2-delivery requires --published-result")
         if not args.repo or not args.run_id:
             parser.error("--repo and --run-id required for historical artifact transport")
         result = project_delivery(read_run(args.repo, args.run_id), writer, historical)
