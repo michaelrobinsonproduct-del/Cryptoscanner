@@ -33,6 +33,9 @@ class C2CoverageContract(unittest.TestCase):
     def test_valid_coverage_is_read_only(self):
         result = combine(*evidence())
         self.assertTrue(result["a2_snapshot_attached"])
+        self.assertEqual(result["a2_watch_candidates"], [{"pair": "BTCUSD"}])
+        self.assertEqual(result["a2_watch_count"], len(result["a2_watch_candidates"]))
+        self.assertEqual(result["status"], "ABSTAIN_LEGACY_QUOTE_EVIDENCE")
         self.assertFalse(result["production_applied"])
         self.assertFalse(result["trading_approved"])
 
