@@ -3,7 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from .heldout_outcome_adapter import build_heldout_evidence, main
+from .heldout_outcome_adapter import build_heldout_evidence, main, project_learning_handoff
 
 
 def row(key, horizon, **changes):
@@ -96,6 +96,40 @@ class OutcomeAdapterTests(unittest.TestCase):
         self.assertEqual(result["source_qualified_prediction_count"], 1)
         self.assertFalse(result["counts_independently_authenticated"])
         self.assertFalse(result["promotion_authorized"])
+
+    def test_missing_48h_is_reported_not_silently_dropped(self):
+        result = self.evaluate([row("p", h) for h in (1, 6, 24, 48)] +
+                               [row("q", h) for h in (1, 6, 24)])
+        self.assertEqual(result["incomplete_prediction_horizons"], {"q": [48]})
+        self.assertEqual(result["observed_prediction_count"], 2)
+        self.assertEqual(result["excluded_prediction_count"], 1)
+        self.assertEqual(result["four_horizon_complete_predictions"], 1)
+
+    def test_read_only_learning_handoff_separates_unverified_counts(self):
+        result = self.evaluate([row("p", h) for h in (1, 6, 24, 48)])
+        handoff = project_learning_handoff(result)
+        self.assertEqual(handoff["schema"], "paper_learning_handoff_v1")
+        self.assertEqual(handoff["complete_cohort_count"], 1)
+        self.assertFalse(handoff["source_authenticated"])
+        self.assertFalse(handoff["measured_lift_verified"])
+        self.assertFalse(handoff["promotion_authorized"])
+        with self.assertRaisesRegex(ValueError, "Unsafe"):
+            project_learning_handoff(dict(result, promotion_authorized=True))
+
+    def test_cli_writes_separate_b_handoff_and_refuses_overwrite(self):
+        payload = dict(outcomes=[row("p", h) for h in (1, 6, 24, 48)],
+                       baseline_decisions={"p": True}, challenger_decisions={"p": False},
+                       training_end_utc="2026-07-29T00:00:00Z",
+                       holdout_start_utc="2026-08-01T00:00:00Z",
+                       evaluation_asof_utc="2026-08-07T00:00:00Z",
+                       baseline_version="baseline-1", challenger_version="shadow-2")
+        with tempfile.TemporaryDirectory() as folder:
+            source, full, handoff = (Path(folder)/name for name in ("input.json", "full.json", "b.json"))
+            source.write_text(json.dumps(payload), encoding="utf-8")
+            main([str(source), "--output", str(full), "--delivery-output", str(handoff)])
+            self.assertEqual(json.loads(handoff.read_text())["status"], "NO_QUALIFIED_RULE")
+            with self.assertRaises(FileExistsError):
+                main([str(source), "--output", str(full), "--delivery-output", str(handoff)])
 
     def test_48h_gap_requires_decision_exclusion(self):
         result = self.evaluate([row("p", 48), row("gap", 48, coverage_complete=False)])
