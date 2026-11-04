@@ -134,6 +134,76 @@ jobs:
           assert delivery["single_writer_read_only"] is True
           print("D2_B_HISTORICAL_READBACK_PROJECTED",json.dumps(delivery,sort_keys=True))
           PY
+      - name: Consume same-run checksummed published results through B read-only delivery
+        if: ${{ success() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONPATH: ${{ github.workspace }}/b-delivery-consumer
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, subprocess
+          repo=os.environ["GITHUB_REPOSITORY"]
+          rid=os.environ["WRITER_RUN_ID"]
+          listing=json.loads(subprocess.check_output(["gh","api","-X","GET",
+              f"repos/{repo}/actions/runs/{rid}/artifacts?per_page=100"], timeout=45))
+          if listing.get("total_count") != len(listing.get("artifacts",[])):
+              raise SystemExit("INCOMPLETE_PUBLISHED_ARTIFACT_LIST")
+          matches=[a for a in listing["artifacts"] if a.get("name")==f"public-paper-results-{rid}" and a.get("expired") is False]
+          if len(matches)!=1:
+              # Historical writer receipts remain useful, but do not fabricate a
+              # verified published result when the paired artifact is absent.
+              print("D2_B_PUBLISHED_RESULTS_ABSTAIN_NO_PAIRED_ARTIFACT")
+              with open(os.environ["GITHUB_ENV"],"a") as out:
+                  out.write("PUBLISHED_RESULTS_AVAILABLE=false\n")
+          else:
+              with open(os.environ["GITHUB_ENV"],"a") as out:
+                  out.write("PUBLISHED_RESULTS_AVAILABLE=true\n")
+          PY
+          if [ "$PUBLISHED_RESULTS_AVAILABLE" != "true" ]; then exit 0; fi
+          mkdir -p /tmp/d2-published
+          gh run download "$WRITER_RUN_ID" --repo "${{ github.repository }}" --name "public-paper-results-$WRITER_RUN_ID" --dir /tmp/d2-published
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          root=Path("/tmp/d2-published")
+          files=list(root.rglob("*"))
+          if any(p.is_symlink() for p in files):
+              raise SystemExit("UNTRUSTED_PUBLISHED_ARTIFACT_SYMLINK")
+          required={"results.json","results.md","SHA256SUMS"}
+          matched=[p for p in files if p.is_file()]
+          if {p.name for p in matched}!=required or len(matched)!=3:
+              raise SystemExit("INCOMPLETE_PUBLISHED_RESULT_ARTIFACT")
+          with ZipFile("/tmp/d2-published-results.zip","w",compression=ZIP_DEFLATED) as z:
+              for p in matched:
+                  z.write(p,p.name)
+          PY
+          cd b-delivery-consumer
+          python -m paper_pov.github_delivery_projection \
+            --published-artifact /tmp/d2-published-results.zip \
+            --expected-run-id "$WRITER_RUN_ID" \
+            --expected-source-sha "$WRITER_SOURCE_SHA" \
+            --writer-readback /tmp/real-writer-recovery.json \
+            --output /tmp/d2-b-published-delivery.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path("/tmp/d2-b-published-delivery.json").read_text())
+          assert result["source_run_id"] == int(__import__("os").environ["WRITER_RUN_ID"])
+          assert result["single_writer_read_only"] is True
+          assert result["live_watch_authorized"] is False
+          assert result["production_applied"] is False
+          assert result["writer_reconciliation_status"] == "MATCH"
+          print("D2_B_VERIFIED_PUBLISHED_DELIVERY",json.dumps(result,sort_keys=True))
+          PY
+      - name: Retain verified published B delivery
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2-b-published-delivery-report
+          path: /tmp/d2-b-published-delivery.json
+          if-no-files-found: warn
+          retention-days: 7
       - name: Retain B read-only projection
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
