@@ -395,6 +395,34 @@ jobs:
                   "learning_status":projected["learning_status"],
                   "scoring_promotion_applied":False,
                   "production_applied":False}
+          # Human and machine consumers share one authenticated projection. Never
+          # turn A2's independent historical cohort into a same-run overlap.
+          scored=[]
+          for c in projected["live_watch"]:
+              scored.append({key:c.get(key) for key in (
+                  "rank","symbol","price_usd","quote_observed_at",
+                  "baseline_score","challenger_score","move15_pct",
+                  "volume_accel","risk","status")})
+          status["ranked_watch"]=scored
+          status["same_scan_overlap"]={"status":"UNAVAILABLE",
+              "reason":"NO_INDEPENDENT_SAME_RUN_SECOND_SCANNER",
+              "symbols":[]}
+          status["a2_historical_watch_count"]=(
+              a2_status.get("watch_count") if a2_status.get("status")=="A2_READ_TIME_FRESHNESS_VERIFIED" else None)
+          # Do not manufacture a score or a second scanner result from a
+          # different source run, even if a symbol string happens to match.
+          lines=[f"Paper delivery {status['source_run_id']} ({status['github_event']})",
+                 f"Status: {status['delivery_status']}",
+                 f"Published quote complete: {status['published_quote_complete']}",
+                 f"D same-run: {status['writer_same_scan_as_delivery']} / {status['writer_reconciliation_status']}",
+                 f"A2: {a2_status['status']} | E: {e_status['status']}",
+                 f"Learning: {status['learning_status']} (promotion: NO)",
+                 "Same-run scanner overlap: unavailable (no authenticated second scanner)"]
+          for c in scored:
+              lines.append(f"#{c['rank']} {c['symbol']} WATCH paper | price ${c['price_usd']} | baseline {c['baseline_score']} | challenger {c['challenger_score']} | 15m {c['move15_pct']}% | volume acceleration {c['volume_accel']} | risk {c['risk']} | quote {c['quote_observed_at']}")
+          if not scored:
+              lines.append("No authenticated fresh WATCH candidates; delivery abstained or found none.")
+          Path("/tmp/b-delivery/delivery-summary.txt").write_text("\\n".join(lines)+"\\n")
           Path("/tmp/b-delivery/integration-status.json").write_text(json.dumps(status,sort_keys=True))
           print("SHARED_MANUAL_SCHEDULED_DELIVERY",projected["source_run_id"],projected["status"])
           PY
@@ -441,5 +469,6 @@ jobs:
             /tmp/b-delivery/e-status.json
             /tmp/b-delivery/delivery.json
             /tmp/b-delivery/integration-status.json
+            /tmp/b-delivery/delivery-summary.txt
           if-no-files-found: warn
           retention-days: 7
