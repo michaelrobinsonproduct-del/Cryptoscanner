@@ -20,4 +20,4 @@ The Python service selects a successful completed main-branch paper workflow run
 
 **Known blocker:** the new output format is still on an unmerged integration branch; the main-only workflow has not been shown to produce a compatible artifact. Existing branch A1/A2 and A2 consumer artifacts are not substitutes for the main paper-ledger artifact. No HTTPS service or token is currently configured or deployed.
 
-**Operational caveat:** the delivery process performs an authenticated GitHub artifact download per request. Its read can take longer than the Bun 30-second deadline or be rate-limited; that is a visible `UNAVAILABLE` outcome, not permission to use an older result. No fallback writer or stale cache is allowed.
+**Operational caveat:** the delivery process performs an authenticated GitHub artifact download per request. Each GitHub CLI call is bounded to 20 seconds, and a slow or unavailable download fails closed. Its read can take longer than the Bun 30-second deadline or be rate-limited; that is a visible `UNAVAILABLE` outcome, not permission to use an older result. No fallback writer or stale cache is allowed.
