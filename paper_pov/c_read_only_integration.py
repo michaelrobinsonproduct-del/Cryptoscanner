@@ -73,6 +73,10 @@ def combine(parity, recovery, snapshot=None):
         result["a2_snapshot_attached"] = True
         result["a2_receipt_sha256"] = snapshot["receipt_sha256"]
         result["a2_watch_count"] = len(snapshot["watch"])
+        # Carry the authenticated WATCH payload into the integrated artifact so
+        # downstream B/D consumers need not reconstruct or refetch the A2 ZIP.
+        # This remains read-only evidence, never a live BUY authorization.
+        result["a2_watch_candidates"] = snapshot["watch"]
         result["a2_as_of"] = snapshot.get("as_of")
         result["a2_eligible_pairs"] = snapshot.get("eligible_pairs")
         result["a2_observed_markets"] = snapshot.get("observed_markets")
