@@ -13,7 +13,7 @@ def fixture():
         "eligible_pairs": 605,
         "observed_markets": 602,
         "watch_count": 2,
-        "watch": [{"pair": "XXBTZUSD", "rank": 1}, {"pair": "XETHZUSD", "rank": 2}],
+        "watch": [{"pair": "XXBTZUSD", "rank": 1, "status": "PAPER_WATCH"}, {"pair": "XETHZUSD", "rank": 2, "status": "PAPER_WATCH"}],
         "status": "ABSTAIN_LEGACY_QUOTE_EVIDENCE",
         "freshness_status": "HISTORICAL_ARTIFACT_NOT_LIVE",
         "quote_timestamp_semantics": "client_observed_not_exchange_event_time",
@@ -38,7 +38,10 @@ class HandoffTests(unittest.TestCase):
                    ("live_watch_certified", True), ("production_applied", True),
                    ("trading_approved", True), ("freshness_status", "LIVE"),
                    ("receipt_sha256", "fake"), ("watch", []),
-                   ("quote_timestamp_semantics", "exchange_event_time")]
+                   ("quote_timestamp_semantics", "exchange_event_time"),
+                   ("watch", [{"pair": "XXBTZUSD", "rank": 1, "status": "PAPER_WATCH"}, {"pair": "XXBTZUSD", "rank": 2, "status": "PAPER_WATCH"}]),
+                   ("watch", [{"pair": "XXBTZUSD", "rank": 1, "status": "PAPER_WATCH"}, {"pair": "XETHZUSD", "rank": 4, "status": "PAPER_WATCH"}]),
+                   ("watch", [{"pair": "XXBTZUSD", "rank": 1}])]
         for key, value in changes:
             with self.subTest(key=key):
                 src = copy.deepcopy(fixture())
