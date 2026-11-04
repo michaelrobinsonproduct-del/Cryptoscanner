@@ -20,6 +20,36 @@ def _github_json(args, *, runner):
     return json.loads(raw)
 
 
+
+
+def summarize_persisted_paper(files):
+    """Read actual writer receipts; distinguish historical abstention from live certification."""
+    def locate(name):
+        matches = [data for path, data in files.items() if path == name or path.endswith("/" + name)]
+        if len(matches) != 1:
+            raise IntegrityError("Missing or ambiguous persisted " + name)
+        try:
+            value = json.loads(matches[0])
+        except (ValueError, UnicodeError) as exc:
+            raise IntegrityError("Malformed persisted " + name) from exc
+        if not isinstance(value, dict):
+            raise IntegrityError("Non-object persisted " + name)
+        return value
+    scan, ledger, scoreboard = (locate(name) for name in ("latest.json", "ledger.json", "scoreboard.json"))
+    generation = ledger.get("generation")
+    if not isinstance(generation, int) or isinstance(generation, bool) or generation < 0:
+        raise IntegrityError("Invalid recovered ledger generation")
+    if scoreboard.get("generation") != generation:
+        raise IntegrityError("Recovered ledger and scoreboard generation mismatch")
+    status = scan.get("status")
+    if not isinstance(status, str) or not status:
+        raise IntegrityError("Recovered scan status absent")
+    return {"ledger_generation": generation, "scan_status": status,
+            "quote_evidence_certified": scan.get("exchange_event_freshness_verified") is True
+                                        and scan.get("published_quote_evidence") is True,
+            "outcome": "ABSTAIN" if status.startswith("ABSTAIN") else "HISTORICAL_RESULT_ONLY",
+            "live_replay_performed": False}
+
 def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, runner=subprocess.check_output, restore_dir=None):
     """Fail closed on run identity, source SHA, artifact ambiguity and byte drift."""
     if not repo or "/" not in repo or not str(run_id).isdigit() or not artifact_name:
@@ -79,6 +109,8 @@ def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, ru
             result = verify_readback(manifest, files, expected_source_sha=source_sha,
                                      expected_run_id=run_id)
             result["independently_authenticated"] = True
+        if artifact_name == f"public-paper-ledger-{run_id}":
+            result["persisted_paper"] = summarize_persisted_paper(files)
         if restore_dir is not None:
             destination = Path(restore_dir)
             if destination.exists():
