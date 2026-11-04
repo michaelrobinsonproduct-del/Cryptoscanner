@@ -136,12 +136,21 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                 "remote_ref": ref, "remote_path": path,
                 "recovered_sha256": hashlib.sha256(recovered[ledger_paths[0]]).hexdigest(),
                 "independently_authenticated": False, "production_applied": False}
-    if remote.get("type") != "file" or remote.get("encoding") != "base64":
-        raise IntegrityError("Remote ledger not a base64 file")
+    # A malformed or missing remote comparison is not evidence that a
+    # checksum-verified historical writer receipt is corrupt. Preserve the
+    # recovered receipt and explicitly report unavailable reconciliation.
+    if not isinstance(remote, dict) or remote.get("type") != "file" or remote.get("encoding") != "base64":
+        return {"status": "UNAVAILABLE", "reason": "REMOTE_LEDGER_QUERY_FAILED",
+                "failure_type": "REMOTE_LEDGER_FORMAT_INVALID",
+                "remote_ref": ref, "remote_path": path,
+                "independently_authenticated": False, "production_applied": False}
     try:
-        remote_bytes = base64.b64decode(remote["content"], validate=False)
-    except (ValueError, KeyError, TypeError) as exc:
-        raise IntegrityError("Remote ledger content malformed") from exc
+        remote_bytes = base64.b64decode("".join(remote["content"].split()), validate=True)
+    except (ValueError, KeyError, TypeError, AttributeError) as exc:
+        return {"status": "UNAVAILABLE", "reason": "REMOTE_LEDGER_QUERY_FAILED",
+                "failure_type": "REMOTE_LEDGER_BASE64_INVALID",
+                "remote_ref": ref, "remote_path": path,
+                "independently_authenticated": False, "production_applied": False}
     # Reconcile canonical ledger identities, not JSON serialization bytes:
     # the writer and Git branch may encode the same ledger differently.
     from paper_pov import ledger as ledger_module, segmented_storage as storage
