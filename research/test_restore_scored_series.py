@@ -67,6 +67,41 @@ class RestoreScoredSeriesTests(unittest.TestCase):
             self.assertEqual(resumed["rounds_verified"], 3)
             self.assertEqual(evaluate_index(latest / "entry" / "round-index.jsonl")["rounds_verified"], 3)
 
+    def test_real_source_archive_continues_in_timed_batch(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "original"
+            seed(source)
+            elapsed = [1000.0]
+            collected = []
+            def clock():
+                return elapsed[0]
+            def sleep(seconds):
+                self.assertGreater(seconds, 0)
+                elapsed[0] += seconds
+            def collector(pairs, directory):
+                self.assertEqual(pairs, ["XBTUSD"])
+                collected.append((directory.name, clock()))
+                directory.mkdir()
+                fixture(directory)
+            target = root / "continued"
+            with patch("research.restore_scored_series.evaluate_all",
+                       return_value={"mode": "RESEARCH_ONLY_AUTHENTICATED_HELD_OUT",
+                                     "production_applied": False}):
+                report = restore_and_capture(
+                    source, target, collector=collector, followup_rounds=3,
+                    clock=clock, sleep=sleep)
+            self.assertEqual(collected, [
+                ("depth-001", 1000.0), ("depth-002", 1300.0),
+                ("depth-003", 1600.0)])
+            self.assertEqual(report["rounds_verified"], 4)
+            self.assertEqual(report["followup_rounds_acquired"], 3)
+            self.assertEqual(len((target/"entry"/"round-index.jsonl").read_text().splitlines()), 4)
+            import json
+            self.assertEqual(json.loads((target/"continuation-report.json").read_text()),
+                             report)
+            self.assertFalse(report["production_applied"])
+
     def test_modified_manifest_fails_before_copy_or_collection(self):
         with tempfile.TemporaryDirectory() as temp:
             source = Path(temp) / "original"
