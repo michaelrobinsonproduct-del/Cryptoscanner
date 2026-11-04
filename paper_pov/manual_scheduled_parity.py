@@ -75,12 +75,12 @@ def load_sealed_scan(path):
         raise ValueError("preselection decisions differ")
     if watch.get("as_of") != report.get("as_of") or universe.get("as_of") != report.get("as_of"):
         raise ValueError("projection timestamp mismatch")
-    if universe.get("qualified_for_learning") is not False:
+    if universe.get("future_outcomes_authenticated") is not False or universe.get("qualified_for_learning") is not False:
         raise ValueError("unqualified learning projection")
     from datetime import datetime, timezone
     stamp = datetime.fromisoformat(report["as_of"].replace("Z", "+00:00"))
     receipt = root / "receipts" / (stamp.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ") + ".json")
-    if receipt.is_symlink() or not receipt.is_file() or json.loads(receipt.read_bytes()) != report:
+    if receipt.parent.is_symlink() or receipt.is_symlink() or not receipt.is_file() or receipt.read_bytes() != raw:
         raise ValueError("missing or mismatched immutable receipt")
     canonical(report)
     return report
