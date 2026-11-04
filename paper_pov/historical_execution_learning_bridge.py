@@ -82,6 +82,9 @@ def project_historical_execution(execution, *, frozen_predictions):
     # explicit excluded identities and a digest. No incomplete archive cohort is
     # allowed to masquerade as qualified held-out evidence.
     exclusions = {pid: list(HORIZONS) for pid in sorted(universe)}
+    abstentions = {"UNAUTHENTICATED_ARCHIVE_OR_PROXY_ENTRY": len(seen)}
+    if missing:
+        abstentions["NO_RECONSTRUCTED_OUTCOME"] = missing
     return {
         "schema": "paper_learning_handoff_v1",
         "status": "NO_QUALIFIED_RULE",
@@ -96,7 +99,7 @@ def project_historical_execution(execution, *, frozen_predictions):
         "observed_prediction_count": len(universe),
         "complete_cohort_count": 0,
         "excluded_prediction_count": len(universe),
-        "abstention_counts": {"UNAUTHENTICATED_ARCHIVE_OR_PROXY_ENTRY": len(universe)},
+        "abstention_counts": abstentions,
         "incomplete_prediction_horizons": exclusions,
         "frozen_prediction_count": len(universe),
         "reconstructed_prediction_count": len(seen),
