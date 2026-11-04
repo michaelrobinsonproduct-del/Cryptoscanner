@@ -136,9 +136,6 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                 "remote_ref": ref, "remote_path": path,
                 "recovered_sha256": hashlib.sha256(recovered[ledger_paths[0]]).hexdigest(),
                 "independently_authenticated": False, "production_applied": False}
-    # A malformed or missing remote comparison is not evidence that a
-    # checksum-verified historical writer receipt is corrupt. Preserve the
-    # recovered receipt and explicitly report unavailable reconciliation.
     except (subprocess.TimeoutExpired, OSError, ValueError, TypeError, KeyError) as exc:
         # Transport failures are not evidence of a missing packed path. Avoid
         # a speculative fallback and retain the verified historical receipt.
@@ -146,6 +143,8 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                 "failure_type": type(exc).__name__,
                 "remote_ref": ref, "remote_path": path,
                 "independently_authenticated": False, "production_applied": False}
+    # A malformed or missing remote comparison is not evidence that a
+    # checksum-verified historical writer receipt is corrupt.
     if not isinstance(remote, dict) or remote.get("type") != "file" or remote.get("encoding") != "base64":
         return {"status": "UNAVAILABLE", "reason": "REMOTE_LEDGER_QUERY_FAILED",
                 "failure_type": "REMOTE_LEDGER_FORMAT_INVALID",
