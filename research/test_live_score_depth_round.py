@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from contextlib import ExitStack
 from pathlib import Path
 from unittest.mock import patch
 from research.live_score_depth_round import run
@@ -31,11 +32,12 @@ class LiveScoreDepthRoundTests(unittest.TestCase):
             return {"associated": ["a"], "excluded": []}
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "round"
-            with patch("research.live_score_depth_round.capture_live_scan", side_effect=capture), \\
-                 patch("research.live_score_depth_round.load_captures", side_effect=load), \\
-                 patch("research.live_score_depth_round.collect", side_effect=collect), \\
-                 patch("research.live_score_depth_round.append_round", side_effect=append), \\
-                 patch("research.live_score_depth_round.associate_indexed_captures", side_effect=associate):
+            with ExitStack() as stack:
+                stack.enter_context(patch("research.live_score_depth_round.capture_live_scan", side_effect=capture))
+                stack.enter_context(patch("research.live_score_depth_round.load_captures", side_effect=load))
+                stack.enter_context(patch("research.live_score_depth_round.collect", side_effect=collect))
+                stack.enter_context(patch("research.live_score_depth_round.append_round", side_effect=append))
+                stack.enter_context(patch("research.live_score_depth_round.associate_indexed_captures", side_effect=associate))
                 result = run(root)
         self.assertEqual(events, ["score", "depth", "index", "associate"])
         self.assertEqual(result["associated"], 1)
