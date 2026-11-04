@@ -79,7 +79,7 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                 if obj.get("type") != "file":
                     raise IntegrityError("Remote packed ledger object unavailable")
                 if obj.get("encoding") == "base64":
-                    return base64.b64decode(obj["content"], validate=True)
+                    return base64.b64decode("".join(obj["content"].split()), validate=True)
                 # GitHub Contents API omits inline bytes for large blobs.
                 # Resolve the immutable blob SHA through the read-only Git Data API.
                 blob_sha = obj.get("sha")
@@ -88,7 +88,7 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                 blob = _github_json([f"repos/{repo}/git/blobs/{blob_sha}"], runner=runner)
                 if blob.get("sha") != blob_sha or blob.get("encoding") != "base64":
                     raise IntegrityError("Remote packed ledger blob identity mismatch")
-                payload = base64.b64decode(blob["content"], validate=True)
+                payload = base64.b64decode("".join(blob["content"].split()), validate=True)
                 if len(payload) != obj.get("size"):
                     raise IntegrityError("Remote packed ledger blob size mismatch")
                 return payload
