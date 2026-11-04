@@ -202,18 +202,20 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
     if not isinstance(quotes, list) or type(result.get("observed_markets")) is not int or len(quotes) != result["observed_markets"]:
         raise ValueError("published quote evidence missing or incomplete")
     by_symbol = {}
+    by_pair = set()
     ages = []
     for quote in quotes:
         if not isinstance(quote, dict):
             raise ValueError("malformed published quote evidence")
         symbol, pair = quote.get("symbol"), quote.get("pair")
-        if not isinstance(symbol, str) or not symbol.endswith("/USD") or symbol.split("/")[0].upper() in STABLE or not isinstance(pair, str) or not pair or symbol in by_symbol:
+        if not isinstance(symbol, str) or not symbol.endswith("/USD") or symbol.split("/")[0].upper() in STABLE or not isinstance(pair, str) or not pair or symbol in by_symbol or pair in by_pair:
             raise ValueError("invalid or excluded published quote")
         age = (as_of - _utc(quote.get("observed_at"))).total_seconds()
         price = quote.get("price")
         if not 0 <= age <= 600 or type(price) not in (int, float) or not 0 < price < float("inf"):
             raise ValueError("stale or invalid published quote")
         by_symbol[symbol] = quote
+        by_pair.add(pair)
         ages.append(age)
     if result.get("max_client_quote_age_seconds") != (max(ages) if ages else None):
         raise ValueError("published quote freshness summary mismatch")
@@ -241,6 +243,13 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
     delivery_status = ("ABSTAIN_PUBLISHED_WATCH_STALE_AT_DELIVERY"
                        if candidates and not fresh_at_delivery else status)
     writer = _writer_evidence(writer_readback) if writer_readback is not None else None
+    # D may legitimately be an independently authenticated historical run.
+    # But if it claims the exact published run, its persisted generation must
+    # agree with the publisher; never present contradictory same-run readback.
+    if (writer and writer["source_run_id"] == int(run_id) and
+            writer["source_sha"] == sha and
+            writer["ledger_generation"] != generation):
+        raise ValueError("same-run D persisted generation contradicts published ledger")
     a2 = _a2_evidence(a2_delivery) if a2_delivery is not None else None
     learning = _learning_evidence(learning_handoff) if learning_handoff is not None else None
     return {"schema": "paper_delivery_readback_v1", "source_run_id": int(run_id),
