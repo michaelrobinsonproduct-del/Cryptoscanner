@@ -102,9 +102,15 @@ def main():
     parser.add_argument("candidates", type=Path)
     parser.add_argument("--from-integration", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--bd-output", type=Path, help="Also write validated B/D replay artifact from C integration")
     args = parser.parse_args()
     source = json.loads(args.candidates.read_text())
+    if args.bd_output and not args.from_integration:
+        parser.error("--bd-output requires --from-integration")
     result = from_integration(source) if args.from_integration else consume(source)
+    downstream = consume(result) if args.bd_output else None
+    if downstream is not None:
+        args.bd_output.write_text(json.dumps(downstream, sort_keys=True) + "\n")
     args.output.write_text(json.dumps(result, sort_keys=True) + "\n")
     print(json.dumps({"status": result["status"], "watch_count": result["watch_count"], "receipt_sha256": result["receipt_sha256"]}, sort_keys=True))
 
