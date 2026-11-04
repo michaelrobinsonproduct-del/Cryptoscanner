@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m unittest paper_pov.test_retired_workflow_contract paper_pov.test_manual_schedule_contract paper_pov.test_c_read_only_integration_coverage -v
+      - run: python -m unittest paper_pov.test_retired_workflow_contract paper_pov.test_manual_schedule_contract paper_pov.test_c_read_only_integration_coverage paper_pov.test_c_candidate_handoff -v
 
   authentic-manual-scheduled:
     runs-on: ubuntu-latest
@@ -100,7 +100,7 @@ jobs:
           assert r["production_applied"] is False and r["trading_approved"] is False
           print("C_REAL_RECOVERY_AND_PARITY_CONSUMED",json.dumps(r,sort_keys=True))
           PY
-      - name: Attach B authenticated A2 snapshot to recovered C report
+      - name: Attach A authenticated A2 snapshot to recovered C report
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -178,6 +178,20 @@ jobs:
           Path("/tmp/c-real-receipts/candidates.json").write_text(json.dumps(payload,sort_keys=True)+"\\n")
           print("C_B_A2_RECOVERY_CONNECTED",json.dumps(p,sort_keys=True))
           PY
+      - name: Consume C artifact through B/D read-only executable interface
+        run: |
+          python -m paper_pov.c_candidate_handoff /tmp/c-real-receipts/candidates.json --output /tmp/c-real-receipts/bd-handoff.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          src=json.loads(Path("/tmp/c-real-receipts/candidates.json").read_text())
+          out=json.loads(Path("/tmp/c-real-receipts/bd-handoff.json").read_text())
+          assert out["watch"]==src["watch"] and out["watch_count"]==12
+          assert out["receipt_sha256"]==src["receipt_sha256"]
+          assert out["status"]=="WATCH_REPLAY_ONLY_NOT_LIVE"
+          assert out["live_watch_certified"] is False and out["production_applied"] is False
+          print("BD_READ_ONLY_CANDIDATES_CONSUMED",out["watch_count"])
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: c-real-manual-scheduled-contract
@@ -186,5 +200,6 @@ jobs:
             /tmp/c-real-receipts/integration.json
             /tmp/c-real-receipts/a2.json
             /tmp/c-real-receipts/candidates.json
+            /tmp/c-real-receipts/bd-handoff.json
           retention-days: 7
           if-no-files-found: error
