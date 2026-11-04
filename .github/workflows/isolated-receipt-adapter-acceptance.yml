@@ -28,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          python -m unittest tools.test_scan_receipt_gate tools.test_c_integration_receipt_bridge tools.test_a2_verified_snapshot_bridge -v
+          python -m unittest tools.test_scan_receipt_gate tools.test_c_integration_receipt_bridge tools.test_a2_verified_snapshot_bridge tools.test_raw_scanner_receipt_adapter tools.test_verified_paper_handoff -v
       - name: Download actual published A2 transport artifact
         env:
           GH_TOKEN: ${{ github.token }}
@@ -83,6 +83,56 @@ jobs:
               "production_applied":False
           },sort_keys=True))
           PY
+      - name: Consume independently published real Kraken two-member scanner receipt
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/a1-raw-scanner
+          gh run download 41745901270 -R michaelrobinsonproduct-del/Cryptoscanner -n a1-a2-live-paper-evidence -D /tmp/a1-raw-scanner
+          python - <<'PY'
+          import datetime as dt, json, zipfile
+          from pathlib import Path
+          from tools.a2_verified_snapshot_bridge import read_scanner_receipt_zip, write_verified_handoff
+          root=Path("/tmp/a1-raw-scanner")
+          receipts=list(root.glob("receipts/*.json"))
+          assert len(receipts)==1
+          archive=root/"raw-transport.zip"
+          with zipfile.ZipFile(archive,"w",compression=zipfile.ZIP_DEFLATED) as out:
+              out.write(root/"latest.json","latest.json")
+              out.write(receipts[0],"receipts/"+receipts[0].name)
+          original=json.loads((root/"latest.json").read_bytes())
+          captured=dt.datetime.fromisoformat(original["as_of"].replace("Z","+00:00"))
+          verified=read_scanner_receipt_zip(archive,now=captured+dt.timedelta(seconds=15))
+          handoff=write_verified_handoff(verified,root/"paper-candidate-handoff.json")
+          persisted=json.loads((root/"paper-candidate-handoff.json").read_bytes())
+          assert handoff==persisted
+          assert len(persisted["watch"])==1
+          assert persisted["eligible_pairs"]==605 and persisted["observed_markets"]==602
+          assert persisted["live_watch_certified"] is False and persisted["production_applied"] is False
+          try:
+              read_scanner_receipt_zip(archive,now=captured+dt.timedelta(seconds=601))
+          except ValueError:
+              pass
+          else:
+              raise AssertionError("expired source unexpectedly accepted")
+          print("REAL_A1_VERIFIED_PAPER_HANDOFF",json.dumps({
+              "receipt_sha256":handoff["receipt_sha256"],
+              "watch_count":len(handoff["watch"]),
+              "eligible_pairs":handoff["eligible_pairs"],
+              "observed_markets":handoff["observed_markets"],
+              "paper_only":True,
+              "source_expiry_abstained":True,
+              "production_applied":False
+          },sort_keys=True))
+          PY
+      - name: Publish independently verified read-only candidate handoff
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-paper-candidate-handoff
+          path: /tmp/a1-raw-scanner/paper-candidate-handoff.json
+          if-no-files-found: error
+          retention-days: 7
       - name: Confirm fail-closed CLI exit on invalid report
         run: |
           set -euo pipefail
