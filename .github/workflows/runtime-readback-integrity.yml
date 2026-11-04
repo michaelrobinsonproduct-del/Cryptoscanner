@@ -4,6 +4,8 @@ on:
     paths:
       - 'paper_pov/runtime_readback_integrity.py'
       - 'paper_pov/test_runtime_readback_integrity.py'
+      - 'paper_pov/github_artifact_readback.py'
+      - 'paper_pov/test_github_artifact_readback.py'
       - '.github/workflows/runtime-readback-integrity.yml'
   workflow_dispatch:
 permissions:
@@ -17,4 +19,4 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m pip install pytest
-      - run: python -m pytest -q paper_pov/test_runtime_readback_integrity.py
+      - run: python -m pytest -q paper_pov/test_runtime_readback_integrity.py paper_pov/test_github_artifact_readback.py
