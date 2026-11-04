@@ -210,7 +210,10 @@ jobs:
           w=json.loads(Path("/tmp/c-real-receipts/bd-recovered-watch.json").read_text())
           assert b["writer_recovery"]["run_id"]=="41636714169"
           assert b["writer_recovery"]["status"]=="WRITER_CHECKSUM_ONLY"
-          assert b["writer_recovery"]["persisted_paper"]["ledger_generation"]>=1
+          assert b["writer_recovery"]["delivery_projection_ready"] == (b["writer_recovery"]["persisted_paper"] is not None and b["writer_recovery"]["delivery_blocker"] is None)
+          if not b["writer_recovery"]["delivery_projection_ready"]:
+              assert b["writer_recovery"]["delivery_blocker"]=="D_PERSISTED_PAPER_MISSING_OR_INCOMPLETE"
+              assert not Path("/tmp/c-real-receipts/bd-writer-readback.json").exists()
           assert b["historical_a2"]["watch"]==w["watch"]
           assert not b["live_watch_certified"] and not b["same_run_or_candidate_parity_claimed"]
           print("C_D_REAL_WRITER_BRIDGE_CONNECTED",b["writer_recovery"]["run_id"],w["watch_count"])
