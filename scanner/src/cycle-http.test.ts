@@ -43,12 +43,12 @@ test("dashboard expires cached authenticated A2 paper WATCH without mutating sto
  const fresh=await (await http(req("/dashboard"))).json();
  expect(fresh.last_result.a2_snapshot.status).toBe("VERIFIED_SNAPSHOT");
  expect(fresh.last_result.paper_watch).toHaveLength(1);
- const watchFresh=await http(req("/watch"));expect(watchFresh.headers.get("cache-control")).toBe("no-store");expect(await watchFresh.json()).toMatchObject({mode:"paper_only",status:"PAPER_ONLY_VERIFIED",live_watch_certified:false,watch:[{pair:"TAOUSD"}]});expect(fresh.last_result.paper_watch_status).toBe("PAPER_ONLY_VERIFIED");expect(fresh.last_result.live_watch_certified).toBe(false);
+ const watchFresh=await http(req("/watch"));expect(watchFresh.headers.get("cache-control")).toBe("no-store");expect(await watchFresh.json()).toMatchObject({mode:"paper_only",status:"PAPER_ONLY_VERIFIED",live_watch_certified:false,scan_status:"WATCH",eligible_pairs:1,observed_markets:1,abstention_counts:{},watch:[{pair:"TAOUSD"}]});expect(fresh.last_result.paper_watch_status).toBe("PAPER_ONLY_VERIFIED");expect(fresh.last_result.live_watch_certified).toBe(false);
  clock=new Date("2026-11-03T04:10:01Z");
  const expired=await (await http(req("/dashboard"))).json();
  expect(expired.last_result.a2_snapshot).toMatchObject({status:"UNAVAILABLE",reason:"expired_at_dashboard_read",watch:[]});
  expect(expired.last_result.candidates).toHaveLength(1);
  expect(expired.last_result.paper_watch).toEqual([]);
- expect(await (await http(req("/watch"))).json()).toMatchObject({mode:"paper_only",status:"ABSTAIN_A2_EXPIRED",live_watch_certified:false,watch:[]});expect(expired.last_result.paper_watch_status).toBe("ABSTAIN_A2_EXPIRED");expect(expired.last_result.live_watch_certified).toBe(false);
+ expect(await (await http(req("/watch"))).json()).toMatchObject({mode:"paper_only",status:"ABSTAIN_A2_EXPIRED",live_watch_certified:false,scan_status:null,eligible_pairs:null,observed_markets:null,abstention_counts:null,watch:[]});expect(expired.last_result.paper_watch_status).toBe("ABSTAIN_A2_EXPIRED");expect(expired.last_result.live_watch_certified).toBe(false);
  expect(runner.snapshot().last.a2_snapshot.status).toBe("VERIFIED_SNAPSHOT");
 });
