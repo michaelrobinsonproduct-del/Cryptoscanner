@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       previous_run_id:
-        description: 'Prior successful scored-series run to extend by one real depth round (blank starts a fresh 13-round cohort)'
+        description: 'Prior successful scored-series run to extend by twelve actual five-minute depth rounds (blank starts fresh 13-round cohort)'
         required: false
         type: string
 permissions:
@@ -37,7 +37,7 @@ jobs:
           python -m research.live_scored_series \
             --output-root /tmp/kraken-one-hour \
             --rounds 13 --interval-seconds 300 | tee /tmp/kraken-one-hour-result.log
-      - name: Restore prior successful source artifact and acquire one factual follow-up
+      - name: Restore source artifact and acquire twelve factual five-minute follow-up rounds
         if: inputs.previous_run_id != ''
         env:
           PREVIOUS_RUN_ID: ${{ inputs.previous_run_id }}
