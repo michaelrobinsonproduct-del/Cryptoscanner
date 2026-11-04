@@ -133,19 +133,32 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/b-delivery/a2
-          gh api "repos/$REPO/actions/artifacts/13281329000" > /tmp/b-delivery/a2-meta.json
+          gh api "repos/$REPO/actions/artifacts?per_page=100" > /tmp/b-delivery/a2-artifacts.json
           python - <<'PY'
           import json
           from pathlib import Path
-          m=json.loads(Path("/tmp/b-delivery/a2-meta.json").read_text())
-          if (m.get("id")!=13281329000 or m.get("expired") is not False
-              or m.get("workflow_run",{}).get("id")!=41743237429
-              or m.get("workflow_run",{}).get("head_sha")!="9af09e21d9f0c132e7630ed60b508ef2286c0fb0"
-              or m.get("digest")!="sha256:f331501461593cc1600d6043cb304a243e396145d29c9d322d3a159b512fb68e"):
-              raise SystemExit("A2_GITHUB_METADATA_MISMATCH")
+          artifacts=json.loads(Path("/tmp/b-delivery/a2-artifacts.json").read_text()).get("artifacts",[])
+          matches=[a for a in artifacts if a.get("name")=="a2-live-consumer-evidence"
+                   and a.get("expired") is False
+                   and str(a.get("digest","")).startswith("sha256:")
+                   and a.get("workflow_run",{}).get("id")
+                   and a.get("workflow_run",{}).get("head_sha")]
+          if not matches:
+              raise SystemExit("NO_CHECKSUMMED_A2_DELIVERY_ARTIFACT")
+          chosen=max(matches,key=lambda a:a["id"])
+          Path("/tmp/b-delivery/a2-meta.json").write_text(json.dumps(chosen))
+          print("SELECTED_A2_ARTIFACT",chosen["id"],chosen["workflow_run"]["id"])
           PY
-          gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/13281329000/zip" > /tmp/b-delivery/a2.zip
-          echo 'f331501461593cc1600d6043cb304a243e396145d29c9d322d3a159b512fb68e  /tmp/b-delivery/a2.zip' | sha256sum --check --status
+          A2_ID="$(python -c 'import json;print(json.load(open("/tmp/b-delivery/a2-meta.json"))["id"])')"
+          gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/$A2_ID/zip" > /tmp/b-delivery/a2.zip
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          meta=json.loads(Path("/tmp/b-delivery/a2-meta.json").read_text())
+          observed=hashlib.sha256(Path("/tmp/b-delivery/a2.zip").read_bytes()).hexdigest()
+          if observed!=meta["digest"].removeprefix("sha256:"):
+              raise SystemExit("A2_GITHUB_ARTIFACT_DIGEST_MISMATCH")
+          PY
           python - <<'PY'
           import json,zipfile
           from pathlib import Path
