@@ -80,11 +80,56 @@ def read_published_artifact(directory, now=None):
     return {"snapshot": snapshot, "preselection": verified_universe}
 
 
+
+def project_watch_delivery(directory, now=None):
+    """B-facing read-only delivery from the SAME published A receipt and universe.
+
+    This is not the production paper-ledger result and never claims the
+    single-writer ledger has persisted it. It is safe for manual/scheduled
+    presentation only while the original Kraken client quotes remain fresh.
+    """
+    verified = read_published_artifact(directory, now=now)
+    snapshot, universe = verified["snapshot"], verified["preselection"]
+    watch = []
+    for candidate in snapshot["watch"]:
+        watch.append({
+            "rank": candidate["rank"], "symbol": candidate["symbol"],
+            "price": candidate["price"], "quote_observed_at": candidate["quote_observed_at"],
+            "baseline_score": candidate["baseline_score"],
+            "challenger_score": candidate["challenger_score"],
+            "move15_pct": candidate["move15_pct"],
+            "volume_accel": candidate["volume_accel"], "risk": candidate["risk"],
+            "status": candidate["status"], "buy_approved": False,
+            "prediction_id": candidate["prediction_id"],
+        })
+    return {
+        "schema": "a2_published_watch_delivery_v1",
+        "source": "kraken_public_rest_client_observed",
+        "as_of": snapshot["as_of"], "scan_status": snapshot["scan_status"],
+        "receipt_sha256": snapshot["receipt_sha256"],
+        "watch": watch, "watch_count": len(watch),
+        "eligible_pairs": snapshot["eligible_pairs"],
+        "observed_markets": snapshot["observed_markets"],
+        "preselection_observations": len(universe["markets"]),
+        "selection_decisions": universe["selection_decisions"],
+        "abstention_counts": snapshot["abstention_counts"],
+        "snapshot_age_seconds": snapshot["snapshot_age_seconds"],
+        "quote_age_seconds": snapshot["quote_age_seconds"],
+        "client_quote_freshness_verified": True,
+        "exchange_event_freshness_verified": False,
+        "single_writer_ledger_verified": False,
+        "production_applied": False, "buy_approved": False,
+    }
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("zip", help="A2 transport ZIP or downloaded Actions artifact directory")
+    p.add_argument("--delivery", action="store_true", help="emit B-facing read-only WATCH delivery from downloaded artifact directory")
     args = p.parse_args()
-    print(json.dumps(read_published_artifact(args.zip) if Path(args.zip).is_dir() else read_artifact_zip(args.zip), sort_keys=True, allow_nan=False))
+    if args.delivery and not Path(args.zip).is_dir():
+        p.error("--delivery requires the complete downloaded A2 artifact directory")
+    result = project_watch_delivery(args.zip) if args.delivery else (read_published_artifact(args.zip) if Path(args.zip).is_dir() else read_artifact_zip(args.zip))
+    print(json.dumps(result, sort_keys=True, allow_nan=False))
 
 if __name__ == "__main__":
     main()
