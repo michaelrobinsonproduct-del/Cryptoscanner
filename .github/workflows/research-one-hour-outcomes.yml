@@ -1,8 +1,14 @@
 name: Research one-hour source-qualified outcome capture (manual only)
 on:
   workflow_dispatch:
+    inputs:
+      previous_run_id:
+        description: 'Prior successful scored-series run to extend by one real depth round (blank starts a fresh 13-round cohort)'
+        required: false
+        type: string
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: research-one-hour-outcomes-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: false
@@ -25,18 +31,43 @@ jobs:
         with:
           python-version: '3.11'
       - name: Capture scoring-time Kraken receipts and 13 real five-minute depth rounds
+        if: inputs.previous_run_id == ''
         run: |
           set -euo pipefail
           python -m research.live_scored_series \
             --output-root /tmp/kraken-one-hour \
             --rounds 13 --interval-seconds 300 | tee /tmp/kraken-one-hour-result.log
+      - name: Restore prior successful source artifact and acquire one factual follow-up
+        if: inputs.previous_run_id != ''
+        env:
+          PREVIOUS_RUN_ID: ${{ inputs.previous_run_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$PREVIOUS_RUN_ID" =~ ^[0-9]{8,20}$ ]] || { echo "INVALID_PREVIOUS_RUN_ID"; exit 1; }
+          gh run view "$PREVIOUS_RUN_ID" -R "$GITHUB_REPOSITORY" \
+            --json workflowName,conclusion --jq '.workflowName == "Research one-hour source-qualified outcome capture (manual only)" and .conclusion == "success"' | grep -qx true
+          mkdir -p /tmp/prior-series
+          gh run download "$PREVIOUS_RUN_ID" -R "$GITHUB_REPOSITORY" \
+            -n "research-scored-series-$PREVIOUS_RUN_ID" -D /tmp/prior-series
+          test -s /tmp/prior-series/entry/round-index.jsonl
+          test -d /tmp/prior-series/entry/scores
+          python -m research.restore_scored_series \
+            --previous /tmp/prior-series --output-root /tmp/kraken-one-hour \
+            | tee /tmp/kraken-one-hour-result.log
+      - name: Verify factual outcomes and score-depth binding without production claims
+        run: |
+          set -euo pipefail
           python - <<'PY'
           import json
           from pathlib import Path
           from research.prospective_round_store import evaluate_index
           root=Path('/tmp/kraken-one-hour')
           result=evaluate_index(root/'entry'/'round-index.jsonl',1)
-          assert result['rounds_verified']==13
+          expected=13 if not '${{ inputs.previous_run_id }}' else None
+          assert result['rounds_verified']>=2
+          if expected is not None:
+              assert result['rounds_verified']==expected
           assert result['held_out_lift'] is None and not result['production_applied']
           from research.acquisition_receipt_pipeline import load_captures
           from research.depth_acquisition_associations import verified_associations
@@ -61,6 +92,14 @@ jobs:
               'held_out_lift':result['held_out_lift']
           },sort_keys=True))
           PY
+      - name: Retain portable scored-series evidence for next independent job
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: research-scored-series-${{ github.run_id }}
+          path: /tmp/kraken-one-hour/
+          retention-days: 30
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:
