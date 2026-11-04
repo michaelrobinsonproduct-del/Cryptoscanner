@@ -1,5 +1,5 @@
 import unittest
-from paper_pov.github_delivery_projection import project_delivery
+from paper_pov.github_delivery_projection import project_delivery, project_published_result
 
 SHA = "a" * 40
 BASE = {"source_run_id": 123, "source_sha": SHA,
@@ -87,6 +87,31 @@ class DeliveryProjectionTests(unittest.TestCase):
         replay["live_watch_certified"] = True
         with self.assertRaises(ValueError):
             project_delivery(base, historical_a2=replay)
+
+    def test_actual_paper_result_manual_scheduled_same_schema_and_abstention(self):
+        from paper_pov.test_results_report import fixture
+        from paper_pov.results_report import render
+        scan, score = fixture()
+        results = []
+        for event, cron in (("workflow_dispatch", None), ("schedule", "9 * * * *")):
+            result, _ = render(scan, score, run_id="41235442591", source_sha=SHA,
+                               ledger_commit="b"*40, event=event, originating_cron=cron)
+            projected = project_published_result(result)
+            self.assertEqual(projected["github_event"], event)
+            self.assertEqual(len(projected["live_watch"]), 2)
+            self.assertFalse(projected["live_watch_authorized"])
+            self.assertFalse(projected["exchange_event_freshness_verified"])
+            results.append(projected)
+        self.assertEqual(set(results[0]), set(results[1]))
+        scan["watch"] = []
+        abstain, _ = render(scan, score, run_id="41235442591", source_sha=SHA,
+                            ledger_commit="b"*40, event="schedule", originating_cron="39 * * * *")
+        self.assertEqual(project_published_result(abstain)["live_watch"], [])
+        for field, value in (("remote_readback_verified", False),
+                             ("production_applied", True),
+                             ("exchange_event_freshness_verified", True)):
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                project_published_result({**abstain, field: value})
 
     def test_untrusted_promotion_and_run_provenance_rejected(self):
         valid = {**BASE, "sealed": False,
