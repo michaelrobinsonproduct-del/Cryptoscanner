@@ -1,0 +1,348 @@
+name: D1 focused durable stage receipts
+on:
+  push:
+    branches:
+      - 'owner-d-d1-ledger-readback-20261103'
+    paths:
+      - '.github/workflows/d1-stage-receipts.yml'
+  pull_request:
+    paths:
+      - 'paper_pov/ledger.py'
+      - 'paper_pov/segmented_live_writer.py'
+      - 'paper_pov/test_ledger_readback.py'
+      - 'paper_pov/test_stage_receipts.py'
+      - 'paper_pov/test_segmented_live_writer.py'
+      - 'paper_pov/results_report.py'
+      - '.github/workflows/paper-pipeline.yml'
+      - 'paper_pov/test_results_report.py'
+      - 'paper_pov/test_source_bound_publication.py'
+      - 'paper_pov/replay_downloaded_artifacts.py'
+      - 'paper_pov/test_replay_downloaded_artifacts.py'
+      - 'paper_pov/artifact_audit.py'
+      - 'paper_pov/test_artifact_audit.py'
+      - '.github/workflows/d1-stage-receipts.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact-head focused tests
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python -m unittest paper_pov.test_ledger_readback paper_pov.test_stage_receipts paper_pov.test_segmented_live_writer.LiveWriterTests.test_actual_bare_remote_push_fetch_and_verified_replay paper_pov.test_results_report.PaperResultsContracts.test_realistic_report_is_readable_and_not_a_buy_signal paper_pov.test_results_report.PaperResultsContracts.test_zero_qualifying_watch_is_successful_abstention paper_pov.test_results_report.PaperResultsContracts.test_zero_observations_disclose_unverified_freshness paper_pov.test_results_report.PaperResultsContracts.test_reject_inconsistent_market_evidence_before_reporting paper_pov.test_results_report.PaperResultsContracts.test_zero_observation_cli_artifact_and_checksums paper_pov.test_results_report.PaperResultsContracts.test_atomic_result_publication_rejects_existing_and_cleans_failed_stage paper_pov.test_results_report.PaperResultsContracts.test_published_result_readback_rejects_tamper_and_wrong_ledger paper_pov.test_results_report.PaperResultsContracts.test_independent_quote_freshness_and_candidate_provenance_readback paper_pov.test_source_bound_publication paper_pov.test_replay_downloaded_artifacts paper_pov.test_artifact_audit -v
+      - name: Real scheduled Kraken artifact readback (read only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/d2-real
+          gh api -H 'Accept: application/vnd.github+json' 'repos/${{ github.repository }}/actions/artifacts/13225349128/zip' > /tmp/d2-real/ledger.zip
+          gh api -H 'Accept: application/vnd.github+json' 'repos/${{ github.repository }}/actions/artifacts/13226916072/zip' > /tmp/d2-real/results.zip
+          python -m paper_pov.artifact_audit \
+            --ledger-zip /tmp/d2-real/ledger.zip \
+            --results-zip /tmp/d2-real/results.zip \
+            --run-id 41626400391 \
+            --source-sha 94929a544899ddec63c676b6d4d52539da8e3837 \
+            --ledger-commit c3aa7b863ac1a7befd40b465589df86f8347c042 | tee /tmp/d2-real/proof.json
+          python - <<'PY'
+          import json
+          with open('/tmp/d2-real/proof.json') as f:
+              proof = json.load(f)
+          assert proof['run_id'] == '41626400391', proof
+          assert proof['generation'] == 64, proof
+          assert proof['watch'] == 12, proof
+          assert proof['status'] == 'ABSTAIN_LEGACY_QUOTE_EVIDENCE', proof
+          assert proof['certified'] is False, proof
+          print('REAL_SCHEDULED_ARTIFACT_READBACK_VALID_LEGACY_ABSTENTION', proof)
+          PY
+      - name: Real manual Kraken artifact readback (read only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/d2-manual
+          gh api -H 'Accept: application/vnd.github+json' 'repos/${{ github.repository }}/actions/artifacts/13231431070/zip' > /tmp/d2-manual/ledger.zip
+          gh api -H 'Accept: application/vnd.github+json' 'repos/${{ github.repository }}/actions/artifacts/13231321360/zip' > /tmp/d2-manual/results.zip
+          python -m paper_pov.artifact_audit \
+            --ledger-zip /tmp/d2-manual/ledger.zip \
+            --results-zip /tmp/d2-manual/results.zip \
+            --run-id 41636714169 \
+            --source-sha 94929a544899ddec63c676b6d4d52539da8e3837 \
+            --ledger-commit 27ceb38b5b6c8186e804af0aae537a2de0091da6 | tee /tmp/d2-manual/proof.json
+          python - <<'PY'
+          import json
+          with open('/tmp/d2-manual/proof.json') as f:
+              proof = json.load(f)
+          assert str(proof['run_id']) == '41636714169', proof
+          assert proof['generation'] == 65 and proof['observed'] == 596, proof
+          assert proof['watch'] == 12, proof
+          assert proof['status'] == 'ABSTAIN_LEGACY_QUOTE_EVIDENCE', proof
+          assert proof['certified'] is False, proof
+          print('REAL_MANUAL_ARTIFACT_READBACK_VALID_LEGACY_ABSTENTION', proof)
+          PY
+      - name: Publish independently recovered paper-run receipts
+        if: ${{ always() }}
+        run: |
+          mkdir -p /tmp/d2-recovery
+          python - <<'PY'
+          import json
+          import hashlib
+          from pathlib import Path
+          inputs = {
+              "scheduled": Path("/tmp/d2-real/proof.json"),
+              "manual": Path("/tmp/d2-manual/proof.json"),
+          }
+          result = {"schema": "paper_recovery_v1", "production_applied": False,
+                    "source_sha": "94929a544899ddec63c676b6d4d52539da8e3837",
+                    "runs": {}, "all_recovered": True}
+          # Bind each recovered receipt to the exact immutable downloaded ZIP bytes.
+          zip_inputs = {
+              "scheduled": (Path("/tmp/d2-real/ledger.zip"), Path("/tmp/d2-real/results.zip"),
+                            13225349128, 13226916072, "41626400391"),
+              "manual": (Path("/tmp/d2-manual/ledger.zip"), Path("/tmp/d2-manual/results.zip"),
+                         13231431070, 13231321360, "41636714169"),
+          }
+          result["artifact_provenance"] = {}
+          for name, path in inputs.items():
+              if not path.is_file():
+                  result["runs"][name] = {"status": "RECOVERY_FAILED", "certified": False}
+                  result["all_recovered"] = False
+                  continue
+              try:
+                  receipt = json.loads(path.read_text())
+                  if receipt.get("status") not in ("VERIFIED", "ABSTAIN_LEGACY_QUOTE_EVIDENCE"):
+                      raise ValueError("Unexpected recovery status")
+                  ledger_zip, results_zip, ledger_id, results_id, expected_run = zip_inputs[name]
+                  if str(receipt.get("run_id")) != expected_run:
+                      raise ValueError("Recovery run ID differs from downloaded artifact identity")
+                  if not ledger_zip.is_file() or not results_zip.is_file():
+                      raise ValueError("Downloaded ZIP missing for recovered receipt")
+                  result["artifact_provenance"][name] = {
+                      "ledger_artifact_id": ledger_id,
+                      "results_artifact_id": results_id,
+                      "ledger_zip_sha256": hashlib.sha256(ledger_zip.read_bytes()).hexdigest(),
+                      "results_zip_sha256": hashlib.sha256(results_zip.read_bytes()).hexdigest(),
+                  }
+                  result["runs"][name] = receipt
+              except (ValueError, OSError) as exc:
+                  result["runs"][name] = {"status": "RECOVERY_FAILED", "certified": False,
+                                          "error": type(exc).__name__}
+                  result["all_recovered"] = False
+          Path("/tmp/d2-recovery/recovery.json").write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
+          # Reopen the exact bytes downstream consumers download, not the in-memory object.
+          persisted = json.loads(Path("/tmp/d2-recovery/recovery.json").read_text())
+          if persisted != result:
+              raise SystemExit("D2 persisted recovery receipt differs from source")
+          print("D2_RECOVERY_REPORT", json.dumps(persisted, sort_keys=True))
+          if not result["all_recovered"]:
+              raise SystemExit("D2 recovery incomplete")
+          PY
+      - name: Retain recovery receipts for B/C read-only consumption
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2-real-paper-recovery
+          path: /tmp/d2-recovery/recovery.json
+          if-no-files-found: error
+          retention-days: 7
+  downstream-readback:
+    needs: focused
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Download published D2 recovery artifact
+        id: recovery_download
+        uses: actions/download-artifact@v4
+        with:
+          name: d2-real-paper-recovery
+          path: /tmp/d2-consumer
+      - name: Consume actual published recovery report and enforce fail-closed status
+        id: recovery_consume
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("/tmp/d2-consumer/recovery.json")
+          result = json.loads(p.read_text())
+          assert result["schema"] == "paper_recovery_v1", result
+          assert result["production_applied"] is False, result
+          assert result["all_recovered"] is True, result
+          assert result["source_sha"] == "94929a544899ddec63c676b6d4d52539da8e3837", result
+          for name, run_id, generation in (("scheduled", "41626400391", 64),
+                                           ("manual", "41636714169", 65)):
+              run = result["runs"][name]
+              assert str(run["run_id"]) == run_id, run
+              assert run["generation"] == generation and run["watch"] == 12, run
+              assert run["status"] == "ABSTAIN_LEGACY_QUOTE_EVIDENCE", run
+              assert run["certified"] is False, run
+          print("D2_PUBLISHED_RECOVERY_CONSUMED", json.dumps(result, sort_keys=True))
+          PY
+      - name: Persist downstream readback outcome even after failure
+        if: ${{ always() }}
+        env:
+          DOWNLOAD_OUTCOME: ${{ steps.recovery_download.outcome }}
+          CONSUME_OUTCOME: ${{ steps.recovery_consume.outcome }}
+          SOURCE_RUN: ${{ github.run_id }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          mkdir -p /tmp/d2-readback-status
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          download = os.environ["DOWNLOAD_OUTCOME"]
+          consume = os.environ["CONSUME_OUTCOME"]
+          status = "VERIFIED_READBACK" if download == consume == "success" else "RECOVERY_CONSUMER_FAILED"
+          receipt = {"schema": "paper_recovery_consumer_v1", "status": status,
+                     "download_outcome": download, "consume_outcome": consume,
+                     "workflow_run_id": os.environ["SOURCE_RUN"],
+                     "workflow_sha": os.environ["SOURCE_SHA"],
+                     "production_applied": False}
+          Path("/tmp/d2-readback-status/status.json").write_text(json.dumps(receipt, sort_keys=True) + "\n")
+          print("D2_CONSUMER_OUTCOME", json.dumps(receipt, sort_keys=True))
+          PY
+      - name: Verify negative recovery-consumer outcome mapping (no production changes)
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("/tmp/d2-readback-status/status.json")
+          live = json.loads(path.read_text())
+          assert live["schema"] == "paper_recovery_consumer_v1"
+          assert live["production_applied"] is False
+          for download, consume in (("failure", "skipped"), ("success", "failure"),
+                                    ("cancelled", "skipped"), ("success", "skipped")):
+              status = "VERIFIED_READBACK" if download == consume == "success" else "RECOVERY_CONSUMER_FAILED"
+              assert status == "RECOVERY_CONSUMER_FAILED", (download, consume)
+          assert (live["status"] == "VERIFIED_READBACK") == (
+              live["download_outcome"] == live["consume_outcome"] == "success")
+          print("D2_FAILURE_OUTCOME_MAPPING_VERIFIED")
+          PY
+      - name: Publish failed-run visibility for operators
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2-recovery-consumer-status
+          path: /tmp/d2-readback-status/status.json
+          if-no-files-found: error
+          retention-days: 7
+  source-run-health:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Inspect actual scheduled paper pipeline runs (read only)
+        id: source_query
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/d2-source-health
+          if ! gh api "repos/$REPO/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/d2-source-health/runs.json; then
+            echo '{"workflow_runs": [], "query_failed": true}' > /tmp/d2-source-health/runs.json
+          fi
+          python - <<'PY'
+          import datetime as dt
+          import json
+          from pathlib import Path
+          source = json.loads(Path("/tmp/d2-source-health/runs.json").read_text())
+          query_failed = source.get("query_failed") is True
+          now = dt.datetime.now(dt.timezone.utc)
+          cutoff = now - dt.timedelta(hours=24)
+          runs = []
+          for item in source.get("workflow_runs", []):
+              if item.get("event") not in ("schedule", "workflow_dispatch"):
+                  continue
+              if item.get("head_branch") != "main":
+                  continue
+              created = dt.datetime.fromisoformat(item["created_at"].replace("Z", "+00:00"))
+              if created < cutoff:
+                  continue
+              runs.append({"run_id": item["id"], "event": item["event"],
+                           "created_at": item["created_at"], "status": item["status"],
+                           "conclusion": item.get("conclusion"),
+                           "source_sha": item.get("head_sha"),
+                           "url": item.get("html_url")})
+          failed = [v for v in runs if v["conclusion"] in
+                    ("failure", "timed_out", "cancelled", "action_required", "startup_failure")]
+          pending = [v for v in runs if v["status"] != "completed"]
+          # A green completed run does not establish unattended schedule coverage.
+          # Detect missing schedule execution independently of manual dispatches.
+          scheduled = [v for v in runs if v["event"] == "schedule"]
+          last_schedule = max((dt.datetime.fromisoformat(
+              v["created_at"].replace("Z", "+00:00")) for v in scheduled),
+              default=None)
+          schedule_gap_minutes = (round((now - last_schedule).total_seconds() / 60, 1)
+                                  if last_schedule else None)
+          schedule_gap = last_schedule is None or schedule_gap_minutes > 90
+          # GitHub cron can be delayed or skipped. Count actual missing UTC slots,
+          # not just time since the last scheduled run; no second writer is created.
+          # Exclude the most recent 15 minutes to allow normal runner delay.
+          grace = dt.timedelta(minutes=15)
+          matured_cutoff = now - grace
+          missing_slots = []
+          for hours_ago in range(25):
+              hour = (now - dt.timedelta(hours=hours_ago)).replace(
+                  minute=0, second=0, microsecond=0)
+              for minute in (9, 39):
+                  slot = hour.replace(minute=minute)
+                  if slot < cutoff or slot > matured_cutoff:
+                      continue
+                  # Match the actual originating schedule's UTC creation time
+                  # with up to 15 minutes of scheduler/queue delay.
+                  matched = any(
+                      slot <= dt.datetime.fromisoformat(
+                          v["created_at"].replace("Z", "+00:00")) <= slot + grace
+                      for v in scheduled)
+                  if not matched:
+                      missing_slots.append(slot.isoformat())
+          missing_slots.sort()
+          schedule_gap = schedule_gap or bool(missing_slots)
+          report = {"schema": "paper_source_run_health_v1",
+                    "window_hours": 24, "observed_at": now.isoformat(),
+                    "runs": runs, "failed_count": len(failed),
+                    "pending_count": len(pending),
+                    "observed_run_count": len(runs),
+                    "scheduled_run_count": len(scheduled),
+                    "last_scheduled_at": last_schedule.isoformat() if last_schedule else None,
+                    "schedule_gap_minutes": schedule_gap_minutes,
+                    "schedule_gap_observed": schedule_gap,
+                    "expected_slots_checked": len([1 for hours_ago in range(25) for minute in (9, 39) if cutoff <= (now - dt.timedelta(hours=hours_ago)).replace(minute=minute, second=0, microsecond=0) <= matured_cutoff]),
+                    "missing_scheduled_slots": missing_slots,
+                    "missing_scheduled_slot_count": len(missing_slots),
+                    "production_applied": False,
+                    "query_verified": not query_failed,
+                    "status": "SOURCE_QUERY_FAILED" if query_failed else
+                              "FAILURES_OBSERVED" if failed else
+                              "RUNS_PENDING" if pending else
+                              "NO_RECENT_RUNS" if not runs else
+                              "SCHEDULE_GAP_OBSERVED" if schedule_gap else
+                              "NO_FAILURES_OBSERVED"}
+          Path("/tmp/d2-source-health/health.json").write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
+          print("D2_SOURCE_RUN_HEALTH", json.dumps(report, sort_keys=True))
+          if query_failed:
+              raise SystemExit("GitHub source-run history unavailable; report persisted")
+          PY
+      - name: Retain source-run failure visibility even when scan history is incomplete
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2-source-run-health
+          path: /tmp/d2-source-health/health.json
+          if-no-files-found: error
+          retention-days: 7
