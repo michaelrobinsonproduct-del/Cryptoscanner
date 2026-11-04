@@ -41,7 +41,7 @@ class HistoricalBridgeTests(unittest.TestCase):
         self.assertEqual(handoff["complete_cohort_count"], 0)
         self.assertEqual(handoff["excluded_prediction_count"], 2)
         self.assertEqual(len(handoff["incomplete_prediction_horizons"]), 2)
-        self.assertEqual(handoff["abstention_counts"], {"UNAUTHENTICATED_ARCHIVE_OR_PROXY_ENTRY": 2})
+        self.assertEqual(handoff["abstention_counts"], {"UNAUTHENTICATED_ARCHIVE_OR_PROXY_ENTRY": 1, "NO_RECONSTRUCTED_OUTCOME": 1})
         self.assertEqual(len(handoff["evidence_digest"]), 64)
         self.assertEqual(len(handoff["cohort_join_digest"]), 64)
         self.assertFalse(handoff["live_watch_authorized"])
