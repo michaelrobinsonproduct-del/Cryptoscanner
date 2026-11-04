@@ -108,6 +108,60 @@ jobs:
                   raise SystemExit("D_RECOVERY_REPORT_NOT_READ_ONLY")
               Path("/tmp/b-delivery/writer.json").write_text(json.dumps(obj))
           PY
+      - name: Authenticate independent A2 snapshot and build separate read-only cohort
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/actions/artifacts/13281329000" > /tmp/b-delivery/a2-meta.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          m=json.loads(Path("/tmp/b-delivery/a2-meta.json").read_text())
+          if (m.get("id")!=13281329000 or m.get("expired") is not False
+              or m.get("workflow_run",{}).get("id")!=41743237429
+              or m.get("workflow_run",{}).get("head_sha")!="9af09e21d9f0c132e7630ed60b508ef2286c0fb0"
+              or m.get("digest")!="sha256:f331501461593cc1600d6043cb304a243e396145d29c9d322d3a159b512fb68e"):
+              raise SystemExit("A2_AUTHENTICATED_METADATA_MISMATCH")
+          PY
+          gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/13281329000/zip" > /tmp/b-delivery/a2.zip
+          echo 'f331501461593cc1600d6043cb304a243e396145d29c9d322d3a159b512fb68e  /tmp/b-delivery/a2.zip' | sha256sum --check --status
+          python - <<'PY'
+          import hashlib,io,json,zipfile
+          from pathlib import Path
+          with zipfile.ZipFile("/tmp/b-delivery/a2.zip") as outer:
+              transports=[n for n in outer.namelist() if n.endswith("transport.zip")]
+              exports=[n for n in outer.namelist() if n.endswith("verified-snapshot.json")]
+              if len(transports)!=1 or len(exports)!=1:
+                  raise SystemExit("A2_TRANSPORT_LAYOUT_MISMATCH")
+              with zipfile.ZipFile(io.BytesIO(outer.read(transports[0]))) as inner:
+                  names=inner.namelist()
+                  receipts=[n for n in names if n.startswith("receipts/") and n.endswith(".json")]
+                  if len(names)!=3 or len(receipts)!=1 or "latest.json" not in names or "verified-snapshot.json" not in names:
+                      raise SystemExit("A2_RECEIPT_LAYOUT_MISMATCH")
+                  receipt=inner.read(receipts[0])
+                  if receipt!=inner.read("latest.json"):
+                      raise SystemExit("A2_RECEIPT_MISMATCH")
+                  verified=json.loads(inner.read("verified-snapshot.json"))
+                  exported=json.loads(outer.read(exports[0]))
+                  if verified.get("receipt_sha256")!=hashlib.sha256(receipt).hexdigest():
+                      raise SystemExit("A2_RECEIPT_HASH_MISMATCH")
+                  for key in ("as_of","scan_status","eligible_pairs","observed_markets","abstention_counts","watch","receipt_sha256"):
+                      if verified.get(key)!=exported.get(key):
+                          raise SystemExit("A2_EXPORT_MISMATCH_"+key)
+                  delivery={"schema":"a2_published_watch_delivery_v1",
+                      "source":"kraken_public_rest_client_observed",
+                      "single_writer_ledger_verified":False,"exchange_event_freshness_verified":False,
+                      "production_applied":False,"buy_approved":False,
+                      "client_quote_freshness_verified":True,
+                      "receipt_sha256":verified["receipt_sha256"],"as_of":verified["as_of"],
+                      "scan_status":verified["scan_status"],"watch":verified["watch"],
+                      "watch_count":len(verified["watch"]),
+                      "eligible_pairs":verified["eligible_pairs"],
+                      "observed_markets":verified["observed_markets"]}
+                  Path("/tmp/b-delivery/a2-delivery.json").write_text(json.dumps(delivery))
+          PY
       - name: Consume actual downloaded manual or scheduled result through B shared adapter
         run: |
           set -euo pipefail
@@ -122,6 +176,9 @@ jobs:
           writer=json.loads(Path("/tmp/b-delivery/writer.json").read_text())
           from paper_pov.github_delivery_projection import _writer_evidence
           writer_projection=_writer_evidence(writer)
+          a2=json.loads(Path("/tmp/b-delivery/a2-delivery.json").read_text())
+          from paper_pov.github_delivery_projection import _a2_evidence
+          a2_projection=_a2_evidence(a2)
           if "quote_evidence" not in published:
               Path("/tmp/b-delivery/delivery.json").write_text(json.dumps({
                   "schema":"paper_delivery_abstention_v1","status":"ABSTAIN_PUBLISHED_QUOTE_EVIDENCE_MISSING",
@@ -129,12 +186,14 @@ jobs:
                   "github_event":identity["event"],"live_watch":[],"live_watch_authorized":False,
                   "production_applied":False,"single_writer_read_only":True,
                   "writer_recovery":writer_projection,
+                  "a2_receipt_cohort":a2_projection,"learning":None,
                   "writer_reconciliation_status":writer_projection["reconciliation_status"]},sort_keys=True)+"\n")
               print("PUBLISHED_LEGACY_QUOTE_EVIDENCE_ABSTENTION",identity["run_id"])
           else:
               subprocess.run([sys.executable,"-m","paper_pov.github_delivery_projection",
                   "--published-artifact","/tmp/b-delivery/published.zip",
                   "--writer-readback","/tmp/b-delivery/writer.json",
+                  "--a2-delivery","/tmp/b-delivery/a2-delivery.json",
                   "--expected-run-id",identity["run_id"],"--expected-source-sha",identity["source_sha"],
                   "--output","/tmp/b-delivery/delivery.json"],check=True)
               projected=json.loads(Path("/tmp/b-delivery/delivery.json").read_text())
@@ -147,6 +206,7 @@ jobs:
           path: |
             /tmp/b-delivery/identity.json
             /tmp/b-delivery/writer.json
+            /tmp/b-delivery/a2-delivery.json
             /tmp/b-delivery/delivery.json
           if-no-files-found: error
           retention-days: 7
