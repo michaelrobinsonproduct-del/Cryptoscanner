@@ -138,6 +138,24 @@ jobs:
           assert snapshot["observed_markets"]==exported["observed_markets"]
           assert snapshot["scan_status"]==exported["scan_status"]
           assert all(age<=600 for age in snapshot["quote_age_seconds"].values())
+          # B's actual read-only consumer contract, exercised against the
+          # downloaded artifact rather than reconstructed in-process data.
+          from paper_pov.a2_artifact_consumer import project_watch_delivery
+          delivery=project_watch_delivery(root)
+          assert delivery["receipt_sha256"]==snapshot["receipt_sha256"]
+          assert delivery["watch_count"]==len(snapshot["watch"])
+          assert delivery["preselection_observations"]==snapshot["observed_markets"]
+          assert [c["rank"] for c in delivery["watch"]]==list(range(1,len(snapshot["watch"])+1))
+          assert all(c["price"]>0 and c["volume_accel"]>0 and c["buy_approved"] is False for c in delivery["watch"])
+          assert delivery["single_writer_ledger_verified"] is False
+          assert delivery["exchange_event_freshness_verified"] is False
+          assert delivery["production_applied"] is False
+          print("A2_B_DELIVERY_READY",json.dumps({
+              "receipt_sha256":delivery["receipt_sha256"],
+              "watch_count":delivery["watch_count"],
+              "preselection_observations":delivery["preselection_observations"],
+              "scan_status":delivery["scan_status"],
+          },sort_keys=True))
           print("A2_PUBLISHED_ARTIFACT_DOWNSTREAM_VERIFIED",json.dumps({
               "receipt_sha256":snapshot["receipt_sha256"],
               "watch_count":len(snapshot["watch"]),
