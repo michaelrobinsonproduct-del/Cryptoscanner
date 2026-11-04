@@ -12,7 +12,7 @@ HORIZONS = (1, 6, 24, 48)
 STATUSES = ("MATURED_OBSERVED", "ABSTAIN_ENTRY", "ABSTAIN_IMMATURE", "ABSTAIN_GAP")
 
 
-def project_historical_execution(execution, *, frozen_predictions, frozen_selections=None):
+def project_historical_execution(execution, *, frozen_predictions, frozen_selections=None, frozen_observation_times=None):
     if not isinstance(execution, dict) or execution.get("schema") != "historical_outcome_execution_v1":
         raise ValueError("Unsupported historical execution")
     batch = execution.get("outcomes")
@@ -37,6 +37,14 @@ def project_historical_execution(execution, *, frozen_predictions, frozen_select
             raise ValueError("Incomplete frozen A2 selection mapping")
         if any(value not in ("WATCH", "SCREEN_REJECTED", "NOT_OHLC_SELECTED", "OHLC_ABSTAINED", "NOT_RANKED_WATCH") for value in frozen_selections.values()):
             raise ValueError("Invalid frozen A2 selection")
+    # Preserve the frozen pre-outcome timestamps for chronological diagnostic
+    # evaluation. These caller-supplied times are not publisher attestation.
+    if frozen_observation_times is not None:
+        from .shadow_learning_evidence import utc_time
+        if not isinstance(frozen_observation_times, dict) or set(frozen_observation_times) != set(universe):
+            raise ValueError("Incomplete frozen A2 timestamp mapping")
+        for value in frozen_observation_times.values():
+            utc_time(value)
     records = batch.get("records")
     if not isinstance(records, list) or len(records) != batch.get("prediction_count"):
         raise ValueError("Invalid reconstructed record count")
@@ -78,6 +86,7 @@ def project_historical_execution(execution, *, frozen_predictions, frozen_select
             diagnostic_rows.append({
                 "prediction_id": pid, "pair": universe[pid],
                 "frozen_selection_status": frozen_selections[pid] if frozen_selections is not None else None,
+                "observation_asof_utc": frozen_observation_times[pid] if frozen_observation_times is not None else None,
                 "horizon_hours": horizon, "status": status,
                 "observed_30pct_hit": label.get("observed_30pct_hit") if status == "MATURED_OBSERVED" else None,
                 "source_sha256": record["source_sha256"],
