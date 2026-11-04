@@ -40,6 +40,16 @@ def bridge(integration, readback, *, restored_latest=None):
     reconciliation = readback.get("remote_ledger_reconciliation")
     if reconciliation is not None and (not isinstance(reconciliation, dict) or reconciliation.get("status") not in ("MATCH", "DIVERGED", "UNAVAILABLE") or reconciliation.get("independently_authenticated") is not False):
         raise ValueError("D remote ledger comparison malformed")
+    # A recovered historical receipt does not imply D persisted a paper ledger.
+    # Keep replay usable while making the missing B writer prerequisite explicit.
+    writer_delivery_ready = (
+        isinstance(persisted, dict)
+        and type(persisted.get("ledger_generation")) is int
+        and persisted["ledger_generation"] >= 0
+        and isinstance(persisted.get("scan_status"), str)
+        and bool(persisted["scan_status"])
+        and persisted.get("live_replay_performed") is False
+    )
     result = {
         "schema": "c_d_recovered_writer_bridge_v1",
         "status": "READ_ONLY_COHORTS_CONNECTED_NOT_LIVE",
@@ -52,6 +62,8 @@ def bridge(integration, readback, *, restored_latest=None):
             "artifact_id": readback.get("artifact_id"),
             "restored_latest_available": restored_latest is not None,
             "persisted_paper": persisted,
+            "delivery_projection_ready": writer_delivery_ready,
+            "delivery_blocker": None if writer_delivery_ready else "D_PERSISTED_PAPER_MISSING_OR_INCOMPLETE",
             "remote_ledger_reconciliation": reconciliation,
         },
         "same_run_or_candidate_parity_claimed": False,
@@ -84,7 +96,7 @@ def main():
     if args.bd_output:
         args.bd_output.parent.mkdir(parents=True, exist_ok=True)
         args.bd_output.write_text(json.dumps(result["historical_a2"], sort_keys=True) + "\n")
-    print(json.dumps({"status": result["status"], "historical_watch": result["historical_a2"]["watch_count"], "writer_run": result["writer_recovery"]["run_id"]}, sort_keys=True))
+    print(json.dumps({"status": result["status"], "historical_watch": result["historical_a2"]["watch_count"], "writer_run": result["writer_recovery"]["run_id"], "writer_delivery_ready": result["writer_recovery"]["delivery_projection_ready"], "writer_delivery_blocker": result["writer_recovery"]["delivery_blocker"]}, sort_keys=True))
 
 
 if __name__ == "__main__":
