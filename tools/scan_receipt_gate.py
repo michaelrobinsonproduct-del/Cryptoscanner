@@ -22,12 +22,23 @@ STABLECOIN_SYMBOLS = frozenset(("USDT", "USDC", "DAI", "PYUSD", "TUSD", "USDD", 
 
 
 def is_stablecoin_pair(pair):
-    """Conservative independent denylist for Kraken compact or slash pairs."""
+    """Identify the base/quote assets; never mistake USD as a stablecoin base suffix."""
     if not isinstance(pair, str):
         return False
-    normalized = pair.upper().replace("/", "").replace("-", "")
-    return any(normalized.startswith(token) or normalized.endswith(token)
-               for token in STABLECOIN_SYMBOLS)
+    normalized = pair.upper().replace("/", "").replace("-", "").replace("_", "")
+    if normalized in STABLECOIN_SYMBOLS:
+        return True
+    # Kraken compact symbols may use Z-prefixed fiat quote aliases. Stablecoins
+    # are rejected on either side; ordinary USD/EUR quotes are not stablecoins.
+    quote_assets = ("USDT", "USDC", "ZUSD", "USD", "ZEUR", "EUR",
+                    "ZGBP", "GBP", "ZCAD", "CAD", "ZAUD", "AUD",
+                    "ZJPY", "JPY", "ZCHF", "CHF", "XBT", "BTC", "ETH")
+    quote = next((q for q in quote_assets if normalized.endswith(q)
+                  and len(normalized) > len(q)), None)
+    if quote is None:
+        return False
+    base = normalized[:-len(quote)]
+    return base in STABLECOIN_SYMBOLS or quote in STABLECOIN_SYMBOLS
 
 
 def validate_receipt(receipt, *, now, max_age_seconds=600):
