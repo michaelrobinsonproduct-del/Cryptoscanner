@@ -72,12 +72,32 @@ def project_historical_execution(execution, *, frozen_predictions):
         if observed != set(HORIZONS):
             raise ValueError("Missing reconstructed horizon")
     canonical = json.dumps(sorted(universe.items()), separators=(",", ":")).encode()
+    cohort_digest = hashlib.sha256(canonical).hexdigest()
+    evidence_digest = hashlib.sha256(json.dumps(
+        {"source_sha256": batch["source_sha256"], "counts": counts,
+         "universe": sorted(universe.items()), "reconstructed": sorted(seen)},
+        sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    missing = len(universe) - len(seen)
+    # B's existing _learning_evidence contract expects exact cohort arithmetic,
+    # explicit excluded identities and a digest. No incomplete archive cohort is
+    # allowed to masquerade as qualified held-out evidence.
+    exclusions = {pid: list(HORIZONS) for pid in sorted(universe)}
     return {
         "schema": "paper_learning_handoff_v1",
         "status": "NO_QUALIFIED_RULE",
         "source": "historical_outcome_execution_v1",
         "outcome_input_sha256": batch["source_sha256"],
-        "frozen_universe_digest": hashlib.sha256(canonical).hexdigest(),
+        "frozen_universe_digest": cohort_digest,
+        "cohort_join_digest": cohort_digest,
+        "evidence_digest": evidence_digest,
+        "baseline_version": "NO_AUTHENTICATED_BASELINE",
+        "challenger_version": "NO_AUTHENTICATED_CHALLENGER",
+        "evaluation_asof_utc": None,
+        "observed_prediction_count": len(universe),
+        "complete_cohort_count": 0,
+        "excluded_prediction_count": len(universe),
+        "abstention_counts": {"UNAUTHENTICATED_ARCHIVE_OR_PROXY_ENTRY": len(universe)},
+        "incomplete_prediction_horizons": exclusions,
         "frozen_prediction_count": len(universe),
         "reconstructed_prediction_count": len(seen),
         "missing_prediction_count": len(universe) - len(seen),
