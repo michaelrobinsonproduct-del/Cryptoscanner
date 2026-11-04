@@ -101,6 +101,11 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
                     bind_a2_projection(changed, watch)
             with self.assertRaisesRegex(ValueError, "WATCH sample"):
                 bind_a2_projection(projection, [])
+            altered = dict(projection, frozen_predictions=[
+                dict(binding["frozen_predictions"][0], prediction_id="f" * 64),
+                binding["frozen_predictions"][1]])
+            with self.assertRaisesRegex(ValueError, "sealed receipt"):
+                bind_a2_projection(altered, watch)
 
 
 
