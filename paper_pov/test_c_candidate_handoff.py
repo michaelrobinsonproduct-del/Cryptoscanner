@@ -1,6 +1,11 @@
 """C -> B/D executable candidate handoff acceptance."""
 import copy
+import json
+import subprocess
+import sys
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from paper_pov.c_candidate_handoff import consume, from_integration
 
 
@@ -72,6 +77,49 @@ class HandoffTests(unittest.TestCase):
                 mutated[key] = bad
                 with self.assertRaises(ValueError):
                     from_integration(mutated)
+
+    def test_single_invocation_writes_both_authenticated_artifacts(self):
+        src = fixture()
+        integration = {
+            "schema": "c_read_only_integration_v1",
+            "status": "ABSTAIN_LEGACY_QUOTE_EVIDENCE",
+            "recovery_verified": True,
+            "historical_artifact_parity": True,
+            "manual_run": "41636714169",
+            "scheduled_run": "41626400391",
+            "a2_snapshot_attached": True,
+            "exchange_event_freshness_verified": False,
+            "production_applied": False,
+            "trading_approved": False,
+            "a2_receipt_sha256": src["receipt_sha256"],
+            "a2_as_of": src["source_as_of"],
+            "a2_source_cohort": src["source_cohort"],
+            "a2_eligible_pairs": src["eligible_pairs"],
+            "a2_observed_markets": src["observed_markets"],
+            "a2_watch_count": src["watch_count"],
+            "a2_watch_candidates": src["watch"],
+        }
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, candidates, bd = (root / name for name in ("integration.json", "candidates.json", "bd.json"))
+            source.write_text(json.dumps(integration))
+            result = subprocess.run(
+                [sys.executable, "-m", "paper_pov.c_candidate_handoff",
+                 str(source), "--from-integration", "--output", str(candidates),
+                 "--bd-output", str(bd)],
+                capture_output=True, text=True, check=True)
+            self.assertEqual(json.loads(candidates.read_text()), src)
+            self.assertEqual(json.loads(bd.read_text()), consume(src))
+            self.assertIn("WATCH_REPLAY_ONLY_NOT_LIVE", result.stdout)
+            bd.unlink()
+            source.write_text(json.dumps({**integration, "recovery_verified": False}))
+            failed = subprocess.run(
+                [sys.executable, "-m", "paper_pov.c_candidate_handoff",
+                 str(source), "--from-integration", "--output", str(candidates),
+                 "--bd-output", str(bd)],
+                capture_output=True, text=True)
+            self.assertNotEqual(failed.returncode, 0)
+            self.assertFalse(bd.exists())
 
     def test_fail_closed_on_bad_contract(self):
         changes = [("watch_count", 3), ("observed_markets", 1),
