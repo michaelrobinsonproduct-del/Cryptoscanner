@@ -30,7 +30,6 @@ def capture_scored_series(output_root, *, rounds=13, interval_seconds=300,
         raise ValueError("series interval must be at least 300 seconds")
     root = Path(output_root)
     root.mkdir(parents=True, exist_ok=False)
-    started = clock()
     entry_root = root / "entry"
     entry = entry_capture(entry_root)
     if entry.get("mode") != "RESEARCH_ONLY_PROSPECTIVE_SCORE_DEPTH" or entry.get("production_applied") is not False:
@@ -42,6 +41,9 @@ def capture_scored_series(output_root, *, rounds=13, interval_seconds=300,
     index = entry_root / "round-index.jsonl"
     if not index.is_file() or len(index.read_text().splitlines()) != 1:
         raise ValueError("entry depth round not indexed exactly once")
+    # Do not anchor cadence to the scanner startup: that may precede the
+    # independently observed entry depth by minutes on a slow Kraken call.
+    started = clock()
     for number in range(1, rounds):
         target = started + number * interval_seconds
         delay = target - clock()
