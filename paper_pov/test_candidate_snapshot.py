@@ -22,7 +22,7 @@ class SnapshotTests(unittest.TestCase):
 
     def candidate(self):
         pair = "TESTUSD"
-        return {"pair": pair, "rank": 1, "status": "PAPER_WATCH", "buy_approved": False,
+        return {"pair": pair, "symbol": "TEST/USD", "rank": 1, "status": "PAPER_WATCH", "buy_approved": False,
                 "as_of": STAMP, "quote_observed_at": STAMP,
                 "quote_timestamp_semantics": "client_observed_not_exchange_event_time",
                 "prediction_id": hashlib.sha256(("paper-v1|" + STAMP + "|" + pair).encode()).hexdigest(),
@@ -58,6 +58,17 @@ class SnapshotTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, message):
                     read_snapshot(self.latest, NOW)
                 self.report["watch"][0][field] = original
+
+    def test_display_symbol_required_for_b_delivery(self):
+        for bad in (None, "", "TEST USD", "X" * 65):
+            with self.subTest(symbol=bad):
+                self.report["watch"][0]["symbol"] = bad
+                self.seal()
+                with self.assertRaisesRegex(ValueError, "invalid WATCH display symbol"):
+                    read_snapshot(self.latest, NOW)
+        self.report["watch"][0]["symbol"] = "TEST/USD"
+        self.seal()
+        self.assertEqual(read_snapshot(self.latest, NOW)["watch"][0]["symbol"], "TEST/USD")
 
     def test_zero_watch_abstention_readback(self):
         self.report.update(watch=[], scan_status="ABSTAIN_NO_QUALIFIED_OHLC")
