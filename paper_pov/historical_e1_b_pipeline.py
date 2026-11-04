@@ -122,7 +122,7 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
             continue
         result = convert_pinned_csv(manifest, root, partition_file=partition,
                                     pair=pair, schema=schema)
-        bars[pair] = [utc_time(b["timestamp"]) for b in result["bars"]]
+        bars[pair] = [utc_time(b["open_at"]) for b in result["bars"]]
         provenance[pair] = {"status": "PINNED_BYTES_VERIFIED",
                             "partition": partition,
                             "partition_sha256": result["partition_sha256"],
