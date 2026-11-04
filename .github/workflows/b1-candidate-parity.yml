@@ -76,6 +76,38 @@ jobs:
           PY
           ARTIFACT="$(python -c 'import json;print(json.load(open("/tmp/b-delivery/identity.json"))["artifact_id"])')"
           gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/$ARTIFACT/zip" > /tmp/b-delivery/published.zip
+      - name: Download existing D recovered-ledger evidence independently
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/actions/artifacts/13310182812" > /tmp/b-delivery/d-meta.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          m=json.loads(Path("/tmp/b-delivery/d-meta.json").read_text())
+          if m.get("id")!=13310182812 or m.get("expired") or m.get("workflow_run",{}).get("id")!=41807440846:
+              raise SystemExit("D_RECOVERY_ARTIFACT_METADATA_MISMATCH")
+          PY
+          gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/13310182812/zip" > /tmp/b-delivery/d-recovery.zip
+          python - <<'PY'
+          import json,zipfile
+          from pathlib import Path
+          with zipfile.ZipFile("/tmp/b-delivery/d-recovery.zip") as z:
+              names=z.namelist()
+              if names!=["recovery.json"]:
+                  raise SystemExit("D_RECOVERY_ARCHIVE_LAYOUT_MISMATCH")
+              raw=z.read("recovery.json")
+              if len(raw)>100000:
+                  raise SystemExit("D_RECOVERY_REPORT_OVERSIZED")
+              if raw.endswith(bytes((92,110))):
+                  raw=raw[:-2]+bytes((10,))
+              obj=json.loads(raw)
+              if obj.get("remote_downloaded") is not True or obj.get("production_applied") is not False:
+                  raise SystemExit("D_RECOVERY_REPORT_NOT_READ_ONLY")
+              Path("/tmp/b-delivery/writer.json").write_text(json.dumps(obj))
+          PY
       - name: Consume actual downloaded manual or scheduled result through B shared adapter
         run: |
           set -euo pipefail
@@ -87,6 +119,7 @@ jobs:
           published=load_verified_artifact(Path("/tmp/b-delivery/published.zip"))
           if str(published.get("run_id"))!=identity["run_id"] or published.get("source_sha")!=identity["source_sha"] or published.get("github_event")!=identity["event"]:
               raise SystemExit("GITHUB_METADATA_RESULT_IDENTITY_MISMATCH")
+          writer=json.loads(Path("/tmp/b-delivery/writer.json").read_text())
           if "quote_evidence" not in published:
               Path("/tmp/b-delivery/delivery.json").write_text(json.dumps({
                   "schema":"paper_delivery_abstention_v1","status":"ABSTAIN_PUBLISHED_QUOTE_EVIDENCE_MISSING",
@@ -97,6 +130,7 @@ jobs:
           else:
               subprocess.run([sys.executable,"-m","paper_pov.github_delivery_projection",
                   "--published-artifact","/tmp/b-delivery/published.zip",
+                  "--writer-readback","/tmp/b-delivery/writer.json",
                   "--expected-run-id",identity["run_id"],"--expected-source-sha",identity["source_sha"],
                   "--output","/tmp/b-delivery/delivery.json"],check=True)
               projected=json.loads(Path("/tmp/b-delivery/delivery.json").read_text())
@@ -108,6 +142,7 @@ jobs:
           name: b-authenticated-downloaded-delivery
           path: |
             /tmp/b-delivery/identity.json
+            /tmp/b-delivery/writer.json
             /tmp/b-delivery/delivery.json
           if-no-files-found: error
           retention-days: 7
