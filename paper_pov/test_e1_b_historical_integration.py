@@ -109,6 +109,8 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
             self.assertEqual(all_markets["delivery"]["observed_prediction_count"], 2)
             self.assertEqual(all_markets["delivery"]["status"], "NO_QUALIFIED_RULE")
             self.assertEqual(all_markets["handoff"]["qualified_cohort_count"], 0)
+            self.assertEqual({r["observation_asof_utc"] for r in all_markets["handoff"]["diagnostic_outcome_rows"]}, {start.isoformat()})
+            self.assertTrue(all(r["observation_asof_utc"] is None for r in retained["handoff"]["diagnostic_outcome_rows"]))
             self.assertFalse(all_markets["handoff"]["source_authenticated"])
             decisions = {(r["pair"], r["frozen_selection_status"]) for r in all_markets["handoff"]["diagnostic_outcome_rows"]}
             self.assertEqual(decisions, {("XUSD", "WATCH"), ("YUSD", "SCREEN_REJECTED")})
