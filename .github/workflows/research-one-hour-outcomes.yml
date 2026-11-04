@@ -76,9 +76,18 @@ jobs:
           from research.acquisition_receipt_pipeline import load_captures
           from research.depth_acquisition_associations import verified_associations
           captures=load_captures(root/'entry'/'scores')
-          associated, excluded, provenance=verified_associations(
-              root/'entry'/'scores',root/'entry'/'associations',
-              root/'entry'/'round-index.jsonl')
+          association_dir=root/'entry'/'associations'
+          if association_dir.is_dir():
+              associated, excluded, provenance=verified_associations(
+                  root/'entry'/'scores',association_dir,
+                  root/'entry'/'round-index.jsonl')
+          else:
+              # A real scan with no source-qualified depth is an abstention,
+              # not a fabricated match or a failed artifact-publication job.
+              associated=[]
+              excluded=[{'prediction_id':r['prediction_id'],
+                         'reason':'MISSING_DEPTH_ASSOCIATION'} for r in captures]
+              provenance={'source_abstentions':[]}
           statuses={}
           for o in result['outcomes']:
               statuses[o['status']]=statuses.get(o['status'],0)+1
