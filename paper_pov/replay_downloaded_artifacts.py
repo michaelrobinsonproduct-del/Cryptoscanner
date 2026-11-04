@@ -116,6 +116,38 @@ def replay(ledger_zip, results_zip, *, run_id, source_sha, ledger_commit):
             "status": published["status"], "exchange_event_freshness_verified": False}
 
 
+def replay_visible_result(ledger_zip=None, results_zip=None, failure_zip=None, *,
+                          run_id, source_sha, ledger_commit=None):
+    """Return a truthful read-only result for success OR a failed paper run.
+
+    Failed runs cannot claim a persisted generation or WATCH. A caller must
+    explicitly choose exactly one artifact path; no fallback from corrupted
+    success artifacts to an apparently legitimate failure receipt.
+    """
+    if failure_zip is not None:
+        if ledger_zip is not None or results_zip is not None or ledger_commit is not None:
+            raise ValueError("Mixed success and failure evidence")
+        if not re.fullmatch(r"[0-9]+", str(run_id)) or not re.fullmatch(r"[0-9a-f]{40}", source_sha):
+            raise ValueError("Invalid failed-run identity")
+        files = read_archive(failure_zip, RESULT_FILES)
+        verify_checksums(files, RESULT_FILES - {"SHA256SUMS"})
+        payload = json.loads(files["results.json"])
+        if (not isinstance(payload, dict) or payload.get("status") != "FAILED_PAPER_ONLY"
+                or str(payload.get("run_id")) != str(run_id)
+                or payload.get("source_sha") != source_sha):
+            raise ValueError("Failed-run artifact identity mismatch")
+        if not files["results.md"].strip():
+            raise ValueError("Empty failed-run human-readable report")
+        return {"status": "FAILED_PAPER_ONLY", "certified": False,
+                "run_id": str(run_id), "source_sha": source_sha,
+                "ledger_persisted": False, "watch_candidates": None,
+                "exchange_event_freshness_verified": False}
+    if ledger_zip is None or results_zip is None or ledger_commit is None:
+        raise ValueError("Incomplete successful-run evidence")
+    return replay(ledger_zip, results_zip, run_id=run_id,
+                  source_sha=source_sha, ledger_commit=ledger_commit)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--ledger-zip", required=True)
