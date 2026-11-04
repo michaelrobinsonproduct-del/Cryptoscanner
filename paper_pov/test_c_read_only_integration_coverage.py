@@ -59,6 +59,16 @@ class C2CoverageContract(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     combine(p, r, s)
 
+    def test_invalid_source_timestamps_abstain(self):
+        for timestamp in ("tomorrow", "2026-99-03T00:00:00Z",
+                          "2026-11-03T00:00:00+02:00",
+                          "2026-11-03T00:00:00", "2026-11-03T25:00:00Z"):
+            with self.subTest(timestamp=timestamp):
+                p, r, s = evidence()
+                s["as_of"] = timestamp
+                with self.assertRaises(ValueError):
+                    combine(p, r, s)
+
     def test_invalid_coverage_abstains(self):
         for key, value in (("eligible_pairs", True), ("eligible_pairs", -1),
                            ("observed_markets", 5), ("observed_markets", 0),
