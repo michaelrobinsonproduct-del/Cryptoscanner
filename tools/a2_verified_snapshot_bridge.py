@@ -9,6 +9,7 @@ import datetime as dt
 import hashlib
 import json
 import math
+import os
 import zipfile
 from pathlib import Path
 
@@ -111,7 +112,9 @@ def read_scanner_receipt_zip(path, *, now=None, max_age_seconds=600):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--a2-zip", type=Path,
-                        help="A2 immutable inner transport ZIP; verify using A2's source consumer first")
+                        help="Immutable A2 3-member transport ZIP or verified 2-member paper scanner ZIP")
+    parser.add_argument("--output", type=Path,
+                        help="New read-only, verified paper candidate handoff JSON; never overwrite")
     args = parser.parse_args()
     try:
         if not args.a2_zip:
@@ -127,6 +130,30 @@ def main():
             else:
                 verified = read_scanner_receipt_zip(args.a2_zip)
         result = assess_verified_a2(verified)
+        if result["accepted"] and args.output:
+            if args.output.is_symlink() or args.output.exists():
+                raise FileExistsError("verified handoff already exists")
+            # No direct trade or live certification. Carry only verifier-approved
+            # paper candidates and their receipt identity into downstream readers.
+            payload = {"schema": 1, "mode": "VERIFIED_PAPER_WATCH_HANDOFF",
+                       "receipt_sha256": result["receipt_sha256"],
+                       "scan_status": verified["scan_status"],
+                       "watch": verified["watch"],
+                       "quote_age_seconds": verified["quote_age_seconds"],
+                       "snapshot_age_seconds": verified["snapshot_age_seconds"],
+                       "eligible_pairs": verified["eligible_pairs"],
+                       "observed_markets": verified["observed_markets"],
+                       "live_watch_certified": False,
+                       "production_applied": False, "trading_approved": False}
+            raw = (json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                              allow_nan=False) + "\\n").encode()
+            # O_EXCL is the only writer path: no replacement or partial promotion
+            # after invalid source/quote proof. Consumer can hash exact bytes.
+            fd = os.open(args.output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(fd, "wb") as handle:
+                handle.write(raw)
+                handle.flush()
+                os.fsync(handle.fileno())
     except (OSError, ValueError, TypeError, ImportError, KeyError, AssertionError, RuntimeError):
         result = {"accepted": False, "status": "INVALID_A2_SNAPSHOT", "errors": ["unreadable_snapshot"]}
     print(json.dumps(result, sort_keys=True))
