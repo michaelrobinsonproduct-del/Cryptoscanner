@@ -162,6 +162,8 @@ jobs:
               "schema": "c_a2_read_only_candidates_v1",
               "receipt_sha256": p["a2_receipt_sha256"],
               "source_as_of": p["a2_as_of"],
+              "quote_timestamp_semantics": "client_observed_not_exchange_event_time",
+              "freshness_status": "HISTORICAL_ARTIFACT_NOT_LIVE",
               "source_cohort": p["a2_source_cohort"],
               "eligible_pairs": p["a2_eligible_pairs"],
               "observed_markets": p["a2_observed_markets"],
