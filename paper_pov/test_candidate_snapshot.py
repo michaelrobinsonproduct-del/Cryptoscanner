@@ -70,6 +70,26 @@ class SnapshotTests(unittest.TestCase):
         self.seal()
         self.assertEqual(read_snapshot(self.latest, NOW)["watch"][0]["symbol"], "TEST/USD")
 
+    def test_persisted_watch_order_must_match_challenger_scores(self):
+        first = self.report["watch"][0]
+        second = dict(first, pair="OTHERUSD", symbol="OTHER/USD", rank=2,
+                      challenger_score=first["challenger_score"] + 1)
+        second["prediction_id"] = hashlib.sha256(
+            ("paper-v1|" + STAMP + "|OTHERUSD").encode()).hexdigest()
+        self.report["watch"].append(second)
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "WATCH challenger ranking mismatch"):
+            read_snapshot(self.latest, NOW)
+        self.report["watch"] = [dict(second, rank=1), dict(first, rank=2)]
+        self.seal()
+        self.assertEqual(len(read_snapshot(self.latest, NOW)["watch"]), 2)
+
+    def test_boolean_watch_rank_rejected(self):
+        self.report["watch"][0]["rank"] = True
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "invalid paper candidate contract"):
+            read_snapshot(self.latest, NOW)
+
     def test_zero_watch_abstention_readback(self):
         self.report.update(watch=[], scan_status="ABSTAIN_NO_QUALIFIED_OHLC")
         self.seal()
