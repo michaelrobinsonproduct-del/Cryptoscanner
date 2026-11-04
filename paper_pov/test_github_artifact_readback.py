@@ -16,8 +16,8 @@ def runner_factory(tmp_path, *, mismatch=None):
     calls = []
     def run(args, timeout):
         calls.append(args)
-        if args[:2] == ["gh", "api"]:
-            if "/artifacts" in args[2]:
+        if args[:4] == ["gh", "api", "-X", "GET"]:
+            if "/artifacts" in args[4]:
                 return json.dumps({"total_count": 1, "artifacts": [
                     {"id": 88, "name": "paper-ledger", "expired": False}]}).encode()
             return json.dumps({"id": 123, "head_sha": "b" * 40 if mismatch == "sha" else SHA,
