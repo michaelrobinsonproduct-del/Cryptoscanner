@@ -137,7 +137,11 @@ def replay_visible_result(ledger_zip=None, results_zip=None, failure_zip=None, *
                 or str(payload.get("run_id")) != str(run_id)
                 or payload.get("source_sha") != source_sha):
             raise ValueError("Failed-run artifact identity mismatch")
-        # A checksum alone is not authenticity: verify the complete report\n        # against its independently specified deterministic renderer.\n        from .scanner import utc\n        expected, markdown = render_failure(str(run_id), source_sha, utc(payload["as_of"]))\n        if payload != expected or files["results.md"] != (markdown + "\\n").encode():\n            raise ValueError("Failed-run report differs from canonical renderer")
+        # Verify both the payload and human report against canonical rendering.
+        from .scanner import utc
+        expected, markdown = render_failure(str(run_id), source_sha, utc(payload["as_of"]))
+        if payload != expected or files["results.md"] != (markdown + "\n").encode():
+            raise ValueError("Failed-run report differs from canonical renderer")
         return {"status": "FAILED_PAPER_ONLY", "certified": False,
                 "run_id": str(run_id), "source_sha": source_sha,
                 "ledger_persisted": None, "watch_candidates": None,
