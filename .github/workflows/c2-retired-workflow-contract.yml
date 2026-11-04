@@ -254,16 +254,36 @@ jobs:
           git clone --no-checkout --filter=blob:none "https://github.com/$REPO.git" /tmp/c-b-consumer
           git -C /tmp/c-b-consumer fetch --depth=1 origin integration-a-b-c-d-20261103
           git -C /tmp/c-b-consumer checkout --detach FETCH_HEAD
-          gh api "repos/$REPO/actions/runs/41804379677" > /tmp/c-real-receipts/b-published-run.json
+          # Select newest successful scanner run with a published artifact.
+          gh api "repos/$REPO/actions/workflows/paper-pipeline.yml/runs?branch=main&status=success&per_page=30" > /tmp/c-real-receipts/b-runs.json
+          python - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          root=Path("/tmp/c-real-receipts")
+          runs=json.loads((root/"b-runs.json").read_text()).get("workflow_runs",[])
+          for run in runs:
+              if run.get("conclusion")!="success" or run.get("event") not in ("schedule","workflow_dispatch"):
+                  continue
+              rid=run["id"]
+              listing=json.loads(subprocess.check_output(["gh","api",f"repos/{os.environ['REPO']}/actions/runs/{rid}/artifacts"]))
+              matches=[a for a in listing.get("artifacts",[]) if a.get("name")==f"public-paper-results-{rid}" and not a.get("expired")]
+              if len(matches)==1:
+                  (root/"b-selected.json").write_text(json.dumps({"run_id":rid,"sha":run["head_sha"]}))
+                  (root/"b-published-run.json").write_text(json.dumps(run))
+                  break
+          else:
+              raise SystemExit("No recent published scanner result available")
+          PY
           python - <<'PY'
           import json
           from pathlib import Path
           run=json.loads(Path("/tmp/c-real-receipts/b-published-run.json").read_text())
-          assert run["id"]==41804379677 and run["conclusion"]=="success"
+          assert run["id"]==json.loads(Path("/tmp/c-real-receipts/b-selected.json").read_text())["run_id"] and run["conclusion"]=="success"
           assert run["event"] in ("schedule","workflow_dispatch")
-          assert run["head_sha"]=="19328dcebdfd60500ebbecccc8f334539a2d42e1"
+          assert run["head_sha"]==json.loads(Path("/tmp/c-real-receipts/b-selected.json").read_text())["sha"]
           PY
-          gh run download 41804379677 --repo "$REPO" --name public-paper-results-41804379677 --dir /tmp/c-real-receipts/b-published
+          SELECTED_RUN=$(python -c 'import json;print(json.load(open("/tmp/c-real-receipts/b-selected.json"))["run_id"])')
+          gh run download "$SELECTED_RUN" --repo "$REPO" --name "public-paper-results-$SELECTED_RUN" --dir /tmp/c-real-receipts/b-published
           python - <<'PY'
           import json
           from pathlib import Path
@@ -296,8 +316,8 @@ jobs:
           if [[ "$(cat /tmp/c-real-receipts/b-quote-evidence-ready)" == yes ]]; then
             (cd /tmp/c-b-consumer && python -m paper_pov.github_delivery_projection \
               --published-result /tmp/c-real-receipts/b-published/results.json \
-              --expected-run-id 41804379677 \
-              --expected-source-sha 19328dcebdfd60500ebbecccc8f334539a2d42e1 \
+              --expected-run-id "$SELECTED_RUN" \
+              --expected-source-sha "$(python -c 'import json;print(json.load(open("/tmp/c-real-receipts/b-selected.json"))["sha"])')" \
               --writer-readback /tmp/c-real-receipts/bd-writer-readback.json \
               --output /tmp/c-real-receipts/b-published-delivery.json)
             python - <<'PY'
@@ -305,7 +325,7 @@ jobs:
           from pathlib import Path
           result=json.loads(Path("/tmp/c-real-receipts/b-published-delivery.json").read_text())
           assert result["schema"]=="paper_delivery_readback_v1"
-          assert result["source_run_id"]==41804379677
+          assert str(result["source_run_id"])==str(json.loads(Path("/tmp/c-real-receipts/b-selected.json").read_text())["run_id"])
           assert result["writer_recovery"] is not None
           assert result["single_writer_read_only"] and not result["production_applied"]
           assert not result["live_watch_authorized"]
@@ -322,10 +342,10 @@ jobs:
           bridge=json.loads((root/"cd-bridge.json").read_text())
           published=json.loads((root/"b-published/results.json").read_text())
           assert bridge["writer_recovery"]["delivery_projection_ready"]
-          assert published["run_id"]=="41804379677"
+          assert str(published["run_id"])==str(json.loads((root/"b-selected.json").read_text())["run_id"])
           result={"schema":"paper_c_bd_integration_abstention_v1",
                   "status":"ABSTAIN_PUBLISHED_QUOTE_EVIDENCE_MISSING",
-                  "source_run_id":41804379677,
+                  "source_run_id":json.loads((root/"b-selected.json").read_text())["run_id"],
                   "source_sha":published["source_sha"],
                   "writer_recovery_status":bridge["writer_recovery"]["status"],
                   "writer_recovery_ready":True,
