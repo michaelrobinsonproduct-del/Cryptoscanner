@@ -26,6 +26,12 @@ def canonical(report):
         raise ValueError("unexpected production application")
     if report["forward_labels"] != 0 or report["held_out_lift"] is not None:
         raise ValueError("unverified learning claim")
+    for field in ("eligible_pairs", "matched_tickers", "observed_markets", "ohlc_screened"):
+        if type(report[field]) is not int or report[field] < 0:
+            raise ValueError("invalid scanner coverage: " + field)
+    if not (report["ohlc_screened"] <= report["observed_markets"]
+            <= report["matched_tickers"] <= report["eligible_pairs"]):
+        raise ValueError("inconsistent scanner coverage")
     if not isinstance(report["watch"], list) or not isinstance(report["observations"], list):
         raise ValueError("invalid candidate or observation list")
     ids = [item.get("prediction_id") for item in report["watch"] if isinstance(item, dict)]
