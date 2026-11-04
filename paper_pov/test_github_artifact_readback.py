@@ -69,7 +69,7 @@ def test_real_writer_artifact_name_and_nested_paths(tmp_path):
         "paper_pov/output/scoreboard.json": b'{"actual_scans":3}',
     }
     import hashlib
-    sums = "".join(hashlib.sha256(receipts[name]).hexdigest() + "  " + name.split("/")[-1] + "\\n"
+    sums = "".join(hashlib.sha256(receipts[name]).hexdigest() + "  " + name.split("/")[-1] + "\n"
                    for name in receipts)
     receipts["paper_pov/output/SHA256SUMS"] = sums.encode()
     manifest = make_manifest(receipts, source_sha=SHA, run_id="123")
