@@ -21,6 +21,8 @@ on:
       - '.github/workflows/b1-candidate-parity.yml'
       - 'paper_pov/github_sealed_bundle_readback.py'
       - 'paper_pov/test_github_sealed_bundle_readback.py'
+      - 'paper_pov/github_delivery_projection.py'
+      - 'paper_pov/test_github_delivery_projection.py'
 permissions:
   contents: read
 jobs:
@@ -33,6 +35,6 @@ jobs:
       - name: Focused B1 candidate and native-entry parity regression
         run: bun test scanner/src/shadow-evaluation.test.ts scanner/src/shadow-artifacts.test.ts scanner/src/cycle-runner.test.ts scanner/src/cycle-http.test.ts scanner/src/paper-receipt.test.ts
       - name: Read-only GitHub artifact transport and checksum acceptance
-        run: python -m unittest paper_pov.test_github_sealed_bundle_readback -v
+        run: python -m unittest paper_pov.test_github_sealed_bundle_readback paper_pov.test_github_delivery_projection -v
       - name: Verify exact checkout
         run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
