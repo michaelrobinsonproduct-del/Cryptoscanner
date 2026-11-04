@@ -97,3 +97,11 @@ test("authenticated A2 remains available when legacy collector fails; both sourc
  const unavailable=createCycleRunner(failing,undefined,undefined,async()=>{throw Error("A2 unavailable")});
  const bad=await unavailable.run("manual");expect(bad.ok).toBe(false);expect(bad.status).toBe(502);
 });
+
+test("baseline failure provenance survives shadow gate and A2 fallback",async()=>{
+ const snapshot={status:"VERIFIED_SNAPSHOT" as const,as_of:"2026-11-03T04:00:00Z",scan_status:"WATCH",receipt_sha256:"e".repeat(64),watch:[{pair:"TAOUSD",quote_observed_at:"2026-11-03T03:59:00Z"}],eligible_pairs:1,observed_markets:1,abstention_counts:{},source:"a2_verified_readonly" as const,buy_approved:false as const};
+ const runner=createCycleRunner(deps({scan:async()=>{throw Error("legacy source offline")}}),async()=>({evidence:null,outcomes:[],scores:[]}),undefined,async()=>snapshot as any,async()=>({decision:"KEEP_BASELINE",held_out_n:0,production_applied:false as const}));
+ const result=await runner.run("manual");
+ expect(result.ok).toBe(true);
+ expect(result.result).toMatchObject({scan_status:"BASELINE_UNAVAILABLE",baseline_error:"Error: legacy source offline",paper_watch_status:"PAPER_ONLY_VERIFIED",shadow_artifact_status:"REJECTED",learning_gate:{decision:"KEEP_BASELINE"},shadow_evaluation:{production_promoted:false}});
+});
