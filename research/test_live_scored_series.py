@@ -21,7 +21,7 @@ class ScoredSeriesTests(unittest.TestCase):
             events.append(("score_then_depth", clock()))
             (root / "scores").mkdir(parents=True)
             (root / "scores" / ("a" * 64 + ".json")).write_text('{"proof":"sealed"}')
-            (root / "round-index.jsonl").write_text('{"entry":true}\\n')
+            (root / "round-index.jsonl").write_text('{"entry":true}\n')
             return {"mode": "RESEARCH_ONLY_PROSPECTIVE_SCORE_DEPTH",
                     "production_applied": False}
         def collector(pairs, directory):
@@ -30,7 +30,7 @@ class ScoredSeriesTests(unittest.TestCase):
         def indexer(index, directory):
             self.assertTrue(directory.is_dir())
             with Path(index).open("a") as handle:
-                handle.write(json.dumps({"batch": str(directory)}) + "\\n")
+                handle.write(json.dumps({"batch": str(directory)}) + "\n")
             events.append(("index", directory.name))
         def evaluate(index, hours):
             self.assertEqual(len(Path(index).read_text().splitlines()), 3)
