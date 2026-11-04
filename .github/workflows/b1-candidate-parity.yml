@@ -190,7 +190,12 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/b-delivery/a2
           gh api "repos/$REPO/actions/artifacts?per_page=100" > /tmp/b-delivery/a2-artifacts.json
-          gh api "repos/$REPO/actions/workflows/a2-candidate-snapshot.yml/runs?status=success&per_page=100" > /tmp/b-delivery/a2-successful-runs.json
+          if ! gh api "repos/$REPO/actions/workflows/a2-candidate-snapshot.yml/runs?status=success&per_page=100" > /tmp/b-delivery/a2-successful-runs.json; then
+            # This optional producer may exist only on an unmerged PR branch.
+            # Absence must be explicit, never a fabricated successful handoff.
+            echo '{"workflow_runs":[]}' > /tmp/b-delivery/a2-successful-runs.json
+            echo "OPTIONAL_A2_WORKFLOW_NOT_REGISTERED"
+          fi
           python - <<'PY'
           import json
           from pathlib import Path
@@ -276,7 +281,12 @@ jobs:
         run: |
           set -euo pipefail
           gh api "repos/$REPO/actions/artifacts?per_page=100" > /tmp/b-delivery/e-artifacts.json
-          gh api "repos/$REPO/actions/workflows/shadow-learning-evidence.yml/runs?status=success&per_page=100" > /tmp/b-delivery/e-successful-runs.json
+          if ! gh api "repos/$REPO/actions/workflows/shadow-learning-evidence.yml/runs?status=success&per_page=100" > /tmp/b-delivery/e-successful-runs.json; then
+            # This optional producer may exist only on an unmerged PR branch.
+            # Absence must be explicit, never a fabricated successful handoff.
+            echo '{"workflow_runs":[]}' > /tmp/b-delivery/e-successful-runs.json
+            echo "OPTIONAL_E_WORKFLOW_NOT_REGISTERED"
+          fi
           python - <<'PY'
           import hashlib,json,os,subprocess,zipfile,io
           from pathlib import Path
