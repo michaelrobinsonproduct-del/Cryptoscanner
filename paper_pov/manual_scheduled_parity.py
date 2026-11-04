@@ -51,13 +51,48 @@ def compare(manual, scheduled):
     return hashlib.sha256(a).hexdigest()
 
 
+
+def load_sealed_scan(path):
+    """Consume the A persisted WATCH and preselection views without writing a ledger."""
+    root = Path(path)
+    if not root.is_dir() or root.is_symlink():
+        raise ValueError("expected scanner output directory")
+    names = ("latest.json", "candidate-snapshot.json", "preselection-universe.json")
+    if any((root / n).is_symlink() or not (root / n).is_file() for n in names):
+        raise ValueError("missing or linked persisted scanner projection")
+    raw = (root / names[0]).read_bytes()
+    report = json.loads(raw)
+    watch = json.loads((root / names[1]).read_bytes())
+    universe = json.loads((root / names[2]).read_bytes())
+    digest = hashlib.sha256(raw).hexdigest()
+    if watch.get("receipt_sha256") != digest or universe.get("receipt_sha256") != digest:
+        raise ValueError("projection receipt hash mismatch")
+    if watch.get("watch") != report.get("watch") or watch.get("scan_status") != report.get("scan_status"):
+        raise ValueError("WATCH projection differs from sealed scan")
+    if universe.get("markets") != report.get("preselection_universe"):
+        raise ValueError("preselection projection differs from sealed scan")
+    if universe.get("selection_decisions") != report.get("preselection_decisions"):
+        raise ValueError("preselection decisions differ")
+    if watch.get("as_of") != report.get("as_of") or universe.get("as_of") != report.get("as_of"):
+        raise ValueError("projection timestamp mismatch")
+    if universe.get("qualified_for_learning") is not False:
+        raise ValueError("unqualified learning projection")
+    from datetime import datetime, timezone
+    stamp = datetime.fromisoformat(report["as_of"].replace("Z", "+00:00"))
+    receipt = root / "receipts" / (stamp.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ") + ".json")
+    if receipt.is_symlink() or not receipt.is_file() or json.loads(receipt.read_bytes()) != report:
+        raise ValueError("missing or mismatched immutable receipt")
+    canonical(report)
+    return report
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("manual", type=Path)
     parser.add_argument("scheduled", type=Path)
     args = parser.parse_args()
     print("PAPER_MANUAL_SCHEDULED_PARITY_SHA256=" +
-          compare(json.loads(args.manual.read_text()), json.loads(args.scheduled.read_text())))
+          compare(load_sealed_scan(args.manual) if args.manual.is_dir() else json.loads(args.manual.read_text()),
+                  load_sealed_scan(args.scheduled) if args.scheduled.is_dir() else json.loads(args.scheduled.read_text())))
 
 
 if __name__ == "__main__":
