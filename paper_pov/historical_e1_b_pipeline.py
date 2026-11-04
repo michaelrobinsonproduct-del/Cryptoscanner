@@ -167,7 +167,8 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
         for hours in (1, 6, 24, 48):
             if row["pair"] not in partitions:
                 horizon = "NO_PINNED_PARTITION"
-            elif at + timedelta(hours=hours, minutes=5) > cutoff:
+            elif (at.replace(second=0, microsecond=0) - timedelta(minutes=at.minute % 5)
+                  + timedelta(hours=hours, minutes=10)) > cutoff:
                 horizon = "ABSTAIN_IMMATURE"
             elif status != "ENTRY_BAR_PRESENT_UNQUALIFIED":
                 horizon = "INCOMPLETE_5M_PATH"
@@ -178,7 +179,9 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
                 start -= timedelta(minutes=start.minute % 5)
                 first = start + timedelta(minutes=5)
                 timeset = bar_sets[row["pair"]]
-                required = hours * 12
+                # E1 checks the entry bar AND 12*h forward target bars.
+                # Excluding the final target bar falsely marks gaps complete.
+                required = hours * 12 + 1
                 horizon = ("COMPLETE_BAR_PATH_UNQUALIFIED"
                            if all(first + timedelta(minutes=5 * i) in timeset
                                   for i in range(required))
