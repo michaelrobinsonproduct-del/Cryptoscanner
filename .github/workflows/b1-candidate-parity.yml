@@ -255,39 +255,21 @@ jobs:
           a2_projection=_a2_evidence(json.loads(a2_path.read_text())) if a2_path.exists() else None
           e_path=Path("/tmp/b-delivery/e-handoff.json")
           learning_projection=_learning_evidence(json.loads(e_path.read_text())) if e_path.exists() else None
-          if "quote_evidence" not in published:
-              # Authenticated legacy results lack the per-market quotes required
-              # to authorize WATCH. Deliver explicit read-only abstention.
-              projected={
-                  "schema":"paper_delivery_abstention_v1",
-                  "status":"ABSTAIN_PUBLISHED_QUOTE_EVIDENCE_MISSING",
-                  "source_run_id":identity["run_id"],
-                  "source_sha":identity["source_sha"],
-                  "github_event":identity["event"],
-                  "live_watch":[],"live_watch_authorized":False,
-                  "production_applied":False,"single_writer_read_only":True,
-                  "writer_recovery":writer_projection,
-                  "writer_reconciliation_status":writer_projection["reconciliation_status"],
-                  "a2_receipt_cohort":a2_projection,"learning":learning_projection}
-              Path("/tmp/b-delivery/delivery.json").write_text(
-                  json.dumps(projected,sort_keys=True)+"\\n")
-              print("AUTHENTIC_LEGACY_DELIVERY_ABSTENTION",identity["run_id"])
-          else:
-              cmd=[sys.executable,"-m","paper_pov.github_delivery_projection",
-                  "--published-artifact","/tmp/b-delivery/published.zip",
-                  "--writer-readback","/tmp/b-delivery/writer.json",
-                  "--expected-run-id",identity["run_id"],
-                  "--expected-source-sha",identity["source_sha"],
-                  "--output","/tmp/b-delivery/delivery.json"]
-              if a2_path.exists():
-                  cmd.extend(["--a2-delivery","/tmp/b-delivery/a2"])
-              if e_path.exists():
-                  cmd.extend(["--learning-handoff",str(e_path)])
-              subprocess.run(cmd,check=True)
-              projected=json.loads(Path("/tmp/b-delivery/delivery.json").read_text())
-              assert projected["schema"]=="paper_delivery_readback_v1"
-              assert projected["live_watch_authorized"] is False and projected["single_writer_read_only"] is True
-              print("SHARED_MANUAL_SCHEDULED_DELIVERY",projected["source_run_id"],projected["status"])
+          cmd=[sys.executable,"-m","paper_pov.github_delivery_projection",
+              "--published-artifact","/tmp/b-delivery/published.zip",
+              "--writer-readback","/tmp/b-delivery/writer.json",
+              "--expected-run-id",identity["run_id"],
+              "--expected-source-sha",identity["source_sha"],
+              "--output","/tmp/b-delivery/delivery.json"]
+          if a2_path.exists():
+              cmd.extend(["--a2-delivery","/tmp/b-delivery/a2"])
+          if e_path.exists():
+              cmd.extend(["--learning-handoff",str(e_path)])
+          subprocess.run(cmd,check=True)
+          projected=json.loads(Path("/tmp/b-delivery/delivery.json").read_text())
+          if projected["schema"]!="paper_delivery_readback_v1" or projected["live_watch_authorized"] is not False or projected["single_writer_read_only"] is not True:
+              raise SystemExit("UNSAFE_DELIVERY_PROJECTION")
+          print("SHARED_MANUAL_SCHEDULED_DELIVERY",projected["source_run_id"],projected["status"])
           PY
       - uses: actions/upload-artifact@v4
         with:
