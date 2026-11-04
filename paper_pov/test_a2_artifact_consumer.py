@@ -8,7 +8,7 @@ import zipfile
 from pathlib import Path
 from paper_pov.scanner import UTC, persist_report
 from paper_pov.candidate_snapshot import read_snapshot
-from paper_pov.a2_artifact_consumer import read_artifact_zip, read_published_artifact
+from paper_pov.a2_artifact_consumer import read_artifact_zip, read_published_artifact, project_watch_delivery
 from paper_pov.preselection_universe import export_universe
 
 class ArtifactConsumerTests(unittest.TestCase):
@@ -76,6 +76,15 @@ class ArtifactConsumerTests(unittest.TestCase):
             self.assertEqual(accepted["snapshot"]["watch"], [])
             self.assertEqual(accepted["preselection"]["coverage"]["valid_tickers"], 25)
             self.assertFalse(accepted["preselection"]["qualified_for_learning"])
+            delivery = project_watch_delivery(root, now=fixture.now + dt.timedelta(seconds=30))
+            self.assertEqual(delivery["watch"], [])
+            self.assertEqual(delivery["watch_count"], 0)
+            self.assertEqual(delivery["preselection_observations"], 25)
+            self.assertEqual(delivery["receipt_sha256"], snapshot["receipt_sha256"])
+            self.assertEqual(delivery["scan_status"], "ABSTAIN_NO_LIQUID_CANDIDATES")
+            self.assertFalse(delivery["single_writer_ledger_verified"])
+            self.assertFalse(delivery["exchange_event_freshness_verified"])
+            self.assertFalse(delivery["buy_approved"])
             tampered = dict(universe)
             tampered["receipt_sha256"] = "0" * 64
             (root / "preselection-universe.json").write_text(json.dumps(tampered))
@@ -83,6 +92,6 @@ class ArtifactConsumerTests(unittest.TestCase):
                 read_published_artifact(root, now=fixture.now + dt.timedelta(seconds=30))
             (root / "preselection-universe.json").write_text(json.dumps(universe))
             with self.assertRaisesRegex(ValueError, "stale"):
-                read_published_artifact(root, now=fixture.now + dt.timedelta(minutes=11))
+                project_watch_delivery(root, now=fixture.now + dt.timedelta(minutes=11))
 if __name__ == "__main__":
     unittest.main()
