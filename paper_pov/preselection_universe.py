@@ -3,14 +3,25 @@
 Ticker-only evidence: NOT source-authenticated future outcomes or learning labels.
 """
 import argparse
+import datetime as dt
 import hashlib
 import json
 from pathlib import Path
 from paper_pov.candidate_snapshot import read_snapshot
 
 
-def export_universe(latest, now=None):
-    verified = read_snapshot(latest, now=now)
+def export_universe(latest, now=None, historical=False):
+    # Historical analysis must not masquerade as a currently fresh WATCH feed.
+    # Validate the original sealed receipt at its own scan timestamp, then mark
+    # the resulting universe explicitly historical and non-actionable.
+    if historical:
+        payload = json.loads(Path(latest).read_bytes())
+        stamp = dt.datetime.fromisoformat(payload["as_of"].replace("Z", "+00:00"))
+        if stamp.tzinfo is None or stamp.utcoffset() is None:
+            raise ValueError("invalid historical timestamp")
+        verified = read_snapshot(latest, now=stamp)
+    else:
+        verified = read_snapshot(latest, now=now)
     report = json.loads(Path(latest).read_bytes())
     rows = report.get("preselection_universe")
     coverage = report.get("preselection_coverage")
@@ -57,15 +68,18 @@ def export_universe(latest, now=None):
             "coverage": coverage, "selection_decisions": decisions, "markets": rows,
             "identity_semantics": "sha256(paper-preselection-v1|receipt_sha256|pair)",
             "future_outcomes_authenticated": False, "qualified_for_learning": False,
-            "production_applied": False}
+            "production_applied": False,
+            "snapshot_use": "HISTORICAL_RESEARCH_ONLY" if historical else "FRESH_PAPER_OBSERVATION",
+            "live_watch_eligible": not historical}
 
 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("latest")
     p.add_argument("--output", required=True)
+    p.add_argument("--historical", action="store_true", help="receipt-verified historical universe; never live WATCH")
     args = p.parse_args()
-    Path(args.output).write_text(json.dumps(export_universe(args.latest), sort_keys=True, allow_nan=False) + "\n")
+    Path(args.output).write_text(json.dumps(export_universe(args.latest, historical=args.historical), sort_keys=True, allow_nan=False) + "\n")
 
 
 if __name__ == "__main__":
