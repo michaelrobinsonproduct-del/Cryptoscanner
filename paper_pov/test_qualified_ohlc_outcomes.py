@@ -6,7 +6,7 @@ UTC = dt.timezone.utc
 START = dt.datetime(2026, 1, 1, tzinfo=UTC)
 
 
-def bars(count=577, gap=None):
+def bars(count=578, gap=None):
     return [
         {"open_at": (START + dt.timedelta(minutes=5 * i)).isoformat(),
          "open": 100.0, "high": 135.0 if i == 6 else 101.0,
