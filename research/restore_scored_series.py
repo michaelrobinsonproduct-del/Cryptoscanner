@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import json
 import shutil
+import time
 from pathlib import Path
 
 from research.prospective_round_store import append_round, evaluate_index
@@ -17,8 +18,8 @@ from research.acquisition_receipt_pipeline import load_captures
 from research.kraken_prospective_batch import collect, MAX_PAIRS
 
 
-def restore_and_capture(previous, output_root, *, collector=collect):
-    previous = Path(previous).resolve(strict=True)
+def restore_and_capture(previous, output_root, *, collector=collect, followup_rounds=1,\n                        interval_seconds=300, clock=time.monotonic, sleep=time.sleep):
+    if type(followup_rounds) is not int or not 1 <= followup_rounds <= 13:\n        raise ValueError("follow-up rounds must be 1..13")\n    if type(interval_seconds) is not int or interval_seconds < 300:\n        raise ValueError("minimum source interval is 300 seconds")\n    previous = Path(previous).resolve(strict=True)
     output = Path(output_root)
     if not previous.is_dir() or previous.is_symlink():
         raise ValueError("invalid previous scored series")
@@ -84,22 +85,33 @@ def restore_and_capture(previous, output_root, *, collector=collect):
     new_index.write_text("\n".join(relocated) + "\n")
     # Verify *all* copied retained rounds before the next independent collection.
     evaluate_index(new_index, 1)
-    number = len(relocated)
-    destination = output / ("depth-%03d" % number)
-    collector(pairs, destination)
-    # A successful collection must actually cover the original scored cohort;
-    # never index a substituted market simply because the collector returned.
-    manifest_doc = json.loads((destination / "manifest.json").read_bytes())
-    collected_pairs = [row.get("pair") for row in manifest_doc.get("entries", [])]
-    if len(collected_pairs) != len(pairs) or set(collected_pairs) != set(pairs):
-        raise ValueError("new depth round differs from scored cohort")
-    append_round(new_index, destination)
+    first = len(relocated)
+    if first + followup_rounds > 577:
+        raise ValueError("follow-up batch exceeds 48-hour evidence limit")
+    # A 13-round continuation retains twelve bounded five-minute intervals in
+    # one runner, rather than depending on a fresh manual dispatch each slot.
+    # The first observation is made now: missed intervals are never synthesized.
+    started = clock()
+    for offset in range(followup_rounds):
+        target = started + offset * interval_seconds
+        delay = target - clock()
+        if delay > 0:
+            sleep(delay)
+        number = first + offset
+        destination = output / ("depth-%03d" % number)
+        collector(pairs, destination)
+        # Each newly collected market MUST be the original scored cohort.
+        manifest_doc = json.loads((destination / "manifest.json").read_bytes())
+        collected_pairs = [row.get("pair") for row in manifest_doc.get("entries", [])]
+        if len(collected_pairs) != len(pairs) or set(collected_pairs) != set(pairs):
+            raise ValueError("new depth round differs from scored cohort")
+        append_round(new_index, destination)
     coverage = {str(h): evaluate_index(new_index, h) for h in (1, 6, 24, 48)}
     learning = evaluate_all(output / "entry" / "scores",
                             output / "entry" / "associations", new_index,
                             ledger_path=output / "shadow-decisions.jsonl")
     return {"mode": "RESEARCH_ONLY_CROSS_JOB_FOLLOWUP",
-            "rounds_verified": number + 1,
+            "rounds_verified": first + followup_rounds,\n            "followup_rounds_acquired": followup_rounds,
             "original_index_sha256": hashlib.sha256(original_bytes).hexdigest(),
             "round_index": str(new_index), "scored_pairs": pairs,
             "coverage": coverage, "learning": learning, "production_applied": False,
@@ -109,9 +121,9 @@ def restore_and_capture(previous, output_root, *, collector=collect):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--previous", required=True)
-    p.add_argument("--output-root", required=True)
+    p.add_argument("--output-root", required=True)\n    p.add_argument("--followup-rounds", type=int, default=1)
     a = p.parse_args()
-    print(json.dumps(restore_and_capture(a.previous, a.output_root), sort_keys=True))
+    print(json.dumps(restore_and_capture(a.previous, a.output_root,\n                                         followup_rounds=a.followup_rounds), sort_keys=True))
 
 
 if __name__ == "__main__":
