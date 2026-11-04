@@ -12,7 +12,7 @@ HORIZONS = (1, 6, 24, 48)
 STATUSES = ("MATURED_OBSERVED", "ABSTAIN_ENTRY", "ABSTAIN_IMMATURE", "ABSTAIN_GAP")
 
 
-def project_historical_execution(execution, *, frozen_predictions):
+def project_historical_execution(execution, *, frozen_predictions, frozen_selections=None):
     if not isinstance(execution, dict) or execution.get("schema") != "historical_outcome_execution_v1":
         raise ValueError("Unsupported historical execution")
     batch = execution.get("outcomes")
@@ -32,6 +32,11 @@ def project_historical_execution(execution, *, frozen_predictions):
         if not isinstance(pid, str) or not pid or not isinstance(pair, str) or not pair or pid in universe:
             raise ValueError("Duplicate or malformed frozen identity")
         universe[pid] = pair
+    if frozen_selections is not None:
+        if not isinstance(frozen_selections, dict) or set(frozen_selections) != set(universe):
+            raise ValueError("Incomplete frozen A2 selection mapping")
+        if any(value not in ("WATCH", "SCREEN_REJECTED", "NOT_OHLC_SELECTED", "OHLC_ABSTAINED", "NOT_RANKED_WATCH") for value in frozen_selections.values()):
+            raise ValueError("Invalid frozen A2 selection")
     records = batch.get("records")
     if not isinstance(records, list) or len(records) != batch.get("prediction_count"):
         raise ValueError("Invalid reconstructed record count")
@@ -72,6 +77,7 @@ def project_historical_execution(execution, *, frozen_predictions):
             counts[str(horizon)][status] += 1
             diagnostic_rows.append({
                 "prediction_id": pid, "pair": universe[pid],
+                "frozen_selection_status": frozen_selections[pid] if frozen_selections is not None else None,
                 "horizon_hours": horizon, "status": status,
                 "observed_30pct_hit": label.get("observed_30pct_hit") if status == "MATURED_OBSERVED" else None,
                 "source_sha256": record["source_sha256"],
