@@ -16,7 +16,7 @@ HORIZONS = (1, 6, 24, 48)
 def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *,
                            training_end_utc, holdout_start_utc, evaluation_asof_utc,
                            baseline_version, challenger_version, source_receipt=None,
-                           minimum_holdout=30):
+                           minimum_holdout=30, prediction_universe=None):
     """Join identical point-in-time prediction IDs, reject incomplete evidence.
 
     outcomes: records with prediction_id, entry_utc, feature_asof_utc,
@@ -31,6 +31,16 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
         raise ValueError("Holdout violates 48h purge")
     if not isinstance(outcomes, list) or not isinstance(baseline_decisions, dict) or not isinstance(challenger_decisions, dict):
         raise ValueError("Invalid outcome or decision input")
+    # Optional immutable preselection universe prevents selection-on-label bias:
+    # every prediction observed before outcomes were known must be accounted for.
+    if prediction_universe is not None:
+        if (not isinstance(prediction_universe, list) or
+                any(not isinstance(k, str) or not k for k in prediction_universe) or
+                len(set(prediction_universe)) != len(prediction_universe)):
+            raise ValueError("Invalid or duplicate prediction universe")
+        universe = set(prediction_universe)
+    else:
+        universe = None
     eligible = {}
     abstentions = {}
     for record in outcomes:
@@ -40,6 +50,8 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
         horizon = record.get("horizon_hours")
         if not isinstance(key, str) or not key or type(horizon) is not int or horizon not in HORIZONS:
             raise ValueError("Invalid prediction identity or horizon")
+        if universe is not None and key not in universe:
+            raise ValueError("Outcome outside frozen prediction universe")
         identity = (key, horizon)
         if identity in eligible or identity in abstentions:
             raise ValueError("Duplicate prediction/horizon")
@@ -90,7 +102,8 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
     # cohort. A valid 48h label alone must not hide missing 1/6/24h evidence.
     selected = {}
     incomplete_predictions = {}
-    all_predictions = sorted({key for key, _ in eligible} | {key for key, _ in abstentions})
+    observed_ids = {key for key, _ in eligible} | {key for key, _ in abstentions}
+    all_predictions = sorted(universe if universe is not None else observed_ids)
     for key in all_predictions:
         missing = [h for h in HORIZONS if (key, h) not in eligible]
         if missing:
@@ -140,6 +153,10 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
     result["four_horizon_complete_predictions"] = len(selected)
     result["observed_prediction_count"] = len(all_predictions)
     result["excluded_prediction_count"] = len(all_predictions) - len(selected)
+    result["unlabeled_prediction_count"] = len(set(all_predictions) - observed_ids)
+    result["prediction_universe_frozen"] = universe is not None
+    result["prediction_universe_digest"] = canonical_digest(all_predictions) if universe is not None else None
+    result["complete_cohort_fraction"] = len(selected) / len(all_predictions) if all_predictions else None
     result["baseline_challenger_same_cohort"] = True
     result["cohort_join_digest"] = canonical_digest(sorted(selected))
     return result
@@ -162,6 +179,10 @@ def project_learning_handoff(result):
             "observed_prediction_count": result["observed_prediction_count"],
             "complete_cohort_count": result["four_horizon_complete_predictions"],
             "excluded_prediction_count": result["excluded_prediction_count"],
+            "unlabeled_prediction_count": result["unlabeled_prediction_count"],
+            "prediction_universe_frozen": result["prediction_universe_frozen"],
+            "prediction_universe_digest": result["prediction_universe_digest"],
+            "complete_cohort_fraction": result["complete_cohort_fraction"],
             "abstention_counts": result["abstention_counts"],
             "incomplete_prediction_horizons": result["incomplete_prediction_horizons"],
             "source_authenticated": False, "measured_lift_verified": False,
