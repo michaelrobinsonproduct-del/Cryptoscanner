@@ -152,11 +152,19 @@ def main():
     parser.add_argument("--run-id")
     parser.add_argument("--writer-readback", help="Existing D historical readback JSON")
     parser.add_argument("--historical-a2", help="Existing C/B historical WATCH handoff JSON")
-    parser.add_argument("--output", help="Write read-only delivery JSON; never a ledger")\n    parser.add_argument("--published-result", help="Actual verified paper-pipeline results.json")
+    parser.add_argument("--output", help="Write read-only delivery JSON; never a ledger")
+    parser.add_argument("--published-result", help="Actual verified paper-pipeline results.json")
     args = parser.parse_args()
     writer = json.loads(open(args.writer_readback, encoding="utf-8").read()) if args.writer_readback else None
     historical = json.loads(open(args.historical_a2, encoding="utf-8").read()) if args.historical_a2 else None
-    if args.published_result:\n        if args.run_id or args.repo or historical is not None:\n            parser.error("--published-result is exclusive of historical artifact transport")\n        result = project_published_result(json.loads(open(args.published_result, encoding="utf-8").read()), writer)\n    else:\n        if not args.repo or not args.run_id:\n            parser.error("--repo and --run-id required for historical artifact transport")\n        result = project_delivery(read_run(args.repo, args.run_id), writer, historical)
+    if args.published_result:
+        if args.run_id or args.repo or historical is not None:
+            parser.error("--published-result is exclusive of historical artifact transport")
+        result = project_published_result(json.loads(open(args.published_result, encoding="utf-8").read()), writer)
+    else:
+        if not args.repo or not args.run_id:
+            parser.error("--repo and --run-id required for historical artifact transport")
+        result = project_delivery(read_run(args.repo, args.run_id), writer, historical)
     rendered = json.dumps(result, sort_keys=True, allow_nan=False) + "\n"
     if args.output:
         from pathlib import Path
