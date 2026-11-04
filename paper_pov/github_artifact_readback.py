@@ -127,11 +127,29 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
         remote_bytes = base64.b64decode(remote["content"], validate=False)
     except (ValueError, KeyError, TypeError) as exc:
         raise IntegrityError("Remote ledger content malformed") from exc
-    remote_sha = hashlib.sha256(remote_bytes).hexdigest()
-    recovered_sha = hashlib.sha256(recovered[ledger_paths[0]]).hexdigest()
-    return {"status": "MATCH" if remote_sha == recovered_sha else "DIVERGED",
+    # Reconcile canonical ledger identities, not JSON serialization bytes:
+    # the writer and Git branch may encode the same ledger differently.
+    from paper_pov import ledger as ledger_module, segmented_storage as storage
+    try:
+        remote_state = json.loads(remote_bytes)
+        recovered_state = json.loads(recovered[ledger_paths[0]])
+        ledger_module.verify(remote_state, storage.MAX_RAW_BYTES)
+        ledger_module.verify(recovered_state, storage.MAX_RAW_BYTES)
+    except (ValueError, TypeError, KeyError, IntegrityError) as exc:
+        return {"status": "UNAVAILABLE", "reason": "REMOTE_LEDGER_QUERY_FAILED",
+                "remote_ref": ref, "remote_path": path,
+                "independently_authenticated": False, "production_applied": False}
+    remote_sha, recovered_sha = remote_state["sha256"], recovered_state["sha256"]
+    same = (remote_sha == recovered_sha and
+            remote_state["generation"] == recovered_state["generation"])
+    return {"status": "MATCH" if same else "DIVERGED",
             "remote_ref": ref, "remote_path": path, "remote_sha256": remote_sha,
-            "recovered_sha256": recovered_sha, "remote_git_blob_sha": remote.get("sha"),
+            "recovered_sha256": recovered_sha,
+            "remote_generation": remote_state["generation"],
+            "recovered_generation": recovered_state["generation"],
+            "remote_artifact_sha256": hashlib.sha256(remote_bytes).hexdigest(),
+            "recovered_artifact_sha256": hashlib.sha256(recovered[ledger_paths[0]]).hexdigest(),
+            "remote_git_blob_sha": remote.get("sha"),
             "independently_authenticated": False, "production_applied": False}
 
 
