@@ -100,7 +100,7 @@ class SnapshotTests(unittest.TestCase):
         for closed, now, message in (
             (None, NOW, "missing completed OHLC"),
             ("2026-11-03T16:49:00+00:00", NOW, "stale completed OHLC"),
-            ("2026-11-03T16:50:30+00:00", NOW, "expired completed OHLC"),
+            ("2026-11-03T16:50:20+00:00", NOW, "expired completed OHLC"),
             ("2026-11-03T17:00:45+00:00", NOW, "stale completed OHLC"),
         ):
             with self.subTest(closed=closed):
