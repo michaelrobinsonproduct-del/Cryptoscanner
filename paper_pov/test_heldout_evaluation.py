@@ -51,7 +51,9 @@ class HeldoutEvaluationTests(unittest.TestCase):
         self.assertEqual(report["test_runs"], 2)
         self.assertEqual(report["baseline_hits"], 0)
         self.assertEqual(report["challenger_hits"], 2)
-        self.assertEqual(report["held_out_lift"], 1.0)
+        self.assertIsNone(report["held_out_lift"])
+        self.assertEqual(report["watch_cohort_exploratory_delta"], 1.0)
+        self.assertFalse(report["unbiased_lift_qualified"])
         self.assertEqual(report["status"], "NO_QUALIFIED_RULE")
         self.assertFalse(report["promotion_authorized"])
 
