@@ -111,6 +111,24 @@ class RestoreScoredSeriesTests(unittest.TestCase):
                                     collector=lambda *_: self.fail("collected"))
             self.assertFalse((Path(tmp) / "new").exists())
 
+    def test_newly_collected_pair_substitution_is_never_indexed(self):
+        import json
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "original"
+            seed(source)
+            def substituted_collector(pairs, directory):
+                self.assertEqual(pairs, ["XBTUSD"])
+                directory.mkdir()
+                fixture(directory)
+                manifest_path = directory / "manifest.json"
+                manifest = json.loads(manifest_path.read_text())
+                manifest["entries"][0]["pair"] = "ETHUSD"
+                manifest_path.write_text(json.dumps(manifest))
+            target = Path(tmp) / "new"
+            with self.assertRaisesRegex(ValueError, "new depth round differs"):
+                restore_and_capture(source, target, collector=substituted_collector)
+            self.assertEqual(len((target / "entry" / "round-index.jsonl").read_text().splitlines()), 1)
+
     def test_missing_receipt_and_existing_destination_fail_closed(self):
         with tempfile.TemporaryDirectory() as temp:
             source = Path(temp) / "original"
