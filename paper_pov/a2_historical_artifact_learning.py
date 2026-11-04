@@ -31,7 +31,7 @@ def project_a2_historical_artifact(archive):
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
         (root / "receipts").mkdir()
-        (root / receipts[0]).write_bytes(receipt)
+        (root / receipts[0].filename).write_bytes(receipt)
         history = export_receipt_history(root / "receipts")
     watch = []
     for snapshot in history["snapshots"]:
