@@ -391,7 +391,37 @@ jobs:
           Path("/tmp/b-delivery/integration-status.json").write_text(json.dumps(status,sort_keys=True))
           print("SHARED_MANUAL_SCHEDULED_DELIVERY",projected["source_run_id"],projected["status"])
           PY
+      - name: Publish delivery outcome and explicit missing-evidence status
+        if: always()
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path("/tmp/b-delivery")
+          status=root/"integration-status.json"
+          delivery=root/"delivery.json"
+          a2=root/"a2-status.json"
+          e=root/"e-status.json"
+          if status.exists():
+              data=json.loads(status.read_text())
+              lines=["### B authenticated manual/scheduled delivery",
+                     f"- Source run: {data['source_run_id']} ({data['github_event']})",
+                     f"- Delivery: {data['delivery_status']}; WATCH: {data['watch_count']}",
+                     f"- Quote complete: {data['published_quote_complete']}",
+                     f"- Writer reconciliation: {data['writer_reconciliation_status']}",
+                     f"- A2: {data['a2']['status']}; E: {data['e']['status']}",
+                     "- Paper only; no scoring promotion or second writer"]
+          else:
+              lines=["### B authenticated manual/scheduled delivery",
+                     "- **INCOMPLETE:** required authenticated readback or integration failed",
+                     f"- Published delivery file present: {delivery.exists()}",
+                     f"- A2 status available: {a2.exists()}; E status available: {e.exists()}",
+                     "- Inspect the first failed downloaded-delivery step; do not infer WATCH or learning"]
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf-8") as out:
+              out.write("\\n".join(lines)+"\\n")
+          PY
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: b-authenticated-downloaded-delivery
           path: |
@@ -402,5 +432,5 @@ jobs:
             /tmp/b-delivery/e-status.json
             /tmp/b-delivery/delivery.json
             /tmp/b-delivery/integration-status.json
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
