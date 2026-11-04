@@ -4,6 +4,7 @@ All input files are caller-supplied pinned historical archive evidence.
 Never fetches live data, modifies scanner state or certifies source authenticity.
 """
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -39,6 +40,15 @@ def bind_a2_projection(projection, predictions):
     for p in frozen:
         if not isinstance(p.get("pair"), str) or not p["pair"] or not isinstance(p.get("prediction_id"), str) or len(p["prediction_id"]) != 64:
             raise ValueError("Malformed A2 frozen identity")
+        expected = hashlib.sha256(("paper-preselection-v1|" + receipt + "|" + p["pair"]).encode()).hexdigest()
+        if p["prediction_id"] != expected:
+            raise ValueError("A2 identity is not bound to sealed receipt")
+    frozen_pairs = {p["prediction_id"]: p["pair"] for p in frozen}
+    if any(not isinstance(p, dict) or p.get("status") != "PAPER_WATCH" or
+           not isinstance(p.get("as_of"), str) or not p["as_of"] or
+           frozen_pairs.get(p.get("prediction_id")) != p.get("pair")
+           for p in watches):
+        raise ValueError("Invalid A2 WATCH decision or timestamp")
     watch_ids = {p.get("prediction_id") for p in watches if isinstance(p, dict)}
     if len(watch_ids) != len(watches) or not watch_ids.issubset(set(ids)):
         raise ValueError("Invalid A2 WATCH subset")
