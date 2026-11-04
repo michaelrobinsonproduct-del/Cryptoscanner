@@ -4,6 +4,8 @@ on:
     paths:
       - 'paper_pov/candidate_snapshot_contract.py'
       - 'paper_pov/test_candidate_snapshot_contract.py'
+      - 'paper_pov/compare_scan_reports.py'
+      - 'paper_pov/test_compare_scan_reports.py'
       - '.github/workflows/candidate-snapshot-parity.yml'
 permissions:
   contents: read
@@ -17,4 +19,4 @@ jobs:
         with:
           python-version: '3.11'
       - name: Read-only manual/scheduled candidate contract tests
-        run: python -m unittest paper_pov.test_candidate_snapshot_contract -v
+        run: python -m unittest paper_pov.test_candidate_snapshot_contract paper_pov.test_compare_scan_reports -v
