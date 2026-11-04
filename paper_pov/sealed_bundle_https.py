@@ -15,7 +15,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from paper_pov.github_sealed_bundle_readback import read_run
 
 
-def latest_run(repo, runner=subprocess.check_output):
+def _bounded_gh(args):
+    return subprocess.check_output(args, timeout=20)
+
+
+def latest_run(repo, runner=_bounded_gh):
     raw = runner(["gh", "run", "list", "-R", repo, "-w", "paper-pipeline.yml",
                   "--limit", "10", "--json",
                   "databaseId,status,conclusion,headBranch,event"])
@@ -57,7 +61,7 @@ def make_handler(repo, token, *, resolver=latest_run, reader=read_run):
                 data = json.dumps(bundle, separators=(",", ":"), allow_nan=False).encode()
                 if len(data) > 1_000_000:
                     raise ValueError("sealed bundle exceeds HTTP reader limit")
-            except (ValueError, TypeError, KeyError, OverflowError, OSError, subprocess.CalledProcessError, json.JSONDecodeError):
+            except (ValueError, TypeError, KeyError, OverflowError, OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired, json.JSONDecodeError):
                 self.send_response(503)
                 self.send_header("Cache-Control", "no-store")
                 self.end_headers()
