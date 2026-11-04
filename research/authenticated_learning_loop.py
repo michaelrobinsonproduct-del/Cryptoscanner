@@ -75,7 +75,7 @@ def compare(captures_dir, associations_dir, round_index, *, horizon_hours=1,
                   "baseline": baseline, "challenger": challenger,
                   "held_out_lift": lift, "abstentions": abstentions,
                   "source_abstentions": provenance["source_abstentions"],
-                  "rule": "QUALIFIED_COMPARISON" if held else "NO QUALIFIED RULE"}
+                  "rule": "QUALIFIED_COMPARISON" if len(held) >= 20 else "NO QUALIFIED RULE"}
     raw = json.dumps(comparison, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
     decision = decide(comparison, baseline_version=baseline_version,
                       challenger_version=challenger_version,
