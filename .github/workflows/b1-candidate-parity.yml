@@ -1,0 +1,34 @@
+name: B1 isolated candidate parity acceptance
+on:
+  pull_request:
+    paths:
+      - 'scanner/src/candidate-contract.ts'
+      - 'scanner/src/candidate-contract.test.ts'
+      - 'scanner/src/candidate-cycle.ts'
+      - 'scanner/src/candidate-cycle.test.ts'
+      - 'scanner/src/shadow-artifacts.ts'
+      - 'scanner/src/shadow-artifacts.test.ts'
+      - 'scanner/src/shadow-evaluation.ts'
+      - 'scanner/src/shadow-evaluation.test.ts'
+      - 'scanner/src/cycle-http.ts'
+      - 'scanner/src/cycle-http.test.ts'
+      - 'scanner/src/paper-receipt.ts'
+      - 'scanner/src/paper-receipt.test.ts'
+      - 'scanner/src/cycle-coverage.test.ts'
+      - 'scanner/src/cycle-runner.ts'
+      - 'scanner/src/cycle-runner.test.ts'
+      - 'scanner/src/server.ts'
+      - '.github/workflows/b1-candidate-parity.yml'
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Focused B1 candidate and native-entry parity regression
+        run: bun test scanner/src/shadow-evaluation.test.ts scanner/src/shadow-artifacts.test.ts scanner/src/cycle-runner.test.ts scanner/src/cycle-http.test.ts
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
