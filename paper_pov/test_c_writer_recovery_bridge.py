@@ -105,10 +105,25 @@ class BridgeTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             combined = json.loads((root / "combined.json").read_text())
             bd = json.loads((root / "bd.json").read_text())
-            self.assertEqual(json.loads((root / "writer.json").read_text()), readback())
+            self.assertFalse((root / "writer.json").exists())
+            self.assertEqual(combined["writer_recovery"]["delivery_blocker"], "D_PERSISTED_PAPER_MISSING_OR_INCOMPLETE")
             self.assertEqual(bd, combined["historical_a2"])
             self.assertFalse(combined["same_run_or_candidate_parity_claimed"])
             self.assertEqual(bd["status"], "WATCH_REPLAY_ONLY_NOT_LIVE")
+
+    def test_writer_delivery_export_requires_real_persisted_paper(self):
+        actual = {**readback(), "persisted_paper": {"ledger_generation": 70, "scan_status": "ABSTAIN_STALE_QUOTE", "live_replay_performed": False}}
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "integration.json").write_text(json.dumps(integration()))
+            (root / "readback.json").write_text(json.dumps(actual))
+            proc = subprocess.run([sys.executable, "-m", "paper_pov.c_writer_recovery_bridge",
+                "--integration", str(root / "integration.json"), "--readback", str(root / "readback.json"),
+                "--output", str(root / "combined.json"), "--writer-readback-output", str(root / "writer.json")],
+                capture_output=True, text=True)
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertEqual(json.loads((root / "writer.json").read_text()), actual)
+            self.assertTrue(json.loads((root / "combined.json").read_text())["writer_recovery"]["delivery_projection_ready"])
 
     def test_independently_authenticated_writer_is_separate_from_a2(self):
         verified = {**readback(), "status": "VERIFIED_REMOTE_READBACK",
