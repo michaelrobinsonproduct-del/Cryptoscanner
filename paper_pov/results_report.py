@@ -94,7 +94,6 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         raise ValueError("Missing sealed ledger checksum")
     ages = []
     quotes = {}
-    published_quote_evidence = []
     for o in observations:
         pair = o.get("pair")
         if not isinstance(pair, str) or not PAIR.fullmatch(pair) or pair in quotes:
@@ -112,12 +111,6 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
             raise ValueError("Stale, future, or invalid quote")
         ages.append(age)
         quotes[pair] = o
-        # Preserve the validated, same-run client-observed quote cohort for
-        # independent downstream B/C/D delivery. Never synthesize or refetch.
-        published_quote_evidence.append({
-            "pair": pair, "symbol": quote_symbol,
-            "price": o["price"], "observed_at": o["observed_at"],
-        })
     if len(watches) > scan["ohlc_screened"]:
         raise ValueError("WATCH count exceeds screened OHLC evidence")
     result_status = ("ABSTAIN_NO_OBSERVATIONS" if not observations else
@@ -250,7 +243,6 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
                "excluded_stablecoin_pairs": scan["excluded_stablecoin_pairs"],
                "excluded_other_pairs": scan["excluded_other_pairs"],
                "observed_markets": len(observations),
-               "quote_evidence": published_quote_evidence,
                "max_client_quote_age_seconds": max(ages) if ages else None,
                "quote_evidence": [{"pair": o["pair"], "symbol": o["symbol"],
                                    "observed_at": o["observed_at"], "price": o["price"]}
