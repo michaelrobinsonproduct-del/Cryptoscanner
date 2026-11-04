@@ -1,6 +1,10 @@
 import datetime as dt
+import tempfile
+import json
+import hashlib
+from pathlib import Path
 import unittest
-from paper_pov.verified_trade_bars import trades_to_bars, convert_verified_partition
+from paper_pov.verified_trade_bars import trades_to_bars, convert_verified_partition, convert_manifest_partition
 
 START = dt.datetime(2026, 1, 1, tzinfo=dt.timezone.utc)
 
@@ -46,6 +50,25 @@ class VerifiedTradeBarsTests(unittest.TestCase):
             convert_verified_partition([], pair="XUSD", verification=receipt,
                                        partition_file="YUSD.csv")
 
+
+    def test_end_to_end_manifest_verified_jsonl_partition(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            data = (json.dumps(trade(0, 100)) + '\\n' +
+                    json.dumps(trade(1, 105)) + '\\n').encode()
+            (root / 'XUSD.jsonl').write_bytes(data)
+            manifest = {'schema': 'kraken_archive_manifest_v1', 'source': 'Kraken',
+                        'partitions': [{'file': 'XUSD.jsonl', 'size_bytes': len(data),
+                                        'sha256': hashlib.sha256(data).hexdigest()}]}
+            result = convert_manifest_partition(manifest, root,
+                                                partition_file='XUSD.jsonl', pair='XUSD')
+            self.assertEqual(result['bar_count'], 1)
+            self.assertEqual(result['bars'][0]['close'], 105)
+            self.assertFalse(result['qualified_for_learning'])
+            (root / 'XUSD.jsonl').write_bytes(data.replace(b'105', b'106'))
+            with self.assertRaisesRegex(ValueError, 'checksum'):
+                convert_manifest_partition(manifest, root,
+                                           partition_file='XUSD.jsonl', pair='XUSD')
 
 if __name__ == "__main__":
     unittest.main()
