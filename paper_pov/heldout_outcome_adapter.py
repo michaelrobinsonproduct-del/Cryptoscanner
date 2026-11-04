@@ -74,6 +74,18 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
         if key in by_prediction and by_prediction[key] != identity:
             raise ValueError("Cross-horizon prediction/source identity mismatch")
         by_prediction[key] = identity
+    # A prediction is one point-in-time event across all horizons, including
+    # abstaining horizons. A failed source/coverage horizon cannot silently
+    # redefine the entry or feature cutoff used by a valid 48h row.
+    for (key, horizon), record in list(eligible.items()) + [(k, next(
+            r for r in outcomes if (r["prediction_id"], r["horizon_hours"]) == k))
+            for k in abstentions]:
+        if not all(field in record for field in ("entry_utc", "feature_asof_utc", "source_sha256")):
+            continue
+        identity = (record["entry_utc"], record["feature_asof_utc"], record["source_sha256"])
+        if key in by_prediction and by_prediction[key] != identity:
+            raise ValueError("Cross-horizon prediction/source identity mismatch")
+        by_prediction[key] = identity
     # A complete four-horizon outcome is required for a comparable learning
     # cohort. A valid 48h label alone must not hide missing 1/6/24h evidence.
     selected = {}
@@ -113,6 +125,15 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
     result["status"] = "NO_QUALIFIED_RULE"
     result["promotion_authorized"] = False
     result["outcome_coverage"] = {str(h): sum(k[1] == h for k in eligible) for h in HORIZONS}
+    # Descriptive labels are counts from caller-provided rows, NOT authenticated
+    # Kraken history or measured learning lift. Preserve full four-horizon
+    # hit/miss distribution for downstream read-only B reporting.
+    result["eligible_horizon_counts"] = {
+        str(h): {"hits": sum(record["hit"] is True for (key, hh), record in eligible.items() if hh == h),
+                 "misses": sum(record["hit"] is False for (key, hh), record in eligible.items() if hh == h)}
+        for h in HORIZONS}
+    result["source_qualified_prediction_count"] = len(selected)
+    result["counts_independently_authenticated"] = False
     result["abstention_counts"] = {reason: list(abstentions.values()).count(reason)
                                     for reason in sorted(set(abstentions.values()))}
     result["source_authentication_verified_by_adapter"] = False
