@@ -76,6 +76,16 @@ class ParityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "excluded_stablecoin_pairs"):
             compare(a, b)
 
+    def test_inconsistent_kraken_coverage_fails(self):
+        for field, value in (("eligible_pairs", 19), ("matched_tickers", 21),
+                             ("observed_markets", 21), ("ohlc_screened", 21),
+                             ("eligible_pairs", -1), ("matched_tickers", True)):
+            with self.subTest(field=field, value=value):
+                candidate = report()
+                candidate[field] = value
+                with self.assertRaisesRegex(ValueError, "coverage"):
+                    compare(candidate, candidate)
+
     def test_unverified_learning_claim_fails(self):
         for field, value in (("forward_labels", 1), ("held_out_lift", 0.2)):
             with self.subTest(field=field):
