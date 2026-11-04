@@ -39,7 +39,7 @@ class RestoreScoredSeriesTests(unittest.TestCase):
             import json
             original_record = json.loads(original_index)
             original_record["batch"] = "/home/runner/work/expired/entry/depth"
-            (score / "round-index.jsonl").write_text(json.dumps(original_record) + "\\n")
+            (score / "round-index.jsonl").write_text(json.dumps(original_record) + "\n")
             original_index = (score / "round-index.jsonl").read_bytes()
             def collector(pairs, directory):
                 self.assertEqual(pairs, ["XBTUSD"])
