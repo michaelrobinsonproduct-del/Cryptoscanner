@@ -281,13 +281,26 @@ jobs:
           bridge=json.loads(Path("/tmp/c-real-receipts/cd-bridge.json").read_text())
           assert bridge["writer_recovery"]["delivery_projection_ready"], "D persisted evidence not available for B"
           PY
-          (cd /tmp/c-b-consumer && python -m paper_pov.github_delivery_projection \
-            --published-result /tmp/c-real-receipts/b-published/results.json \
-            --expected-run-id 41804379677 \
-            --expected-source-sha 19328dcebdfd60500ebbecccc8f334539a2d42e1 \
-            --writer-readback /tmp/c-real-receipts/bd-writer-readback.json \
-            --output /tmp/c-real-receipts/b-published-delivery.json)
+          # Legacy published runs can have valid SHA256SUMS and writer recovery
+          # but no per-market quote_evidence. Never reclassify those as live WATCH.
           python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("/tmp/c-real-receipts/b-published/results.json")
+          r=json.loads(p.read_text())
+          quotes=r.get("quote_evidence")
+          complete=isinstance(quotes,list) and type(r.get("observed_markets")) is int and len(quotes)==r["observed_markets"]
+          Path("/tmp/c-real-receipts/b-quote-evidence-ready").write_text("yes" if complete else "no")
+          print("PUBLISHED_QUOTE_COVERAGE",len(quotes) if isinstance(quotes,list) else "missing",r.get("observed_markets"))
+          PY
+          if [[ "$(cat /tmp/c-real-receipts/b-quote-evidence-ready)" == yes ]]; then
+            (cd /tmp/c-b-consumer && python -m paper_pov.github_delivery_projection \
+              --published-result /tmp/c-real-receipts/b-published/results.json \
+              --expected-run-id 41804379677 \
+              --expected-source-sha 19328dcebdfd60500ebbecccc8f334539a2d42e1 \
+              --writer-readback /tmp/c-real-receipts/bd-writer-readback.json \
+              --output /tmp/c-real-receipts/b-published-delivery.json)
+            python - <<'PY'
           import json
           from pathlib import Path
           result=json.loads(Path("/tmp/c-real-receipts/b-published-delivery.json").read_text())
@@ -298,6 +311,35 @@ jobs:
           assert not result["live_watch_authorized"]
           print("B_C_D_READ_ONLY_DELIVERY_CONSUMED",result["status"],result["writer_reconciliation_status"])
           PY
+          else
+            # Emit a truthful, machine-readable integration abstention. D's
+            # recovered ledger remains useful, but does not fill missing quote
+            # observations from a different scan/cohort.
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("/tmp/c-real-receipts")
+          bridge=json.loads((root/"cd-bridge.json").read_text())
+          published=json.loads((root/"b-published/results.json").read_text())
+          assert bridge["writer_recovery"]["delivery_projection_ready"]
+          assert published["run_id"]=="41804379677"
+          result={"schema":"paper_c_bd_integration_abstention_v1",
+                  "status":"ABSTAIN_PUBLISHED_QUOTE_EVIDENCE_MISSING",
+                  "source_run_id":41804379677,
+                  "source_sha":published["source_sha"],
+                  "writer_recovery_status":bridge["writer_recovery"]["status"],
+                  "writer_recovery_ready":True,
+                  "historical_a2_watch_count":bridge["historical_a2"]["watch_count"],
+                  "live_watch":[],
+                  "live_watch_authorized":False,
+                  "production_applied":False,
+                  "single_writer_read_only":True,
+                  "b_delivery_projection_executed":False,
+                  "next_action":"Consume a checksum-verified published run with complete per-market quote_evidence using B's existing projection"}
+          (root/"b-published-delivery.json").write_text(json.dumps(result,sort_keys=True)+"\\n")
+          print("B_C_D_INTEGRATION_ABSTAINED",result["status"])
+          PY
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: c-real-manual-scheduled-contract
