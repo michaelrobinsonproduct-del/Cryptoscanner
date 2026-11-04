@@ -178,7 +178,7 @@ jobs:
                   name=item.filename
                   # Scanner may publish additional diagnostic JSON alongside
                   # the four required inputs. Never execute or trust extras.
-                  safe=(not name.startswith("/") and "\\\\" not in name
+                  safe=(not name.startswith("/") and chr(92) not in name
                         and all(part not in ("", ".", "..") for part in name.split("/")))
                   if (item.is_dir() or not safe or name in seen
                       or item.file_size>2_000_000
