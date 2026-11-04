@@ -131,6 +131,12 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
                             "bar_count": result["bar_count"]}
     status_counts = {"NO_PINNED_PARTITION": 0, "NO_ENTRY_BAR": 0,
                      "ENTRY_BAR_PRESENT_UNQUALIFIED": 0}
+    # Horizon coverage is diagnostic only. Sparse bars cannot prove a complete
+    # price path, and an observed bar cannot authenticate executable liquidity.
+    horizon_counts = {str(h): {"NO_PINNED_PARTITION": 0,
+                               "INCOMPLETE_5M_PATH": 0,
+                               "COMPLETE_BAR_PATH_UNQUALIFIED": 0}
+                      for h in (1, 6, 24, 48)}
     by_selection = {}
     for row in rows:
         at = utc_time(row["as_of"])
@@ -148,6 +154,22 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
                       if idx < len(times) and times[idx] == target
                       else "NO_ENTRY_BAR")
         status_counts[status] += 1
+        for hours in (1, 6, 24, 48):
+            if row["pair"] not in partitions:
+                horizon = "NO_PINNED_PARTITION"
+            else:
+                # Exact contiguous 5m opens from first post-observation bar
+                # through the horizon. Missing even one bar abstains.
+                start = at.replace(second=0, microsecond=0)
+                start -= timedelta(minutes=start.minute % 5)
+                first = start + timedelta(minutes=5)
+                timeset = set(times)
+                required = hours * 12
+                horizon = ("COMPLETE_BAR_PATH_UNQUALIFIED"
+                           if all(first + timedelta(minutes=5 * i) in timeset
+                                  for i in range(required))
+                           else "INCOMPLETE_5M_PATH")
+            horizon_counts[str(hours)][horizon] += 1
         by_selection.setdefault(row["selection_status"], {})
         d = by_selection[row["selection_status"]]
         d[status] = d.get(status, 0) + 1
@@ -157,6 +179,7 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
             "a_receipt_sha256": binding["a_receipt_sha256"],
             "frozen_observation_count": len(rows),
             "status_counts": status_counts, "selection_status_counts": by_selection,
+            "diagnostic_horizon_coverage": horizon_counts,
             "partition_provenance": provenance,
             "qualified_outcome_count": 0, "source_authenticated": False,
             "qualified_for_learning": False, "promotion_authorized": False,
