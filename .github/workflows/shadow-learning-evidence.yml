@@ -33,7 +33,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: workspace
+          persist-credentials: false
       - uses: actions/checkout@v4
         with:
           ref: historical-outcome-execution-20261103
