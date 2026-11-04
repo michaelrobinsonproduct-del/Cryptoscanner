@@ -63,6 +63,50 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
     try:
         remote = _github_json([endpoint], runner=runner)
     except subprocess.CalledProcessError as exc:
+        # The current writer persists a packed snapshot and segment manifest,
+        # NOT paper_pov/output/ledger.json on its Git branch. Read those
+        # immutable GitHub objects without invoking a second ledger writer.
+        if ref == "paper-proof-ledger" and path == "paper_pov/output/ledger.json":
+            from paper_pov import segmented_repository as segments, segmented_storage as storage
+            def remote_object(name):
+                endpoint = f"repos/{repo}/contents/{quote(name, safe='/')}?ref={quote(ref, safe='')}"
+                obj = _github_json([endpoint], runner=runner)
+                if obj.get("type") != "file" or obj.get("encoding") != "base64":
+                    raise IntegrityError("Remote packed ledger object unavailable")
+                return base64.b64decode(obj["content"], validate=True)
+            try:
+                manifest_bytes = remote_object(segments.MANIFEST)
+                if len(manifest_bytes) > segments.MAX_MANIFEST_BYTES:
+                    raise IntegrityError("Remote manifest exceeds limit")
+                manifest = json.loads(manifest_bytes)
+                segments._check_manifest(manifest)
+                packed = remote_object(segments.SNAPSHOT)
+                if hashlib.sha256(packed).hexdigest() != manifest["head"]["snapshot_sha256"]:
+                    raise IntegrityError("Remote snapshot SHA mismatch")
+                state = storage.unpack_snapshot(packed)
+                head = manifest["head"]
+                if state["generation"] != head["generation"] or state["sha256"] != head["ledger_sha256"]:
+                    raise IntegrityError("Remote packed ledger head mismatch")
+                old = json.loads(recovered[ledger_paths[0]])
+                from paper_pov import ledger as ledger_module
+                ledger_module.verify(old, storage.MAX_RAW_BYTES)
+                old_sha, old_generation = old["sha256"], old["generation"]
+                same = old_sha == state["sha256"] and old_generation == state["generation"]
+                return {"status": "MATCH" if same else "DIVERGED",
+                        "reason": "PACKED_LEDGER_HEAD_COMPARISON",
+                        "remote_ref": ref, "remote_path": segments.SNAPSHOT,
+                        "remote_generation": state["generation"],
+                        "recovered_generation": old_generation,
+                        "remote_sha256": hashlib.sha256(packed).hexdigest(),
+                        "recovered_sha256": hashlib.sha256(recovered[ledger_paths[0]]).hexdigest(),
+                        "remote_ledger_sha256": state["sha256"],
+                        "recovered_ledger_sha256": old_sha,
+                        "independently_authenticated": False, "production_applied": False}
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError, ValueError, KeyError, TypeError) as inner:
+                return {"status": "UNAVAILABLE", "reason": "REMOTE_LEDGER_QUERY_FAILED",
+                        "remote_ref": ref, "remote_path": segments.SNAPSHOT,
+                        "recovered_sha256": hashlib.sha256(recovered[ledger_paths[0]]).hexdigest(),
+                        "independently_authenticated": False, "production_applied": False}
         # The historical writer artifact is still recoverable if the independently
         # advancing branch has no ledger at the configured path. Do not convert
         # missing comparison evidence into MATCH or authenticated recovery.
