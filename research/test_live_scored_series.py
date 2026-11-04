@@ -39,7 +39,10 @@ class ScoredSeriesTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "series"
             with patch("research.live_scored_series.load_captures",
-                       return_value=[{"pair": "TAOUSD"}]):
+                       return_value=[{"pair": "TAOUSD"}]), patch(
+                           "research.live_scored_series.evaluate_all",
+                           return_value={"mode": "RESEARCH_ONLY_AUTHENTICATED_HELD_OUT",
+                                         "production_applied": False}):
                 result = capture_scored_series(
                     root, rounds=3, clock=clock, sleep=sleep,
                     entry_capture=entry, collector=collector,
