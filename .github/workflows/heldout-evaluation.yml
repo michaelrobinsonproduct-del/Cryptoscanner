@@ -1,0 +1,21 @@
+name: Held-out Learning Evaluation (read only)
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/heldout_evaluation.py'
+      - 'paper_pov/test_heldout_evaluation.py'
+      - '.github/workflows/heldout-evaluation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  learning:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Evaluate chronological held-out safeguards
+        run: python -m unittest paper_pov.test_heldout_evaluation -v
