@@ -235,11 +235,21 @@ class RestoreScoredSeriesTests(unittest.TestCase):
             source = root / "original"
             entry = seed(source)
             index = entry / "round-index.jsonl"
+            import json
+            index_rows = [json.loads(index.read_text())]
             for i in range(1, 577):
                 directory = source / ("depth-%03d" % i)
                 directory.mkdir()
                 fixture(directory)
-                append_round(index, directory)
+                index_rows.append({
+                    "batch": str(directory.resolve()),
+                    "manifest_sha256": hashlib.sha256(
+                        (directory / "manifest.json").read_bytes()).hexdigest(),
+                    "snapshots_verified": 1, "abstentions": 0})
+            # The archive represents independently captured immutable rounds;
+            # write its index once instead of 576 redundant fsync/lock cycles.
+            index.write_text("".join(json.dumps(row, sort_keys=True) + "\\n"
+                                     for row in index_rows))
             self.assertEqual(len(index.read_text().splitlines()), 577)
             def collect(pairs, directory):
                 self.assertEqual(pairs, ["XBTUSD"])
