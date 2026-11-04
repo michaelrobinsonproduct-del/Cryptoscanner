@@ -64,9 +64,9 @@ def test_real_writer_artifact_name_and_nested_paths(tmp_path):
     """Use actual paper-pipeline artifact name and nested receipt layout."""
     from pathlib import Path
     receipts = {
-        "paper_pov/output/latest.json": b'{"status":"WATCH"}',
+        "paper_pov/output/latest.json": b'{"status":"ABSTAIN_LEGACY_QUOTE_EVIDENCE"}',
         "paper_pov/output/ledger.json": b'{"generation":3}',
-        "paper_pov/output/scoreboard.json": b'{"actual_scans":3}',
+        "paper_pov/output/scoreboard.json": b'{"actual_scans":3,"generation":3}',
     }
     import hashlib
     sums = "".join(hashlib.sha256(receipts[name]).hexdigest() + "  " + name.split("/")[-1] + "\n"
@@ -123,7 +123,19 @@ def test_real_writer_checksum_only_restores_without_independent_manifest(tmp_pat
     assert report["status"] == "WRITER_CHECKSUM_ONLY"
     assert report["independently_authenticated"] is False
     assert report["remote_downloaded"] is True
+    assert report["persisted_paper"]["ledger_generation"] == 3
+    assert report["persisted_paper"]["outcome"] == "ABSTAIN"
+    assert report["persisted_paper"]["quote_evidence_certified"] is False
     assert (restored / "paper_pov/output/ledger.json").read_bytes() == receipts["paper_pov/output/ledger.json"]
     with pytest.raises(IntegrityError):
         retrieve_and_verify(REPO, "123", "public-paper-ledger", None, SHA,
                             runner=run, restore_dir=restored)
+
+
+def test_recovered_generation_mismatch_fails_closed():
+    from paper_pov.github_artifact_readback import summarize_persisted_paper
+    receipts = {"latest.json": b'{"status":"WATCH"}',
+                "ledger.json": b'{"generation":3}',
+                "scoreboard.json": b'{"generation":4}'}
+    with pytest.raises(IntegrityError, match="generation mismatch"):
+        summarize_persisted_paper(receipts)
