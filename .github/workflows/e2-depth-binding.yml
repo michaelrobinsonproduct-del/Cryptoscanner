@@ -6,6 +6,8 @@ on:
       - 'research/acquisition_receipt_pipeline.py'
       - 'research/bind_acquisition_receipts.py'
       - 'research/test_depth_acquisition_associations.py'
+      - 'research/live_score_capture.py'
+      - 'research/test_live_score_capture.py'
       - 'research/public_paper_learning_bridge.py'
       - 'research/test_public_paper_learning_bridge.py'
       - '.github/workflows/e2-depth-binding.yml'
@@ -31,7 +33,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Focused immutable depth association acceptance
-        run: python -m unittest -v research.test_depth_acquisition_associations
+        run: python -m unittest -v research.test_depth_acquisition_associations research.test_live_score_capture
       - name: Exercise research association CLI help and no-write guard
         run: |
           python -m research.depth_acquisition_associations --help > /tmp/e-association-cli.txt
