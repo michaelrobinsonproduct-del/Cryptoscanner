@@ -9,6 +9,7 @@ from pathlib import Path
 from .historical_outcome_bridge import prepare_outcome_input
 from .qualified_ohlc_outcomes import reconstruct_batch
 from .scanner import atomic_json
+from .historical_learning_cohort_gate import export_learning_cohorts
 
 
 def run_historical_outcomes(manifest, root, schema, partitions, predictions, observed_until):
@@ -19,6 +20,9 @@ def run_historical_outcomes(manifest, root, schema, partitions, predictions, obs
                                  observed_until=payload["observed_until"],
                                  source_sha256=prepared["outcome_input_sha256"])
     statuses = outcomes["status_counts"]
+    diagnostic_execution = {"schema": "historical_outcome_execution_v1",
+                            "outcomes": outcomes, "source_authenticated": False}
+    cohort_gate = export_learning_cohorts(diagnostic_execution, predictions)
     return {"schema": "historical_outcome_execution_v1",
             "outcomes": outcomes,
             "partition_provenance": prepared["partition_provenance"],
@@ -27,7 +31,8 @@ def run_historical_outcomes(manifest, root, schema, partitions, predictions, obs
             "status_counts": statuses,
             "source_authenticated": False,
             "qualified_for_learning": False,
-            "qualified_cohorts": [],
+            "qualified_cohorts": cohort_gate["qualified_cohorts"],
+            "learning_cohort_gate": cohort_gate,
             "learning_qualified_count": 0,
             "held_out_lift": None,
             "promotion_authorized": False,
