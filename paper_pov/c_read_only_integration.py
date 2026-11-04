@@ -5,6 +5,7 @@ Never turns legacy quote evidence into a certified trade signal.
 import argparse
 import json
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -81,8 +82,15 @@ def combine(parity, recovery, snapshot=None):
             for k, v in abstentions.items()
         ):
             raise ValueError("Invalid A2 abstention breakdown")
-        if not isinstance(snapshot.get("as_of"), str) or not snapshot["as_of"].strip():
-            raise ValueError("Missing A2 source time")
+        source_time = snapshot.get("as_of")
+        if not isinstance(source_time, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z", source_time):
+            raise ValueError("A2 source time must be UTC ISO-8601")
+        try:
+            parsed_time = datetime.fromisoformat(source_time.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError("Invalid A2 source time") from exc
+        if parsed_time.utcoffset() != timezone.utc.utcoffset(None):
+            raise ValueError("A2 source time is not UTC")
         result["a2_snapshot_attached"] = True
         result["a2_receipt_sha256"] = snapshot["receipt_sha256"]
         result["a2_watch_count"] = len(snapshot["watch"])
