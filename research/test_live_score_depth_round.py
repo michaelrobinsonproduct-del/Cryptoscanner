@@ -19,10 +19,10 @@ class LiveScoreDepthRoundTests(unittest.TestCase):
             self.assertEqual(pairs, ["XBTUSD", "ETHUSD"])
             Path(path).mkdir()
             return {"pairs_requested": 2, "pairs_eligible": 2}
-        def associate(scores, depth, associations):
+        def append(index, depth):\n            events.append("index")\n            Path(index).write_text("indexed\\n")\n            return {"snapshots_verified": 2}\n        def associate(scores, index, associations):
             events.append("associate")
             self.assertTrue((Path(scores)).is_dir())
-            self.assertTrue((Path(depth)).is_dir())
+            self.assertTrue(Path(index).is_file())
             Path(associations).mkdir()
             return {"associated": ["a"], "excluded": []}
         with tempfile.TemporaryDirectory() as tmp:
@@ -32,7 +32,7 @@ class LiveScoreDepthRoundTests(unittest.TestCase):
                  patch("research.live_score_depth_round.collect", side_effect=collect), \
                  patch("research.live_score_depth_round.associate_captured_scores", side_effect=associate):
                 result = run(root)
-        self.assertEqual(events, ["score", "depth", "associate"])
+        self.assertEqual(events, ["score", "depth", "index", "associate"])
         self.assertEqual(result["associated"], 1)
         self.assertFalse(result["production_applied"])
 
