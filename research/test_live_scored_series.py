@@ -81,7 +81,7 @@ class ScoredSeriesTests(unittest.TestCase):
         elapsed = [500.0]
         def entry(folder):
             (folder / "scores").mkdir(parents=True)
-            (folder / "round-index.jsonl").write_text('{"entry":true}\\n')
+            (folder / "round-index.jsonl").write_text('{"entry":true}\n')
             return {"mode": "RESEARCH_ONLY_PROSPECTIVE_SCORE_DEPTH",
                     "production_applied": False}
         def fail_second_source(pairs, directory):
@@ -90,7 +90,7 @@ class ScoredSeriesTests(unittest.TestCase):
             directory.mkdir()
         def append(index, directory):
             with Path(index).open("a") as out:
-                out.write(json.dumps({"batch": str(directory)}) + "\\n")
+                out.write(json.dumps({"batch": str(directory)}) + "\n")
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "series"
             with patch("research.live_scored_series.load_captures",
