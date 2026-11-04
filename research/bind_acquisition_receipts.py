@@ -20,7 +20,9 @@ def bind(ledger, batch_directory, score_receipts):
         rows, abstentions, _ = verified_index_rows(batch_directory)
     else:
         rows, abstentions = verified_rows(batch_directory)
-    by_source = {(r["pair"], r["source_sha256"]): r for r in rows}
+    by_source = {}
+    for row in rows:
+        by_source.setdefault((row["pair"], row["source_sha256"]), []).append(row)
     predictions = {p["prediction_id"]: p for p in ledger["predictions"]}
     accepted, excluded, seen = [], [], set()
     for receipt in score_receipts:
@@ -40,13 +42,19 @@ def bind(ledger, batch_directory, score_receipts):
         ):
             excluded.append({"prediction_id": pid, "reason": "SCORE_IDENTITY_MISMATCH"})
             continue
-        row = by_source.get((receipt["pair"], receipt.get("source_sha256")))
-        if row is None:
-            excluded.append({"prediction_id": pid, "reason": "NO_VERIFIED_DEPTH_SOURCE"})
+        candidates = by_source.get((receipt["pair"], receipt.get("source_sha256")), [])
+        if "source_first_observed_at" in receipt:
+            candidates = [r for r in candidates
+                          if r["first_observed_at"] == receipt["source_first_observed_at"]]
+        if len(candidates) != 1:
+            excluded.append({"prediction_id": pid, "reason":
+                "AMBIGUOUS_VERIFIED_DEPTH_SOURCE" if len(candidates) > 1
+                else "NO_VERIFIED_DEPTH_SOURCE"})
             continue
+        row = candidates[0]
         observed = receipt.get("score_observed_at")
         if (type(observed) not in (int, float) or not math.isfinite(observed)
-                or observed < 0 or observed > row["first_observed_at"]):
+                or observed < 0 or not observed <= row["first_observed_at"] <= observed + 600):
             excluded.append({"prediction_id": pid, "reason": "SCORE_NOT_PRE_ENTRY"})
             continue
         if row.get("entry_liquidity_usd") is None or row["entry_liquidity_usd"] < 20:
