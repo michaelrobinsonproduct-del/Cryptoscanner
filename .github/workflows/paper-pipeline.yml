@@ -1,6 +1,11 @@
 name: Public Kraken Paper POV (scheduled, isolated ledger)
 on:
   workflow_dispatch:
+    inputs:
+      recovery_slot_utc:
+        description: 'Missed :09/:39 UTC slot; empty for normal manual scan'
+        required: false
+        type: string
   schedule:
     - cron: '9 * * * *'
     - cron: '39 * * * *'
@@ -42,6 +47,19 @@ jobs:
           esac
           echo "PAPER_VERIFIED_GITHUB_EVENT=$PAPER_GITHUB_EVENT"
           echo "PAPER_VERIFIED_ORIGINATING_CRON=${PAPER_CRON_EXPRESSION:-MANUAL_DISPATCH}"
+      - name: Validate recovery slot provenance before ledger mutation
+        env:
+          PAPER_RECOVERY_SLOT: ${{ inputs.recovery_slot_utc }}
+          PAPER_GITHUB_EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from paper_pov.missed_slot_recovery import validate_recovery_slot
+          result = validate_recovery_slot(os.environ.get("PAPER_RECOVERY_SLOT", ""),
+                                          os.environ["PAPER_GITHUB_EVENT"])
+          print("PAPER_RECOVERY_PROVENANCE", result)
+          PY
       - name: Exact commit tests before any ledger mutation
         run: |
           set -euo pipefail
@@ -68,10 +86,55 @@ jobs:
           state=verify(json.loads(Path("/tmp/paper-ledger-input.json").read_text()),MAX_RAW_BYTES)
           print("PAPER_RESTORED",state["generation"],len(state["runs"]),state["sha256"])
           PY
+      - name: Resolve slot identity against authoritative single-writer ledger
+        env:
+          PAPER_RECOVERY_SLOT: ${{ inputs.recovery_slot_utc }}
+          PAPER_GITHUB_EVENT: ${{ github.event_name }}
+          PAPER_ORIGINATING_CRON: ${{ github.event.schedule }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import datetime as dt, os
+          from pathlib import Path
+          from paper_pov.missed_slot_recovery import resolve_writer_slot
+          slot = resolve_writer_slot(os.environ["PAPER_GITHUB_EVENT"],
+                                     os.environ.get("PAPER_ORIGINATING_CRON", ""),
+                                     os.environ.get("PAPER_RECOVERY_SLOT", ""))
+          Path("/tmp/paper-slot-identity.txt").write_text(slot or "MANUAL")
+          print("PAPER_WRITER_SLOT", slot or "MANUAL")
+          PY
+          SLOT="$(cat /tmp/paper-slot-identity.txt)"
+          if [ "$SLOT" != MANUAL ]; then
+            # Ledger branch is the only durable writer. Its serialized commits
+            # are authoritative even when GitHub workflow run history lags.
+            if git log --format='%B' "$(cat /tmp/paper-base.sha)" -- | grep -Fqx "PAPER_SLOT_ID=$SLOT"; then
+              echo "PAPER_DUPLICATE_SLOT_ABORT $SLOT"
+              exit 1
+            fi
+          fi
       - name: Real bounded public Kraken scan (paper only)
         run: |
           set -euo pipefail
           python -m paper_pov.scanner
+      - name: Consume same sealed WATCH and preselection outputs for manual and scheduled scans
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from paper_pov.manual_scheduled_parity import load_sealed_scan
+          root = Path("paper_pov/output")
+          report = load_sealed_scan(root)
+          from paper_pov.sealed_http_bundle import build_bundle
+          from paper_pov.scanner import atomic_json
+          atomic_json(root / "sealed-http-bundle.json", build_bundle(root))
+          print("PAPER_SHARED_ENTRYPOINT", {
+              "event": os.environ.get("GITHUB_EVENT_NAME", os.environ.get("GITHUB_EVENT_NAME", "unknown")),
+              "as_of": report["as_of"],
+              "watch_count": len(report["watch"]),
+              "observed_markets": report["observed_markets"],
+          })
+          PY
       - name: Append immutable as-of records and only matured observed outcomes
         run: |
           set -euo pipefail
@@ -82,7 +145,21 @@ jobs:
             --scoreboard paper_pov/output/scoreboard.json
           echo "PAPER_LEDGER_SCOREBOARD $(cat paper_pov/output/scoreboard.json)"
           cp /tmp/paper-ledger-next.json paper_pov/output/ledger.json
-          (cd paper_pov/output && sha256sum latest.json scoreboard.json ledger.json > SHA256SUMS)
+          # Persist the recovered/normal slot alongside downloadable scan evidence.
+          # This is a receipt, not a backdated market observation.
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("paper_pov/output/slot_receipt.json")
+          p.write_text(json.dumps({
+            "schema": 1,
+            "slot_identity": Path("/tmp/paper-slot-identity.txt").read_text().strip(),
+            "source_sha": __import__("os").environ["GITHUB_SHA"],
+            "run_id": __import__("os").environ["GITHUB_RUN_ID"],
+            "historical_quotes_reconstructed": False,
+          }, sort_keys=True))
+          PY
+          (cd paper_pov/output && sha256sum latest.json scoreboard.json ledger.json slot_receipt.json > SHA256SUMS)
           cp paper_pov/output/scoreboard.json /tmp/paper-scoreboard.json
       - name: Cross-run nonregression and provenance acceptance
         run: |
@@ -112,9 +189,14 @@ jobs:
           name: public-paper-ledger-${{ github.run_id }}
           path: |
             paper_pov/output/latest.json
+            paper_pov/output/receipts/*.json
             paper_pov/output/ledger.json
             paper_pov/output/scoreboard.json
             paper_pov/output/SHA256SUMS
+            paper_pov/output/candidate-snapshot.json
+            paper_pov/output/preselection-universe.json
+            paper_pov/output/sealed-http-bundle.json
+            paper_pov/output/slot_receipt.json
           retention-days: 90
           if-no-files-found: error
       - name: Non-force, single-writer ledger push and remote readback
@@ -135,13 +217,24 @@ jobs:
           PYTHONPATH=/tmp/paper-source-root python -m paper_pov.segmented_live_writer apply \
             --repository . --base "$(cat /tmp/paper-base.sha)" --staged /tmp/paper-staged
           git diff --cached --check
-          git commit -m "paper: atomic packed scan ${{ github.run_id }} source ${{ github.sha }}"
+          git commit -m "paper: atomic packed scan ${{ github.run_id }} source ${{ github.sha }}" -m "PAPER_SLOT_ID=$(cat /tmp/paper-slot-identity.txt)"
           git push origin HEAD:refs/heads/paper-proof-ledger
           git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
           PYTHONPATH=/tmp/paper-source-root python -m paper_pov.segmented_live_writer verify-remote \
             --repository . --base "$(cat /tmp/paper-base.sha)" \
             --commit "$(git rev-parse HEAD)" --staged /tmp/paper-staged
+          # Confirm the exact slot identity survived the non-force remote push.
+          # A GitHub Actions success without this readback is not accepted.
+          SLOT="$(cat /tmp/paper-slot-identity.txt)"
+          test "$(git log -1 --format='%B' HEAD | grep -Fxc "PAPER_SLOT_ID=$SLOT")" = 1 || {
+            echo "PAPER_REMOTE_SLOT_READBACK_MISMATCH"; exit 1;
+          }
+          if [ "$SLOT" != MANUAL ]; then
+            COUNT="$(git log --format='%B' HEAD -- | grep -Fxc "PAPER_SLOT_ID=$SLOT" || true)"
+            test "$COUNT" = 1 || { echo "PAPER_REMOTE_DUPLICATE_SLOT $COUNT"; exit 1; }
+          fi
+          echo "PAPER_SLOT_REMOTE_READBACK_VERIFIED $SLOT"
           echo "PAPER_LEDGER_REMOTE_READBACK_VERIFIED $(git rev-parse HEAD)"
       - name: Render verified UTC results after ledger remote readback
         env:
@@ -165,6 +258,17 @@ jobs:
             --output-dir paper_pov/output/results
           (cd paper_pov/output/results && sha256sum -c SHA256SUMS)
           cat paper_pov/output/results/results.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Independently verify published results and remote ledger identity
+        run: |
+          set -euo pipefail
+          LEDGER_COMMIT="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+          LEDGER_SHA="$(python -c 'import json;print(json.load(open("paper_pov/output/scoreboard.json"))["ledger_sha256"])')"
+          python -m paper_pov.results_report --verify-only \
+            --run-id "$GITHUB_RUN_ID" --source-sha "$GITHUB_SHA" \
+            --ledger-commit "$LEDGER_COMMIT" --ledger-sha256 "$LEDGER_SHA" \
+            --scan paper_pov/output/latest.json \
+            --scoreboard paper_pov/output/scoreboard.json \
+            --output-dir paper_pov/output/results
       - name: Preserve public human-readable paper results
         uses: actions/upload-artifact@v4
         with:

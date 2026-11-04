@@ -1,0 +1,125 @@
+"""Read-only C integration: combine authenticated historical parity and D recovery evidence.
+
+Never turns legacy quote evidence into a certified trade signal.
+"""
+import argparse
+import json
+import re
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+def combine(parity, recovery, snapshot=None):
+    if parity.get("status") != "FIXTURE_OR_ARTIFACT_CONTRACT_VERIFIED_NOT_LIVE_PARITY":
+        raise ValueError("Unverified parity contract")
+    if parity.get("candidate_schema_parity") is not True or parity.get("same_source_sha") is not True:
+        raise ValueError("Incompatible historical result schemas")
+    if recovery.get("schema") != "paper_recovery_v1" or recovery.get("production_applied") is not False:
+        raise ValueError("Invalid recovery receipt")
+    runs = recovery.get("runs")
+    if not isinstance(runs, dict):
+        raise ValueError("Missing recovery runs")
+    for name in ("manual", "scheduled"):
+        run = runs.get(name)
+        if not isinstance(run, dict):
+            raise ValueError("Missing " + name + " recovery")
+        if str(run.get("run_id")) != str(parity[name + "_run"]):
+            raise ValueError("Mismatched " + name + " run identity")
+        if run.get("generation") != parity[name + "_generation"] or run.get("watch") != parity[name + "_watch_count"]:
+            raise ValueError("Mismatched " + name + " recovered candidates")
+        if run.get("certified") is not False:
+            raise ValueError("Legacy recovery falsely certified")
+    recovered = recovery.get("all_recovered") is True and all(
+        runs[n].get("status") == "ABSTAIN_LEGACY_QUOTE_EVIDENCE" for n in ("manual", "scheduled")
+    )
+    result = {
+        "schema": "c_read_only_integration_v1",
+        "production_applied": False,
+        "historical_artifact_parity": True,
+        "recovery_verified": recovered,
+        "exchange_event_freshness_verified": False,
+        "trading_approved": False,
+        "status": "ABSTAIN_LEGACY_QUOTE_EVIDENCE" if recovered else "RECOVERY_FAILED",
+        "manual_run": str(parity["manual_run"]),
+        "scheduled_run": str(parity["scheduled_run"]),
+        "manual_watch": parity["manual_watch_count"],
+        "scheduled_watch": parity["scheduled_watch_count"],
+        "a2_snapshot_attached": False,
+    }
+    if snapshot is not None:
+        if not isinstance(snapshot, dict) or not isinstance(snapshot.get("receipt_sha256"), str) or re.fullmatch(r"[0-9a-f]{64}", snapshot["receipt_sha256"]) is None:
+            raise ValueError("Missing A2 immutable receipt provenance")
+        if snapshot.get("buy_approved") is True or snapshot.get("production_applied") is True:
+            raise ValueError("A2 consumer attempted production approval")
+        if not isinstance(snapshot.get("watch"), list) or not snapshot["watch"]:
+            raise ValueError("A2 snapshot lacks WATCH candidates")
+        if any(not isinstance(item, dict) or not item for item in snapshot["watch"]):
+            raise ValueError("A2 WATCH candidate is not a nonempty object")
+        pairs, ranks = [], []
+        for candidate in snapshot["watch"]:
+            pair, rank = candidate.get("pair"), candidate.get("rank")
+            if not isinstance(pair, str) or not pair or type(rank) is not int or rank < 1:
+                raise ValueError("A2 candidate missing pair/rank identity")
+            if candidate.get("status") != "PAPER_WATCH":
+                raise ValueError("A2 candidate is not a paper WATCH")
+            pairs.append(pair)
+            ranks.append(rank)
+        if len(set(pairs)) != len(pairs) or sorted(ranks) != list(range(1, len(ranks) + 1)):
+            raise ValueError("A2 duplicate pair or noncontiguous ranks")
+        if snapshot.get("scan_status") != "WATCH":
+            raise ValueError("A2 snapshot has unexpected scan status")
+        # Treat snapshot metadata as untrusted even after transport authentication.
+        # Contradictory counts must never be published as a verified C report.
+        eligible = snapshot.get("eligible_pairs")
+        observed = snapshot.get("observed_markets")
+        abstentions = snapshot.get("abstention_counts")
+        if any(type(n) is not int or n < 0 for n in (eligible, observed)):
+            raise ValueError("Invalid A2 market coverage")
+        if observed > eligible or len(snapshot["watch"]) > observed:
+            raise ValueError("Contradictory A2 market coverage")
+        if not isinstance(abstentions, dict) or any(
+            not isinstance(k, str) or not k or type(v) is not int or v < 0
+            for k, v in abstentions.items()
+        ):
+            raise ValueError("Invalid A2 abstention breakdown")
+        source_time = snapshot.get("as_of")
+        if not isinstance(source_time, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|\+00:00)", source_time):
+            raise ValueError("A2 source time must be UTC ISO-8601 with explicit timezone")
+        try:
+            parsed_time = datetime.fromisoformat(source_time.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError("Invalid A2 source time") from exc
+        if parsed_time.utcoffset() != timezone.utc.utcoffset(None):
+            raise ValueError("A2 source time is not UTC")
+        result["a2_snapshot_attached"] = True
+        result["a2_receipt_sha256"] = snapshot["receipt_sha256"]
+        result["a2_watch_count"] = len(snapshot["watch"])
+        # Carry the authenticated WATCH payload into the integrated artifact so
+        # downstream B/D consumers need not reconstruct or refetch the A2 ZIP.
+        # This remains read-only evidence, never a live BUY authorization.
+        result["a2_watch_candidates"] = snapshot["watch"]
+        result["a2_as_of"] = snapshot.get("as_of")
+        result["a2_eligible_pairs"] = snapshot.get("eligible_pairs")
+        result["a2_observed_markets"] = snapshot.get("observed_markets")
+        result["a2_abstention_counts"] = snapshot.get("abstention_counts")
+        result["a2_source_cohort"] = "authenticated_snapshot_distinct_from_historical_manual_scheduled"
+        # A2 capture and legacy runs are different cohorts; never assert identity or freshness parity.
+    return result
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--parity", type=Path, required=True)
+    parser.add_argument("--recovery", type=Path, required=True)
+    parser.add_argument("--a2", type=Path)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    inputs = [json.loads(p.read_text()) for p in (args.parity, args.recovery)]
+    snapshot = json.loads(args.a2.read_text()) if args.a2 else None
+    result = combine(*inputs, snapshot)
+    args.output.write_text(json.dumps(result, sort_keys=True) + "\n")
+    print(json.dumps(result, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

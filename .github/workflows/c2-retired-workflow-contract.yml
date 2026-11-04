@@ -1,0 +1,188 @@
+name: C2 retired workflow caller contract
+on:
+  push:
+    branches:
+      - owner-c-c2-remove-superseded-continuation-20261103
+    paths:
+      - '.github/workflows/c2-retired-workflow-contract.yml'
+      - 'paper_pov/c_read_only_integration.py'
+      - 'paper_pov/test_c_read_only_integration_coverage.py'
+      - 'paper_pov/c_candidate_handoff.py'
+      - 'paper_pov/test_c_candidate_handoff.py'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'paper_pov/test_retired_workflow_contract.py'
+      - 'paper_pov/manual_schedule_contract.py'
+      - 'paper_pov/test_manual_schedule_contract.py'
+      - 'paper_pov/c_read_only_integration.py'
+      - 'paper_pov/test_c_read_only_integration_coverage.py'
+      - 'paper_pov/c_candidate_handoff.py'
+      - 'paper_pov/test_c_candidate_handoff.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest paper_pov.test_retired_workflow_contract paper_pov.test_manual_schedule_contract paper_pov.test_c_read_only_integration_coverage paper_pov.test_c_candidate_handoff -v
+
+  authentic-manual-scheduled:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download and authenticate two historical REAL scanner result artifacts (read-only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/c-real-receipts
+          for pair in "manual:41636714169:13231321360:workflow_dispatch" "scheduled:41626400391:13226916072:schedule"; do
+            IFS=: read -r label run artifact event <<< "$pair"
+            gh api "repos/$REPO/actions/runs/$run" > "/tmp/c-real-receipts/$label-run.json"
+            python - "$label" "$run" "$event" <<'PY'
+          import json,sys,os
+          label,run,event=sys.argv[1:]
+          data=json.load(open("/tmp/c-real-receipts/"+label+"-run.json"))
+          assert str(data["id"])==run and data["event"]==event, "GitHub authenticated event mismatch"
+          assert data["conclusion"]=="success", "Real scan did not succeed"
+          assert data["head_sha"]=="94929a544899ddec63c676b6d4d52539da8e3837", "Real scan source drift"
+          print("AUTHENTIC_RUN",label,run,event,data["head_sha"])
+          PY
+            gh api -H "Accept: application/vnd.github+json" "repos/$REPO/actions/artifacts/$artifact/zip" > "/tmp/c-real-receipts/$label.zip"
+          done
+      - name: Execute exact-code read-only dual ZIP acceptance
+        run: |
+          set -euo pipefail
+          python -m paper_pov.manual_schedule_contract --zip-artifacts --manual /tmp/c-real-receipts/manual.zip --scheduled /tmp/c-real-receipts/scheduled.zip > /tmp/c-real-receipts/parity.json
+          python - <<'PY'
+          import json
+          p=json.load(open("/tmp/c-real-receipts/parity.json"))
+          assert p["manual_run"]=="41636714169" and p["scheduled_run"]=="41626400391"
+          assert p["manual_watch_count"]==12 and p["scheduled_watch_count"]==12
+          assert p["same_source_sha"] is True and p["candidate_schema_parity"] is True
+          assert p["market_time_candidate_equality_claimed"] is False
+          print("REAL_MANUAL_SCHEDULED_CONTRACT_VERIFIED",json.dumps(p,sort_keys=True))
+          PY
+      - name: Consume independently published D recovery artifact into unified C report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/13276401753/zip" > /tmp/c-real-receipts/recovery.zip
+          python - <<'PY'
+          import zipfile
+          from pathlib import Path
+          archive=Path("/tmp/c-real-receipts/recovery.zip")
+          with zipfile.ZipFile(archive) as z:
+              names=z.namelist()
+              assert names == ["recovery.json"], names
+              payload=z.read("recovery.json")
+              assert len(payload) < 100000
+              # D artifact 13276401753 ends with literal backslash-n after JSON.
+              # Normalize ONLY this observed transport defect; do not relax JSON parsing.
+              if payload.endswith(bytes((92, 110))):
+                  payload = payload[:-2] + bytes((10,))
+              Path("/tmp/c-real-receipts/recovery.json").write_bytes(payload)
+          PY
+          python -m paper_pov.c_read_only_integration --parity /tmp/c-real-receipts/parity.json --recovery /tmp/c-real-receipts/recovery.json --output /tmp/c-real-receipts/integration.json
+          python - <<'PY'
+          import json
+          r=json.load(open("/tmp/c-real-receipts/integration.json"))
+          assert r["recovery_verified"] is True and r["status"] == "ABSTAIN_LEGACY_QUOTE_EVIDENCE"
+          assert r["production_applied"] is False and r["trading_approved"] is False
+          print("C_REAL_RECOVERY_AND_PARITY_CONSUMED",json.dumps(r,sort_keys=True))
+          PY
+      - name: Attach A authenticated A2 snapshot to recovered C report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/actions/artifacts/13281329000" > /tmp/c-real-receipts/a2-metadata.json
+          python - <<'PY'
+          import json
+          meta=json.load(open("/tmp/c-real-receipts/a2-metadata.json"))
+          assert meta["id"]==13281329000 and meta["name"]=="a2-live-consumer-evidence"
+          assert meta["expired"] is False and meta["workflow_run"]["id"]==41743237429
+          assert meta["workflow_run"]["head_sha"]=="9af09e21d9f0c132e7630ed60b508ef2286c0fb0"
+          assert meta["digest"]=="sha256:f331501461593cc1600d6043cb304a243e396145d29c9d322d3a159b512fb68e"
+          PY
+          gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/13281329000/zip" > /tmp/c-real-receipts/a2.zip
+          echo 'f331501461593cc1600d6043cb304a243e396145d29c9d322d3a159b512fb68e  /tmp/c-real-receipts/a2.zip' | sha256sum --check --status
+          python - <<'PY'
+          import hashlib, json, zipfile
+          from pathlib import Path
+          with zipfile.ZipFile("/tmp/c-real-receipts/a2.zip") as outer:
+              names=outer.namelist()
+              transport=[n for n in names if n.endswith("transport.zip")]
+              exports=[n for n in names if n.endswith("verified-snapshot.json")]
+              assert len(transport)==1 and len(exports)==1, names
+              with zipfile.ZipFile(__import__("io").BytesIO(outer.read(transport[0]))) as inner:
+                  members=inner.namelist()
+                  receipts=[n for n in members if n.startswith("receipts/") and n.endswith(".json")]
+                  assert len(members)==3 and len(receipts)==1 and "latest.json" in members and "verified-snapshot.json" in members
+                  receipt=inner.read(receipts[0])
+                  assert inner.read("latest.json")==receipt
+                  verified=json.loads(inner.read("verified-snapshot.json"))
+                  exported=json.loads(outer.read(exports[0]))
+                  for key in ("as_of","scan_status","eligible_pairs","observed_markets","abstention_counts","watch","receipt_sha256"):
+                      assert verified[key]==exported[key], key
+                  assert exported["snapshot_age_seconds"]>=0
+                  assert set(exported["quote_age_seconds"])==set(verified["quote_age_seconds"])
+                  assert verified["receipt_sha256"]==hashlib.sha256(receipt).hexdigest()
+                  assert verified["watch"] and isinstance(verified["watch"],list)
+                  assert verified["scan_status"]!="BUY"
+                  Path("/tmp/c-real-receipts/a2.json").write_text(json.dumps(verified,sort_keys=True))
+          PY
+          python -m paper_pov.c_read_only_integration --parity /tmp/c-real-receipts/parity.json --recovery /tmp/c-real-receipts/recovery.json --a2 /tmp/c-real-receipts/a2.json --output /tmp/c-real-receipts/integration.json
+          python - <<'PY'
+          import json
+          p=json.load(open("/tmp/c-real-receipts/integration.json"))
+          assert p["a2_snapshot_attached"] and p["a2_watch_count"]==12
+          assert len(p["a2_watch_candidates"])==p["a2_watch_count"]
+          assert p["a2_watch_candidates"]
+          assert p["a2_eligible_pairs"]==605 and p["a2_observed_markets"]==602
+          assert p["a2_source_cohort"]=="authenticated_snapshot_distinct_from_historical_manual_scheduled"
+          assert isinstance(p["a2_abstention_counts"],dict)
+          assert p["a2_as_of"]
+          assert p["recovery_verified"] and p["status"]=="ABSTAIN_LEGACY_QUOTE_EVIDENCE"
+          assert not p["trading_approved"] and not p["production_applied"]
+          print("C_B_A2_RECOVERY_CONNECTED",json.dumps(p,sort_keys=True))
+          PY
+          python -m paper_pov.c_candidate_handoff /tmp/c-real-receipts/integration.json --from-integration --output /tmp/c-real-receipts/candidates.json --bd-output /tmp/c-real-receipts/bd-handoff.json
+      - name: Consume C artifact through B/D read-only executable interface
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          src=json.loads(Path("/tmp/c-real-receipts/candidates.json").read_text())
+          out=json.loads(Path("/tmp/c-real-receipts/bd-handoff.json").read_text())
+          assert out["watch"]==src["watch"] and out["watch_count"]==12
+          assert out["receipt_sha256"]==src["receipt_sha256"]
+          assert out["status"]=="WATCH_REPLAY_ONLY_NOT_LIVE"
+          assert out["live_watch_certified"] is False and out["production_applied"] is False
+          print("BD_READ_ONLY_CANDIDATES_CONSUMED",out["watch_count"])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: c-real-manual-scheduled-contract
+          path: |
+            /tmp/c-real-receipts/parity.json
+            /tmp/c-real-receipts/integration.json
+            /tmp/c-real-receipts/a2.json
+            /tmp/c-real-receipts/candidates.json
+            /tmp/c-real-receipts/bd-handoff.json
+          retention-days: 7
+          if-no-files-found: error
