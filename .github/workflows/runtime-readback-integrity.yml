@@ -238,8 +238,15 @@ jobs:
               if writer["remote_ledger_reconciliation"]["status"] != "MATCH":
                   raise ValueError("same-run published delivery requires matching packed ledger")
           if "quote_evidence" not in published:
+              # A paired legacy result is NOT a quote-complete source.
+              # Preserve explicit absence and cohort identity for B and E,
+              # rather than reporting generic artifact availability.
               report = {
                   "source_run_id": int(os.environ["WRITER_RUN_ID"]),
+                  "source_sha": os.environ["WRITER_SOURCE_SHA"],
+                  "github_event": published["github_event"],
+                  "published_artifact_verified": True,
+                  "quote_evidence_present": False,
                   "status": "HISTORICAL_PUBLISHED_QUOTE_EVIDENCE_UNAVAILABLE",
                   "reason": "PUBLISHED_QUOTE_EVIDENCE_MISSING",
                   "single_writer_read_only": True,
