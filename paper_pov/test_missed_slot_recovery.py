@@ -1,6 +1,6 @@
 """Focused decision tests: never fabricate a historical market scan."""
 import unittest
-from paper_pov.missed_slot_recovery import decision
+from paper_pov.missed_slot_recovery import decision, validate_recovery_slot
 
 NOW = "2026-11-03T23:24:30Z"
 
@@ -10,6 +10,17 @@ def run(created, status="completed", event="schedule"):
 
 
 class MissedSlotRecoveryTests(unittest.TestCase):
+    def test_recovery_slot_provenance_and_bounded_age(self):
+        self.assertEqual(validate_recovery_slot("", "workflow_dispatch"), "NORMAL_SCAN")
+        self.assertEqual(validate_recovery_slot("2026-11-03T23:09:00+00:00",
+                         "workflow_dispatch", NOW), "2026-11-03T23:09:00+00:00")
+        with self.assertRaisesRegex(ValueError, "only allowed"):
+            validate_recovery_slot("2026-11-03T23:09:00Z", "schedule", NOW)
+        with self.assertRaisesRegex(ValueError, "Invalid scheduled"):
+            validate_recovery_slot("2026-11-03T23:10:00Z", "workflow_dispatch", NOW)
+        with self.assertRaisesRegex(ValueError, "outside bounded"):
+            validate_recovery_slot("2026-11-03T22:39:00Z", "workflow_dispatch", NOW)
+
     def test_missing_slot_dispatches_existing_writer(self):
         result = decision(NOW, [run("2026-11-03T22:39:03Z")])
         self.assertEqual(result["action"], "DISPATCH")
