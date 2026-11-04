@@ -41,6 +41,12 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
     if train_a != train_b:
         raise ValueError("Training boundary mismatch")
     training_end = utc_time(train_a)
+    asof_a, asof_b = baseline.get("evaluation_asof_utc"), challenger.get("evaluation_asof_utc")
+    if asof_a != asof_b:
+        raise ValueError("Evaluation cutoff mismatch")
+    evaluation_asof = utc_time(asof_a)
+    if evaluation_asof <= training_end + timedelta(hours=48):
+        raise ValueError("Evaluation cutoff precedes held-out maturity window")
     a, b = baseline.get("observations"), challenger.get("observations")
     # Row-level booleans cannot independently authenticate Kraken archive data.
     receipt_a, receipt_b = baseline.get("source_receipt"), challenger.get("source_receipt")
@@ -78,13 +84,15 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
             start = utc_time(row["holdout_start_utc"])
             if start < training_end + timedelta(hours=48):
                 raise ValueError("Held-out start violates 48h training purge")
-            if feature > entry or entry < start or mature < entry + timedelta(hours=48):
+            if feature > entry or entry < start or mature < entry + timedelta(hours=48) or mature > evaluation_asof:
                 raise ValueError("Lookahead, in-sample entry or immature 48h outcome")
             if not all(c in "0123456789abcdef" for c in row["source_sha256"].lower()):
                 raise ValueError("Malformed source SHA256")
             out[key] = row
         return out
     aa, bb = normalize(a), normalize(b)
+    if len({row["holdout_start_utc"] for row in aa.values()}) > 1:
+        raise ValueError("Mixed held-out start boundaries")
     if aa.keys() != bb.keys():
         raise ValueError("Different holdout universes")
     for key in aa:
@@ -110,7 +118,7 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
                  and candidate["false_positives"] <= base["false_positives"])
     return {"schema": "shadow_learning_evidence_v1",
             "baseline_version": baseline["version"], "challenger_version": challenger["version"],
-            "cohort_size": n, "baseline": base, "challenger": candidate,
+            "cohort_size": n, "evaluation_asof_utc": asof_a, "baseline": base, "challenger": candidate,
             "precision_delta": (candidate["precision"] - base["precision"]
                                 if base["precision"] is not None and candidate["precision"] is not None else None),
             "evidence_digest": canonical_digest({"baseline": baseline, "challenger": challenger}),
