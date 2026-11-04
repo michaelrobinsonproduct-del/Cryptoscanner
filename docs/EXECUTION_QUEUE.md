@@ -15,13 +15,13 @@
 | ID | Owner | Status | Exact deliverable | Acceptance evidence |
 |---|---|---|---|---|
 | A1 | A :00 | READY | Trace current scanner entry point and implement any missing deterministic fresh Kraken quote -> ranked WATCH candidate execution path, preserving stablecoin and <=10-minute freshness filters | Executable test proving nonempty candidate on valid fixture, abstention on stale/stablecoin, commit/PR |
-| B1 | B :12 | READY | Integrate existing scanner core with the actual manual and scheduled entry points; resolve conflicting open PR implementation only where necessary | Same candidate/schema for manual vs scheduled fixture, focused test and PR |
+| B1 | B :12 | IMPLEMENTED — RELEASE GATED | Integrate existing scanner core with the actual manual and scheduled entry points; resolve conflicting open PR implementation only where necessary | Same candidate/schema for manual vs scheduled fixture, focused test and PR |
 | D1 | D :24 | READY | Fix current executable runtime and durable scan result persistence/recovery; make failed runs visible instead of silently green | Repro of failing case then passing targeted test, persisted result/readback or explicit environment blocker |
 | C1 | C :36 | READY | Identify and remove ONE proven duplicated or disconnected implementation blocking integration, with preserved imports and tests | Bounded diff, tests, no removal of active functionality |
 | E1 | E :48 | READY | Connect existing historical source rows to source-qualified point-in-time outcome labels; explicit coverage/abstention on incomplete intervals | Real eligible label counts if authenticated, otherwise code/test demonstrating truthful abstention and next source gap |
 | E2 | E :48 | NEXT | Compare identical-cohort baseline/challenger chronologically, with 48h purge, liquidity assumptions and held-out results | Numerical evidence with sample sizes, or NO QUALIFIED RULE |
 | A2 | A :00 | NEXT | Wire ranked WATCH output to persisted candidate snapshots with price, timestamp, momentum, volume acceleration, risk/status | Contract test and real or fixture-backed output with provenance |
-| B2 | B :12 | NEXT | Connect evaluated challenger version and outcome ledger to shadow scoring; no automatic production promotion | Deterministic end-to-end shadow test |
+| B2 | B :12 | READY — SHADOW EVIDENCE INTEGRATION | Connect evaluated challenger version and outcome ledger to shadow scoring; no automatic production promotion | Deterministic end-to-end shadow test |
 | D2 | D :24 | NEXT | Validate real GitHub scheduled and manually dispatched scanner execution, output persistence, readback, failure reporting | Exact run URLs, actual output freshness and persistence |
 | C2 | C :36 | NEXT | Remove remaining proven obsolete duplicate modules/workflows only after verifying they are unused | Focused import/workflow regression tests |
 | E3 | E :48 | NEXT | Implement versioned learning feedback and no-improvement fallback; only qualified evidence can promote | Deterministic regression test and held-out comparison |
@@ -30,3 +30,9 @@
 **Scheduling:** A :00, B :12, D :24, C :36, E :48 hourly. These are opportunities to execute, not proof of unattended independent execution. Manual run requests may be inline and must not be reported as background runs.
 
 **Progress scoreboard:** Verified live scanner / manual trigger / scheduled trigger / durable ledger / authenticated labels / held-out uplift / applied learning — all remain UNKNOWN until directly evidenced. Record facts, not estimates.
+
+## B1 delivery closure — exact head 416beac (2026-11-04 UTC)
+
+B1 HTTP receipt producer/consumer, GitHub read-only artifact adapter, bearer-protected TLS service, slot/run provenance, immutable receipt/projection checksum and 10-minute freshness are **implemented** on the integration branch. Exact-head CI PASS: [B1 run 41766615477](https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41766615477), [A1/A2 run 41766615466](https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41766615466), [A2 consumer run 41766615485](https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/41766615485).
+
+**Not released:** the main-only paper writer has not produced a sealed bundle from this unmerged branch, and no authorized HTTPS host/TLS/bearer configuration or live PAPER_RECEIPT_URL exists. No actual main artifact-to-live-HTTP end-to-end claim. See docs/BATCH_B_READONLY_DELIVERY.md. Do not repeat B1 tests unless source changes or an actual failure appears. Next B owner priority: B2 shadow-evidence functional integration, coordinated with E's source-qualified learning, while C2/D1 owners fix their separate failing workflows. No promotion or second writer.
