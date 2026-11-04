@@ -186,7 +186,8 @@ class DeliveryProjectionTests(unittest.TestCase):
         scan, score = fixture()
         published, _ = render(scan, score, run_id="41235442591", source_sha=SHA,
                               ledger_commit="b"*40, event="workflow_dispatch")
-        self.assertEqual(len(project_published_result(published)["live_watch"]), 2)
+        self.assertEqual(project_published_result(published)["live_watch"], [])
+        self.assertEqual(project_published_result(published)["status"], "ABSTAIN_SAME_RUN_PERSISTED_WRITER_UNVERIFIED")
         bad = deepcopy(published)
         bad["candidates"][0]["price_usd"] *= 2
         with self.assertRaisesRegex(ValueError, "matching fresh quote"):
@@ -203,6 +204,32 @@ class DeliveryProjectionTests(unittest.TestCase):
         bad["max_client_quote_age_seconds"] = 0
         with self.assertRaisesRegex(ValueError, "freshness summary mismatch"):
             project_published_result(bad)
+
+    def test_same_run_d_match_requires_exact_persisted_commit(self):
+        from paper_pov.test_results_report import fixture
+        from paper_pov.results_report import render
+        scan, score = fixture()
+        published, _ = render(scan, score, run_id="41235442591", source_sha=SHA,
+                              ledger_commit="b"*40, event="workflow_dispatch")
+        d = {"status": "VERIFIED_REMOTE_READBACK", "remote_downloaded": True,
+             "ledger_writer_invoked": False, "production_applied": False,
+             "independently_authenticated": True, "run_id": "41235442591",
+             "source_sha": SHA,
+             "persisted_paper": {"ledger_generation": published["ledger_generation"],
+                                 "scan_status": "SUCCESS_PAPER_ONLY",
+                                 "live_replay_performed": False},
+             "remote_ledger_reconciliation": {
+                 "status": "MATCH", "recovered_sha256": "c"*64,
+                 "remote_sha256": "c"*64, "recovered_generation": published["ledger_generation"],
+                 "remote_generation": published["ledger_generation"],
+                 "independently_authenticated": False, "production_applied": False}}
+        output = project_published_result(published, d)
+        self.assertEqual(output["status"], "ABSTAIN_SAME_RUN_LEDGER_COMMIT_UNVERIFIED")
+        self.assertEqual(output["live_watch"], [])
+        self.assertFalse(output["fresh_watch_delivery_verified"])
+        d["persisted_paper"]["ledger_commit"] = "f"*40
+        with self.assertRaisesRegex(ValueError, "commit contradicts"):
+            project_published_result(published, d)
 
     def test_real_paper_results_zip_to_delivery_cli(self):
         import hashlib
