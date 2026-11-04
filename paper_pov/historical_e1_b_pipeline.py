@@ -129,6 +129,7 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
                             "partition_sha256": result["partition_sha256"],
                             "trade_count": result["parsed_trade_count"],
                             "bar_count": result["bar_count"]}
+    bar_sets = {pair: set(times) for pair, times in bars.items()}
     status_counts = {"NO_PINNED_PARTITION": 0, "NO_ENTRY_BAR": 0,
                      "ENTRY_BAR_PRESENT_UNQUALIFIED": 0}
     # Horizon coverage is diagnostic only. Sparse bars cannot prove a complete
@@ -163,7 +164,7 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
                 start = at.replace(second=0, microsecond=0)
                 start -= timedelta(minutes=start.minute % 5)
                 first = start + timedelta(minutes=5)
-                timeset = set(times)
+                timeset = bar_sets[row["pair"]]
                 required = hours * 12
                 horizon = ("COMPLETE_BAR_PATH_UNQUALIFIED"
                            if all(first + timedelta(minutes=5 * i) in timeset
