@@ -132,6 +132,21 @@ class PaperScanTests(unittest.TestCase):
         report = scanner.scan(api=bad_api, clock=lambda: NOW, sleep=lambda _: None)
         self.assertNotIn("C0USD", {x["pair"] for x in report["watch"]})
 
+    def test_ohlc_expiring_during_screening_abstains_before_sealing(self):
+        # The candle closes at 14:55; it is 9m old during OHLC
+        # requests, but 11m old when the final scan receipt is sealed.
+        calls = 0
+        def clock():
+            nonlocal calls
+            calls += 1
+            return NOW + dt.timedelta(minutes=6 if calls > 26 else 4)
+        report = scanner.scan(api=fixture(), clock=clock, sleep=lambda _: None)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+        self.assertEqual(report["abstention_counts"]["stale_or_future_ohlc"], 24)
+        self.assertEqual(report["preselection_decisions"]["OHLC_ABSTAINED"], 24)
+        self.assertEqual(report["preselection_decisions"]["NOT_OHLC_SELECTED"], 1)
+
     def test_future_ohlc_rejected(self):
         def future_api(path):
             result = fixture()(path)
