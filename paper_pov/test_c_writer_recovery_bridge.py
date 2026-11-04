@@ -108,7 +108,7 @@ class BridgeTests(unittest.TestCase):
             combined = json.loads((root / "combined.json").read_text())
             bd = json.loads((root / "bd.json").read_text())
             self.assertFalse((root / "writer.json").exists())
-            self.assertEqual(combined["writer_recovery"]["delivery_blocker"], "D_PERSISTED_PAPER_MISSING_OR_INCOMPLETE")
+            self.assertEqual(combined["writer_recovery"]["delivery_blocker"], "D_REMOTE_READBACK_NOT_INDEPENDENTLY_AUTHENTICATED")
             self.assertEqual(bd, combined["historical_a2"])
             self.assertFalse(combined["same_run_or_candidate_parity_claimed"])
             self.assertEqual(bd["status"], "WATCH_REPLAY_ONLY_NOT_LIVE")
