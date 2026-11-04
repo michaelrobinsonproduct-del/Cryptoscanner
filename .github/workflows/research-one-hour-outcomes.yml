@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       previous_run_id:
-        description: 'Prior successful scored-series run to extend by twelve actual five-minute depth rounds (blank starts fresh 13-round cohort)'
+        description: 'Prior scored-series artifact to extend by thirteen actual five-minute depth rounds (blank starts fresh 13-round cohort)'
         required: false
         type: string
       prior_cohort_run_ids:
@@ -41,7 +41,7 @@ jobs:
           python -m research.live_scored_series \
             --output-root /tmp/kraken-one-hour \
             --rounds 13 --interval-seconds 300 | tee /tmp/kraken-one-hour-result.log
-      - name: Restore source artifact and acquire twelve factual five-minute follow-up rounds
+      - name: Restore source artifact and acquire thirteen factual five-minute follow-up rounds with new source-linked scores
         if: inputs.previous_run_id != ''
         env:
           PREVIOUS_RUN_ID: ${{ inputs.previous_run_id }}
@@ -58,7 +58,7 @@ jobs:
           test -d /tmp/prior-series/entry/scores
           python -m research.restore_scored_series \
             --previous /tmp/prior-series --output-root /tmp/kraken-one-hour \
-            --followup-rounds 12 | tee /tmp/kraken-one-hour-result.log
+            --followup-rounds 13 --rescore | tee /tmp/kraken-one-hour-result.log
       - name: Verify factual outcomes and score-depth binding without production claims
         run: |
           set -euo pipefail
