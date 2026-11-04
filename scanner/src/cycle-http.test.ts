@@ -105,3 +105,11 @@ test("baseline failure provenance survives shadow gate and A2 fallback",async()=
  expect(result.ok).toBe(true);
  expect(result.result).toMatchObject({scan_status:"BASELINE_UNAVAILABLE",baseline_error:"Error: legacy source offline",paper_watch_status:"PAPER_ONLY_VERIFIED",shadow_artifact_status:"REJECTED",learning_gate:{decision:"KEEP_BASELINE"},shadow_evaluation:{production_promoted:false}});
 });
+
+test("qualified shadow artifact failure cannot erase A2 fallback outage provenance",async()=>{
+ const snapshot={status:"VERIFIED_SNAPSHOT" as const,as_of:"2026-11-03T04:00:00Z",scan_status:"WATCH",receipt_sha256:"f".repeat(64),watch:[{pair:"TAOUSD",quote_observed_at:"2026-11-03T03:59:00Z"}],eligible_pairs:1,observed_markets:1,abstention_counts:{},source:"a2_verified_readonly" as const,buy_approved:false as const};
+ const runner=createCycleRunner(deps({scan:async()=>{throw Error("legacy source offline")}}),async()=>{throw Error("shadow artifact offline")},undefined,async()=>snapshot as any,async()=>({decision:"SHADOW_ELIGIBLE_REVIEW",held_out_n:1,production_applied:false as const}));
+ const manual=await runner.run("manual"),scheduled=await runner.run("scheduled");
+ expect(manual.ok).toBe(true);expect(scheduled.ok).toBe(true);expect(manual.result).toEqual(scheduled.result);
+ expect(manual.result).toMatchObject({scan_status:"BASELINE_UNAVAILABLE",baseline_error:"Error: legacy source offline",paper_watch_status:"PAPER_ONLY_VERIFIED",shadow_artifact_status:"REJECTED",learning_gate:{decision:"SHADOW_ELIGIBLE_REVIEW"},shadow_evaluation:{production_promoted:false}});
+});
