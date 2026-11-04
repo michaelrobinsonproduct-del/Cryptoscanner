@@ -93,3 +93,46 @@ jobs:
           path: ${{ runner.temp }}/paper-a2/
           retention-days: 7
           if-no-files-found: warn
+
+  independent-downloaded-consumer:
+    needs: live-consumer
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: a2-live-consumer-evidence
+          path: ${{ runner.temp }}/downloaded-a2
+      - name: Independent downstream readback of published real Kraken A2 transport
+        env:
+          A2_DOWNLOADED_DIR: ${{ runner.temp }}/downloaded-a2
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from paper_pov.a2_artifact_consumer import read_artifact_zip
+          root=Path(os.environ["A2_DOWNLOADED_DIR"])
+          transport=root/"a2-verified-transport.zip"
+          assert transport.is_file() and transport.stat().st_size>0, "missing published transport"
+          snapshot=read_artifact_zip(transport)
+          exported=json.loads((root/"verified-snapshot.json").read_bytes())
+          assert snapshot["receipt_sha256"]==exported["receipt_sha256"]
+          assert snapshot["watch"]==exported["watch"]
+          assert snapshot["eligible_pairs"]==exported["eligible_pairs"]
+          assert snapshot["observed_markets"]==exported["observed_markets"]
+          assert snapshot["scan_status"]==exported["scan_status"]
+          assert all(age<=600 for age in snapshot["quote_age_seconds"].values())
+          print("A2_PUBLISHED_ARTIFACT_DOWNSTREAM_VERIFIED",json.dumps({
+              "receipt_sha256":snapshot["receipt_sha256"],
+              "watch_count":len(snapshot["watch"]),
+              "eligible_pairs":snapshot["eligible_pairs"],
+              "observed_markets":snapshot["observed_markets"],
+              "snapshot_age_seconds":snapshot["snapshot_age_seconds"],
+              "production_applied":False,
+          },sort_keys=True))
+          PY
+      - name: Verify exact A checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
