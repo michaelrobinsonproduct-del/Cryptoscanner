@@ -76,9 +76,22 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
             def remote_object(name):
                 endpoint = f"repos/{repo}/contents/{quote(name, safe='/')}?ref={quote(ref, safe='')}"
                 obj = _github_json([endpoint], runner=runner)
-                if obj.get("type") != "file" or obj.get("encoding") != "base64":
+                if obj.get("type") != "file":
                     raise IntegrityError("Remote packed ledger object unavailable")
-                return base64.b64decode(obj["content"], validate=True)
+                if obj.get("encoding") == "base64":
+                    return base64.b64decode(obj["content"], validate=True)
+                # GitHub Contents API omits inline bytes for large blobs.
+                # Resolve the immutable blob SHA through the read-only Git Data API.
+                blob_sha = obj.get("sha")
+                if obj.get("encoding") != "none" or not isinstance(blob_sha, str) or len(blob_sha) != 40 or any(c not in "0123456789abcdef" for c in blob_sha):
+                    raise IntegrityError("Remote packed ledger blob identity unavailable")
+                blob = _github_json([f"repos/{repo}/git/blobs/{blob_sha}"], runner=runner)
+                if blob.get("sha") != blob_sha or blob.get("encoding") != "base64":
+                    raise IntegrityError("Remote packed ledger blob identity mismatch")
+                payload = base64.b64decode(blob["content"], validate=True)
+                if len(payload) != obj.get("size"):
+                    raise IntegrityError("Remote packed ledger blob size mismatch")
+                return payload
             try:
                 manifest_bytes = remote_object(segments.MANIFEST)
                 if len(manifest_bytes) > segments.MAX_MANIFEST_BYTES:
