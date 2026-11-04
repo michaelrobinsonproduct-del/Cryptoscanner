@@ -187,15 +187,24 @@ def main():
     parser.add_argument("--historical-a2", help="Existing C/B historical WATCH handoff JSON")
     parser.add_argument("--output", help="Write read-only delivery JSON; never a ledger")
     parser.add_argument("--published-result", help="Actual verified paper-pipeline results.json")
+    parser.add_argument("--published-artifact", help="Checksummed public-paper-results GitHub ZIP (read-only)")
     parser.add_argument("--a2-delivery", help="A verified downloaded artifact projection, separate from writer cohort")
     args = parser.parse_args()
     writer = json.loads(open(args.writer_readback, encoding="utf-8").read()) if args.writer_readback else None
     historical = json.loads(open(args.historical_a2, encoding="utf-8").read()) if args.historical_a2 else None
-    if args.published_result:
+    if args.published_result and args.published_artifact:
+        parser.error("select exactly one published input")
+    if args.published_result or args.published_artifact:
         if args.run_id or args.repo or historical is not None:
             parser.error("--published-result is exclusive of historical artifact transport")
         a2 = json.loads(open(args.a2_delivery, encoding="utf-8").read()) if args.a2_delivery else None
-        result = project_published_result(json.loads(open(args.published_result, encoding="utf-8").read()), writer, a2)
+        if args.published_artifact:
+            from .manual_schedule_contract import load_verified_artifact
+            from pathlib import Path
+            published = load_verified_artifact(Path(args.published_artifact))
+        else:
+            published = json.loads(open(args.published_result, encoding="utf-8").read())
+        result = project_published_result(published, writer, a2)
     else:
         if args.a2_delivery:
             parser.error("--a2-delivery requires --published-result")
