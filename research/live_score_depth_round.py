@@ -5,7 +5,8 @@ from pathlib import Path
 from research.live_score_capture import capture_live_scan
 from research.acquisition_receipt_pipeline import load_captures
 from research.kraken_prospective_batch import collect
-from research.depth_acquisition_associations import associate_captured_scores
+from research.depth_acquisition_associations import associate_indexed_captures
+from research.prospective_round_store import append_round
 
 
 def run(root):
@@ -16,8 +17,11 @@ def run(root):
     pairs = [row["pair"] for row in load_captures(scores)][:8]
     if not pairs:
         raise ValueError("no captured WATCH markets")
-    source = collect(pairs, root / "depth")
-    binding = associate_captured_scores(scores, root / "depth", root / "associations")
+    depth_dir = root / "depth"
+    source = collect(pairs, depth_dir)
+    index_path = root / "round-index.jsonl"
+    indexed = append_round(index_path, depth_dir)
+    binding = associate_indexed_captures(scores, index_path, root / "associations")
     return {"mode": "RESEARCH_ONLY_PROSPECTIVE_SCORE_DEPTH",
             "scores_captured": captured["captures"],
             "depth_requested": source["pairs_requested"],
