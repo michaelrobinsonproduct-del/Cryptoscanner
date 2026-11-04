@@ -46,7 +46,8 @@ class DownloadedArtifactReplayTests(unittest.TestCase):
         self.save()
 
     def save(self):
-        seal(self.ledger, ["latest.json", "scoreboard.json", "ledger.json"])
+        seal(self.ledger, ["latest.json", "scoreboard.json", "ledger.json"] +
+             (["slot_receipt.json"] if "slot_receipt.json" in self.ledger else []))
         seal(self.results, ["results.json", "results.md"])
         pack(self.ledger_path, self.ledger)
         pack(self.results_path, self.results)
@@ -54,6 +55,20 @@ class DownloadedArtifactReplayTests(unittest.TestCase):
     def verify(self):
         return replay(self.ledger_path, self.results_path, run_id=RUN,
                       source_sha=SHA, ledger_commit=LEDGER)
+
+    def test_new_slot_receipt_is_verified_in_downloaded_ledger(self):
+        slot = {"schema": 1, "slot_identity": "2026-11-03T23:09:00+00:00",
+                "run_id": RUN, "source_sha": SHA,
+                "historical_quotes_reconstructed": False}
+        self.ledger["slot_receipt.json"] = json.dumps(slot).encode()
+        self.save()
+        result = self.verify()
+        self.assertEqual(result["slot_identity"], slot["slot_identity"])
+        slot["run_id"] = "999"
+        self.ledger["slot_receipt.json"] = json.dumps(slot).encode()
+        self.save()
+        with self.assertRaisesRegex(ValueError, "Slot receipt identity"):
+            self.verify()
 
     def test_failed_run_receipt_is_visible_but_never_certified(self):
         failed, markdown = render_failure(RUN, SHA)
