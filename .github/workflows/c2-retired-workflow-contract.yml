@@ -159,29 +159,9 @@ jobs:
           assert p["a2_as_of"]
           assert p["recovery_verified"] and p["status"]=="ABSTAIN_LEGACY_QUOTE_EVIDENCE"
           assert not p["trading_approved"] and not p["production_applied"]
-          # Publish a directly consumable, read-only B/D candidate contract.
-          # Historical legacy parity does NOT certify live freshness.
-          from pathlib import Path
-          payload = {
-              "schema": "c_a2_read_only_candidates_v1",
-              "receipt_sha256": p["a2_receipt_sha256"],
-              "source_as_of": p["a2_as_of"],
-              "quote_timestamp_semantics": "client_observed_not_exchange_event_time",
-              "freshness_status": "HISTORICAL_ARTIFACT_NOT_LIVE",
-              "source_cohort": p["a2_source_cohort"],
-              "eligible_pairs": p["a2_eligible_pairs"],
-              "observed_markets": p["a2_observed_markets"],
-              "watch_count": p["a2_watch_count"],
-              "watch": p["a2_watch_candidates"],
-              "status": "ABSTAIN_LEGACY_QUOTE_EVIDENCE",
-              "live_watch_certified": False,
-              "production_applied": False,
-              "trading_approved": False,
-          }
-          assert payload["watch_count"] == len(payload["watch"])
-          Path("/tmp/c-real-receipts/candidates.json").write_text(json.dumps(payload,sort_keys=True)+chr(10))
           print("C_B_A2_RECOVERY_CONNECTED",json.dumps(p,sort_keys=True))
           PY
+          python -m paper_pov.c_candidate_handoff /tmp/c-real-receipts/integration.json --from-integration --output /tmp/c-real-receipts/candidates.json
       - name: Consume C artifact through B/D read-only executable interface
         run: |
           python -m paper_pov.c_candidate_handoff /tmp/c-real-receipts/candidates.json --output /tmp/c-real-receipts/bd-handoff.json
