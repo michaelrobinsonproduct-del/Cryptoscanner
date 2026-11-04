@@ -57,7 +57,7 @@ def make_handler(repo, token, *, resolver=latest_run, reader=read_run):
                 data = json.dumps(bundle, separators=(",", ":"), allow_nan=False).encode()
                 if len(data) > 1_000_000:
                     raise ValueError("sealed bundle exceeds HTTP reader limit")
-            except (ValueError, OSError, subprocess.CalledProcessError, json.JSONDecodeError):
+            except (ValueError, TypeError, KeyError, OverflowError, OSError, subprocess.CalledProcessError, json.JSONDecodeError):
                 self.send_response(503)
                 self.send_header("Cache-Control", "no-store")
                 self.end_headers()
