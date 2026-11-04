@@ -239,6 +239,34 @@ jobs:
           assert result["writer_reconciliation_status"] == "MATCH"
           print("D2_B_VERIFIED_PUBLISHED_DELIVERY",json.dumps(result,sort_keys=True))
           PY
+      - name: Project D historical published abstention through unified B consumer
+        if: ${{ success() }}
+        env:
+          PYTHONPATH: ${{ github.workspace }}/b-delivery-consumer
+        run: |
+          set -euo pipefail
+          python -m paper_pov.github_delivery_projection \
+            --d-historical-published-report /tmp/d2-b-published-delivery.json \
+            --writer-readback /tmp/real-writer-recovery.json \
+            --output /tmp/d2-b-unified-published-delivery.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("/tmp/d2-b-unified-published-delivery.json").read_text())
+          assert report["source_run_id"] == int(__import__("os").environ["WRITER_RUN_ID"])
+          assert report["writer_reconciliation_status"] == "MATCH"
+          assert report["live_watch"] == [] and report["live_watch_authorized"] is False
+          assert report["single_writer_read_only"] is True and report["production_applied"] is False
+          print("D2_B_UNIFIED_HISTORICAL_PUBLISHED_ABSTENTION",json.dumps(report,sort_keys=True))
+          PY
+      - name: Retain unified B published delivery
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2-b-unified-published-delivery-report
+          path: /tmp/d2-b-unified-published-delivery.json
+          if-no-files-found: warn
+          retention-days: 7
       - name: Retain verified published B delivery
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
