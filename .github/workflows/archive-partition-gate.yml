@@ -6,6 +6,8 @@ on:
       - 'paper_pov/test_archive_partition_gate.py'
       - 'paper_pov/verified_trade_bars.py'
       - 'paper_pov/test_verified_trade_bars.py'
+      - 'paper_pov/kraken_trade_csv_adapter.py'
+      - 'paper_pov/test_kraken_trade_csv_adapter.py'
       - '.github/workflows/archive-partition-gate.yml'
 permissions:
   contents: read
@@ -19,4 +21,4 @@ jobs:
         with:
           python-version: '3.11'
       - name: Verify pinned partition gate behavior
-        run: python -m unittest paper_pov.test_archive_partition_gate paper_pov.test_verified_trade_bars -v
+        run: python -m unittest paper_pov.test_archive_partition_gate paper_pov.test_verified_trade_bars paper_pov.test_kraken_trade_csv_adapter -v
