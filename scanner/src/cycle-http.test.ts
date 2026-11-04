@@ -56,7 +56,7 @@ test("dashboard expires cached authenticated A2 paper WATCH without mutating sto
 test("watch endpoint abstains after failed cycle and resumes only on successful recovery",async()=>{
  let fail=false;
  const snapshot={status:"VERIFIED_SNAPSHOT" as const,as_of:"2026-11-03T04:00:00Z",scan_status:"WATCH",receipt_sha256:"b".repeat(64),watch:[{pair:"TAOUSD",quote_observed_at:"2026-11-03T03:59:00Z"}],eligible_pairs:1,observed_markets:1,abstention_counts:{},source:"a2_verified_readonly" as const,buy_approved:false as const};
- const runner=createCycleRunner(deps({scan:async()=>{if(fail)throw Error("collector unavailable");return {candidates:[row]}}}),undefined,undefined,async()=>snapshot as any);
+ const runner=createCycleRunner(deps({scan:async()=>{if(fail)throw Error("collector unavailable");return {candidates:[row]}}}),undefined,undefined,async()=>{if(fail)throw Error("A2 unavailable");return snapshot as any});
  const http=createCycleHttpHandler(runner,()=>new Date("2026-11-03T04:01:00Z"));
  expect((await runner.run("scheduled")).ok).toBe(true);
  expect(await (await http(req("/watch"))).json()).toMatchObject({status:"PAPER_ONLY_VERIFIED",watch:[{pair:"TAOUSD"}]});
