@@ -188,6 +188,8 @@ def main():
     parser.add_argument("--output", help="Write read-only delivery JSON; never a ledger")
     parser.add_argument("--published-result", help="Actual verified paper-pipeline results.json")
     parser.add_argument("--published-artifact", help="Checksummed public-paper-results GitHub ZIP (read-only)")
+    parser.add_argument("--expected-run-id", help="Expected immutable GitHub run identity")
+    parser.add_argument("--expected-source-sha", help="Expected immutable GitHub source SHA")
     parser.add_argument("--a2-delivery", help="A verified downloaded artifact projection, separate from writer cohort")
     args = parser.parse_args()
     writer = json.loads(open(args.writer_readback, encoding="utf-8").read()) if args.writer_readback else None
@@ -204,6 +206,12 @@ def main():
             published = load_verified_artifact(Path(args.published_artifact))
         else:
             published = json.loads(open(args.published_result, encoding="utf-8").read())
+        if args.published_artifact and (not args.expected_run_id or not args.expected_source_sha):
+            parser.error("ZIP readback requires expected GitHub run ID and source SHA")
+        if args.expected_run_id and str(published.get("run_id")) != args.expected_run_id:
+            raise ValueError("published artifact run identity mismatch")
+        if args.expected_source_sha and published.get("source_sha") != args.expected_source_sha:
+            raise ValueError("published artifact source SHA mismatch")
         result = project_published_result(published, writer, a2)
     else:
         if args.a2_delivery:
