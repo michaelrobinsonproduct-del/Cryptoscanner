@@ -27,9 +27,21 @@ def export_universe(latest, now=None):
            x["quote_timestamp_semantics"] != "client_observed_not_exchange_event_time"
            for x in rows):
         raise ValueError("invalid preselection status or provenance")
+    decisions = report.get("preselection_decisions")
+    allowed = {"SCREEN_REJECTED", "NOT_OHLC_SELECTED", "OHLC_ABSTAINED", "WATCH", "NOT_RANKED_WATCH"}
+    if not isinstance(decisions, dict) or set(decisions) - allowed or sum(decisions.values()) != len(rows):
+        raise ValueError("invalid preselection decision accounting")
+    if any(x.get("selection_status") not in allowed or
+           (x["selection_status"] == "WATCH") != (x.get("watch_rank") is not None) or
+           (x["selection_status"] == "OHLC_ABSTAINED") != (x.get("ohlc_abstention_category") is not None) or
+           (x["screen_passed"]) != (x.get("baseline_score") is not None)
+           for x in rows):
+        raise ValueError("invalid preselection decision provenance")
+    if {name: sum(x["selection_status"] == name for x in rows) for name in decisions} != decisions:
+        raise ValueError("preselection decision totals mismatch")
     return {"schema": "paper_preselection_v1", "as_of": verified["as_of"],
             "receipt_sha256": verified["receipt_sha256"],
-            "coverage": coverage, "markets": rows,
+            "coverage": coverage, "selection_decisions": decisions, "markets": rows,
             "future_outcomes_authenticated": False, "qualified_for_learning": False,
             "production_applied": False}
 
