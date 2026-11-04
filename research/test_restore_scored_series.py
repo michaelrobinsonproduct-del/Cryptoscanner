@@ -93,6 +93,24 @@ class RestoreScoredSeriesTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 restore_and_capture(source, Path(temp) / "new")
 
+    def test_changed_pair_unacceptable_even_if_manifest_digest_updated(self):
+        import json
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "original"
+            seed(source)
+            manifest_path = source / "entry" / "depth" / "manifest.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest["entries"][0]["pair"] = "ETHUSD"
+            manifest_path.write_text(json.dumps(manifest))
+            index_path = source / "entry" / "round-index.jsonl"
+            index_row = json.loads(index_path.read_text())
+            index_row["manifest_sha256"] = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+            index_path.write_text(json.dumps(index_row) + "\n")
+            with self.assertRaisesRegex(ValueError, "scored cohort"):
+                restore_and_capture(source, Path(tmp) / "new",
+                                    collector=lambda *_: self.fail("collected"))
+            self.assertFalse((Path(tmp) / "new").exists())
+
     def test_missing_receipt_and_existing_destination_fail_closed(self):
         with tempfile.TemporaryDirectory() as temp:
             source = Path(temp) / "original"
