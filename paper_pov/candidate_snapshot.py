@@ -6,6 +6,8 @@ import json
 import math
 from pathlib import Path
 
+from .scanner import STABLE
+
 def read_snapshot(latest_path, now=None, max_age_seconds=600):
     latest = Path(latest_path)
     if latest.is_symlink() or not latest.is_file():
@@ -60,6 +62,8 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
         if not isinstance(pair, str) or not pair or pair in seen:
             raise ValueError("duplicate or invalid pair")
         seen.add(pair)
+        if not isinstance(candidate.get("symbol"), str) or candidate["symbol"].split("/")[0].upper() in STABLE:
+            raise ValueError("stablecoin WATCH candidate prohibited")
         # B projects the displayed Kraken symbol from this sealed candidate.
         # Reject malformed/missing symbols at A readback instead of allowing a
         # downstream KeyError or a non-displayable persisted WATCH.
@@ -73,6 +77,15 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
         quote = dt.datetime.fromisoformat(candidate["quote_observed_at"].replace("Z", "+00:00"))
         if quote.tzinfo is None or quote.utcoffset() is None or not 0 <= (stamp - quote).total_seconds() <= 600:
             raise ValueError("stale candidate quote")
+        # A fresh ticker cannot make stale completed OHLC momentum valid.
+        closed_at_raw = candidate.get("ohlc_last_closed_at")
+        if not isinstance(closed_at_raw, str):
+            raise ValueError("missing completed OHLC provenance")
+        closed_at = dt.datetime.fromisoformat(closed_at_raw.replace("Z", "+00:00"))
+        if closed_at.tzinfo is None or closed_at.utcoffset() is None or not 0 <= (stamp - closed_at).total_seconds() <= 600:
+            raise ValueError("stale completed OHLC evidence")
+        if not 0 <= (now - closed_at).total_seconds() <= max_age_seconds:
+            raise ValueError("expired completed OHLC at read time")
         # Scan freshness alone is insufficient: a quote may be 9m old at scan
         # time and 9m old again when read. Enforce the actual read-time age.
         quote_age = (now - quote).total_seconds()
