@@ -1,0 +1,32 @@
+name: Isolated receipt adapter acceptance
+on:
+  push:
+    branches:
+      - batch/read-only-receipt-gate-20261103
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  receipt-adapter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify source and run all adapter tests
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          python -m unittest tools.test_scan_receipt_gate tools.test_c_integration_receipt_bridge tools.test_a2_verified_snapshot_bridge -v
+      - name: Confirm fail-closed CLI exit on invalid report
+        run: |
+          set -euo pipefail
+          printf '%s\n' '{"scan_status":"WATCH","watch":[]}' > /tmp/invalid-a2.json
+          if python -m tools.a2_verified_snapshot_bridge /tmp/invalid-a2.json; then
+            echo "FAIL: invalid A2 receipt accepted"
+            exit 1
+          fi
