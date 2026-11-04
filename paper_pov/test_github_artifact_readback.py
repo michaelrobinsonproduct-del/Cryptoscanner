@@ -58,3 +58,31 @@ def test_wrong_manifest_run_never_fetches(tmp_path):
     with pytest.raises(IntegrityError):
         retrieve_and_verify(REPO, "123", "paper-ledger", manifest, SHA, runner=run)
     assert calls == []
+
+
+def test_real_writer_artifact_name_and_nested_paths(tmp_path):
+    """Use actual paper-pipeline artifact name and nested receipt layout."""
+    from pathlib import Path
+    receipts = {
+        "paper_pov/output/latest.json": b'{"status":"WATCH"}',
+        "paper_pov/output/ledger.json": b'{"generation":3}',
+        "paper_pov/output/scoreboard.json": b'{"actual_scans":3}',
+    }
+    manifest = make_manifest(receipts, source_sha=SHA, run_id="123")
+    def run(args, timeout):
+        if args[:4] == ["gh", "api", "-X", "GET"]:
+            if "/artifacts" in args[4]:
+                return json.dumps({"total_count": 1, "artifacts": [
+                    {"id": 91, "name": "public-paper-ledger-123", "expired": False}]}).encode()
+            return json.dumps({"id": 123, "head_sha": SHA, "status": "completed",
+                "conclusion": "success", "repository": {"full_name": REPO}}).encode()
+        assert args[:3] == ["gh", "run", "download"]
+        assert args[args.index("--name") + 1] == "public-paper-ledger-123"
+        root = Path(args[-1])
+        for name, data in receipts.items():
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        return b""
+    result = retrieve_and_verify(REPO, "123", "public-paper-ledger", manifest, SHA, runner=run)
+    assert result["receipt_count"] == 3
