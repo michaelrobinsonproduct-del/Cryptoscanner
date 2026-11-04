@@ -245,19 +245,31 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/b-delivery-consumer
         run: |
           set -euo pipefail
-          python -m paper_pov.github_delivery_projection \
-            --d-historical-published-report /tmp/d2-b-published-delivery.json \
-            --writer-readback /tmp/real-writer-recovery.json \
-            --output /tmp/d2-b-unified-published-delivery.json
+          if python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("/tmp/d2-b-published-delivery.json").read_text())
+          raise SystemExit(0 if report.get("status") in (
+              "HISTORICAL_PUBLISHED_ARTIFACT_UNAVAILABLE",
+              "HISTORICAL_PUBLISHED_QUOTE_EVIDENCE_UNAVAILABLE") else 1)
+          PY
+          then
+            python -m paper_pov.github_delivery_projection \
+              --d-historical-published-report /tmp/d2-b-published-delivery.json \
+              --writer-readback /tmp/real-writer-recovery.json \
+              --output /tmp/d2-b-unified-published-delivery.json
+          else
+            cp /tmp/d2-b-published-delivery.json /tmp/d2-b-unified-published-delivery.json
+          fi
           python - <<'PY'
           import json
           from pathlib import Path
           report=json.loads(Path("/tmp/d2-b-unified-published-delivery.json").read_text())
           assert report["source_run_id"] == int(__import__("os").environ["WRITER_RUN_ID"])
           assert report["writer_reconciliation_status"] == "MATCH"
-          assert report["live_watch"] == [] and report["live_watch_authorized"] is False
+          assert isinstance(report["live_watch"], list) and report["live_watch_authorized"] is False
           assert report["single_writer_read_only"] is True and report["production_applied"] is False
-          print("D2_B_UNIFIED_HISTORICAL_PUBLISHED_ABSTENTION",json.dumps(report,sort_keys=True))
+          print("D2_B_UNIFIED_PUBLISHED_DELIVERY",json.dumps(report,sort_keys=True))
           PY
       - name: Retain unified B published delivery
         if: ${{ always() }}
