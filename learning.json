@@ -2,35 +2,35 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 7578,
+      "matured_snapshots": 7590,
       "evaluated": 7038,
-      "coverage_pct": 92.9,
-      "unresolved": 540,
-      "no_observation_in_window": 540
+      "coverage_pct": 92.7,
+      "unresolved": 552,
+      "no_observation_in_window": 552
     },
     {
       "hours": 3,
-      "matured_snapshots": 7578,
+      "matured_snapshots": 7590,
       "evaluated": 6673,
-      "coverage_pct": 88.1,
-      "unresolved": 905,
-      "no_observation_in_window": 905
-    },
-    {
-      "hours": 6,
-      "matured_snapshots": 7566,
-      "evaluated": 6649,
       "coverage_pct": 87.9,
       "unresolved": 917,
       "no_observation_in_window": 917
     },
     {
+      "hours": 6,
+      "matured_snapshots": 7590,
+      "evaluated": 6649,
+      "coverage_pct": 87.6,
+      "unresolved": 941,
+      "no_observation_in_window": 941
+    },
+    {
       "hours": 24,
-      "matured_snapshots": 7542,
+      "matured_snapshots": 7554,
       "evaluated": 6518,
-      "coverage_pct": 86.4,
-      "unresolved": 1024,
-      "no_observation_in_window": 1024
+      "coverage_pct": 86.3,
+      "unresolved": 1036,
+      "no_observation_in_window": 1036
     }
   ],
   "outcome_lag_hours_by_horizon": [
@@ -55,12 +55,12 @@
       "average_delay_hours": 0.356
     }
   ],
-  "unresolved_1h_snapshots": 540,
+  "unresolved_1h_snapshots": 552,
   "rank_comparison": {
-    "historical_ranked_samples": 7302,
+    "historical_ranked_samples": 7314,
     "mean_base_minus_early_rank": 1.77
   },
-  "newly_discovered_outside_base_top12": 1,
+  "newly_discovered_outside_base_top12": 2,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
@@ -98,16 +98,6 @@
   },
   "missed_breakout_examples": [
     {
-      "pair": "PWTUSD",
-      "observed_at": "2026-10-28T09:43:03.019149+00:00",
-      "next_scan_gain_pct": 183.18
-    },
-    {
-      "pair": "LSSOLUSD",
-      "observed_at": "2026-10-28T11:36:53.882673+00:00",
-      "next_scan_gain_pct": 103.58
-    },
-    {
       "pair": "XMNUSD",
       "observed_at": "2026-10-28T18:40:46.350557+00:00",
       "next_scan_gain_pct": 70.93
@@ -121,11 +111,6 @@
       "pair": "SOFIDUSD",
       "observed_at": "2026-10-28T23:08:31.219010+00:00",
       "next_scan_gain_pct": 48.08
-    },
-    {
-      "pair": "PIPEUSD",
-      "observed_at": "2026-10-28T09:43:03.019149+00:00",
-      "next_scan_gain_pct": 46.39
     },
     {
       "pair": "MFUSD",
@@ -146,13 +131,28 @@
       "pair": "SYNDUSD",
       "observed_at": "2026-10-29T19:45:38.230920+00:00",
       "next_scan_gain_pct": 33.71
+    },
+    {
+      "pair": "FRNTUSD",
+      "observed_at": "2026-10-31T14:08:49.750367+00:00",
+      "next_scan_gain_pct": 33.33
+    },
+    {
+      "pair": "PARTIUSD",
+      "observed_at": "2026-10-29T15:48:28.630934+00:00",
+      "next_scan_gain_pct": 32.31
+    },
+    {
+      "pair": "DENTUSD",
+      "observed_at": "2026-10-31T03:40:08.210489+00:00",
+      "next_scan_gain_pct": 31.09
     }
   ],
-  "unselected_gainers_5pct_observations": 548,
-  "market_observations": 402060,
-  "market_price_coverage": 615,
-  "feature_rows": 7470,
-  "snapshots": 7590,
+  "unselected_gainers_5pct_observations": 513,
+  "market_observations": 402659,
+  "market_price_coverage": 599,
+  "feature_rows": 7482,
+  "snapshots": 7602,
   "outcomes": 26878,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
