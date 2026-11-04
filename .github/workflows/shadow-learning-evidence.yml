@@ -29,6 +29,9 @@ jobs:
 
   historical-e1-b-integration:
     needs: real-a2-historical-universe
+    permissions:
+      actions: read
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
