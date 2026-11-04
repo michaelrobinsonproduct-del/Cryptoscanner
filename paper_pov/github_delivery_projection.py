@@ -313,6 +313,16 @@ def project_d_historical_published_abstention(report, writer_readback):
             report["source_run_id"] != writer["source_run_id"] or
             report.get("writer_reconciliation_status") != writer["reconciliation_status"]):
         raise ValueError("D published abstention not bound to writer receipt")
+    # The paired published artifact is separately authenticated by D against
+    # the actual GitHub source-run metadata. Never silently cross cohorts.
+    if "source_sha" in report and report["source_sha"] != writer["source_sha"]:
+        raise ValueError("D published abstention source SHA mismatch")
+    if "github_event" in report and report["github_event"] not in ("schedule", "workflow_dispatch"):
+        raise ValueError("D published abstention has invalid GitHub trigger")
+    if report.get("quote_evidence_present") is True:
+        raise ValueError("historical missing-quote report contradicts quote evidence")
+    if report.get("published_artifact_verified") is True and report["status"] != "HISTORICAL_PUBLISHED_QUOTE_EVIDENCE_UNAVAILABLE":
+        raise ValueError("paired published artifact claim contradicts missing artifact status")
     if any(report.get(k) is not v for k, v in (
             ("single_writer_read_only", True),
             ("live_watch_authorized", False),
@@ -324,6 +334,9 @@ def project_d_historical_published_abstention(report, writer_readback):
         "source_sha": writer["source_sha"],
         "status": report["status"],
         "abstention_reason": report["reason"],
+        "published_artifact_verified": report.get("published_artifact_verified", False),
+        "quote_evidence_present": False,
+        "github_event": report.get("github_event"),
         "writer_recovery": writer,
         "writer_reconciliation_status": writer["reconciliation_status"],
         "historical_watch_count": None,
