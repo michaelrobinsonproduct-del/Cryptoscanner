@@ -124,6 +124,9 @@ jobs:
           from paper_pov.manual_scheduled_parity import load_sealed_scan
           root = Path("paper_pov/output")
           report = load_sealed_scan(root)
+          from paper_pov.sealed_http_bundle import build_bundle
+          from paper_pov.scanner import atomic_json
+          atomic_json(root / "sealed-http-bundle.json", build_bundle(root))
           print("PAPER_SHARED_ENTRYPOINT", {
               "event": __import__("os").environ["GITHUB_EVENT_NAME"],
               "as_of": report["as_of"],
@@ -190,6 +193,7 @@ jobs:
             paper_pov/output/SHA256SUMS
             paper_pov/output/candidate-snapshot.json
             paper_pov/output/preselection-universe.json
+            paper_pov/output/sealed-http-bundle.json
             paper_pov/output/slot_receipt.json
           retention-days: 90
           if-no-files-found: error
