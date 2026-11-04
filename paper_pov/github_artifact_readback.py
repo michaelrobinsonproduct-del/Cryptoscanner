@@ -235,6 +235,8 @@ def main(argv=None):
     except (IntegrityError, OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError,
             subprocess.TimeoutExpired) as exc:
         report["reason"] = type(exc).__name__
+        if isinstance(exc, IntegrityError):
+            report["failure_detail"] = str(exc)[:240]
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     temp = output.with_name(output.name + ".tmp")
