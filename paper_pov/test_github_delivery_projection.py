@@ -68,6 +68,26 @@ class DeliveryProjectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not read-only"):
             project_delivery(base, recovery)
 
+    def test_existing_c_handoff_in_shared_delivery_schema(self):
+        base = {**BASE, "sealed": False, "artifact_status": "CHECKSUM_VERIFIED_LEGACY_NO_RECEIPT", "scoreboard": {}}
+        replay = {"schema": "c_a2_read_only_candidates_v1", "production_applied": False,
+                  "trading_approved": False, "live_watch_certified": False,
+                  "status": "ABSTAIN_LEGACY_QUOTE_EVIDENCE",
+                  "freshness_status": "HISTORICAL_ARTIFACT_NOT_LIVE",
+                  "quote_timestamp_semantics": "client_observed_not_exchange_event_time",
+                  "receipt_sha256": "a"*64, "watch_count": 1,
+                  "watch": [{"pair": "TAOUSD", "rank": 1, "status": "PAPER_WATCH"}],
+                  "eligible_pairs": 10, "observed_markets": 8,
+                  "source_as_of": "2026-10-01T00:00:00Z",
+                  "source_cohort": "authenticated_snapshot_distinct_from_historical_manual_scheduled"}
+        result = project_delivery(base, historical_a2=replay)
+        self.assertEqual(result["historical_a2"]["watch_count"], 1)
+        self.assertFalse(result["historical_a2"]["live_watch_certified"])
+        self.assertEqual(result["live_watch"], [])
+        replay["live_watch_certified"] = True
+        with self.assertRaises(ValueError):
+            project_delivery(base, historical_a2=replay)
+
     def test_untrusted_promotion_and_run_provenance_rejected(self):
         valid = {**BASE, "sealed": False,
                  "artifact_status": "CHECKSUM_VERIFIED_LEGACY_NO_RECEIPT", "scoreboard": {}}
