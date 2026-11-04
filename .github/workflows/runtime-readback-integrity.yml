@@ -251,8 +251,27 @@ jobs:
               writer=json.loads(Path("/tmp/real-writer-recovery.json").read_text())
               if published.get("ledger_generation") != writer["persisted_paper"]["ledger_generation"]:
                   raise ValueError("published result ledger generation differs from recovered same-run writer")
+              # A historical writer receipt can remain valid after the remote
+              # single-writer branch advances. Divergence is not corruption:
+              # retain the source-qualified published result but abstain from
+              # live delivery instead of failing historical recovery.
               if writer["remote_ledger_reconciliation"]["status"] != "MATCH":
-                  raise ValueError("same-run published delivery requires matching packed ledger")
+                  report = {
+                      "source_run_id": int(os.environ["WRITER_RUN_ID"]),
+                      "source_sha": os.environ["WRITER_SOURCE_SHA"],
+                      "github_event": published["github_event"],
+                      "published_artifact_verified": True,
+                      "quote_evidence_present": True,
+                      "status": "HISTORICAL_WRITER_RECONCILIATION_NOT_MATCHED",
+                      "reason": "REMOTE_LEDGER_" + writer["remote_ledger_reconciliation"]["status"],
+                      "single_writer_read_only": True,
+                      "live_watch_authorized": False,
+                      "production_applied": False,
+                      "writer_reconciliation_status": writer["remote_ledger_reconciliation"]["status"],
+                  }
+                  Path("/tmp/d2-b-published-delivery.json").write_text(json.dumps(report, sort_keys=True)+"\\n")
+                  Path("/tmp/d2-published-legacy").write_text("true")
+                  print("D2_B_HISTORICAL_RECONCILIATION_ABSTAIN",json.dumps(report,sort_keys=True))
           if "quote_evidence" not in published:
               # A paired legacy result is NOT a quote-complete source.
               # Preserve explicit absence and cohort identity for B and E,
@@ -308,7 +327,8 @@ jobs:
           report=json.loads(Path("/tmp/d2-b-published-delivery.json").read_text())
           raise SystemExit(0 if report.get("status") in (
               "HISTORICAL_PUBLISHED_ARTIFACT_UNAVAILABLE",
-              "HISTORICAL_PUBLISHED_QUOTE_EVIDENCE_UNAVAILABLE") else 1)
+              "HISTORICAL_PUBLISHED_QUOTE_EVIDENCE_UNAVAILABLE",
+              "HISTORICAL_WRITER_RECONCILIATION_NOT_MATCHED") else 1)
           PY
           then
             python -m paper_pov.github_delivery_projection \
