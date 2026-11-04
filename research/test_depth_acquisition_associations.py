@@ -46,6 +46,26 @@ class DepthAssociationTests(unittest.TestCase):
         self.assertEqual(bound[0]["source_sha256"], self.source)
 
     @patch("research.depth_acquisition_associations.verified_rows")
+    def test_repeated_raw_depth_receipt_binds_exact_observation_epoch(self, rows):
+        duplicated = {**self.row, "first_observed_at": 401}
+        rows.return_value = ([self.row, duplicated], [])
+        self.associate(source_first_observed_at=101)
+        bound, exclusions, _ = verified_associations(
+            self.root / "scores", self.root / "depth-links", self.root / "raw")
+        self.assertEqual(exclusions, [])
+        self.assertEqual(len(bound), 1)
+        self.assertEqual(bound[0]["source_first_observed_at"], 101)
+
+    @patch("research.depth_acquisition_associations.verified_rows")
+    def test_legacy_sha_only_binding_repeated_depth_is_ambiguous(self, rows):
+        rows.return_value = ([self.row, {**self.row, "first_observed_at": 401}], [])
+        self.associate()
+        bound, exclusions, _ = verified_associations(
+            self.root / "scores", self.root / "depth-links", self.root / "raw")
+        self.assertEqual(bound, [])
+        self.assertEqual(exclusions[0]["reason"], "AMBIGUOUS_SOURCE_RECEIPT")
+
+    @patch("research.depth_acquisition_associations.verified_rows")
     def test_connector_cli_persists_association_report(self, rows):
         from research.depth_acquisition_associations import main as association_main
         rows.return_value = ([self.row], [])
