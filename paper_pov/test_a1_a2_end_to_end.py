@@ -1,5 +1,6 @@
 """A1→A2 complete fixture-backed scan, durable receipt and read-only consumption."""
 import datetime as dt
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -45,6 +46,14 @@ class EndToEndCandidateTests(unittest.TestCase):
             self.assertEqual(universe["receipt_sha256"], result["receipt_sha256"])
             self.assertEqual(len(universe["markets"]), report["observed_markets"])
             self.assertFalse(universe["qualified_for_learning"])
+            self.assertEqual(len({x["observation_id"] for x in universe["markets"]}), report["observed_markets"])
+            for x in universe["markets"]:
+                expected = hashlib.sha256(("paper-preselection-v1|" +
+                    universe["receipt_sha256"] + "|" + x["pair"]).encode()).hexdigest()
+                self.assertEqual(x["observation_id"], expected)
+            ranked = {x["pair"]: x["rank"] for x in result["watch"]}
+            self.assertEqual({x["pair"]: x["watch_rank"] for x in universe["markets"]
+                              if x["selection_status"] == "WATCH"}, ranked)
             self.assertEqual(sum(universe["selection_decisions"].values()), report["observed_markets"])
             self.assertEqual(universe["selection_decisions"]["WATCH"], len(report["watch"]))
             self.assertEqual(universe["selection_decisions"]["OHLC_ABSTAINED"], len(report["abstentions"]))
