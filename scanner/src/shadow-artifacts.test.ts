@@ -28,7 +28,7 @@ test("HTTP manual and scheduled both load read-only outcome artifacts and shadow
 test("missing artifact URL and malformed or count-mismatched evidence abstain, baseline stays intact",async()=>{
  const missing=createCycleRunner(deps,createReadOnlyShadowLoader(undefined));
  const r=await missing.run("manual");expect(r.result.candidates).toHaveLength(1);
- expect(r.result.shadow_evaluation.candidates[0].status).toBe("ABSTAIN");expect(r.result.shadow_artifact_status).toBe("UNAVAILABLE");
+ expect(r.result.shadow_evaluation.candidates[0].status).toBe("ABSTAIN");expect(r.result.shadow_artifact_status).toBe("REJECTED");
  const bad=createReadOnlyShadowLoader("https://example.org/ledger.json",async()=>new Response(JSON.stringify({evidence:{...evidence,outcome_rows:2},outcomes})) as any);
  await expect(bad()).rejects.toThrow("shadow_ledger_count_mismatch");
 });
@@ -49,7 +49,7 @@ test("self-consistent but untrusted source and missing challenger scores cannot 
  await expect(createReadOnlyShadowLoader("https://example.org/ledger.json",response,"c".repeat(64))()).rejects.toThrow("untrusted_shadow_source");
  const empty={...verified,score_ledger_sha:await digest([])};
  const loader=createReadOnlyShadowLoader("https://example.org/ledger.json",async(url:any)=>new Response(JSON.stringify(url===gateUrl?researchGate:{evidence:empty,outcomes,scores:[]})) as any,source,gateUrl,researchDigest);
- const runner=createCycleRunner(deps,loader);const result=await runner.run("manual");
+ const runner=createCycleRunner(deps,loader,undefined,undefined,async()=>({decision:"SHADOW_ELIGIBLE_REVIEW",held_out_n:42,production_applied:false as const}));const result=await runner.run("manual");
  expect(result.result.shadow_evaluation.candidates[0].reason).toBe("missing_or_leaky_challenger_score");
 });
 
@@ -170,7 +170,7 @@ test("authenticated equivalent-instant timestamps score identically across manua
  const alternateOutcomes=[{...outcomes[0],observed_at:"2026-11-03T03:59:00.000Z"}];
  const verified={...evidence,outcome_ledger_sha:await digest(alternateOutcomes),score_ledger_sha:await digest(alternateScores)};
  const loader=createReadOnlyShadowLoader("https://example.org/ledger.json",async(url:any)=>new Response(JSON.stringify(url===gateUrl?researchGate:{evidence:verified,outcomes:alternateOutcomes,scores:alternateScores})) as any,source,gateUrl,researchDigest);
- const runner=createCycleRunner(deps,loader);
+ const runner=createCycleRunner(deps,loader,undefined,undefined,async()=>({decision:"SHADOW_ELIGIBLE_REVIEW",held_out_n:42,production_applied:false as const}));
  const manual=await (await createCycleHttpHandler(runner)(new Request("http://localhost/cycle"))).json();
  const scheduled=await runner.run("scheduled");
  expect(manual).toEqual(scheduled.result);
