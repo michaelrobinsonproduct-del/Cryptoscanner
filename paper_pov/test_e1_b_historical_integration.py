@@ -206,6 +206,18 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
                                 for row in handoff["diagnostic_outcome_rows"]))
 
             self.assertFalse(projected["promotion_authorized"])
+            # The 48h target opens at +48h05; its high is not observable
+            # until the entire target bar closes at +48h10.
+            with patch.dict(sys.modules, {"paper_pov.github_sealed_bundle_readback": transport_stub}):
+                not_closed = run_pipeline(
+                    manifest, root, schema, {"XUSD": "XUSD.csv"}, predictions,
+                    (start + dt.timedelta(hours=48, minutes=5)).isoformat())
+                closed = run_pipeline(
+                    manifest, root, schema, {"XUSD": "XUSD.csv"}, predictions,
+                    (start + dt.timedelta(hours=48, minutes=10)).isoformat())
+            self.assertEqual(not_closed["execution"]["status_counts"].get("48h:MATURED_OBSERVED", 0), 0)
+            self.assertEqual(not_closed["execution"]["status_counts"]["48h:ABSTAIN_IMMATURE"], 1)
+            self.assertEqual(closed["execution"]["status_counts"]["48h:MATURED_OBSERVED"], 1)
             # Mutation of pinned bytes must fail BEFORE E can hand anything to B.
             (root / "XUSD.csv").write_bytes(raw.replace(b"100.00", b"101.00", 1))
             with self.assertRaisesRegex(ValueError, "checksum"):
