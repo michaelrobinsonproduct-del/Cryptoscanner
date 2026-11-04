@@ -37,7 +37,7 @@ export function createCycleRunner(deps:Dependencies,shadow?:()=>Promise<{evidenc
      output={...output,shadow_evaluation:attachShadowEvaluation(result,null,[]).shadow_evaluation,shadow_artifact_status:"REJECTED"};
     }else{
      try{const {evidence,outcomes,scores}=await shadow();output={...output,shadow_evaluation:attachShadowEvaluation(result,evidence,outcomes,scores).shadow_evaluation,shadow_artifact_status:evidence?"VERIFIED":"UNAVAILABLE"}}
-     catch{output={...attachShadowEvaluation(result,null,[]),learning_gate:output.learning_gate,shadow_artifact_status:"REJECTED"}}
+     catch{output={...output,shadow_evaluation:attachShadowEvaluation(result,null,[]).shadow_evaluation,shadow_artifact_status:"REJECTED"}}
     }
    }
    if(recoveryStatus){try{output={...output,recovery_status:await recoveryStatus()}}catch{output={...output,recovery_status:unavailableRecovery("read_or_validation_failed")}}}
