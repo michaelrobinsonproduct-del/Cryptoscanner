@@ -13,7 +13,11 @@ export function createCycleHttpHandler(runner:ReturnType<typeof createCycleRunne
   const path=new URL(req.url).pathname;
   if(path==="/health"){const s=runner.snapshot();return Response.json({mode:"shadow",running:s.running,cycles:s.cycles,lastError:s.lastError})}
   if(path==="/dashboard"){const s=runner.snapshot();return Response.json({mode:"shadow",running:s.running,cycles:s.cycles,last_error:s.lastError,last_result:safeLast(s.last)})}
+  if(path==="/watch"){
+   const s=runner.snapshot(),last=safeLast(s.last);
+   return Response.json({mode:"paper_only",cycles:s.cycles,running:s.running,watch:last?.paper_watch??[],status:last?.paper_watch_status??"ABSTAIN_NO_SCAN",live_watch_certified:false,receipt_sha256:last?.a2_snapshot?.receipt_sha256??null,as_of:last?.a2_snapshot?.as_of??null},{headers:{"cache-control":"no-store"}});
+  }
   if(path==="/cycle"){const result=await runner.run("manual");return Response.json(result.ok?result.result:{error:result.error},{status:result.status})}
-  return Response.json({endpoints:["/health","/dashboard","/cycle"]});
+  return Response.json({endpoints:["/health","/dashboard","/watch","/cycle"]});
  };
 }
