@@ -254,25 +254,64 @@ jobs:
           git clone --no-checkout --filter=blob:none "https://github.com/$REPO.git" /tmp/c-b-consumer
           git -C /tmp/c-b-consumer fetch --depth=1 origin integration-a-b-c-d-20261103
           git -C /tmp/c-b-consumer checkout --detach FETCH_HEAD
-          # Select newest successful scanner run with a published artifact.
+          # Find the newest published result with authenticated complete quote
+          # evidence. Do not accept a newer legacy cohort merely by recency.
           gh api "repos/$REPO/actions/workflows/paper-pipeline.yml/runs?branch=main&status=success&per_page=30" > /tmp/c-real-receipts/b-runs.json
           python - <<'PY'
-          import json,os,subprocess
+          import hashlib,io,json,os,re,subprocess,zipfile
           from pathlib import Path
           root=Path("/tmp/c-real-receipts")
           runs=json.loads((root/"b-runs.json").read_text()).get("workflow_runs",[])
+          fallback=None
           for run in runs:
               if run.get("conclusion")!="success" or run.get("event") not in ("schedule","workflow_dispatch"):
                   continue
               rid=run["id"]
               listing=json.loads(subprocess.check_output(["gh","api",f"repos/{os.environ['REPO']}/actions/runs/{rid}/artifacts"]))
               matches=[a for a in listing.get("artifacts",[]) if a.get("name")==f"public-paper-results-{rid}" and not a.get("expired")]
-              if len(matches)==1:
-                  (root/"b-selected.json").write_text(json.dumps({"run_id":rid,"sha":run["head_sha"]}))
-                  (root/"b-published-run.json").write_text(json.dumps(run))
+              if len(matches)!=1:
+                  continue
+              data=subprocess.check_output(["gh","api","-H","Accept: application/vnd.github+json",f"repos/{os.environ['REPO']}/actions/artifacts/{matches[0]['id']}/zip"])
+              with zipfile.ZipFile(io.BytesIO(data)) as archive:
+                  names=archive.namelist()
+                  if len(names)!=len(set(names)) or any(n.startswith("/") or ".." in Path(n).parts for n in names):
+                      continue
+                  results=[n for n in names if Path(n).name=="results.json"]
+                  manifests=[n for n in names if Path(n).name=="SHA256SUMS"]
+                  if len(results)!=1 or len(manifests)!=1:
+                      continue
+                  files={Path(n).name:archive.read(n) for n in names if not n.endswith("/")}
+                  verified=True
+                  for line in files["SHA256SUMS"].decode().splitlines():
+                      match=re.fullmatch(r"([0-9a-f]{64})  ([^/]+)",line)
+                      if not match or match[2] not in files or hashlib.sha256(files[match[2]]).hexdigest()!=match[1]:
+                          verified=False
+                          break
+                  if not verified or "results.json" not in files:
+                      continue
+                  result=json.loads(files["results.json"])
+                  if str(result.get("run_id"))!=str(rid) or result.get("source_sha")!=run["head_sha"]:
+                      continue
+                  quotes=result.get("quote_evidence")
+                  complete=isinstance(quotes,list) and type(result.get("observed_markets")) is int and len(quotes)==result["observed_markets"]
+                  if fallback is None:
+                      fallback=(run,files)
+                  if not complete:
+                      continue
+                  selected=(run,files)
                   break
           else:
-              raise SystemExit("No recent published scanner result available")
+              if fallback is None:
+                  raise SystemExit("No checksum-verified published scanner results available")
+              selected=fallback
+          run,files=selected
+          target=root/"b-published"
+          target.mkdir(exist_ok=True)
+          for name,data in files.items():
+              (target/name).write_bytes(data)
+          (root/"b-selected.json").write_text(json.dumps({"run_id":run["id"],"sha":run["head_sha"]}))
+          (root/"b-published-run.json").write_text(json.dumps(run))
+          print("SELECTED_PUBLISHED_QUOTE_COHORT",run["id"],"complete" if isinstance(json.loads(files["results.json"]).get("quote_evidence"),list) else "legacy_abstention")
           PY
           python - <<'PY'
           import json
@@ -283,17 +322,7 @@ jobs:
           assert run["head_sha"]==json.loads(Path("/tmp/c-real-receipts/b-selected.json").read_text())["sha"]
           PY
           SELECTED_RUN=$(python -c 'import json;print(json.load(open("/tmp/c-real-receipts/b-selected.json"))["run_id"])')
-          gh run download "$SELECTED_RUN" --repo "$REPO" --name "public-paper-results-$SELECTED_RUN" --dir /tmp/c-real-receipts/b-published
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          root=Path("/tmp/c-real-receipts/b-published")
-          files=list(root.rglob("results.json"))
-          assert len(files)==1, "Published results missing"
-          # B's existing verified ZIP reader is used below when possible.
-          manifests=list(root.rglob("SHA256SUMS"))
-          assert len(manifests)==1
-          PY
+          # ZIP members were independently checksum-verified during selection.
           (cd /tmp/c-real-receipts/b-published && sha256sum -c SHA256SUMS)
           python - <<'PY'
           import json
