@@ -295,6 +295,33 @@ jobs:
           projected=json.loads(Path("/tmp/b-delivery/delivery.json").read_text())
           if projected["schema"]!="paper_delivery_readback_v1" or projected["live_watch_authorized"] is not False or projected["single_writer_read_only"] is not True:
               raise SystemExit("UNSAFE_DELIVERY_PROJECTION")
+          # Publish the actual integration outcome, including unavailable
+          # evidence, in one retained report rather than silently dropping it.
+          a2_status=json.loads(Path("/tmp/b-delivery/a2-status.json").read_text())
+          e_status=json.loads(Path("/tmp/b-delivery/e-status.json").read_text())
+          if projected["source_run_id"]!=int(identity["run_id"]):
+              raise SystemExit("DELIVERY_RUN_IDENTITY_MISMATCH")
+          if projected["source_sha"]!=identity["source_sha"] or projected["github_event"]!=identity["event"]:
+              raise SystemExit("DELIVERY_SOURCE_IDENTITY_MISMATCH")
+          if projected["writer_recovery"]!=writer_projection:
+              raise SystemExit("D_RECOVERY_NOT_CONSUMED")
+          if bool(projected.get("a2_receipt_cohort")) != bool(a2_path.exists()):
+              raise SystemExit("A2_EVIDENCE_NOT_CONSUMED")
+          if bool(projected.get("learning")) != bool(e_path.exists()):
+              raise SystemExit("E_LEARNING_NOT_CONSUMED")
+          status={"schema":"b_integrated_delivery_status_v1",
+                  "source_run_id":projected["source_run_id"],
+                  "source_sha":projected["source_sha"],
+                  "github_event":projected["github_event"],
+                  "delivery_status":projected["status"],
+                  "watch_count":len(projected["live_watch"]),
+                  "live_watch_authorized":False,
+                  "writer_reconciliation_status":projected["writer_reconciliation_status"],
+                  "writer_same_scan_as_delivery":projected["writer_recovery"]["same_scan_as_delivery"],
+                  "a2":a2_status,"e":e_status,
+                  "learning_qualified":False,
+                  "production_applied":False}
+          Path("/tmp/b-delivery/integration-status.json").write_text(json.dumps(status,sort_keys=True))
           print("SHARED_MANUAL_SCHEDULED_DELIVERY",projected["source_run_id"],projected["status"])
           PY
       - uses: actions/upload-artifact@v4
@@ -307,5 +334,6 @@ jobs:
             /tmp/b-delivery/a2-delivery.json
             /tmp/b-delivery/e-status.json
             /tmp/b-delivery/delivery.json
+            /tmp/b-delivery/integration-status.json
           if-no-files-found: error
           retention-days: 7
