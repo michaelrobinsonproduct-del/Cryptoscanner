@@ -58,16 +58,22 @@ class PaperScanTests(unittest.TestCase):
         self.assertTrue(all(x["quote_observed_at"] <= x["as_of"] for x in a["watch"]))
 
     def test_gap_fails_closed(self):
-        with self.assertRaisesRegex(RuntimeError, "No fresh"):
-            run(gap=True)
+        report = run(gap=True)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+        self.assertEqual(report["abstention_counts"]["ohlc_gap_or_schema"], 24)
 
     def test_zero_volume_no_trade_abstains(self):
-        with self.assertRaisesRegex(RuntimeError, "No fresh"):
-            run(zero_volume=True)
+        report = run(zero_volume=True)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+        self.assertEqual(report["abstention_counts"]["invalid_market_metrics"], 24)
 
     def test_stale_candle_fails_closed(self):
-        with self.assertRaisesRegex(RuntimeError, "No fresh"):
-            run(stale=True)
+        report = run(stale=True)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+        self.assertEqual(report["abstention_counts"]["stale_or_future_ohlc"], 24)
 
     def test_insufficient_universe_coverage_fails_closed(self):
         with self.assertRaisesRegex(RuntimeError, "coverage"):
@@ -171,8 +177,9 @@ class PaperScanTests(unittest.TestCase):
                 for row in result[key]:
                     row[0] += 900
             return result
-        with self.assertRaisesRegex(RuntimeError, "No fresh"):
-            scanner.scan(api=future_api, clock=lambda: NOW, sleep=lambda _: None)
+        report = scanner.scan(api=future_api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["abstention_counts"]["stale_or_future_ohlc"], 24)
 
 if __name__ == "__main__":
     unittest.main()
