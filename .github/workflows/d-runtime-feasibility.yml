@@ -7,6 +7,7 @@ on:
       - 'paper_pov/test_replay_downloaded_artifacts.py'
       - 'paper_pov/missed_slot_recovery.py'
       - 'paper_pov/test_missed_slot_recovery.py'
+      - 'paper_pov/scanner.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -40,6 +41,51 @@ jobs:
           cp /tmp/feasibility-test.log feasibility-test.log
           sha256sum feasibility-proof.json feasibility-test.log > feasibility-SHA256SUMS
           sha256sum -c feasibility-SHA256SUMS
+      - name: Read-only live Kraken paper scan with truthful failure receipt
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import datetime as dt
+          import json
+          import os
+          from pathlib import Path
+          from paper_pov.scanner import scan, atomic_json
+          out = Path("feasibility-live-scan.json")
+          try:
+              report = scan()
+              if report.get("mode") != "PAPER_ONLY" or report.get("buy_approved") is not False:
+                  raise ValueError("Unexpected non-paper scan mode")
+              if not report.get("watch"):
+                  raise ValueError("Live scan returned no WATCH candidates")
+              receipt = {
+                  "status": "LIVE_PAPER_WATCH",
+                  "run_id": os.environ["GITHUB_RUN_ID"],
+                  "source_sha": os.environ["GITHUB_SHA"],
+                  "as_of": report["as_of"],
+                  "watch_count": len(report["watch"]),
+                  "eligible_pairs": report["eligible_pairs"],
+                  "observed_markets": report["observed_markets"],
+                  "watch": report["watch"],
+                  "quote_provenance": "client_observed_not_exchange_timestamp",
+                  "ledger_persisted": False,
+                  "production_applied": False,
+              }
+          except Exception as exc:
+              receipt = {
+                  "status": "LIVE_SCAN_ABSTAINED",
+                  "run_id": os.environ["GITHUB_RUN_ID"],
+                  "source_sha": os.environ["GITHUB_SHA"],
+                  "error_type": type(exc).__name__,
+                  "reason": str(exc)[:300],
+                  "ledger_persisted": False,
+                  "production_applied": False,
+              }
+          atomic_json(out, receipt)
+          print("LIVE_SCAN_RECEIPT", json.dumps({
+              k: v for k, v in receipt.items() if k != "watch"}, sort_keys=True))
+          PY
+          sha256sum feasibility-proof.json feasibility-test.log feasibility-live-scan.json > feasibility-SHA256SUMS
+          sha256sum -c feasibility-SHA256SUMS
       - name: Preserve downloadable evidence
         uses: actions/upload-artifact@v4
         with:
@@ -47,6 +93,7 @@ jobs:
           path: |
             feasibility-proof.json
             feasibility-test.log
+            feasibility-live-scan.json
             feasibility-SHA256SUMS
           retention-days: 7
           if-no-files-found: error
