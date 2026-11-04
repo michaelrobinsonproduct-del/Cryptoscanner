@@ -43,11 +43,16 @@ def summarize_persisted_paper(files):
         raise IntegrityError("Recovered ledger and scoreboard generation mismatch")
     status = scan.get("status")
     if not isinstance(status, str) or not status:
-        raise IntegrityError("Recovered scan status absent")
+        # Historical writer receipts predate the explicit scan-status field.
+        # Valid writer checksums remain recoverable, but no WATCH/ABSTAIN
+        # conclusion can be inferred from the missing field.
+        status = "UNKNOWN_LEGACY"
     return {"ledger_generation": generation, "scan_status": status,
             "quote_evidence_certified": scan.get("exchange_event_freshness_verified") is True
                                         and scan.get("published_quote_evidence") is True,
-            "outcome": "ABSTAIN" if status.startswith("ABSTAIN") else "HISTORICAL_RESULT_ONLY",
+            "outcome": ("ABSTAIN" if status.startswith("ABSTAIN") else
+                        "HISTORICAL_UNCLASSIFIED" if status == "UNKNOWN_LEGACY" else
+                        "HISTORICAL_RESULT_ONLY"),
             "live_replay_performed": False}
 
 def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.check_output):
