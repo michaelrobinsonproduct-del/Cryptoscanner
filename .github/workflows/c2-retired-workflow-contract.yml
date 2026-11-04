@@ -236,9 +236,9 @@ jobs:
           w=json.loads(Path("/tmp/c-real-receipts/bd-recovered-watch.json").read_text())
           assert b["writer_recovery"]["run_id"]==str(json.loads(Path("/tmp/c-real-receipts/d2-readback.json").read_text())["run_id"])
           assert b["writer_recovery"]["status"] in ("WRITER_CHECKSUM_ONLY","VERIFIED_REMOTE_READBACK")
-          assert b["writer_recovery"]["delivery_projection_ready"] == (b["writer_recovery"]["persisted_paper"] is not None and b["writer_recovery"]["delivery_blocker"] is None)
+          assert b["writer_recovery"]["delivery_projection_ready"] == (b["writer_recovery"]["delivery_blocker"] is None)
           if not b["writer_recovery"]["delivery_projection_ready"]:
-              assert b["writer_recovery"]["delivery_blocker"]=="D_PERSISTED_PAPER_MISSING_OR_INCOMPLETE"
+              assert b["writer_recovery"]["delivery_blocker"] in ("D_REMOTE_READBACK_NOT_INDEPENDENTLY_AUTHENTICATED", "D_REMOTE_LEDGER_RECONCILIATION_NOT_MATCH", "D_REMOTE_LEDGER_RECONCILIATION_MISSING", "D_PERSISTED_PAPER_MISSING_OR_INCOMPLETE")
               assert not Path("/tmp/c-real-receipts/bd-writer-readback.json").exists()
           assert b["historical_a2"]["watch"]==w["watch"]
           assert not b["live_watch_certified"] and not b["same_run_or_candidate_parity_claimed"]
@@ -336,7 +336,8 @@ jobs:
           import json
           from pathlib import Path
           bridge=json.loads(Path("/tmp/c-real-receipts/cd-bridge.json").read_text())
-          assert bridge["writer_recovery"]["delivery_projection_ready"], "D persisted evidence not available for B"
+          Path("/tmp/c-real-receipts/b-writer-ready").write_text("yes" if bridge["writer_recovery"]["delivery_projection_ready"] else "no")
+          print("D_WRITER_DELIVERY_GATE",bridge["writer_recovery"]["delivery_blocker"] or "READY")
           PY
           # Legacy published runs can have valid SHA256SUMS and writer recovery
           # but no per-market quote_evidence. Never reclassify those as live WATCH.
@@ -353,10 +354,12 @@ jobs:
           recovered=json.loads(Path("/tmp/c-real-receipts/d2-readback.json").read_text())
           same_scan=(str(recovered.get("run_id"))==str(selected["run_id"])
                      and recovered.get("source_sha")==selected["sha"])
+          writer_ready=Path("/tmp/c-real-receipts/b-writer-ready").read_text()=="yes"
           Path("/tmp/c-real-receipts/b-quote-evidence-ready").write_text(
-              "yes" if complete and same_scan else "no")
+              "yes" if complete and same_scan and writer_ready else "no")
           Path("/tmp/c-real-receipts/b-delivery-blocker").write_text(
-              "NONE" if complete and same_scan else
+              "NONE" if complete and same_scan and writer_ready else
+              "ABSTAIN_D_WRITER_READBACK_NOT_VERIFIED" if not writer_ready else
               "ABSTAIN_PUBLISHED_QUOTE_EVIDENCE_MISSING" if not complete else
               "ABSTAIN_WRITER_READBACK_DIFFERENT_SCAN")
           print("PUBLISHED_QUOTE_COVERAGE",len(quotes) if isinstance(quotes,list) else "missing",r.get("observed_markets"))
@@ -390,14 +393,13 @@ jobs:
           root=Path("/tmp/c-real-receipts")
           bridge=json.loads((root/"cd-bridge.json").read_text())
           published=json.loads((root/"b-published/results.json").read_text())
-          assert bridge["writer_recovery"]["delivery_projection_ready"]
           assert str(published["run_id"])==str(json.loads((root/"b-selected.json").read_text())["run_id"])
           result={"schema":"paper_c_bd_integration_abstention_v1",
                   "status":(root/"b-delivery-blocker").read_text(),
                   "source_run_id":json.loads((root/"b-selected.json").read_text())["run_id"],
                   "source_sha":published["source_sha"],
                   "writer_recovery_status":bridge["writer_recovery"]["status"],
-                  "writer_recovery_ready":True,
+                  "writer_recovery_ready":bridge["writer_recovery"]["delivery_projection_ready"],
                   "historical_a2_watch_count":bridge["historical_a2"]["watch_count"],
                   "live_watch":[],
                   "live_watch_authorized":False,
