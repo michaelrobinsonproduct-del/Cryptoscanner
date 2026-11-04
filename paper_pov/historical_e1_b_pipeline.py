@@ -139,6 +139,7 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
                                "COMPLETE_BAR_PATH_UNQUALIFIED": 0}
                       for h in (1, 6, 24, 48)}
     by_selection = {}
+    cohort_coverage = []
     for row in rows:
         at = utc_time(row["as_of"])
         times = bars[row["pair"]]
@@ -155,6 +156,7 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
                       if idx < len(times) and times[idx] == target
                       else "NO_ENTRY_BAR")
         status_counts[status] += 1
+        row_horizons = {}
         for hours in (1, 6, 24, 48):
             if row["pair"] not in partitions:
                 horizon = "NO_PINNED_PARTITION"
@@ -171,6 +173,11 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
                                   for i in range(required))
                            else "INCOMPLETE_5M_PATH")
             horizon_counts[str(hours)][horizon] += 1
+            row_horizons[str(hours)] = horizon
+        cohort_coverage.append({"prediction_id": row["prediction_id"],
+                                "pair": row["pair"], "as_of": row["as_of"],
+                                "selection_status": row["selection_status"],
+                                "entry_status": status, "horizons": row_horizons})
         by_selection.setdefault(row["selection_status"], {})
         d = by_selection[row["selection_status"]]
         d[status] = d.get(status, 0) + 1
@@ -181,6 +188,7 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
             "frozen_observation_count": len(rows),
             "status_counts": status_counts, "selection_status_counts": by_selection,
             "diagnostic_horizon_coverage": horizon_counts,
+            "cohort_coverage": sorted(cohort_coverage, key=lambda x: x["prediction_id"]),
             "partition_provenance": provenance,
             "qualified_outcome_count": 0, "source_authenticated": False,
             "qualified_for_learning": False, "promotion_authorized": False,
