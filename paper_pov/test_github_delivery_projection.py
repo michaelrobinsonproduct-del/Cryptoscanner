@@ -113,6 +113,44 @@ class DeliveryProjectionTests(unittest.TestCase):
             with self.subTest(field=field), self.assertRaises(ValueError):
                 project_published_result({**abstain, field: value})
 
+    def test_actual_paper_delivery_with_separate_a2_receipt_and_d_writer(self):
+        from paper_pov.test_results_report import fixture
+        from paper_pov.results_report import render
+        scan, score = fixture()
+        a2 = {"schema": "a2_published_watch_delivery_v1",
+              "source": "kraken_public_rest_client_observed",
+              "receipt_sha256": "c"*64, "as_of": "2026-11-04T08:00:00Z",
+              "scan_status": "WATCH", "watch_count": 1,
+              "watch": [{"rank": 1, "symbol": "TAOUSD", "buy_approved": False}],
+              "eligible_pairs": 605, "observed_markets": 602,
+              "client_quote_freshness_verified": True,
+              "single_writer_ledger_verified": False,
+              "exchange_event_freshness_verified": False,
+              "production_applied": False, "buy_approved": False}
+        d = {"status": "WRITER_CHECKSUM_ONLY", "remote_downloaded": True,
+             "ledger_writer_invoked": False, "production_applied": False,
+             "independently_authenticated": False, "run_id": "456", "source_sha": "b"*40,
+             "persisted_paper": {"ledger_generation": 7, "scan_status": "ABSTAIN_STALE",
+                                 "live_replay_performed": False},
+             "remote_ledger_reconciliation": {"status": "UNAVAILABLE",
+                 "reason": "REMOTE_LEDGER_QUERY_FAILED",
+                 "independently_authenticated": False, "production_applied": False}}
+        outputs = []
+        for event, cron in (("schedule", "9 * * * *"), ("workflow_dispatch", None)):
+            published, _ = render(scan, score, run_id="41235442591", source_sha=SHA,
+                                  ledger_commit="b"*40, event=event, originating_cron=cron)
+            output = project_published_result(published, d, a2)
+            self.assertEqual(output["writer_reconciliation_status"], "UNAVAILABLE")
+            self.assertEqual(output["a2_receipt_cohort"]["receipt_sha256"], "c"*64)
+            self.assertFalse(output["a2_receipt_cohort"]["same_scan_as_writer"])
+            self.assertFalse(output["live_watch_authorized"])
+            outputs.append(output)
+        self.assertEqual(set(outputs[0]), set(outputs[1]))
+        with self.assertRaisesRegex(ValueError, "falsely claims"):
+            project_published_result(published, d, {**a2, "single_writer_ledger_verified": True})
+        with self.assertRaisesRegex(ValueError, "count mismatch"):
+            project_published_result(published, d, {**a2, "watch_count": 2})
+
     def test_untrusted_promotion_and_run_provenance_rejected(self):
         valid = {**BASE, "sealed": False,
                  "artifact_status": "CHECKSUM_VERIFIED_LEGACY_NO_RECEIPT", "scoreboard": {}}
