@@ -57,7 +57,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: michaelrobinsonproduct-del/Cryptoscanner
-          ref: f11ff7260a504e9580e38b329958238654c8aaaa
+          ref: 9ef6361a279468bd2de9e45557ddc7195a80af2
           path: a2-source
           persist-credentials: false
       - name: Acquire one live public Kraken paper snapshot and verify immutable receipt
