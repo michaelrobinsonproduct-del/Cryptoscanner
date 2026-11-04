@@ -46,7 +46,7 @@ class OutcomeBridgeTests(unittest.TestCase):
 
     def test_future_prediction_rejected(self):
         with self.assertRaisesRegex(ValueError, "cutoff"):
-            prepare_outcome_input(self.manifest, self.root, SCHEMA, {},
+            prepare_outcome_input(self.manifest, self.root, SCHEMA, {'XUSD': 'XUSD.csv'},
                                   [{**self.predictions[0], "as_of": "2027-01-01T00:00:00+00:00"}],
                                   self.until)
 
