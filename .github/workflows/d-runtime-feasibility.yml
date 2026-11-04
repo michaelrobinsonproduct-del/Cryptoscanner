@@ -11,6 +11,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   feasibility:
     if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
@@ -86,6 +87,24 @@ jobs:
           PY
           sha256sum feasibility-proof.json feasibility-test.log feasibility-live-scan.json > feasibility-SHA256SUMS
           sha256sum -c feasibility-SHA256SUMS
+      - name: Inspect actual missed scheduled slot without second writer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m paper_pov.missed_slot_recovery > feasibility-recovery.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("feasibility-recovery.json").read_text())
+          assert report["schema"] == "paper_missed_slot_observer_v1"
+          assert report["writer_dispatched"] is False
+          assert report["ledger_persisted"] is False
+          assert report["production_applied"] is False
+          print("D_REAL_SLOT_OBSERVER",json.dumps(report,sort_keys=True))
+          PY
+          sha256sum feasibility-recovery.json >> feasibility-SHA256SUMS
+          sha256sum -c feasibility-SHA256SUMS
       - name: Preserve downloadable evidence
         uses: actions/upload-artifact@v4
         with:
@@ -94,6 +113,7 @@ jobs:
             feasibility-proof.json
             feasibility-test.log
             feasibility-live-scan.json
+            feasibility-recovery.json
             feasibility-SHA256SUMS
           retention-days: 7
           if-no-files-found: error
