@@ -57,6 +57,26 @@ class LiveWriterTests(unittest.TestCase):
                          self.git("show", sha + ":paper-ledger.json").encode())
         self.assertEqual(segments.read_git_state(self.gitdir, sha, True)[0], after)
 
+
+    def test_actual_bare_remote_push_fetch_and_verified_replay(self):
+        remote = self.root / "bare.git"
+        subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True)
+        self.git("remote", "add", "origin", str(remote))
+        self.git("push", "origin", "HEAD:refs/heads/paper-proof-ledger")
+        staged, state, _ = self.prepare()
+        paths = live.apply(self.gitdir, self.base, staged)
+        self.assertEqual(len(paths), 4)
+        self.git("commit", "-m", "one verified paper generation")
+        new = self.git("rev-parse", "HEAD")
+        self.git("push", "origin", "HEAD:refs/heads/paper-proof-ledger")
+        self.git("fetch", "origin", "refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger")
+        proof = live.verify_remote(self.gitdir, self.base, new, staged)
+        self.assertEqual(proof["generation"], 1)
+        self.assertEqual(proof["ledger_sha256"], state["sha256"])
+        self.git("update-ref", live.REMOTE_REF, self.base)
+        with self.assertRaisesRegex(ValueError, "Remote ledger ref"):
+            live.verify_remote(self.gitdir, self.base, new, staged)
+
     def test_second_append_preserves_checkpoint_and_old_segments(self):
         first, _, _ = self.prepare()
         first_commit, _ = self.commit(self.base, first)
