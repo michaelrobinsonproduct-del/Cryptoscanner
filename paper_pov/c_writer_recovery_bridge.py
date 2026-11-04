@@ -34,6 +34,12 @@ def bridge(integration, readback, *, restored_latest=None):
         # fabricate parity with the historical A2 candidate cohort.
         if restored_latest.get("production_applied") is True or restored_latest.get("trading_approved") is True:
             raise ValueError("Restored writer report claims trading/production")
+    persisted = readback.get("persisted_paper")
+    if persisted is not None and (not isinstance(persisted, dict) or not isinstance(persisted.get("ledger_generation"), int) or not isinstance(persisted.get("scan_status"), str)):
+        raise ValueError("D persisted writer evidence malformed")
+    reconciliation = readback.get("remote_ledger_reconciliation")
+    if reconciliation is not None and (not isinstance(reconciliation, dict) or reconciliation.get("status") not in ("MATCH", "DIVERGED") or reconciliation.get("independently_authenticated") is not False):
+        raise ValueError("D remote ledger comparison malformed")
     result = {
         "schema": "c_d_recovered_writer_bridge_v1",
         "status": "READ_ONLY_COHORTS_CONNECTED_NOT_LIVE",
@@ -45,6 +51,8 @@ def bridge(integration, readback, *, restored_latest=None):
             "independently_authenticated": independent,
             "artifact_id": readback.get("artifact_id"),
             "restored_latest_available": restored_latest is not None,
+            "persisted_paper": persisted,
+            "remote_ledger_reconciliation": reconciliation,
         },
         "same_run_or_candidate_parity_claimed": False,
         "live_watch_certified": False,
