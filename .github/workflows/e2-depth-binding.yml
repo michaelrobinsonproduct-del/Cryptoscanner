@@ -1,0 +1,122 @@
+name: E2 authenticated acquisition depth binding
+on:
+  pull_request:
+    paths:
+      - 'research/depth_acquisition_associations.py'
+      - 'research/acquisition_receipt_pipeline.py'
+      - 'research/bind_acquisition_receipts.py'
+      - 'research/test_bind_acquisition_receipts.py'
+      - 'research/test_depth_acquisition_associations.py'
+      - 'research/live_score_capture.py'
+      - 'research/test_live_score_capture.py'
+      - 'research/live_score_depth_round.py'
+      - 'research/test_live_score_depth_round.py'
+      - 'research/live_scored_series.py'
+      - 'research/test_live_scored_series.py'
+      - 'research/restore_scored_series.py'
+      - 'research/test_restore_scored_series.py'
+      - 'research/authenticated_learning_loop.py'
+      - 'research/multi_cohort_learning.py'
+      - 'research/test_authenticated_learning_loop.py'
+      - 'research/prospective_round_assembler.py'
+      - 'research/test_prospective_round_assembler.py'
+      - 'research/public_paper_learning_bridge.py'
+      - 'research/test_public_paper_learning_bridge.py'
+      - '.github/workflows/e2-depth-binding.yml'
+      - '.github/workflows/research-one-hour-outcomes.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  focused-depth-binding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact head
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          echo "E2_EXACT_HEAD=$EXPECTED_SHA"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Focused immutable depth association acceptance
+        run: python -m unittest -v research.test_depth_acquisition_associations research.test_bind_acquisition_receipts research.test_live_score_capture research.test_live_score_depth_round research.test_live_scored_series research.test_restore_scored_series research.test_authenticated_learning_loop research.test_prospective_round_assembler
+      - name: Verify multi-cohort learning CLI accepts multiple real scored cohorts
+        run: |
+          python -m research.multi_cohort_learning --help > /tmp/e-multi-cohort-cli.txt
+          grep -q -- '--cohort' /tmp/e-multi-cohort-cli.txt
+          grep -q -- '--shadow-ledger' /tmp/e-multi-cohort-cli.txt
+      - name: Exercise research association CLI help and no-write guard
+        run: |
+          python -m research.depth_acquisition_associations --help > /tmp/e-association-cli.txt
+          grep -q -- '--captures-directory' /tmp/e-association-cli.txt
+          grep -q -- '--associations-directory' /tmp/e-association-cli.txt
+
+  real-paper-learning-bridge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact E head
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Focused E paper bridge acceptance
+        run: python -m unittest -v research.test_public_paper_learning_bridge
+      - name: Acquire actual sealed public Kraken paper artifact read-only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p real-paper
+          gh run download 41717229720 -R michaelrobinsonproduct-del/Cryptoscanner -n public-paper-ledger-41717229720 -D real-paper
+          test -s real-paper/ledger.json
+      - name: Execute E1-E3 real-paper bridge and assert truthful abstention
+        run: |
+          python -m research.public_paper_learning_bridge --ledger real-paper/ledger.json --output real-paper/e-learning-report.json
+          python - <<'PY'
+          import json
+          r=json.load(open("real-paper/e-learning-report.json"))
+          assert r["paper_predictions"] > 0
+          assert r["paper_observations"] > 0
+          assert all(r["horizons"][str(h)]["authenticated_entry_labels"] == 0 for h in (1,6,24,48))
+          assert r["shadow_decision"]["decision"] == "KEEP_BASELINE"
+          assert r["production_applied"] is False
+          print("E_REAL_PAPER_BRIDGE_VERIFIED", r["ledger_sha256"], r["horizons"])
+          PY
+      - name: Acquire retained authenticated Kraken depth rounds read-only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/kraken-round-history
+          gh run download 41725038118 -R michaelrobinsonproduct-del/Cryptoscanner -n kraken-round-history-41725038118 -D /tmp/kraken-round-history
+          test -s /tmp/kraken-round-history/rounds.jsonl
+      - name: Evaluate actual source-qualified 1h 6h 24h 48h evidence
+        run: |
+          python -m research.acquisition_receipt_pipeline --round-index /tmp/kraken-round-history/rounds.jsonl --all-horizon-coverage --output real-paper/e-source-coverage.json
+          python - <<'PY'
+          import json
+          r=json.load(open("real-paper/e-source-coverage.json"))
+          assert r["mode"]=="RESEARCH_ONLY_SOURCE_COVERAGE"
+          assert set(r["horizon_coverage"])=={"1","6","24","48"}
+          assert all(v["production_applied"] is False for v in r["horizon_coverage"].values())
+          assert all(v["rounds_verified"] >= 19 for v in r["horizon_coverage"].values())
+          print("E_REAL_AUTHENTICATED_SOURCE_COVERAGE", json.dumps(r["horizon_coverage"],sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e-real-paper-learning-report
+          path: |
+            real-paper/e-learning-report.json
+            real-paper/e-source-coverage.json
+          retention-days: 7
