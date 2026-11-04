@@ -63,11 +63,23 @@ def assess_verified_a2(snapshot):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("verified_snapshot", type=Path)
+    parser.add_argument("verified_snapshot", type=Path, nargs="?",
+                        help="JSON emitted by the existing verified A2 consumer")
+    parser.add_argument("--a2-zip", type=Path,
+                        help="A2 immutable inner transport ZIP; verify using A2's source consumer first")
     args = parser.parse_args()
     try:
-        result = assess_verified_a2(json.loads(args.verified_snapshot.read_text()))
-    except (OSError, ValueError, TypeError):
+        if bool(args.verified_snapshot) == bool(args.a2_zip):
+            raise ValueError("provide exactly one verified snapshot or --a2-zip")
+        if args.a2_zip:
+            # Import only when the A2 source PR is present. The A2 consumer
+            # verifies immutable receipt bytes, source SHA, and read-time freshness.
+            from paper_pov.a2_artifact_consumer import read_artifact_zip
+            verified = read_artifact_zip(args.a2_zip)
+        else:
+            verified = json.loads(args.verified_snapshot.read_text())
+        result = assess_verified_a2(verified)
+    except (OSError, ValueError, TypeError, ImportError, KeyError, AssertionError, RuntimeError):
         result = {"accepted": False, "status": "INVALID_A2_SNAPSHOT", "errors": ["unreadable_snapshot"]}
     print(json.dumps(result, sort_keys=True))
     return 0 if result["accepted"] else 1
