@@ -1,5 +1,6 @@
 """Public Kraken, paper-only early-mover observations. No credentials or orders."""
 import datetime as dt
+import fcntl
 import hashlib
 import json
 import math
@@ -44,6 +45,26 @@ def fetch(path):
         raise ValueError("Kraken response error or invalid schema")
     return payload["result"]
 
+def watch_contract(item, quote_at, completed):
+    """Conservative, deterministic paper WATCH evidence; never implies exchange tick age."""
+    age = (completed - quote_at).total_seconds()
+    if not 0 <= age <= 600:
+        raise ValueError("client-observed ticker quote outside 10-minute freshness window")
+    spread = finite(item["spread_bps"])
+    accel = finite(item["volume_accel"])
+    move15 = finite(item["move15_pct"])
+    if spread < 0 or accel <= 0:
+        raise ValueError("invalid WATCH liquidity metrics")
+    risk = "HIGH" if spread > 30 or accel < 0.8 or abs(move15) > 8 else "ELEVATED"
+    return {
+        "status": "PAPER_WATCH", "risk": risk,
+        "quote_age_seconds": round(age),
+        "quote_timestamp_semantics": "client_observed_not_exchange_event_time",
+        "volume_acceleration_reference": "last_30m_over_prior_30m",
+        "momentum_reference": "completed_5m_candles_15m",
+        "buy_approved": False,
+    }
+
 def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     """All timestamps are client-observed; no Kraken ticker exchange timestamp is asserted."""
     clock = clock or (lambda: dt.datetime.now(UTC))
@@ -76,16 +97,22 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         raise RuntimeError("Ticker request stale")
     observations = []
     screened = []
+    screening_rejections = {"below_early_move": 0, "above_early_move": 0,
+                            "wide_spread": 0, "low_notional": 0}
     matched = 0
+    ticker_rejections = {"missing_or_invalid_payload": 0, "invalid_price_or_volume": 0,
+                         "nonfinite_derived_metric": 0}
     for pair, name in sorted(eligible.items()):
         t = ticker.get(pair)
         if not isinstance(t, dict):
+            ticker_rejections["missing_or_invalid_payload"] += 1
             continue
         matched += 1
         try:
             price, bid, ask, op, volume = (finite(t["c"][0]), finite(t["b"][0]),
                 finite(t["a"][0]), finite(t["o"]), finite(t["v"][1]))
             if min(price, bid, ask, op) <= 0 or ask < bid or volume < 0:
+                ticker_rejections["invalid_price_or_volume"] += 1
                 continue
             # Kraken Ticker 'o' is today's UTC opening price, NOT the
             # rolling 24-hour opening price. Keep ranking arithmetic unchanged
@@ -96,11 +123,23 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             # Individually finite ticker inputs can overflow in arithmetic.
             # Never emit nonfinite market evidence or fail during JSON sealing.
             if not all(map(math.isfinite, (move_since_utc_open, spread, notional))):
+                ticker_rejections["nonfinite_derived_metric"] += 1
                 continue
             observations.append({"pair": pair, "symbol": name, "price": price,
                 "spread_bps": round(spread, 4), "notional_24h_usd": round(notional, 2),
                 "observed_at": quote_at.isoformat(), "source": "kraken_public_ticker_client_observed"})
-            if not (0.25 <= move_since_utc_open <= 12 and spread <= 45 and notional >= 100000):
+            # Count every failed screen independently; one market can fail several.
+            failed = False
+            for rejected, condition in (
+                ("below_early_move", move_since_utc_open < 0.25),
+                ("above_early_move", move_since_utc_open > 12),
+                ("wide_spread", spread > 45),
+                ("low_notional", notional < 100000),
+            ):
+                if condition:
+                    screening_rejections[rejected] += 1
+                    failed = True
+            if failed:
                 continue
             baseline = round(min(45, move_since_utc_open * 7) + min(25, notional / 150000)
                              + max(0, 30 - spread / 2), 4)
@@ -110,7 +149,10 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                 "spread_bps": round(spread, 4),
                 "notional_24h_usd": round(notional, 2), "baseline_score": baseline})
         except (KeyError, ValueError, TypeError, IndexError, ZeroDivisionError):
+            ticker_rejections["missing_or_invalid_payload"] += 1
             continue
+    if len(observations) + sum(ticker_rejections.values()) != len(eligible):
+        raise RuntimeError("Ticker coverage accounting mismatch")
     if matched < max(20, math.ceil(len(eligible) * 0.8)):
         raise RuntimeError("Incomplete Kraken ticker universe coverage")
     if len(observations) < max(20, math.ceil(matched * 0.8)):
@@ -128,10 +170,10 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                 selected.append(item.copy())
                 seen.add(item["pair"])
                 limit -= 1
-    if not selected:
-        raise RuntimeError("No liquid early-stage candidates")
     watch = []
     abstentions = []
+    abstention_counts = {"request_failure": 0, "stale_or_future_ohlc": 0,
+                         "ohlc_gap_or_schema": 0, "invalid_market_metrics": 0}
     for item in selected:
         try:
             bars = api("OHLC?pair=" + urllib.parse.quote(item["pair"], safe="") + "&interval=5")
@@ -172,7 +214,10 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             age = clock().astimezone(UTC).timestamp() - (starts[-1] + 300)
             if not 0 <= age <= 600:
                 raise ValueError("stale or future completed OHLC")
-            accel = sum(volumes[-6:]) / sum(volumes[-12:-6])
+            prior_volume = sum(volumes[-12:-6])
+            if prior_volume <= 0:
+                raise ValueError("invalid or no-trade OHLC prior volume")
+            accel = sum(volumes[-6:]) / prior_volume
             move15 = 100 * (closes[-1] / closes[-4] - 1)
             if not all(map(math.isfinite, (accel, move15))):
                 raise ValueError("nonfinite OHLC derived metric")
@@ -184,33 +229,62 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                 "ohlc_last_closed_at": dt.datetime.fromtimestamp(starts[-1] + 300, UTC).isoformat(),
                 "ohlc_age_seconds": round(age), "status": "PAPER_WATCH"})
             watch.append(item)
-        except (ValueError, TypeError, KeyError, StopIteration, IndexError, ZeroDivisionError) as exc:
-            abstentions.append({"pair": item["pair"], "reason": str(exc)[:100]})
+        except (ValueError, TypeError, KeyError, StopIteration, IndexError, ZeroDivisionError,
+                OSError, TimeoutError, RuntimeError) as exc:
+            # A failed Kraken OHLC request abstains this market rather than
+            # discarding other independently validated candidates.
+            reason = str(exc)[:100]
+            if isinstance(exc, (OSError, TimeoutError, RuntimeError)):
+                category = "request_failure"
+            elif "stale or future completed OHLC" in reason:
+                category = "stale_or_future_ohlc"
+            elif any(term in reason for term in ("OHLC", "candle", "tail", "interval", "timestamp")):
+                category = "ohlc_gap_or_schema"
+            else:
+                category = "invalid_market_metrics"
+            abstention_counts[category] += 1
+            abstentions.append({"pair": item["pair"], "category": category, "reason": reason})
         sleep(0.15)
     completed = clock().astimezone(UTC)
     if not 0 <= (completed - quote_at).total_seconds() <= 180:
         raise RuntimeError("Quote observations expired during OHLC screening")
-    if not watch:
-        raise RuntimeError("No fresh contiguous liquid OHLC candidates")
+    # A valid scan may have no qualified market: preserve its coverage and abstentions.
+    # This is a successful paper observation, never a BUY or an invented WATCH.
     watch.sort(key=lambda x: (-x["challenger_score"], x["pair"]))
     watch = watch[:12]
     as_of = completed.isoformat()
     for rank, item in enumerate(watch, 1):
+        item.update(watch_contract(item, quote_at, completed))
         item["rank"] = rank
         item["as_of"] = as_of
         item["quote_observed_at"] = quote_at.isoformat()
         item["prediction_id"] = hashlib.sha256(
             ("paper-v1|" + as_of + "|" + item["pair"]).encode()).hexdigest()
     return {"schema": 1, "mode": "PAPER_ONLY", "buy_approved": False,
+        "scan_status": ("WATCH" if watch else
+                        "ABSTAIN_NO_LIQUID_CANDIDATES" if not selected else
+                        "ABSTAIN_NO_QUALIFIED_OHLC"),
         "source": "Kraken public REST (ticker client-observed; OHLC completed)",
         "started_at": started.isoformat(), "as_of": as_of,
         "ticker_move_reference": "kraken_ticker_today_open_utc",
         "eligible_pairs": len(eligible), "online_usd_pairs": online_usd_pairs,
         "excluded_stablecoin_pairs": excluded_stablecoin_pairs,
         "excluded_other_pairs": excluded_other_pairs, "matched_tickers": matched,
-        "observed_markets": len(observations), "ohlc_screened": len(selected),
+        "observed_markets": len(observations), "ticker_rejections": ticker_rejections,
+        "screening_rejections": screening_rejections,
+        "screened_markets": len(screened),
+        "ohlc_screened": len(selected),
         "watch": watch, "observations": observations, "abstentions": abstentions,
+        "abstention_counts": abstention_counts,
         "forward_labels": 0, "held_out_lift": None, "production_applied": False}
+
+def sync_directory(path):
+    """Persist directory entries after rename/receipt creation on POSIX filesystems."""
+    fd = os.open(str(path), os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 def atomic_json(path, report):
     path = Path(path)
@@ -222,20 +296,104 @@ def atomic_json(path, report):
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(tmp, path)
+        sync_directory(path.parent)
     finally:
         if os.path.exists(tmp):
             os.unlink(tmp)
 
+def persist_report(latest_path, report):
+    """Serialize local paper receipt commits; never regress latest or delete another writer's file."""
+    latest_path = Path(latest_path)
+    stamp = utc(report["as_of"])
+    payload = json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    latest_path.parent.mkdir(parents=True, exist_ok=True)
+    receipt_dir = latest_path.parent / "receipts"
+    receipt_dir.mkdir(parents=True, exist_ok=True)
+    receipt = receipt_dir / (stamp.strftime("%Y%m%dT%H%M%S%fZ") + ".json")
+    # Advisory lock is held across receipt creation, readback and latest update.
+    # Separate lock inode is stable even as latest.json is atomically replaced.
+    lock_path = latest_path.parent / ".paper-receipt.lock"
+    with open(lock_path, "a+b") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        if latest_path.exists():
+            try:
+                current = json.loads(latest_path.read_text())
+                current_stamp = utc(current["as_of"])
+            except (ValueError, KeyError, TypeError, UnicodeError):
+                # A torn/invalid latest may be repaired ONLY from the exact
+                # independently sealed immutable receipt for this report.
+                if not receipt.exists() or receipt.read_bytes() != payload:
+                    raise ValueError("invalid latest without matching sealed receipt")
+                current_stamp = None
+            if current_stamp is not None and current_stamp > stamp:
+                raise ValueError("out-of-order scan cannot replace newer latest")
+            if current_stamp == stamp:
+                if latest_path.read_bytes() != payload or not receipt.exists():
+                    raise ValueError("conflicting or incomplete same-timestamp scan replay")
+                if receipt.read_bytes() != payload:
+                    raise ValueError("same-timestamp receipt readback mismatch")
+                sync_directory(receipt_dir)
+                sync_directory(latest_path.parent)
+                return receipt
+        # Recover a crash after the immutable receipt was sealed but before
+        # latest.json was published. Never overwrite an existing conflicting
+        # receipt, and never regress a newer latest snapshot.
+        if receipt.exists():
+            if receipt.read_bytes() != payload:
+                raise ValueError("conflicting orphan scan receipt")
+            # Crash recovery must durably seal the orphan's directory entry
+            # before publishing latest, including after an interrupted fsync.
+            sync_directory(receipt_dir)
+            atomic_json(latest_path, report)
+            if latest_path.read_bytes() != payload:
+                raise IOError("recovered latest report readback mismatch")
+            return receipt
+        fd = os.open(receipt, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        identity = os.fstat(fd)
+        try:
+            with os.fdopen(fd, "wb") as handle:
+                handle.write(payload)
+                handle.flush()
+                os.fsync(handle.fileno())
+            if receipt.read_bytes() != payload:
+                raise IOError("scan receipt readback mismatch")
+            sync_directory(receipt_dir)
+            atomic_json(latest_path, report)
+            if latest_path.read_bytes() != payload:
+                raise IOError("latest report readback mismatch")
+        except BaseException:
+            # Once a receipt is sealed and byte-verified, preserve it on
+            # latest publication failure: a retry can recover this exact scan.
+            # Only discard an incomplete/unverified receipt owned by this call.
+            sealed = receipt.exists() and receipt.read_bytes() == payload
+            if not sealed:
+                try:
+                    actual = receipt.stat()
+                    if (actual.st_dev, actual.st_ino) == (identity.st_dev, identity.st_ino):
+                        receipt.unlink()
+                except FileNotFoundError:
+                    pass
+            raise
+    return receipt
+
 def main():
     report = scan()
-    atomic_json(os.getenv("PAPER_REPORT_PATH", "paper_pov/output/latest.json"), report)
+    receipt = persist_report(os.getenv("PAPER_REPORT_PATH", "paper_pov/output/latest.json"), report)
+    print("PAPER_RECEIPT " + str(receipt))
     print("PAPER_SCAN " + json.dumps({k: report[k] for k in (
-        "as_of", "online_usd_pairs", "excluded_stablecoin_pairs",
+        "as_of", "scan_status", "online_usd_pairs", "excluded_stablecoin_pairs",
         "excluded_other_pairs", "eligible_pairs", "matched_tickers",
-        "observed_markets", "ohlc_screened", "forward_labels", "production_applied")}, sort_keys=True))
+        "observed_markets", "ticker_rejections", "screening_rejections",
+        "screened_markets", "ohlc_screened", "abstention_counts", "forward_labels", "production_applied")}, sort_keys=True))
     print("PAPER_WATCH " + json.dumps([{"symbol": x["symbol"], "rank": x["rank"],
         "prediction_id": x["prediction_id"], "baseline_score": x["baseline_score"],
-        "challenger_score": x["challenger_score"]} for x in report["watch"]]))
+        "challenger_score": x["challenger_score"], "price": x["price"],
+        "quote_observed_at": x["quote_observed_at"],
+        "quote_timestamp_semantics": x["quote_timestamp_semantics"],
+        "ohlc_last_closed_at": x["ohlc_last_closed_at"],
+        "move15_pct": x["move15_pct"], "volume_accel": x["volume_accel"],
+        "spread_bps": x["spread_bps"], "notional_24h_usd": x["notional_24h_usd"],
+        "status": x["status"], "risk": x["risk"], "buy_approved": x["buy_approved"]} for x in report["watch"]]))
 
 if __name__ == "__main__":
     main()
