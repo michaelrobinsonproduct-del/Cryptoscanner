@@ -53,7 +53,9 @@ def capture_scored_series(output_root, *, rounds=13, interval_seconds=300,
         indexer(index, directory)
     # This verifies every retained manifest and evaluates only genuine coverage.
     coverage = {str(h): evaluate(index, h) for h in (1, 6, 24, 48)}
-    learning = evaluate_all(entry_root / "scores", entry_root / "associations", index,\n                            ledger_path=root / "shadow-decisions.jsonl")\n    result = {"mode": "RESEARCH_ONLY_SCORED_PROSPECTIVE_SERIES",
+    learning = evaluate_all(entry_root / "scores", entry_root / "associations", index,
+                            ledger_path=root / "shadow-decisions.jsonl")
+    result = {"mode": "RESEARCH_ONLY_SCORED_PROSPECTIVE_SERIES",
               "rounds_indexed": rounds, "scored_pairs": pairs,
               "round_index": str(index), "coverage": coverage, "learning": learning,
               "production_applied": False, "trading_approved": False}
