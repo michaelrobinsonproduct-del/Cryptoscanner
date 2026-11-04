@@ -72,7 +72,7 @@ class BridgeTests(unittest.TestCase):
             bridge(integration(), readback(), restored_latest={"trading_approved": True})
 
     def test_real_persisted_writer_status_and_remote_divergence(self):
-        actual = {**readback(),
+        actual = {**readback(), "status": "VERIFIED_REMOTE_READBACK", "independently_authenticated": True,
                   "persisted_paper": {"ledger_generation": 70, "scan_status": "ABSTAIN_STALE_QUOTE",
                                       "quote_evidence_certified": False, "live_replay_performed": False},
                   "remote_ledger_reconciliation": {"status": "DIVERGED", "independently_authenticated": False}}
