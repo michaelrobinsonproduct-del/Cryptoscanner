@@ -28,6 +28,45 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Discover newest successful single-writer artifact and bind immutable run identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, subprocess
+          repo = os.environ["REPOSITORY"]
+          selected = None
+          # Bound the search; never fall back to an unverified historical run.
+          for page in range(1, 6):
+              raw = subprocess.check_output(["gh", "api", "-X", "GET",
+                  f"repos/{repo}/actions/workflows/paper-pipeline.yml/runs?branch=main&status=success&per_page=100&page={page}"], timeout=45)
+              runs = json.loads(raw).get("workflow_runs", [])
+              if not runs:
+                  break
+              for run in runs:
+                  if run.get("conclusion") != "success" or run.get("status") != "completed" or run.get("event") not in ("schedule", "workflow_dispatch"):
+                      continue
+                  rid, sha = run.get("id"), run.get("head_sha")
+                  if not isinstance(rid, int) or not isinstance(sha, str) or len(sha) != 40:
+                      continue
+                  listing = json.loads(subprocess.check_output(["gh", "api", "-X", "GET",
+                      f"repos/{repo}/actions/runs/{rid}/artifacts?per_page=100"], timeout=45))
+                  if listing.get("total_count") != len(listing.get("artifacts", [])):
+                      continue
+                  matching = [a for a in listing["artifacts"] if a.get("name") == f"public-paper-ledger-{rid}" and a.get("expired") is False]
+                  if len(matching) == 1:
+                      selected = (rid, sha)
+                      break
+              if selected:
+                  break
+          if selected is None:
+              raise SystemExit("NO_SOURCE_VERIFIED_SINGLE_WRITER_ARTIFACT")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as output:
+              output.write(f"WRITER_RUN_ID={selected[0]}\\nWRITER_SOURCE_SHA={selected[1]}\\n")
+          print("SELECTED_SOURCE_BOUND_WRITER", selected[0], selected[1])
+          PY
       - name: Independently download existing manual paper writer artifact and restore locally
         env:
           GH_TOKEN: ${{ github.token }}
@@ -35,9 +74,9 @@ jobs:
           set -euo pipefail
           python -m paper_pov.github_artifact_readback \
             --repo "${{ github.repository }}" \
-            --run-id 41636714169 \
+            --run-id "$WRITER_RUN_ID" \
             --artifact-name public-paper-ledger \
-            --source-sha 94929a544899ddec63c676b6d4d52539da8e3837 \
+            --source-sha "$WRITER_SOURCE_SHA" \
             --output /tmp/real-writer-recovery.json \
             --restore-dir /tmp/real-writer-recovered \
             --ledger-ref paper-proof-ledger \
