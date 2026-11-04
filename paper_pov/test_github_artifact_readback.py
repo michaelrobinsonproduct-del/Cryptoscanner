@@ -139,3 +139,33 @@ def test_recovered_generation_mismatch_fails_closed():
                 "scoreboard.json": b'{"generation":4}'}
     with pytest.raises(IntegrityError, match="generation mismatch"):
         summarize_persisted_paper(receipts)
+
+
+def test_read_only_remote_ledger_reconciliation_matches_and_diverges():
+    """Recovered writer bytes are compared to remote ref without any write API."""
+    import base64
+    from paper_pov.github_artifact_readback import reconcile_remote_ledger
+    ledger = b'{"generation":65}'
+    calls = []
+    def fake(args, timeout):
+        calls.append(args)
+        assert args[:4] == ["gh", "api", "-X", "GET"]
+        return json.dumps({"type": "file", "encoding": "base64",
+                           "content": base64.b64encode(ledger).decode(), "sha": "git-blob"}).encode()
+    report = reconcile_remote_ledger(REPO, "paper-proof-ledger", "paper_pov/output/ledger.json",
+                                     {"ledger.json": ledger}, runner=fake)
+    assert report["status"] == "MATCH"
+    assert report["independently_authenticated"] is False
+    mismatch = reconcile_remote_ledger(REPO, "paper-proof-ledger", "paper_pov/output/ledger.json",
+                                       {"ledger.json": b'{"generation":64}'}, runner=fake)
+    assert mismatch["status"] == "DIVERGED"
+    assert len(calls) == 2
+
+
+def test_remote_ledger_ref_rejects_unsafe_path_without_api():
+    from paper_pov.github_artifact_readback import reconcile_remote_ledger
+    def fail(*args, **kwargs):
+        raise AssertionError("Network must not be used")
+    with pytest.raises(IntegrityError):
+        reconcile_remote_ledger(REPO, "paper-proof-ledger", "../ledger.json",
+                                {"ledger.json": b"{}"}, runner=fail)
