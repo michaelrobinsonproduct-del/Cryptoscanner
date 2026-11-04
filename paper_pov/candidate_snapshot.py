@@ -62,14 +62,16 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
         if not isinstance(pair, str) or not pair or pair in seen:
             raise ValueError("duplicate or invalid pair")
         seen.add(pair)
-        if not isinstance(candidate.get("symbol"), str) or candidate["symbol"].split("/")[0].upper() in STABLE:
-            raise ValueError("stablecoin WATCH candidate prohibited")
-        # B projects the displayed Kraken symbol from this sealed candidate.
-        # Reject malformed/missing symbols at A readback instead of allowing a
-        # downstream KeyError or a non-displayable persisted WATCH.
+        # Recheck the Kraken online /USD market contract at sealed readback.
+        # An alternate quote or extra separator cannot bypass stablecoin gates.
         symbol = candidate.get("symbol")
-        if not isinstance(symbol, str) or not symbol or len(symbol) > 64 or any(ch.isspace() or ord(ch) < 33 for ch in symbol):
+        if (not isinstance(symbol, str) or len(symbol) > 64
+                or symbol.count("/") != 1 or not symbol.endswith("/USD")
+                or not symbol.split("/")[0]
+                or any(ch.isspace() or ord(ch) < 33 for ch in symbol)):
             raise ValueError("invalid WATCH display symbol")
+        if symbol.split("/")[0].upper() in STABLE:
+            raise ValueError("stablecoin WATCH candidate prohibited")
         if candidate.get("as_of") != report["as_of"] or candidate.get("prediction_id") != hashlib.sha256(("paper-v1|" + report["as_of"] + "|" + pair).encode()).hexdigest():
             raise ValueError("candidate provenance mismatch")
         if candidate.get("quote_timestamp_semantics") != "client_observed_not_exchange_event_time":
