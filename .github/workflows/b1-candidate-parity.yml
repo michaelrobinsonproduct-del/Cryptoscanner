@@ -215,15 +215,20 @@ jobs:
         run: |
           set -euo pipefail
           gh api "repos/$REPO/actions/artifacts?per_page=100" > /tmp/b-delivery/e-artifacts.json
+          gh api "repos/$REPO/actions/workflows/shadow-learning-evidence.yml/runs?status=success&per_page=100" > /tmp/b-delivery/e-successful-runs.json
           python - <<'PY'
           import hashlib,json,os,subprocess,zipfile,io
           from pathlib import Path
           from paper_pov.github_delivery_projection import _learning_evidence
           artifacts=json.loads(Path("/tmp/b-delivery/e-artifacts.json").read_text()).get("artifacts",[])
+          successful={run["id"]:run for run in json.loads(Path("/tmp/b-delivery/e-successful-runs.json").read_text()).get("workflow_runs",[]) if run.get("conclusion")=="success"}
           # Only E's explicitly named handoff artifact can qualify; no synthetic labels.
           eligible=[a for a in artifacts if a.get("name")=="e-historical-learning-handoff"
                     and a.get("expired") is False and str(a.get("digest","")).startswith("sha256:")
-                    and a.get("workflow_run",{}).get("head_sha")]
+                    and a.get("workflow_run",{}).get("head_sha")
+                    and a.get("workflow_run",{}).get("id") in successful
+                    and successful[a["workflow_run"]["id"]].get("head_sha")==a["workflow_run"]["head_sha"]]
+          eligible.sort(key=lambda a:a["id"],reverse=True)
           status={"status":"LEARNING_HANDOFF_UNAVAILABLE","reason":"NO_PUBLISHED_E_HANDOFF"}
           for a in eligible:
               try:
