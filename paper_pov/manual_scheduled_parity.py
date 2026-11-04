@@ -24,6 +24,8 @@ def canonical(report):
         raise ValueError("unsafe scanner mode")
     if report["production_applied"] is not False:
         raise ValueError("unexpected production application")
+    if report["forward_labels"] != 0 or report["held_out_lift"] is not None:
+        raise ValueError("unverified learning claim")
     if not isinstance(report["watch"], list) or not isinstance(report["observations"], list):
         raise ValueError("invalid candidate or observation list")
     ids = [item.get("prediction_id") for item in report["watch"] if isinstance(item, dict)]
