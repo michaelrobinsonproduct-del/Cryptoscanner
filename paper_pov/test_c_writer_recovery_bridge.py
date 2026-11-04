@@ -83,6 +83,12 @@ class BridgeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             bridge(integration(), {**actual, "remote_ledger_reconciliation": {"status": "MATCH", "independently_authenticated": True}})
 
+    def test_missing_remote_branch_preserves_historical_recovery(self):
+        d = {**readback(), "remote_ledger_reconciliation": {"status": "UNAVAILABLE", "reason": "REMOTE_LEDGER_QUERY_FAILED", "independently_authenticated": False}}
+        result = bridge(integration(), d)
+        self.assertEqual(result["writer_recovery"]["remote_ledger_reconciliation"]["status"], "UNAVAILABLE")
+        self.assertFalse(result["live_watch_certified"])
+
     def test_cli_emits_recovered_provenance_and_replay_as_separate_artifacts(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
@@ -94,10 +100,12 @@ class BridgeTests(unittest.TestCase):
                 "--readback", str(root / "readback.json"),
                 "--output", str(root / "combined.json"),
                 "--bd-output", str(root / "bd.json"),
+                "--writer-readback-output", str(root / "writer.json"),
             ], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             combined = json.loads((root / "combined.json").read_text())
             bd = json.loads((root / "bd.json").read_text())
+            self.assertEqual(json.loads((root / "writer.json").read_text()), readback())
             self.assertEqual(bd, combined["historical_a2"])
             self.assertFalse(combined["same_run_or_candidate_parity_claimed"])
             self.assertEqual(bd["status"], "WATCH_REPLAY_ONLY_NOT_LIVE")
