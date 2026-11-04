@@ -2,6 +2,20 @@
 import hashlib
 import json
 import math
+from datetime import datetime, timedelta, timezone
+
+
+def utc_time(value):
+    if not isinstance(value, str):
+        raise ValueError('Missing UTC observation timestamp')
+    try:
+        parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except ValueError as exc:
+        raise ValueError('Invalid observation timestamp') from exc
+    if parsed.tzinfo is None or parsed.utcoffset() != timedelta(0):
+        raise ValueError('Observation timestamp must be UTC')
+    return parsed
+
 
 
 def canonical_digest(value):
@@ -21,6 +35,8 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
         raise ValueError("Baseline and challenger versions must differ")
     if not all(isinstance(x.get("version"), str) and x["version"].strip() for x in (baseline, challenger)):
         raise ValueError("Missing immutable version")
+    if type(minimum_holdout) is not int or minimum_holdout < 1:
+        raise ValueError("Invalid minimum holdout")
     a, b = baseline.get("observations"), challenger.get("observations")
     if not isinstance(a, list) or not isinstance(b, list):
         raise ValueError("Missing held-out cohort")
@@ -40,13 +56,23 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
                 raise ValueError("Missing binary outcome/decision")
             if not isinstance(row.get("source_sha256"), str) or len(row["source_sha256"]) != 64:
                 raise ValueError("Missing source identity")
+            if any(row.get(field) is None for field in ("entry_utc", "label_mature_utc", "feature_asof_utc", "holdout_start_utc")):
+                raise ValueError("Missing point-in-time evidence")
+            entry = utc_time(row["entry_utc"])
+            mature = utc_time(row["label_mature_utc"])
+            feature = utc_time(row["feature_asof_utc"])
+            start = utc_time(row["holdout_start_utc"])
+            if feature > entry or entry < start or mature < entry + timedelta(hours=48):
+                raise ValueError("Lookahead, in-sample entry or immature 48h outcome")
+            if not all(c in "0123456789abcdef" for c in row["source_sha256"].lower()):
+                raise ValueError("Malformed source SHA256")
             out[key] = row
         return out
     aa, bb = normalize(a), normalize(b)
     if aa.keys() != bb.keys():
         raise ValueError("Different holdout universes")
     for key in aa:
-        if any(aa[key][field] != bb[key][field] for field in ("hit", "source_sha256", "horizon_hours")):
+        if any(aa[key][field] != bb[key][field] for field in ("hit", "source_sha256", "horizon_hours", "entry_utc", "label_mature_utc", "feature_asof_utc", "holdout_start_utc", "liquidity_qualified", "source_authenticated", "partition")):
             raise ValueError("Outcome or source mismatch")
     def metrics(rows):
         selected = [x for x in rows.values() if x["watch"]]
