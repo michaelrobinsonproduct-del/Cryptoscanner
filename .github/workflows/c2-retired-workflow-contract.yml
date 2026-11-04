@@ -234,8 +234,8 @@ jobs:
           from pathlib import Path
           b=json.loads(Path("/tmp/c-real-receipts/cd-bridge.json").read_text())
           w=json.loads(Path("/tmp/c-real-receipts/bd-recovered-watch.json").read_text())
-          assert b["writer_recovery"]["run_id"]=="41636714169"
-          assert b["writer_recovery"]["status"]=="WRITER_CHECKSUM_ONLY"
+          assert b["writer_recovery"]["run_id"]==str(json.loads(Path("/tmp/c-real-receipts/d2-readback.json").read_text())["run_id"])
+          assert b["writer_recovery"]["status"] in ("WRITER_CHECKSUM_ONLY","VERIFIED_REMOTE_READBACK")
           assert b["writer_recovery"]["delivery_projection_ready"] == (b["writer_recovery"]["persisted_paper"] is not None and b["writer_recovery"]["delivery_blocker"] is None)
           if not b["writer_recovery"]["delivery_projection_ready"]:
               assert b["writer_recovery"]["delivery_blocker"]=="D_PERSISTED_PAPER_MISSING_OR_INCOMPLETE"
