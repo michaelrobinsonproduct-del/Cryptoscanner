@@ -18,7 +18,7 @@ class HistoricalOutcomeExecutionTests(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.raw = b"".join(
             f"{int((START + dt.timedelta(minutes=5*i)).timestamp())},{100+i*0.01:.2f},1\n".encode()
-            for i in range(577))
+            for i in range(578))
         (self.root / "XUSD.csv").write_bytes(self.raw)
         self.manifest = {"schema": "kraken_archive_manifest_v1", "source": "Kraken",
                          "partitions": [{"file": "XUSD.csv", "size_bytes": len(self.raw),
