@@ -63,6 +63,13 @@ def from_integration(integration):
     """Convert authenticated C integration evidence into the B/D replay contract."""
     if not isinstance(integration, dict) or integration.get("schema") != "c_read_only_integration_v1":
         raise ValueError("invalid C integration schema")
+    if integration.get("historical_artifact_parity") is not True:
+        raise ValueError("C historical parity not established")
+    for key in ("manual_run", "scheduled_run"):
+        if not isinstance(integration.get(key), str) or not integration[key].isdigit():
+            raise ValueError("C historical run identity missing")
+    if integration["manual_run"] == integration["scheduled_run"]:
+        raise ValueError("C manual and scheduled runs must be distinct")
     if integration.get("status") != "ABSTAIN_LEGACY_QUOTE_EVIDENCE" or integration.get("recovery_verified") is not True:
         raise ValueError("C recovery is not verified")
     if integration.get("a2_snapshot_attached") is not True or integration.get("exchange_event_freshness_verified") is not False:
