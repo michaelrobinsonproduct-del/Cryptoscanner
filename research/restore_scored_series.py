@@ -19,6 +19,10 @@ from research.kraken_prospective_batch import collect, MAX_PAIRS
 from research.live_score_capture import capture_live_scan
 from research.depth_acquisition_associations import associate_indexed_captures
 
+# 96 hours permits hourly scoring in the first 48 hours to acquire its OWN
+# complete 48-hour forward observation path. One 577-round series never could.
+MAX_RETAINED_ROUNDS = 1153
+
 
 def restore_and_capture(previous, output_root, *, collector=collect, followup_rounds=1,
                         interval_seconds=300, clock=time.monotonic, sleep=time.sleep,
@@ -41,7 +45,7 @@ def restore_and_capture(previous, output_root, *, collector=collect, followup_ro
     if not 1 <= len(pairs) <= MAX_PAIRS:
         raise ValueError("invalid original scored market cohort")
     lines = old_index.read_text().splitlines()
-    if not 1 <= len(lines) <= 576:  # permits the 577th terminal 48-hour round
+    if not 1 <= len(lines) < MAX_RETAINED_ROUNDS:
         raise ValueError("invalid round count")
     records = [json.loads(line) for line in lines]
     if len({r["batch"] for r in records}) != len(records):
@@ -103,7 +107,7 @@ def restore_and_capture(previous, output_root, *, collector=collect, followup_ro
     # Verify *all* copied retained rounds before the next independent collection.
     evaluate_index(new_index, 1)
     first = len(relocated)
-    acquired_rounds = min(followup_rounds, 577 - first)
+    acquired_rounds = min(followup_rounds, MAX_RETAINED_ROUNDS - first)
     # Preserve the preceding real receipt time so cross-job continuation can
     # actually begin on the next five-minute slot instead of starting early.
     previous_rows, _ = verified_rows(output / normalized[-1][1])
