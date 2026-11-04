@@ -48,9 +48,13 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
         raise ValueError("invalid abstention counts")
     if len(watch) > report["observed_markets"]:
         raise ValueError("watch exceeds observed markets")
+    # Preserve deterministic challenger ranking in the sealed WATCH handoff.
+    if any(not isinstance(c, dict) for c in watch):
+        raise ValueError("invalid paper candidate contract")
     seen = set()
+    previous_sort_key = None
     for rank, candidate in enumerate(watch, 1):
-        if not isinstance(candidate, dict) or candidate.get("rank") != rank or candidate.get("status") != "PAPER_WATCH" or candidate.get("buy_approved") is not False:
+        if type(candidate.get("rank")) is not int or candidate["rank"] != rank or candidate.get("status") != "PAPER_WATCH" or candidate.get("buy_approved") is not False:
             raise ValueError("invalid paper candidate contract")
         pair = candidate.get("pair")
         if not isinstance(pair, str) or not pair or pair in seen:
@@ -80,6 +84,10 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
                 raise ValueError("invalid numeric candidate field: " + field)
         if candidate["price"] <= 0 or candidate["volume_accel"] <= 0 or candidate["spread_bps"] < 0:
             raise ValueError("invalid candidate market metrics")
+        sort_key = (-candidate["challenger_score"], pair)
+        if previous_sort_key is not None and sort_key < previous_sort_key:
+            raise ValueError("WATCH challenger ranking mismatch")
+        previous_sort_key = sort_key
         if (candidate.get("momentum_reference") != "completed_5m_candles_15m" or
                 candidate.get("volume_acceleration_reference") != "last_30m_over_prior_30m"):
             raise ValueError("missing WATCH metric provenance")
