@@ -16,7 +16,8 @@ def _digest(value):
     return isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value)
 
 
-def write_association(directory, *, prediction_id, pair, source_sha256, score_receipt_sha256,\n                      source_first_observed_at=None):
+def write_association(directory, *, prediction_id, pair, source_sha256, score_receipt_sha256,
+                      source_first_observed_at=None):
     if not all(map(_digest, (prediction_id, source_sha256, score_receipt_sha256))):
         raise ValueError("invalid receipt digest")
     if not isinstance(pair, str) or not pair.strip():
@@ -121,7 +122,8 @@ def associate_captured_scores(captures_directory, depth_directory, associations_
         digest = hashlib.sha256((Path(captures_directory) / (pid + '.json')).read_bytes()).hexdigest()
         write_association(associations_directory, prediction_id=pid,
                           pair=capture['pair'], source_sha256=matches[0]['source_sha256'],
-                          score_receipt_sha256=digest,\n                          source_first_observed_at=matches[0]["first_observed_at"])
+                          score_receipt_sha256=digest,
+                          source_first_observed_at=matches[0]["first_observed_at"])
         accepted.append(pid)
     return {'associated': accepted, 'excluded': excluded,
             'source_abstentions': abstentions, 'production_applied': False}
@@ -171,7 +173,8 @@ def associate_indexed_captures(captures_directory, round_index, associations_dir
         receipt = hashlib.sha256((Path(captures_directory) / (pid + ".json")).read_bytes()).hexdigest()
         write_association(associations_directory, prediction_id=pid,
                           pair=capture["pair"], source_sha256=matches[0]["source_sha256"],
-                          score_receipt_sha256=receipt,\n                          source_first_observed_at=matches[0]["first_observed_at"])
+                          score_receipt_sha256=receipt,
+                          source_first_observed_at=matches[0]["first_observed_at"])
         accepted.append(pid)
     return {"associated": accepted, "excluded": excluded, "source_abstentions": abstentions,
             "rounds_verified": round_count, "production_applied": False}
