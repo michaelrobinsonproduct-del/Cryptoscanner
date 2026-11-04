@@ -110,15 +110,12 @@ def restore_and_capture(previous, output_root, *, collector=collect, followup_ro
     learning = evaluate_all(output / "entry" / "scores",
                             output / "entry" / "associations", new_index,
                             ledger_path=output / "shadow-decisions.jsonl")
-    return {"mode": "RESEARCH_ONLY_CROSS_JOB_FOLLOWUP",
+    report = {"mode": "RESEARCH_ONLY_CROSS_JOB_FOLLOWUP",
             "rounds_verified": first + followup_rounds,\n            "followup_rounds_acquired": followup_rounds,
             "original_index_sha256": hashlib.sha256(original_bytes).hexdigest(),
             "round_index": str(new_index), "scored_pairs": pairs,
             "coverage": coverage, "learning": learning, "production_applied": False,
-            "trading_approved": False}
-
-
-def main():
+            "trading_approved": False}\n    with (output / "continuation-report.json").open("x", encoding="utf-8") as handle:\n        json.dump(report, handle, sort_keys=True, allow_nan=False)\n        handle.write("\\n")\n    return report\n\n\ndef main():
     p = argparse.ArgumentParser()
     p.add_argument("--previous", required=True)
     p.add_argument("--output-root", required=True)\n    p.add_argument("--followup-rounds", type=int, default=1)
