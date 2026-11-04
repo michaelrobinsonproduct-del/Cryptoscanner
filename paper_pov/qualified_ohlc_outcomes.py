@@ -79,6 +79,30 @@ def reconstruct(prediction, bars, *, observed_until, source_sha256):
     }
 
 
+def reconstruct_batch(predictions, bars_by_pair, *, observed_until, source_sha256):
+    """Read-only pair-partitioned batch; missing markets abstain, never disappear."""
+    if not isinstance(predictions, list) or not isinstance(bars_by_pair, dict):
+        raise ValueError('Invalid historical batch')
+    seen = set()
+    records = []
+    for prediction in predictions:
+        pid = prediction['prediction_id']
+        if pid in seen:
+            raise ValueError('Duplicate prediction identity')
+        seen.add(pid)
+        records.append(reconstruct(prediction, bars_by_pair.get(prediction['pair'], []),
+                                   observed_until=observed_until, source_sha256=source_sha256))
+    counts = {}
+    for record in records:
+        for label in record['labels']:
+            key = str(label['horizon_hours']) + 'h:' + label['status']
+            counts[key] = counts.get(key, 0) + 1
+    return {'schema': 'qualified_ohlc_outcome_batch_v1',
+            'prediction_count': len(records), 'source_sha256': source_sha256,
+            'source_authenticated': False, 'learning_qualified_count': 0,
+            'status_counts': counts, 'records': records,
+            'production_applied': False}
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True)
@@ -86,12 +110,15 @@ def main():
     args = parser.parse_args()
     raw = Path(args.input).read_bytes()
     payload = json.loads(raw)
-    result = reconstruct(payload["prediction"], payload["bars"],
-                         observed_until=payload["observed_until"],
-                         source_sha256=hashlib.sha256(raw).hexdigest())
+    digest = hashlib.sha256(raw).hexdigest()
+    if 'predictions' in payload:
+        result = reconstruct_batch(payload['predictions'], payload['bars_by_pair'],
+                                   observed_until=payload['observed_until'], source_sha256=digest)
+    else:
+        result = reconstruct(payload['prediction'], payload['bars'],
+                             observed_until=payload['observed_until'], source_sha256=digest)
     atomic_json(args.output, result)
-    print(json.dumps({"statuses": [x["status"] for x in result["labels"]],
-                      "source_authenticated": False}, sort_keys=True))
+    print(json.dumps({'schema': result['schema'], 'source_authenticated': False}, sort_keys=True))
 
 
 if __name__ == "__main__":
