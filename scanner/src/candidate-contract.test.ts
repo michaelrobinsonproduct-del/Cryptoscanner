@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { selectDiscoveryCandidates, classifyConfirmationFailure } from "./candidate-contract";
+import { selectDiscoveryCandidates, classifyConfirmationFailure, confirmedPairIdentity } from "./candidate-contract";
 const valid = { pair: "TAOUSD", score: 85, displacement_pct: 1.5, discovered_at: "2026-11-02T20:00:00Z" };
 test("manual and scheduled selectors are deterministic", () => {
  const scan = { candidates: [valid], fetched_at: "2026-11-02T20:01:00Z" };
@@ -24,4 +24,11 @@ test("duplicate pair only gets one confirmation and malformed pair is excluded",
 });
 test("confirmation errors abstain rather than presenting a WATCH signal", () => {
  expect(classifyConfirmationFailure("TAOUSD",new Error("timeout")).decision).toBe("ABSTAIN");
+});
+
+test("confirmation identity must come from upstream payload, never requested-pair fallback", () => {
+ expect(confirmedPairIdentity({pair:"TAOUSD"})).toBe("TAOUSD");
+ expect(confirmedPairIdentity({symbol:"XRPUSD"})).toBe("XRPUSD");
+ expect(confirmedPairIdentity({})).toBe("");
+ expect(confirmedPairIdentity(null)).toBe("");
 });
