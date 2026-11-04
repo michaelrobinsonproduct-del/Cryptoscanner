@@ -23,8 +23,14 @@ def compare(captures_dir, associations_dir, round_index, *, horizon_hours=1,
     if horizon_hours not in HORIZONS:
         raise ValueError("unsupported horizon")
     captures = load_captures(captures_dir)
-    verified, excluded, provenance = verified_associations(
-        captures_dir, associations_dir, round_index)
+    if Path(associations_dir).is_dir():
+        verified, excluded, provenance = verified_associations(
+            captures_dir, associations_dir, round_index)
+    else:
+        verified = []
+        excluded = [{"prediction_id": c["prediction_id"],
+                     "reason": "MISSING_DEPTH_ASSOCIATION"} for c in captures]
+        provenance = {"source_abstentions": []}
     outcomes = evaluate_index(round_index, horizon_hours)
     by_source = {}
     for row in outcomes["outcomes"]:
