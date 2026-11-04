@@ -42,7 +42,7 @@ test("Owner A ticker coverage must reconcile and is visible in both HTTP paths",
 });
 
 test("sealed HTTP bundle binds raw immutable receipt and both projections",async()=>{
- const report={...receipt,preselection_universe:[{pair:"TAOUSD"}],preselection_decisions:{WATCH:1}};
+ const report={...receipt,observed_markets:1,eligible_pairs:9,preselection_universe:[{pair:"TAOUSD"}],preselection_decisions:{WATCH:1}};
  const raw=JSON.stringify(report);
  const digest=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(raw)))).map(x=>x.toString(16).padStart(2,"0")).join("");
  const bundle={schema:"paper_sealed_bundle_v1",receipt_json:raw,candidate_snapshot:{receipt_sha256:digest,as_of:asOf,scan_status:"WATCH",watch:report.watch},preselection_universe:{receipt_sha256:digest,as_of:asOf,markets:report.preselection_universe,selection_decisions:report.preselection_decisions,future_outcomes_authenticated:false,qualified_for_learning:false,production_applied:false}};
