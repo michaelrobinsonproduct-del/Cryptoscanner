@@ -116,6 +116,21 @@ jobs:
         run: |
           set -euo pipefail
           python -m paper_pov.scanner
+      - name: Consume same sealed WATCH and preselection outputs for manual and scheduled scans
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          from paper_pov.manual_scheduled_parity import load_sealed_scan
+          root = Path("paper_pov/output")
+          report = load_sealed_scan(root)
+          print("PAPER_SHARED_ENTRYPOINT", {
+              "event": __import__("os").environ["GITHUB_EVENT_NAME"],
+              "as_of": report["as_of"],
+              "watch_count": len(report["watch"]),
+              "observed_markets": report["observed_markets"],
+          })
+          PY
       - name: Append immutable as-of records and only matured observed outcomes
         run: |
           set -euo pipefail
@@ -173,6 +188,8 @@ jobs:
             paper_pov/output/ledger.json
             paper_pov/output/scoreboard.json
             paper_pov/output/SHA256SUMS
+            paper_pov/output/candidate-snapshot.json
+            paper_pov/output/preselection-universe.json
             paper_pov/output/slot_receipt.json
           retention-days: 90
           if-no-files-found: error
