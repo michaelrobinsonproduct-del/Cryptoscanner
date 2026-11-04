@@ -1,0 +1,20 @@
+name: Historical OHLC Outcome Reconstruction (read only)
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/qualified_ohlc_outcomes.py'
+      - 'paper_pov/test_qualified_ohlc_outcomes.py'
+      - '.github/workflows/historical-outcomes.yml'
+permissions:
+  contents: read
+jobs:
+  outcomes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Reconstruct four horizons with strict abstentions
+        run: python -m unittest paper_pov.test_qualified_ohlc_outcomes -v
