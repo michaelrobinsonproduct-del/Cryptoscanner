@@ -60,7 +60,7 @@ class SnapshotTests(unittest.TestCase):
                 self.report["watch"][0][field] = original
 
     def test_display_symbol_required_for_b_delivery(self):
-        for bad in (None, "", "TEST USD", "X" * 65):
+        for bad in (None, "", "TEST USD", "X" * 65, "TEST/EUR", "TEST/USD/USD", "/USD", "TEST/usd"):
             with self.subTest(symbol=bad):
                 self.report["watch"][0]["symbol"] = bad
                 self.seal()
