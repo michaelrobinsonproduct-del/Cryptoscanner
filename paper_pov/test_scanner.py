@@ -147,6 +147,22 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["preselection_decisions"]["OHLC_ABSTAINED"], 24)
         self.assertEqual(report["preselection_decisions"]["NOT_OHLC_SELECTED"], 1)
 
+    def test_tiny_positive_acceleration_abstains_before_snapshot_seal(self):
+        # Raw OHLC volume acceleration is positive, but the persisted four
+        # decimal representation would be zero and fail A2 readback.
+        def api(path):
+            result = fixture()(path)
+            if path.startswith("OHLC?"):
+                pair = next(k for k in result if k != "last")
+                for row in result[pair][-7:-1]:
+                    row[6] = "0.000001"
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+        self.assertEqual(report["abstention_counts"]["invalid_market_metrics"], 24)
+        self.assertEqual(report["preselection_decisions"]["OHLC_ABSTAINED"], 24)
+
     def test_future_ohlc_rejected(self):
         def future_api(path):
             result = fixture()(path)
