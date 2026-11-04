@@ -269,7 +269,7 @@ jobs:
                       "production_applied": False,
                       "writer_reconciliation_status": writer["remote_ledger_reconciliation"]["status"],
                   }
-                  Path("/tmp/d2-b-published-delivery.json").write_text(json.dumps(report, sort_keys=True)+"\\n")
+                  Path("/tmp/d2-b-published-delivery.json").write_text(json.dumps(report, sort_keys=True)+"\n")
                   Path("/tmp/d2-published-legacy").write_text("true")
                   print("D2_B_HISTORICAL_RECONCILIATION_ABSTAIN",json.dumps(report,sort_keys=True))
           if "quote_evidence" not in published:
