@@ -95,6 +95,71 @@ def bind_a2_projection(projection, predictions):
             "a_receipt_sha256": receipt, "unbiased_learning_qualified": False}
 
 
+def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partitions):
+    """Read-only, checksum-gated overlap inventory for the FULL frozen A2 cohort.
+
+    This never calls a trade hit a qualified learning label. It exposes exactly
+    which pre-outcome observations have pinned trade-bar evidence and which
+    abstain because no partition or matching observation window exists.
+    """
+    binding = bind_a2_projection(projection, projection["e1_watch_predictions"])
+    rows = projection.get("frozen_observations")
+    if not isinstance(rows, list) or len(rows) != binding["preselection_observation_count"]:
+        raise ValueError("Complete timestamped A2 universe required")
+    from .kraken_trade_csv_adapter import convert_pinned_csv
+    from .shadow_learning_evidence import utc_time
+    from datetime import timedelta
+    if not isinstance(partitions, dict):
+        raise ValueError("Missing explicit partition map")
+    pairs = {row["pair"] for row in rows}
+    bars = {}
+    provenance = {}
+    for pair in sorted(pairs):
+        partition = partitions.get(pair)
+        if partition is None:
+            bars[pair] = []
+            provenance[pair] = {"status": "NO_PINNED_PARTITION"}
+            continue
+        result = convert_pinned_csv(manifest, root, partition_file=partition,
+                                    pair=pair, schema=schema)
+        bars[pair] = [utc_time(b["timestamp"]) for b in result["bars"]]
+        provenance[pair] = {"status": "PINNED_BYTES_VERIFIED",
+                            "partition": partition,
+                            "partition_sha256": result["partition_sha256"],
+                            "trade_count": result["parsed_trade_count"],
+                            "bar_count": result["bar_count"]}
+    status_counts = {"NO_PINNED_PARTITION": 0, "NO_ENTRY_BAR": 0,
+                     "ENTRY_BAR_PRESENT_UNQUALIFIED": 0}
+    by_selection = {}
+    for row in rows:
+        at = utc_time(row["as_of"])
+        times = bars[row["pair"]]
+        if not times:
+            status = ("NO_PINNED_PARTITION" if row["pair"] not in partitions
+                      else "NO_ENTRY_BAR")
+        else:
+            # A next-five-minute bar is diagnostic, never executable liquidity.
+            start = at.replace(second=0, microsecond=0)
+            start -= timedelta(minutes=start.minute % 5)
+            status = ("ENTRY_BAR_PRESENT_UNQUALIFIED"
+                      if any(start < t <= start + timedelta(minutes=5) for t in times)
+                      else "NO_ENTRY_BAR")
+        status_counts[status] += 1
+        by_selection.setdefault(row["selection_status"], {})
+        d = by_selection[row["selection_status"]]
+        d[status] = d.get(status, 0) + 1
+    if sum(status_counts.values()) != len(rows):
+        raise ValueError("Historical overlap cohort mismatch")
+    return {"schema": "a2_trade_partition_overlap_v1",
+            "a_receipt_sha256": binding["a_receipt_sha256"],
+            "frozen_observation_count": len(rows),
+            "status_counts": status_counts, "selection_status_counts": by_selection,
+            "partition_provenance": provenance,
+            "qualified_outcome_count": 0, "source_authenticated": False,
+            "qualified_for_learning": False, "promotion_authorized": False,
+            "read_only": True}
+
+
 def run_pipeline(manifest, root, schema, partitions, predictions, observed_until, *, preselection_history=None, a2_projection=None):
     if preselection_history is not None and a2_projection is not None:
         raise ValueError("Select one frozen A provenance source")
