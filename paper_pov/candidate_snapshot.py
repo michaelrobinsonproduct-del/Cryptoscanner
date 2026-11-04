@@ -54,6 +54,7 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
     if any(not isinstance(c, dict) for c in watch):
         raise ValueError("invalid paper candidate contract")
     seen = set()
+    seen_symbols = set()
     previous_sort_key = None
     for rank, candidate in enumerate(watch, 1):
         if type(candidate.get("rank")) is not int or candidate["rank"] != rank or candidate.get("status") != "PAPER_WATCH" or candidate.get("buy_approved") is not False:
@@ -72,6 +73,9 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
             raise ValueError("invalid WATCH display symbol")
         if symbol.split("/")[0].upper() in STABLE:
             raise ValueError("stablecoin WATCH candidate prohibited")
+        if symbol in seen_symbols:
+            raise ValueError("duplicate WATCH display symbol")
+        seen_symbols.add(symbol)
         if candidate.get("as_of") != report["as_of"] or candidate.get("prediction_id") != hashlib.sha256(("paper-v1|" + report["as_of"] + "|" + pair).encode()).hexdigest():
             raise ValueError("candidate provenance mismatch")
         if candidate.get("quote_timestamp_semantics") != "client_observed_not_exchange_event_time":
