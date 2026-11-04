@@ -114,7 +114,7 @@ class BridgeTests(unittest.TestCase):
             self.assertEqual(bd["status"], "WATCH_REPLAY_ONLY_NOT_LIVE")
 
     def test_writer_delivery_export_requires_real_persisted_paper(self):
-        actual = {**readback(), "persisted_paper": {"ledger_generation": 70, "scan_status": "ABSTAIN_STALE_QUOTE", "live_replay_performed": False}, "remote_ledger_reconciliation": {"status": "MATCH", "independently_authenticated": False}}
+        actual = {**readback(), "status": "VERIFIED_REMOTE_READBACK", "independently_authenticated": True, "persisted_paper": {"ledger_generation": 70, "scan_status": "ABSTAIN_STALE_QUOTE", "live_replay_performed": False}, "remote_ledger_reconciliation": {"status": "MATCH", "independently_authenticated": False}}
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             (root / "integration.json").write_text(json.dumps(integration()))
@@ -128,7 +128,7 @@ class BridgeTests(unittest.TestCase):
             self.assertTrue(json.loads((root / "combined.json").read_text())["writer_recovery"]["delivery_projection_ready"])
 
     def test_writer_export_rejects_diverged_and_unavailable_remote_ledger(self):
-        actual = {**readback(), "persisted_paper": {"ledger_generation": 70, "scan_status": "WATCH", "live_replay_performed": False},
+        actual = {**readback(), "status": "VERIFIED_REMOTE_READBACK", "independently_authenticated": True, "persisted_paper": {"ledger_generation": 70, "scan_status": "WATCH", "live_replay_performed": False},
                   "remote_ledger_reconciliation": {"status": "MATCH", "independently_authenticated": False}}
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
@@ -144,6 +144,14 @@ class BridgeTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual((root / "writer.json").exists(), status == "MATCH")
                 self.assertEqual(json.loads((root / "combined.json").read_text())["writer_recovery"]["delivery_projection_ready"], status == "MATCH")
+
+    def test_checksum_only_match_never_exports_delivery_receipt(self):
+        # A checksum-matched artifact is not independent remote ledger proof.
+        actual = {**readback(), "persisted_paper": {"ledger_generation": 70, "scan_status": "WATCH", "live_replay_performed": False},
+                  "remote_ledger_reconciliation": {"status": "MATCH", "independently_authenticated": False}}
+        result = bridge(integration(), actual)
+        self.assertFalse(result["writer_recovery"]["delivery_projection_ready"])
+        self.assertEqual(result["writer_recovery"]["delivery_blocker"], "D_REMOTE_READBACK_NOT_INDEPENDENTLY_AUTHENTICATED")
 
     def test_independently_authenticated_writer_is_separate_from_a2(self):
         verified = {**readback(), "status": "VERIFIED_REMOTE_READBACK",
