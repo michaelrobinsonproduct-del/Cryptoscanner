@@ -51,7 +51,7 @@ jobs:
           assert len({x["observation_id"] for x in universe["markets"]})==len(universe["markets"])
           assert universe["selection_decisions"]["WATCH"]==len(snapshot["watch"])
           (latest.parent/"preselection-universe.json").write_text(
-              json.dumps(universe,sort_keys=True,allow_nan=False)+"\\n")
+              json.dumps(universe,sort_keys=True,allow_nan=False)+chr(10))
           assert all(0 <= age <= 600 for age in snapshot["quote_age_seconds"].values())
           assert report["mode"] == "PAPER_ONLY" and not report["production_applied"]
           # Publish only verified, read-only consumer JSON; never raw mutable latest.json as a trusted API.
