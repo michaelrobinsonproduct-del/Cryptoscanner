@@ -55,7 +55,7 @@ export function createPaperReceiptReader(url:string|undefined,now:()=>Date,fetch
   if(!url)return unavailablePaperReceipt("not_configured");
   const u=new URL(url);
   if(u.protocol!=="https:"||u.username||u.password||u.hash)throw Error("unsafe_paper_receipt_url");
-  const response=await fetcher(u.toString(),{method:"GET",redirect:"error",signal:AbortSignal.timeout(8000),headers:{accept:"application/json",...(token?{authorization:"Bearer "+token}:{})}});
+  const response=await fetcher(u.toString(),{method:"GET",redirect:"error",signal:AbortSignal.timeout(30000),headers:{accept:"application/json",...(token?{authorization:"Bearer "+token}:{})}});
   if(!response.ok)throw Error("paper_receipt_http_"+response.status);
   const body=await response.text();
   if(body.length>1000000)throw Error("paper_receipt_oversized");
