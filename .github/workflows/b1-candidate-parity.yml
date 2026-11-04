@@ -383,7 +383,8 @@ jobs:
                   "published_quote_complete":projected["published_quote_complete"],
                   "live_watch_authorized":False,
                   "writer_reconciliation_status":projected["writer_reconciliation_status"],
-                  "writer_same_scan_as_delivery":projected["writer_recovery"]["same_scan_as_delivery"],
+                  "writer_same_scan_as_delivery":projected["writer_source_identity_matches_delivery"],
+                  "fresh_watch_delivery_verified":projected.get("fresh_watch_delivery_verified",False),
                   "writer_source_identity_matches_delivery":projected["writer_source_identity_matches_delivery"],
                   "a2":a2_status,"e":e_status,
                   "learning_qualified":False,
@@ -407,7 +408,8 @@ jobs:
               lines=["### B authenticated manual/scheduled delivery",
                      f"- Source run: {data['source_run_id']} ({data['github_event']})",
                      f"- Delivery: {data['delivery_status']}; WATCH: {data['watch_count']}",
-                     f"- Quote complete: {data['published_quote_complete']}",
+                     f"- Quote complete: {data['published_quote_complete']}; authenticated fresh WATCH: {data['fresh_watch_delivery_verified']}",
+                     f"- D same-source run: {data['writer_same_scan_as_delivery']}",
                      f"- Writer reconciliation: {data['writer_reconciliation_status']}",
                      f"- A2: {data['a2']['status']}; E: {data['e']['status']}",
                      "- Paper only; no scoring promotion or second writer"]
@@ -418,7 +420,7 @@ jobs:
                      f"- A2 status available: {a2.exists()}; E status available: {e.exists()}",
                      "- Inspect the first failed downloaded-delivery step; do not infer WATCH or learning"]
           with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf-8") as out:
-              out.write("\\n".join(lines)+"\\n")
+              out.write("\n".join(lines)+"\n")
           PY
       - uses: actions/upload-artifact@v4
         if: always()
