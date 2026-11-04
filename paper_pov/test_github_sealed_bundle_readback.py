@@ -50,8 +50,6 @@ class GitHubSealedBundleReadbackTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"untrusted paper workflow origin"):
             self._run(origin="pull_request")
 
-if __name__=="__main__":
-    unittest.main()
 
     def test_real_legacy_artifact_contract_is_readable_without_fake_watch(self):
         actual=self._run(legacy=True)
@@ -67,3 +65,6 @@ if __name__=="__main__":
     def test_sealed_bundle_checksum_corruption_rejected(self):
         with self.assertRaisesRegex(ValueError,"sealed artifact checksum mismatch"):
             self._run(tamper="sealed-http-bundle.json")
+
+if __name__=="__main__":
+    unittest.main()
