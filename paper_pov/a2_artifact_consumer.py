@@ -121,14 +121,42 @@ def project_watch_delivery(directory, now=None):
         "production_applied": False, "buy_approved": False,
     }
 
+def read_published_delivery(directory, now=None):
+    """Authenticate B's published JSON against the sealed A2 receipt at read time.
+
+    A copied a2-delivery.json is not trusted by itself. Require the complete
+    downloaded artifact and compare all immutable delivery fields to a fresh
+    projection. Age evidence is recomputed rather than copied from publication.
+    """
+    root = Path(directory)
+    published_file = root / "a2-delivery.json"
+    if published_file.is_symlink() or not published_file.is_file() or published_file.stat().st_size > 2_000_000:
+        raise ValueError("missing or unsafe published A2 delivery")
+    published = json.loads(published_file.read_bytes())
+    if not isinstance(published, dict):
+        raise ValueError("invalid published A2 delivery")
+    verified = project_watch_delivery(root, now=now)
+    age_keys = {"snapshot_age_seconds", "quote_age_seconds"}
+    if set(published) != set(verified):
+        raise ValueError("published A2 delivery field coverage mismatch")
+    for key, value in verified.items():
+        if key not in age_keys and published[key] != value:
+            raise ValueError("published A2 delivery mismatch: " + key)
+    if type(published["snapshot_age_seconds"]) not in (int, float) or published["snapshot_age_seconds"] < 0:
+        raise ValueError("invalid published A2 snapshot age")
+    if not isinstance(published["quote_age_seconds"], dict) or set(published["quote_age_seconds"]) != set(verified["quote_age_seconds"]):
+        raise ValueError("invalid published A2 quote age coverage")
+    return verified
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("zip", help="A2 transport ZIP or downloaded Actions artifact directory")
-    p.add_argument("--delivery", action="store_true", help="emit B-facing read-only WATCH delivery from downloaded artifact directory")
+    p.add_argument("--delivery", action="store_true", help="verify and emit B-facing published WATCH delivery from downloaded artifact directory")
     args = p.parse_args()
     if args.delivery and not Path(args.zip).is_dir():
         p.error("--delivery requires the complete downloaded A2 artifact directory")
-    result = project_watch_delivery(args.zip) if args.delivery else (read_published_artifact(args.zip) if Path(args.zip).is_dir() else read_artifact_zip(args.zip))
+    result = read_published_delivery(args.zip) if args.delivery else (read_published_artifact(args.zip) if Path(args.zip).is_dir() else read_artifact_zip(args.zip))
     print(json.dumps(result, sort_keys=True, allow_nan=False))
 
 if __name__ == "__main__":
