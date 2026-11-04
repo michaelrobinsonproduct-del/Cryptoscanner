@@ -131,6 +131,19 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
         str(h): {"hits": sum(record["hit"] is True for (key, hh), record in eligible.items() if hh == h),
                  "misses": sum(record["hit"] is False for (key, hh), record in eligible.items() if hh == h)}
         for h in HORIZONS}
+    # Distinguish the four-horizon comparable cohort from all individually
+    # eligible rows. A partial prediction must never inflate comparable hit
+    # rates or be mistaken for an independently verified historical win.
+    result["complete_cohort_horizon_counts"] = {
+        str(h): {
+            "hits": sum(eligible[(key, h)]["hit"] is True for key in selected),
+            "misses": sum(eligible[(key, h)]["hit"] is False for key in selected),
+        } for h in HORIZONS
+    }
+    result["complete_cohort_horizon_rates"] = {
+        str(h): (result["complete_cohort_horizon_counts"][str(h)]["hits"] / len(selected)
+                 if selected else None) for h in HORIZONS
+    }
     result["source_qualified_prediction_count"] = len(selected)
     result["counts_independently_authenticated"] = False
     result["abstention_counts"] = {reason: list(abstentions.values()).count(reason)
@@ -162,6 +175,8 @@ def project_learning_handoff(result):
             "observed_prediction_count": result["observed_prediction_count"],
             "complete_cohort_count": result["four_horizon_complete_predictions"],
             "excluded_prediction_count": result["excluded_prediction_count"],
+            "complete_cohort_horizon_counts": result["complete_cohort_horizon_counts"],
+            "complete_cohort_horizon_rates": result["complete_cohort_horizon_rates"],
             "abstention_counts": result["abstention_counts"],
             "incomplete_prediction_horizons": result["incomplete_prediction_horizons"],
             "source_authenticated": False, "measured_lift_verified": False,
