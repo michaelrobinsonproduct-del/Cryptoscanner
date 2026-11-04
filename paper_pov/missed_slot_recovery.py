@@ -1,8 +1,7 @@
 """Bounded, fail-closed recovery decision for missed GitHub paper scan slots.
 
-This module never trades, writes a ledger, or dispatches a workflow. Its caller
-may dispatch the EXISTING single-writer paper-pipeline workflow only when a
-scheduled slot has no matching run and no paper workflow is already active.
+This module never trades or writes a ledger. Its CLI may dispatch the
+EXISTING single-writer paper-pipeline workflow after bounded eligibility checks.
 """
 import datetime as dt
 
@@ -114,9 +113,10 @@ def main():
     # Fail closed if GitHub cannot return a complete authoritative response.
     def fetch_runs():
         raw = subprocess.check_output([
-        "gh", "api", "-X", "GET", f"repos/{repo}/actions/workflows/paper-pipeline.yml/runs",
-        "-f", "branch=main", "-f", "per_page=100",
-    ], timeout=30)
+            "gh", "api", "-X", "GET",
+            f"repos/{repo}/actions/workflows/paper-pipeline.yml/runs",
+            "-f", "branch=main", "-f", "per_page=100",
+        ], timeout=30)
         payload = json.loads(raw)
         if not isinstance(payload, dict) or not isinstance(payload.get("workflow_runs"), list):
             raise ValueError("Missing GitHub workflow run list")
