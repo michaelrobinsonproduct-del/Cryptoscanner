@@ -116,7 +116,7 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
                  "as_of": start.isoformat(), "selection_status": "SCREEN_REJECTED"}])
             # A WATCH decision cannot silently move independently of its frozen observation.
             with self.assertRaisesRegex(ValueError, "observation time mismatch"):
-                audit_a2_trade_partition_overlap(earlier, manifest, root, schema, {"XUSD": "XUSD.csv"})
+                audit_a2_trade_partition_overlap(earlier, manifest, root, schema, {"XUSD": "XUSD.csv"}, observed_until=(start + dt.timedelta(hours=49)).isoformat())
             shifted = audit_a2_trade_partition_overlap(
                 dict(earlier, e1_watch_predictions=[dict(watch[0], as_of=(start + dt.timedelta(minutes=5)).isoformat())]),
                 manifest, root, schema, {"XUSD": "XUSD.csv"})
