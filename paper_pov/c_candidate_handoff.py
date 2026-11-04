@@ -33,6 +33,19 @@ def consume(payload):
         raise ValueError("invalid source cohort")
     if any(not isinstance(x, dict) for x in watch):
         raise ValueError("invalid candidate item")
+    pairs, ranks = [], []
+    for item in watch:
+        pair, rank = item.get("pair"), item.get("rank")
+        if not isinstance(pair, str) or not pair or type(rank) is not int or rank < 1:
+            raise ValueError("candidate identity or rank invalid")
+        if item.get("status") != "PAPER_WATCH":
+            raise ValueError("candidate is not an explicit paper WATCH")
+        pairs.append(pair)
+        ranks.append(rank)
+    if len(set(pairs)) != count or len(set(ranks)) != count:
+        raise ValueError("duplicate candidate pair or rank")
+    if sorted(ranks) != list(range(1, count + 1)):
+        raise ValueError("candidate ranks are not contiguous")
     return {
         "schema": "bd_read_only_watch_handoff_v1",
         "status": "WATCH_REPLAY_ONLY_NOT_LIVE",
