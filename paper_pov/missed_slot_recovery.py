@@ -105,42 +105,61 @@ def resolve_writer_slot(event, cron="", recovery_slot="", now=None):
     return candidate.isoformat()
 
 
+def inspect_slot(now, runs):
+    """Read-only, bounded slot diagnosis. Never claims historical prices."""
+    verdict = decision(now, runs)
+    if verdict["action"] == "DISPATCH":
+        return {"status": "MISSED_SLOT_RECOVERY_REQUIRED",
+                "slot_utc": verdict["slot_utc"],
+                "writer_dispatched": False, "ledger_persisted": False,
+                "reason": "Main writer has no authorized recovery_slot_utc input"}
+    return {"status": "NO_RECOVERY_DISPATCH", "reason": verdict["reason"],
+            "writer_dispatched": False, "ledger_persisted": False}
+
+
+def fetch_recent_runs(repo, *, now=None, command=None):
+    """Fetch authenticated, complete workflow history with no mutation."""
+    import json
+    import subprocess
+    now = dt.datetime.now(UTC) if now is None else now
+    cutoff = (now - dt.timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    args = ["gh", "api", "-X", "GET",
+            f"repos/{repo}/actions/workflows/paper-pipeline.yml/runs",
+            "-f", "branch=main", "-f", "per_page=100", "-f", "created=>=" + cutoff]
+    raw = (command or subprocess.check_output)(args, timeout=30)
+    payload = json.loads(raw)
+    if (not isinstance(payload, dict) or not isinstance(payload.get("workflow_runs"), list)
+            or not isinstance(payload.get("total_count"), int)
+            or payload["total_count"] != len(payload["workflow_runs"])):
+        raise ValueError("GitHub workflow history incomplete or truncated")
+    return [{k: run[k] for k in ("event", "status", "created_at")}
+            for run in payload["workflow_runs"]]
+
+
 def main():
+    """Operator visibility only; dispatch is deliberately not enabled.
+
+    Main paper-pipeline.yml does not declare a recovery_slot_utc input.
+    Sending an undeclared input would fail and cannot recover missed slots.
+    """
     import json
     import os
-    import subprocess
-    repo = os.environ["GITHUB_REPOSITORY"]
-    # Query only the bounded recovery horizon: unfiltered busy repositories
-    # routinely have 100+ historical runs and would otherwise abstain forever.
-    def fetch_runs():
-        cutoff = (dt.datetime.now(UTC) - dt.timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
-        raw = subprocess.check_output([
-            "gh", "api", "-X", "GET",
-            f"repos/{repo}/actions/workflows/paper-pipeline.yml/runs",
-            "-f", "branch=main", "-f", "per_page=100",
-            "-f", "created=>=" + cutoff,
-        ], timeout=30)
-        payload = json.loads(raw)
-        if not isinstance(payload, dict) or not isinstance(payload.get("workflow_runs"), list):
-            raise ValueError("Missing GitHub workflow run list")
-        if (not isinstance(payload.get("total_count"), int)
-                or payload["total_count"] != len(payload["workflow_runs"])):
-            raise ValueError("GitHub workflow history incomplete or truncated")
-        return [{k: run[k] for k in ("event", "status", "created_at")}
-                for run in payload["workflow_runs"]]
-
-    first = decision(dt.datetime.now(UTC), fetch_runs())
-    print(json.dumps({"phase": "initial", **first}, sort_keys=True), flush=True)
-    if first["action"] != "DISPATCH":
-        return
-    # Re-query immediately before dispatch. An already queued scheduled run,
-    # manual dispatch or another recovery attempt must suppress this one.
-    second = decision(dt.datetime.now(UTC), fetch_runs())
-    print(json.dumps({"phase": "pre_dispatch", **second}, sort_keys=True), flush=True)
-    if second["action"] != "DISPATCH" or second["slot_utc"] != first["slot_utc"]:
-        return
-    subprocess.run(["gh", "workflow", "run", "paper-pipeline.yml",
-                    "--ref", "main", "-f", "recovery_slot_utc=" + first["slot_utc"]], check=True, timeout=30)
+    now = dt.datetime.now(UTC)
+    try:
+        runs = fetch_recent_runs(os.environ["GITHUB_REPOSITORY"], now=now)
+        report = inspect_slot(now, runs)
+    except (ValueError, KeyError, OSError, TimeoutError) as exc:
+        report = {"status": "RECOVERY_EVIDENCE_UNAVAILABLE",
+                  "error_type": type(exc).__name__, "writer_dispatched": False,
+                  "ledger_persisted": False}
+    report.update(schema="paper_missed_slot_observer_v1", observed_at=now.isoformat(),
+                  production_applied=False)
+    print(json.dumps(report, sort_keys=True), flush=True)
+    if "GITHUB_OUTPUT" in os.environ:
+        from pathlib import Path
+        with Path(os.environ["GITHUB_OUTPUT"]).open("a") as out:
+            out.write("recovery_status=" + report["status"] + "\\n")
+    return report
 
 
 if __name__ == "__main__":
