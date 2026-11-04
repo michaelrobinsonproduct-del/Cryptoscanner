@@ -119,7 +119,8 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
                 audit_a2_trade_partition_overlap(earlier, manifest, root, schema, {"XUSD": "XUSD.csv"}, observed_until=(start + dt.timedelta(hours=49)).isoformat())
             shifted = audit_a2_trade_partition_overlap(
                 dict(earlier, e1_watch_predictions=[dict(watch[0], as_of=(start + dt.timedelta(minutes=5)).isoformat())]),
-                manifest, root, schema, {"XUSD": "XUSD.csv"})
+                manifest, root, schema, {"XUSD": "XUSD.csv"},
+                observed_until=(start + dt.timedelta(hours=49)).isoformat())
             self.assertEqual(sum(shifted["status_counts"].values()), 2)
 
             self.assertEqual(retained["handoff"], result["handoff"])
