@@ -61,6 +61,22 @@ def decision(now, runs):
             "reason": "No workflow run since eligible scheduled slot"}
 
 
+def validate_recovery_slot(slot, event, now=None):
+    """Validate explicit recovery provenance; never treat it as historic prices."""
+    if not slot:
+        return "NORMAL_SCAN"
+    if event != "workflow_dispatch":
+        raise ValueError("Recovery slot only allowed for manual dispatch event")
+    stamp = utc(slot)
+    if stamp.second or stamp.microsecond or stamp.minute not in SLOT_MINUTES:
+        raise ValueError("Invalid scheduled slot identity")
+    now = dt.datetime.now(UTC) if now is None else (utc(now) if isinstance(now, str) else now)
+    age = now.astimezone(UTC) - stamp
+    if not GRACE <= age <= MAX_AGE:
+        raise ValueError("Recovery slot outside bounded freshness window")
+    return stamp.isoformat()
+
+
 def main():
     import json
     import os
@@ -91,7 +107,7 @@ def main():
     if second["action"] != "DISPATCH" or second["slot_utc"] != first["slot_utc"]:
         return
     subprocess.run(["gh", "workflow", "run", "paper-pipeline.yml",
-                    "--ref", "main"], check=True, timeout=30)
+                    "--ref", "main", "-f", "recovery_slot_utc=" + first["slot_utc"]], check=True, timeout=30)
 
 
 if __name__ == "__main__":
