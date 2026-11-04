@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -19,7 +20,7 @@ def _github_json(args, *, runner):
     return json.loads(raw)
 
 
-def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, runner=subprocess.check_output):
+def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, runner=subprocess.check_output, restore_dir=None):
     """Fail closed on run identity, source SHA, artifact ambiguity and byte drift."""
     if not repo or "/" not in repo or not str(run_id).isdigit() or not artifact_name:
         raise IntegrityError("Invalid repository, run ID or artifact")
@@ -69,6 +70,22 @@ def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, ru
                 raise IntegrityError("Incomplete writer checksum inventory")
         result = verify_readback(manifest, files, expected_source_sha=source_sha,
                                  expected_run_id=run_id)
+        if restore_dir is not None:
+            destination = Path(restore_dir)
+            if destination.exists():
+                raise IntegrityError("Recovery destination exists; refusing overwrite")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            staging = Path(tempfile.mkdtemp(prefix=".paper-restore-", dir=destination.parent))
+            try:
+                for name, data in files.items():
+                    target = staging / name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(data)
+                staging.rename(destination)
+            finally:
+                if staging.exists():
+                    shutil.rmtree(staging)
+            result["recovered_to"] = str(destination)
     result.update(remote_run_url=run.get("html_url"), artifact_id=matches[0].get("id"),
                   remote_downloaded=True)
     return result
@@ -82,12 +99,14 @@ def main(argv=None):
     parser.add_argument("--manifest", required=True, help="Trusted manifest saved separately from remote artifact")
     parser.add_argument("--source-sha", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--restore-dir", help="Restore verified artifact to new directory without overwriting")
     args = parser.parse_args(argv)
     report = {"status": "REMOTE_READBACK_FAILED", "remote_downloaded": False,
               "ledger_writer_invoked": False, "production_applied": False}
     try:
         manifest = json.loads(Path(args.manifest).read_text())
-        report = retrieve_and_verify(args.repo, args.run_id, args.artifact_name, manifest, args.source_sha)
+        report = retrieve_and_verify(args.repo, args.run_id, args.artifact_name, manifest, args.source_sha,
+                                     restore_dir=args.restore_dir)
     except (IntegrityError, OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError,
             subprocess.TimeoutExpired) as exc:
         report["reason"] = type(exc).__name__
