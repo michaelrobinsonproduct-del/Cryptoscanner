@@ -212,8 +212,14 @@ def run_pipeline(manifest, root, schema, partitions, predictions, observed_until
     binding = bind_a2_projection(a2_projection, predictions) if a2_projection is not None else None
     if preselection_history is not None:
         binding = bind_preselection_history(preselection_history, predictions)
+    # E1 uses the target bar's high, but target_at is its OPEN timestamp.
+    # A target bar must be closed before it can become an observed outcome.
+    # Pass the last-closed-bar cutoff to E1 without modifying E1-owned code.
+    from .shadow_learning_evidence import utc_time
+    from datetime import timedelta
+    closed_bar_cutoff = (utc_time(observed_until) - timedelta(minutes=5)).isoformat()
     execution = run_historical_outcomes(
-        manifest, root, schema, partitions, predictions, observed_until)
+        manifest, root, schema, partitions, predictions, closed_bar_cutoff)
     frozen = binding["frozen_predictions"] if binding is not None else predictions
     handoff = project_historical_execution(execution, frozen_predictions=frozen)
     # Consume B's existing strict read-only learning contract rather than
