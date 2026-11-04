@@ -4,6 +4,7 @@ Requires PAPER_BUNDLE_TOKEN, TLS certificate/key and authenticated gh CLI.
 No scan, ledger writer, or deployment is started by importing this module.
 """
 import argparse
+import datetime as dt
 import hmac
 import json
 import os
@@ -44,7 +45,13 @@ def make_handler(repo, token, *, resolver=latest_run, reader=read_run):
                 return
             try:
                 record = reader(repo, resolver(repo))
-                data = json.dumps(record["bundle"], separators=(",", ":"), allow_nan=False).encode()
+                bundle = record["bundle"]
+                report = json.loads(bundle["receipt_json"])
+                stamp = dt.datetime.fromisoformat(report["as_of"].replace("Z", "+00:00"))
+                age = (dt.datetime.now(dt.timezone.utc) - stamp).total_seconds()
+                if stamp.tzinfo is None or not 0 <= age <= 600:
+                    raise ValueError("stale paper receipt")
+                data = json.dumps(bundle, separators=(",", ":"), allow_nan=False).encode()
                 if len(data) > 1_000_000:
                     raise ValueError("sealed bundle exceeds HTTP reader limit")
             except (ValueError, OSError, subprocess.CalledProcessError, json.JSONDecodeError):
