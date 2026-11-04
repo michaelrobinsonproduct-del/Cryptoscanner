@@ -374,8 +374,13 @@ def main():
             if source.is_dir():
                 # A's complete downloaded Actions artifact, including immutable
                 # receipt and preselection, is required for live-age evidence.
-                from .a2_artifact_consumer import read_published_delivery
-                a2 = read_published_delivery(source)
+                from .a2_artifact_consumer import read_published_delivery, project_watch_delivery
+                # A2 historical published artifacts can predate the optional
+                # delivery JSON. Verify the complete sealed receipt and universe
+                # directly; never treat an unverified JSON as fresh evidence.
+                a2 = (read_published_delivery(source)
+                      if (source / "a2-delivery.json").exists()
+                      else project_watch_delivery(source))
             else:
                 # Legacy JSON handoffs are separate historical cohorts only;
                 # they must never be represented as fresh A2 artifact readback.
