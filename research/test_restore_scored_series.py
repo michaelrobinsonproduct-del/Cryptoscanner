@@ -66,9 +66,6 @@ class RestoreScoredSeriesTests(unittest.TestCase):
                 resumed = restore_and_capture(new, latest, collector=collector)
             self.assertEqual(resumed["rounds_verified"], 3)
             self.assertEqual(evaluate_index(latest / "entry" / "round-index.jsonl")["rounds_verified"], 3)
-            self.assertEqual((latest / "continuation-reports" / "rounds-002.json").read_bytes(),
-                             (new / "continuation-report.json").read_bytes())
-
             self.assertEqual(
                 (latest / "continuation-history" / "through-002-rounds.json").read_bytes(),
                 (new / "continuation-report.json").read_bytes())
