@@ -145,12 +145,15 @@ jobs:
                    and str(a.get("digest","")).startswith("sha256:")
                    and a.get("workflow_run",{}).get("id") in successful
                    and a.get("workflow_run",{}).get("head_sha")]
-          if not matches:
-              raise SystemExit("NO_CHECKSUMMED_A2_DELIVERY_ARTIFACT")
-          chosen=max(matches,key=lambda a:a["id"])
-          Path("/tmp/b-delivery/a2-meta.json").write_text(json.dumps(chosen))
-          print("SELECTED_A2_ARTIFACT",chosen["id"],chosen["workflow_run"]["id"])
+          if matches:
+              chosen=max(matches,key=lambda a:a["id"])
+              Path("/tmp/b-delivery/a2-meta.json").write_text(json.dumps(chosen))
+              print("SELECTED_A2_ARTIFACT",chosen["id"],chosen["workflow_run"]["id"])
+          else:
+              Path("/tmp/b-delivery/a2-status.json").write_text(json.dumps({"status":"A2_FRESH_DELIVERY_UNAVAILABLE","reason":"NO_SUCCESSFUL_CHECKSUMMED_A2_ARTIFACT"}))
+              print("A2_FRESH_DELIVERY_UNAVAILABLE")
           PY
+          if test -f /tmp/b-delivery/a2-meta.json; then
           A2_ID="$(python -c 'import json;print(json.load(open("/tmp/b-delivery/a2-meta.json"))["id"])')"
           gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/$A2_ID/zip" > /tmp/b-delivery/a2.zip
           python - <<'PY'
@@ -199,6 +202,7 @@ jobs:
           Path("/tmp/b-delivery/a2-status.json").write_text(json.dumps(status))
           print("A2_DELIVERY_STATUS",status)
           PY
+          fi
       - name: Discover existing E read-only learning handoff without inventing evidence
         env:
           GH_TOKEN: ${{ github.token }}
