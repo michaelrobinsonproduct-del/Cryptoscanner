@@ -151,6 +151,31 @@ class DeliveryProjectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "count mismatch"):
             project_published_result(published, d, {**a2, "watch_count": 2})
 
+    def test_delivery_rejects_quote_mismatch_stale_and_stablecoin(self):
+        from copy import deepcopy
+        from paper_pov.test_results_report import fixture
+        from paper_pov.results_report import render
+        scan, score = fixture()
+        published, _ = render(scan, score, run_id="41235442591", source_sha=SHA,
+                              ledger_commit="b"*40, event="workflow_dispatch")
+        self.assertEqual(len(project_published_result(published)["live_watch"]), 2)
+        bad = deepcopy(published)
+        bad["candidates"][0]["price_usd"] *= 2
+        with self.assertRaisesRegex(ValueError, "matching fresh quote"):
+            project_published_result(bad)
+        bad = deepcopy(published)
+        bad["quote_evidence"][0]["symbol"] = "USDT/USD"
+        with self.assertRaisesRegex(ValueError, "excluded published quote"):
+            project_published_result(bad)
+        bad = deepcopy(published)
+        bad["quote_evidence"][0]["observed_at"] = "2020-01-01T00:00:00Z"
+        with self.assertRaisesRegex(ValueError, "stale or invalid"):
+            project_published_result(bad)
+        bad = deepcopy(published)
+        bad["max_client_quote_age_seconds"] = 0
+        with self.assertRaisesRegex(ValueError, "freshness summary mismatch"):
+            project_published_result(bad)
+
     def test_real_paper_results_zip_to_delivery_cli(self):
         import hashlib
         import io
