@@ -4,6 +4,7 @@ on:
     paths:
       - 'paper_pov/scanner.py'
       - 'paper_pov/candidate_snapshot.py'
+      - 'paper_pov/preselection_universe.py'
       - 'paper_pov/test_candidate_snapshot.py'
       - 'paper_pov/test_a1_a2_end_to_end.py'
       - 'paper_pov/a2_artifact_consumer.py'
@@ -43,6 +44,14 @@ jobs:
           assert snapshot["observed_markets"] == report["observed_markets"]
           assert snapshot["abstention_counts"] == report["abstention_counts"]
           assert snapshot["scan_status"] == report["scan_status"]
+          from paper_pov.preselection_universe import export_universe
+          universe=export_universe(latest)
+          assert universe["receipt_sha256"]==snapshot["receipt_sha256"]
+          assert len(universe["markets"])==snapshot["observed_markets"]
+          assert len({x["observation_id"] for x in universe["markets"]})==len(universe["markets"])
+          assert universe["selection_decisions"]["WATCH"]==len(snapshot["watch"])
+          (latest.parent/"preselection-universe.json").write_text(
+              json.dumps(universe,sort_keys=True,allow_nan=False)+"\\n")
           assert all(0 <= age <= 600 for age in snapshot["quote_age_seconds"].values())
           assert report["mode"] == "PAPER_ONLY" and not report["production_applied"]
           # Publish only verified, read-only consumer JSON; never raw mutable latest.json as a trusted API.
@@ -121,6 +130,12 @@ jobs:
           exported=json.loads((root/"verified-snapshot.json").read_bytes())
           assert snapshot["receipt_sha256"]==exported["receipt_sha256"]
           assert snapshot["watch"]==exported["watch"]
+          from paper_pov.preselection_universe import export_universe
+          universe=export_universe(root/"latest.json")
+          published=json.loads((root/"preselection-universe.json").read_bytes())
+          assert published==universe
+          assert universe["receipt_sha256"]==snapshot["receipt_sha256"]
+          assert universe["selection_decisions"]["WATCH"]==len(snapshot["watch"])
           assert snapshot["eligible_pairs"]==exported["eligible_pairs"]
           assert snapshot["observed_markets"]==exported["observed_markets"]
           assert snapshot["scan_status"]==exported["scan_status"]
