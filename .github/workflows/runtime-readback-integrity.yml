@@ -203,7 +203,15 @@ jobs:
           except Exception:
               # Invalid present evidence must still fail the job.
               raise
-          if not published.get("quote_evidence"):
+          # An empty but present quote_evidence array is a legitimate
+          # ABSTAIN_NO_OBSERVATIONS cohort, not a missing legacy field.
+          if "quote_evidence" in published:
+              writer=json.loads(Path("/tmp/real-writer-recovery.json").read_text())
+              if published.get("ledger_generation") != writer["persisted_paper"]["ledger_generation"]:
+                  raise ValueError("published result ledger generation differs from recovered same-run writer")
+              if writer["remote_ledger_reconciliation"]["status"] != "MATCH":
+                  raise ValueError("same-run published delivery requires matching packed ledger")
+          if "quote_evidence" not in published:
               report = {
                   "source_run_id": int(os.environ["WRITER_RUN_ID"]),
                   "status": "HISTORICAL_PUBLISHED_QUOTE_EVIDENCE_UNAVAILABLE",
