@@ -34,6 +34,8 @@ def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, ru
     if (not isinstance(artifacts, list) or not isinstance(listing.get("total_count"), int)
             or listing["total_count"] != len(artifacts)):
         raise IntegrityError("Artifact listing incomplete")
+    if artifact_name == "public-paper-ledger":
+        artifact_name = f"public-paper-ledger-{run_id}"
     matches = [a for a in artifacts if a.get("name") == artifact_name]
     if len(matches) != 1 or matches[0].get("expired") is not False:
         raise IntegrityError("Missing, duplicated or expired artifact")
@@ -42,9 +44,9 @@ def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, ru
                 "--name", artifact_name, "--dir", directory], timeout=120)
         root = Path(directory)
         paths = list(root.rglob("*"))
-        if any(p.is_symlink() or (p.is_file() and p.parent != root) for p in paths):
+        if any(p.is_symlink() for p in paths):
             raise IntegrityError("Unexpected nested or symlinked artifact entries")
-        files = {p.name: p.read_bytes() for p in paths if p.is_file()}
+        files = {p.relative_to(root).as_posix(): p.read_bytes() for p in paths if p.is_file()}
         result = verify_readback(manifest, files, expected_source_sha=source_sha,
                                  expected_run_id=run_id)
     result.update(remote_run_url=run.get("html_url"), artifact_id=matches[0].get("id"),
@@ -56,7 +58,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", required=True)
     parser.add_argument("--run-id", required=True)
-    parser.add_argument("--artifact-name", required=True)
+    parser.add_argument("--artifact-name", default="public-paper-ledger")
     parser.add_argument("--manifest", required=True, help="Trusted manifest saved separately from remote artifact")
     parser.add_argument("--source-sha", required=True)
     parser.add_argument("--output", required=True)
