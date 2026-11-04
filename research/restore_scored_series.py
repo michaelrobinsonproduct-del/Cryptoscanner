@@ -35,15 +35,22 @@ def restore_and_capture(previous, output_root, *, collector=collect):
     records = [json.loads(line) for line in lines]
     if len({r["batch"] for r in records}) != len(records):
         raise ValueError("duplicate original source round")
-    # Relocation is strictly internal: no foreign absolute batch path is imported.
+    # The old GitHub runner's absolute directories may not exist in this job.
+    # Map each indexed round by its *expected ordinal* within the downloaded
+    # artifact, then independently re-verify each local manifest and raw receipt.
+    # Never dereference the untrusted original path from the JSON index.
     normalized = []
-    for record in records:
-        original = Path(record["batch"])
-        if original.is_symlink() or original.resolve(strict=True).parent not in (
-                previous, previous / "entry"):
-            raise ValueError("round outside original scored series")
-        if original.name != "depth" and not original.name.startswith("depth-"):
-            raise ValueError("unrecognized source round")
+    for ordinal, record in enumerate(records):
+        old_name = record.get("batch")
+        if not isinstance(old_name, str) or not Path(old_name).is_absolute():
+            raise ValueError("invalid archived batch locator")
+        expected = "depth" if ordinal == 0 else "depth-%03d" % ordinal
+        if Path(old_name).name != expected:
+            raise ValueError("unexpected indexed round ordinal")
+        relative = Path("entry/depth") if ordinal == 0 else Path(expected)
+        original = previous / relative
+        if original.is_symlink() or not original.is_dir():
+            raise ValueError("missing local indexed round")
         manifest = original / "manifest.json"
         if manifest.is_symlink() or not manifest.is_file():
             raise ValueError("missing immutable source manifest")
@@ -52,7 +59,7 @@ def restore_and_capture(previous, output_root, *, collector=collect):
         rows, abstentions = verified_rows(original)
         if len(rows) != record["snapshots_verified"] or len(abstentions) != record["abstentions"]:
             raise ValueError("original source coverage drift")
-        normalized.append((record, original.relative_to(previous)))
+        normalized.append((record, relative))
     # Explicitly reject symlinks anywhere in archived evidence (including score files).
     if any(item.is_symlink() for item in previous.rglob("*")):
         raise ValueError("unsafe archived symlink")
