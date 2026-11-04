@@ -1,6 +1,11 @@
 """Focused C/D read-only recovered writer bridge acceptance."""
 import copy
 import unittest
+import json
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
 from paper_pov.c_writer_recovery_bridge import bridge
 from paper_pov.test_c_candidate_handoff import fixture
 
@@ -65,6 +70,25 @@ class BridgeTests(unittest.TestCase):
                     bridge(integration(), bad)
         with self.assertRaises(ValueError):
             bridge(integration(), readback(), restored_latest={"trading_approved": True})
+
+    def test_cli_emits_recovered_provenance_and_replay_as_separate_artifacts(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "integration.json").write_text(json.dumps(integration()))
+            (root / "readback.json").write_text(json.dumps(readback()))
+            result = subprocess.run([
+                sys.executable, "-m", "paper_pov.c_writer_recovery_bridge",
+                "--integration", str(root / "integration.json"),
+                "--readback", str(root / "readback.json"),
+                "--output", str(root / "combined.json"),
+                "--bd-output", str(root / "bd.json"),
+            ], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            combined = json.loads((root / "combined.json").read_text())
+            bd = json.loads((root / "bd.json").read_text())
+            self.assertEqual(bd, combined["historical_a2"])
+            self.assertFalse(combined["same_run_or_candidate_parity_claimed"])
+            self.assertEqual(bd["status"], "WATCH_REPLAY_ONLY_NOT_LIVE")
 
     def test_independently_authenticated_writer_is_separate_from_a2(self):
         verified = {**readback(), "status": "VERIFIED_REMOTE_READBACK",
