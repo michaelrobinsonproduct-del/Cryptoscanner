@@ -4,6 +4,7 @@ Requires authenticated gh CLI; never writes a ledger or starts a scan.
 """
 import argparse
 import json
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -11,13 +12,13 @@ from paper_pov.sealed_http_bundle import build_bundle
 
 
 def read_run(repo, run_id, *, runner=subprocess.check_output):
-    if not repo or not run_id.isdigit() or int(run_id) <= 0:
+    if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repo or '') or not run_id.isdigit() or int(run_id) <= 0:
         raise ValueError("invalid GitHub artifact locator")
     run = json.loads(runner(["gh", "run", "view", run_id, "-R", repo,
-                             "--json", "databaseId,status,conclusion,headSha,event"]).decode())
+                             "--json", "databaseId,status,conclusion,headSha,event,workflowName,headBranch"]).decode())
     if run.get("databaseId") != int(run_id) or run.get("status") != "completed" or run.get("conclusion") != "success":
         raise ValueError("paper workflow has not completed successfully")
-    if run.get("event") not in ("schedule", "workflow_dispatch"):
+    if run.get("event") not in ("schedule", "workflow_dispatch") or run.get("headBranch") != "main" or run.get("workflowName") != "Public Kraken Paper POV (scheduled, isolated ledger)":
         raise ValueError("untrusted paper workflow origin")
     with tempfile.TemporaryDirectory() as folder:
         root = Path(folder)
