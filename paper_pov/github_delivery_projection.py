@@ -291,6 +291,48 @@ def project_legacy_published_abstention(result, *, writer_readback=None, a2_deli
             "single_writer_read_only": True, "production_applied": False}
 
 
+
+def project_d_historical_published_abstention(report, writer_readback):
+    """Consume D's retained, read-only published-result abstention as B delivery."""
+    if not isinstance(report, dict) or report.get("status") not in (
+            "HISTORICAL_PUBLISHED_ARTIFACT_UNAVAILABLE",
+            "HISTORICAL_PUBLISHED_QUOTE_EVIDENCE_UNAVAILABLE"):
+        raise ValueError("unsupported D historical published report")
+    reasons = {
+        "HISTORICAL_PUBLISHED_ARTIFACT_UNAVAILABLE": "NO_PAIRED_PUBLISHED_RESULTS_ARTIFACT",
+        "HISTORICAL_PUBLISHED_QUOTE_EVIDENCE_UNAVAILABLE": "PUBLISHED_QUOTE_EVIDENCE_MISSING",
+    }
+    if report.get("reason") != reasons[report["status"]]:
+        raise ValueError("inconsistent D published abstention")
+    writer = _writer_evidence(writer_readback)
+    if (type(report.get("source_run_id")) is not int or
+            report["source_run_id"] != writer["source_run_id"] or
+            report.get("writer_reconciliation_status") != writer["reconciliation_status"]):
+        raise ValueError("D published abstention not bound to writer receipt")
+    if any(report.get(k) is not v for k, v in (
+            ("single_writer_read_only", True),
+            ("live_watch_authorized", False),
+            ("production_applied", False))):
+        raise ValueError("D published abstention makes unsafe authorization claim")
+    return {
+        "schema": "paper_delivery_readback_v1",
+        "source_run_id": writer["source_run_id"],
+        "source_sha": writer["source_sha"],
+        "status": report["status"],
+        "abstention_reason": report["reason"],
+        "writer_recovery": writer,
+        "writer_reconciliation_status": writer["reconciliation_status"],
+        "historical_watch_count": None,
+        "historical_coverage": None,
+        "live_watch": [],
+        "live_watch_authorized": False,
+        "client_quote_freshness_verified": False,
+        "exchange_event_freshness_verified": False,
+        "single_writer_read_only": True,
+        "production_applied": False,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo")
@@ -298,6 +340,7 @@ def main():
     parser.add_argument("--writer-readback", help="Existing D historical readback JSON")
     parser.add_argument("--historical-a2", help="Existing C/B historical WATCH handoff JSON")
     parser.add_argument("--output", help="Write read-only delivery JSON; never a ledger")
+    parser.add_argument("--d-historical-published-report", help="D retained historical published abstention JSON")
     parser.add_argument("--published-result", help="Actual verified paper-pipeline results.json")
     parser.add_argument("--published-artifact", help="Checksummed public-paper-results GitHub ZIP (read-only)")
     parser.add_argument("--expected-run-id", help="Expected immutable GitHub run identity")
@@ -307,9 +350,17 @@ def main():
     args = parser.parse_args()
     writer = json.loads(open(args.writer_readback, encoding="utf-8").read()) if args.writer_readback else None
     historical = json.loads(open(args.historical_a2, encoding="utf-8").read()) if args.historical_a2 else None
+    if args.d_historical_published_report and (args.published_result or args.published_artifact or args.repo or args.run_id or args.historical_a2 or args.a2_delivery or args.learning_handoff):
+        parser.error("D historical abstention report is exclusive of other delivery sources")
     if args.published_result and args.published_artifact:
         parser.error("select exactly one published input")
-    if args.published_result or args.published_artifact:
+    if args.d_historical_published_report:
+        if writer is None:
+            parser.error("--d-historical-published-report requires --writer-readback")
+        from pathlib import Path
+        report = json.loads(Path(args.d_historical_published_report).read_text(encoding="utf-8"))
+        result = project_d_historical_published_abstention(report, writer)
+    elif args.published_result or args.published_artifact:
         if args.run_id or args.repo or historical is not None:
             parser.error("--published-result is exclusive of historical artifact transport")
         a2 = None
