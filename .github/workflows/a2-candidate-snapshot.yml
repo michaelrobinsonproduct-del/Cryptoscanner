@@ -122,16 +122,14 @@ jobs:
           python - <<'PY'
           import json, os
           from pathlib import Path
-          from paper_pov.a2_artifact_consumer import read_artifact_zip
+          from paper_pov.a2_artifact_consumer import read_published_artifact
           root=Path(os.environ["A2_DOWNLOADED_DIR"])
-          transport=root/"a2-verified-transport.zip"
-          assert transport.is_file() and transport.stat().st_size>0, "missing published transport"
-          snapshot=read_artifact_zip(transport)
+          consumed=read_published_artifact(root)
+          snapshot=consumed["snapshot"]
           exported=json.loads((root/"verified-snapshot.json").read_bytes())
           assert snapshot["receipt_sha256"]==exported["receipt_sha256"]
           assert snapshot["watch"]==exported["watch"]
-          from paper_pov.preselection_universe import export_universe
-          universe=export_universe(root/"latest.json")
+          universe=consumed["preselection"]
           published=json.loads((root/"preselection-universe.json").read_bytes())
           assert published==universe
           assert universe["receipt_sha256"]==snapshot["receipt_sha256"]
