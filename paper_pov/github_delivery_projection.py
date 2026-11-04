@@ -252,7 +252,8 @@ def project_legacy_published_abstention(result, *, writer_readback=None, a2_deli
     if not isinstance(result, dict) or result.get("schema") != 1:
         raise ValueError("invalid legacy published result")
     run_id, sha = result.get("run_id"), result.get("source_sha")
-    if (type(run_id) not in (str, int) or not str(run_id).isdigit() or\n            not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{40}", sha) is None):
+    if (type(run_id) not in (str, int) or not str(run_id).isdigit() or
+            not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{40}", sha) is None):
         raise ValueError("missing legacy run provenance")
     event = result.get("github_event")
     if event not in ("workflow_dispatch", "schedule") or result.get("remote_readback_verified") is not True:
