@@ -3,6 +3,7 @@
 Ticker-only evidence: NOT source-authenticated future outcomes or learning labels.
 """
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from paper_pov.candidate_snapshot import read_snapshot
@@ -39,9 +40,22 @@ def export_universe(latest, now=None):
         raise ValueError("invalid preselection decision provenance")
     if {name: sum(x["selection_status"] == name for x in rows) for name in decisions} != decisions:
         raise ValueError("preselection decision totals mismatch")
+    # Deterministic receipt-bound identity for EVERY observed ticker, including
+    # screen rejects and OHLC budget exclusions. Never call these outcome labels.
+    for row in rows:
+        row["observation_id"] = hashlib.sha256(
+            ("paper-preselection-v1|" + verified["receipt_sha256"] + "|" + row["pair"]).encode()
+        ).hexdigest()
+    watch_by_pair = {x["pair"]: x for x in verified["watch"]}
+    if any(row["watch_rank"] != watch_by_pair[row["pair"]]["rank"]
+           for row in rows if row["selection_status"] == "WATCH"):
+        raise ValueError("WATCH rank differs from sealed candidate snapshot")
+    if set(watch_by_pair) != {row["pair"] for row in rows if row["selection_status"] == "WATCH"}:
+        raise ValueError("WATCH identities differ from complete preselection")
     return {"schema": "paper_preselection_v1", "as_of": verified["as_of"],
             "receipt_sha256": verified["receipt_sha256"],
             "coverage": coverage, "selection_decisions": decisions, "markets": rows,
+            "identity_semantics": "sha256(paper-preselection-v1|receipt_sha256|pair)",
             "future_outcomes_authenticated": False, "qualified_for_learning": False,
             "production_applied": False}
 
