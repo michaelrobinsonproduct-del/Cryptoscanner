@@ -101,6 +101,11 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
             self.assertEqual(overlap["status_counts"]["NO_PINNED_PARTITION"], 1)
             self.assertEqual(overlap["status_counts"]["ENTRY_BAR_PRESENT_UNQUALIFIED"], 1)
             self.assertEqual(overlap["qualified_outcome_count"], 0)
+            self.assertEqual(len(overlap["cohort_coverage"]), 2)
+            coverage = {x["pair"]: x for x in overlap["cohort_coverage"]}
+            self.assertEqual(coverage["YUSD"]["horizons"]["48"], "NO_PINNED_PARTITION")
+            self.assertEqual(coverage["XUSD"]["horizons"]["48"], "COMPLETE_BAR_PATH_UNQUALIFIED")
+            self.assertEqual(coverage["XUSD"]["entry_status"], "ENTRY_BAR_PRESENT_UNQUALIFIED")
             # The decision timestamp's own 5m bar must never count as entry.
             earlier = dict(projection, frozen_observations=[
                 {"prediction_id": rows[0]["observation_id"], "pair": "XUSD",
