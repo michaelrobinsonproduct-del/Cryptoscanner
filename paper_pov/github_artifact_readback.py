@@ -14,7 +14,7 @@ from paper_pov.runtime_readback_integrity import IntegrityError, canonical_bytes
 
 
 def _github_json(args, *, runner):
-    raw = runner(["gh", "api", *args], timeout=45)
+    raw = runner(["gh", "api", "-X", "GET", *args], timeout=45)
     return json.loads(raw)
 
 
