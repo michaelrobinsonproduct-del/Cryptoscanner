@@ -13,7 +13,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from .historical_execution_learning_bridge import project_historical_execution
-from .historical_e1_b_pipeline import run_pipeline
+from .historical_e1_b_pipeline import run_pipeline, bind_a2_projection
 from .historical_preselection_binding import bind_preselection_history
 
 
@@ -72,6 +72,36 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
                               "NO_RECONSTRUCTED_OUTCOME": 1})
             self.assertEqual(result["delivery"]["observed_prediction_count"], 2)
             self.assertEqual(result["delivery"]["status"], "NO_QUALIFIED_RULE")
+
+            # Exercise the retained E A2 projection through the SAME real
+            # pinned-trade E1 reconstruction and B delivery consumer.
+            projection = {"schema": "a2_historical_e_preselection_v1",
+                          "a_receipt_sha256": receipt,
+                          "status": "NO_QUALIFIED_RULE",
+                          "source_authenticated": False,
+                          "historical_outcomes_available": False,
+                          "promotion_authorized": False, "production_applied": False,
+                          "frozen_predictions": binding["frozen_predictions"],
+                          "e1_watch_predictions": watch,
+                          "frozen_observation_count": 2, "watch_count": 1,
+                          "nonwatch_without_outcomes": 1}
+            with patch.dict(sys.modules, {"paper_pov.github_sealed_bundle_readback": transport_stub}):
+                retained = run_pipeline(
+                    manifest, root, schema, {"XUSD": "XUSD.csv"}, watch,
+                    (start + dt.timedelta(hours=49)).isoformat(),
+                    a2_projection=projection)
+            self.assertEqual(retained["handoff"], result["handoff"])
+            self.assertEqual(retained["delivery"], result["delivery"])
+            self.assertEqual(retained["preselection_binding"]["a_receipt_sha256"], receipt)
+            for changed in (
+                dict(projection, source_authenticated=True),
+                dict(projection, frozen_observation_count=1),
+                dict(projection, e1_watch_predictions=[])):
+                with self.assertRaises(ValueError):
+                    bind_a2_projection(changed, watch)
+            with self.assertRaisesRegex(ValueError, "WATCH sample"):
+                bind_a2_projection(projection, [])
+
 
 
     def test_pinned_csv_to_four_horizons_to_b_read_only(self):
