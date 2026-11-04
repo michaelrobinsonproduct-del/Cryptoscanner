@@ -248,7 +248,7 @@ class RestoreScoredSeriesTests(unittest.TestCase):
                     "snapshots_verified": 1, "abstentions": 0})
             # The archive represents independently captured immutable rounds;
             # write its index once instead of 576 redundant fsync/lock cycles.
-            index.write_text("".join(json.dumps(row, sort_keys=True) + "\\n"
+            index.write_text("".join(json.dumps(row, sort_keys=True) + "\n"
                                      for row in index_rows))
             self.assertEqual(len(index.read_text().splitlines()), 577)
             def collect(pairs, directory):
