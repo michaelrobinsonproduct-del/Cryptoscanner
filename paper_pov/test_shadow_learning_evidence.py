@@ -17,7 +17,7 @@ def cohort(n=40):
 class ShadowEvidenceTests(unittest.TestCase):
     def setUp(self):
         self.a = dict(version="baseline-v1", training_end_utc="2026-07-29T00:00:00Z", evaluation_asof_utc="2026-08-07T00:00:00Z", observations=cohort())
-        self.b = dict(version="challenger-v2", training_end_utc="2026-07-29T00:00:00Z", observations=cohort())
+        self.b = dict(version="challenger-v2", training_end_utc="2026-07-29T00:00:00Z", evaluation_asof_utc="2026-08-07T00:00:00Z", observations=cohort())
 
     def test_no_improvement_never_promotes(self):
         result = evaluate_shadow_release(self.a, self.b)
