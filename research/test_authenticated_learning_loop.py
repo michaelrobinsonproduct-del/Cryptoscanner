@@ -7,7 +7,7 @@ from unittest.mock import patch
 from research.capture_acquisition_scores import capture_score
 from research.prospective_round_store import append_round
 from research.test_prospective_outcome_adapter import fixture
-from research.authenticated_learning_loop import compare, evaluate_all
+from research.authenticated_learning_loop import compare, evaluate_all, evaluate_cohorts
 
 
 class AuthenticatedLearningTests(unittest.TestCase):
@@ -61,6 +61,67 @@ class AuthenticatedLearningTests(unittest.TestCase):
         self.assertEqual(result["baseline"]["top_decile_n"], 3)
         self.assertEqual(result["challenger"]["top_decile_n"], 3)
         self.assertEqual(report["shadow_decision"]["decision"], "KEEP_BASELINE")
+
+
+    def test_ten_independently_verified_cohorts_one_held_out_split(self):
+        from contextlib import ExitStack
+        with tempfile.TemporaryDirectory() as tmp:
+            roots = [Path(tmp) / ("cohort-%02d" % k) for k in range(10)]
+            for root in roots:
+                (root / "entry" / "associations").mkdir(parents=True)
+            captures, outcomes = {}, {}
+            for k, root in enumerate(roots):
+                key = str(root / "entry")
+                captures[key] = []
+                outcomes[key] = []
+                for j in range(20):
+                    i = 20 * k + j
+                    pid, sha = format(i, "064x"), format(1000 + i, "064x")
+                    observed = 1700000000 + i * 3600
+                    captures[key].append({
+                        "prediction_id": pid, "pair": "XBTUSD",
+                        "source_sha256": sha, "score_observed_at": observed - 2,
+                        "baseline_score": float(i),
+                        "challenger_score": float(200-i)})
+                    outcomes[key].append({
+                        "pair": "XBTUSD", "entry_source_sha256": sha,
+                        "entry_first_observed_at": observed,
+                        "entry_liquidity_usd": 100.0,
+                        "status": "QUALIFIED_OBSERVED_PATH", "ge30pct": i % 5 == 0})
+            def key_for(path):
+                return str(Path(path).parent)
+            with ExitStack() as stack:
+                stack.enter_context(patch(
+                    "research.authenticated_learning_loop.load_captures",
+                    side_effect=lambda path: captures[key_for(path)]))
+                stack.enter_context(patch(
+                    "research.authenticated_learning_loop.verified_associations",
+                    side_effect=lambda scores, associations, index:
+                        (captures[key_for(scores)], [], {"source_abstentions": []})))
+                stack.enter_context(patch(
+                    "research.authenticated_learning_loop.evaluate_index",
+                    side_effect=lambda index, hours:
+                        {"outcomes": outcomes[key_for(index)], "snapshots_verified": 20}))
+                result = evaluate_cohorts(roots, ledger_path=Path(tmp) / "shadow.jsonl")
+            comparison = result["horizons"]["48"]["comparison"]
+            self.assertEqual(result["cohorts"], 10)
+            self.assertEqual(set(result["horizons"]), {"1", "6", "24", "48"})
+            self.assertEqual(comparison["qualified_n"], 200)
+            self.assertEqual(comparison["held_out_n"], 60)
+            self.assertEqual(comparison["train_n"], 92)
+            self.assertEqual(comparison["baseline"]["top_decile_n"], 6)
+            self.assertEqual(comparison["challenger"]["top_decile_n"], 6)
+            self.assertEqual(comparison["rule"], "QUALIFIED_COMPARISON")
+            self.assertEqual(result["shadow_decision"]["decision"], "SHADOW_ELIGIBLE_REVIEW")
+            self.assertFalse(result["production_applied"])
+            self.assertEqual(len((Path(tmp) / "shadow.jsonl").read_text().splitlines()), 1)
+
+    def test_repeated_cohort_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "cohort"
+            root.mkdir()
+            with self.assertRaisesRegex(ValueError, "distinct"):
+                evaluate_cohorts([root, root])
 
 
 if __name__ == "__main__":
