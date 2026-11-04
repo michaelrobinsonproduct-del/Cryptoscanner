@@ -167,12 +167,24 @@ jobs:
           from paper_pov.a2_artifact_consumer import read_published_delivery
           root=Path("/tmp/b-delivery/a2")
           with zipfile.ZipFile("/tmp/b-delivery/a2.zip") as archive:
+              required={"a2-verified-transport.zip","preselection-universe.json",
+                        "latest.json","a2-delivery.json"}
+              seen=set()
               for item in archive.infolist():
                   name=item.filename
-                  if (item.is_dir() or name not in ("a2-verified-transport.zip","preselection-universe.json","latest.json","a2-delivery.json")
-                      or item.file_size>2_000_000 or (item.external_attr >> 16)&0o170000==0o120000):
+                  # A publishes its complete output folder, including the
+                  # independent verified snapshot and immutable receipt.
+                  allowed=(name in required or name=="verified-snapshot.json"
+                           or (name.startswith("receipts/") and name.endswith(".json")
+                               and name.count("/")==1))
+                  if (not allowed or name in seen or item.file_size>2_000_000
+                      or (item.external_attr >> 16)&0o170000==0o120000):
                       raise SystemExit("A2_UNSAFE_OR_UNKNOWN_ARTIFACT_MEMBER")
-                  (root/name).write_bytes(archive.read(item))
+                  seen.add(name)
+                  if name in required:
+                      (root/name).write_bytes(archive.read(item))
+              if not required.issubset(seen):
+                  raise SystemExit("A2_REQUIRED_PUBLISHED_FILES_MISSING")
           try:
               delivery=read_published_delivery(root)
           except (ValueError,KeyError) as exc:
