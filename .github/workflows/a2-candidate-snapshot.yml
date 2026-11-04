@@ -1,0 +1,17 @@
+name: A2 immutable snapshot focused acceptance
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/candidate_snapshot.py'
+      - 'paper_pov/test_candidate_snapshot.py'
+      - '.github/workflows/a2-candidate-snapshot.yml'
+  workflow_dispatch:
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify immutable WATCH candidate readback
+        run: python -m unittest paper_pov.test_candidate_snapshot -v
