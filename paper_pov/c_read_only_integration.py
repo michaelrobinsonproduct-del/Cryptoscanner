@@ -52,6 +52,8 @@ def combine(parity, recovery, snapshot=None):
             raise ValueError("A2 consumer attempted production approval")
         if not isinstance(snapshot.get("watch"), list) or not snapshot["watch"]:
             raise ValueError("A2 snapshot lacks WATCH candidates")
+        if any(not isinstance(item, dict) or not item for item in snapshot["watch"]):
+            raise ValueError("A2 WATCH candidate is not a nonempty object")
         if snapshot.get("scan_status") != "WATCH":
             raise ValueError("A2 snapshot has unexpected scan status")
         # Treat snapshot metadata as untrusted even after transport authentication.
