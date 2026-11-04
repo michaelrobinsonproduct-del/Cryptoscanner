@@ -216,6 +216,66 @@ def verify_remote(root, base, new_commit, staged):
             "remote_commit": new_commit, "verified_files": paths}
 
 
+def _exclusive_receipt(path, data):
+    """Exclusive durable receipt; remove partial bytes only if this call created it."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if any(p.is_symlink() for p in (path, *path.parents)):
+        raise ValueError("Unsafe receipt destination")
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    identity = os.fstat(fd)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+    except BaseException:
+        # Never unlink a replacement installed by a competing process.
+        try:
+            current = path.lstat()
+            if (current.st_dev, current.st_ino) == (identity.st_dev, identity.st_ino):
+                path.unlink()
+        except FileNotFoundError:
+            pass
+        raise
+    return identity.st_dev, identity.st_ino
+
+
+def publish_stage_outputs(next_ledger, state, scoreboard_path, score):
+    """Publish exclusively and read back both receipts; never overwrite a competitor."""
+    entries = [(Path(next_ledger), ledger.canonical(state)),
+               (Path(scoreboard_path), ledger.canonical(score))]
+    if entries[0][0].resolve(strict=False) == entries[1][0].resolve(strict=False):
+        raise ValueError("Ledger and scoreboard destinations must differ")
+    if any(path.exists() or path.is_symlink() for path, _ in entries):
+        raise FileExistsError("Refuse to replace staged output")
+    created = []
+    try:
+        for path, data in entries:
+            identity = _exclusive_receipt(path, data)
+            if identity is None:
+                raise ValueError("Missing exclusive receipt identity")
+            created.append((path, *identity))
+            current = path.lstat()
+            if (current.st_dev, current.st_ino) != identity:
+                raise ValueError("Receipt replaced before readback")
+            if path.read_bytes() != data:
+                raise ValueError("Staged output readback mismatch")
+        ledger.verify(json.loads(entries[0][0].read_bytes()), storage.MAX_RAW_BYTES)
+        if json.loads(entries[1][0].read_bytes()) != ledger.scoreboard(
+                state, storage.MAX_RAW_BYTES):
+            raise ValueError("Persisted scoreboard mismatch")
+    except Exception:
+        for path, device, inode in reversed(created):
+            try:
+                current = path.lstat()
+                if (current.st_dev, current.st_ino) == (device, inode):
+                    path.unlink()
+            except FileNotFoundError:
+                pass
+        raise
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description="Git-only paper ledger single-writer staging")
     sub = p.add_subparsers(dest="command", required=True)
@@ -235,13 +295,7 @@ def main(argv=None):
     if a.command == "stage":
         report = json.loads(Path(a.report).read_bytes())
         state, info = stage(a.repository, a.base, report, a.source_sha, a.staged)
-        for path, data in ((a.next_ledger, ledger.canonical(state)),
-                           (a.scoreboard, ledger.canonical(info["scoreboard"]))):
-            target = Path(path)
-            if target.exists():
-                raise FileExistsError("Refuse to replace staged output")
-            target.parent.mkdir(parents=True, exist_ok=True)
-            segments._write(target, data)
+        publish_stage_outputs(a.next_ledger, state, a.scoreboard, info["scoreboard"])
         result = {"generation": state["generation"], "ledger_sha256": state["sha256"],
                   "snapshot_sha256": info["snapshot_sha256"]}
     elif a.command == "apply":
