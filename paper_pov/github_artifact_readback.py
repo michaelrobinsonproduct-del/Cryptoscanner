@@ -50,7 +50,32 @@ def summarize_persisted_paper(files):
             "outcome": "ABSTAIN" if status.startswith("ABSTAIN") else "HISTORICAL_RESULT_ONLY",
             "live_replay_performed": False}
 
-def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, runner=subprocess.check_output, restore_dir=None):
+def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.check_output):
+    """Compare recovered writer bytes to the remote ledger ref without modifying either."""
+    import base64
+    from urllib.parse import quote
+    if not ref or not path or path.startswith("/") or ".." in Path(path).parts:
+        raise IntegrityError("Invalid read-only ledger ref or path")
+    ledger_paths = [name for name in recovered if name == "ledger.json" or name.endswith("/ledger.json")]
+    if len(ledger_paths) != 1:
+        raise IntegrityError("Recovered ledger missing or ambiguous")
+    endpoint = f"repos/{repo}/contents/{quote(path, safe='/')}?ref={quote(ref, safe='')}"
+    remote = _github_json([endpoint], runner=runner)
+    if remote.get("type") != "file" or remote.get("encoding") != "base64":
+        raise IntegrityError("Remote ledger not a base64 file")
+    try:
+        remote_bytes = base64.b64decode(remote["content"], validate=False)
+    except (ValueError, KeyError, TypeError) as exc:
+        raise IntegrityError("Remote ledger content malformed") from exc
+    remote_sha = hashlib.sha256(remote_bytes).hexdigest()
+    recovered_sha = hashlib.sha256(recovered[ledger_paths[0]]).hexdigest()
+    return {"status": "MATCH" if remote_sha == recovered_sha else "DIVERGED",
+            "remote_ref": ref, "remote_path": path, "remote_sha256": remote_sha,
+            "recovered_sha256": recovered_sha, "remote_git_blob_sha": remote.get("sha"),
+            "independently_authenticated": False, "production_applied": False}
+
+
+def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, runner=subprocess.check_output, restore_dir=None, ledger_ref=None, ledger_path="paper_pov/output/ledger.json"):
     """Fail closed on run identity, source SHA, artifact ambiguity and byte drift."""
     if not repo or "/" not in repo or not str(run_id).isdigit() or not artifact_name:
         raise IntegrityError("Invalid repository, run ID or artifact")
@@ -111,6 +136,9 @@ def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, ru
             result["independently_authenticated"] = True
         if artifact_name == f"public-paper-ledger-{run_id}":
             result["persisted_paper"] = summarize_persisted_paper(files)
+        if ledger_ref is not None:
+            result["remote_ledger_reconciliation"] = reconcile_remote_ledger(
+                repo, ledger_ref, ledger_path, files, runner=runner)
         if restore_dir is not None:
             destination = Path(restore_dir)
             if destination.exists():
@@ -141,13 +169,15 @@ def main(argv=None):
     parser.add_argument("--source-sha", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--restore-dir", help="Restore verified artifact to new directory without overwriting")
+    parser.add_argument("--ledger-ref", help="Optional read-only Git branch/tag containing the persisted ledger")
+    parser.add_argument("--ledger-path", default="paper_pov/output/ledger.json")
     args = parser.parse_args(argv)
     report = {"status": "REMOTE_READBACK_FAILED", "remote_downloaded": False,
               "ledger_writer_invoked": False, "production_applied": False}
     try:
         manifest = json.loads(Path(args.manifest).read_text()) if args.manifest else None
         report = retrieve_and_verify(args.repo, args.run_id, args.artifact_name, manifest, args.source_sha,
-                                     restore_dir=args.restore_dir)
+                                     restore_dir=args.restore_dir, ledger_ref=args.ledger_ref, ledger_path=args.ledger_path)
     except (IntegrityError, OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError,
             subprocess.TimeoutExpired) as exc:
         report["reason"] = type(exc).__name__
