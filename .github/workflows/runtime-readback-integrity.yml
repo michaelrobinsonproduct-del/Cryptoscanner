@@ -64,7 +64,7 @@ jobs:
           if selected is None:
               raise SystemExit("NO_SOURCE_VERIFIED_SINGLE_WRITER_ARTIFACT")
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as output:
-              output.write(f"WRITER_RUN_ID={selected[0]}\\nWRITER_SOURCE_SHA={selected[1]}\\n")
+              output.write(f"WRITER_RUN_ID={selected[0]}\nWRITER_SOURCE_SHA={selected[1]}\n")
           print("SELECTED_SOURCE_BOUND_WRITER", selected[0], selected[1])
           PY
       - name: Independently download existing manual paper writer artifact and restore locally
