@@ -37,6 +37,10 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
         raise ValueError("Missing immutable version")
     if type(minimum_holdout) is not int or minimum_holdout < 1:
         raise ValueError("Invalid minimum holdout")
+    train_a, train_b = baseline.get("training_end_utc"), challenger.get("training_end_utc")
+    if train_a != train_b:
+        raise ValueError("Training boundary mismatch")
+    training_end = utc_time(train_a)
     a, b = baseline.get("observations"), challenger.get("observations")
     # Row-level booleans cannot independently authenticate Kraken archive data.
     receipt_a, receipt_b = baseline.get("source_receipt"), challenger.get("source_receipt")
@@ -72,6 +76,8 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
             mature = utc_time(row["label_mature_utc"])
             feature = utc_time(row["feature_asof_utc"])
             start = utc_time(row["holdout_start_utc"])
+            if start < training_end + timedelta(hours=48):
+                raise ValueError("Held-out start violates 48h training purge")
             if feature > entry or entry < start or mature < entry + timedelta(hours=48):
                 raise ValueError("Lookahead, in-sample entry or immature 48h outcome")
             if not all(c in "0123456789abcdef" for c in row["source_sha256"].lower()):
@@ -87,7 +93,12 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
     def metrics(rows):
         selected = [x for x in rows.values() if x["watch"]]
         true_positive = sum(x["hit"] for x in selected)
-        return {"watched": len(selected), "true_positive": true_positive,
+        movers = sum(x["hit"] for x in rows.values())
+        false_positives = len(selected) - true_positive
+        return {"false_positives": false_positives, "total_movers": movers,
+                "recall": true_positive / movers if movers else None,
+                "coverage": len(selected) / len(rows) if rows else None,
+                "watched": len(selected), "true_positive": true_positive,
                 "precision": true_positive / len(selected) if selected else None,
                 "missed_movers": sum(x["hit"] and not x["watch"] for x in rows.values())}
     base, candidate = metrics(aa), metrics(bb)
@@ -95,7 +106,8 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
     qualified = (receipt_valid and n >= minimum_holdout and base["watched"] >= minimum_holdout
                  and candidate["watched"] >= minimum_holdout
                  and candidate["precision"] > base["precision"]
-                 and candidate["missed_movers"] <= base["missed_movers"])
+                 and candidate["missed_movers"] <= base["missed_movers"]
+                 and candidate["false_positives"] <= base["false_positives"])
     return {"schema": "shadow_learning_evidence_v1",
             "baseline_version": baseline["version"], "challenger_version": challenger["version"],
             "cohort_size": n, "baseline": base, "challenger": candidate,
