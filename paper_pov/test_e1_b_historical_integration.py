@@ -205,6 +205,44 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
 
 
 
+    def test_historical_outputs_roll_back_partial_publication(self):
+        from .historical_e1_b_pipeline import main
+        from unittest.mock import patch as mock_patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ("manifest", "schema", "partitions", "predictions", "a2"):
+                (root / (name + ".json")).write_text("{}", encoding="utf-8")
+            output, overlap = root / "result.json", root / "overlap.json"
+            argv = [
+                "--manifest", str(root / "manifest.json"),
+                "--root", str(root),
+                "--schema", str(root / "schema.json"),
+                "--partitions", str(root / "partitions.json"),
+                "--predictions", str(root / "predictions.json"),
+                "--a2-projection", str(root / "a2.json"),
+                "--observed-until", "2026-01-03T00:00:00+00:00",
+                "--output", str(output),
+                "--full-cohort-overlap-output", str(overlap),
+            ]
+            fake = {"execution": {"prediction_count": 0, "status_counts": {}},
+                    "handoff": {"qualified_cohort_count": 0},
+                    "delivery": {"status": "NO_QUALIFIED_RULE"}}
+            from . import historical_e1_b_pipeline as pipeline
+            original_link = pipeline.os.link
+            def fail_second(source, destination):
+                if Path(destination) == overlap:
+                    raise OSError("injected second publication failure")
+                return original_link(source, destination)
+            with mock_patch.object(pipeline, "bind_a2_projection", return_value=None), \
+                 mock_patch.object(pipeline, "audit_a2_trade_partition_overlap", return_value={}), \
+                 mock_patch.object(pipeline, "run_pipeline", return_value=fake), \
+                 mock_patch.object(pipeline.os, "link", side_effect=fail_second):
+                with self.assertRaisesRegex(OSError, "injected second"):
+                    main(argv)
+            self.assertFalse(output.exists())
+            self.assertFalse(overlap.exists())
+            self.assertEqual(list(root.glob(".e1-b-*")), [])
+
     def test_pinned_csv_to_four_horizons_to_b_read_only(self):
         from .historical_outcome_execution import run_historical_outcomes
         # B's module imports its transport at import time; the projection below
