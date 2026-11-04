@@ -42,6 +42,37 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
         self.assertFalse(binding["unbiased_learning_qualified"])
         with self.assertRaisesRegex(ValueError, "WATCH sample"):
             bind_preselection_history(history, [])
+        # Run the actual A frozen universe through E1 and B; the non-WATCH
+        # market remains a missing outcome rather than an invented miss.
+        start = dt.datetime(2026, 1, 1, tzinfo=dt.timezone.utc)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            raw = b"".join(
+                f"{int((start + dt.timedelta(minutes=5*i)).timestamp())},100,1\\n".encode()
+                for i in range(578))
+            (root / "XUSD.csv").write_bytes(raw)
+            manifest = {"schema": "kraken_archive_manifest_v1", "source": "Kraken",
+                        "partitions": [{"file": "XUSD.csv", "size_bytes": len(raw),
+                                        "sha256": hashlib.sha256(raw).hexdigest()}]}
+            schema = {"format": "kraken_trade_csv_explicit_v1",
+                      "timestamp_unit": "seconds",
+                      "columns": {"timestamp": 0, "price": 1, "volume": 2},
+                      "header": False, "column_count": 3}
+            transport_stub = types.ModuleType("paper_pov.github_sealed_bundle_readback")
+            transport_stub.read_run = lambda *args, **kwargs: None
+            with patch.dict(sys.modules, {"paper_pov.github_sealed_bundle_readback": transport_stub}):
+                result = run_pipeline(
+                    manifest, root, schema, {"XUSD": "XUSD.csv"}, watch,
+                    (start + dt.timedelta(hours=49)).isoformat(),
+                    preselection_history=history)
+            self.assertEqual(result["handoff"]["reconstructed_prediction_count"], 1)
+            self.assertEqual(result["handoff"]["missing_prediction_count"], 1)
+            self.assertEqual(result["handoff"]["abstention_counts"],
+                             {"UNAUTHENTICATED_ARCHIVE_OR_PROXY_ENTRY": 1,
+                              "NO_RECONSTRUCTED_OUTCOME": 1})
+            self.assertEqual(result["delivery"]["observed_prediction_count"], 2)
+            self.assertEqual(result["delivery"]["status"], "NO_QUALIFIED_RULE")
+
 
     def test_pinned_csv_to_four_horizons_to_b_read_only(self):
         from .historical_outcome_execution import run_historical_outcomes
