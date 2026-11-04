@@ -28,6 +28,7 @@ jobs:
       - run: python -m unittest paper_pov.test_shadow_learning_evidence paper_pov.test_heldout_outcome_adapter paper_pov.test_historical_execution_learning_bridge -v
 
   historical-e1-b-integration:
+    needs: real-a2-historical-universe
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -53,7 +54,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: e-real-a2-historical-preselection
-          run-id: 41835380964
+          run-id: ${{ github.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: downloaded-e-a2
       - name: Exercise E1 pinned trade CSV through E handoff and B's real consumer
@@ -85,6 +86,8 @@ jobs:
           assert b['preselection_observation_count'] == p['frozen_observation_count']
           assert b['unobserved_nonwatch_count'] == p['nonwatch_without_outcomes']
           assert not b['unbiased_learning_qualified']
+          assert len(p['frozen_observations']) == b['preselection_observation_count']
+          assert sum(x['selection_status'] == 'WATCH' for x in p['frozen_observations']) == b['watch_outcome_input_count']
           print('REAL_A2_INPUT_GATE', json.dumps({
               'receipt_sha256': b['a_receipt_sha256'],
               'frozen_observations': b['preselection_observation_count'],
