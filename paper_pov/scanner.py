@@ -274,6 +274,38 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         item["quote_observed_at"] = quote_at.isoformat()
         item["prediction_id"] = hashlib.sha256(
             ("paper-v1|" + as_of + "|" + item["pair"]).encode()).hexdigest()
+    # Resolve every observed ticker to its actual scanner decision. A historical
+    # learner can now distinguish screen rejection, OHLC budget, OHLC failure,
+    # and a ranked WATCH without incorrectly labeling unselected markets misses.
+    selected_pairs = {x["pair"] for x in selected}
+    watch_by_pair = {x["pair"]: x for x in watch}
+    abstention_by_pair = {x["pair"]: x["category"] for x in abstentions}
+    screened_by_pair = {x["pair"]: x for x in screened}
+    preselection_decisions = {
+        "SCREEN_REJECTED": 0, "NOT_OHLC_SELECTED": 0,
+        "OHLC_ABSTAINED": 0, "WATCH": 0,
+    }
+    for row in preselection:
+        pair = row["pair"]
+        if not row["screen_passed"]:
+            decision = "SCREEN_REJECTED"
+        elif pair not in selected_pairs:
+            decision = "NOT_OHLC_SELECTED"
+        elif pair in abstention_by_pair:
+            decision = "OHLC_ABSTAINED"
+        elif pair in watch_by_pair:
+            decision = "WATCH"
+        else:
+            # An OHLC-valid candidate may be below the top-12 WATCH cutoff.
+            decision = "NOT_RANKED_WATCH"
+            preselection_decisions.setdefault(decision, 0)
+        row["selection_status"] = decision
+        row["baseline_score"] = screened_by_pair[pair]["baseline_score"] if row["screen_passed"] else None
+        row["watch_rank"] = watch_by_pair[pair]["rank"] if decision == "WATCH" else None
+        row["ohlc_abstention_category"] = abstention_by_pair.get(pair)
+        preselection_decisions[decision] += 1
+    if sum(preselection_decisions.values()) != len(preselection):
+        raise RuntimeError("Preselection decision coverage mismatch")
     return {"schema": 1, "mode": "PAPER_ONLY", "buy_approved": False,
         "scan_status": ("WATCH" if watch else
                         "ABSTAIN_NO_LIQUID_CANDIDATES" if not selected else
@@ -291,6 +323,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         "watch": watch, "observations": observations,
         "preselection_universe": preselection,
         "preselection_universe_status": "TICKER_ONLY_NOT_FORWARD_LABELLED",
+        "preselection_decisions": preselection_decisions,
         "preselection_coverage": {"valid_tickers": len(preselection),
                                   "screen_passed": len(screened),
                                   "screen_rejected": len(preselection) - len(screened)},
