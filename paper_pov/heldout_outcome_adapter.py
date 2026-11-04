@@ -6,6 +6,8 @@ rows abstain; neither predictions nor missing candles create synthetic labels.
 """
 import argparse
 import json
+import os
+import tempfile
 from pathlib import Path
 from datetime import timedelta
 from .shadow_learning_evidence import utc_time, evaluate_shadow_release, canonical_digest
@@ -201,9 +203,33 @@ def main(argv=None):
         raise ValueError("Learning handoff and full evidence must use separate paths")
     if args.output.exists() or (args.delivery_output and args.delivery_output.exists()):
         raise FileExistsError("Refusing to overwrite existing evidence")
-    args.output.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    rendered = [(args.output, json.dumps(result, sort_keys=True, indent=2, allow_nan=False) + "\n")]
     if args.delivery_output:
-        args.delivery_output.write_text(json.dumps(project_learning_handoff(result), sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        rendered.append((args.delivery_output, json.dumps(
+            project_learning_handoff(result), sort_keys=True, indent=2, allow_nan=False) + "\n"))
+    if len({path.resolve() for path, _ in rendered}) != len(rendered):
+        raise ValueError("Learning outputs must have distinct paths")
+    staged, published = [], []
+    try:
+        for destination, content in rendered:
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8",
+                                             dir=destination.parent, prefix=".heldout-",
+                                             delete=False) as handle:
+                staged.append(Path(handle.name))
+                handle.write(content)
+                handle.flush()
+                os.fsync(handle.fileno())
+        for (destination, _), temporary in zip(rendered, staged):
+            # Exclusive publication cannot overwrite a concurrent worker.
+            os.link(temporary, destination)
+            published.append(destination)
+    except Exception:
+        for destination in published:
+            destination.unlink(missing_ok=True)
+        raise
+    finally:
+        for temporary in staged:
+            temporary.unlink(missing_ok=True)
     return result
 
 
