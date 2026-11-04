@@ -88,5 +88,7 @@ def test_real_writer_artifact_name_and_nested_paths(tmp_path):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
         return b""
-    result = retrieve_and_verify(REPO, "123", "public-paper-ledger", manifest, SHA, runner=run)
-    assert result["receipt_count"] == 3
+    result = retrieve_and_verify(REPO, "123", "public-paper-ledger", manifest, SHA,
+                                 runner=run, restore_dir=tmp_path / "recovered")
+    assert result["receipt_count"] == 4
+    assert (tmp_path / "recovered/paper_pov/output/ledger.json").read_bytes() == receipts["paper_pov/output/ledger.json"]
