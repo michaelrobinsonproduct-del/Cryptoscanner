@@ -158,7 +158,7 @@ def main():
     if "GITHUB_OUTPUT" in os.environ:
         from pathlib import Path
         with Path(os.environ["GITHUB_OUTPUT"]).open("a") as out:
-            out.write("recovery_status=" + report["status"] + "\\n")
+            out.write("recovery_status=" + report["status"] + "\n")
     return report
 
 
