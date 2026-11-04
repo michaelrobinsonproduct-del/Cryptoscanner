@@ -155,7 +155,9 @@ jobs:
           assert delivery["single_writer_ledger_verified"] is False
           assert delivery["exchange_event_freshness_verified"] is False
           assert delivery["production_applied"] is False
-          published_delivery=json.loads((root/"a2-delivery.json").read_text())
+          from paper_pov.a2_artifact_consumer import read_published_delivery
+          published_delivery=read_published_delivery(root)
+          assert published_delivery["receipt_sha256"]==delivery["receipt_sha256"]
           immutable_keys=("schema","source","as_of","scan_status","receipt_sha256","watch","watch_count","eligible_pairs","observed_markets","preselection_observations","selection_decisions","abstention_counts")
           assert all(published_delivery[k]==delivery[k] for k in immutable_keys)
           assert published_delivery["single_writer_ledger_verified"] is False
