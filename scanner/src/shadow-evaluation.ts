@@ -13,8 +13,10 @@ export function evaluateShadowCandidate(candidate:{pair:string;score:number;disc
  const matches=scores.filter(s=>s.pair===candidate.pair&&sameObservation(s.observed_at)&&s.version===evidence.version&&s.source_sha===evidence.source_sha);
  if(matches.length!==1||!Number.isFinite(matches[0].score)||matches[0].score<0||matches[0].score>100||!Number.isFinite(Date.parse(matches[0].computed_at))||Date.parse(matches[0].computed_at)>Date.parse(candidate.discovered_at))return abstain("missing_or_leaky_challenger_score");
  const matching=outcomes.filter(x=>x.pair===candidate.pair&&sameObservation(x.observed_at));
- if(matching.length===0||matching.length===1&&matching[0].label==="ABSTAIN"&&matching[0].source_sha===evidence.source_sha)
+ if(matching.length===0)
   return {...base,status:"PENDING_OUTCOME",reason:"outcome_not_mature",challenger_score:matches[0].score,outcome_label:null};
+ if(matching.length===1&&matching[0].label==="ABSTAIN"&&matching[0].source_sha===evidence.source_sha)
+  return {...base,status:"ABSTAIN",reason:"source_outcome_gap",challenger_score:matches[0].score,outcome_label:null};
  if(matching.length!==1||matching[0].source_sha!==evidence.source_sha||!["HIT","MISS"].includes(matching[0].label))return abstain("missing_or_ambiguous_outcome");
  return {...base,status:"SCORED",reason:"qualified_shadow_only",challenger_score:matches[0].score,outcome_label:matching[0].label};
 }
