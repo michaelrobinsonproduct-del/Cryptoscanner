@@ -227,6 +227,35 @@ class RestoreScoredSeriesTests(unittest.TestCase):
             self.assertEqual(report["resume_wait_seconds"], 120)
             self.assertEqual(report["rounds_verified"], 2)
 
+    def test_mature_48h_archive_remains_extendable_for_later_scored_cohorts(self):
+        # Exactly 577 real indexed rounds mature the original 48-hour entry,
+        # but newly scored hourly entrants need another 48 hours of evidence.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "original"
+            entry = seed(source)
+            index = entry / "round-index.jsonl"
+            for i in range(1, 577):
+                directory = source / ("depth-%03d" % i)
+                directory.mkdir()
+                fixture(directory)
+                append_round(index, directory)
+            self.assertEqual(len(index.read_text().splitlines()), 577)
+            def collect(pairs, directory):
+                self.assertEqual(pairs, ["XBTUSD"])
+                directory.mkdir()
+                fixture(directory)
+            with patch("research.restore_scored_series.evaluate_all",
+                       return_value={"mode": "RESEARCH_ONLY_AUTHENTICATED_HELD_OUT",
+                                     "production_applied": False}):
+                result = restore_and_capture(
+                    source, root / "extended", collector=collect,
+                    followup_rounds=2)
+            self.assertEqual(result["rounds_verified"], 579)
+            self.assertEqual(result["followup_rounds_acquired"], 2)
+            self.assertTrue((root / "extended" / "depth-578" / "manifest.json").exists())
+            self.assertFalse(result["production_applied"])
+
     def test_modified_manifest_fails_before_copy_or_collection(self):
         with tempfile.TemporaryDirectory() as temp:
             source = Path(temp) / "original"
