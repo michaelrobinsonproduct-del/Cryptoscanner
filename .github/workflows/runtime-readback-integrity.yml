@@ -307,7 +307,14 @@ jobs:
           from pathlib import Path
           report=json.loads(Path("/tmp/d2-b-unified-published-delivery.json").read_text())
           assert report["source_run_id"] == int(__import__("os").environ["WRITER_RUN_ID"])
-          assert report["writer_reconciliation_status"] == "MATCH"
+          writer=json.loads(Path("/tmp/real-writer-recovery.json").read_text())
+          actual=writer["remote_ledger_reconciliation"]["status"]
+          assert actual in ("MATCH", "DIVERGED", "UNAVAILABLE"), writer
+          assert report["writer_reconciliation_status"] == actual, report
+          # Historical abstention must survive a later ledger generation or
+          # unavailable remote branch; only exact-source live WATCH requires MATCH.
+          if actual != "MATCH":
+              assert report["live_watch_authorized"] is False, report
           assert isinstance(report["live_watch"], list) and report["live_watch_authorized"] is False
           assert report["single_writer_read_only"] is True and report["production_applied"] is False
           print("D2_B_UNIFIED_PUBLISHED_DELIVERY",json.dumps(report,sort_keys=True))
