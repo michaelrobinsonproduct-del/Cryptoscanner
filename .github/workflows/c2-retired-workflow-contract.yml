@@ -267,25 +267,26 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
-          from paper_pov.manual_schedule_contract import load_verified_artifact
           root=Path("/tmp/c-real-receipts/b-published")
           files=list(root.rglob("results.json"))
           assert len(files)==1, "Published results missing"
           # B's existing verified ZIP reader is used below when possible.
-          assert len(list(root.rglob("SHA256SUMS")))==1
+          manifests=list(root.rglob("SHA256SUMS"))
+          assert len(manifests)==1
           PY
+          (cd /tmp/c-real-receipts/b-published && sha256sum -c SHA256SUMS)
           python - <<'PY'
           import json
           from pathlib import Path
           bridge=json.loads(Path("/tmp/c-real-receipts/cd-bridge.json").read_text())
           assert bridge["writer_recovery"]["delivery_projection_ready"], "D persisted evidence not available for B"
           PY
-          PYTHONPATH=/tmp/c-b-consumer python -m paper_pov.github_delivery_projection \
+          (cd /tmp/c-b-consumer && python -m paper_pov.github_delivery_projection \
             --published-result /tmp/c-real-receipts/b-published/results.json \
             --expected-run-id 41804379677 \
             --expected-source-sha 19328dcebdfd60500ebbecccc8f334539a2d42e1 \
             --writer-readback /tmp/c-real-receipts/bd-writer-readback.json \
-            --output /tmp/c-real-receipts/b-published-delivery.json
+            --output /tmp/c-real-receipts/b-published-delivery.json)
           python - <<'PY'
           import json
           from pathlib import Path
