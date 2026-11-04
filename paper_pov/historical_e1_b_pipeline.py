@@ -126,7 +126,8 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
             continue
         result = convert_pinned_csv(manifest, root, partition_file=partition,
                                     pair=pair, schema=schema)
-        bars[pair] = sorted(utc_time(b["open_at"]) for b in result["bars"])
+        bars[pair] = sorted(utc_time(b["open_at"]) for b in result["bars"]
+                            if utc_time(b["open_at"]) + timedelta(minutes=5) <= cutoff)
         provenance[pair] = {"status": "PINNED_BYTES_VERIFIED",
                             "partition": partition,
                             "partition_sha256": result["partition_sha256"],
@@ -146,6 +147,8 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
     cohort_coverage = []
     for row in rows:
         at = utc_time(row["as_of"])
+        if at > cutoff:
+            raise ValueError("A2 observation is after historical cutoff")
         times = bars[row["pair"]]
         if not times:
             status = ("NO_PINNED_PARTITION" if row["pair"] not in partitions
