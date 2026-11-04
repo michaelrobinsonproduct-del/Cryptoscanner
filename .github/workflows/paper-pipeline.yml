@@ -1,6 +1,11 @@
 name: Public Kraken Paper POV (scheduled, isolated ledger)
 on:
   workflow_dispatch:
+    inputs:
+      recovery_slot_utc:
+        description: 'Missed :09/:39 UTC slot; empty for normal manual scan'
+        required: false
+        type: string
   schedule:
     - cron: '9 * * * *'
     - cron: '39 * * * *'
@@ -42,6 +47,19 @@ jobs:
           esac
           echo "PAPER_VERIFIED_GITHUB_EVENT=$PAPER_GITHUB_EVENT"
           echo "PAPER_VERIFIED_ORIGINATING_CRON=${PAPER_CRON_EXPRESSION:-MANUAL_DISPATCH}"
+      - name: Validate recovery slot provenance before ledger mutation
+        env:
+          PAPER_RECOVERY_SLOT: ${{ inputs.recovery_slot_utc }}
+          PAPER_GITHUB_EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from paper_pov.missed_slot_recovery import validate_recovery_slot
+          result = validate_recovery_slot(os.environ.get("PAPER_RECOVERY_SLOT", ""),
+                                          os.environ["PAPER_GITHUB_EVENT"])
+          print("PAPER_RECOVERY_PROVENANCE", result)
+          PY
       - name: Exact commit tests before any ledger mutation
         run: |
           set -euo pipefail
