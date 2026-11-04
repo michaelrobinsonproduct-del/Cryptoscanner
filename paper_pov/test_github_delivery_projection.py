@@ -151,6 +151,45 @@ class DeliveryProjectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "count mismatch"):
             project_published_result(published, d, {**a2, "watch_count": 2})
 
+    def test_real_paper_results_zip_to_delivery_cli(self):
+        import hashlib
+        import io
+        import json
+        import tempfile
+        import zipfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from paper_pov.github_delivery_projection import main
+        from paper_pov.test_results_report import fixture
+        from paper_pov.results_report import render
+        scan, score = fixture()
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            for event, cron in (("workflow_dispatch", None), ("schedule", "9 * * * *")):
+                published, markdown = render(scan, score, run_id="41235442591", source_sha=SHA,
+                                             ledger_commit="b"*40, event=event, originating_cron=cron)
+                payload = json.dumps(published).encode()
+                note = (markdown + "\\n").encode()
+                manifest = (hashlib.sha256(payload).hexdigest()+"  results.json\\n"+
+                            hashlib.sha256(note).hexdigest()+"  results.md\\n").encode()
+                artifact = root / (event + ".zip")
+                with zipfile.ZipFile(artifact, "w") as z:
+                    for name, data in (("results.json", payload), ("results.md", note), ("SHA256SUMS", manifest)):
+                        z.writestr(name, data)
+                output = root / (event + ".json")
+                argv = ["delivery", "--published-artifact", str(artifact),
+                        "--expected-run-id", "41235442591", "--expected-source-sha", SHA,
+                        "--output", str(output)]
+                with patch("sys.argv", argv), patch("sys.stdout", new_callable=io.StringIO):
+                    main()
+                projected = json.loads(output.read_text())
+                self.assertEqual(projected["github_event"], event)
+                self.assertEqual(projected["live_watch_authorized"], False)
+                self.assertEqual(len(projected["live_watch"]), 2)
+                with patch("sys.argv", argv[:-2] + ["--expected-source-sha", "f"*40]), patch("sys.stdout", new_callable=io.StringIO):
+                    with self.assertRaises(ValueError):
+                        main()
+
     def test_untrusted_promotion_and_run_provenance_rejected(self):
         valid = {**BASE, "sealed": False,
                  "artifact_status": "CHECKSUM_VERIFIED_LEGACY_NO_RECEIPT", "scoreboard": {}}
