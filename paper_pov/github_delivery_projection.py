@@ -259,6 +259,9 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
     if visible_watch and not same_run_writer:
         visible_watch = []
         delivery_status = "ABSTAIN_SAME_RUN_PERSISTED_WRITER_UNVERIFIED"
+    # Fresh quote observations alone are not an accepted fresh WATCH delivery.
+    # The same persisted scan must also have independently authenticated D readback.
+    accepted_fresh_watch = bool(visible_watch)
     a2 = _a2_evidence(a2_delivery) if a2_delivery is not None else None
     learning = _learning_evidence(learning_handoff) if learning_handoff is not None else None
     return {"schema": "paper_delivery_readback_v1", "source_run_id": int(run_id),
@@ -273,6 +276,7 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
             "published_observed_markets": result["observed_markets"],
             "published_quote_complete": True,
             "client_quote_freshness_verified": fresh_at_delivery,
+            "fresh_watch_delivery_verified": accepted_fresh_watch,
             "exchange_event_freshness_verified": False,
             "single_writer_read_only": True, "production_applied": False}
 
