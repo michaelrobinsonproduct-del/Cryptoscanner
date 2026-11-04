@@ -40,11 +40,28 @@ def read_run(repo, run_id, *, runner=_bounded_gh):
             if not match or match.group(2) in expected:
                 raise ValueError("invalid artifact checksum manifest")
             expected[match.group(2)] = match.group(1)
-        for name in ("latest.json", "scoreboard.json", "ledger.json", "slot_receipt.json"):
+        for name in ("latest.json", "scoreboard.json", "ledger.json"):
             if name not in expected:
                 raise ValueError("incomplete artifact checksum manifest")
             if hashlib.sha256((output / name).read_bytes()).hexdigest() != expected[name]:
                 raise ValueError("downloaded artifact checksum mismatch: " + name)
+        # Legacy public-paper-ledger artifacts have only latest, scoreboard and
+        # ledger. Expose their checksum-verified status without claiming sealed WATCH.
+        if not (output / "slot_receipt.json").is_file():
+            if (output / "sealed-http-bundle.json").exists():
+                raise ValueError("sealed bundle without originating slot receipt")
+            latest = json.loads((output / "latest.json").read_bytes())
+            scoreboard = json.loads((output / "scoreboard.json").read_bytes())
+            if not isinstance(latest, dict) or not isinstance(scoreboard, dict):
+                raise ValueError("invalid legacy paper artifact")
+            return {"source_run_id": int(run_id), "source_sha": run["headSha"],
+                    "publisher_authenticated": False, "sealed": False,
+                    "watch_delivery_authorized": False,
+                    "artifact_status": "CHECKSUM_VERIFIED_LEGACY_NO_RECEIPT",
+                    "scoreboard": scoreboard}
+        for name in ("slot_receipt.json", "sealed-http-bundle.json"):
+            if name not in expected or hashlib.sha256((output / name).read_bytes()).hexdigest() != expected[name]:
+                raise ValueError("sealed artifact checksum mismatch: " + name)
         slot = json.loads((output / "slot_receipt.json").read_bytes())
         if slot.get("source_sha") != run.get("headSha") or str(slot.get("run_id")) != run_id or slot.get("historical_quotes_reconstructed") is not False:
             raise ValueError("artifact run provenance mismatch")
@@ -53,7 +70,7 @@ def read_run(repo, run_id, *, runner=_bounded_gh):
         if saved != bundle:
             raise ValueError("downloaded sealed HTTP bundle differs from immutable receipt")
         return {"source_run_id": int(run_id), "source_sha": run["headSha"],
-                "publisher_authenticated": False, "bundle": bundle}
+                "publisher_authenticated": False, "sealed": True, "watch_delivery_authorized": False, "bundle": bundle}
 
 
 def main():
