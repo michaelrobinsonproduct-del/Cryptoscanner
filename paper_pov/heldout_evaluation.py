@@ -87,6 +87,8 @@ def evaluate(state, *, horizon=48, top_k=3, min_train=MIN_TRAIN,
         "train_runs": 0, "test_runs": 0, "held_out_lift": None,
         "production_applied": False, "promotion_authorized": False,
         "reason": "Insufficient complete chronological cohorts",
+        "selection_bias": "WATCH-only challenger-selected cohort",
+        "unbiased_lift_qualified": False,
     }
     if len(cohorts) < min_train + min_test:
         return result
@@ -107,12 +109,13 @@ def evaluate(state, *, horizon=48, top_k=3, min_train=MIN_TRAIN,
         "holdout_predictions_per_arm": denominator,
         "baseline_hit_rate": base_hits / denominator,
         "challenger_hit_rate": challenge_hits / denominator,
-        "held_out_lift": (challenge_hits - base_hits) / denominator,
+        "held_out_lift": None,
+        "watch_cohort_exploratory_delta": (challenge_hits - base_hits) / denominator,
         "holdout_start": test[0]["as_of"].isoformat(),
         "holdout_end": test[-1]["as_of"].isoformat(),
     })
     # A measured difference is not automatically a qualified rule.
-    result["reason"] = "Exploratory held-out comparison only; no statistical or liquidity qualification"
+    result["reason"] = "WATCH-only selection bias; baseline universe and liquidity qualification missing"
     return result
 
 
