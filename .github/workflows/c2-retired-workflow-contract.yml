@@ -177,6 +177,44 @@ jobs:
           assert out["live_watch_certified"] is False and out["production_applied"] is False
           print("BD_READ_ONLY_CANDIDATES_CONSUMED",out["watch_count"])
           PY
+      - name: Consume real D writer readback in C/B replay bridge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/actions/artifacts/13290686191" > /tmp/c-real-receipts/d2-metadata.json
+          python - <<'PY'
+          import json
+          m=json.load(open("/tmp/c-real-receipts/d2-metadata.json"))
+          assert m["id"]==13290686191 and m["name"]=="d2-real-writer-recovery-report"
+          assert m["expired"] is False and m["workflow_run"]["id"]==41761308417
+          assert m["workflow_run"]["head_sha"]=="1e2b8cd78059bc71bb9d935e0ecf2539d36bff3d"
+          assert m["digest"]=="sha256:3769fb30aeb838bd74b755fb976584a841fa86033f3d2f5a1e319fc664ef3d3c"
+          PY
+          gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/13290686191/zip" > /tmp/c-real-receipts/d2.zip
+          echo '3769fb30aeb838bd74b755fb976584a841fa86033f3d2f5a1e319fc664ef3d3c  /tmp/c-real-receipts/d2.zip' | sha256sum --check --status
+          python - <<'PY'
+          import zipfile
+          from pathlib import Path
+          with zipfile.ZipFile("/tmp/c-real-receipts/d2.zip") as z:
+              names=z.namelist()
+              assert len(names)==1 and names[0].endswith("real-writer-recovery.json"), names
+              Path("/tmp/c-real-receipts/d2-readback.json").write_bytes(z.read(names[0]))
+          PY
+          python -m paper_pov.c_writer_recovery_bridge --integration /tmp/c-real-receipts/integration.json --readback /tmp/c-real-receipts/d2-readback.json --output /tmp/c-real-receipts/cd-bridge.json --bd-output /tmp/c-real-receipts/bd-recovered-watch.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          b=json.loads(Path("/tmp/c-real-receipts/cd-bridge.json").read_text())
+          w=json.loads(Path("/tmp/c-real-receipts/bd-recovered-watch.json").read_text())
+          assert b["writer_recovery"]["run_id"]=="41636714169"
+          assert b["writer_recovery"]["status"]=="WRITER_CHECKSUM_ONLY"
+          assert b["writer_recovery"]["persisted_paper"]["ledger_generation"]>=1
+          assert b["historical_a2"]["watch"]==w["watch"]
+          assert not b["live_watch_certified"] and not b["same_run_or_candidate_parity_claimed"]
+          print("C_D_REAL_WRITER_BRIDGE_CONNECTED",b["writer_recovery"]["run_id"],w["watch_count"])
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: c-real-manual-scheduled-contract
@@ -186,5 +224,8 @@ jobs:
             /tmp/c-real-receipts/a2.json
             /tmp/c-real-receipts/candidates.json
             /tmp/c-real-receipts/bd-handoff.json
+            /tmp/c-real-receipts/d2-readback.json
+            /tmp/c-real-receipts/cd-bridge.json
+            /tmp/c-real-receipts/bd-recovered-watch.json
           retention-days: 7
           if-no-files-found: error
