@@ -186,6 +186,7 @@ def main(argv=None):
         parser.add_argument("--" + key, required=True)
     parser.add_argument("--preselection-history", help="A receipt-verified historical full-universe JSON")
     parser.add_argument("--a2-projection", help="Retained E A2 receipt-bound preselection JSON")
+    parser.add_argument("--full-cohort-overlap-output", help="Write checksum-gated A2 all-candidate trade overlap diagnostics")
     parser.add_argument("--a-receipts-dir", help="Original sealed A receipts; verify via A export_receipt_history")
     args = parser.parse_args(argv)
     if sum(bool(v) for v in (args.preselection_history, args.a_receipts_dir, args.a2_projection)) > 1:
@@ -199,10 +200,20 @@ def main(argv=None):
     if args.a_receipts_dir:
         from .preselection_universe import export_receipt_history
         history = export_receipt_history(args.a_receipts_dir)
-    result = run_pipeline(read("manifest"), args.root, read("schema"),
-                          read("partitions"), read("predictions"), args.observed_until,
+    manifest, schema, partitions, predictions = (read(k) for k in ("manifest", "schema", "partitions", "predictions"))
+    projection = read("a2_projection") if args.a2_projection else None
+    if args.full_cohort_overlap_output:
+        if projection is None:
+            parser.error("--full-cohort-overlap-output requires --a2-projection")
+        overlap_path = Path(args.full_cohort_overlap_output)
+        if overlap_path.exists():
+            raise FileExistsError("Refusing to overwrite historical overlap evidence")
+        overlap = audit_a2_trade_partition_overlap(projection, manifest, args.root, schema, partitions)
+        overlap_path.write_text(json.dumps(overlap, sort_keys=True, indent=2) + "\\n", encoding="utf-8")
+    result = run_pipeline(manifest, args.root, schema,
+                          partitions, predictions, args.observed_until,
                           preselection_history=history,
-                          a2_projection=read("a2_projection") if args.a2_projection else None)
+                          a2_projection=projection)
     output.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"prediction_count": result["execution"]["prediction_count"],
                       "status_counts": result["execution"]["status_counts"],
