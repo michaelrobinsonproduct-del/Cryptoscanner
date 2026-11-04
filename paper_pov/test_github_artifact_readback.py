@@ -362,3 +362,25 @@ def test_packed_remote_blob_identity_mismatch_abstains():
                                      {"ledger.json": b'{}'}, runner=github)
     assert result["status"] == "UNAVAILABLE"
     assert result["independently_authenticated"] is False
+
+
+def test_malformed_remote_direct_ledger_preserves_historical_recovery_as_unavailable():
+    """Remote corruption must not erase a valid restored writer artifact."""
+    import base64
+    import json
+    from paper_pov import ledger
+    from paper_pov.github_artifact_readback import reconcile_remote_ledger
+    recovered = {"ledger.json": ledger.canonical(ledger.empty())}
+    for remote in (
+        {"type": "dir", "encoding": "none"},
+        {"type": "file", "encoding": "base64", "content": "%%%"},
+        {"type": "file", "encoding": "base64", "content": base64.b64encode(b"not-json").decode()},
+    ):
+        def runner(args, timeout):
+            return json.dumps(remote).encode()
+        report = reconcile_remote_ledger(
+            REPO, "immutable-test-ref", "paper-ledger.json", recovered, runner=runner)
+        assert report["status"] == "UNAVAILABLE"
+        assert report["reason"] == "REMOTE_LEDGER_QUERY_FAILED"
+        assert report["independently_authenticated"] is False
+        assert report["production_applied"] is False
