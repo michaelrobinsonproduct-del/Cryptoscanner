@@ -25,8 +25,8 @@ export function attachShadowEvaluation(cycle:any,evidence:ShadowEvidence|null,ou
  // up to 10,000 history rows separately for every discovered candidate.
  const key=(pair:string,at:string)=>pair+"|"+Date.parse(at);
  const outcomeIndex=new Map<string,ShadowOutcome[]>(),scoreIndex=new Map<string,ShadowScore[]>();
- for(const row of outcomes){const k=key(row.pair,row.observed_at);outcomeIndex.set(k,[...(outcomeIndex.get(k)??[]),row]);}
- for(const row of scores){const k=key(row.pair,row.observed_at);scoreIndex.set(k,[...(scoreIndex.get(k)??[]),row]);}
+ for(const row of outcomes){const k=key(row.pair,row.observed_at);const bucket=outcomeIndex.get(k);if(bucket)bucket.push(row);else outcomeIndex.set(k,[row]);}
+ for(const row of scores){const k=key(row.pair,row.observed_at);const bucket=scoreIndex.get(k);if(bucket)bucket.push(row);else scoreIndex.set(k,[row]);}
  const candidates=(cycle.candidates??[]).map((c:any)=>{
   const k=key(c.pair,c.discovered_at);
   return {pair:c.pair,...evaluateShadowCandidate(c,evidence,outcomeIndex.get(k)??[],scoreIndex.get(k)??[])};
