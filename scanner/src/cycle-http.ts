@@ -12,7 +12,7 @@ export function createCycleHttpHandler(runner:ReturnType<typeof createCycleRunne
  return async (req:Request):Promise<Response>=>{
   const path=new URL(req.url).pathname;
   if(path==="/health"){const s=runner.snapshot();return Response.json({mode:"shadow",running:s.running,cycles:s.cycles,lastError:s.lastError})}
-  if(path==="/dashboard"){const s=runner.snapshot();return Response.json({mode:"shadow",running:s.running,cycles:s.cycles,last_error:s.lastError,last_result:safeLast(s.last)})}
+  if(path==="/dashboard"){const s=runner.snapshot(),historical=safeLast(s.last);const last_result=s.running||s.lastError?historical?{...historical,a2_snapshot:unavailableA2Snapshot(s.running?"scan_in_progress":"last_scan_failed"),paper_watch:[],paper_watch_status:s.running?"ABSTAIN_SCAN_IN_PROGRESS":"ABSTAIN_LAST_SCAN_FAILED",live_watch_certified:false}:null:historical;return Response.json({mode:"shadow",running:s.running,cycles:s.cycles,last_error:s.lastError,last_result})}
   if(path==="/watch"){
    const s=runner.snapshot(),last=s.running||s.lastError?null:safeLast(s.last);
    return Response.json({mode:"paper_only",cycles:s.cycles,running:s.running,watch:last?.paper_watch??[],status:s.running?"ABSTAIN_SCAN_IN_PROGRESS":s.lastError?"ABSTAIN_LAST_SCAN_FAILED":last?.paper_watch_status??"ABSTAIN_NO_SCAN",live_watch_certified:false,receipt_sha256:last?.a2_snapshot?.receipt_sha256??null,as_of:last?.a2_snapshot?.as_of??null,scan_status:last?.a2_snapshot?.scan_status??null,eligible_pairs:last?.a2_snapshot?.eligible_pairs??null,observed_markets:last?.a2_snapshot?.observed_markets??null,abstention_counts:last?.a2_snapshot?.abstention_counts??null},{headers:{"cache-control":"no-store"}});
