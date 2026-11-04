@@ -50,12 +50,12 @@ export async function parseSealedPaperBundle(value:unknown,now:Date):Promise<Pap
 }
 
 export const unavailablePaperReceipt=(reason:string):PaperReceipt=>({status:"UNAVAILABLE",scan_status:null,as_of:null,watch_count:null,observed_markets:null,eligible_pairs:null,ticker_rejections:null,ohlc_screened:null,abstention_count:null,source:"paper_pov",buy_approved:false,reason});
-export function createPaperReceiptReader(url:string|undefined,now:()=>Date,fetcher:typeof fetch=fetch):()=>Promise<PaperReceipt>{
+export function createPaperReceiptReader(url:string|undefined,now:()=>Date,fetcher:typeof fetch=fetch,token?:string):()=>Promise<PaperReceipt>{
  return async()=>{
   if(!url)return unavailablePaperReceipt("not_configured");
   const u=new URL(url);
   if(u.protocol!=="https:"||u.username||u.password||u.hash)throw Error("unsafe_paper_receipt_url");
-  const response=await fetcher(u.toString(),{method:"GET",redirect:"error",signal:AbortSignal.timeout(8000),headers:{accept:"application/json"}});
+  const response=await fetcher(u.toString(),{method:"GET",redirect:"error",signal:AbortSignal.timeout(8000),headers:{accept:"application/json",...(token?{authorization:"Bearer "+token}:{})}});
   if(!response.ok)throw Error("paper_receipt_http_"+response.status);
   const body=await response.text();
   if(body.length>1000000)throw Error("paper_receipt_oversized");
