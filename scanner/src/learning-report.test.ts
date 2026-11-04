@@ -56,3 +56,14 @@ test("unavailable E learning evidence blocks shadow loader rather than permittin
  expect(manual.result.shadow_artifact_status).toBe("REJECTED");
  expect(manual.result.learning_gate).toMatchObject({decision:"KEEP_BASELINE",held_out_n:0,production_applied:false});
 });
+
+test("shadow scoring is disabled when no authenticated E qualification reader is configured",async()=>{
+ let reads=0;
+ const shadow=async()=>{reads++;return {evidence:{version:"v2",source_sha:"a".repeat(64),qualified:true,held_out_samples:42,held_out_lift:4,outcome_ledger_sha:"b".repeat(64),score_ledger_sha:"c".repeat(64),outcome_rows:1},outcomes:[],scores:[]}};
+ const runner=createCycleRunner(deps,shadow);
+ const manual=await runner.run("manual"),scheduled=await runner.run("scheduled");
+ expect(manual.result).toEqual(scheduled.result);
+ expect(reads).toBe(0);
+ expect(manual.result.shadow_artifact_status).toBe("REJECTED");
+ expect(manual.result.shadow_evaluation.coverage).toMatchObject({scored:0,abstained:0,source_qualified:false});
+});
