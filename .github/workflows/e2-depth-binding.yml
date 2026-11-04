@@ -17,6 +17,8 @@ on:
       - 'research/authenticated_learning_loop.py'
       - 'research/multi_cohort_learning.py'
       - 'research/test_authenticated_learning_loop.py'
+      - 'research/prospective_round_assembler.py'
+      - 'research/test_prospective_round_assembler.py'
       - 'research/public_paper_learning_bridge.py'
       - 'research/test_public_paper_learning_bridge.py'
       - '.github/workflows/e2-depth-binding.yml'
@@ -43,7 +45,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Focused immutable depth association acceptance
-        run: python -m unittest -v research.test_depth_acquisition_associations research.test_live_score_capture research.test_live_score_depth_round research.test_live_scored_series research.test_restore_scored_series research.test_authenticated_learning_loop
+        run: python -m unittest -v research.test_depth_acquisition_associations research.test_live_score_capture research.test_live_score_depth_round research.test_live_scored_series research.test_restore_scored_series research.test_authenticated_learning_loop research.test_prospective_round_assembler
       - name: Verify multi-cohort learning CLI accepts multiple real scored cohorts
         run: |
           python -m research.multi_cohort_learning --help > /tmp/e-multi-cohort-cli.txt
