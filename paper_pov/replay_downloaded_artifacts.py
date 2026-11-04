@@ -79,6 +79,8 @@ def replay(ledger_zip, results_zip, *, run_id, source_sha, ledger_commit):
                 or receipt.get("source_sha") != source_sha
                 or receipt.get("historical_quotes_reconstructed") is not False):
             raise ValueError("Slot receipt identity mismatch")
+        if set(receipt) != {"schema", "slot_identity", "run_id", "source_sha", "historical_quotes_reconstructed"}:
+            raise ValueError("Unexpected slot receipt fields")
         slot_identity = receipt.get("slot_identity")
         if slot_identity != "MANUAL":
             from .missed_slot_recovery import utc, SLOT_MINUTES
