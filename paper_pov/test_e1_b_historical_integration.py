@@ -13,7 +13,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from .historical_execution_learning_bridge import project_historical_execution
-from .historical_e1_b_pipeline import run_pipeline, bind_a2_projection, audit_a2_trade_partition_overlap
+from .historical_e1_b_pipeline import run_pipeline, bind_a2_projection, audit_a2_trade_partition_overlap, research_full_universe_predictions
 from .historical_preselection_binding import bind_preselection_history
 
 
@@ -90,6 +90,26 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
                     manifest, root, schema, {"XUSD": "XUSD.csv"}, watch,
                     (start + dt.timedelta(hours=49)).isoformat(),
                     a2_projection=projection)
+            complete_projection = dict(projection, frozen_observations=[
+                {"prediction_id": rows[0]["observation_id"], "pair": "XUSD",
+                 "as_of": start.isoformat(), "selection_status": "WATCH"},
+                {"prediction_id": rows[1]["observation_id"], "pair": "YUSD",
+                 "as_of": start.isoformat(), "selection_status": "SCREEN_REJECTED"}])
+            research_predictions = research_full_universe_predictions(complete_projection)
+            self.assertEqual(len(research_predictions), 2)
+            self.assertEqual({p["pair"] for p in research_predictions}, {"XUSD", "YUSD"})
+            with patch.dict(sys.modules, {"paper_pov.github_sealed_bundle_readback": transport_stub}):
+                all_markets = run_pipeline(
+                    manifest, root, schema, {"XUSD": "XUSD.csv"}, watch,
+                    (start + dt.timedelta(hours=49)).isoformat(),
+                    a2_projection=complete_projection, full_universe_research=True)
+            self.assertTrue(all_markets["research_full_universe"])
+            self.assertEqual(all_markets["handoff"]["reconstructed_prediction_count"], 2)
+            self.assertEqual(all_markets["handoff"]["missing_prediction_count"], 0)
+            self.assertEqual(all_markets["delivery"]["observed_prediction_count"], 2)
+            self.assertEqual(all_markets["delivery"]["status"], "NO_QUALIFIED_RULE")
+            self.assertEqual(all_markets["handoff"]["qualified_cohort_count"], 0)
+            self.assertFalse(all_markets["handoff"]["source_authenticated"])
             overlap = audit_a2_trade_partition_overlap(
                 dict(projection, frozen_observations=[
                     {"prediction_id": rows[0]["observation_id"], "pair": "XUSD",
