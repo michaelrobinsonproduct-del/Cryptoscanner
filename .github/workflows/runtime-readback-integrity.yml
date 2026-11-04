@@ -201,7 +201,24 @@ jobs:
           PY
           if [ "$(cat /tmp/d2-published-available)" != "true" ]; then exit 0; fi
           mkdir -p /tmp/d2-published
-          gh run download "$WRITER_RUN_ID" --repo "${{ github.repository }}" --name "public-paper-results-$WRITER_RUN_ID" --dir /tmp/d2-published
+          if ! gh run download "$WRITER_RUN_ID" --repo "${{ github.repository }}" --name "public-paper-results-$WRITER_RUN_ID" --dir /tmp/d2-published; then
+            # Keep the real failure visible in the retained artifact even if the
+            # artifact service returns 503 / egress quota errors.
+            python - <<'PY'
+          import json, os
+          from pathlib import Path
+          writer=json.loads(Path("/tmp/real-writer-recovery.json").read_text())
+          report={"source_run_id":int(os.environ["WRITER_RUN_ID"]),
+                  "source_sha":os.environ["WRITER_SOURCE_SHA"],
+                  "status":"PUBLISHED_RESULTS_DOWNLOAD_FAILED",
+                  "reason":"REMOTE_ARTIFACT_DOWNLOAD_FAILED",
+                  "writer_reconciliation_status":writer["remote_ledger_reconciliation"]["status"],
+                  "single_writer_read_only":True,
+                  "live_watch_authorized":False,"production_applied":False}
+          Path("/tmp/d2-b-published-delivery.json").write_text(json.dumps(report,sort_keys=True)+"\\n")
+          PY
+            exit 1
+          fi
           python - <<'PY'
           from pathlib import Path
           from zipfile import ZipFile, ZIP_DEFLATED
