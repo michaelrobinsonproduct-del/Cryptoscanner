@@ -275,6 +275,33 @@ class DeliveryProjectionTests(unittest.TestCase):
             with self.subTest(mutation=mutation), self.assertRaises(ValueError):
                 project_published_result(published, learning_handoff={**learning, **mutation})
 
+    def test_legacy_main_result_retains_complete_shared_delivery_status(self):
+        # Main's existing persisted results have no quote_evidence. B's
+        # downloaded-delivery consumer must report abstention, not KeyError.
+        from paper_pov.test_results_report import fixture
+        from paper_pov.results_report import render
+        from paper_pov.github_delivery_projection import project_legacy_published_abstention
+        scan, score = fixture()
+        outputs = []
+        for event, cron in (("workflow_dispatch", None), ("schedule", "9 * * * *")):
+            published, _ = render(scan, score, run_id="41235442591",
+                                  source_sha=SHA, ledger_commit="b"*40,
+                                  event=event, originating_cron=cron)
+            published.pop("quote_evidence")
+            delivery = project_legacy_published_abstention(published)
+            for field in ("source_run_id", "source_sha", "github_event",
+                          "published_observed_markets", "published_quote_evidence_count",
+                          "published_quote_complete", "writer_source_identity_matches_delivery",
+                          "fresh_watch_delivery_verified", "learning_status",
+                          "scoring_promotion_applied"):
+                self.assertIn(field, delivery)
+            self.assertEqual(delivery["status"], "ABSTAIN_PUBLISHED_QUOTE_EVIDENCE_MISSING")
+            self.assertFalse(delivery["fresh_watch_delivery_verified"])
+            self.assertFalse(delivery["published_quote_complete"])
+            self.assertEqual(delivery["live_watch"], [])
+            outputs.append(delivery)
+        self.assertEqual(set(outputs[0]), set(outputs[1]))
+
     def test_untrusted_promotion_and_run_provenance_rejected(self):
         valid = {**BASE, "sealed": False,
                  "artifact_status": "CHECKSUM_VERIFIED_LEGACY_NO_RECEIPT", "scoreboard": {}}
