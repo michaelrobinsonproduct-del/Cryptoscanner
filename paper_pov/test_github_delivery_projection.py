@@ -169,9 +169,9 @@ class DeliveryProjectionTests(unittest.TestCase):
                 published, markdown = render(scan, score, run_id="41235442591", source_sha=SHA,
                                              ledger_commit="b"*40, event=event, originating_cron=cron)
                 payload = json.dumps(published).encode()
-                note = (markdown + "\\n").encode()
-                manifest = (hashlib.sha256(payload).hexdigest()+"  results.json\\n"+
-                            hashlib.sha256(note).hexdigest()+"  results.md\\n").encode()
+                note = (markdown + "\n").encode()
+                manifest = (hashlib.sha256(payload).hexdigest()+"  results.json\n"+
+                            hashlib.sha256(note).hexdigest()+"  results.md\n").encode()
                 artifact = root / (event + ".zip")
                 with zipfile.ZipFile(artifact, "w") as z:
                     for name, data in (("results.json", payload), ("results.md", note), ("SHA256SUMS", manifest)):
