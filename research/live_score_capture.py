@@ -12,7 +12,7 @@ from paper_pov.scanner import scan, utc, UTC
 from research.capture_acquisition_scores import capture_score
 
 
-def capture_live_scan(directory, *, scanner=scan, clock=None):
+def capture_live_scan(directory, *, scanner=scan, clock=None, allowed_pairs=None, allow_empty=False):
     clock = clock or (lambda: dt.datetime.now(UTC))
     before = clock()
     report = scanner()
@@ -24,8 +24,15 @@ def capture_live_scan(directory, *, scanner=scan, clock=None):
     as_of = utc(report["as_of"])
     if not (before <= as_of <= after and 0 <= (after-as_of).total_seconds() <= 600):
         raise ValueError("not a synchronous live scan")
+    if allowed_pairs is not None:
+        allowed = set(allowed_pairs)
+        candidates = [item for item in report["watch"] if item.get("pair") in allowed]
+    else:
+        candidates = report["watch"]
+    if not candidates and not allow_empty:
+        raise ValueError("no WATCH market in scored cohort")
     receipts = []
-    for item in report["watch"]:
+    for item in candidates:
         if item.get("status") != "PAPER_WATCH":
             raise ValueError("invalid WATCH status")
         if item.get("as_of") != report["as_of"]:
