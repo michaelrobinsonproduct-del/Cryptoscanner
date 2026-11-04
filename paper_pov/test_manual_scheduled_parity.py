@@ -76,6 +76,14 @@ class ParityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "excluded_stablecoin_pairs"):
             compare(a, b)
 
+    def test_unverified_learning_claim_fails(self):
+        for field, value in (("forward_labels", 1), ("held_out_lift", 0.2)):
+            with self.subTest(field=field):
+                candidate = report()
+                candidate[field] = value
+                with self.assertRaisesRegex(ValueError, "unverified learning"):
+                    compare(candidate, candidate)
+
     def test_unsafe_mode_fails(self):
         other = report()
         other["buy_approved"] = True
