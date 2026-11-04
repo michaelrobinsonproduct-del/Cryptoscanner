@@ -38,7 +38,7 @@ def bridge(integration, readback, *, restored_latest=None):
     if persisted is not None and (not isinstance(persisted, dict) or not isinstance(persisted.get("ledger_generation"), int) or not isinstance(persisted.get("scan_status"), str)):
         raise ValueError("D persisted writer evidence malformed")
     reconciliation = readback.get("remote_ledger_reconciliation")
-    if reconciliation is not None and (not isinstance(reconciliation, dict) or reconciliation.get("status") not in ("MATCH", "DIVERGED") or reconciliation.get("independently_authenticated") is not False):
+    if reconciliation is not None and (not isinstance(reconciliation, dict) or reconciliation.get("status") not in ("MATCH", "DIVERGED", "UNAVAILABLE") or reconciliation.get("independently_authenticated") is not False):
         raise ValueError("D remote ledger comparison malformed")
     result = {
         "schema": "c_d_recovered_writer_bridge_v1",
@@ -69,6 +69,7 @@ def main():
     parser.add_argument("--restored-latest", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--bd-output", type=Path, help="Write B/D replay payload alongside recovered writer provenance")
+    parser.add_argument("--writer-readback-output", type=Path, help="Export D readback for B delivery projection")
     args = parser.parse_args()
     result = bridge(
         json.loads(args.integration.read_text()),
@@ -77,6 +78,9 @@ def main():
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, sort_keys=True) + "\n")
+    if args.writer_readback_output:
+        args.writer_readback_output.parent.mkdir(parents=True, exist_ok=True)
+        args.writer_readback_output.write_text(json.dumps(json.loads(args.readback.read_text()), sort_keys=True) + "\n")
     if args.bd_output:
         args.bd_output.parent.mkdir(parents=True, exist_ok=True)
         args.bd_output.write_text(json.dumps(result["historical_a2"], sort_keys=True) + "\n")
