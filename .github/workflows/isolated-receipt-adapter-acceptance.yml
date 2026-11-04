@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: michaelrobinsonproduct-del/Cryptoscanner
-          ref: 9ef6361a279468bd2de9e45557ddc7195a80af2
+          ref: owner-a-a2-quote-freshness-20261103
           path: a2-source
           persist-credentials: false
       - name: Verify source and run all adapter tests
