@@ -142,23 +142,29 @@ def test_recovered_generation_mismatch_fails_closed():
 
 
 def test_read_only_remote_ledger_reconciliation_matches_and_diverges():
-    """Recovered writer bytes are compared to remote ref without any write API."""
+    """Logical ledger identity, not byte formatting, determines MATCH."""
     import base64
+    from paper_pov import ledger as ledger_module
     from paper_pov.github_artifact_readback import reconcile_remote_ledger
-    ledger = b'{"generation":65}'
+    state = ledger_module.empty()
+    remote = json.dumps(state, indent=2).encode()
+    recovered = ledger_module.canonical(state)
     calls = []
     def fake(args, timeout):
         calls.append(args)
         assert args[:4] == ["gh", "api", "-X", "GET"]
         return json.dumps({"type": "file", "encoding": "base64",
-                           "content": base64.b64encode(ledger).decode(), "sha": "git-blob"}).encode()
-    report = reconcile_remote_ledger(REPO, "paper-proof-ledger", "paper_pov/output/ledger.json",
-                                     {"ledger.json": ledger}, runner=fake)
+                           "content": base64.b64encode(remote).decode(), "sha": "git-blob"}).encode()
+    report = reconcile_remote_ledger(REPO, "historical-ledger", "ledger.json",
+                                     {"ledger.json": recovered}, runner=fake)
     assert report["status"] == "MATCH"
-    assert report["independently_authenticated"] is False
-    mismatch = reconcile_remote_ledger(REPO, "paper-proof-ledger", "paper_pov/output/ledger.json",
-                                       {"ledger.json": b'{"generation":64}'}, runner=fake)
-    assert mismatch["status"] == "DIVERGED"
+    assert report["remote_sha256"] == state["sha256"]
+    assert report["remote_artifact_sha256"] != report["recovered_artifact_sha256"]
+    changed = dict(state, generation=state["generation"] + 1)
+    mismatch = reconcile_remote_ledger(REPO, "historical-ledger", "ledger.json",
+                                       {"ledger.json": json.dumps(changed).encode()}, runner=fake)
+    assert mismatch["status"] == "UNAVAILABLE"
+    assert mismatch["reason"] == "REMOTE_LEDGER_QUERY_FAILED"
     assert len(calls) == 2
 
 
