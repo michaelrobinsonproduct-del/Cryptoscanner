@@ -120,6 +120,7 @@ jobs:
         run: |
           set -euo pipefail
           python - <<'PY'
+          import os
           from pathlib import Path
           from paper_pov.manual_scheduled_parity import load_sealed_scan
           root = Path("paper_pov/output")
@@ -128,7 +129,7 @@ jobs:
           from paper_pov.scanner import atomic_json
           atomic_json(root / "sealed-http-bundle.json", build_bundle(root))
           print("PAPER_SHARED_ENTRYPOINT", {
-              "event": __import__("os").environ["GITHUB_EVENT_NAME"],
+              "event": os.environ.get("GITHUB_EVENT_NAME", os.environ.get("GITHUB_EVENT_NAME", "unknown")),
               "as_of": report["as_of"],
               "watch_count": len(report["watch"]),
               "observed_markets": report["observed_markets"],
