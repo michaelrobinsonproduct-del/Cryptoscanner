@@ -5,6 +5,7 @@ on:
       - 'research/depth_acquisition_associations.py'
       - 'research/acquisition_receipt_pipeline.py'
       - 'research/bind_acquisition_receipts.py'
+      - 'research/test_bind_acquisition_receipts.py'
       - 'research/test_depth_acquisition_associations.py'
       - 'research/live_score_capture.py'
       - 'research/test_live_score_capture.py'
@@ -45,7 +46,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Focused immutable depth association acceptance
-        run: python -m unittest -v research.test_depth_acquisition_associations research.test_live_score_capture research.test_live_score_depth_round research.test_live_scored_series research.test_restore_scored_series research.test_authenticated_learning_loop research.test_prospective_round_assembler
+        run: python -m unittest -v research.test_depth_acquisition_associations research.test_bind_acquisition_receipts research.test_live_score_capture research.test_live_score_depth_round research.test_live_scored_series research.test_restore_scored_series research.test_authenticated_learning_loop research.test_prospective_round_assembler
       - name: Verify multi-cohort learning CLI accepts multiple real scored cohorts
         run: |
           python -m research.multi_cohort_learning --help > /tmp/e-multi-cohort-cli.txt
