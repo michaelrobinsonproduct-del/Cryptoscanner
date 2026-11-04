@@ -4,6 +4,7 @@ on:
     paths:
       - 'paper_pov/scanner.py'
       - 'paper_pov/preselection_universe.py'
+      - 'paper_pov/manual_scheduled_parity.py'
       - 'paper_pov/test_a1_a2_end_to_end.py'
       - 'paper_pov/tests/test_scan_failure_isolation.py'
       - 'paper_pov/tests/test_watch_contract.py'
@@ -122,6 +123,17 @@ jobs:
                       "watch": report["watch"], "production_applied": False,
                       "buy_approved": False, "future_outcomes_authenticated": False}
           (latest.parent / "ranked-watch.json").write_text(json.dumps(snapshot, sort_keys=True) + chr(10))
+          PY
+      - name: Consume real persisted A projections through B shared entrypoint
+        env:
+          PAPER_REPORT_PATH: ${{ runner.temp }}/kraken-paper/latest.json
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from paper_pov.manual_scheduled_parity import load_sealed_scan
+          report = load_sealed_scan(Path(os.environ["PAPER_REPORT_PATH"]).parent)
+          print("B_SHARED_PERSISTED_SCAN", report["as_of"], len(report["watch"]))
           PY
       - name: Retain isolated paper evidence
         if: always()
