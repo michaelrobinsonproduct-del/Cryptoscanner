@@ -1,0 +1,20 @@
+name: Shadow Learning Evidence
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/shadow_learning_evidence.py'
+      - 'paper_pov/test_shadow_learning_evidence.py'
+      - '.github/workflows/shadow-learning-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest paper_pov.test_shadow_learning_evidence -v
