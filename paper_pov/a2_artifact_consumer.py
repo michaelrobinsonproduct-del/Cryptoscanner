@@ -25,7 +25,7 @@ def read_artifact_zip(archive, now=None):
         if len(receipts) != 1:
             raise ValueError("missing immutable A2 receipt")
         for info in infos:
-            if info.is_dir() or info.file_size > 200_000 or info.compress_size > 500_000 or (info.external_attr >> 16) & 0o170000 == 0o120000:
+            if info.is_dir() or info.file_size > 1_000_000 or info.compress_size > 500_000 or (info.external_attr >> 16) & 0o170000 == 0o120000:
                 raise ValueError("unsafe A2 artifact member")
         latest = z.read("latest.json")
         receipt = z.read(receipts[0])
