@@ -15,6 +15,7 @@ on:
       - 'research/restore_scored_series.py'
       - 'research/test_restore_scored_series.py'
       - 'research/authenticated_learning_loop.py'
+      - 'research/multi_cohort_learning.py'
       - 'research/test_authenticated_learning_loop.py'
       - 'research/public_paper_learning_bridge.py'
       - 'research/test_public_paper_learning_bridge.py'
@@ -42,6 +43,11 @@ jobs:
           python-version: '3.11'
       - name: Focused immutable depth association acceptance
         run: python -m unittest -v research.test_depth_acquisition_associations research.test_live_score_capture research.test_live_score_depth_round research.test_live_scored_series research.test_restore_scored_series research.test_authenticated_learning_loop
+      - name: Verify multi-cohort learning CLI accepts multiple real scored cohorts
+        run: |
+          python -m research.multi_cohort_learning --help > /tmp/e-multi-cohort-cli.txt
+          grep -q -- '--cohort' /tmp/e-multi-cohort-cli.txt
+          grep -q -- '--shadow-ledger' /tmp/e-multi-cohort-cli.txt
       - name: Exercise research association CLI help and no-write guard
         run: |
           python -m research.depth_acquisition_associations --help > /tmp/e-association-cli.txt
