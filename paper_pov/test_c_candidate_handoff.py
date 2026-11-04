@@ -39,6 +39,9 @@ class HandoffTests(unittest.TestCase):
             "schema": "c_read_only_integration_v1",
             "status": "ABSTAIN_LEGACY_QUOTE_EVIDENCE",
             "recovery_verified": True,
+            "historical_artifact_parity": True,
+            "manual_run": "41636714169",
+            "scheduled_run": "41626400391",
             "a2_snapshot_attached": True,
             "exchange_event_freshness_verified": False,
             "production_applied": False,
@@ -52,7 +55,10 @@ class HandoffTests(unittest.TestCase):
             "a2_watch_candidates": src["watch"],
         }
         self.assertEqual(from_integration(integration), src)
-        for key, bad in (("recovery_verified", False),
+        for key, bad in (("historical_artifact_parity", False),
+                         ("manual_run", ""),
+                         ("scheduled_run", "41636714169"),
+                         ("recovery_verified", False),
                          ("a2_snapshot_attached", False),
                          ("exchange_event_freshness_verified", True),
                          ("a2_receipt_sha256", "bad"),
