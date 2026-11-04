@@ -283,7 +283,7 @@ def test_writer_checksum_only_rejects_uninventoried_payload(tmp_path):
     receipts = {"latest.json": b'{"status":"ABSTAIN"}',
                 "ledger.json": b'{"generation":2}',
                 "scoreboard.json": b'{"generation":2}'}
-    sums = "".join(hashlib.sha256(data).hexdigest() + "  " + name + "\\n"
+    sums = "".join(hashlib.sha256(data).hexdigest() + "  " + name + "\n"
                    for name, data in receipts.items()).encode()
     def runner(args, timeout):
         if args[:4] == ["gh", "api", "-X", "GET"]:
