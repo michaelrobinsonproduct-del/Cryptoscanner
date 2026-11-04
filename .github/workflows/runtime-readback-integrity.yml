@@ -38,6 +38,10 @@ jobs:
           import json, os, subprocess
           repo = os.environ["REPOSITORY"]
           selected = None
+          legacy_fallback = None
+          # Prefer a source run with both the immutable writer ledger and
+          # published results, so real B delivery is exercised when available.
+          # Retain the newest ledger-only source for explicit abstention.
           # Bound the search; never fall back to an unverified historical run.
           for page in range(1, 6):
               raw = subprocess.check_output(["gh", "api", "-X", "GET",
@@ -57,10 +61,18 @@ jobs:
                       continue
                   matching = [a for a in listing["artifacts"] if a.get("name") == f"public-paper-ledger-{rid}" and a.get("expired") is False]
                   if len(matching) == 1:
-                      selected = (rid, sha)
-                      break
+                      if legacy_fallback is None:
+                          legacy_fallback = (rid, sha)
+                      paired = [a for a in listing["artifacts"]
+                                if a.get("name") == f"public-paper-results-{rid}"
+                                and a.get("expired") is False]
+                      if len(paired) == 1:
+                          selected = (rid, sha)
+                          break
               if selected:
                   break
+          if selected is None:
+              selected = legacy_fallback
           if selected is None:
               raise SystemExit("NO_SOURCE_VERIFIED_SINGLE_WRITER_ARTIFACT")
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as output:
