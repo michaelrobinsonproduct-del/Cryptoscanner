@@ -24,7 +24,7 @@ def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, ru
     """Fail closed on run identity, source SHA, artifact ambiguity and byte drift."""
     if not repo or "/" not in repo or not str(run_id).isdigit() or not artifact_name:
         raise IntegrityError("Invalid repository, run ID or artifact")
-    if not isinstance(manifest, dict) or manifest.get("run_id") != str(run_id):
+    if manifest is not None and (not isinstance(manifest, dict) or manifest.get("run_id") != str(run_id)):
         raise IntegrityError("Untrusted or mismatched manifest run ID")
     run = _github_json([f"repos/{repo}/actions/runs/{run_id}"], runner=runner)
     if (str(run.get("id")) != str(run_id) or run.get("head_sha") != source_sha
@@ -68,8 +68,17 @@ def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, ru
                     raise IntegrityError("Writer checksum mismatch")
             if seen != {"latest.json", "ledger.json", "scoreboard.json"}:
                 raise IntegrityError("Incomplete writer checksum inventory")
-        result = verify_readback(manifest, files, expected_source_sha=source_sha,
-                                 expected_run_id=run_id)
+        if manifest is None:
+            if artifact_name != f"public-paper-ledger-{run_id}":
+                raise IntegrityError("Writer-only verification requires the known single-writer artifact")
+            result = {"status": "WRITER_CHECKSUM_ONLY", "source_sha": source_sha,
+                      "run_id": str(run_id), "receipt_count": len(files),
+                      "ledger_writer_invoked": False, "production_applied": False,
+                      "independently_authenticated": False}
+        else:
+            result = verify_readback(manifest, files, expected_source_sha=source_sha,
+                                     expected_run_id=run_id)
+            result["independently_authenticated"] = True
         if restore_dir is not None:
             destination = Path(restore_dir)
             if destination.exists():
@@ -96,7 +105,7 @@ def main(argv=None):
     parser.add_argument("--repo", required=True)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--artifact-name", default="public-paper-ledger")
-    parser.add_argument("--manifest", required=True, help="Trusted manifest saved separately from remote artifact")
+    parser.add_argument("--manifest", help="Independent trusted manifest; omit only for writer-checksum-only recovery")
     parser.add_argument("--source-sha", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--restore-dir", help="Restore verified artifact to new directory without overwriting")
@@ -104,7 +113,7 @@ def main(argv=None):
     report = {"status": "REMOTE_READBACK_FAILED", "remote_downloaded": False,
               "ledger_writer_invoked": False, "production_applied": False}
     try:
-        manifest = json.loads(Path(args.manifest).read_text())
+        manifest = json.loads(Path(args.manifest).read_text()) if args.manifest else None
         report = retrieve_and_verify(args.repo, args.run_id, args.artifact_name, manifest, args.source_sha,
                                      restore_dir=args.restore_dir)
     except (IntegrityError, OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError,
@@ -116,7 +125,7 @@ def main(argv=None):
     temp.write_bytes(canonical_bytes(report) + b"\n")
     os.replace(temp, output)
     print(json.dumps(report, sort_keys=True))
-    return 0 if report["status"] == "VERIFIED_REMOTE_READBACK" else 2
+    return 0 if report["status"] in ("VERIFIED_REMOTE_READBACK", "WRITER_CHECKSUM_ONLY") else 2
 
 
 if __name__ == "__main__":
