@@ -253,7 +253,7 @@ def main():
     parser.add_argument("--published-artifact", help="Checksummed public-paper-results GitHub ZIP (read-only)")
     parser.add_argument("--expected-run-id", help="Expected immutable GitHub run identity")
     parser.add_argument("--expected-source-sha", help="Expected immutable GitHub source SHA")
-    parser.add_argument("--a2-delivery", help="A verified downloaded artifact projection, separate from writer cohort")
+    parser.add_argument("--a2-delivery", help="Complete A2 downloaded artifact directory (verified at read time), or legacy read-only JSON projection")
     parser.add_argument("--learning-handoff", help="E no-improvement learning handoff JSON")
     args = parser.parse_args()
     writer = json.loads(open(args.writer_readback, encoding="utf-8").read()) if args.writer_readback else None
@@ -263,7 +263,19 @@ def main():
     if args.published_result or args.published_artifact:
         if args.run_id or args.repo or historical is not None:
             parser.error("--published-result is exclusive of historical artifact transport")
-        a2 = json.loads(open(args.a2_delivery, encoding="utf-8").read()) if args.a2_delivery else None
+        a2 = None
+        if args.a2_delivery:
+            from pathlib import Path
+            source = Path(args.a2_delivery)
+            if source.is_dir():
+                # A's complete downloaded Actions artifact, including immutable
+                # receipt and preselection, is required for live-age evidence.
+                from .a2_artifact_consumer import read_published_delivery
+                a2 = read_published_delivery(source)
+            else:
+                # Legacy JSON handoffs are separate historical cohorts only;
+                # they must never be represented as fresh A2 artifact readback.
+                a2 = json.loads(source.read_text(encoding="utf-8"))
         learning = json.loads(open(args.learning_handoff, encoding="utf-8").read()) if args.learning_handoff else None
         if args.published_artifact:
             from .manual_schedule_contract import load_verified_artifact
