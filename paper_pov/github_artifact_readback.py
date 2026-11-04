@@ -60,7 +60,16 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
     if len(ledger_paths) != 1:
         raise IntegrityError("Recovered ledger missing or ambiguous")
     endpoint = f"repos/{repo}/contents/{quote(path, safe='/')}?ref={quote(ref, safe='')}"
-    remote = _github_json([endpoint], runner=runner)
+    try:
+        remote = _github_json([endpoint], runner=runner)
+    except subprocess.CalledProcessError as exc:
+        # The historical writer artifact is still recoverable if the independently
+        # advancing branch has no ledger at the configured path. Do not convert
+        # missing comparison evidence into MATCH or authenticated recovery.
+        return {"status": "UNAVAILABLE", "reason": "REMOTE_LEDGER_QUERY_FAILED",
+                "remote_ref": ref, "remote_path": path,
+                "recovered_sha256": hashlib.sha256(recovered[ledger_paths[0]]).hexdigest(),
+                "independently_authenticated": False, "production_applied": False}
     if remote.get("type") != "file" or remote.get("encoding") != "base64":
         raise IntegrityError("Remote ledger not a base64 file")
     try:
