@@ -18,8 +18,13 @@ from research.acquisition_receipt_pipeline import load_captures
 from research.kraken_prospective_batch import collect, MAX_PAIRS
 
 
-def restore_and_capture(previous, output_root, *, collector=collect, followup_rounds=1,\n                        interval_seconds=300, clock=time.monotonic, sleep=time.sleep):
-    if type(followup_rounds) is not int or not 1 <= followup_rounds <= 13:\n        raise ValueError("follow-up rounds must be 1..13")\n    if type(interval_seconds) is not int or interval_seconds < 300:\n        raise ValueError("minimum source interval is 300 seconds")\n    previous = Path(previous).resolve(strict=True)
+def restore_and_capture(previous, output_root, *, collector=collect, followup_rounds=1,
+                        interval_seconds=300, clock=time.monotonic, sleep=time.sleep):
+    if type(followup_rounds) is not int or not 1 <= followup_rounds <= 13:
+        raise ValueError("follow-up rounds must be 1..13")
+    if type(interval_seconds) is not int or interval_seconds < 300:
+        raise ValueError("minimum source interval is 300 seconds")
+    previous = Path(previous).resolve(strict=True)
     output = Path(output_root)
     if not previous.is_dir() or previous.is_symlink():
         raise ValueError("invalid previous scored series")
