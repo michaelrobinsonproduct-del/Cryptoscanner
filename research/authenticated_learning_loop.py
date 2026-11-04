@@ -73,6 +73,10 @@ def compare(captures_dir, associations_dir, round_index, *, horizon_hours=1,
     challenger = top_decile(held, "challenger_score")
     lift = ((challenger["top_decile_hits"] - baseline["top_decile_hits"]) /
             baseline["top_decile_n"]) if held else None
+    # A tiny ranked top-decile sample cannot establish repeatable improvement.
+    # Retain the cohort counts but do not authorize a challenger on 1-4 picks.
+    if baseline["top_decile_n"] < 5:
+        lift = None
     comparison = {"production_applied": False, "horizon_hours": horizon_hours,
                   "captures_total": len(captures), "associations_verified": len(verified),
                   "source_snapshots_verified": outcomes["snapshots_verified"],
