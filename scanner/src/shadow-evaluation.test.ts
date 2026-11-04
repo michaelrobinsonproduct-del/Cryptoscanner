@@ -41,9 +41,9 @@ test("qualified pre-discovery challenger score is visible pending outcome, never
  expect(manual.result.shadow_evaluation.candidates[0]).toMatchObject({status:"PENDING_OUTCOME",reason:"outcome_not_mature",challenger_score:89,outcome_label:null,production_promoted:false});
  expect(manual.result.candidates[0].score).toBe(85);
 });
-test("gap-abstaining outcomes remain pending, duplicates or mismatched provenance fail closed",()=>{
+test("gap-abstaining outcomes are explicit abstentions, duplicates or mismatched provenance fail closed",()=>{
  const c={pair:"TAOUSD",score:85,discovered_at:discovered,decision:"WATCH"};
- expect(evaluateShadowCandidate(c,evidence,[{...outcomes[0],label:"ABSTAIN"}],scores).status).toBe("PENDING_OUTCOME");
+ expect(evaluateShadowCandidate(c,evidence,[{...outcomes[0],label:"ABSTAIN"}],scores)).toMatchObject({status:"ABSTAIN",reason:"source_outcome_gap",production_promoted:false});
  expect(evaluateShadowCandidate(c,evidence,[...outcomes,...outcomes],scores).status).toBe("ABSTAIN");
  expect(evaluateShadowCandidate(c,evidence,[{...outcomes[0],source_sha:"c".repeat(64)}],scores).status).toBe("ABSTAIN");
  expect(evaluateShadowCandidate(c,{...evidence,qualified:false},[],scores).status).toBe("ABSTAIN");
@@ -57,4 +57,10 @@ test("shadow coverage distinguishes matured, pending and abstained without chang
  const fail=createCycleRunner(deps,async()=>{throw Error("unavailable")});
  const failed=(await fail.run("manual")).result;
  expect(failed.shadow_evaluation.coverage).toMatchObject({candidates:1,scored:0,pending_outcome:0,abstained:1,authenticated_outcomes:0,source_qualified:false});
+});
+
+test("B2 source-qualified outcomes and pre-discovery scores join across equivalent UTC timestamp formats",()=>{
+ const c={pair:"TAOUSD",score:85,discovered_at:"2026-11-03T03:59:00.000+00:00",decision:"WATCH"};
+ const result=evaluateShadowCandidate(c,evidence,outcomes,scores);
+ expect(result).toMatchObject({status:"SCORED",outcome_label:"HIT",challenger_score:89,baseline_score:85,production_promoted:false});
 });
