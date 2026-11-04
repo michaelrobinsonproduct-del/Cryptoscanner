@@ -12,18 +12,35 @@ export function createCycleRunner(deps:Dependencies,shadow?:()=>Promise<{evidenc
   try{
    const result=await executeCandidateCycle(deps);
    let output=result;
-   if(shadow){try{const {evidence,outcomes,scores}=await shadow();output={...attachShadowEvaluation(result,evidence,outcomes,scores),shadow_artifact_status:evidence?"VERIFIED":"UNAVAILABLE"}}catch{output={...attachShadowEvaluation(result,null,[]),shadow_artifact_status:"REJECTED"}}}
-   if(learningReport){try{const gate=await learningReport();output={...output,learning_gate:{...gate,status:"VERIFIED_RESEARCH_ONLY"}}}catch{output={...output,learning_gate:{status:"REJECTED",decision:"KEEP_BASELINE",held_out_n:0,production_applied:false}}}}
+   // E's authenticated qualification decision is an upstream gate, not merely
+   // a parallel informational field. A shadow artifact cannot bypass KEEP_BASELINE.
+   let learningAllowsShadow=learningReport===undefined;
+   if(learningReport){
+    try{
+     const gate=await learningReport();
+     output={...output,learning_gate:{...gate,status:"VERIFIED_RESEARCH_ONLY"}};
+     learningAllowsShadow=gate.decision==="SHADOW_ELIGIBLE_REVIEW"&&gate.held_out_n>0&&gate.production_applied===false;
+    }catch{
+     output={...output,learning_gate:{status:"REJECTED",decision:"KEEP_BASELINE",held_out_n:0,production_applied:false}};
+     learningAllowsShadow=false;
+    }
+   }
+   if(shadow){
+    if(!learningAllowsShadow){
+     output={...attachShadowEvaluation(result,null,[]),learning_gate:output.learning_gate,shadow_artifact_status:"REJECTED"};
+    }else{
+     try{const {evidence,outcomes,scores}=await shadow();output={...attachShadowEvaluation(result,evidence,outcomes,scores),learning_gate:output.learning_gate,shadow_artifact_status:evidence?"VERIFIED":"UNAVAILABLE"}}
+     catch{output={...attachShadowEvaluation(result,null,[]),learning_gate:output.learning_gate,shadow_artifact_status:"REJECTED"}}
+    }
+   }
    if(recoveryStatus){try{output={...output,recovery_status:await recoveryStatus()}}catch{output={...output,recovery_status:unavailableRecovery("read_or_validation_failed")}}}
    if(sourceHealth){try{output={...output,source_run_health:await sourceHealth()}}catch{output={...output,source_run_health:unavailableSourceHealth("read_or_validation_failed")}}}
-   if(paperReceipt){let receipt:PaperReceipt;try{receipt=await paperReceipt()}catch(error){receipt=unavailablePaperReceipt("read_or_validation_failed")};output={...output,paper_receipt:receipt}}
+   if(paperReceipt){let receipt:PaperReceipt;try{receipt=await paperReceipt()}catch{receipt=unavailablePaperReceipt("read_or_validation_failed")};output={...output,paper_receipt:receipt}}
    if(a2Snapshot){let snapshot:A2Snapshot;try{snapshot=await a2Snapshot()}catch{snapshot=unavailableA2Snapshot("read_or_validation_failed")};output={...output,a2_snapshot:snapshot}}
    last=output;lastError=null;cycles++;
    return {ok:true,status:200,origin,result:output};
-  }catch(error){
-   lastError=String(error);
-   return {ok:false,status:502,origin,error:lastError};
-  }finally{running=false}
+  }catch(error){lastError=String(error);return {ok:false,status:502,origin,error:lastError}}
+  finally{running=false}
  }
  return {run,snapshot:()=>({running,cycles,lastError,last})};
 }
