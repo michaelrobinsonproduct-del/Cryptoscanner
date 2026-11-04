@@ -63,6 +63,7 @@ test("watch endpoint abstains after failed cycle and resumes only on successful 
  fail=true;
  expect((await runner.run("scheduled")).ok).toBe(false);
  expect(await (await http(req("/watch"))).json()).toMatchObject({status:"ABSTAIN_LAST_SCAN_FAILED",watch:[],receipt_sha256:null,live_watch_certified:false});
+ expect(await (await http(req("/dashboard"))).json()).toMatchObject({last_result:{paper_watch_status:"ABSTAIN_LAST_SCAN_FAILED",paper_watch:[],a2_snapshot:{status:"UNAVAILABLE",reason:"last_scan_failed"},live_watch_certified:false}});
  fail=false;
  expect((await runner.run("manual")).ok).toBe(true);
  expect(await (await http(req("/watch"))).json()).toMatchObject({status:"PAPER_ONLY_VERIFIED",watch:[{pair:"TAOUSD"}]});
@@ -79,6 +80,7 @@ test("watch endpoint abstains while a replacement scheduled scan is running",asy
  block=true;
  const scheduled=runner.run("scheduled");
  expect(await (await http(req("/watch"))).json()).toMatchObject({running:true,status:"ABSTAIN_SCAN_IN_PROGRESS",watch:[],receipt_sha256:null,live_watch_certified:false});
+ expect(await (await http(req("/dashboard"))).json()).toMatchObject({running:true,last_result:{paper_watch_status:"ABSTAIN_SCAN_IN_PROGRESS",paper_watch:[],a2_snapshot:{status:"UNAVAILABLE",reason:"scan_in_progress"},live_watch_certified:false}});
  release();
  expect((await scheduled).ok).toBe(true);
  expect(await (await http(req("/watch"))).json()).toMatchObject({running:false,status:"PAPER_ONLY_VERIFIED",watch:[{pair:"TAOUSD"}]});
