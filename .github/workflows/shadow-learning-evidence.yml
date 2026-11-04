@@ -56,5 +56,7 @@ jobs:
           for name in historical_outcome_execution historical_outcome_bridge historical_learning_cohort_gate qualified_ohlc_outcomes kraken_trade_csv_adapter verified_trade_bars archive_partition_gate test_historical_outcome_execution; do
             cp "../upstream-e1/paper_pov/$name.py" "paper_pov/$name.py"
           done
-          cp ../upstream-b/paper_pov/github_delivery_projection.py paper_pov/github_delivery_projection.py
+          for name in github_delivery_projection preselection_universe candidate_snapshot; do
+            cp "../upstream-b/paper_pov/$name.py" "paper_pov/$name.py"
+          done
           python -m unittest paper_pov.test_historical_outcome_execution paper_pov.test_e1_b_historical_integration -v
