@@ -196,6 +196,15 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
             self.assertEqual(projected["complete_cohort_count"], 0)
             self.assertEqual(projected["excluded_prediction_count"], 2)
             self.assertEqual(projected["status"], "NO_QUALIFIED_RULE")
+            self.assertEqual(len(handoff["diagnostic_outcome_rows"]), 8)
+            self.assertEqual(handoff["diagnostic_horizon_hit_miss"]["48"]["observed_hits_unqualified"] +
+                             handoff["diagnostic_horizon_hit_miss"]["48"]["observed_misses_unqualified"], 1)
+            self.assertEqual(sum(row["status"] == "ABSTAIN_ENTRY" for row in handoff["diagnostic_outcome_rows"]), 4)
+            self.assertTrue(all(row["qualified_for_learning"] is False and
+                                row["source_authenticated"] is False and
+                                row["liquidity_qualified"] is False
+                                for row in handoff["diagnostic_outcome_rows"]))
+
             self.assertFalse(projected["promotion_authorized"])
             # Mutation of pinned bytes must fail BEFORE E can hand anything to B.
             (root / "XUSD.csv").write_bytes(raw.replace(b"100.00", b"101.00", 1))
