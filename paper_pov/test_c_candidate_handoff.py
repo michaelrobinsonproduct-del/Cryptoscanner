@@ -54,7 +54,10 @@ class HandoffTests(unittest.TestCase):
             "a2_watch_count": src["watch_count"],
             "a2_watch_candidates": src["watch"],
         }
-        self.assertEqual(from_integration(integration), src)
+        handoff = from_integration(integration)
+        self.assertEqual(handoff, src)
+        handoff["watch"][0]["pair"] = "MUTATED"
+        self.assertEqual(integration["a2_watch_candidates"][0]["pair"], src["watch"][0]["pair"])
         for key, bad in (("historical_artifact_parity", False),
                          ("manual_run", ""),
                          ("scheduled_run", "41636714169"),
