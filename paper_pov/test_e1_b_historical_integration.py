@@ -13,6 +13,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from .historical_execution_learning_bridge import project_historical_execution
+from .historical_e1_b_pipeline import run_pipeline
 
 
 class RealHistoricalE1ToBTests(unittest.TestCase):
@@ -44,11 +45,12 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
                  "as_of": start.isoformat()},
                 {"prediction_id": "p2", "pair": "YUSD", "status": "PAPER_WATCH",
                  "as_of": start.isoformat()}]
-            result = run_historical_outcomes(
-                manifest, root, schema, {"XUSD": "XUSD.csv"}, predictions,
-                (start + dt.timedelta(hours=49)).isoformat())
-            handoff = project_historical_execution(result, frozen_predictions=predictions)
-            projected = _learning_evidence(handoff)
+            with patch.dict(sys.modules, {"paper_pov.github_sealed_bundle_readback": transport_stub}):
+                integrated = run_pipeline(
+                    manifest, root, schema, {"XUSD": "XUSD.csv"}, predictions,
+                    (start + dt.timedelta(hours=49)).isoformat())
+            result, handoff, projected = (integrated["execution"], integrated["handoff"], integrated["delivery"])
+            self.assertEqual(projected, _learning_evidence(handoff))
             self.assertEqual(result["status_counts"]["48h:MATURED_OBSERVED"], 1)
             self.assertEqual(result["status_counts"]["48h:ABSTAIN_ENTRY"], 1)
             self.assertEqual(handoff["diagnostic_horizon_status_counts"]["48"]["ABSTAIN_ENTRY"], 1)
