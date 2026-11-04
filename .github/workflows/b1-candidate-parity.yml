@@ -173,16 +173,20 @@ jobs:
               required={"a2-verified-transport.zip","preselection-universe.json",
                         "latest.json","a2-delivery.json"}
               seen=set()
+              total=0
               for item in archive.infolist():
                   name=item.filename
-                  # A publishes its complete output folder, including the
-                  # independent verified snapshot and immutable receipt.
-                  allowed=(name in required or name=="verified-snapshot.json"
-                           or (name.startswith("receipts/") and name.endswith(".json")
-                               and name.count("/")==1))
-                  if (not allowed or name in seen or item.file_size>2_000_000
+                  # Scanner may publish additional diagnostic JSON alongside
+                  # the four required inputs. Never execute or trust extras.
+                  safe=(not name.startswith("/") and "\\\\" not in name
+                        and all(part not in ("", ".", "..") for part in name.split("/")))
+                  if (item.is_dir() or not safe or name in seen
+                      or item.file_size>2_000_000
                       or (item.external_attr >> 16)&0o170000==0o120000):
-                      raise SystemExit("A2_UNSAFE_OR_UNKNOWN_ARTIFACT_MEMBER")
+                      raise SystemExit("A2_UNSAFE_OR_DUPLICATE_ARTIFACT_MEMBER")
+                  total+=item.file_size
+                  if total>8_000_000:
+                      raise SystemExit("A2_ARTIFACT_UNCOMPRESSED_LIMIT")
                   seen.add(name)
                   if name in required:
                       (root/name).write_bytes(archive.read(item))
