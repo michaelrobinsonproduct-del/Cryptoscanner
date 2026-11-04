@@ -74,6 +74,14 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
                 raise ValueError("invalid numeric candidate field: " + field)
         if candidate["price"] <= 0 or candidate["volume_accel"] <= 0 or candidate["spread_bps"] < 0:
             raise ValueError("invalid candidate market metrics")
+        if (candidate.get("momentum_reference") != "completed_5m_candles_15m" or
+                candidate.get("volume_acceleration_reference") != "last_30m_over_prior_30m"):
+            raise ValueError("missing WATCH metric provenance")
+        expected_risk = ("HIGH" if candidate["spread_bps"] > 30 or
+                         candidate["volume_accel"] < 0.8 or abs(candidate["move15_pct"]) > 8
+                         else "ELEVATED")
+        if candidate.get("risk") != expected_risk:
+            raise ValueError("invalid WATCH risk classification")
     if latest.is_symlink() or latest.read_bytes() != raw:
         raise ValueError("snapshot changed during verification")
     return {"as_of": report["as_of"], "scan_status": report["scan_status"],
