@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from research.capture_acquisition_scores import capture_score
+from research.acquisition_receipt_pipeline import load_captures
 from research.prospective_round_store import append_round, evaluate_index
 from research.test_prospective_outcome_adapter import fixture
 from research.restore_scored_series import restore_and_capture
@@ -133,6 +134,72 @@ class RestoreScoredSeriesTests(unittest.TestCase):
             self.assertEqual(json.loads((target/"continuation-report.json").read_text()),
                              report)
             self.assertFalse(report["production_applied"])
+
+    def test_hourly_rescore_appends_new_predictions_before_verified_depth(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "original"
+            entry = seed(source)
+            original = (entry / "scores" / (PID + ".json")).read_bytes()
+            events = []
+            elapsed = [1000.0]
+            def score(directory, *, allowed_pairs, allow_empty):
+                events.append("score")
+                self.assertEqual(allowed_pairs, ["XBTUSD"])
+                self.assertTrue(allow_empty)
+                capture_score(directory, prediction_id="b" * 64, pair="XBTUSD",
+                              baseline_score=51, challenger_score=52,
+                              observed_at=1700000001.5)
+                return {"captures": 1}
+            def collect(pairs, directory):
+                events.append("depth")
+                directory.mkdir()
+                fixture(directory)
+            def bind(scores, index, associations):
+                events.append("associate")
+                self.assertEqual(len(list(Path(scores).glob("*.json"))), 1)
+                self.assertEqual(len(Path(index).read_text().splitlines()), 2)
+                self.assertTrue((Path(scores) / ("b" * 64 + ".json")).exists())
+                return {"associated": ["b" * 64], "excluded": []}
+            with patch("research.restore_scored_series.associate_indexed_captures",
+                       side_effect=bind), patch(
+                           "research.restore_scored_series.evaluate_all",
+                           return_value={"mode": "RESEARCH_ONLY_AUTHENTICATED_HELD_OUT",
+                                         "production_applied": False}):
+                report = restore_and_capture(
+                    source, root / "continued", collector=collect,
+                    rescore=True, scorer=score, followup_rounds=2,
+                    clock=lambda: elapsed[0],
+                    sleep=lambda n: elapsed.__setitem__(0, elapsed[0] + n))
+            self.assertEqual(events, ["score", "depth", "associate", "depth"])
+            self.assertEqual(report["new_scored_candidates"], 1)
+            self.assertEqual(report["new_source_associations"], 1)
+            self.assertIsNone(report["rescore_failure_class"])
+            self.assertEqual(len(load_captures(root / "continued" / "entry" / "scores")), 2)
+            self.assertEqual((source / "entry" / "scores" / (PID + ".json")).read_bytes(),
+                             original)
+            self.assertEqual((root / "continued" / "entry" / "scores" /
+                              (PID + ".json")).read_bytes(), original)
+
+    def test_scoring_unavailable_preserves_source_continuation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            seed(root / "original")
+            def unavailable(*args, **kwargs):
+                raise ConnectionError("Kraken temporarily unavailable")
+            def collect(pairs, directory):
+                directory.mkdir()
+                fixture(directory)
+            with patch("research.restore_scored_series.evaluate_all",
+                       return_value={"production_applied": False}):
+                report = restore_and_capture(root / "original", root / "continued",
+                                             collector=collect, rescore=True,
+                                             scorer=unavailable, followup_rounds=1)
+            self.assertEqual(report["rescore_failure_class"], "ConnectionError")
+            self.assertEqual(report["new_scored_candidates"], 0)
+            self.assertEqual(report["rounds_verified"], 2)
+            self.assertEqual(len((root / "continued" / "entry" /
+                                  "round-index.jsonl").read_text().splitlines()), 2)
 
     def test_continuation_waits_for_next_real_receipt_slot(self):
         from research.prospective_outcome_adapter import verified_rows
