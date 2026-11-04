@@ -93,7 +93,8 @@ def from_integration(integration):
         "trading_approved": False,
     }
     consume(payload)
-    return payload
+    # Detach the replay artifact from caller-owned nested WATCH objects.
+    return json.loads(json.dumps(payload, allow_nan=False))
 
 
 def main():
