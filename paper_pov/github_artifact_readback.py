@@ -124,6 +124,8 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                         "independently_authenticated": False, "production_applied": False}
             except (IntegrityError, subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError, ValueError, KeyError, TypeError) as inner:
                 return {"status": "UNAVAILABLE", "reason": "REMOTE_LEDGER_QUERY_FAILED",
+                        "failure_type": type(inner).__name__,
+                        "failure_detail": str(inner)[:240] if not isinstance(inner, subprocess.CalledProcessError) else "GITHUB_API_HTTP_" + str(inner.returncode),
                         "remote_ref": ref, "remote_path": segments.SNAPSHOT,
                         "recovered_sha256": hashlib.sha256(recovered[ledger_paths[0]]).hexdigest(),
                         "independently_authenticated": False, "production_applied": False}
