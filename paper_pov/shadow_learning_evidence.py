@@ -38,6 +38,16 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
     if type(minimum_holdout) is not int or minimum_holdout < 1:
         raise ValueError("Invalid minimum holdout")
     a, b = baseline.get("observations"), challenger.get("observations")
+    # Row-level booleans cannot independently authenticate Kraken archive data.
+    receipt_a, receipt_b = baseline.get("source_receipt"), challenger.get("source_receipt")
+    receipt_valid = (isinstance(receipt_a, dict) and receipt_a == receipt_b
+                     and receipt_a.get("verification") == "independently_authenticated"
+                     and isinstance(receipt_a.get("artifact_sha256"), str)
+                     and len(receipt_a["artifact_sha256"]) == 64
+                     and all(c in "0123456789abcdef" for c in receipt_a["artifact_sha256"].lower())
+                     and isinstance(receipt_a.get("verifier_commit"), str)
+                     and len(receipt_a["verifier_commit"]) == 40
+                     and all(c in "0123456789abcdef" for c in receipt_a["verifier_commit"].lower()))
     if not isinstance(a, list) or not isinstance(b, list):
         raise ValueError("Missing held-out cohort")
     def normalize(rows):
@@ -82,7 +92,7 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
                 "missed_movers": sum(x["hit"] and not x["watch"] for x in rows.values())}
     base, candidate = metrics(aa), metrics(bb)
     n = len(aa)
-    qualified = (n >= minimum_holdout and base["watched"] >= minimum_holdout
+    qualified = (receipt_valid and n >= minimum_holdout and base["watched"] >= minimum_holdout
                  and candidate["watched"] >= minimum_holdout
                  and candidate["precision"] > base["precision"]
                  and candidate["missed_movers"] <= base["missed_movers"])
@@ -93,4 +103,5 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
                                 if base["precision"] is not None and candidate["precision"] is not None else None),
             "evidence_digest": canonical_digest({"baseline": baseline, "challenger": challenger}),
             "status": "EVIDENCE_CANDIDATE_REVIEW_REQUIRED" if qualified else "NO_QUALIFIED_RULE",
+            "source_receipt_qualified": receipt_valid,
             "promotion_authorized": False, "production_applied": False}
