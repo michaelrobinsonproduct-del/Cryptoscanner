@@ -19,7 +19,7 @@ class GitHubSealedBundleReadbackTests(unittest.TestCase):
             if args[1:3]==["run","download"]:
                 root=Path(args[-1])
                 for name in ("latest.json","scoreboard.json","ledger.json","slot_receipt.json"):
-                    (root/name).write_bytes((json.dumps({"run_id":123,"source_sha":"a"*40}) if name=="slot_receipt.json" else name+"-content").encode())
+                    (root/name).write_bytes((json.dumps({"run_id":"123","source_sha":"a"*40,"historical_quotes_reconstructed":False}) if name=="slot_receipt.json" else name+"-content").encode())
                 lines=[]
                 for name in ("latest.json","scoreboard.json","ledger.json","slot_receipt.json"):
                     lines.append(hashlib.sha256((root/name).read_bytes()).hexdigest()+"  "+name)
