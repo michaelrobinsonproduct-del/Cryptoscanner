@@ -4,6 +4,7 @@ This is a read-only consumer of the existing single-writer's published artifact.
 It never dispatches workflows, publishes artifacts, or writes to a ledger.
 """
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -47,6 +48,25 @@ def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, ru
         if any(p.is_symlink() for p in paths):
             raise IntegrityError("Unexpected nested or symlinked artifact entries")
         files = {p.relative_to(root).as_posix(): p.read_bytes() for p in paths if p.is_file()}
+        if artifact_name == f"public-paper-ledger-{run_id}":
+            index = [name for name in files if name == "SHA256SUMS" or name.endswith("/SHA256SUMS")]
+            if len(index) != 1:
+                raise IntegrityError("Writer checksum index missing or ambiguous")
+            parent = index[0].rpartition("/")[0]
+            seen = set()
+            for line in files[index[0]].decode("utf-8").splitlines():
+                digest, sep, relative = line.partition("  ")
+                target = (parent + "/" if parent else "") + relative
+                if (not sep or len(digest) != 64 or
+                    any(char not in "0123456789abcdef" for char in digest) or
+                    relative not in ("latest.json", "ledger.json", "scoreboard.json") or
+                    relative in seen or target not in files):
+                    raise IntegrityError("Malformed writer checksum inventory")
+                seen.add(relative)
+                if hashlib.sha256(files[target]).hexdigest() != digest:
+                    raise IntegrityError("Writer checksum mismatch")
+            if seen != {"latest.json", "ledger.json", "scoreboard.json"}:
+                raise IntegrityError("Incomplete writer checksum inventory")
         result = verify_readback(manifest, files, expected_source_sha=source_sha,
                                  expected_run_id=run_id)
     result.update(remote_run_url=run.get("html_url"), artifact_id=matches[0].get("id"),
