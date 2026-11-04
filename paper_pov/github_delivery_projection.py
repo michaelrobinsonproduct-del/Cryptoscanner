@@ -122,7 +122,30 @@ def _a2_evidence(delivery):
             "exchange_event_freshness_verified": False, "production_applied": False}
 
 
-def project_published_result(result, writer_readback=None, a2_delivery=None):
+def _learning_evidence(h):
+    """E's unpromotable held-out evidence is separate from live scan scoring."""
+    import re
+    if not isinstance(h, dict) or h.get("schema") != "paper_learning_handoff_v1" or h.get("status") != "NO_QUALIFIED_RULE" or h.get("read_only") is not True:
+        raise ValueError("invalid learning handoff")
+    if any(h.get(k) is not False for k in ("source_authenticated", "measured_lift_verified", "live_watch_authorized", "promotion_authorized", "production_applied")):
+        raise ValueError("unsafe learning authorization")
+    if any(not isinstance(h.get(k), str) or not re.fullmatch(r"[0-9a-f]{64}", h[k]) for k in ("evidence_digest", "cohort_join_digest")):
+        raise ValueError("missing learning digest")
+    n = [h.get(k) for k in ("observed_prediction_count", "complete_cohort_count", "excluded_prediction_count")]
+    if any(type(v) is not int or v < 0 for v in n) or n[0] != n[1] + n[2]:
+        raise ValueError("inconsistent learning cohort counts")
+    if not isinstance(h.get("abstention_counts"), dict) or not isinstance(h.get("incomplete_prediction_horizons"), dict) or len(h["incomplete_prediction_horizons"]) != n[2]:
+        raise ValueError("missing learning abstentions")
+    return {"schema": "paper_learning_delivery_v1", "status": "NO_QUALIFIED_RULE",
+            "baseline_version": h["baseline_version"], "challenger_version": h["challenger_version"],
+            "evaluation_asof_utc": h["evaluation_asof_utc"], "evidence_digest": h["evidence_digest"],
+            "cohort_join_digest": h["cohort_join_digest"], "observed_prediction_count": n[0],
+            "complete_cohort_count": n[1], "excluded_prediction_count": n[2],
+            "abstention_counts": h["abstention_counts"], "source_authenticated": False,
+            "measured_lift_verified": False, "promotion_authorized": False, "production_applied": False}
+
+
+def project_published_result(result, writer_readback=None, a2_delivery=None, learning_handoff=None):
     """Consume the real results.json emitted by the ONE paper-pipeline writer.
 
     This is the same schema for scheduled and manual dispatch; it does not
@@ -196,11 +219,12 @@ def project_published_result(result, writer_readback=None, a2_delivery=None):
             raise ValueError("WATCH candidate lacks matching fresh quote")
     writer = _writer_evidence(writer_readback) if writer_readback is not None else None
     a2 = _a2_evidence(a2_delivery) if a2_delivery is not None else None
+    learning = _learning_evidence(learning_handoff) if learning_handoff is not None else None
     return {"schema": "paper_delivery_readback_v1", "source_run_id": int(run_id),
             "source_sha": sha, "github_event": event, "status": status,
             "ledger_generation": generation, "ledger_commit": result["ledger_commit"],
             "writer_reconciliation_status": writer["reconciliation_status"] if writer else "UNAVAILABLE",
-            "writer_recovery": writer, "a2_receipt_cohort": a2, "historical_watch_count": None, "historical_coverage": None,
+            "writer_recovery": writer, "a2_receipt_cohort": a2, "learning": learning, "historical_watch_count": None, "historical_coverage": None,
             "live_watch": candidates, "live_watch_authorized": False,
             "client_quote_freshness_verified": bool(candidates),
             "exchange_event_freshness_verified": False,
@@ -219,6 +243,7 @@ def main():
     parser.add_argument("--expected-run-id", help="Expected immutable GitHub run identity")
     parser.add_argument("--expected-source-sha", help="Expected immutable GitHub source SHA")
     parser.add_argument("--a2-delivery", help="A verified downloaded artifact projection, separate from writer cohort")
+    parser.add_argument("--learning-handoff", help="E no-improvement learning handoff JSON")
     args = parser.parse_args()
     writer = json.loads(open(args.writer_readback, encoding="utf-8").read()) if args.writer_readback else None
     historical = json.loads(open(args.historical_a2, encoding="utf-8").read()) if args.historical_a2 else None
@@ -228,6 +253,7 @@ def main():
         if args.run_id or args.repo or historical is not None:
             parser.error("--published-result is exclusive of historical artifact transport")
         a2 = json.loads(open(args.a2_delivery, encoding="utf-8").read()) if args.a2_delivery else None
+        learning = json.loads(open(args.learning_handoff, encoding="utf-8").read()) if args.learning_handoff else None
         if args.published_artifact:
             from .manual_schedule_contract import load_verified_artifact
             from pathlib import Path
@@ -240,10 +266,10 @@ def main():
             raise ValueError("published artifact run identity mismatch")
         if args.expected_source_sha and published.get("source_sha") != args.expected_source_sha:
             raise ValueError("published artifact source SHA mismatch")
-        result = project_published_result(published, writer, a2)
+        result = project_published_result(published, writer, a2, learning)
     else:
-        if args.a2_delivery:
-            parser.error("--a2-delivery requires --published-result")
+        if args.a2_delivery or args.learning_handoff:
+            parser.error("--a2-delivery and --learning-handoff require --published-result")
         if not args.repo or not args.run_id:
             parser.error("--repo and --run-id required for historical artifact transport")
         result = project_delivery(read_run(args.repo, args.run_id), writer, historical)
