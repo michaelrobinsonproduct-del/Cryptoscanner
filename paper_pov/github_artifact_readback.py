@@ -39,7 +39,7 @@ def summarize_persisted_paper(files):
     generation = ledger.get("generation")
     if not isinstance(generation, int) or isinstance(generation, bool) or generation < 0:
         raise IntegrityError("Invalid recovered ledger generation")
-    if scoreboard.get("generation") != generation:
+    if scoreboard.get("generation") != generation or (scan.get("generation") is not None and scan["generation"] != generation):
         raise IntegrityError("Recovered ledger and scoreboard generation mismatch")
     status = scan.get("status")
     if not isinstance(status, str) or not status:
@@ -201,6 +201,9 @@ def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, ru
                     raise IntegrityError("Writer checksum mismatch")
             if seen != {"latest.json", "ledger.json", "scoreboard.json"}:
                 raise IntegrityError("Incomplete writer checksum inventory")
+            expected_paths = {index[0]} | {(parent + "/" if parent else "") + name for name in seen}
+            if set(files) != expected_paths:
+                raise IntegrityError("Unexpected files outside writer checksum inventory")
         if manifest is None:
             if artifact_name != f"public-paper-ledger-{run_id}":
                 raise IntegrityError("Writer-only verification requires the known single-writer artifact")
