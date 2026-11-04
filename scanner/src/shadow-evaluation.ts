@@ -21,7 +21,16 @@ export function evaluateShadowCandidate(candidate:{pair:string;score:number;disc
  return {...base,status:"SCORED",reason:"qualified_shadow_only",challenger_score:matches[0].score,outcome_label:matching[0].label};
 }
 export function attachShadowEvaluation(cycle:any,evidence:ShadowEvidence|null,outcomes:ShadowOutcome[],scores:ShadowScore[]=[]){
- const candidates=(cycle.candidates??[]).map((c:any)=>({pair:c.pair,...evaluateShadowCandidate(c,evidence,outcomes,scores)}));
+ // Index immutable source-qualified ledgers once per scan rather than scanning
+ // up to 10,000 history rows separately for every discovered candidate.
+ const key=(pair:string,at:string)=>pair+"|"+Date.parse(at);
+ const outcomeIndex=new Map<string,ShadowOutcome[]>(),scoreIndex=new Map<string,ShadowScore[]>();
+ for(const row of outcomes){const k=key(row.pair,row.observed_at);outcomeIndex.set(k,[...(outcomeIndex.get(k)??[]),row]);}
+ for(const row of scores){const k=key(row.pair,row.observed_at);scoreIndex.set(k,[...(scoreIndex.get(k)??[]),row]);}
+ const candidates=(cycle.candidates??[]).map((c:any)=>{
+  const k=key(c.pair,c.discovered_at);
+  return {pair:c.pair,...evaluateShadowCandidate(c,evidence,outcomeIndex.get(k)??[],scoreIndex.get(k)??[])};
+ });
  const coverage={candidates:candidates.length,scored:candidates.filter((c:any)=>c.status==="SCORED").length,pending_outcome:candidates.filter((c:any)=>c.status==="PENDING_OUTCOME").length,abstained:candidates.filter((c:any)=>c.status==="ABSTAIN").length,authenticated_outcomes:candidates.filter((c:any)=>c.status==="SCORED").length,
   observed_hits:candidates.filter((c:any)=>c.status==="SCORED"&&c.outcome_label==="HIT").length,
   observed_misses:candidates.filter((c:any)=>c.status==="SCORED"&&c.outcome_label==="MISS").length,
