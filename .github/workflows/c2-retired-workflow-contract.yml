@@ -61,7 +61,30 @@ jobs:
           assert data["head_sha"]=="94929a544899ddec63c676b6d4d52539da8e3837", "Real scan source drift"
           print("AUTHENTIC_RUN",label,run,event,data["head_sha"])
           PY
+            # Bind the downloaded ZIP to the same GitHub run and source SHA;
+            # checksums inside a ZIP alone do not authenticate its publisher.
+            gh api "repos/$REPO/actions/artifacts/$artifact" > "/tmp/c-real-receipts/$label-artifact.json"
+            python - "$label" "$run" "$artifact" <<'PY'
+          import json,re,sys
+          label,run,artifact=sys.argv[1:]
+          meta=json.load(open("/tmp/c-real-receipts/"+label+"-artifact.json"))
+          source=json.load(open("/tmp/c-real-receipts/"+label+"-run.json"))
+          if (str(meta.get("id"))!=artifact or meta.get("expired") is not False
+                  or meta.get("workflow_run",{}).get("id")!=int(run)
+                  or meta.get("workflow_run",{}).get("head_sha")!=source["head_sha"]
+                  or not re.fullmatch(r"sha256:[0-9a-f]{64}",str(meta.get("digest","")))):
+              raise SystemExit("MANUAL_SCHEDULED_ARTIFACT_PROVENANCE_MISMATCH")
+          PY
             gh api -H "Accept: application/vnd.github+json" "repos/$REPO/actions/artifacts/$artifact/zip" > "/tmp/c-real-receipts/$label.zip"
+            python - "$label" <<'PY'
+          import hashlib,json,sys
+          label=sys.argv[1]
+          meta=json.load(open("/tmp/c-real-receipts/"+label+"-artifact.json"))
+          with open("/tmp/c-real-receipts/"+label+".zip","rb") as stream:
+              actual=hashlib.file_digest(stream,"sha256").hexdigest()
+          if actual!=meta["digest"].split(":")[1]:
+              raise SystemExit("MANUAL_SCHEDULED_ARTIFACT_ZIP_DIGEST_MISMATCH")
+          PY
           done
       - name: Execute exact-code read-only dual ZIP acceptance
         run: |
