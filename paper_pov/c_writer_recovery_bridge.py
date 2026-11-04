@@ -1,0 +1,74 @@
+"""Read-only bridge between C historical WATCH replay and D's restored real writer.
+
+The C A2 capture and D paper-writer run are different cohorts. This module
+publishes both without falsely claiming candidate or timestamp equality.
+"""
+import argparse
+import json
+from pathlib import Path
+
+from paper_pov.c_candidate_handoff import consume, from_integration
+
+
+def bridge(integration, readback, *, restored_latest=None):
+    replay = consume(from_integration(integration))
+    if not isinstance(readback, dict) or readback.get("status") not in (
+        "WRITER_CHECKSUM_ONLY", "VERIFIED_REMOTE_READBACK"
+    ):
+        raise ValueError("D writer recovery has not succeeded")
+    if readback.get("remote_downloaded") is not True or readback.get("ledger_writer_invoked") is not False:
+        raise ValueError("D report is not a read-only remote recovery")
+    if readback.get("production_applied") is not False:
+        raise ValueError("D recovery changed production")
+    run_id = readback.get("run_id")
+    sha = readback.get("source_sha")
+    if not isinstance(run_id, str) or not run_id.isdigit() or not isinstance(sha, str) or len(sha) != 40 or any(c not in "0123456789abcdef" for c in sha):
+        raise ValueError("D run identity missing")
+    independent = readback.get("independently_authenticated")
+    if independent is not (readback["status"] == "VERIFIED_REMOTE_READBACK"):
+        raise ValueError("D independent verification status inconsistent")
+    if restored_latest is not None:
+        if not isinstance(restored_latest, dict):
+            raise ValueError("Restored writer latest is not JSON object")
+        # The writer's output is retained as separate provenance, not used to
+        # fabricate parity with the historical A2 candidate cohort.
+        if restored_latest.get("production_applied") is True or restored_latest.get("trading_approved") is True:
+            raise ValueError("Restored writer report claims trading/production")
+    return {
+        "schema": "c_d_recovered_writer_bridge_v1",
+        "status": "READ_ONLY_COHORTS_CONNECTED_NOT_LIVE",
+        "historical_a2": replay,
+        "writer_recovery": {
+            "run_id": run_id,
+            "source_sha": sha,
+            "status": readback["status"],
+            "independently_authenticated": independent,
+            "artifact_id": readback.get("artifact_id"),
+            "restored_latest_available": restored_latest is not None,
+        },
+        "same_run_or_candidate_parity_claimed": False,
+        "live_watch_certified": False,
+        "trading_approved": False,
+        "production_applied": False,
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--integration", type=Path, required=True)
+    parser.add_argument("--readback", type=Path, required=True)
+    parser.add_argument("--restored-latest", type=Path)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    result = bridge(
+        json.loads(args.integration.read_text()),
+        json.loads(args.readback.read_text()),
+        restored_latest=json.loads(args.restored_latest.read_text()) if args.restored_latest else None,
+    )
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(json.dumps(result, sort_keys=True) + "\n")
+    print(json.dumps({"status": result["status"], "historical_watch": result["historical_a2"]["watch_count"], "writer_run": result["writer_recovery"]["run_id"]}, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()
