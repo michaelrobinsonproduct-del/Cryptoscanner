@@ -30,3 +30,10 @@ export function selectDiscoveryCandidates(scan: any): SelectedCandidate[] {
 export function classifyConfirmationFailure(pair: string, error: unknown) {
   return { pair, decision: "ABSTAIN" as const, reason: "confirmation_error", error: String(error) };
 }
+
+// Never substitute the requested pair when the confirmation service omits identity.
+// Missing identity must flow into the cycle's pair-mismatch abstention.
+export function confirmedPairIdentity(payload: any): string {
+  const value = payload?.pair ?? payload?.symbol;
+  return typeof value === "string" ? value : "";
+}
