@@ -282,12 +282,14 @@ jobs:
                       continue
                   files={Path(n).name:archive.read(n) for n in names if not n.endswith("/")}
                   verified=True
+                  checked=set()
                   for line in files["SHA256SUMS"].decode().splitlines():
                       match=re.fullmatch(r"([0-9a-f]{64})  ([^/]+)",line)
-                      if not match or match[2] not in files or hashlib.sha256(files[match[2]]).hexdigest()!=match[1]:
+                      if not match or match[2] in checked or match[2] not in files or hashlib.sha256(files[match[2]]).hexdigest()!=match[1]:
                           verified=False
                           break
-                  if not verified or "results.json" not in files:
+                      checked.add(match[2])
+                  if not verified or "results.json" not in checked:
                       continue
                   result=json.loads(files["results.json"])
                   if str(result.get("run_id"))!=str(rid) or result.get("source_sha")!=run["head_sha"]:
