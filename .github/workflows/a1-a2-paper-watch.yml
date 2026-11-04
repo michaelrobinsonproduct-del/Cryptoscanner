@@ -95,6 +95,10 @@ jobs:
           report=json.loads(Path(os.environ["PAPER_REPORT_PATH"]).read_text())
           exported=json.loads((Path(os.environ["PAPER_REPORT_PATH"]).parent/"preselection-universe.json").read_text())
           assert len(exported["markets"]) == report["observed_markets"]
+          candidate=json.loads((Path(os.environ["PAPER_REPORT_PATH"]).parent/"candidate-snapshot.json").read_text())
+          assert candidate["receipt_sha256"] == exported["receipt_sha256"]
+          assert len(candidate["watch"]) == len(report["watch"])
+          assert candidate["scan_status"] == report["scan_status"]
           assert exported["coverage"]["screen_passed"] == report["screened_markets"]
           assert exported["future_outcomes_authenticated"] is False
           print("A1_PRESELECTION_EXPORTED", exported["coverage"], exported["receipt_sha256"])
