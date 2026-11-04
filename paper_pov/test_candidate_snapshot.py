@@ -1,0 +1,78 @@
+"""Focused immutable A2 candidate readback acceptance tests."""
+import datetime as dt
+import hashlib
+import json
+import tempfile
+import unittest
+from pathlib import Path
+from paper_pov.candidate_snapshot import read_snapshot
+
+NOW = dt.datetime(2026, 11, 3, 17, 0, 30, tzinfo=dt.timezone.utc)
+STAMP = "2026-11-03T17:00:00+00:00"
+
+class SnapshotTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.latest = Path(self.tmp.name) / "latest.json"
+        self.report = {"as_of": STAMP, "mode": "PAPER_ONLY", "buy_approved": False,
+                       "scan_status": "WATCH", "eligible_pairs": 20, "observed_markets": 20,
+                       "abstention_counts": {"ohlc_gap_or_schema": 2}, "watch": [self.candidate()]}
+        self.seal()
+
+    def candidate(self):
+        pair = "TESTUSD"
+        return {"pair": pair, "rank": 1, "status": "PAPER_WATCH", "buy_approved": False,
+                "as_of": STAMP, "quote_observed_at": STAMP,
+                "quote_timestamp_semantics": "client_observed_not_exchange_event_time",
+                "prediction_id": hashlib.sha256(("paper-v1|" + STAMP + "|" + pair).encode()).hexdigest(),
+                "price": 1.5, "move15_pct": 2.0, "volume_accel": 1.4,
+                "baseline_score": 45.0, "challenger_score": 60.0, "spread_bps": 5.0}
+
+    def seal(self):
+        raw = json.dumps(self.report, sort_keys=True, separators=(",", ":")).encode()
+        self.latest.write_bytes(raw)
+        directory = self.latest.parent / "receipts"
+        directory.mkdir(exist_ok=True)
+        (directory / "20261103T170000000000Z.json").write_bytes(raw)
+
+    def test_realistic_watch_readback(self):
+        result = read_snapshot(self.latest, NOW)
+        self.assertEqual(result["watch"][0]["pair"], "TESTUSD")
+        self.assertEqual(result["snapshot_age_seconds"], 30)
+        self.assertEqual(result["abstention_counts"]["ohlc_gap_or_schema"], 2)
+
+    def test_zero_watch_abstention_readback(self):
+        self.report.update(watch=[], scan_status="ABSTAIN_NO_QUALIFIED_OHLC")
+        self.seal()
+        self.assertEqual(read_snapshot(self.latest, NOW)["watch"], [])
+
+    def test_missing_receipt_rejected(self):
+        next((self.latest.parent / "receipts").glob("*.json")).unlink()
+        with self.assertRaisesRegex(ValueError, "immutable receipt"):
+            read_snapshot(self.latest, NOW)
+
+    def test_rechecksummed_forged_candidate_rejected(self):
+        self.report["watch"][0]["prediction_id"] = "forged"
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "provenance"):
+            read_snapshot(self.latest, NOW)
+
+    def test_stale_snapshot_rejected(self):
+        with self.assertRaisesRegex(ValueError, "stale or future"):
+            read_snapshot(self.latest, NOW + dt.timedelta(minutes=11))
+
+    def test_quote_timestamp_forgery_rejected(self):
+        self.report["watch"][0]["quote_observed_at"] = "2026-11-03T16:30:00+00:00"
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "stale candidate quote"):
+            read_snapshot(self.latest, NOW)
+
+    def test_duplicate_candidate_rejected(self):
+        self.report["watch"].append(dict(self.report["watch"][0], rank=2))
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            read_snapshot(self.latest, NOW)
+
+if __name__ == "__main__":
+    unittest.main()
