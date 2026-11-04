@@ -10,6 +10,7 @@ import zipfile
 from pathlib import Path
 from paper_pov.replay_downloaded_artifacts import replay, read_archive, replay_visible_result, LEDGER_FILES, main
 from paper_pov.results_report import render
+from paper_pov.failure_report import render_failure
 from paper_pov.test_results_report import fixture, SHA, LEDGER
 
 RUN = "41235442591"
@@ -55,15 +56,15 @@ class DownloadedArtifactReplayTests(unittest.TestCase):
                       source_sha=SHA, ledger_commit=LEDGER)
 
     def test_failed_run_receipt_is_visible_but_never_certified(self):
-        failed = {"status": "FAILED_PAPER_ONLY", "run_id": RUN, "source_sha": SHA}
+        failed, markdown = render_failure(RUN, SHA)
         receipt = {"results.json": json.dumps(failed).encode(),
-                   "results.md": b"Paper scan failed; no ledger publication.\\n"}
+                   "results.md": (markdown + "\\n").encode()}
         seal(receipt, ["results.json", "results.md"])
         pack(self.results_path, receipt)
         outcome = replay_visible_result(failure_zip=self.results_path,
                                         run_id=RUN, source_sha=SHA)
         self.assertEqual(outcome["status"], "FAILED_PAPER_ONLY")
-        self.assertFalse(outcome["ledger_persisted"])
+        self.assertIsNone(outcome["ledger_persisted"])
         self.assertIsNone(outcome["watch_candidates"])
         with self.assertRaisesRegex(ValueError, "Mixed success"):
             replay_visible_result(ledger_zip=self.ledger_path,
@@ -74,9 +75,9 @@ class DownloadedArtifactReplayTests(unittest.TestCase):
                                   run_id="999", source_sha=SHA)
 
     def test_failed_run_cli_reports_nonzero_and_no_ledger(self):
-        failed = {"status": "FAILED_PAPER_ONLY", "run_id": RUN, "source_sha": SHA}
+        failed, markdown = render_failure(RUN, SHA)
         receipt = {"results.json": json.dumps(failed).encode(),
-                   "results.md": b"Paper run failed; no publication.\\n"}
+                   "results.md": (markdown + "\\n").encode()}
         seal(receipt, ["results.json", "results.md"])
         pack(self.results_path, receipt)
         output = io.StringIO()
@@ -87,7 +88,7 @@ class DownloadedArtifactReplayTests(unittest.TestCase):
         result = json.loads(output.getvalue())
         self.assertEqual(code, 2)
         self.assertEqual(result["status"], "FAILED_PAPER_ONLY")
-        self.assertFalse(result["ledger_persisted"])
+        self.assertIsNone(result["ledger_persisted"])
         self.assertIsNone(result["watch_candidates"])
 
     def test_complete_downloaded_artifact_replay(self):
