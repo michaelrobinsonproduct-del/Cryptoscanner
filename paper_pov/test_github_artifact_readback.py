@@ -101,7 +101,7 @@ def test_real_writer_checksum_only_restores_without_independent_manifest(tmp_pat
     receipts = {"paper_pov/output/latest.json": b'{"status":"WATCH"}',
                 "paper_pov/output/ledger.json": b'{"generation":3}',
                 "paper_pov/output/scoreboard.json": b'{"actual_scans":3}'}
-    sums = "".join(hashlib.sha256(value).hexdigest() + "  " + name.rsplit("/", 1)[-1] + "\\n"
+    sums = "".join(hashlib.sha256(value).hexdigest() + "  " + name.rsplit("/", 1)[-1] + "\n"
                    for name, value in receipts.items())
     receipts["paper_pov/output/SHA256SUMS"] = sums.encode()
     def run(args, timeout):
