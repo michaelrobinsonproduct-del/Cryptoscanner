@@ -11,6 +11,7 @@ import shutil
 from pathlib import Path
 
 from research.prospective_round_store import append_round, evaluate_index
+from research.authenticated_learning_loop import evaluate_all
 from research.prospective_outcome_adapter import verified_rows
 from research.acquisition_receipt_pipeline import load_captures
 from research.kraken_prospective_batch import collect, MAX_PAIRS
@@ -94,11 +95,11 @@ def restore_and_capture(previous, output_root, *, collector=collect):
         raise ValueError("new depth round differs from scored cohort")
     append_round(new_index, destination)
     coverage = {str(h): evaluate_index(new_index, h) for h in (1, 6, 24, 48)}
-    return {"mode": "RESEARCH_ONLY_CROSS_JOB_FOLLOWUP",
+    learning = evaluate_all(output / "entry" / "scores",\n                            output / "entry" / "associations", new_index,\n                            ledger_path=output / "shadow-decisions.jsonl")\n    return {"mode": "RESEARCH_ONLY_CROSS_JOB_FOLLOWUP",
             "rounds_verified": number + 1,
             "original_index_sha256": hashlib.sha256(original_bytes).hexdigest(),
             "round_index": str(new_index), "scored_pairs": pairs,
-            "coverage": coverage, "production_applied": False,
+            "coverage": coverage, "learning": learning, "production_applied": False,
             "trading_approved": False}
 
 
