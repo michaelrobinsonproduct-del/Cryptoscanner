@@ -67,6 +67,39 @@ class RestoreScoredSeriesTests(unittest.TestCase):
             self.assertEqual(resumed["rounds_verified"], 3)
             self.assertEqual(evaluate_index(latest / "entry" / "round-index.jsonl")["rounds_verified"], 3)
 
+            self.assertEqual(
+                (latest / "continuation-history" / "through-002-rounds.json").read_bytes(),
+                (new / "continuation-report.json").read_bytes())
+
+    def test_twelve_actual_continuation_rounds(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            seed(root / "original")
+            times = [1000.0]
+            def clock():
+                return times[0]
+            def sleep(seconds):
+                times[0] += seconds
+            observations = []
+            def collector(pairs, target):
+                self.assertEqual(pairs, ["XBTUSD"])
+                observations.append((target.name, clock()))
+                target.mkdir()
+                fixture(target)
+            with patch("research.restore_scored_series.evaluate_all",
+                       return_value={"production_applied": False}):
+                result = restore_and_capture(
+                    root / "original", root / "extended", collector=collector,
+                    followup_rounds=12, clock=clock, sleep=sleep)
+            self.assertEqual(result["rounds_verified"], 13)
+            self.assertEqual(result["followup_rounds_acquired"], 12)
+            self.assertEqual(len(result["coverage"]), 4)
+            self.assertEqual(len((root / "extended" / "entry" / "round-index.jsonl").read_text().splitlines()), 13)
+            self.assertEqual(observations, [
+                ("depth-%03d" % i, 1000.0 + 300 * (i - 1)) for i in range(1, 13)])
+            self.assertFalse(result["production_applied"])
+
+
     def test_real_source_archive_continues_in_timed_batch(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
