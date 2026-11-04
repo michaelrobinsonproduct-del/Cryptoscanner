@@ -74,7 +74,18 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
         if key in by_prediction and by_prediction[key] != identity:
             raise ValueError("Cross-horizon prediction/source identity mismatch")
         by_prediction[key] = identity
-    selected = {key: row for (key, horizon), row in eligible.items() if horizon == 48}
+    # A complete four-horizon outcome is required for a comparable learning
+    # cohort. A valid 48h label alone must not hide missing 1/6/24h evidence.
+    selected = {}
+    incomplete_predictions = {}
+    for (key, horizon), record in eligible.items():
+        if horizon != 48:
+            continue
+        missing = [h for h in HORIZONS if (key, h) not in eligible]
+        if missing:
+            incomplete_predictions[key] = missing
+        else:
+            selected[key] = record
     if set(selected) != set(baseline_decisions) or set(selected) != set(challenger_decisions):
         raise ValueError("Decisions do not cover identical eligible 48h cohort")
     if any(type(v) is not bool for v in baseline_decisions.values()) or any(type(v) is not bool for v in challenger_decisions.values()):
@@ -105,6 +116,8 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
     result["abstention_counts"] = {reason: list(abstentions.values()).count(reason)
                                     for reason in sorted(set(abstentions.values()))}
     result["source_authentication_verified_by_adapter"] = False
+    result["incomplete_prediction_horizons"] = {key: missing for key, missing in sorted(incomplete_predictions.items())}
+    result["four_horizon_complete_predictions"] = len(selected)
     result["cohort_join_digest"] = canonical_digest(sorted(selected))
     return result
 
