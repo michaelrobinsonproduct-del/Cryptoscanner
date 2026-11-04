@@ -6,6 +6,7 @@ from pathlib import Path
 
 from paper_pov.scanner import UTC, scan, persist_report
 from paper_pov.candidate_snapshot import read_snapshot
+from paper_pov.preselection_universe import export_universe
 
 
 class EndToEndCandidateTests(unittest.TestCase):
@@ -40,6 +41,10 @@ class EndToEndCandidateTests(unittest.TestCase):
             self.assertEqual(result["watch"], report["watch"])
             self.assertEqual(result["observed_markets"], report["observed_markets"])
             self.assertEqual(result["abstention_counts"], report["abstention_counts"])
+            universe = export_universe(latest, now=self.now + dt.timedelta(seconds=30))
+            self.assertEqual(universe["receipt_sha256"], result["receipt_sha256"])
+            self.assertEqual(len(universe["markets"]), report["observed_markets"])
+            self.assertFalse(universe["qualified_for_learning"])
             self.assertEqual(persist_report(latest, report), receipt)
             return result
 
@@ -47,6 +52,7 @@ class EndToEndCandidateTests(unittest.TestCase):
         report = scan(api=self.api, clock=lambda: self.now, sleep=lambda _: None, max_ohlc=4)
         result = self.round_trip(report)
         self.assertEqual(report["excluded_stablecoin_pairs"], 1)
+        self.assertEqual(report["preselection_coverage"], {"valid_tickers": 25, "screen_passed": 25, "screen_rejected": 0})
         self.assertEqual(report["abstention_counts"]["request_failure"], 1)
         self.assertEqual(len(result["watch"]), 3)
         self.assertTrue(all(x["status"] == "PAPER_WATCH" and x["buy_approved"] is False for x in result["watch"]))
@@ -61,6 +67,8 @@ class EndToEndCandidateTests(unittest.TestCase):
         self.assertEqual(result["scan_status"], "ABSTAIN_NO_LIQUID_CANDIDATES")
         self.assertEqual(result["watch"], [])
         self.assertEqual(result["quote_age_seconds"], {})
+        self.assertEqual(report["preselection_coverage"], {"valid_tickers": 25, "screen_passed": 0, "screen_rejected": 25})
+        self.assertTrue(all(x["screen_rejections"] == ["below_early_move"] for x in report["preselection_universe"]))
 
     def test_reader_rejects_aged_quote_without_rewriting_receipt(self):
         report = scan(api=self.api, clock=lambda: self.now, sleep=lambda _: None, max_ohlc=4)
