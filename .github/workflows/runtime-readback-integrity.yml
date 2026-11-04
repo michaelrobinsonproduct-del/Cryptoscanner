@@ -153,7 +153,18 @@ jobs:
           if len(matches)!=1:
               # Historical writer receipts remain useful, but do not fabricate a
               # verified published result when the paired artifact is absent.
-              print("D2_B_PUBLISHED_RESULTS_ABSTAIN_NO_PAIRED_ARTIFACT")
+              report = {
+                  "source_run_id": int(rid),
+                  "status": "HISTORICAL_PUBLISHED_ARTIFACT_UNAVAILABLE",
+                  "reason": "NO_PAIRED_PUBLISHED_RESULTS_ARTIFACT",
+                  "single_writer_read_only": True,
+                  "live_watch_authorized": False,
+                  "production_applied": False,
+                  "writer_reconciliation_status": json.load(open("/tmp/real-writer-recovery.json"))["remote_ledger_reconciliation"]["status"],
+              }
+              from pathlib import Path
+              Path("/tmp/d2-b-published-delivery.json").write_text(json.dumps(report, sort_keys=True) + "\n")
+              print("D2_B_PUBLISHED_RESULTS_ABSTAIN_NO_PAIRED_ARTIFACT", json.dumps(report, sort_keys=True))
               from pathlib import Path
               Path("/tmp/d2-published-available").write_text("false")
           else:
