@@ -242,6 +242,42 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
             "single_writer_read_only": True, "production_applied": False}
 
 
+def project_legacy_published_abstention(result, *, writer_readback=None, a2_delivery=None, learning_handoff=None):
+    """Project genuine old published results into the SAME delivery schema.
+
+    Missing quote observations cannot be reconstructed from aggregate age or
+    historical A2 evidence. Preserve identities and abstain without a WATCH.
+    """
+    import re
+    if not isinstance(result, dict) or result.get("schema") != 1:
+        raise ValueError("invalid legacy published result")
+    run_id, sha = result.get("run_id"), result.get("source_sha")
+    if not isinstance(run_id, str) or not run_id.isdigit() or not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{40}", sha) is None:
+        raise ValueError("missing legacy run provenance")
+    event = result.get("github_event")
+    if event not in ("workflow_dispatch", "schedule") or result.get("remote_readback_verified") is not True:
+        raise ValueError("unverified legacy event or writer")
+    if result.get("production_applied") is not False or result.get("buy_approved") is not False or result.get("exchange_event_freshness_verified") is not False:
+        raise ValueError("unsafe legacy authorization")
+    if "quote_evidence" in result:
+        raise ValueError("quote-complete results must use strict published projection")
+    writer = _writer_evidence(writer_readback) if writer_readback is not None else None
+    a2 = _a2_evidence(a2_delivery) if a2_delivery is not None else None
+    learning = _learning_evidence(learning_handoff) if learning_handoff is not None else None
+    return {"schema": "paper_delivery_readback_v1", "source_run_id": int(run_id),
+            "source_sha": sha, "github_event": event,
+            "status": "ABSTAIN_PUBLISHED_QUOTE_EVIDENCE_MISSING",
+            "ledger_generation": result.get("ledger_generation"),
+            "ledger_commit": result.get("ledger_commit"),
+            "writer_reconciliation_status": writer["reconciliation_status"] if writer else "UNAVAILABLE",
+            "writer_recovery": writer, "a2_receipt_cohort": a2, "learning": learning,
+            "historical_watch_count": None, "historical_coverage": None,
+            "live_watch": [], "live_watch_authorized": False,
+            "client_quote_freshness_verified": False,
+            "exchange_event_freshness_verified": False,
+            "single_writer_read_only": True, "production_applied": False}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo")
@@ -289,7 +325,7 @@ def main():
             raise ValueError("published artifact run identity mismatch")
         if args.expected_source_sha and published.get("source_sha") != args.expected_source_sha:
             raise ValueError("published artifact source SHA mismatch")
-        result = project_published_result(published, writer, a2, learning)
+        result = (project_legacy_published_abstention(published, writer_readback=writer, a2_delivery=a2, learning_handoff=learning)\n                  if "quote_evidence" not in published else project_published_result(published, writer, a2, learning))
     else:
         if args.a2_delivery or args.learning_handoff:
             parser.error("--a2-delivery and --learning-handoff require --published-result")
