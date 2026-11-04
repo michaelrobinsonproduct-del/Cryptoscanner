@@ -54,6 +54,17 @@ def combine(parity, recovery, snapshot=None):
             raise ValueError("A2 snapshot lacks WATCH candidates")
         if any(not isinstance(item, dict) or not item for item in snapshot["watch"]):
             raise ValueError("A2 WATCH candidate is not a nonempty object")
+        pairs, ranks = [], []
+        for candidate in snapshot["watch"]:
+            pair, rank = candidate.get("pair"), candidate.get("rank")
+            if not isinstance(pair, str) or not pair or type(rank) is not int or rank < 1:
+                raise ValueError("A2 candidate missing pair/rank identity")
+            if candidate.get("status") != "PAPER_WATCH":
+                raise ValueError("A2 candidate is not a paper WATCH")
+            pairs.append(pair)
+            ranks.append(rank)
+        if len(set(pairs)) != len(pairs) or sorted(ranks) != list(range(1, len(ranks) + 1)):
+            raise ValueError("A2 duplicate pair or noncontiguous ranks")
         if snapshot.get("scan_status") != "WATCH":
             raise ValueError("A2 snapshot has unexpected scan status")
         # Treat snapshot metadata as untrusted even after transport authentication.
