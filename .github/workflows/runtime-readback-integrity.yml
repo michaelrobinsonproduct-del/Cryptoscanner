@@ -184,12 +184,11 @@ jobs:
           python - <<'PY'
           import json, os
           from pathlib import Path
-          from paper_pov.github_delivery_projection import read_published_artifact
+          from paper_pov.manual_schedule_contract import load_verified_artifact
           try:
-              published = read_published_artifact(
-                  "/tmp/d2-published-results.zip",
-                  expected_run_id=int(os.environ["WRITER_RUN_ID"]),
-                  expected_source_sha=os.environ["WRITER_SOURCE_SHA"])
+              published = load_verified_artifact(Path("/tmp/d2-published-results.zip"))
+              if str(published.get("run_id")) != os.environ["WRITER_RUN_ID"] or published.get("source_sha") != os.environ["WRITER_SOURCE_SHA"]:
+                  raise ValueError("published artifact source identity mismatch")
           except Exception:
               # Invalid present evidence must still fail the job.
               raise
