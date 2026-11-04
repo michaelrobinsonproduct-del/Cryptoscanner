@@ -99,18 +99,54 @@ jobs:
           import json,os,subprocess
           from pathlib import Path
           runs=json.loads(Path("/tmp/b-delivery/d-runs.json").read_text()).get("workflow_runs",[])
+          identity=json.loads(Path("/tmp/b-delivery/identity.json").read_text())
+          selected=None
+          fallback=None
+          import hashlib,io,zipfile
           for run in runs:
               if run.get("conclusion")!="success" or run.get("head_branch")!="runtime-readback-integrity-20261104":
                   continue
               raw=subprocess.check_output(["gh","api",f"repos/{os.environ['REPO']}/actions/runs/{run['id']}/artifacts"],timeout=30)
               matches=[a for a in json.loads(raw).get("artifacts",[]) if a.get("name")=="d2-real-writer-recovery-report"
-                  and a.get("expired") is False and a.get("workflow_run",{}).get("id")==run["id"]]
-              if len(matches)==1 and str(matches[0].get("digest","")).startswith("sha256:"):
-                  Path("/tmp/b-delivery/d-meta.json").write_text(json.dumps(matches[0]))
-                  print("SELECTED_D_RECOVERY",run["id"],matches[0]["id"])
+                  and a.get("expired") is False and a.get("workflow_run",{}).get("id")==run["id"]
+                  and str(a.get("digest","")).startswith("sha256:")]
+              if len(matches)!=1:
+                  continue
+              artifact=matches[0]
+              blob=subprocess.check_output(["gh","api","-H","Accept: application/vnd.github+json",
+                  f"repos/{os.environ['REPO']}/actions/artifacts/{artifact['id']}/zip"],timeout=45)
+              if hashlib.sha256(blob).hexdigest()!=artifact["digest"].removeprefix("sha256:"):
+                  continue
+              with zipfile.ZipFile(io.BytesIO(blob)) as archive:
+                  names=archive.namelist()
+                  if len(names)!=1 or names[0].split("/")[-1] not in ("real-writer-recovery.json","recovery.json"):
+                      continue
+                  data=archive.read(names[0])
+                  if len(data)>100000:
+                      continue
+                  if data.endswith(bytes((92,110))):
+                      data=data[:-2]+bytes((10,))
+                  report=json.loads(data)
+              if (report.get("remote_downloaded") is not True or
+                      report.get("production_applied") is not False or
+                      report.get("ledger_writer_invoked") is not False):
+                  continue
+              if fallback is None:
+                  fallback=(run,artifact)
+              if (str(report.get("run_id"))==identity["run_id"] and
+                      report.get("source_sha")==identity["source_sha"] and
+                      report.get("independently_authenticated") is True and
+                      report.get("status")=="VERIFIED_REMOTE_READBACK" and
+                      report.get("remote_ledger_reconciliation",{}).get("status")=="MATCH"):
+                  selected=(run,artifact)
+                  print("SELECTED_EXACT_SOURCE_D_RECOVERY",run["id"],artifact["id"])
                   break
-          else:
+          if selected is None:
+              selected=fallback
+          if selected is None:
               raise SystemExit("NO_VERIFIED_D_RECOVERY_ARTIFACT")
+          Path("/tmp/b-delivery/d-meta.json").write_text(json.dumps(selected[1]))
+          print("SELECTED_D_RECOVERY",selected[0]["id"],selected[1]["id"])
           PY
           D_ARTIFACT="$(python -c 'import json;print(json.load(open("/tmp/b-delivery/d-meta.json"))["id"])')"
           gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/$D_ARTIFACT/zip" > /tmp/b-delivery/d-recovery.zip
