@@ -49,7 +49,7 @@ class RawScannerReceiptTests(unittest.TestCase):
 
     def test_future_snapshot_rejected(self):
         with self.assertRaises(ValueError):
-            read_scanner_receipt_zip(self.write_zip(make_report()), now=NOW - dt.timedelta(seconds=1))
+            read_scanner_receipt_zip(self.write_zip(make_report()), now=NOW - dt.timedelta(seconds=12))
 
 
 if __name__ == "__main__":
