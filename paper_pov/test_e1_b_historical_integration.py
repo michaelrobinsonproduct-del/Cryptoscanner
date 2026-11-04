@@ -96,7 +96,8 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
                      "as_of": start.isoformat(), "selection_status": "WATCH"},
                     {"prediction_id": rows[1]["observation_id"], "pair": "YUSD",
                      "as_of": start.isoformat(), "selection_status": "SCREEN_REJECTED"}]),
-                manifest, root, schema, {"XUSD": "XUSD.csv"})
+                manifest, root, schema, {"XUSD": "XUSD.csv"},
+                observed_until=(start + dt.timedelta(hours=49)).isoformat())
             self.assertEqual(sum(overlap["status_counts"].values()), 2)
             self.assertEqual(overlap["status_counts"]["NO_PINNED_PARTITION"], 1)
             self.assertEqual(overlap["status_counts"]["ENTRY_BAR_PRESENT_UNQUALIFIED"], 1)
