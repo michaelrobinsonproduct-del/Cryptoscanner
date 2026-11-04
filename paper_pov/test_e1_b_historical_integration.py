@@ -13,7 +13,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from .historical_execution_learning_bridge import project_historical_execution
-from .historical_e1_b_pipeline import run_pipeline, bind_a2_projection
+from .historical_e1_b_pipeline import run_pipeline, bind_a2_projection, audit_a2_trade_partition_overlap
 from .historical_preselection_binding import bind_preselection_history
 
 
@@ -90,6 +90,17 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
                     manifest, root, schema, {"XUSD": "XUSD.csv"}, watch,
                     (start + dt.timedelta(hours=49)).isoformat(),
                     a2_projection=projection)
+            overlap = audit_a2_trade_partition_overlap(
+                dict(projection, frozen_observations=[
+                    {"prediction_id": rows[0]["observation_id"], "pair": "XUSD",
+                     "as_of": start.isoformat(), "selection_status": "WATCH"},
+                    {"prediction_id": rows[1]["observation_id"], "pair": "YUSD",
+                     "as_of": start.isoformat(), "selection_status": "SCREEN_REJECTED"}]),
+                manifest, root, schema, {"XUSD": "XUSD.csv"})
+            self.assertEqual(sum(overlap["status_counts"].values()), 2)
+            self.assertEqual(overlap["status_counts"]["NO_PINNED_PARTITION"], 1)
+            self.assertEqual(overlap["status_counts"]["ENTRY_BAR_PRESENT_UNQUALIFIED"], 1)
+            self.assertEqual(overlap["qualified_outcome_count"], 0)
             self.assertEqual(retained["handoff"], result["handoff"])
             self.assertEqual(retained["delivery"], result["delivery"])
             self.assertEqual(retained["preselection_binding"]["a_receipt_sha256"], receipt)
