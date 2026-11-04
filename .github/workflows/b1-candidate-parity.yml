@@ -82,15 +82,33 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          gh api "repos/$REPO/actions/artifacts/13310182812" > /tmp/b-delivery/d-meta.json
+          gh api "repos/$REPO/actions/workflows/runtime-readback-integrity.yml/runs?status=success&per_page=20" > /tmp/b-delivery/d-runs.json
           python - <<'PY'
-          import json
+          import json,os,subprocess
+          from pathlib import Path
+          runs=json.loads(Path("/tmp/b-delivery/d-runs.json").read_text()).get("workflow_runs",[])
+          for run in runs:
+              if run.get("conclusion")!="success" or run.get("head_branch")!="runtime-readback-integrity-20261104":
+                  continue
+              raw=subprocess.check_output(["gh","api",f"repos/{os.environ['REPO']}/actions/runs/{run['id']}/artifacts"],timeout=30)
+              matches=[a for a in json.loads(raw).get("artifacts",[]) if a.get("name")=="d2-real-writer-recovery-report"
+                  and a.get("expired") is False and a.get("workflow_run",{}).get("id")==run["id"]]
+              if len(matches)==1 and str(matches[0].get("digest","")).startswith("sha256:"):
+                  Path("/tmp/b-delivery/d-meta.json").write_text(json.dumps(matches[0]))
+                  print("SELECTED_D_RECOVERY",run["id"],matches[0]["id"])
+                  break
+          else:
+              raise SystemExit("NO_VERIFIED_D_RECOVERY_ARTIFACT")
+          PY
+          D_ARTIFACT="$(python -c 'import json;print(json.load(open("/tmp/b-delivery/d-meta.json"))["id"])')"
+          gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/$D_ARTIFACT/zip" > /tmp/b-delivery/d-recovery.zip
+          python - <<'PY'
+          import hashlib,json
           from pathlib import Path
           m=json.loads(Path("/tmp/b-delivery/d-meta.json").read_text())
-          if m.get("id")!=13310182812 or m.get("expired") or m.get("workflow_run",{}).get("id")!=41807440846:
-              raise SystemExit("D_RECOVERY_ARTIFACT_METADATA_MISMATCH")
+          if hashlib.sha256(Path("/tmp/b-delivery/d-recovery.zip").read_bytes()).hexdigest()!=m["digest"].removeprefix("sha256:"):
+              raise SystemExit("D_RECOVERY_ZIP_SHA_MISMATCH")
           PY
-          gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/13310182812/zip" > /tmp/b-delivery/d-recovery.zip
           python - <<'PY'
           import json,zipfile
           from pathlib import Path
