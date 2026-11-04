@@ -19,7 +19,7 @@ from research.kraken_prospective_batch import collect, MAX_PAIRS
 
 
 def restore_and_capture(previous, output_root, *, collector=collect, followup_rounds=1,
-                        interval_seconds=300, clock=time.monotonic, sleep=time.sleep):
+                        interval_seconds=300, clock=time.monotonic, sleep=time.sleep,\n                        epoch_clock=time.time):
     if type(followup_rounds) is not int or not 1 <= followup_rounds <= 13:
         raise ValueError("follow-up rounds must be 1..13")
     if type(interval_seconds) is not int or interval_seconds < 300:
@@ -91,13 +91,22 @@ def restore_and_capture(previous, output_root, *, collector=collect, followup_ro
     # Verify *all* copied retained rounds before the next independent collection.
     evaluate_index(new_index, 1)
     first = len(relocated)
-    if first + followup_rounds > 577:
-        raise ValueError("follow-up batch exceeds 48-hour evidence limit")
+    acquired_rounds = min(followup_rounds, 577 - first)
+    # Preserve the preceding real receipt time so cross-job continuation can
+    # actually begin on the next five-minute slot instead of starting early.
+    previous_rows, _ = verified_rows(output / normalized[-1][1])
+    last_observed = max((float(row["first_observed_at"]) for row in previous_rows), default=None)
+    deadline = last_observed + interval_seconds if last_observed is not None else None
+    wait = max(0.0, deadline - float(epoch_clock())) if deadline is not None else 0.0
+    if wait > interval_seconds + 60:
+        raise ValueError("previous source observation is in the future")
+    if wait:
+        sleep(wait)
     # A 13-round continuation retains twelve bounded five-minute intervals in
     # one runner, rather than depending on a fresh manual dispatch each slot.
     # The first observation is made now: missed intervals are never synthesized.
     started = clock()
-    for offset in range(followup_rounds):
+    for offset in range(acquired_rounds):
         target = started + offset * interval_seconds
         delay = target - clock()
         if delay > 0:
@@ -116,8 +125,11 @@ def restore_and_capture(previous, output_root, *, collector=collect, followup_ro
                             output / "entry" / "associations", new_index,
                             ledger_path=output / "shadow-decisions.jsonl")
     report = {"mode": "RESEARCH_ONLY_CROSS_JOB_FOLLOWUP",
-            "rounds_verified": first + followup_rounds,
-            "followup_rounds_acquired": followup_rounds,
+            "rounds_verified": first + acquired_rounds,
+            "followup_rounds_requested": followup_rounds,
+            "followup_rounds_acquired": acquired_rounds,
+            "previous_last_observed_at": last_observed,
+            "resume_wait_seconds": wait,
             "original_index_sha256": hashlib.sha256(original_bytes).hexdigest(),
             "round_index": str(new_index), "scored_pairs": pairs,
             "coverage": coverage, "learning": learning, "production_applied": False,
