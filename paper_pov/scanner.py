@@ -96,6 +96,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     if not isinstance(ticker, dict) or not 0 <= (quote_at - started).total_seconds() <= 120:
         raise RuntimeError("Ticker request stale")
     observations = []
+    preselection = []
     screened = []
     screening_rejections = {"below_early_move": 0, "above_early_move": 0,
                             "wide_spread": 0, "low_notional": 0}
@@ -130,6 +131,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                 "observed_at": quote_at.isoformat(), "source": "kraken_public_ticker_client_observed"})
             # Count every failed screen independently; one market can fail several.
             failed = False
+            rejected_reasons = []
             for rejected, condition in (
                 ("below_early_move", move_since_utc_open < 0.25),
                 ("above_early_move", move_since_utc_open > 12),
@@ -138,7 +140,17 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             ):
                 if condition:
                     screening_rejections[rejected] += 1
+                    rejected_reasons.append(rejected)
                     failed = True
+            # Preserve every valid observed market, including failed screens,
+            # before selecting OHLC candidates. Never infer missed movers from
+            # this snapshot without authenticated future price paths.
+            preselection.append({"pair": pair, "symbol": name, "price": price,
+                "quote_observed_at": quote_at.isoformat(),
+                "quote_timestamp_semantics": "client_observed_not_exchange_event_time",
+                "move_since_utc_open_pct": round(move_since_utc_open, 4),
+                "spread_bps": round(spread, 4), "notional_24h_usd": round(notional, 2),
+                "screen_passed": not failed, "screen_rejections": rejected_reasons})
             if failed:
                 continue
             baseline = round(min(45, move_since_utc_open * 7) + min(25, notional / 150000)
@@ -157,6 +169,8 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         raise RuntimeError("Incomplete Kraken ticker universe coverage")
     if len(observations) < max(20, math.ceil(matched * 0.8)):
         raise RuntimeError("Insufficient valid ticker observations")
+    if len(preselection) != len(observations):
+        raise RuntimeError("Preselection universe coverage mismatch")
     screened.sort(key=lambda x: (-x["baseline_score"], x["pair"]))
     selected = []
     seen = set()
@@ -274,7 +288,13 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         "screening_rejections": screening_rejections,
         "screened_markets": len(screened),
         "ohlc_screened": len(selected),
-        "watch": watch, "observations": observations, "abstentions": abstentions,
+        "watch": watch, "observations": observations,
+        "preselection_universe": preselection,
+        "preselection_universe_status": "TICKER_ONLY_NOT_FORWARD_LABELLED",
+        "preselection_coverage": {"valid_tickers": len(preselection),
+                                  "screen_passed": len(screened),
+                                  "screen_rejected": len(preselection) - len(screened)},
+        "abstentions": abstentions,
         "abstention_counts": abstention_counts,
         "forward_labels": 0, "held_out_lift": None, "production_applied": False}
 
