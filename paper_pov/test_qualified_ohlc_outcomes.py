@@ -1,6 +1,6 @@
 import datetime as dt
 import unittest
-from paper_pov.qualified_ohlc_outcomes import reconstruct
+from paper_pov.qualified_ohlc_outcomes import reconstruct, reconstruct_batch
 
 UTC = dt.timezone.utc
 START = dt.datetime(2026, 1, 1, tzinfo=UTC)
@@ -60,6 +60,24 @@ class OutcomeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             run(data)
 
+
+    def test_batch_keeps_missing_market_abstentions(self):
+        predictions = [
+            {'prediction_id': str(i), 'pair': pair, 'status': 'PAPER_WATCH',
+             'as_of': (START + dt.timedelta(seconds=10)).isoformat()}
+            for i, pair in enumerate(('XUSD', 'YUSD'))
+        ]
+        result = reconstruct_batch(predictions, {'XUSD': bars()},
+                                   observed_until=(START + dt.timedelta(hours=49)).isoformat(),
+                                   source_sha256='a' * 64)
+        self.assertEqual(result['prediction_count'], 2)
+        self.assertEqual(result['status_counts']['48h:MATURED_OBSERVED'], 1)
+        self.assertEqual(result['status_counts']['48h:ABSTAIN_ENTRY'], 1)
+        self.assertEqual(result['learning_qualified_count'], 0)
+        with self.assertRaises(ValueError):
+            reconstruct_batch(predictions + [predictions[0]], {'XUSD': bars()},
+                              observed_until=(START + dt.timedelta(hours=49)).isoformat(),
+                              source_sha256='a' * 64)
 
 if __name__ == "__main__":
     unittest.main()
