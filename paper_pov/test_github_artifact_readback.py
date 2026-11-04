@@ -246,3 +246,16 @@ def test_packed_branch_corrupt_snapshot_does_not_claim_match():
                                      {"ledger.json": ledger.canonical(state)}, runner=github)
     assert result["status"] == "UNAVAILABLE"
     assert result["independently_authenticated"] is False
+
+
+def test_legacy_real_writer_without_status_is_recovered_but_unclassified():
+    from paper_pov.github_artifact_readback import summarize_persisted_paper
+    receipts = {"latest.json": b'{"watch_count":0}',
+                "ledger.json": b'{"generation":76}',
+                "scoreboard.json": b'{"generation":76}'}
+    result = summarize_persisted_paper(receipts)
+    assert result["ledger_generation"] == 76
+    assert result["scan_status"] == "UNKNOWN_LEGACY"
+    assert result["outcome"] == "HISTORICAL_UNCLASSIFIED"
+    assert result["quote_evidence_certified"] is False
+    assert result["live_replay_performed"] is False
