@@ -300,7 +300,19 @@ jobs:
               matches=[a for a in listing.get("artifacts",[]) if a.get("name")==f"public-paper-results-{rid}" and not a.get("expired")]
               if len(matches)!=1:
                   continue
-              data=subprocess.check_output(["gh","api","-H","Accept: application/vnd.github+json",f"repos/{os.environ['REPO']}/actions/artifacts/{matches[0]['id']}/zip"])
+              # Verify GitHub's independent artifact/run binding and transport digest,
+              # not merely the self-declared SHA256SUMS inside the downloaded ZIP.
+              artifact=matches[0]
+              meta=json.loads(subprocess.check_output(["gh","api",f"repos/{os.environ['REPO']}/actions/artifacts/{artifact['id']}"]))
+              digest=meta.get("digest")
+              if (meta.get("id")!=artifact["id"] or meta.get("expired") is not False
+                      or meta.get("workflow_run",{}).get("id")!=rid
+                      or meta.get("workflow_run",{}).get("head_sha")!=run["head_sha"]
+                      or not isinstance(digest,str) or re.fullmatch(r"sha256:[0-9a-f]{64}",digest) is None):
+                  continue
+              data=subprocess.check_output(["gh","api","-H","Accept: application/vnd.github+json",f"repos/{os.environ['REPO']}/actions/artifacts/{artifact['id']}/zip"])
+              if hashlib.sha256(data).hexdigest()!=digest.removeprefix("sha256:"):
+                  continue
               with zipfile.ZipFile(io.BytesIO(data)) as archive:
                   names=archive.namelist()
                   if len(names)!=len(set(names)) or any(n.startswith("/") or ".." in Path(n).parts for n in names):
