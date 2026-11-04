@@ -17,10 +17,11 @@ from .failure_report import render_failure
 
 MAX_FILE = 16 * 1024 * 1024
 LEDGER_FILES = {"latest.json", "scoreboard.json", "ledger.json", "SHA256SUMS"}
+SLOT_RECEIPT = "slot_receipt.json"
 RESULT_FILES = {"results.json", "results.md", "SHA256SUMS"}
 
 
-def read_archive(path, expected):
+def read_archive(path, expected, optional=frozenset()):
     with zipfile.ZipFile(path) as archive:
         files = {}
         for entry in archive.infolist():
@@ -33,14 +34,14 @@ def read_archive(path, expected):
                     or (entry.external_attr >> 16) & 0o170000 == 0o120000):
                 raise ValueError("Unsafe artifact ZIP entry")
             base = parts[-1]
-            if base not in expected or base in files or entry.file_size > MAX_FILE:
+            if base not in expected | set(optional) or base in files or entry.file_size > MAX_FILE:
                 raise ValueError("Unexpected, duplicate or oversized artifact entry")
             with archive.open(entry) as stream:
                 content = stream.read(MAX_FILE + 1)
             if len(content) != entry.file_size or len(content) > MAX_FILE:
                 raise ValueError("Truncated or oversized artifact entry")
             files[base] = content
-        if set(files) != expected:
+        if not expected <= set(files) or set(files) - expected - set(optional):
             raise ValueError("Incomplete artifact ZIP")
         return files
 
@@ -66,10 +67,25 @@ def replay(ledger_zip, results_zip, *, run_id, source_sha, ledger_commit):
         raise ValueError("Invalid run identity")
     if not all(re.fullmatch(r"[0-9a-f]{40}", s) for s in (source_sha, ledger_commit)):
         raise ValueError("Invalid commit identity")
-    ledger = read_archive(ledger_zip, LEDGER_FILES)
+    ledger = read_archive(ledger_zip, LEDGER_FILES, {SLOT_RECEIPT})
     results = read_archive(results_zip, RESULT_FILES)
-    verify_checksums(ledger, LEDGER_FILES - {"SHA256SUMS"})
+    verify_checksums(ledger, (LEDGER_FILES - {"SHA256SUMS"}) | ({SLOT_RECEIPT} if SLOT_RECEIPT in ledger else set()))
     verify_checksums(results, RESULT_FILES - {"SHA256SUMS"})
+    slot_identity = None
+    if SLOT_RECEIPT in ledger:
+        receipt = json.loads(ledger[SLOT_RECEIPT])
+        if (not isinstance(receipt, dict) or receipt.get("schema") != 1
+                or receipt.get("run_id") != str(run_id)
+                or receipt.get("source_sha") != source_sha
+                or receipt.get("historical_quotes_reconstructed") is not False):
+            raise ValueError("Slot receipt identity mismatch")
+        slot_identity = receipt.get("slot_identity")
+        if slot_identity != "MANUAL":
+            from .missed_slot_recovery import utc, SLOT_MINUTES
+            stamp = utc(slot_identity)
+            if (stamp.minute not in SLOT_MINUTES or stamp.second or stamp.microsecond
+                    or stamp.isoformat() != slot_identity):
+                raise ValueError("Invalid slot receipt identity")
     scan = json.loads(ledger["latest.json"])
     score = json.loads(ledger["scoreboard.json"])
     state = json.loads(ledger["ledger.json"])
@@ -108,7 +124,8 @@ def replay(ledger_zip, results_zip, *, run_id, source_sha, ledger_commit):
             directory, run_id=run_id, source_sha=source_sha,
             ledger_commit=ledger_commit, ledger_sha256=score["ledger_sha256"],
             scan=scan, scoreboard=score)
-    return {"run_id": str(run_id), "generation": score["generation"],
+    return {"run_id": str(run_id), "slot_identity": slot_identity,
+            "generation": score["generation"],
             "eligible_pairs": published["eligible_pairs"],
             "observed_markets": published["observed_markets"],
             "watch_candidates": len(published["candidates"]),
