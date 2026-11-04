@@ -175,7 +175,7 @@ jobs:
               "trading_approved": False,
           }
           assert payload["watch_count"] == len(payload["watch"])
-          Path("/tmp/c-real-receipts/candidates.json").write_text(json.dumps(payload,sort_keys=True)+"\\n")
+          Path("/tmp/c-real-receipts/candidates.json").write_text(json.dumps(payload,sort_keys=True)+chr(10))
           print("C_B_A2_RECOVERY_CONNECTED",json.dumps(p,sort_keys=True))
           PY
       - name: Consume C artifact through B/D read-only executable interface
