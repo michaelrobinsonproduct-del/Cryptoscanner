@@ -48,16 +48,11 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
     if evaluation_asof <= training_end + timedelta(hours=48):
         raise ValueError("Evaluation cutoff precedes held-out maturity window")
     a, b = baseline.get("observations"), challenger.get("observations")
-    # Row-level booleans cannot independently authenticate Kraken archive data.
-    receipt_a, receipt_b = baseline.get("source_receipt"), challenger.get("source_receipt")
-    receipt_valid = (isinstance(receipt_a, dict) and receipt_a == receipt_b
-                     and receipt_a.get("verification") == "independently_authenticated"
-                     and isinstance(receipt_a.get("artifact_sha256"), str)
-                     and len(receipt_a["artifact_sha256"]) == 64
-                     and all(c in "0123456789abcdef" for c in receipt_a["artifact_sha256"].lower())
-                     and isinstance(receipt_a.get("verifier_commit"), str)
-                     and len(receipt_a["verifier_commit"]) == 40
-                     and all(c in "0123456789abcdef" for c in receipt_a["verifier_commit"].lower()))
+    # A caller-supplied receipt is not publisher authentication. Until an
+    # independently verified byte-level Kraken receipt is wired into this
+    # evaluator, the shadow result is diagnostic only. The downstream B
+    # consumer must never receive a self-attested qualified rule.
+    receipt_valid = False
     if not isinstance(a, list) or not isinstance(b, list):
         raise ValueError("Missing held-out cohort")
     def normalize(rows):
@@ -122,6 +117,6 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
             "precision_delta": (candidate["precision"] - base["precision"]
                                 if base["precision"] is not None and candidate["precision"] is not None else None),
             "evidence_digest": canonical_digest({"baseline": baseline, "challenger": challenger}),
-            "status": "EVIDENCE_CANDIDATE_REVIEW_REQUIRED" if qualified else "NO_QUALIFIED_RULE",
+            "status": "NO_QUALIFIED_RULE",
             "source_receipt_qualified": receipt_valid,
             "promotion_authorized": False, "production_applied": False}
