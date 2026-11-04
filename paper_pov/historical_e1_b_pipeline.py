@@ -110,9 +110,9 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
     from .shadow_learning_evidence import utc_time
     from datetime import timedelta
     from bisect import bisect_left
-    cutoff = utc_time(observed_until)
     if not isinstance(observed_until, str):
         raise ValueError("Missing historical observation cutoff")
+    cutoff = utc_time(observed_until)
     if not isinstance(partitions, dict):
         raise ValueError("Missing explicit partition map")
     pairs = {row["pair"] for row in rows}
@@ -258,9 +258,13 @@ def main(argv=None):
                           partitions, predictions, args.observed_until,
                           preselection_history=history,
                           a2_projection=projection)
+    # Serialize both complete outputs before publishing either one.
+    rendered_result = json.dumps(result, sort_keys=True, indent=2, allow_nan=False) + "\n"
+    rendered_overlap = (json.dumps(overlap, sort_keys=True, indent=2, allow_nan=False) + "\n"
+                        if args.full_cohort_overlap_output else None)
+    output.write_text(rendered_result, encoding="utf-8")
     if args.full_cohort_overlap_output:
-        overlap_path.write_text(json.dumps(overlap, sort_keys=True, indent=2) + "\n", encoding="utf-8")
-    output.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        overlap_path.write_text(rendered_overlap, encoding="utf-8")
     print(json.dumps({"prediction_count": result["execution"]["prediction_count"],
                       "status_counts": result["execution"]["status_counts"],
                       "qualified_cohort_count": result["handoff"]["qualified_cohort_count"],
