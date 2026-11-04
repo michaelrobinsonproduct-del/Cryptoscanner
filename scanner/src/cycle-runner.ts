@@ -14,7 +14,7 @@ export function createCycleRunner(deps:Dependencies,shadow?:()=>Promise<{evidenc
    let output=result;
    // E's authenticated qualification decision is an upstream gate, not merely
    // a parallel informational field. A shadow artifact cannot bypass KEEP_BASELINE.
-   let learningAllowsShadow=learningReport===undefined;
+   let learningAllowsShadow=false;
    if(learningReport){
     try{
      const gate=await learningReport();
