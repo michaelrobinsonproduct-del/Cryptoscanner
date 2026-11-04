@@ -109,6 +109,7 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
     from .kraken_trade_csv_adapter import convert_pinned_csv
     from .shadow_learning_evidence import utc_time
     from datetime import timedelta
+    from bisect import bisect_left
     if not isinstance(partitions, dict):
         raise ValueError("Missing explicit partition map")
     pairs = {row["pair"] for row in rows}
@@ -122,7 +123,7 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
             continue
         result = convert_pinned_csv(manifest, root, partition_file=partition,
                                     pair=pair, schema=schema)
-        bars[pair] = [utc_time(b["open_at"]) for b in result["bars"]]
+        bars[pair] = sorted(utc_time(b["open_at"]) for b in result["bars"])
         provenance[pair] = {"status": "PINNED_BYTES_VERIFIED",
                             "partition": partition,
                             "partition_sha256": result["partition_sha256"],
@@ -141,8 +142,10 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
             # A next-five-minute bar is diagnostic, never executable liquidity.
             start = at.replace(second=0, microsecond=0)
             start -= timedelta(minutes=start.minute % 5)
+            target = start + timedelta(minutes=5)
+            idx = bisect_left(times, target)
             status = ("ENTRY_BAR_PRESENT_UNQUALIFIED"
-                      if any(start < t <= start + timedelta(minutes=5) for t in times)
+                      if idx < len(times) and times[idx] == target
                       else "NO_ENTRY_BAR")
         status_counts[status] += 1
         by_selection.setdefault(row["selection_status"], {})
@@ -209,7 +212,7 @@ def main(argv=None):
         if overlap_path.exists():
             raise FileExistsError("Refusing to overwrite historical overlap evidence")
         overlap = audit_a2_trade_partition_overlap(projection, manifest, args.root, schema, partitions)
-        overlap_path.write_text(json.dumps(overlap, sort_keys=True, indent=2) + "\\n", encoding="utf-8")
+        overlap_path.write_text(json.dumps(overlap, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     result = run_pipeline(manifest, args.root, schema,
                           partitions, predictions, args.observed_until,
                           preselection_history=history,
