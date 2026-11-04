@@ -45,6 +45,16 @@ class EndToEndCandidateTests(unittest.TestCase):
             self.assertEqual(universe["receipt_sha256"], result["receipt_sha256"])
             self.assertEqual(len(universe["markets"]), report["observed_markets"])
             self.assertFalse(universe["qualified_for_learning"])
+            self.assertEqual(sum(universe["selection_decisions"].values()), report["observed_markets"])
+            self.assertEqual(universe["selection_decisions"]["WATCH"], len(report["watch"]))
+            self.assertEqual(universe["selection_decisions"]["OHLC_ABSTAINED"], len(report["abstentions"]))
+            self.assertEqual(universe["selection_decisions"]["SCREEN_REJECTED"], report["preselection_coverage"]["screen_rejected"])
+            self.assertEqual(universe["selection_decisions"]["NOT_OHLC_SELECTED"] +
+                             universe["selection_decisions"].get("NOT_RANKED_WATCH", 0) +
+                             universe["selection_decisions"]["WATCH"] +
+                             universe["selection_decisions"]["OHLC_ABSTAINED"],
+                             report["preselection_coverage"]["screen_passed"])
+            self.assertTrue(all((x["baseline_score"] is not None) == x["screen_passed"] for x in universe["markets"]))
             self.assertEqual(persist_report(latest, report), receipt)
             return result
 
