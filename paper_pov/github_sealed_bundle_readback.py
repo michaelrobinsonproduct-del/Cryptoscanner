@@ -12,7 +12,11 @@ from pathlib import Path
 from paper_pov.sealed_http_bundle import build_bundle
 
 
-def read_run(repo, run_id, *, runner=subprocess.check_output):
+def _bounded_gh(args):
+    return subprocess.check_output(args, timeout=20)
+
+
+def read_run(repo, run_id, *, runner=_bounded_gh):
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repo or '') or not run_id.isdigit() or int(run_id) <= 0:
         raise ValueError("invalid GitHub artifact locator")
     run = json.loads(runner(["gh", "run", "view", run_id, "-R", repo,
