@@ -97,13 +97,14 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                         "remote_ref": ref, "remote_path": segments.SNAPSHOT,
                         "remote_generation": state["generation"],
                         "recovered_generation": old_generation,
-                        "remote_sha256": hashlib.sha256(ledger_module.canonical(state)).hexdigest(),
+                        "remote_sha256": state["sha256"],
                         "remote_snapshot_sha256": hashlib.sha256(packed).hexdigest(),
-                        "recovered_sha256": hashlib.sha256(recovered[ledger_paths[0]]).hexdigest(),
+                        "recovered_sha256": old_sha,
+                        "recovered_artifact_sha256": hashlib.sha256(recovered[ledger_paths[0]]).hexdigest(),
                         "remote_ledger_sha256": state["sha256"],
                         "recovered_ledger_sha256": old_sha,
                         "independently_authenticated": False, "production_applied": False}
-            except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError, ValueError, KeyError, TypeError) as inner:
+            except (IntegrityError, subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError, ValueError, KeyError, TypeError) as inner:
                 return {"status": "UNAVAILABLE", "reason": "REMOTE_LEDGER_QUERY_FAILED",
                         "remote_ref": ref, "remote_path": segments.SNAPSHOT,
                         "recovered_sha256": hashlib.sha256(recovered[ledger_paths[0]]).hexdigest(),
