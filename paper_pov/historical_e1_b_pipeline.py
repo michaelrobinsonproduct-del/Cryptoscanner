@@ -44,6 +44,32 @@ def bind_a2_projection(projection, predictions):
         if p["prediction_id"] != expected:
             raise ValueError("A2 identity is not bound to sealed receipt")
     frozen_pairs = {p["prediction_id"]: p["pair"] for p in frozen}
+    # New A2 projections carry every pre-outcome decision and timestamp.
+    # Validate this full cohort before E1 can consume its WATCH subset.
+    observations = projection.get("frozen_observations")
+    if observations is not None:
+        if not isinstance(observations, list) or len(observations) != len(frozen):
+            raise ValueError("Incomplete A2 point-in-time universe")
+        observed = {}
+        for row in observations:
+            if not isinstance(row, dict) or row.get("prediction_id") in observed:
+                raise ValueError("Duplicate or malformed A2 observation")
+            pid = row.get("prediction_id")
+            if pid not in {p["prediction_id"] for p in frozen}:
+                raise ValueError("Unknown A2 observation")
+            if row.get("pair") != next(p["pair"] for p in frozen if p["prediction_id"] == pid):
+                raise ValueError("A2 observation pair mismatch")
+            if row.get("selection_status") not in ("WATCH", "SCREEN_REJECTED", "NOT_OHLC_SELECTED", "OHLC_ABSTAINED", "NOT_RANKED_WATCH"):
+                raise ValueError("Invalid A2 frozen selection")
+            if not isinstance(row.get("as_of"), str):
+                raise ValueError("Missing A2 observation time")
+            from .shadow_learning_evidence import utc_time
+            utc_time(row["as_of"])
+            observed[pid] = row
+        if {pid for pid, row in observed.items() if row["selection_status"] == "WATCH"} != {p["prediction_id"] for p in watches}:
+            raise ValueError("A2 WATCH cohort does not match frozen decisions")
+        if any(observed[p["prediction_id"]]["as_of"] != p["as_of"] for p in watches):
+            raise ValueError("A2 WATCH observation time mismatch")
     if any(not isinstance(p, dict) or p.get("status") != "PAPER_WATCH" or
            not isinstance(p.get("as_of"), str) or not p["as_of"] or
            frozen_pairs.get(p.get("prediction_id")) != p.get("pair")
