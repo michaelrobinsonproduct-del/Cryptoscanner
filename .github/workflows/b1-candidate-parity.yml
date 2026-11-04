@@ -134,14 +134,16 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/b-delivery/a2
           gh api "repos/$REPO/actions/artifacts?per_page=100" > /tmp/b-delivery/a2-artifacts.json
+          gh api "repos/$REPO/actions/workflows/a2-candidate-snapshot.yml/runs?status=success&per_page=100" > /tmp/b-delivery/a2-successful-runs.json
           python - <<'PY'
           import json
           from pathlib import Path
           artifacts=json.loads(Path("/tmp/b-delivery/a2-artifacts.json").read_text()).get("artifacts",[])
+          successful={run["id"] for run in json.loads(Path("/tmp/b-delivery/a2-successful-runs.json").read_text()).get("workflow_runs",[]) if run.get("conclusion")=="success"}
           matches=[a for a in artifacts if a.get("name")=="a2-live-consumer-evidence"
                    and a.get("expired") is False
                    and str(a.get("digest","")).startswith("sha256:")
-                   and a.get("workflow_run",{}).get("id")
+                   and a.get("workflow_run",{}).get("id") in successful
                    and a.get("workflow_run",{}).get("head_sha")]
           if not matches:
               raise SystemExit("NO_CHECKSUMMED_A2_DELIVERY_ARTIFACT")
