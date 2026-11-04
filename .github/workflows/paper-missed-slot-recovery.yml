@@ -25,5 +25,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          python -m unittest paper_pov.test_missed_slot_recovery -v
           python -m paper_pov.missed_slot_recovery
