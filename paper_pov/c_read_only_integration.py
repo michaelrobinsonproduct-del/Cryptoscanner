@@ -83,8 +83,8 @@ def combine(parity, recovery, snapshot=None):
         ):
             raise ValueError("Invalid A2 abstention breakdown")
         source_time = snapshot.get("as_of")
-        if not isinstance(source_time, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z", source_time):
-            raise ValueError("A2 source time must be UTC ISO-8601")
+        if not isinstance(source_time, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|\+00:00)", source_time):
+            raise ValueError("A2 source time must be UTC ISO-8601 with explicit timezone")
         try:
             parsed_time = datetime.fromisoformat(source_time.replace("Z", "+00:00"))
         except ValueError as exc:
