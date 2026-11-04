@@ -109,6 +109,37 @@ def read_scanner_receipt_zip(path, *, now=None, max_age_seconds=600):
             "receipt_sha256": hashlib.sha256(raw).hexdigest()}
 
 
+def write_verified_handoff(verified, output):
+    """Create one immutable paper-only handoff after an accepted source check."""
+    result = assess_verified_a2(verified)
+    if not result["accepted"]:
+        raise ValueError("unverified paper snapshot")
+    target = Path(output)
+    if target.is_symlink() or target.exists():
+        raise FileExistsError("verified handoff already exists")
+    payload = {"schema": 1, "mode": "VERIFIED_PAPER_WATCH_HANDOFF",
+               "receipt_sha256": result["receipt_sha256"],
+               "scan_status": verified["scan_status"],
+               "watch": verified["watch"],
+               "quote_age_seconds": verified["quote_age_seconds"],
+               "snapshot_age_seconds": verified["snapshot_age_seconds"],
+               "eligible_pairs": verified["eligible_pairs"],
+               "observed_markets": verified["observed_markets"],
+               "live_watch_certified": False,
+               "production_applied": False, "trading_approved": False}
+    raw = (json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                      allow_nan=False) + "\n").encode()
+    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(raw)
+            handle.flush()
+            os.fsync(handle.fileno())
+    except BaseException:
+        target.unlink(missing_ok=True)
+        raise
+    return payload
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--a2-zip", type=Path,
@@ -131,29 +162,7 @@ def main():
                 verified = read_scanner_receipt_zip(args.a2_zip)
         result = assess_verified_a2(verified)
         if result["accepted"] and args.output:
-            if args.output.is_symlink() or args.output.exists():
-                raise FileExistsError("verified handoff already exists")
-            # No direct trade or live certification. Carry only verifier-approved
-            # paper candidates and their receipt identity into downstream readers.
-            payload = {"schema": 1, "mode": "VERIFIED_PAPER_WATCH_HANDOFF",
-                       "receipt_sha256": result["receipt_sha256"],
-                       "scan_status": verified["scan_status"],
-                       "watch": verified["watch"],
-                       "quote_age_seconds": verified["quote_age_seconds"],
-                       "snapshot_age_seconds": verified["snapshot_age_seconds"],
-                       "eligible_pairs": verified["eligible_pairs"],
-                       "observed_markets": verified["observed_markets"],
-                       "live_watch_certified": False,
-                       "production_applied": False, "trading_approved": False}
-            raw = (json.dumps(payload, sort_keys=True, separators=(",", ":"),
-                              allow_nan=False) + "\\n").encode()
-            # O_EXCL is the only writer path: no replacement or partial promotion
-            # after invalid source/quote proof. Consumer can hash exact bytes.
-            fd = os.open(args.output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-            with os.fdopen(fd, "wb") as handle:
-                handle.write(raw)
-                handle.flush()
-                os.fsync(handle.fileno())
+            write_verified_handoff(verified, args.output)
     except (OSError, ValueError, TypeError, ImportError, KeyError, AssertionError, RuntimeError):
         result = {"accepted": False, "status": "INVALID_A2_SNAPSHOT", "errors": ["unreadable_snapshot"]}
     print(json.dumps(result, sort_keys=True))
