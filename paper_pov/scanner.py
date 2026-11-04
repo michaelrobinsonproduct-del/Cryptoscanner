@@ -436,8 +436,8 @@ def main():
     from paper_pov.candidate_snapshot import read_snapshot
     from paper_pov.preselection_universe import export_universe
     latest = Path(os.getenv("PAPER_REPORT_PATH", "paper_pov/output/latest.json"))
-    candidate_view = read_snapshot(latest)
-    universe_view = export_universe(latest)
+    candidate_view = read_snapshot(latest, now=utc(report["as_of"]))
+    universe_view = export_universe(latest, now=utc(report["as_of"]))
     if candidate_view["receipt_sha256"] != universe_view["receipt_sha256"]:
         raise RuntimeError("candidate and preselection projections disagree on receipt")
     atomic_json(latest.parent / "candidate-snapshot.json", candidate_view)
