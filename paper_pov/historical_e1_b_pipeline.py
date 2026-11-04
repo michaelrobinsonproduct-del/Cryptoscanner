@@ -244,11 +244,13 @@ def main(argv=None):
         if overlap_path.exists():
             raise FileExistsError("Refusing to overwrite historical overlap evidence")
         overlap = audit_a2_trade_partition_overlap(projection, manifest, args.root, schema, partitions)
-        overlap_path.write_text(json.dumps(overlap, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        # Commit diagnostic output only after the complete E1-to-B pipeline succeeds.
     result = run_pipeline(manifest, args.root, schema,
                           partitions, predictions, args.observed_until,
                           preselection_history=history,
                           a2_projection=projection)
+    if args.full_cohort_overlap_output:
+        overlap_path.write_text(json.dumps(overlap, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     output.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"prediction_count": result["execution"]["prediction_count"],
                       "status_counts": result["execution"]["status_counts"],
