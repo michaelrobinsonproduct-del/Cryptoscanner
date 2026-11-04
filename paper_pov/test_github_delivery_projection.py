@@ -68,6 +68,26 @@ class DeliveryProjectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not read-only"):
             project_delivery(base, recovery)
 
+    def test_packed_ledger_canonical_match_despite_distinct_raw_bytes(self):
+        base = {**BASE, "sealed": False, "artifact_status": "CHECKSUM_VERIFIED_LEGACY_NO_RECEIPT", "scoreboard": {}}
+        d = {"status": "WRITER_CHECKSUM_ONLY", "remote_downloaded": True,
+             "ledger_writer_invoked": False, "production_applied": False,
+             "independently_authenticated": False, "run_id": "456", "source_sha": "b"*40,
+             "persisted_paper": {"ledger_generation": 7, "scan_status": "ABSTAIN", "live_replay_performed": False},
+             "remote_ledger_reconciliation": {"status": "MATCH", "reason": "PACKED_LEDGER_HEAD_COMPARISON",
+                 "recovered_sha256": "a"*64, "remote_sha256": "b"*64,
+                 "recovered_ledger_sha256": "c"*64, "remote_ledger_sha256": "c"*64,
+                 "recovered_generation": 7, "remote_generation": 7,
+                 "independently_authenticated": False, "production_applied": False}}
+        self.assertEqual(project_delivery(base, d)["writer_reconciliation_status"], "MATCH")
+        d["remote_ledger_reconciliation"]["remote_generation"] = 8
+        with self.assertRaisesRegex(ValueError, "remote generation contradiction"):
+            project_delivery(base, d)
+        d["remote_ledger_reconciliation"]["remote_generation"] = 7
+        d["remote_ledger_reconciliation"]["remote_ledger_sha256"] = "d"*64
+        with self.assertRaisesRegex(ValueError, "digest contradiction"):
+            project_delivery(base, d)
+
     def test_existing_c_handoff_in_shared_delivery_schema(self):
         base = {**BASE, "sealed": False, "artifact_status": "CHECKSUM_VERIFIED_LEGACY_NO_RECEIPT", "scoreboard": {}}
         replay = {"schema": "c_a2_read_only_candidates_v1", "production_applied": False,
