@@ -67,3 +67,19 @@ test("watch endpoint abstains after failed cycle and resumes only on successful 
  expect((await runner.run("manual")).ok).toBe(true);
  expect(await (await http(req("/watch"))).json()).toMatchObject({status:"PAPER_ONLY_VERIFIED",watch:[{pair:"TAOUSD"}]});
 });
+
+test("watch endpoint abstains while a replacement scheduled scan is running",async()=>{
+ let release!:()=>void,block=false;
+ const wait=new Promise<void>(resolve=>{release=resolve});
+ const snapshot={status:"VERIFIED_SNAPSHOT" as const,as_of:"2026-11-03T04:00:00Z",scan_status:"WATCH",receipt_sha256:"c".repeat(64),watch:[{pair:"TAOUSD",quote_observed_at:"2026-11-03T03:59:00Z"}],eligible_pairs:1,observed_markets:1,abstention_counts:{},source:"a2_verified_readonly" as const,buy_approved:false as const};
+ const runner=createCycleRunner(deps({scan:async()=>{if(block)await wait;return {candidates:[row]}}}),undefined,undefined,async()=>snapshot as any);
+ const http=createCycleHttpHandler(runner,()=>new Date("2026-11-03T04:01:00Z"));
+ expect((await runner.run("manual")).ok).toBe(true);
+ expect(await (await http(req("/watch"))).json()).toMatchObject({status:"PAPER_ONLY_VERIFIED",watch:[{pair:"TAOUSD"}]});
+ block=true;
+ const scheduled=runner.run("scheduled");
+ expect(await (await http(req("/watch"))).json()).toMatchObject({running:true,status:"ABSTAIN_SCAN_IN_PROGRESS",watch:[],receipt_sha256:null,live_watch_certified:false});
+ release();
+ expect((await scheduled).ok).toBe(true);
+ expect(await (await http(req("/watch"))).json()).toMatchObject({running:false,status:"PAPER_ONLY_VERIFIED",watch:[{pair:"TAOUSD"}]});
+});
