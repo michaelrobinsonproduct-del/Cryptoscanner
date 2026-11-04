@@ -432,6 +432,21 @@ def persist_report(latest_path, report):
 def main():
     report = scan()
     receipt = persist_report(os.getenv("PAPER_REPORT_PATH", "paper_pov/output/latest.json"), report)
+    # Publish both projections from one sealed receipt, without another ledger writer.
+    from paper_pov.candidate_snapshot import read_snapshot
+    from paper_pov.preselection_universe import export_universe
+    latest = Path(os.getenv("PAPER_REPORT_PATH", "paper_pov/output/latest.json"))
+    candidate_view = read_snapshot(latest)
+    universe_view = export_universe(latest)
+    if candidate_view["receipt_sha256"] != universe_view["receipt_sha256"]:
+        raise RuntimeError("candidate and preselection projections disagree on receipt")
+    atomic_json(latest.parent / "candidate-snapshot.json", candidate_view)
+    atomic_json(latest.parent / "preselection-universe.json", universe_view)
+    print("PAPER_PROJECTIONS " + json.dumps({
+        "receipt_sha256": candidate_view["receipt_sha256"],
+        "watch_count": len(candidate_view["watch"]),
+        "preselection_markets": len(universe_view["markets"]),
+    }, sort_keys=True))
     print("PAPER_RECEIPT " + str(receipt))
     print("PAPER_SCAN " + json.dumps({k: report[k] for k in (
         "as_of", "scan_status", "online_usd_pairs", "excluded_stablecoin_pairs",
