@@ -160,12 +160,40 @@ def project_published_result(result, writer_readback=None, a2_delivery=None):
         age = result.get("max_client_quote_age_seconds")
         if type(age) not in (int, float) or not 0 <= age <= 600:
             raise ValueError("WATCH quote freshness invalid")
+    # Re-evaluate the actual quote observations instead of trusting a producer's
+    # aggregate max-age flag. This is client-observed freshness, never exchange time.
+    from .results_report import _utc, STABLE
+    as_of = _utc(result.get("as_of"))
+    quotes = result.get("quote_evidence")
+    if not isinstance(quotes, list) or type(result.get("observed_markets")) is not int or len(quotes) != result["observed_markets"]:
+        raise ValueError("published quote evidence missing or incomplete")
+    by_symbol = {}
+    ages = []
+    for quote in quotes:
+        if not isinstance(quote, dict):
+            raise ValueError("malformed published quote evidence")
+        symbol, pair = quote.get("symbol"), quote.get("pair")
+        if not isinstance(symbol, str) or not symbol.endswith("/USD") or symbol.split("/")[0].upper() in STABLE or not isinstance(pair, str) or not pair or symbol in by_symbol:
+            raise ValueError("invalid or excluded published quote")
+        age = (as_of - _utc(quote.get("observed_at"))).total_seconds()
+        price = quote.get("price")
+        if not 0 <= age <= 600 or type(price) not in (int, float) or not 0 < price < float("inf"):
+            raise ValueError("stale or invalid published quote")
+        by_symbol[symbol] = quote
+        ages.append(age)
+    if result.get("max_client_quote_age_seconds") != (max(ages) if ages else None):
+        raise ValueError("published quote freshness summary mismatch")
+    if (status == "ABSTAIN_NO_OBSERVATIONS") != (not quotes) or (status == "ABSTAIN_NO_WATCH") != (bool(quotes) and not candidates):
+        raise ValueError("published abstention/coverage contradiction")
     for i, candidate in enumerate(candidates, 1):
         if not isinstance(candidate, dict) or candidate.get("rank") != i or candidate.get("status") != "WATCH_PAPER_ONLY" or candidate.get("exchange_event_freshness_verified") is not False:
             raise ValueError("invalid WATCH candidate")
         for key in ("symbol", "price_usd", "quote_observed_at", "baseline_score", "challenger_score", "move15_pct", "volume_accel", "risk"):
             if key not in candidate:
                 raise ValueError("incomplete WATCH candidate")
+        quote = by_symbol.get(candidate["symbol"])
+        if quote is None or candidate["price_usd"] != quote["price"] or _utc(candidate["quote_observed_at"]) != _utc(quote["observed_at"]):
+            raise ValueError("WATCH candidate lacks matching fresh quote")
     writer = _writer_evidence(writer_readback) if writer_readback is not None else None
     a2 = _a2_evidence(a2_delivery) if a2_delivery is not None else None
     return {"schema": "paper_delivery_readback_v1", "source_run_id": int(run_id),
