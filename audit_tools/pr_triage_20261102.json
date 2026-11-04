@@ -1,0 +1,219 @@
+{
+  "schema": "cryptoscanner-pr-semantic-triage-v1",
+  "snapshot_utc": "2026-11-02",
+  "main_sha": "81ef1479ac4c05c2541388d92442bb83d99b8ddf",
+  "ledger_sha": "e233656fb2916d25754058ada0237cf745914b18",
+  "open_pr_count": 18,
+  "classification_basis": "Actual open PR metadata, patch-level substantive additions compared against current main for #74/#80/#71/#40, workflow/source inspection and independent Railway environment status. Integrated means code path represented on main, not approval to close without review.",
+  "evidence": {
+    "paper_workflow": ".github/workflows/paper-pipeline.yml",
+    "paper_modules": [
+      "paper_pov/scanner.py",
+      "paper_pov/segmented_live_writer.py",
+      "paper_pov/results_report.py",
+      "paper_pov/failure_report.py"
+    ],
+    "legacy_runtime": "Railway environment_status 2026-11-02: 3 services offline, no active deployments, 200MB simple-scanner-durable volume and kraken-shadow-reports bucket still live; no cleanup authorized",
+    "runtime_caveat": "GitHub native cron punctuality and current deployed external Bun/Supabase consumers not yet fully certified"
+  },
+  "prs": [
+    {
+      "number": 121,
+      "title": "Audit: exact-source inventory of scanner workflows, branches, PRs and dependencies (read-only)",
+      "classification": "needed",
+      "reason": "Read-only inventory tool; exact-head CI must pass and downstream semantic/runtime audit remains incomplete.",
+      "head_sha": "46c7ba428535495b9d7b5d757e998067ad08ce84",
+      "head_ref": "audit/full-scanner-inventory-20261102",
+      "base_sha": "81ef1479ac4c05c2541388d92442bb83d99b8ddf",
+      "draft": true,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/121"
+    },
+    {
+      "number": 120,
+      "title": "Research: authenticated Kraken trade gap recovery census with before/after evidence",
+      "classification": "needed",
+      "reason": "Active Role A authenticated trade gap audit, new code and bounded Kraken source evidence; independent V review pending; do not interfere.",
+      "head_sha": "388981bb9a21f9265632cf362a9d0025d7d85480",
+      "head_ref": "research/role-a-authenticated-gap-recovery-20261102",
+      "base_sha": "81ef1479ac4c05c2541388d92442bb83d99b8ddf",
+      "draft": false,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/120"
+    },
+    {
+      "number": 115,
+      "title": "research: SHA-bound trade-bucket validator for read-only gap recovery",
+      "classification": "unknown",
+      "reason": "Distinct SHA-bound trade-bucket validator; overlap with #120's source-recovery problem requires code-level consolidation review, not path-name equivalence.",
+      "head_sha": "7af2fcb1948a036eb2ec0a33b2eb1825835ae741",
+      "head_ref": "role-a-trade-gap-recovery-20261101",
+      "base_sha": "3f0b11fcbf89342794a62800d2c110fdf5881a97",
+      "draft": false,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/115"
+    },
+    {
+      "number": 80,
+      "title": "Show real numerical paper ranking scores and quote timestamps in RESULTS",
+      "classification": "integrated",
+      "reason": "All substantive added lines in results_report.py and its score/UTC tests are present on main; current PAPER workflow calls results_report.",
+      "head_sha": "43dafcda01d7e529f5947968e9aee17eeb7866f2",
+      "head_ref": "paper-results-scores-20261101",
+      "base_sha": "7cf4db888bfd6e3f7f4cd657c27e9078a3d331d8",
+      "draft": true,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/80"
+    },
+    {
+      "number": 74,
+      "title": "Role B: lossless Git-anchored active paper-ledger rollover before storage exhaustion",
+      "classification": "integrated",
+      "reason": "All substantive additions across six files present on main, including stage_rollover, active-budget fallback, dry-run and tests; PAPER calls segmented_live_writer.",
+      "head_sha": "29ee5fb3a8b38b3efec318cdb44efe7404d3533b",
+      "head_ref": "paper-lossless-rollover-roleb-20261101",
+      "base_sha": "41a5c86dbbd83bad31d6174665eab6681a1f7857",
+      "draft": true,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/74"
+    },
+    {
+      "number": 71,
+      "title": "Paper POV: durable explicit failure reports for scheduled scan failures",
+      "classification": "integrated",
+      "reason": "Failure report module, workflow failure handling and nearly all substantive tests present on main; review the one differing test line before closing PR.",
+      "head_sha": "a2d0c8880dcf3ea02425622e662f10309f9062de",
+      "head_ref": "paper-failure-results-rolea-20261031",
+      "base_sha": "f9e46a11302ffdb979add1d822be4fca190d54c1",
+      "draft": false,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/71"
+    },
+    {
+      "number": 64,
+      "title": "Read-only acceptance: lossless migration of actual paper ledger into bounded packed snapshot",
+      "classification": "unknown",
+      "reason": "Read-only migration probe absent from main; newer segmented writer exists but no proof its acceptance checks cover every probe condition.",
+      "head_sha": "9c6a78f8c05be687cdedc262f84da0d9cc0bc5b3",
+      "head_ref": "proof-live-ledger-migration-rolea-20261031",
+      "base_sha": "d3d21d66f115f1cf63629ddab2cf5153489d665b",
+      "draft": true,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/64"
+    },
+    {
+      "number": 61,
+      "title": "Role B: owner-authenticated ChatGPT manual paper scan trigger via issue #34",
+      "classification": "unknown",
+      "reason": "Owner-authenticated manual trigger differs from merged cadence heartbeat controller; no semantic equivalence proven for manual issue trigger.",
+      "head_sha": "9e10992ea3a87a4fb3316993ae1d11482c6ddc29",
+      "head_ref": "proof-owner-manual-paper-trigger-roleb-20261031",
+      "base_sha": "fcd9e8b689f209cfbe6dacf9918201cb59f49301",
+      "draft": true,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/61"
+    },
+    {
+      "number": 40,
+      "title": "Draft: independent sampled forward outcome audit and missed-mover coverage (paper only)",
+      "classification": "integrated",
+      "reason": "paper_eval audit/report modules and tests largely present on main; workflow exists with later edits. Functional audit workflow run still to inspect.",
+      "head_sha": "9c66e45b2a7d674e60fc47c761d44788f9bb15c5",
+      "head_ref": "proof-outcome-eval-20261031",
+      "base_sha": "7295d2eefa89b3bc6d4453e6900ee29521486a85",
+      "draft": true,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/40"
+    },
+    {
+      "number": 39,
+      "title": "Independent paper ledger/as-of/maturity fail-closed contracts (no production writes)",
+      "classification": "unknown",
+      "reason": "Independent paper_verifier contracts not on main; newer paper_eval and ledger checks may overlap but no complete predicate equivalence established.",
+      "head_sha": "df63a94ff67dac282643df17d3347fdfcc335b24",
+      "head_ref": "proof-independent-verify-20261031",
+      "base_sha": "18473d9ee8d3381bbf92f05004d5f0173fb00088",
+      "draft": true,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/39"
+    },
+    {
+      "number": 33,
+      "title": "CI validation only: isolated scanner storage safety tests (DO NOT MERGE)",
+      "classification": "conflicting",
+      "reason": "Large old simple_scanner and workflow storage/release suite targets a separate legacy execution path; not safe to merge into current Python PAPER without consumer/behavior reconciliation.",
+      "head_sha": "3a58194ec9c11649111f29450c5e28e3585c0068",
+      "head_ref": "repair-batches-17a-20-20261021",
+      "base_sha": "8c8532273a7bfea93c7379d02ff276179f4c181c",
+      "draft": true,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/33"
+    },
+    {
+      "number": 27,
+      "title": "Shadow canonical Kraken eligibility and read-only precursor audit (verification required)",
+      "classification": "unknown",
+      "reason": "Legacy simple_scanner canonical Kraken eligibility work; current paper and legacy eligibility differ, requires parity check.",
+      "head_sha": "a285459b492b4c5f05166e84db87d49bf0f9a679",
+      "head_ref": "fix/shadow-asset-eligibility-20261018",
+      "base_sha": "3b12e19b6ad686ee473d0e5114db5137ec7ffb2c",
+      "draft": true,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/27"
+    },
+    {
+      "number": 11,
+      "title": "WIP: isolated shared scan executor with fail-closed validation",
+      "classification": "unknown",
+      "reason": "Legacy shared scan executor not wired to verified PAPER writer; need deployment/consumer mapping before integration or closure.",
+      "head_sha": "3b12e19b6ad686ee473d0e5114db5137ec7ffb2c",
+      "head_ref": "manual-scan-isolation-20261015",
+      "base_sha": "940a4af9d976fb271c7534ad3e3e9eae33c376cf",
+      "draft": true,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/11"
+    },
+    {
+      "number": 10,
+      "title": "Isolated fail-closed learning promotion gate (no production behavior change)",
+      "classification": "unknown",
+      "reason": "Isolated learning promotion gate; current PAPER scoring unchanged, no demonstrated integration.",
+      "head_sha": "6fa12655e7b88b3c8bda11287035edd756944195",
+      "head_ref": "learning-promotion-safety-20261015",
+      "base_sha": "940a4af9d976fb271c7534ad3e3e9eae33c376cf",
+      "draft": true,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/10"
+    },
+    {
+      "number": 7,
+      "title": "Isolated Kraken scanner recovery (requires live acceptance)",
+      "classification": "conflicting",
+      "reason": "Legacy recovery architecture and simple_scanner implementation are not the active Python PAPER writer; bulk integration would mix control planes.",
+      "head_sha": "940a4af9d976fb271c7534ad3e3e9eae33c376cf",
+      "head_ref": "simplified-scanner-recovery-20261011",
+      "base_sha": "fc52b61f6cdb3318e425ab2d0c9201eff89d18f4",
+      "draft": true,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/7"
+    },
+    {
+      "number": 6,
+      "title": "Fail-closed scan report integrity guard (isolated, no production wiring)",
+      "classification": "unknown",
+      "reason": "Older report integrity and SQL labeler experiments; compare actual current reader and Supabase consumers before retirement.",
+      "head_sha": "ecdf788a33c5cf0d2fd1e7c42a8215738c635dc8",
+      "head_ref": "fix/report-integrity-guard-v1",
+      "base_sha": "fc52b61f6cdb3318e425ab2d0c9201eff89d18f4",
+      "draft": true,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/6"
+    },
+    {
+      "number": 4,
+      "title": "Recovery: fail-closed market evidence and scan-cycle contracts",
+      "classification": "unknown",
+      "reason": "Bun evaluation and recovery changes, while verified active PAPER is Python; cannot claim superseded until runtime consumer/deployment graph checked.",
+      "head_sha": "7284645c1dbeb21c67fb07dc23200770500475d3",
+      "head_ref": "production-source-recovery-20261010",
+      "base_sha": "513b9ce60b09ee4bbd419c6509b15d60700dbc3e",
+      "draft": true,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/4"
+    },
+    {
+      "number": 3,
+      "title": "Shadow-only early mover outcome measurement (phase 1)",
+      "classification": "unknown",
+      "reason": "Earlier isolated shadow early-mover evaluation; no proof that current shadow replicates exact metrics.",
+      "head_sha": "719437c5b93abc8a9b6ea856554cdc8980c2f302",
+      "head_ref": "feature/early-mover-shadow-v1",
+      "base_sha": "e2bbbbde342eb36615ac065c37a8a9b8777553c5",
+      "draft": true,
+      "url": "https://github.com/michaelrobinsonproduct-del/Cryptoscanner/pull/3"
+    }
+  ]
+}

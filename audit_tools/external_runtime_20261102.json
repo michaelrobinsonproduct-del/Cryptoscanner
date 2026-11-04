@@ -1,0 +1,192 @@
+{
+  "schema": "cryptoscanner-external-runtime-audit-v1",
+  "snapshot_utc": "2026-11-02T02:17:00Z",
+  "repo_main_sha": "81ef1479ac4c05c2541388d92442bb83d99b8ddf",
+  "paper_ledger_commit": "e233656fb2916d25754058ada0237cf745914b18",
+  "paper_ledger_generation": 48,
+  "github": {
+    "legacy_schedule": {
+      "workflow": ".github/workflows/kraken-recovery-schedule.yml",
+      "checkout_ref": "simplified-scanner-recovery-20261011",
+      "event": "schedule",
+      "run_id": 41376476851,
+      "run_conclusion": "success",
+      "durable_ref": "simple-history",
+      "durable_sha": "dba189e3a66801ddc977ee84d4d0f530905b4fcb",
+      "snapshots_before": 7497,
+      "snapshots_after": 7509,
+      "observed_outcomes": 26833,
+      "universe": 616,
+      "watch": 12,
+      "learning_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION"
+    },
+    "paper": {
+      "workflow": ".github/workflows/paper-pipeline.yml",
+      "durable_ref": "paper-proof-ledger",
+      "cron_configured": [
+        "9 * * * *",
+        "39 * * * *"
+      ],
+      "native_punctuality_proven": false
+    }
+  },
+  "railway": {
+    "project": "kraken-market-collector",
+    "environment": "production",
+    "active_deployments": 0,
+    "services": [
+      {
+        "name": "kraken-simple-validation",
+        "state": "offline",
+        "source_branch": "manual-scan-isolation-20261015"
+      },
+      {
+        "name": "kraken-autonomous-runner",
+        "state": "offline",
+        "source_image": "ghcr.io/railwayapp/function-bun:1.4.4"
+      },
+      {
+        "name": "kraken-collector",
+        "state": "offline",
+        "source_image": "ghcr.io/railwayapp/function-bun:1.4.4"
+      }
+    ],
+    "retained_volume": {
+      "name": "simple-scanner-durable",
+      "size_mb": 200,
+      "mount": "/data"
+    },
+    "retained_bucket": "kraken-shadow-reports",
+    "cleanup_authorized": false
+  },
+  "supabase": {
+    "project": "kraken-scanner-gateway",
+    "status": "ACTIVE_HEALTHY",
+    "deployed_edge_functions": 27,
+    "edge_function_status": "ACTIVE (deployment state, not invocation proof)",
+    "last_24h_log_sources": [
+      "postgres_logs",
+      "auth_logs",
+      "postgrest_logs"
+    ],
+    "edge_logs_observed": false,
+    "db_schema_read": "BLOCKED: IPv6 ECONNREFUSED",
+    "sample_source_consumers": [
+      {
+        "function": "kraken-miss-learner",
+        "version": 4,
+        "tables": [
+          "kraken_miss_learning",
+          "kraken_outcome_learning_features",
+          "kraken_historical_research",
+          "kraken_canonical_miss_learning",
+          "kraken_learning_state"
+        ],
+        "methods": [
+          "select",
+          "insert",
+          "upsert"
+        ]
+      },
+      {
+        "function": "kraken-promotion-router",
+        "version": 6,
+        "tables": [
+          "kraken_integrated_current",
+          "kraken_promotion_outbox",
+          "kraken_autonomous_decisions"
+        ],
+        "rpc": [
+          "kraken_expire_stale_promotions"
+        ],
+        "methods": [
+          "select",
+          "insert"
+        ]
+      },
+      {
+        "function": "kraken-outcome-labeler",
+        "version": 15,
+        "tables": [
+          "kraken_dex_shadow_trigger_auth",
+          "kraken_labeler_runs",
+          "kraken_candidate_outcomes",
+          "kraken_labeler_failures"
+        ],
+        "rpc": [
+          "kraken_labeler_claim",
+          "kraken_labeler_release",
+          "kraken_labeler_next_batch"
+        ],
+        "methods": [
+          "select",
+          "insert",
+          "update",
+          "upsert",
+          "delete"
+        ]
+      }
+    ],
+    "cleanup_authorized": false,
+    "source_review": {
+      "attempted": 27,
+      "fetched": 26,
+      "failed": [
+        {
+          "function": "kraken-gateway",
+          "reason": "connector returned UNAVAILABLE; source consumer graph unknown"
+        }
+      ],
+      "scope": "Static direct .from/.rpc references in deployed function source; dynamic table names, remote function calls, invocations and database cron NOT certified",
+      "additional_direct_table_consumers": [
+        {
+          "function": "kraken-mover-census",
+          "tables": [
+            "kraken_candidate_observations",
+            "kraken_mover_census"
+          ],
+          "writes_possible": true
+        },
+        {
+          "function": "kraken-census-reconstructor",
+          "tables": [
+            "kraken_census_reconstruction_queue",
+            "kraken_miss_learning"
+          ],
+          "rpc": [
+            "enqueue_kraken_census_misses"
+          ],
+          "writes_possible": true
+        },
+        {
+          "function": "kraken-upstream-intelligence",
+          "tables": [
+            "kraken_early_radar_events",
+            "kraken_upstream_signals",
+            "kraken_specialist_scores"
+          ],
+          "writes_possible": true
+        }
+      ],
+      "other_functions": "20 additional deployed source files inspected; no static direct .from table references extracted, which does not establish absence of remote or dynamic consumers"
+    }
+  },
+  "safety": "Read-only observations; no deployment, secret access, scoring, trading, ledger writes or cleanup. Full consumer/runtime audit incomplete.",
+  "static_consumers": {
+    "ios": {
+      "source": "ios/KrakenEdge/ScannerAPI.swift",
+      "endpoint": "https://kraken-autonomous-controller-production.up.railway.app/dashboard",
+      "finding": "hard-coded Railway dashboard endpoint, not the current GitHub PAPER ledger; app deployment/use unverified"
+    },
+    "bun": {
+      "sources": [
+        "scanner/src/server.ts",
+        "evaluation/shadow-cycle.ts"
+      ],
+      "collector_endpoint": "https://kraken-collector-production.up.railway.app",
+      "confirmation_endpoint": "https://kraken-rest-confirm-production.up.railway.app",
+      "finding": "legacy Bun challenger depends on Railway HTTP services; current Railway inventory has no active deployments"
+    },
+    "implication": "No legacy client/source cleanup or assertion of current user-facing delivery until actual deployed consumers and migration are verified"
+  }
+}

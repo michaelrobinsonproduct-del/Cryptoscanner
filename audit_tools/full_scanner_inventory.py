@@ -1,0 +1,760 @@
+"""Read-only repository-wide scanner inventory. No deletion, merge, deployment or secrets."""
+import ast, datetime, json, os, pathlib, re, subprocess, collections
+
+ROOT=pathlib.Path(".")
+def cmd(*args):
+    try:
+        p=subprocess.run(args,text=True,capture_output=True,timeout=120)
+    except subprocess.TimeoutExpired as exc:
+        return {"ok":False,"output":"","error":"Timed out after 120s: "+str(args[:3])}
+    return {"ok":p.returncode==0,"output":p.stdout[:1000000],"error":p.stderr[:500]}
+def gh(path):
+    # Actions run history is very large: never paginate the entire repository.
+    # Request one bounded page and project only the fields needed for evidence.
+    if "/actions/runs?" in path:
+        r=cmd("gh","api",path,"--jq",
+              '{workflow_runs: [.workflow_runs[] | {id,name,event,status,conclusion,head_sha,created_at,run_started_at}]}')
+    else:
+        r=cmd("gh","api",path)
+    if not r["ok"]: return {"error":r["error"]}
+    try:
+        text=r["output"].strip()
+        if text.startswith("["):
+            # gh --paginate may concatenate JSON arrays; parse each array if necessary
+            decoder=json.JSONDecoder(); items=[]
+            while text:
+                obj,end=decoder.raw_decode(text);items.extend(obj if isinstance(obj,list) else [obj]);text=text[end:].strip()
+            return items
+        return json.loads(text)
+    except Exception as exc:return {"error":str(exc)}
+def gh_pages(resource, per_page=100, max_pages=20):
+    """Fail closed on incomplete API pagination; never silently drop branches or PR files."""
+    result=[]
+    sep="&" if "?" in resource else "?"
+    for page in range(1,max_pages+1):
+        batch=gh(f"{resource}{sep}per_page={per_page}&page={page}")
+        if not isinstance(batch,list):
+            raise RuntimeError(f"GitHub pagination failure {resource} page {page}: {batch}")
+        result.extend(batch)
+        if len(batch)<per_page:
+            return result
+    raise RuntimeError(f"GitHub pagination limit reached for {resource}: {max_pages} pages")
+
+def remote_main_blobs(main_sha, fetch=gh):
+    """Enumerate the ACTUAL remote main tree, never the audit PR checkout.
+
+    GitHub's recursive tree response can be truncated while still HTTP 200.
+    Missing or truncated evidence must abort instead of implying path absence.
+    """
+    if not isinstance(main_sha,str) or not re.fullmatch(r"[0-9a-f]{40}",main_sha):
+        raise RuntimeError("Remote main SHA missing or invalid")
+    tree=fetch(f"repos/michaelrobinsonproduct-del/Cryptoscanner/git/trees/{main_sha}?recursive=1")
+    if not isinstance(tree,dict) or tree.get("truncated") is not False or not isinstance(tree.get("tree"),list):
+        raise RuntimeError("Remote main tree unavailable or truncated: cannot certify path overlap")
+    blobs={}
+    for entry in tree["tree"]:
+        if not isinstance(entry,dict) or not isinstance(entry.get("path"),str) or entry.get("type") not in ("blob","tree"):
+            raise RuntimeError("Malformed remote main tree entry")
+        if entry["type"]=="blob":
+            if entry["path"] in blobs or not isinstance(entry.get("sha"),str) or not re.fullmatch(r"[0-9a-f]{40}",entry["sha"]):
+                raise RuntimeError("Duplicate path or invalid blob SHA in remote main tree")
+            blobs[entry["path"]]=entry["sha"]
+    return blobs
+
+
+def remote_main_paths(main_sha, fetch=gh):
+    """Backward-compatible path-only view of the exact remote main tree."""
+    return set(remote_main_blobs(main_sha,fetch))
+
+
+def compare_pr_blobs(changed, main_blobs):
+    """Exact file-content equality is evidence; path overlap is not semantic parity."""
+    result=[]
+    for entry in changed:
+        path=entry["filename"]
+        pr_sha=entry.get("sha")
+        main_sha=main_blobs.get(path)
+        state=("NOT_ON_MAIN" if main_sha is None else
+               "EXACT_BLOB_EQUAL" if pr_sha and pr_sha==main_sha else
+               "DIFFERENT_BLOB_OR_UNKNOWN")
+        result.append({"path":path,"pr_blob_sha":pr_sha,"main_blob_sha":main_sha,
+                       "status":entry.get("status"),"comparison":state})
+    return result
+
+
+def reconcile_pr_snapshot(triage, pr_rows, current_main_sha, fetch_pr=gh):
+    """Reconcile historical triage against CURRENT main, PR heads, and closed PRs.
+
+    A matching filename or an old classification is never current semantic evidence.
+    A snapshot classification is usable only while both main and PR head match.
+    """
+    prior_by_number={p["number"]:p for p in triage["prs"]}
+    main_matches=triage.get("main_sha")==current_main_sha
+    open_numbers=set()
+    for p in pr_rows:
+        n=p["number"]
+        open_numbers.add(n)
+        prior=prior_by_number.get(n,{})
+        head_matches=prior.get("head_sha")==p["head_sha"]
+        p["triage_snapshot_classification"]=prior.get("classification","unknown")
+        p["triage_snapshot_main_matches"]=main_matches
+        p["triage_snapshot_head_matches"]=head_matches
+        p["triage_classification"]=prior.get("classification","unknown") if main_matches and head_matches else "unknown"
+        p["classification_valid_for_current_main"]=main_matches and head_matches and bool(prior)
+        p["triage_stale_reason"]=(
+            "NEW_PR_NOT_IN_SNAPSHOT" if not prior else
+            "MAIN_CHANGED_REQUIRES_SEMANTIC_REVIEW" if not main_matches else
+            "PR_HEAD_CHANGED_REQUIRES_SEMANTIC_REVIEW" if not head_matches else None)
+    closed=[]
+    for n,prior in sorted(prior_by_number.items()):
+        if n in open_numbers: continue
+        current=fetch_pr(f"repos/michaelrobinsonproduct-del/Cryptoscanner/pulls/{n}")
+        if not isinstance(current,dict) or current.get("state")!="closed":
+            raise RuntimeError(f"PR #{n} missing from open list but closed state unverified: {current}")
+        closed.append({"number":n,"snapshot_head_sha":prior.get("head_sha"),
+                       "final_head_sha":current.get("head",{}).get("sha"),
+                       "state":current["state"],"merged":bool(current.get("merged_at")),
+                       "merged_at":current.get("merged_at"),
+                       "merge_commit_sha":current.get("merge_commit_sha"),
+                       "url":current.get("html_url"),
+                       "snapshot_classification":prior.get("classification","unknown"),
+                       "classification":"integrated" if current.get("merged_at") else "unknown",
+                       "classification_basis":"GitHub merged_at, NOT semantic equivalence of any other PR" if current.get("merged_at") else "Closed without merge; semantic outcome unknown"})
+    return closed
+
+def build_consumer_graph(workflows, runtime, checkout_sha, main_sha, workflow_source="audit_checkout"):
+    """Evidence-scoped dependency edges, not a certification of live invocation.
+
+    Workflow edges come from the audit checkout. External edges come from a
+    dated deployed-source snapshot and are explicitly NOT invocation proof.
+    """
+    if workflow_source not in ("audit_checkout","remote_main"):
+        raise ValueError("Unrecognized workflow source provenance")
+    workflow_evidence=workflow_source+":"+(main_sha if workflow_source=="remote_main" else checkout_sha)
+    edges=[]
+    def edge(source,target,kind,evidence,observed_runtime=False,target_checkout_ref=None):
+        record={"source":source,"target":target,"kind":kind,
+                "evidence":evidence,"observed_runtime":observed_runtime}
+        if target_checkout_ref is not None:
+            record["target_checkout_ref"]=target_checkout_ref
+        edges.append(record)
+    names=collections.defaultdict(list)
+    paths={w["path"] for w in workflows}
+    for w in workflows:
+        if w.get("name"):
+            names[w["name"]].append(w["path"])
+    orchestration_unknowns=[]
+    for w in workflows:
+        source="github-workflow:"+w["path"]
+        branch_info=w.get("branch_references",{})
+        refs=branch_info.get("checkout_refs",[])
+        pinned_ref=(refs[0] if len(refs)==1 and not branch_info.get("unresolved_checkout_refs") else None)
+        for script in w["scripts"]:
+            edge(source,"repo-script:"+script,"invokes_script",
+                 workflow_evidence,target_checkout_ref=pinned_ref)
+        for module in w["python_modules"]:
+            edge(source,"python-module:"+module,"invokes_module",
+                 workflow_evidence,target_checkout_ref=pinned_ref)
+        if w["ledger_ref"]:
+            edge(source,"github-ref:paper-proof-ledger","mentions_ledger_ref",
+                 workflow_evidence)
+        for ref in w.get("branch_references",{}).get("checkout_refs",[]):
+            edge(source,"github-ref:"+ref,"explicit_checkout_ref",
+                 workflow_evidence)
+        for ref in w.get("branch_references",{}).get("branch_ref_mentions",[]):
+            edge(source,"github-ref:"+ref,"static_branch_ref_mention",
+                 workflow_evidence)
+        orchestration=w.get("orchestration",{})
+        for name in orchestration.get("workflow_run_names",[]):
+            matched=names.get(name,[])
+            if len(matched)==1:
+                edge(source,"github-workflow:"+matched[0],"workflow_run_subscription",workflow_evidence)
+            else:
+                edge(source,"github-workflow-name:"+name,"unresolved_workflow_run_name",workflow_evidence)
+                orchestration_unknowns.append("Workflow_run name not uniquely mapped: "+w["path"]+" -> "+name)
+        for target in orchestration.get("dispatch_workflows",[]):
+            if target.startswith(".github/workflows/"):
+                target=target[len(".github/workflows/"):]
+            dest=".github/workflows/"+target
+            if dest in paths:
+                edge(source,"github-workflow:"+dest,"explicit_workflow_dispatch_post",workflow_evidence)
+            else:
+                edge(source,"github-workflow-path:"+target,"unresolved_dispatch_target",workflow_evidence)
+                orchestration_unknowns.append("Dispatch target absent from main: "+w["path"]+" -> "+target)
+        orchestration_unknowns.extend("Unresolved orchestration in "+w["path"]+": "+x
+                                      for x in orchestration.get("unresolved",[]))
+    sb=runtime.get("supabase",{})
+    for item in sb.get("sample_source_consumers",[])+sb.get("source_review",{}).get("additional_direct_table_consumers",[]):
+        source="supabase-edge:"+item["function"]
+        for table in item.get("tables",[]):
+            edge(source,"supabase-table:"+table,"static_table_reference",
+                 "external_snapshot:"+runtime["snapshot_utc"])
+        for rpc in item.get("rpc",[]):
+            edge(source,"supabase-rpc:"+rpc,"static_rpc_reference",
+                 "external_snapshot:"+runtime["snapshot_utc"])
+    static=runtime.get("static_consumers",{})
+    if static.get("ios",{}).get("endpoint"):
+        edge("ios:"+static["ios"]["source"],"railway-url:"+static["ios"]["endpoint"],
+             "hardcoded_endpoint","external_snapshot:"+runtime["snapshot_utc"])
+    for endpoint_key in ("collector_endpoint","confirmation_endpoint"):
+        endpoint=static.get("bun",{}).get(endpoint_key)
+        if endpoint:
+            for source in static["bun"].get("sources",[]):
+                edge("bun:"+source,"railway-url:"+endpoint,
+                     "reported_static_endpoint","external_snapshot:"+runtime["snapshot_utc"])
+    dynamic_checkouts=[
+        "Dynamic checkout ref unresolved in "+w["path"]
+        for w in workflows if w.get("branch_references",{}).get("unresolved_checkout_refs")
+    ]
+    return {"schema":"cryptoscanner-consumer-graph-v1",
+            "audit_checkout_sha":checkout_sha,"remote_main_sha":main_sha,
+            "external_snapshot_utc":runtime["snapshot_utc"],
+            "scope":"Static source, workflow_run subscriptions and explicit POST dispatches only; not deployed caller reachability, pg_cron, dynamic references, or invocation evidence",
+            "edges":sorted(edges,key=lambda e:(e["source"],e["target"],e["kind"])),
+            "unknowns":["Supabase invocation/pg_cron and database schema",
+                        "iOS client deployment and users",
+                        "Bun external callers and Railway retained storage consumers",
+                        "GitHub workflow dynamic shell dispatch and branch-pinned consumers"]+dynamic_checkouts+sorted(set(orchestration_unknowns)),
+            "cleanup_authorized":False}
+
+
+
+def workflow_branch_references(source):
+    """Static checkout and durable branch refs, not live invocation evidence."""
+    if not isinstance(source,str):
+        raise ValueError("Workflow source must be text")
+    lines=source.splitlines()
+    checkouts=set()
+    unresolved=[]
+    for i,line in enumerate(lines):
+        match=re.match(r"^(\s*)-\s+uses:\s*actions/checkout@[^\s#]+",line)
+        if not match:
+            continue
+        indent=len(match.group(1))
+        for following in lines[i+1:]:
+            if re.match(r"^\s*-\s+(?:uses|name|run):",following) and len(following)-len(following.lstrip())<=indent:
+                break
+            ref=re.match(r"^\s+ref:\s*(.*?)\s*(?:#.*)?$",following)
+            if ref:
+                value=ref.group(1).strip().strip("'\"")
+                if "$" in value or not re.fullmatch(r"[A-Za-z0-9._/-]+",value):
+                    unresolved.append(value)
+                else:
+                    checkouts.add(value)
+                break
+    mentions=set()
+    for line in lines:
+        if not line.lstrip().startswith("#"):
+            mentions.update(re.findall(r"refs/heads/([A-Za-z0-9._/-]+)",line))
+    return {"checkout_refs":sorted(checkouts),
+            "branch_ref_mentions":sorted(mentions),
+            "unresolved_checkout_refs":sorted(set(unresolved))}
+
+
+
+
+def workflow_orchestration_references(source):
+    """Static workflow_run subscriptions and explicit POST dispatches only."""
+    if not isinstance(source,str):
+        raise ValueError("Workflow source must be text")
+    lines=source.splitlines()
+    subscribed=[]; dispatched=[]; unresolved=[]
+    for i,line in enumerate(lines):
+        if not re.match(r"^on:\s*(?:#.*)?$",line):
+            continue
+        end=next((j for j in range(i+1,len(lines))
+                  if lines[j].strip() and not lines[j].lstrip().startswith("#")
+                  and not lines[j][0].isspace()),len(lines))
+        for j in range(i+1,end):
+            if not re.match(r"^  workflow_run:\s*(?:#.*)?$",lines[j]):
+                continue
+            stop=next((k for k in range(j+1,end)
+                       if lines[k].strip() and not lines[k].lstrip().startswith("#")
+                       and len(lines[k])-len(lines[k].lstrip())<=2),end)
+            for k in range(j+1,stop):
+                m=re.match(r"^(\s*)workflows:\s*(.*?)\s*$",lines[k])
+                if not m:
+                    continue
+                raw=m.group(2).split(" #",1)[0].strip()
+                if raw.startswith("["):
+                    try:
+                        names=ast.literal_eval(raw)
+                    except (SyntaxError,ValueError):
+                        unresolved.append("Unparseable workflow_run list: "+raw); continue
+                    if not isinstance(names,(list,tuple)):
+                        unresolved.append("Invalid workflow_run list: "+raw); continue
+                elif raw:
+                    names=[raw.strip("'\"")]
+                else:
+                    names=[]
+                    indent=len(m.group(1))
+                    for z in range(k+1,stop):
+                        item=lines[z]
+                        if not item.strip() or item.lstrip().startswith("#"):
+                            continue
+                        if len(item)-len(item.lstrip())<=indent:
+                            break
+                        mm=re.match(r"^\s+-\s+(.+?)\s*$",item)
+                        if mm:
+                            names.append(mm.group(1).split(" #",1)[0].strip().strip("'\""))
+                        else:
+                            unresolved.append("Unparsed workflow_run item: "+item.strip())
+                for name in names:
+                    if isinstance(name,str) and name and "$" not in name:
+                        subscribed.append(name)
+                    else:
+                        unresolved.append("Dynamic workflow_run name: "+str(name))
+    for line in lines:
+        cmdline=line.strip()
+        if cmdline.startswith("#") or not re.match(r"^(?:gh\s+api|gh\s+workflow\s+run|curl\s+)",cmdline):
+            continue
+        direct=re.match(r"^gh\s+workflow\s+run\s+([^\s\"']+)",cmdline)
+        if direct:
+            if "$" in direct.group(1):
+                unresolved.append("Dynamic gh workflow run: "+cmdline[:160])
+            else:
+                dispatched.append(direct.group(1))
+            continue
+        if not re.search(r"(?:-X|--method)\s+POST\b",cmdline,re.I):
+            continue
+        if "actions/workflows/" not in cmdline or "/dispatches" not in cmdline:
+            continue
+        m=re.search(r"actions/workflows/([^/\s\"']+)/dispatches\b",cmdline)
+        if m and "$" not in m.group(1):
+            dispatched.append(m.group(1))
+        else:
+            unresolved.append("Dynamic/unparsed workflow dispatch: "+cmdline[:160])
+    return {"workflow_run_names":sorted(set(subscribed)),
+            "dispatch_workflows":sorted(set(dispatched)),
+            "unresolved":sorted(set(unresolved))}
+
+
+def workflow_trigger_inventory(source):
+    """Read only top-level YAML on: triggers; ignore shell strings and comments."""
+    if not isinstance(source,str):
+        raise ValueError("Workflow source must be text")
+    lines=source.splitlines()
+    triggers=set(); crons=[]; unresolved=[]
+    for i,line in enumerate(lines):
+        match=re.match(r"^on:\s*(.*?)\s*$",line)
+        if not match:
+            continue
+        raw=match.group(1).split(" #",1)[0].strip()
+        if raw:
+            if raw.startswith("[") and raw.endswith("]"):
+                triggers.update(x.strip().strip("'\"") for x in raw[1:-1].split(",") if x.strip())
+            elif re.fullmatch(r"[a-z_]+",raw):
+                triggers.add(raw)
+            else:
+                unresolved.append("Unparsed inline on trigger: "+raw)
+            continue
+        end=next((j for j in range(i+1,len(lines))
+                  if lines[j].strip() and not lines[j].lstrip().startswith("#")
+                  and not lines[j][0].isspace()),len(lines))
+        active=None
+        for line2 in lines[i+1:end]:
+            if not line2.strip() or line2.lstrip().startswith("#"):
+                continue
+            key=re.match(r"^  ([a-z_]+):(?:\s|$)",line2)
+            if key:
+                active=key.group(1)
+                triggers.add(active)
+                continue
+            if active=="schedule":
+                cron=re.match(r"^\s+-\s+cron:\s*(.+?)\s*$",line2)
+                if cron:
+                    crons.append(cron.group(1).split(" #",1)[0].strip().strip("'\""))
+    return {"triggers":sorted(triggers),"schedule_cron":crons,"unresolved":unresolved}
+
+
+def inventory_workflow_source(path,source):
+    """Parse a workflow's exact supplied source, independent of checkout location."""
+    triggers=workflow_trigger_inventory(source)
+    return {"path":path,"name":next((m.group(1).strip().strip("\'\"") for m in re.finditer(r"^name:\s*(.+)$",source,re.M)),None),
+            "orchestration":workflow_orchestration_references(source),
+            "schedule_cron":triggers["schedule_cron"],
+            "trigger_unresolved":triggers["unresolved"],
+            "has_dispatch":"workflow_dispatch" in triggers["triggers"],
+            "has_schedule":"schedule" in triggers["triggers"],
+            "writes_contents":bool(re.search(r"contents:\s*write",source)),
+            "ledger_ref":"paper-proof-ledger" in source,
+            "python_modules":sorted(set(re.findall(r"python\s+-m\s+([A-Za-z0-9_.]+)",source))),
+            "scripts":sorted(set(re.findall(r"(?:python|bun|node)\s+([A-Za-z0-9_./-]+\.(?:py|ts|mjs))",source))),
+            "branch_references":workflow_branch_references(source),
+            "write_targets":workflow_write_targets(source)}
+
+
+def workflow_write_targets(source):
+    """Only explicit git-push targets; a dynamic ref is not a known safe destination."""
+    static, dynamic = set(), []
+    for line in source.splitlines():
+        command = line.strip()
+        if command.startswith("#") or not re.search(r"^(?:git\s+push\s+origin|(?:if\s+)?git\s+push\s+origin)\b", command):
+            continue
+        found = re.findall(r"HEAD:([A-Za-z0-9_.$/-]+)", command)
+        if not found:
+            dynamic.append("UNRESOLVED_PUSH_TARGET")
+        for ref in found:
+            ref = ref.removeprefix("refs/heads/")
+            if "$" in ref or not re.fullmatch(r"[A-Za-z0-9._/-]+", ref):
+                dynamic.append("DYNAMIC_PUSH_TARGET")
+            else:
+                static.add(ref)
+    return {"static_push_refs": sorted(static), "dynamic_pushes": sorted(set(dynamic))}
+
+
+def classify_declared_write_surfaces(workflows, main_sha):
+    """Static write-capability census; never claim execution from permissions alone."""
+    rows=[]
+    for w in workflows:
+        if not w.get("writes_contents"):
+            continue
+        refs=w.get("branch_references",{})
+        targets=w.get("write_targets",{})
+        mentions=set(refs.get("branch_ref_mentions",[])) | set(refs.get("checkout_refs",[])) | set(targets.get("static_push_refs",[]))
+        if w.get("ledger_ref") or "paper-proof-ledger" in mentions:
+            surface="PAPER_LEDGER_REFERENCE"
+        elif "simple-history" in mentions:
+            surface="LEGACY_SIMPLE_HISTORY_REFERENCE"
+        elif "rebuild-history" in mentions:
+            surface="REBUILD_HISTORY_REFERENCE"
+        elif targets.get("dynamic_pushes"):
+            surface="DYNAMIC_BRANCH_WRITE_UNATTESTED"
+        else:
+            surface="UNRESOLVED_WRITE_DESTINATION"
+        rows.append({"workflow":w["path"],"declared_contents_write":True,
+                     "write_destination_evidence":surface,
+                     "explicit_checkout_refs":refs.get("checkout_refs",[]),
+                     "explicit_push_refs":targets.get("static_push_refs",[]),
+                     "dynamic_pushes":targets.get("dynamic_pushes",[]),
+                     "schedule_cron":w.get("schedule_cron",[]),
+                     "has_workflow_dispatch":bool(w.get("has_dispatch")),
+                     "execution_proven":False,
+                     "safe_to_delete":False})
+    return {"schema":"cryptoscanner-declared-write-surfaces-v1",
+            "remote_main_sha":main_sha,
+            "scope":"Static workflow contents:write declarations and branch mentions; not observed writes, permission reachability or runtime deployment",
+            "surfaces":sorted(rows,key=lambda r:r["workflow"]),
+            "unknown_write_destinations":sorted(r["workflow"] for r in rows if r["write_destination_evidence"] in ("UNRESOLVED_WRITE_DESTINATION", "DYNAMIC_BRANCH_WRITE_UNATTESTED")),
+            "cleanup_authorized":False}
+
+
+def apply_semantic_review(matrix, rows, current_main_sha, self_pr=121):
+    """Bind human semantic decisions to live main/head and exact PR file blobs.
+
+    A stale decision is visible but never promoted to current classification.
+    This audit PR's own head is inherently self-changing, so it remains
+    provisional even when its recorded snapshot SHA matches.
+    """
+    if matrix.get("schema") != "cryptoscanner-current-semantic-pr-review-v1":
+        raise ValueError("Unsupported semantic review schema")
+    allowed={"integrated","superseded","needed","conflicting","unknown"}
+    decisions=matrix.get("prs")
+    if not isinstance(decisions,list):
+        raise ValueError("Semantic review rows missing")
+    by_number={}
+    for decision in decisions:
+        n=decision.get("number")
+        if not isinstance(n,int) or isinstance(n,bool) or n in by_number:
+            raise ValueError("Duplicate or malformed semantic PR number")
+        if decision.get("classification") not in allowed:
+            raise ValueError("Unsupported semantic classification")
+        if decision.get("release_authorized") is not False or decision.get("cleanup_authorized") is not False:
+            raise ValueError("Semantic review cannot authorize release or cleanup")
+        if not re.fullmatch(r"[0-9a-f]{40}",str(decision.get("head_sha",""))):
+            raise ValueError("Malformed semantic PR head SHA")
+        if not isinstance(decision.get("source_path"),str) or not decision["source_path"]:
+            raise ValueError("Semantic PR source path missing")
+        if not re.fullmatch(r"[0-9a-f]{40}",str(decision.get("source_blob_sha",""))):
+            raise ValueError("Semantic PR source blob SHA missing or malformed")
+        by_number[n]=decision
+    main_matches=matrix.get("main_sha")==current_main_sha
+    open_numbers={r["number"] for r in rows}
+    missing=sorted(open_numbers-set(by_number))
+    no_longer_open=sorted(set(by_number)-open_numbers)
+    counts=collections.Counter()
+    for row in rows:
+        n=row["number"]
+        d=by_number.get(n)
+        head_matches=bool(d and d["head_sha"]==row["head_sha"])
+        path=d.get("source_path") if d else None
+        file_match=next((x for x in row.get("file_blob_comparisons",[]) if x["path"]==path),None)
+        expected_blob=d.get("source_blob_sha") if d else None
+        blob_matches=bool(file_match and (expected_blob is None or file_match["pr_blob_sha"]==expected_blob))
+        self_moving=n==self_pr
+        current=bool(d and main_matches and head_matches and blob_matches and not self_moving)
+        row["semantic_classification"]=d["classification"] if current else "unknown"
+        row["semantic_review_valid"]=current
+        row["semantic_review_reason"]=(d.get("reason") if current else
+            "SELF_MUTATING_AUDIT_HEAD_REQUIRES_INDEPENDENT_REVIEW" if self_moving else
+            "MAIN_DRIFT" if not main_matches else
+            "MISSING_REVIEW" if not d else
+            "PR_HEAD_DRIFT" if not head_matches else
+            "PR_SOURCE_BLOB_DRIFT_OR_MISSING")
+        row["semantic_snapshot_classification"]=d.get("classification") if d else None
+        row["semantic_snapshot_head_sha"]=d.get("head_sha") if d else None
+        row["semantic_source_path"]=path
+        row["semantic_source_blob_sha"]=expected_blob
+        counts[row["semantic_classification"]]+=1
+    return {"schema":"cryptoscanner-semantic-review-reconciliation-v1",
+            "main_sha":current_main_sha,"matrix_main_sha":matrix.get("main_sha"),
+            "main_matches":main_matches,"open_pr_count":len(rows),
+            "reviewed_pr_count":len(decisions),"current_validated_count":sum(r["semantic_review_valid"] for r in rows),
+            "missing_prs":missing,"no_longer_open_prs":no_longer_open,
+            "counts":dict(sorted(counts.items())),"certified":False,
+            "cleanup_authorized":False,"release_authorized":False,
+            "prs":[{"number":r["number"],"head_sha":r["head_sha"],
+                    "classification":r["semantic_classification"],
+                    "review_valid":r["semantic_review_valid"],
+                    "reason":r["semantic_review_reason"],
+                    "snapshot_classification":r["semantic_snapshot_classification"],
+                    "source_path":r["semantic_source_path"],
+                    "source_blob_sha":r["semantic_source_blob_sha"]} for r in rows]}
+
+
+def audit_gate_decision(semantic_review, consumer_graph, write_surfaces, runtime_assessment,
+                        main_sha, ledger_sha):
+    """Machine-readable bounded gate; independent runtime attestation is never inferred."""
+    blockers = []
+    total = semantic_review["open_pr_count"]
+    valid = semantic_review["current_validated_count"]
+    # A reviewed UNKNOWN is still an unresolved semantic decision. Never mistake
+    # source-identity verification for proof that a PR is integrated or deletable.
+    reviewed = semantic_review.get("prs")
+    unresolved = (sum(1 for row in reviewed if not row.get("review_valid")
+                      or row.get("classification") == "unknown")
+                  if isinstance(reviewed, list) and len(reviewed) == total
+                  else total - valid)
+    if unresolved:
+        blockers.append({"id":"PR_SEMANTICS_UNRESOLVED",
+                         "count":unresolved, "required":"Independently classify exact-head PR semantics, including source-verified UNKNOWNs"})
+    unknown = len(consumer_graph["unknowns"])
+    if unknown:
+        blockers.append({"id":"LIVE_CONSUMERS_UNRESOLVED",
+                         "count":unknown, "required":"Resolve dynamic and deployed consumer evidence before cleanup"})
+    writes = len(write_surfaces["unknown_write_destinations"])
+    if writes:
+        blockers.append({"id":"WRITE_DESTINATIONS_UNRESOLVED",
+                         "count":writes, "required":"Identify actual writer destination and runtime"})
+    if not runtime_assessment["runtime_coverage_certified"]:
+        blockers.append({"id":"EXTERNAL_RUNTIME_UNATTESTED", "count":1,
+                         "required":"Verify deployed invocations, database scheduler and gateway source independently",
+                         "snapshot_reason":runtime_assessment["reason"]})
+    blockers.append({"id":"INDEPENDENT_VERIFIER_APPROVAL_MISSING", "count":1,
+                     "required":"Role V and Role B sign off on exact current-source/runtime evidence"})
+    return {"schema":"cryptoscanner-audit-certification-gate-v1",
+            "main_sha":main_sha, "ledger_sha_read_only":ledger_sha,
+            "status":"NOT_CERTIFIED", "blockers":blockers,
+            "unresolved_pr_count":unresolved,
+            "unknown_consumer_count":unknown,
+            "unknown_write_destination_count":writes,
+            "production_mutation_authorized":False,
+            "cleanup_authorized":False}
+
+
+def assess_external_runtime_snapshot(snapshot, main_sha, now=None, max_age_seconds=3600):
+    """Classify external observations without promoting a dated snapshot to live proof."""
+    if snapshot.get("schema") != "cryptoscanner-external-runtime-audit-v1":
+        raise ValueError("Unknown external runtime snapshot schema")
+    if not re.fullmatch(r"[0-9a-f]{40}", str(main_sha)):
+        raise ValueError("Invalid current main SHA")
+    recorded_main = snapshot.get("repo_main_sha")
+    if not re.fullmatch(r"[0-9a-f]{40}", str(recorded_main)):
+        raise ValueError("Invalid snapshot main SHA")
+    try:
+        raw = snapshot["snapshot_utc"]
+        if not isinstance(raw, str) or not raw.endswith("Z"):
+            raise ValueError("UTC Z timestamp required")
+        recorded_at = datetime.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        current = now or datetime.datetime.now(datetime.timezone.utc)
+        if current.tzinfo is None:
+            raise ValueError("Current time must be timezone-aware")
+        age = (current.astimezone(datetime.timezone.utc) - recorded_at).total_seconds()
+    except (KeyError, TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("Invalid external snapshot UTC timestamp") from exc
+    if max_age_seconds <= 0:
+        raise ValueError("Invalid maximum snapshot age")
+    main_matches = recorded_main == main_sha
+    recent = 0 <= age <= max_age_seconds
+    if age < 0:
+        reason = "FUTURE_SNAPSHOT"
+    elif not main_matches:
+        reason = "MAIN_SHA_MISMATCH"
+    elif not recent:
+        reason = "STALE_SNAPSHOT"
+    else:
+        reason = "SNAPSHOT_ONLY_NO_LIVE_AUTHENTICATION"
+    return {
+        "evidence_class": "snapshot_only",
+        "reason": reason,
+        "snapshot_utc": raw,
+        "snapshot_main_sha": recorded_main,
+        "current_main_sha": main_sha,
+        "age_seconds": round(age, 3),
+        "age_limit_seconds": max_age_seconds,
+        "source_main_matches": main_matches,
+        "age_within_limit": recent,
+        "runtime_invocations_verified": False,
+        "database_scheduler_verified": False,
+        "runtime_coverage_certified": False,
+        "cleanup_authorized": False,
+    }
+
+
+def main():
+    tracked=cmd("git","ls-files")
+    if not tracked["ok"]:
+        raise RuntimeError("Unable to enumerate exact checkout tracked files: "+tracked["error"])
+    files=tracked["output"].splitlines()
+    workflows=[p for p in files if p.startswith(".github/workflows/") and p.endswith((".yml",".yaml"))]
+    pyfiles=[p for p in files if p.endswith(".py")]
+    imports=collections.defaultdict(list)
+    for f in pyfiles:
+        try:
+            tree=ast.parse(pathlib.Path(f).read_text())
+            for n in ast.walk(tree):
+                if isinstance(n,ast.ImportFrom) and n.module: imports[n.module].append(f)
+                if isinstance(n,ast.Import):
+                    for alias in n.names:imports[alias.name].append(f)
+        except (SyntaxError,UnicodeError):pass
+    workflow_inventory=[inventory_workflow_source(p,pathlib.Path(p).read_text()) for p in workflows]
+    triage=json.loads((ROOT/"audit_tools/pr_triage_20261102.json").read_text())
+    triage_by_number={p["number"]:p for p in triage["prs"]}
+    main_ref=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/git/ref/heads/main")
+    main_sha=main_ref.get("object",{}).get("sha") if isinstance(main_ref,dict) else None
+    main_blobs=remote_main_blobs(main_sha)
+    main_files=set(main_blobs)
+    main_workflows=sorted(p for p in main_files if p.startswith(".github/workflows/") and p.endswith((".yml",".yaml")))
+    # Fetch only into the ephemeral audit runner, never push or mutate a remote ref.
+    fetched=cmd("git","fetch","--no-tags","--depth=1","origin","refs/heads/main")
+    if not fetched["ok"] or not cmd("git","cat-file","-e",main_sha+"^{commit}")["ok"]:
+        raise RuntimeError("Exact remote main source unavailable: "+fetched["error"])
+    main_workflow_inventory=[]
+    for path in main_workflows:
+        blob=cmd("git","rev-parse",main_sha+":"+path)
+        source=cmd("git","show",main_sha+":"+path)
+        if not blob["ok"] or blob["output"].strip()!=main_blobs[path] or not source["ok"]:
+            raise RuntimeError("Remote main workflow source/blob mismatch: "+path)
+        main_workflow_inventory.append(inventory_workflow_source(path,source["output"]))
+    prs=gh_pages("repos/michaelrobinsonproduct-del/Cryptoscanner/pulls?state=open")
+    pr_rows=[]
+    if isinstance(prs,list):
+        for p in prs:
+            n=p["number"]
+            changed=gh_pages(f"repos/michaelrobinsonproduct-del/Cryptoscanner/pulls/{n}/files")
+            changed_files=[x["filename"] for x in changed] if isinstance(changed,list) else []
+            overlaps=[f for f in changed_files if f in main_files]
+            blob_comparisons=compare_pr_blobs(changed,main_blobs)
+            prior=triage_by_number.get(n,{})
+            same_head=prior.get("head_sha")==p["head"]["sha"]
+            classification=prior.get("classification","unknown") if (same_head or n==121) else "unknown"
+            pr_rows.append({"number":n,"title":p["title"],"head_sha":p["head"]["sha"],"head_ref":p["head"]["ref"],
+                "triage_classification":classification,"triage_snapshot_head_matches":same_head,
+                "triage_reason":prior.get("reason","No prior semantic classification"),
+                "base_sha":p["base"]["sha"],"draft":p["draft"],"mergeable":p.get("mergeable"),
+                "files":changed_files,"already_on_main_paths":overlaps,
+                "exact_main_blob_matches":[x["path"] for x in blob_comparisons if x["comparison"]=="EXACT_BLOB_EQUAL"],
+                "file_blob_comparisons":blob_comparisons,
+                "file_api_error":changed.get("error") if isinstance(changed,dict) else None,
+                "requires_semantic_review":True,"url":p["html_url"]})
+    branches=gh_pages("repos/michaelrobinsonproduct-del/Cryptoscanner/branches")
+    ledger_ref=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/git/ref/heads/paper-proof-ledger")
+    runs_response=gh("repos/michaelrobinsonproduct-del/Cryptoscanner/actions/runs?per_page=30")
+    runs=runs_response.get("workflow_runs",[]) if isinstance(runs_response,dict) else []
+    closed_prs_since_snapshot=reconcile_pr_snapshot(triage,pr_rows,main_ref.get("object",{}).get("sha")) if isinstance(prs,list) else []
+    semantic_matrix=json.loads((ROOT/"audit_tools/pr_semantic_current_20261102.json").read_text())
+    semantic_review=apply_semantic_review(semantic_matrix,pr_rows,main_sha)
+    external_runtime=json.loads((ROOT/"audit_tools/external_runtime_20261102.json").read_text())
+    runtime_snapshot_main_matches=external_runtime.get("repo_main_sha")==main_ref.get("object",{}).get("sha")
+    external_runtime_assessment=assess_external_runtime_snapshot(external_runtime,main_sha)
+    errors={"prs":prs.get("error") if isinstance(prs,dict) else None,
+            "branches":branches.get("error") if isinstance(branches,dict) else None,
+            "runs":runs_response.get("error") if isinstance(runs_response,dict) else "Invalid runs response",
+            "main_ref":main_ref.get("error") if isinstance(main_ref,dict) else "Invalid main ref",
+            "ledger_ref":ledger_ref.get("error") if isinstance(ledger_ref,dict) else "Invalid ledger ref"}
+    for p in pr_rows:
+        if p.get("file_api_error"):
+            errors["pr_files_"+str(p["number"])]=p["file_api_error"]
+    if any(errors.values()) or not isinstance(prs,list) or not isinstance(branches,list):
+        raise RuntimeError("Incomplete GitHub audit inventory: "+json.dumps(errors))
+    package=json.loads((ROOT/"package.json").read_text()) if "package.json" in files else {}
+    legacy_files=[p for p in files if p.startswith(("simple_scanner/","scanner/src/","evaluation/"))]
+    data={"created_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "checkout_sha":cmd("git","rev-parse","HEAD")["output"].strip(),
+        "main_sha":main_ref.get("object",{}).get("sha"),
+        "ledger_sha":ledger_ref.get("object",{}).get("sha"),
+        "files":files,"checkout_files":files,"main_files":sorted(main_files),
+        "main_blob_shas":main_blobs,
+        "main_workflows":sorted(p for p in main_files if p.startswith(".github/workflows/") and p.endswith((".yml",".yaml"))),
+        "workflow_inventory":workflow_inventory,"main_workflow_inventory":main_workflow_inventory,"python_imports":dict(imports),
+        "package_scripts":package.get("scripts",{}),"legacy_files":legacy_files,
+        "semantic_review_summary":{k:v for k,v in semantic_review.items() if k!="prs"},
+        "triage_snapshot_main_sha":triage.get("main_sha"),
+        "triage_snapshot_main_matches":triage.get("main_sha")==main_ref.get("object",{}).get("sha"),
+        "external_runtime_snapshot_utc":external_runtime.get("snapshot_utc"),
+        "external_runtime_snapshot_main_sha":external_runtime.get("repo_main_sha"),
+        "external_runtime_snapshot_main_matches":runtime_snapshot_main_matches,
+        "external_runtime_evidence_class":external_runtime_assessment["evidence_class"],
+        "external_runtime_evidence_reason":external_runtime_assessment["reason"],
+        "closed_prs_since_snapshot":closed_prs_since_snapshot,
+        "new_prs_since_snapshot":[p["number"] for p in pr_rows if p["triage_stale_reason"]=="NEW_PR_NOT_IN_SNAPSHOT"],
+        "open_prs":pr_rows,"branches":branches,
+        "recent_runs":[{"id":r.get("id"),"name":r.get("name"),"event":r.get("event"),"status":r.get("status"),
+          "conclusion":r.get("conclusion"),"head_sha":r.get("head_sha"),"created_at":r.get("created_at"),
+          "run_started_at":r.get("run_started_at")} for r in runs] if isinstance(runs,list) else [],
+        "api_errors":errors,
+        "run_scope":"latest 30 repository-wide GitHub Actions runs, not complete history",
+        "branch_scope":"all branches across every API page, fail-closed if incomplete"}
+    out=ROOT/"audit-evidence";out.mkdir(exist_ok=True)
+    graph=build_consumer_graph(main_workflow_inventory,external_runtime,data["checkout_sha"],data["main_sha"],workflow_source="remote_main")
+    (out/"consumer-graph.json").write_text(json.dumps(graph,indent=2,sort_keys=True)+"\n")
+    (out/"external-runtime-assessment.json").write_text(json.dumps(external_runtime_assessment,indent=2,sort_keys=True)+"\n")
+    (out/"semantic-pr-matrix.json").write_text(json.dumps(semantic_review,indent=2,sort_keys=True)+"\n")
+    write_surfaces=classify_declared_write_surfaces(main_workflow_inventory,data["main_sha"])
+    (out/"declared-write-surfaces.json").write_text(json.dumps(write_surfaces,indent=2,sort_keys=True)+"\n")
+    gate=audit_gate_decision(semantic_review,graph,write_surfaces,external_runtime_assessment,data["main_sha"],data["ledger_sha"])
+    (out/"audit-certification-gate.json").write_text(json.dumps(gate,indent=2,sort_keys=True)+"\n")
+    (out/"scanner-inventory.json").write_text(json.dumps(data,indent=2,sort_keys=True)+"\n")
+    lines=["# Scanner runtime and legacy inventory (read-only)","",
+      f"Generated UTC: {data['created_utc']}","",
+      f"Audit checkout SHA: `{data['checkout_sha']}`; remote main: `{data['main_sha']}`; remote ledger: `{data['ledger_sha']}`","",
+      f"Audit checkout files: {len(files)}; remote main files: {len(main_files)}; checkout workflows: {len(workflows)}; remote main workflows: {len(data['main_workflows'])}; open PRs: {len(pr_rows)}; branches: {len(branches)}","",
+      "## Workflow inventory","",
+      "| Workflow | Cron | Dispatch | Contents write | Ledger reference |","|---|---|---|---|---|"]
+    for w in workflow_inventory:
+        lines.append(f"| {w['path']} | {', '.join(w['schedule_cron']) or '-'} | {w['has_dispatch']} | {w['writes_contents']} | {w['ledger_ref']} |")
+    lines+=["","## All open PRs (path overlap is NOT proof of equivalent behavior)","",
+       "| PR | Head SHA | Triage | Snapshot head match | Changed files | Actual main path overlaps | Exact blob matches |","|---|---|---|---|---:|---:|---:|"]
+    for p in pr_rows:lines.append(f"| [#{p['number']}]({p['url']}) | `{p['head_sha'][:12]}` | {p['triage_classification']} | {p['triage_snapshot_head_matches']} | {len(p['files'])} | {len(p['already_on_main_paths'])} | {len(p['exact_main_blob_matches'])} |")
+    lines+=["","## Declared GitHub write surfaces (static, NOT observed writers)","",
+      f"Workflows declaring contents:write: {len(write_surfaces['surfaces'])}; unresolved destinations: {len(write_surfaces['unknown_write_destinations'])}.",
+      "See declared-write-surfaces.json; no cleanup authorization.",
+      f"Audit certification: {gate['status']}; {len(gate['blockers'])} evidence blockers; see audit-certification-gate.json.", ""]
+    lines+=["","## Current-head semantic review (provisional; fail-closed)","",
+      f"Current validated decisions: {semantic_review['current_validated_count']}/{semantic_review['open_pr_count']}; unknown includes self-changing audit head and stale decisions.",
+      "Artifact: semantic-pr-matrix.json; neither this table nor green CI authorizes cleanup or merge.",
+      "","| PR | Current disposition | Evidence status |","|---|---|---|"]
+    for p in pr_rows:lines.append(f"| #{p['number']} | {p['semantic_classification']} | {p['semantic_review_reason']} |")
+    lines+=["","## Snapshot drift / closed PR reconciliation","",
+      f"Triage snapshot main matches current main: {data['triage_snapshot_main_matches']}",
+      f"External runtime snapshot main matches current main: {data['external_runtime_snapshot_main_matches']}",
+      f"External runtime evidence: {external_runtime_assessment['evidence_class']} / {external_runtime_assessment['reason']}; age seconds {external_runtime_assessment['age_seconds']}.",
+      "External deployments, invocations and DB schedulers remain unverified; no cleanup authority.",
+      "A mismatch means historical runtime observations and PR classifications are NOT revalidated against current main.",
+      ""]
+    for p in closed_prs_since_snapshot:
+        lines.append(f"- PR #{p['number']}: {'MERGED' if p['merged'] else 'CLOSED WITHOUT MERGE'}, final head `{p['final_head_sha']}`, merge `{p['merge_commit_sha']}` (snapshot had `{p['snapshot_head_sha']}`).")
+    lines+=["","## Static consumer graph","",
+      f"Evidence-scoped edges: {len(graph['edges'])}; graph artifact: consumer-graph.json",
+      "All external runtime invocation status remains unverified; no cleanup authorization.",
+      "","## Evidence boundaries","",
+      "- This is a machine-generated source and GitHub inventory, not proof of live deployment or functional equivalence.",
+      "- PR triage is a dated human review snapshot; drifted heads revert to unknown. The audit PR's own head necessarily advances as this inventory evolves.",
+      "- Remote main path and blob comparisons use the exact SHA-bound Git tree, not the audit checkout; exact matching blobs prove only identical individual files, not whole-PR integration.",
+      "- Existing paths do not mean a PR's implementation is already merged.",
+      "- Branches, PRs and workflows are not deleted or changed by this audit.",
+      "- Runtime identification requires corroborating actual successful runs, deployment identity, and ledger history.",
+      "- PR retirement must be based on semantic diff and confirmed consumers, not filename overlap."]
+    (out/"scanner-inventory.md").write_text("\n".join(lines)+"\n")
+    print(f"INVENTORY files={len(files)} workflows={len(workflows)} prs={len(pr_rows)} branches={len(branches) if isinstance(branches,list) else 'unknown'}")
+if __name__=="__main__":main()

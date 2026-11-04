@@ -1,0 +1,239 @@
+{
+  "schema": "cryptoscanner-current-semantic-pr-review-v1",
+  "reviewed_utc": "2026-11-02T06:30:00Z",
+  "main_sha": "e3fb5ec272d74a72f19e306c1825aae1b7960576",
+  "scope": "Evidence-qualified static source review; does not prove runtime reachability, whole-PR semantic equivalence or authorize merges/cleanup.",
+  "review_status": "PROVISIONAL_NOT_CERTIFIED",
+  "prs": [
+    {
+      "number": 127,
+      "classification": "needed",
+      "release_authorized": false,
+      "cleanup_authorized": false,
+      "head_sha": "086842e1f0aa79c1af19df758121487a18ad7375",
+      "source_path": "research/marketwide_episode_diagnostics.py",
+      "source_blob_sha": "2707ad4c873f8994217461bb98d3bdcfe970171f",
+      "reason": "B-owned draft PR #127 current-head combined read-only outcome and episode evaluator integration, source blob 2707ad4c873f8994217461bb98d3bdcfe970171f. Includes B's stricter point-in-time/Decimal/provenance safeguards and E's current diagnostics per B handoff; exact-head CI #41435531860 was pending at review, not counted as passed. GET-only isolated test candidate only; no main merge, writer, scoring or production activation."
+    },
+    {
+      "number": 126,
+      "head_sha": "a361a2c7c4bfb67057b8895fe2b9ae211ef403c3",
+      "classification": "needed",
+      "source_path": "research/marketwide_paper_outcomes.py",
+      "source_blob_sha": "f4ed9e8d971d122d71a4eb51603375d1dec8e04c",
+      "reason": "B-owned PR #126 exact-head read-only PAPER evaluator/provenance gate, source blob f4ed9e8d971d122d71a4eb51603375d1dec8e04c; separate B combined PR #127 is integration candidate. Do not independently merge or activate.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 125,
+      "head_sha": "64cd42eca12e22ddb0ef6e98ea1782ce7db99c4c",
+      "classification": "needed",
+      "source_path": "research/marketwide_episode_diagnostics.py",
+      "source_blob_sha": "84273c4b526fe4d40c6deeca5ca3b20db6fd8d17",
+      "reason": "E-owned PR #125 current-head isolated first-entry/missingness/nonhit-window descriptive PAPER diagnostics, verified source blob 84273c4b526fe4d40c6deeca5ca3b20db6fd8d17; no exchange-authenticated complete history, held-out predictive lift, or scoring promotion.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 124,
+      "head_sha": "bf7a572c63d7ad6ba441157706bcddc3ca96392d",
+      "classification": "needed",
+      "source_path": "paper_pov/cadence_provenance.py",
+      "source_blob_sha": "90af6bd7118cbea8100011508d7d20ebda337cbe",
+      "reason": "D-owned PR #124 current-head read-only PAPER schedule/dispatch provenance, verified source blob 90af6bd7118cbea8100011508d7d20ebda337cbe; tests are isolated, actual native lateness and manual parity still fail acceptance. No live cron/writer change authorized.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 123,
+      "head_sha": "3e9cdf8a6166a362d733e8b39e84a36e44f97a42",
+      "classification": "needed",
+      "source_path": "coordination/workqueue.json",
+      "source_blob_sha": "6d1af833493b4b1a6eeb6b3fbc96a0898ea8580b",
+      "reason": "A-owned proposed coordination queue, not on main; issue #34 authoritative until reviewed merge.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 122,
+      "head_sha": "3e84e661ce3812114f9a5aadf7045fe6d5189d3a",
+      "classification": "needed",
+      "source_path": "research/marketwide_paper_outcomes.py",
+      "source_blob_sha": "15c8699c83c1a1f56f9694df07e64632dd183e8a",
+      "reason": "New read-only PAPER evaluator; observed windows are not distinct episodes; #125/#126 are stacked corrections; coordinate integration.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 121,
+      "head_sha": "ce774b340e217e3c0d4ee25fde639a6905046901",
+      "classification": "needed",
+      "source_path": "audit_tools/full_scanner_inventory.py",
+      "source_blob_sha": "2bf54f36ae77a621c2f58311e328b7dc6c155db7",
+      "reason": "C-owned audit instrument, not deployed on main; cannot self-certify or authorize cleanup.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 115,
+      "head_sha": "7af2fcb1948a036eb2ec0a33b2eb1825835ae741",
+      "classification": "conflicting",
+      "source_path": "paper_pov/trade_gap_recovery.py",
+      "source_blob_sha": "fd76cb27bc6c18a81ad7c4d552d7f98d64413809",
+      "reason": "Self-sealed caller-supplied raw response validates bytes but does not authenticate exchange acquisition; not equivalent to merged #120 source capture.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 80,
+      "head_sha": "43dafcda01d7e529f5947968e9aee17eeb7866f2",
+      "classification": "integrated",
+      "source_path": "paper_pov/results_report.py",
+      "source_blob_sha": "3e3e0f0507f35b5331b8665ab5059b6b8e9ff16e",
+      "reason": "Historical semantic inspection found score/UTC display on main; exact file equality and complete PR parity must still be rechecked before closure.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 74,
+      "head_sha": "29ee5fb3a8b38b3efec318cdb44efe7404d3533b",
+      "classification": "conflicting",
+      "source_path": ".github/workflows/paper-pipeline.yml",
+      "source_blob_sha": "53810d409e1d8f288eb28216dcffc9ab8a9599c8",
+      "reason": "Partially integrated segmented rollover; distinct shallow-fetch workflow change and schedule test remain; cannot blind-merge into current writer.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 71,
+      "head_sha": "a2d0c8880dcf3ea02425622e662f10309f9062de",
+      "classification": "needed",
+      "source_path": ".github/workflows/paper-pipeline.yml",
+      "source_blob_sha": "6e45163d0be9330e6ce4af4df5a7562c7f4760f1",
+      "reason": "Failure-report module reportedly present on main but workflow failure-posting step differs; requires safe behavior/permissions review.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 64,
+      "head_sha": "9c6a78f8c05be687cdedc262f84da0d9cc0bc5b3",
+      "classification": "conflicting",
+      "source_path": "paper_pov/live_storage_migration_probe.py",
+      "source_blob_sha": "b428f8071b825f04e06fc012081f5c1e094b96d1",
+      "reason": "Probes raw paper-ledger.json rather than canonical segmented manifest+replay; cannot attest current generation lossless migration.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 61,
+      "head_sha": "9e10992ea3a87a4fb3316993ae1d11482c6ddc29",
+      "classification": "conflicting",
+      "source_path": "paper_pov/manual_trigger.py",
+      "source_blob_sha": "7507f52de3121feb38c4cea4a430af13857017fb",
+      "reason": "Owner-authenticated unconditional dispatch bypasses main cadence controller slot/spacing/CAS gates; do not activate as-is.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 40,
+      "head_sha": "9c66e45b2a7d674e60fc47c761d44788f9bb15c5",
+      "classification": "conflicting",
+      "source_path": "paper_eval/audit.py",
+      "source_blob_sha": "9c4a659e4be6b7886c03ba1fe50ea34d0143e0c4",
+      "reason": "Exact PR #40 head 9c66e45b2a7d674e60fc47c761d44788f9bb15c5: .github/workflows/paper-forward-audit.yml reads only git show ${LEDGER_COMMIT}:paper-ledger.json and paper_eval/audit.py verifies that raw object. Current sealed ledger ref 690540dee528da64018227dfbbba304312da885d also contains paper-segment-manifest.json and paper-segments; PR #40 never verifies or replays those segments. This is a materially different raw-only evidence contract from PR #122 segmented full-market evaluator; do not merge/retire without adapter and parity proof.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 39,
+      "head_sha": "df63a94ff67dac282643df17d3347fdfcc335b24",
+      "classification": "conflicting",
+      "source_path": "paper_verifier/contracts.py",
+      "source_blob_sha": "865acb906d21e161da2842bb83d18d5307e0fa5e",
+      "reason": "Prediction-list hash-chain schema is not canonical PAPER dict ledger schema; adapter/equivalence proof absent.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 33,
+      "head_sha": "3a58194ec9c11649111f29450c5e28e3585c0068",
+      "classification": "conflicting",
+      "source_path": ".github/workflows/kraken-simple.yml",
+      "source_blob_sha": "627719697f7a20758b420fd07b8fc4f31b4ed99d",
+      "reason": "Exact PR #33 head 3a58194... .github/workflows/kraken-simple.yml blob 62771969... declares contents:write, workflow_dispatch, and pushes to refs/heads/simple-history after restoring SQLite. This is an additional possible manual legacy writer, distinct from canonical PAPER writer and recovery scheduled workflow. Do not merge/dispatch or delete until runtime and single-writer reconciliation; isolated source/tests only.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 27,
+      "head_sha": "a285459b492b4c5f05166e84db87d49bf0f9a679",
+      "classification": "needed",
+      "source_path": "simple_scanner/real_history_replay.py",
+      "reason": "Exact PR #27 source blob 71bad5e4486699c5aed496d1c0460b24ff3edbe4 provides isolated SQLite mode=ro historical identity/eligibility replay requiring operator-supplied verified Kraken AssetPairs provenance, checks SQLite integrity and abstains on missing identity. Useful read-only legacy evidence tool only, not canonical marketwide training history, no proof of actual backup access or deployed consumer parity; do not merge/activate/delete on this classification.",
+      "release_authorized": false,
+      "cleanup_authorized": false,
+      "source_blob_sha": "71bad5e4486699c5aed496d1c0460b24ff3edbe4"
+    },
+    {
+      "number": 11,
+      "head_sha": "3b12e19b6ad686ee473d0e5114db5137ec7ffb2c",
+      "classification": "conflicting",
+      "source_path": "simple_scanner/daemon.py",
+      "source_blob_sha": "7f1da71aff044a1b771ef7e2440829b7a737eabf",
+      "reason": "Exact PR #11 source blob 7f1da71aff044a1b771ef7e2440829b7a737eabf defines a separate Railway single-process 15-minute scheduler plus GitHub manual request polling, invokes simple_scanner.execute_once, and explicitly requires one replica and cron disabled. This conflicts with the canonical GitHub PAPER native/manual execution path; not proven deployed, do not merge/activate or retire consumers without live attestation.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 10,
+      "head_sha": "6fa12655e7b88b3c8bda11287035edd756944195",
+      "classification": "conflicting",
+      "source_path": "simple_scanner/promotion_gate.py",
+      "source_blob_sha": "828bf9529de7af298b8c40b1c8d03d6c2e394e59",
+      "reason": "Exact PR #10 source blob 828bf9529de7af298b8c40b1c8d03d6c2e394e59 is pure DECISION_ONLY with no I/O, but hard-codes 1/3/6/24h, >=40 cohorts and 0.10pp delta, unlike current 1/6/24/48h outcome and independent holdout requirements. Not a production promotion gate or proof of model lift; retain as isolated reference, do not wire into scoring or delete legacy consumers.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 7,
+      "head_sha": "940a4af9d976fb271c7534ad3e3e9eae33c376cf",
+      "classification": "conflicting",
+      "source_path": "simple_scanner/scan.py",
+      "source_blob_sha": "25539447cb9fb2b1d83dcc04fcc595e5fd9e38af",
+      "reason": "Exact PR #7 head 940a4af9d976fb271c7534ad3e3e9eae33c376cf and source blob 25539447cb9fb2b1d83dcc04fcc595e5fd9e38af independently match Contents/PR-files. Its simple_scanner recovery execution is distinct from main's canonical PAPER writer; main branch-pinned recovery workflow references the separate simple-history branch. This is a competing execution/control path, not an integrated PAPER scanner. Source identity resolved; live invocation/consumers remain unknown, so no deployment, dispatch or legacy deletion.",
+      "release_authorized": false,
+      "cleanup_authorized": false
+    },
+    {
+      "number": 6,
+      "head_sha": "ecdf788a33c5cf0d2fd1e7c42a8215738c635dc8",
+      "classification": "conflicting",
+      "source_path": "evaluation/report-integrity-guard.mjs",
+      "reason": "Exact PR #6 source blob f5ac90ee0a5d4ed9151c34e0edb1539d8f6b5a5d is a pure JS reconcileScanEvidence guard (no I/O), checks run ID, report timestamps, durable coverage and persistence_verified, but defaults to 15-minute age and has no canonical segmented PAPER manifest, source SHA, exchange-event timestamp or ledger remote-byte proof. It is not equivalent to current <=10-minute exchange freshness and SHA-sealed PAPER contract. Keep isolated for research; no production wiring, closure or legacy deletion without consumer/parity evidence.",
+      "release_authorized": false,
+      "cleanup_authorized": false,
+      "source_blob_sha": "f5ac90ee0a5d4ed9151c34e0edb1539d8f6b5a5d"
+    },
+    {
+      "number": 4,
+      "head_sha": "7284645c1dbeb21c67fb07dc23200770500475d3",
+      "classification": "conflicting",
+      "source_path": "production-recovery/market-evidence.ts",
+      "reason": "Exact PR #4 head 7284645c... source-bound evaluation/measure-forward.ts blob 637c33d... uses CHALLENGER_SUPABASE_SERVICE_KEY and PATCH to challenger_forward_outcomes; evaluation/shadow-cycle.ts blob 09a6e90... uses credential-backed POST to challenger_observations. Workflow challenger-outcomes.yml schedules and injects service key under contents:read. This is an external write surface, not read-only integration or PAPER equivalence; production activation blocked pending credential and consumer attestation. No deletion authorized.",
+      "release_authorized": false,
+      "cleanup_authorized": false,
+      "source_blob_sha": "359340e3bd302e2bf69c2d65ee8cf4dde6d06ed3"
+    },
+    {
+      "number": 3,
+      "head_sha": "719437c5b93abc8a9b6ea856554cdc8980c2f302",
+      "classification": "conflicting",
+      "source_path": "evaluation/early-mover-evaluation.mjs",
+      "reason": "Exact PR #3 source af0978f88050fa6ee2c96728710d495f7a7ee303 is a shadow-only JS evaluator for 24/48/72h and +20/+50/+100/+500%, with signal reference-price matching but no continuous quote-gap, 1/6h, segmented PAPER ledger or exchange-authenticated as-of feature contract. Not equivalent to the canonical 1/6/24/48h full-market evaluator; preserve as isolated research reference, do not merge/activate/delete without independent parity and consumer review.",
+      "release_authorized": false,
+      "cleanup_authorized": false,
+      "source_blob_sha": "af0978f88050fa6ee2c96728710d495f7a7ee303"
+    }
+  ]
+}
