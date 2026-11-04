@@ -35,6 +35,11 @@ export function attachShadowEvaluation(cycle:any,evidence:ShadowEvidence|null,ou
   observed_hits:candidates.filter((c:any)=>c.status==="SCORED"&&c.outcome_label==="HIT").length,
   observed_misses:candidates.filter((c:any)=>c.status==="SCORED"&&c.outcome_label==="MISS").length,
   source_gap_abstentions:candidates.filter((c:any)=>c.reason==="source_outcome_gap").length,
-  source_qualified:!!evidence?.qualified};
+  source_qualified:!!evidence?.qualified,
+  // Historical rows are not current-scan hits; report their independent
+  // source-qualified counts without inflating matched-candidate coverage.
+  historical_outcome_rows:outcomes.length,
+  historical_labeled_rows:outcomes.filter(o=>o.label==="HIT"||o.label==="MISS").length,
+  historical_gap_rows:outcomes.filter(o=>o.label==="ABSTAIN").length};
  return {...cycle,shadow_evaluation:{evidence_version:evidence?.version??null,production_promoted:false,coverage,candidates}};
 }
