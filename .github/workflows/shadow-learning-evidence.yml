@@ -47,6 +47,35 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Download receipt-bound A2 full-universe evidence from verified run
+        uses: actions/download-artifact@v4
+        with:
+          name: e-real-a2-historical-preselection
+          run-id: 41835380964
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: downloaded-e-a2
+      - name: Consume real A2 frozen identities through E1 input gate
+        working-directory: workspace
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from paper_pov.historical_e1_b_pipeline import bind_a2_projection
+          path = Path('../downloaded-e-a2/a2-historical-evidence.json')
+          p = json.loads(path.read_text())
+          b = bind_a2_projection(p, p['e1_watch_predictions'])
+          assert b['preselection_observation_count'] == p['frozen_observation_count']
+          assert b['unobserved_nonwatch_count'] == p['nonwatch_without_outcomes']
+          assert not b['unbiased_learning_qualified']
+          print('REAL_A2_INPUT_GATE', json.dumps({
+              'receipt_sha256': b['a_receipt_sha256'],
+              'frozen_observations': b['preselection_observation_count'],
+              'watch_predictions': b['watch_outcome_input_count'],
+              'unobserved_nonwatch': b['unobserved_nonwatch_count'],
+              'qualified_trade_outcomes': 0,
+              'source_authenticated': False}, sort_keys=True))
+          PY
       - name: Exercise E1 pinned trade CSV through E handoff and B's real consumer
         working-directory: workspace
         run: |
