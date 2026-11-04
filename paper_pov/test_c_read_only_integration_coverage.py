@@ -59,6 +59,11 @@ class C2CoverageContract(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     combine(p, r, s)
 
+    def test_valid_utc_offset_source_timestamp(self):
+        p, r, s = evidence()
+        s["as_of"] = "2026-11-03T00:00:00+00:00"
+        self.assertEqual(combine(p, r, s)["a2_as_of"], s["as_of"])
+
     def test_invalid_source_timestamps_abstain(self):
         for timestamp in ("tomorrow", "2026-99-03T00:00:00Z",
                           "2026-11-03T00:00:00+02:00",
