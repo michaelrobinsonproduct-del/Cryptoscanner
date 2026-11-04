@@ -38,6 +38,36 @@ class DeliveryProjectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "inconsistent"):
             project_delivery(transport)
 
+    def test_d_writer_recovery_reconciliation_is_separate_historical_cohort(self):
+        base = {**BASE, "sealed": False, "artifact_status": "CHECKSUM_VERIFIED_LEGACY_NO_RECEIPT", "scoreboard": {}}
+        recovery = {"status": "WRITER_CHECKSUM_ONLY", "remote_downloaded": True,
+                    "ledger_writer_invoked": False, "production_applied": False,
+                    "independently_authenticated": False, "run_id": "456", "source_sha": "b"*40,
+                    "persisted_paper": {"ledger_generation": 7, "scan_status": "ABSTAIN_STALE",
+                                        "live_replay_performed": False},
+                    "remote_ledger_reconciliation": {"status": "UNAVAILABLE",
+                        "reason": "REMOTE_LEDGER_QUERY_FAILED",
+                        "independently_authenticated": False, "production_applied": False}}
+        result = project_delivery(base, recovery)
+        self.assertEqual(result["writer_reconciliation_status"], "UNAVAILABLE")
+        self.assertEqual(result["writer_recovery"]["ledger_generation"], 7)
+        self.assertEqual(result["writer_recovery"]["source_run_id"], 456)
+        self.assertFalse(result["writer_recovery"]["same_scan_as_delivery"])
+        self.assertEqual(result["live_watch"], [])
+        for status, remote in (("MATCH", "c"*64), ("DIVERGED", "d"*64)):
+            with self.subTest(status=status):
+                recovery["remote_ledger_reconciliation"] = {
+                    "status": status, "recovered_sha256": "c"*64, "remote_sha256": remote,
+                    "independently_authenticated": False, "production_applied": False}
+                self.assertEqual(project_delivery(base, recovery)["writer_reconciliation_status"], status)
+        recovery["remote_ledger_reconciliation"]["status"] = "MATCH"
+        with self.assertRaisesRegex(ValueError, "digest contradiction"):
+            project_delivery(base, recovery)
+        recovery["remote_ledger_reconciliation"] = None
+        recovery["production_applied"] = True
+        with self.assertRaisesRegex(ValueError, "not read-only"):
+            project_delivery(base, recovery)
+
     def test_untrusted_promotion_and_run_provenance_rejected(self):
         valid = {**BASE, "sealed": False,
                  "artifact_status": "CHECKSUM_VERIFIED_LEGACY_NO_RECEIPT", "scoreboard": {}}
