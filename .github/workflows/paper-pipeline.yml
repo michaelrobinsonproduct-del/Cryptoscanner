@@ -126,7 +126,21 @@ jobs:
             --scoreboard paper_pov/output/scoreboard.json
           echo "PAPER_LEDGER_SCOREBOARD $(cat paper_pov/output/scoreboard.json)"
           cp /tmp/paper-ledger-next.json paper_pov/output/ledger.json
-          (cd paper_pov/output && sha256sum latest.json scoreboard.json ledger.json > SHA256SUMS)
+          # Persist the recovered/normal slot alongside downloadable scan evidence.
+          # This is a receipt, not a backdated market observation.
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("paper_pov/output/slot_receipt.json")
+          p.write_text(json.dumps({
+            "schema": 1,
+            "slot_identity": Path("/tmp/paper-slot-identity.txt").read_text().strip(),
+            "source_sha": __import__("os").environ["GITHUB_SHA"],
+            "run_id": __import__("os").environ["GITHUB_RUN_ID"],
+            "historical_quotes_reconstructed": False,
+          }, sort_keys=True) + "\\n")
+          PY
+          (cd paper_pov/output && sha256sum latest.json scoreboard.json ledger.json slot_receipt.json > SHA256SUMS)
           cp paper_pov/output/scoreboard.json /tmp/paper-scoreboard.json
       - name: Cross-run nonregression and provenance acceptance
         run: |
@@ -159,6 +173,7 @@ jobs:
             paper_pov/output/ledger.json
             paper_pov/output/scoreboard.json
             paper_pov/output/SHA256SUMS
+            paper_pov/output/slot_receipt.json
           retention-days: 90
           if-no-files-found: error
       - name: Non-force, single-writer ledger push and remote readback
