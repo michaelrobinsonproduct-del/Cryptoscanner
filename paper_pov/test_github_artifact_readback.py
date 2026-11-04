@@ -215,6 +215,8 @@ def test_packed_single_writer_remote_reconciliation_real_storage_layout():
     def github(args, timeout):
         calls.append(args)
         endpoint = args[4]
+        if "/git/ref/heads/paper-proof-ledger" in endpoint:
+            return json.dumps({"object": {"sha": "e" * 40}}).encode()
         if "paper_pov/output/ledger.json" in endpoint:
             raise subprocess.CalledProcessError(1, args, output=b"Not Found")
         data = json.dumps(manifest).encode() if repo_storage.MANIFEST in endpoint else blob
@@ -226,7 +228,8 @@ def test_packed_single_writer_remote_reconciliation_real_storage_layout():
     assert report["remote_generation"] == 0
     assert report["remote_sha256"] == report["recovered_sha256"]
     assert report["independently_authenticated"] is False
-    assert len(calls) == 3
+    assert len(calls) == 4
+    assert report["remote_checkpoint_sha"] == "e" * 40
     assert report["remote_path"] == repo_storage.SNAPSHOT
 
 
@@ -242,6 +245,8 @@ def test_packed_branch_corrupt_snapshot_does_not_claim_match():
                          "snapshot_sha256": "c" * 64}, "segments": []}
     def github(args, timeout):
         endpoint = args[4]
+        if "/git/ref/heads/paper-proof-ledger" in endpoint:
+            return json.dumps({"object": {"sha": "e" * 40}}).encode()
         if "paper_pov/output/ledger.json" in endpoint:
             raise subprocess.CalledProcessError(1, args, output=b"Not Found")
         raw = json.dumps(manifest).encode() if layout.MANIFEST in endpoint else b"tampered snapshot"
@@ -324,6 +329,8 @@ def test_packed_remote_large_snapshot_uses_sha_bound_git_blob():
     calls = []
     def github(args, timeout):
         endpoint = args[4]
+        if "/git/ref/heads/paper-proof-ledger" in endpoint:
+            return json.dumps({"object": {"sha": "e" * 40}}).encode()
         calls.append(endpoint)
         if "paper_pov/output/ledger.json" in endpoint:
             raise subprocess.CalledProcessError(1, args)
@@ -348,6 +355,8 @@ def test_packed_remote_blob_identity_mismatch_abstains():
     from paper_pov.github_artifact_readback import reconcile_remote_ledger
     def github(args, timeout):
         endpoint = args[4]
+        if "/git/ref/heads/paper-proof-ledger" in endpoint:
+            return json.dumps({"object": {"sha": "e" * 40}}).encode()
         if "paper_pov/output/ledger.json" in endpoint:
             raise subprocess.CalledProcessError(1, args)
         if "/git/blobs/" in endpoint:
