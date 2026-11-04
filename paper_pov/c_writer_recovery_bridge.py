@@ -34,7 +34,7 @@ def bridge(integration, readback, *, restored_latest=None):
         # fabricate parity with the historical A2 candidate cohort.
         if restored_latest.get("production_applied") is True or restored_latest.get("trading_approved") is True:
             raise ValueError("Restored writer report claims trading/production")
-    return {
+    result = {
         "schema": "c_d_recovered_writer_bridge_v1",
         "status": "READ_ONLY_COHORTS_CONNECTED_NOT_LIVE",
         "historical_a2": replay,
@@ -51,6 +51,7 @@ def bridge(integration, readback, *, restored_latest=None):
         "trading_approved": False,
         "production_applied": False,
     }
+    return result
 
 
 def main():
@@ -59,6 +60,7 @@ def main():
     parser.add_argument("--readback", type=Path, required=True)
     parser.add_argument("--restored-latest", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--bd-output", type=Path, help="Write B/D replay payload alongside recovered writer provenance")
     args = parser.parse_args()
     result = bridge(
         json.loads(args.integration.read_text()),
@@ -67,6 +69,9 @@ def main():
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, sort_keys=True) + "\n")
+    if args.bd_output:
+        args.bd_output.parent.mkdir(parents=True, exist_ok=True)
+        args.bd_output.write_text(json.dumps(result["historical_a2"], sort_keys=True) + "\n")
     print(json.dumps({"status": result["status"], "historical_watch": result["historical_a2"]["watch_count"], "writer_run": result["writer_recovery"]["run_id"]}, sort_keys=True))
 
 
