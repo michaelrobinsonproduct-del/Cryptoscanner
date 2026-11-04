@@ -66,7 +66,10 @@ jobs:
                   continue
               raw=subprocess.check_output(["gh","api",f"repos/{os.environ['REPO']}/actions/runs/{run['id']}/artifacts"],timeout=30)
               artifacts=json.loads(raw).get("artifacts",[])
-              matches=[a for a in artifacts if a.get("name")==f"public-paper-results-{run['id']}" and a.get("expired") is False\n                       and str(a.get("digest","")).startswith("sha256:")\n                       and a.get("workflow_run",{}).get("id")==run["id"]\n                       and a.get("workflow_run",{}).get("head_sha")==run["head_sha"]]
+              matches=[a for a in artifacts if a.get("name")==f"public-paper-results-{run['id']}" and a.get("expired") is False
+                       and str(a.get("digest","")).startswith("sha256:")
+                       and a.get("workflow_run",{}).get("id")==run["id"]
+                       and a.get("workflow_run",{}).get("head_sha")==run["head_sha"]]
               if len(matches)!=1:
                   continue
               Path("/tmp/b-delivery/identity.json").write_text(json.dumps({"run_id":str(run["id"]),"source_sha":run["head_sha"],"event":run["event"],"artifact_id":matches[0]["id"],"artifact_digest":matches[0]["digest"]}))
