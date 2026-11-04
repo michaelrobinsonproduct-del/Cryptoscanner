@@ -23,7 +23,7 @@ class SnapshotTests(unittest.TestCase):
     def candidate(self):
         pair = "TESTUSD"
         return {"pair": pair, "symbol": "TEST/USD", "rank": 1, "status": "PAPER_WATCH", "buy_approved": False,
-                "as_of": STAMP, "quote_observed_at": STAMP,
+                "as_of": STAMP, "quote_observed_at": STAMP, "ohlc_last_closed_at": STAMP,
                 "quote_timestamp_semantics": "client_observed_not_exchange_event_time",
                 "prediction_id": hashlib.sha256(("paper-v1|" + STAMP + "|" + pair).encode()).hexdigest(),
                 "price": 1.5, "move15_pct": 2.0, "volume_accel": 1.4,
@@ -89,6 +89,28 @@ class SnapshotTests(unittest.TestCase):
         self.seal()
         with self.assertRaisesRegex(ValueError, "invalid paper candidate contract"):
             read_snapshot(self.latest, NOW)
+
+    def test_stablecoin_watch_rejected_at_persisted_boundary(self):
+        self.report["watch"][0]["symbol"] = "USDT/USD"
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "stablecoin WATCH"):
+            read_snapshot(self.latest, NOW)
+
+    def test_completed_ohlc_must_be_fresh_at_scan_and_readback(self):
+        for closed, now, message in (
+            (None, NOW, "missing completed OHLC"),
+            ("2026-11-03T16:49:00+00:00", NOW, "stale completed OHLC"),
+            ("2026-11-03T16:50:30+00:00", NOW, "expired completed OHLC"),
+            ("2026-11-03T17:00:45+00:00", NOW, "stale completed OHLC"),
+        ):
+            with self.subTest(closed=closed):
+                self.report["watch"][0]["ohlc_last_closed_at"] = closed
+                self.seal()
+                with self.assertRaisesRegex(ValueError, message):
+                    read_snapshot(self.latest, now)
+        self.report["watch"][0]["ohlc_last_closed_at"] = STAMP
+        self.seal()
+        self.assertEqual(len(read_snapshot(self.latest, NOW)["watch"]), 1)
 
     def test_zero_watch_abstention_readback(self):
         self.report.update(watch=[], scan_status="ABSTAIN_NO_QUALIFIED_OHLC")
