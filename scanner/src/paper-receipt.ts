@@ -20,6 +20,35 @@ export function parsePaperReceipt(value:unknown,now:Date):PaperReceipt{
  }
  return {status:"VERIFIED_RECEIPT",watch:x.watch as unknown[],scan_status:String(x.scan_status),as_of:x.as_of,watch_count:x.watch.length,observed_markets:Number(x.observed_markets),eligible_pairs:rejections?Number(x.eligible_pairs):null,ticker_rejections:rejections,ohlc_screened:Number(x.ohlc_screened),abstention_count:x.abstentions.length,source:"paper_pov",buy_approved:false};
 }
+
+/** A transport bundle carries the exact immutable receipt bytes plus the two
+ * existing scanner projections. Hashing the raw bytes prevents a JSON re-encode
+ * from silently changing the receipt identity. This authenticates internal
+ * consistency, not the identity of an untrusted remote publisher. */
+export async function parseSealedPaperBundle(value:unknown,now:Date):Promise<PaperReceipt>{
+ if(!value||typeof value!=="object"||Array.isArray(value))throw Error("invalid_paper_bundle");
+ const bundle=value as Record<string,unknown>;
+ if(bundle.schema!=="paper_sealed_bundle_v1"||typeof bundle.receipt_json!=="string"||bundle.receipt_json.length>1000000)throw Error("invalid_paper_bundle_schema");
+ const bytes=new TextEncoder().encode(bundle.receipt_json);
+ const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))).map(x=>x.toString(16).padStart(2,"0")).join("");
+ const watch=bundle.candidate_snapshot as Record<string,unknown>|undefined;
+ const universe=bundle.preselection_universe as Record<string,unknown>|undefined;
+ if(!watch||!universe||watch.receipt_sha256!==hash||universe.receipt_sha256!==hash)throw Error("paper_bundle_receipt_mismatch");
+ const raw=JSON.parse(bundle.receipt_json) as Record<string,unknown>;
+ const verified=parsePaperReceipt(raw,now);
+ if(watch.as_of!==raw.as_of||universe.as_of!==raw.as_of||
+    watch.scan_status!==raw.scan_status||
+    JSON.stringify(watch.watch)!==JSON.stringify(raw.watch)||
+    JSON.stringify(universe.markets)!==JSON.stringify(raw.preselection_universe)||
+    JSON.stringify(universe.selection_decisions)!==JSON.stringify(raw.preselection_decisions)||
+    universe.future_outcomes_authenticated!==false||universe.qualified_for_learning!==false||
+    universe.production_applied!==false)throw Error("paper_bundle_projection_mismatch");
+ if(!Array.isArray(universe.markets)||universe.markets.length!==raw.observed_markets||
+    !Array.isArray(raw.preselection_universe)||!raw.preselection_decisions||
+    !Array.isArray(watch.watch)||watch.watch.length!==verified.watch_count)throw Error("paper_bundle_coverage_mismatch");
+ return {...verified,preselection:universe.markets,receipt_sha256:hash};
+}
+
 export const unavailablePaperReceipt=(reason:string):PaperReceipt=>({status:"UNAVAILABLE",scan_status:null,as_of:null,watch_count:null,observed_markets:null,eligible_pairs:null,ticker_rejections:null,ohlc_screened:null,abstention_count:null,source:"paper_pov",buy_approved:false,reason});
 export function createPaperReceiptReader(url:string|undefined,now:()=>Date,fetcher:typeof fetch=fetch):()=>Promise<PaperReceipt>{
  return async()=>{
@@ -30,6 +59,6 @@ export function createPaperReceiptReader(url:string|undefined,now:()=>Date,fetch
   if(!response.ok)throw Error("paper_receipt_http_"+response.status);
   const body=await response.text();
   if(body.length>1000000)throw Error("paper_receipt_oversized");
-  return parsePaperReceipt(JSON.parse(body),now());
+  return parseSealedPaperBundle(JSON.parse(body),now());
  };
 }
