@@ -1,5 +1,5 @@
 /** Read-only bridge to Owner A's persisted PAPER_ONLY receipt. Never writes or re-scores. */
-export type PaperReceipt={status:"VERIFIED_RECEIPT"|"UNAVAILABLE";scan_status:string|null;as_of:string|null;watch_count:number|null;observed_markets:number|null;eligible_pairs:number|null;ticker_rejections:Record<string,number>|null;ohlc_screened:number|null;abstention_count:number|null;source:"paper_pov";buy_approved:false;reason?:string};
+export type PaperReceipt={status:"VERIFIED_RECEIPT"|"UNAVAILABLE";scan_status:string|null;as_of:string|null;watch_count:number|null;observed_markets:number|null;eligible_pairs:number|null;ticker_rejections:Record<string,number>|null;ohlc_screened:number|null;abstention_count:number|null;source:"paper_pov";buy_approved:false;watch?:unknown[];preselection?:unknown[];receipt_sha256?:string;reason?:string};
 const statuses=new Set(["WATCH","ABSTAIN_NO_LIQUID_CANDIDATES","ABSTAIN_NO_QUALIFIED_OHLC"]);
 const count=(v:unknown)=>Number.isSafeInteger(v)&&Number(v)>=0;
 export function parsePaperReceipt(value:unknown,now:Date):PaperReceipt{
@@ -18,7 +18,7 @@ export function parsePaperReceipt(value:unknown,now:Date):PaperReceipt{
   if(Object.keys(r).length!==categories.length||categories.some(k=>!count(r[k]))||Number(x.observed_markets)+categories.reduce((sum,k)=>sum+Number(r[k]),0)!==Number(x.eligible_pairs))throw Error("inconsistent_ticker_coverage");
   rejections=Object.fromEntries(categories.map(k=>[k,Number(r[k])]));
  }
- return {status:"VERIFIED_RECEIPT",scan_status:String(x.scan_status),as_of:x.as_of,watch_count:x.watch.length,observed_markets:Number(x.observed_markets),eligible_pairs:rejections?Number(x.eligible_pairs):null,ticker_rejections:rejections,ohlc_screened:Number(x.ohlc_screened),abstention_count:x.abstentions.length,source:"paper_pov",buy_approved:false};
+ return {status:"VERIFIED_RECEIPT",watch:x.watch as unknown[],scan_status:String(x.scan_status),as_of:x.as_of,watch_count:x.watch.length,observed_markets:Number(x.observed_markets),eligible_pairs:rejections?Number(x.eligible_pairs):null,ticker_rejections:rejections,ohlc_screened:Number(x.ohlc_screened),abstention_count:x.abstentions.length,source:"paper_pov",buy_approved:false};
 }
 export const unavailablePaperReceipt=(reason:string):PaperReceipt=>({status:"UNAVAILABLE",scan_status:null,as_of:null,watch_count:null,observed_markets:null,eligible_pairs:null,ticker_rejections:null,ohlc_screened:null,abstention_count:null,source:"paper_pov",buy_approved:false,reason});
 export function createPaperReceiptReader(url:string|undefined,now:()=>Date,fetcher:typeof fetch=fetch):()=>Promise<PaperReceipt>{
