@@ -1,0 +1,60 @@
+"""Read-only B/D consumer of C's authenticated A2 candidate handoff.
+
+A historical candidate artifact is useful for replay, never a live signal.
+"""
+import argparse
+import json
+import re
+from pathlib import Path
+
+
+def consume(payload):
+    if not isinstance(payload, dict) or payload.get("schema") != "c_a2_read_only_candidates_v1":
+        raise ValueError("unsupported C candidate contract")
+    if payload.get("production_applied") is not False or payload.get("trading_approved") is not False or payload.get("live_watch_certified") is not False:
+        raise ValueError("unsafe C candidate certification")
+    if payload.get("status") != "ABSTAIN_LEGACY_QUOTE_EVIDENCE" or payload.get("freshness_status") != "HISTORICAL_ARTIFACT_NOT_LIVE":
+        raise ValueError("historical freshness abstention missing")
+    if payload.get("quote_timestamp_semantics") != "client_observed_not_exchange_event_time":
+        raise ValueError("unqualified exchange timestamp")
+    digest = payload.get("receipt_sha256")
+    if not isinstance(digest, str) or not re.fullmatch(r"[a-f0-9]{64}", digest):
+        raise ValueError("missing authenticated receipt identity")
+    watch = payload.get("watch")
+    count = payload.get("watch_count")
+    if not isinstance(watch, list) or not watch or type(count) is not int or count != len(watch):
+        raise ValueError("candidate count mismatch")
+    eligible, observed = payload.get("eligible_pairs"), payload.get("observed_markets")
+    if any(type(x) is not int or x < 0 for x in (eligible, observed)) or not count <= observed <= eligible:
+        raise ValueError("invalid source coverage")
+    if not isinstance(payload.get("source_as_of"), str) or not payload["source_as_of"]:
+        raise ValueError("missing source time")
+    if payload.get("source_cohort") != "authenticated_snapshot_distinct_from_historical_manual_scheduled":
+        raise ValueError("invalid source cohort")
+    if any(not isinstance(x, dict) for x in watch):
+        raise ValueError("invalid candidate item")
+    return {
+        "schema": "bd_read_only_watch_handoff_v1",
+        "status": "WATCH_REPLAY_ONLY_NOT_LIVE",
+        "receipt_sha256": digest,
+        "source_as_of": payload["source_as_of"],
+        "watch_count": count,
+        "watch": watch,
+        "live_watch_certified": False,
+        "production_applied": False,
+        "trading_approved": False,
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("candidates", type=Path)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    result = consume(json.loads(args.candidates.read_text()))
+    args.output.write_text(json.dumps(result, sort_keys=True) + "\\n")
+    print(json.dumps({"status": result["status"], "watch_count": result["watch_count"], "receipt_sha256": result["receipt_sha256"]}, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()
