@@ -98,7 +98,7 @@ def test_real_writer_checksum_only_restores_without_independent_manifest(tmp_pat
     """Recover real-layout single-writer bytes while explicitly refusing independent-auth claim."""
     from pathlib import Path
     import hashlib
-    receipts = {"paper_pov/output/latest.json": b'{"status":"WATCH"}',
+    receipts = {"paper_pov/output/latest.json": b'{"status":"ABSTAIN_LEGACY_QUOTE_EVIDENCE"}',
                 "paper_pov/output/ledger.json": b'{"generation":3}',
                 "paper_pov/output/scoreboard.json": b'{"actual_scans":3,"generation":3}'}
     sums = "".join(hashlib.sha256(value).hexdigest() + "  " + name.rsplit("/", 1)[-1] + "\n"
