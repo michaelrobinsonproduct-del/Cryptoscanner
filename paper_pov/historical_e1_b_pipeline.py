@@ -118,6 +118,15 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
     if not isinstance(partitions, dict):
         raise ValueError("Missing explicit partition map")
     pairs = {row["pair"] for row in rows}
+    # A partition is a market-specific source. Reusing one file for two
+    # frozen pairs would create counterfeit cross-market coverage.
+    if any(pair not in pairs for pair in partitions):
+        raise ValueError("Partition map includes a market outside frozen A2 cohort")
+    paths = [str(value) for value in partitions.values()]
+    if any(not isinstance(value, str) or not value for value in partitions.values()):
+        raise ValueError("Invalid pinned partition path")
+    if len(set(paths)) != len(paths):
+        raise ValueError("Pinned trade partition reused across A2 markets")
     bars = {}
     provenance = {}
     for pair in sorted(pairs):
