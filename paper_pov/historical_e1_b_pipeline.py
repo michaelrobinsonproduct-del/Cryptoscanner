@@ -95,7 +95,7 @@ def bind_a2_projection(projection, predictions):
             "a_receipt_sha256": receipt, "unbiased_learning_qualified": False}
 
 
-def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partitions):
+def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partitions, *, observed_until):
     """Read-only, checksum-gated overlap inventory for the FULL frozen A2 cohort.
 
     This never calls a trade hit a qualified learning label. It exposes exactly
@@ -110,6 +110,7 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
     from .shadow_learning_evidence import utc_time
     from datetime import timedelta
     from bisect import bisect_left
+    cutoff = utc_time(observed_until)
     if not isinstance(partitions, dict):
         raise ValueError("Missing explicit partition map")
     pairs = {row["pair"] for row in rows}
@@ -135,6 +136,7 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
     # Horizon coverage is diagnostic only. Sparse bars cannot prove a complete
     # price path, and an observed bar cannot authenticate executable liquidity.
     horizon_counts = {str(h): {"NO_PINNED_PARTITION": 0,
+                               "ABSTAIN_IMMATURE": 0,
                                "INCOMPLETE_5M_PATH": 0,
                                "COMPLETE_BAR_PATH_UNQUALIFIED": 0}
                       for h in (1, 6, 24, 48)}
@@ -160,6 +162,8 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
         for hours in (1, 6, 24, 48):
             if row["pair"] not in partitions:
                 horizon = "NO_PINNED_PARTITION"
+            elif at + timedelta(hours=hours) > cutoff:
+                horizon = "ABSTAIN_IMMATURE"
             else:
                 # Exact contiguous 5m opens from first post-observation bar
                 # through the horizon. Missing even one bar abstains.
@@ -243,7 +247,8 @@ def main(argv=None):
         overlap_path = Path(args.full_cohort_overlap_output)
         if overlap_path.exists():
             raise FileExistsError("Refusing to overwrite historical overlap evidence")
-        overlap = audit_a2_trade_partition_overlap(projection, manifest, args.root, schema, partitions)
+        overlap = audit_a2_trade_partition_overlap(projection, manifest, args.root, schema, partitions,
+                                                   observed_until=args.observed_until)
         # Commit diagnostic output only after the complete E1-to-B pipeline succeeds.
     result = run_pipeline(manifest, args.root, schema,
                           partitions, predictions, args.observed_until,
