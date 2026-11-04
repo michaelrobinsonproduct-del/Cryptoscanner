@@ -70,7 +70,7 @@ def main():
     repo = os.environ["GITHUB_REPOSITORY"]
     # Fail closed if GitHub cannot return a complete authoritative response.
     raw = subprocess.check_output([
-        "gh", "api", f"repos/{repo}/actions/workflows/paper-pipeline.yml/runs",
+        "gh", "api", "-X", "GET", f"repos/{repo}/actions/workflows/paper-pipeline.yml/runs",
         "-f", "branch=main", "-f", "per_page=100",
     ], timeout=30)
     payload = json.loads(raw)
