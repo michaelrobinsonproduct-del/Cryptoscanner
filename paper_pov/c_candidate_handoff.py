@@ -52,7 +52,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     result = consume(json.loads(args.candidates.read_text()))
-    args.output.write_text(json.dumps(result, sort_keys=True) + "\\n")
+    args.output.write_text(json.dumps(result, sort_keys=True) + "\n")
     print(json.dumps({"status": result["status"], "watch_count": result["watch_count"], "receipt_sha256": result["receipt_sha256"]}, sort_keys=True))
 
 
