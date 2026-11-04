@@ -111,6 +111,8 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
     from datetime import timedelta
     from bisect import bisect_left
     cutoff = utc_time(observed_until)
+    if not isinstance(observed_until, str):
+        raise ValueError("Missing historical observation cutoff")
     if not isinstance(partitions, dict):
         raise ValueError("Missing explicit partition map")
     pairs = {row["pair"] for row in rows}
@@ -162,8 +164,10 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
         for hours in (1, 6, 24, 48):
             if row["pair"] not in partitions:
                 horizon = "NO_PINNED_PARTITION"
-            elif at + timedelta(hours=hours) > cutoff:
+            elif at + timedelta(hours=hours, minutes=5) > cutoff:
                 horizon = "ABSTAIN_IMMATURE"
+            elif status != "ENTRY_BAR_PRESENT_UNQUALIFIED":
+                horizon = "INCOMPLETE_5M_PATH"
             else:
                 # Exact contiguous 5m opens from first post-observation bar
                 # through the horizon. Missing even one bar abstains.
