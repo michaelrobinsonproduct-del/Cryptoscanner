@@ -5,8 +5,11 @@ or paper_pov.candidate_snapshot.read_snapshot, not arbitrary scanner JSON.
 The adapter adds a conservative stablecoin exclusion check.
 """
 import argparse
+import datetime as dt
+import hashlib
 import json
 import math
+import zipfile
 from pathlib import Path
 
 from tools.scan_receipt_gate import is_stablecoin_pair
@@ -61,6 +64,50 @@ def assess_verified_a2(snapshot):
             "receipt_sha256": digest if not errors else None, "errors": errors}
 
 
+def read_scanner_receipt_zip(path, *, now=None, max_age_seconds=600):
+    """Verify a raw two-member scanner artifact and enforce read-time freshness."""
+    with zipfile.ZipFile(path) as archive:
+        infos = archive.infolist()
+        names = [item.filename for item in infos]
+        if len(names) != 2 or len(set(names)) != 2 or "latest.json" not in names:
+            raise ValueError("invalid scanner receipt archive members")
+        receipts = [n for n in names if n.startswith("receipts/") and n.endswith(".json") and n.count("/") == 1]
+        if len(receipts) != 1:
+            raise ValueError("missing immutable scanner receipt")
+        for item in infos:
+            if item.is_dir() or item.file_size > 200000 or item.compress_size > 500000:
+                raise ValueError("unsafe scanner receipt member")
+        raw = archive.read("latest.json")
+        if raw != archive.read(receipts[0]):
+            raise ValueError("latest report differs from immutable receipt")
+    report = json.loads(raw)
+    if not isinstance(report, dict) or report.get("mode") != "PAPER_ONLY" or report.get("buy_approved") is not False or report.get("production_applied") is not False:
+        raise ValueError("unsafe scanner report")
+    stamp = dt.datetime.fromisoformat(report["as_of"].replace("Z", "+00:00"))
+    if stamp.tzinfo is None:
+        raise ValueError("naive scanner timestamp")
+    now = now or dt.datetime.now(dt.timezone.utc)
+    age = (now - stamp).total_seconds()
+    if not 0 <= age <= max_age_seconds:
+        raise ValueError("stale or future scanner receipt")
+    watch = report.get("watch")
+    if not isinstance(watch, list) or len(watch) > 12:
+        raise ValueError("invalid scanner candidate list")
+    quote_ages = {}
+    for candidate in watch:
+        if not isinstance(candidate, dict):
+            raise ValueError("invalid scanner candidate")
+        quote_stamp = dt.datetime.fromisoformat(candidate["quote_observed_at"].replace("Z", "+00:00"))
+        quote_age = (now - quote_stamp).total_seconds()
+        if quote_stamp.tzinfo is None or not 0 <= quote_age <= max_age_seconds:
+            raise ValueError("stale or future candidate quote")
+        quote_ages[candidate["pair"]] = quote_age
+    return {"as_of": report["as_of"], "scan_status": report["scan_status"],
+            "eligible_pairs": report["eligible_pairs"], "observed_markets": report["observed_markets"],
+            "watch": watch, "quote_age_seconds": quote_ages, "snapshot_age_seconds": age,
+            "receipt_sha256": hashlib.sha256(raw).hexdigest()}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--a2-zip", type=Path,
@@ -70,10 +117,15 @@ def main():
         if not args.a2_zip:
             raise ValueError("A2 immutable ZIP is required")
         if args.a2_zip:
-            # Import only when the A2 source PR is present. The A2 consumer
-            # verifies immutable receipt bytes, source SHA, and read-time freshness.
-            from paper_pov.a2_artifact_consumer import read_artifact_zip
-            verified = read_artifact_zip(args.a2_zip)
+            # Preserve the established 3-member A2 transport consumer; also accept
+            # the actual two-member scanner receipt artifact after strict verification.
+            with zipfile.ZipFile(args.a2_zip) as archive:
+                names = archive.namelist()
+            if "verified-snapshot.json" in names:
+                from paper_pov.a2_artifact_consumer import read_artifact_zip
+                verified = read_artifact_zip(args.a2_zip)
+            else:
+                verified = read_scanner_receipt_zip(args.a2_zip)
         result = assess_verified_a2(verified)
     except (OSError, ValueError, TypeError, ImportError, KeyError, AssertionError, RuntimeError):
         result = {"accepted": False, "status": "INVALID_A2_SNAPSHOT", "errors": ["unreadable_snapshot"]}
