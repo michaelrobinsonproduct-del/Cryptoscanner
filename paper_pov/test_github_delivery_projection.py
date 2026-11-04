@@ -166,6 +166,14 @@ class DeliveryProjectionTests(unittest.TestCase):
             self.assertFalse(output["live_watch_authorized"])
             outputs.append(output)
         self.assertEqual(set(outputs[0]), set(outputs[1]))
+        for status in ("ABSTAIN_NO_LIQUID_CANDIDATES", "ABSTAIN_NO_QUALIFIED_OHLC"):
+            abstaining_a2 = {**a2, "scan_status": status, "watch": [], "watch_count": 0}
+            result = project_published_result(published, d, abstaining_a2)
+            self.assertEqual(result["a2_receipt_cohort"]["status"], status)
+            self.assertEqual(result["a2_receipt_cohort"]["watch_count"], 0)
+            self.assertFalse(result["live_watch_authorized"])
+        with self.assertRaisesRegex(ValueError, "A2 scan status invalid"):
+            project_published_result(published, d, {**a2, "scan_status": "ABSTAIN_NO_WATCH", "watch": [], "watch_count": 0})
         with self.assertRaisesRegex(ValueError, "falsely claims"):
             project_published_result(published, d, {**a2, "single_writer_ledger_verified": True})
         with self.assertRaisesRegex(ValueError, "count mismatch"):
