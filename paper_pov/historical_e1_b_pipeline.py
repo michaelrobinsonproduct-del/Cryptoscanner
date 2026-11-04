@@ -6,6 +6,8 @@ Never fetches live data, modifies scanner state or certifies source authenticity
 import argparse
 import hashlib
 import json
+import os
+import tempfile
 from pathlib import Path
 
 from .historical_outcome_execution import run_historical_outcomes
@@ -304,9 +306,36 @@ def main(argv=None):
     rendered_result = json.dumps(result, sort_keys=True, indent=2, allow_nan=False) + "\n"
     rendered_overlap = (json.dumps(overlap, sort_keys=True, indent=2, allow_nan=False) + "\n"
                         if args.full_cohort_overlap_output else None)
-    output.write_text(rendered_result, encoding="utf-8")
+    # Stage both outputs before publishing, and roll back a partial handoff.
+    destinations = [(output, rendered_result)]
     if args.full_cohort_overlap_output:
-        overlap_path.write_text(rendered_overlap, encoding="utf-8")
+        destinations.append((overlap_path, rendered_overlap))
+    if len({path.resolve() for path, _ in destinations}) != len(destinations):
+        raise ValueError("Historical outputs must have distinct paths")
+    staged, published = [], []
+    try:
+        for destination, rendered in destinations:
+            if destination.exists():
+                raise FileExistsError("Refusing to overwrite historical evidence")
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8",
+                                             dir=destination.parent, prefix=".e1-b-",
+                                             delete=False) as handle:
+                staged.append(Path(handle.name))
+                handle.write(rendered)
+                handle.flush()
+                os.fsync(handle.fileno())
+        for (destination, _), temporary in zip(destinations, staged):
+            if destination.exists():
+                raise FileExistsError("Refusing to overwrite historical evidence")
+            os.replace(temporary, destination)
+            published.append(destination)
+    except Exception:
+        for destination in published:
+            destination.unlink(missing_ok=True)
+        raise
+    finally:
+        for temporary in staged:
+            temporary.unlink(missing_ok=True)
     print(json.dumps({"prediction_count": result["execution"]["prediction_count"],
                       "status_counts": result["execution"]["status_counts"],
                       "qualified_cohort_count": result["handoff"]["qualified_cohort_count"],
