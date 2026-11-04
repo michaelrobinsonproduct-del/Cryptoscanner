@@ -161,10 +161,9 @@ jobs:
           assert not p["trading_approved"] and not p["production_applied"]
           print("C_B_A2_RECOVERY_CONNECTED",json.dumps(p,sort_keys=True))
           PY
-          python -m paper_pov.c_candidate_handoff /tmp/c-real-receipts/integration.json --from-integration --output /tmp/c-real-receipts/candidates.json
+          python -m paper_pov.c_candidate_handoff /tmp/c-real-receipts/integration.json --from-integration --output /tmp/c-real-receipts/candidates.json --bd-output /tmp/c-real-receipts/bd-handoff.json
       - name: Consume C artifact through B/D read-only executable interface
         run: |
-          python -m paper_pov.c_candidate_handoff /tmp/c-real-receipts/candidates.json --output /tmp/c-real-receipts/bd-handoff.json
           python - <<'PY'
           import json
           from pathlib import Path
