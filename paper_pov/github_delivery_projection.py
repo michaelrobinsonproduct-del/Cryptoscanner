@@ -36,8 +36,19 @@ def _writer_evidence(readback):
         if status in ("MATCH", "DIVERGED"):
             import re
             a, z = reconciliation.get("recovered_sha256"), reconciliation.get("remote_sha256")
-            if not all(isinstance(d, str) and re.fullmatch(r"[0-9a-f]{64}", d) for d in (a, z)) or (a == z) != (status == "MATCH"):
+            if not all(isinstance(d, str) and re.fullmatch(r"[0-9a-f]{64}", d) for d in (a, z)):
+                raise ValueError("writer reconciliation digest missing")
+            # D's canonical ledger identity can match despite different JSON bytes.
+            ca = reconciliation.get("recovered_ledger_sha256", a)
+            cz = reconciliation.get("remote_ledger_sha256", z)
+            if not all(isinstance(d, str) and re.fullmatch(r"[0-9a-f]{64}", d) for d in (ca, cz)) or (ca == cz) != (status == "MATCH"):
                 raise ValueError("writer reconciliation digest contradiction")
+            rg = reconciliation.get("recovered_generation")
+            mg = reconciliation.get("remote_generation")
+            if rg is not None and rg != persisted["ledger_generation"]:
+                raise ValueError("writer recovered generation mismatch")
+            if mg is not None and (type(mg) is not int or mg < 0 or (status == "MATCH" and mg != persisted["ledger_generation"])):
+                raise ValueError("writer remote generation contradiction")
     return {"source_run_id": int(run_id), "source_sha": sha,
             "recovery_status": readback["status"], "ledger_generation": persisted["ledger_generation"],
             "scan_status": persisted["scan_status"], "reconciliation_status": status,
