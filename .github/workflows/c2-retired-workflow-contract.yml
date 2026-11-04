@@ -244,6 +244,59 @@ jobs:
           assert not b["live_watch_certified"] and not b["same_run_or_candidate_parity_claimed"]
           print("C_D_REAL_WRITER_BRIDGE_CONNECTED",b["writer_recovery"]["run_id"],w["watch_count"])
           PY
+      - name: Execute B's real read-only published-results consumer with D recovery
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Consume B on its owned branch without copying or modifying B code.
+          git clone --no-checkout --filter=blob:none "https://github.com/$REPO.git" /tmp/c-b-consumer
+          git -C /tmp/c-b-consumer fetch --depth=1 origin integration-a-b-c-d-20261103
+          git -C /tmp/c-b-consumer checkout --detach FETCH_HEAD
+          gh api "repos/$REPO/actions/runs/41804379677" > /tmp/c-real-receipts/b-published-run.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          run=json.loads(Path("/tmp/c-real-receipts/b-published-run.json").read_text())
+          assert run["id"]==41804379677 and run["conclusion"]=="success"
+          assert run["event"] in ("schedule","workflow_dispatch")
+          assert run["head_sha"]=="19328dcebdfd60500ebbecccc8f334539a2d42e1"
+          PY
+          gh run download 41804379677 --repo "$REPO" --name public-paper-results-41804379677 --dir /tmp/c-real-receipts/b-published
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from paper_pov.manual_schedule_contract import load_verified_artifact
+          root=Path("/tmp/c-real-receipts/b-published")
+          files=list(root.rglob("results.json"))
+          assert len(files)==1, "Published results missing"
+          # B's existing verified ZIP reader is used below when possible.
+          assert len(list(root.rglob("SHA256SUMS")))==1
+          PY
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          bridge=json.loads(Path("/tmp/c-real-receipts/cd-bridge.json").read_text())
+          assert bridge["writer_recovery"]["delivery_projection_ready"], "D persisted evidence not available for B"
+          PY
+          PYTHONPATH=/tmp/c-b-consumer python -m paper_pov.github_delivery_projection \
+            --published-result /tmp/c-real-receipts/b-published/results.json \
+            --expected-run-id 41804379677 \
+            --expected-source-sha 19328dcebdfd60500ebbecccc8f334539a2d42e1 \
+            --writer-readback /tmp/c-real-receipts/bd-writer-readback.json \
+            --output /tmp/c-real-receipts/b-published-delivery.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path("/tmp/c-real-receipts/b-published-delivery.json").read_text())
+          assert result["schema"]=="paper_delivery_readback_v1"
+          assert result["source_run_id"]==41804379677
+          assert result["writer_recovery"] is not None
+          assert result["single_writer_read_only"] and not result["production_applied"]
+          assert not result["live_watch_authorized"]
+          print("B_C_D_READ_ONLY_DELIVERY_CONSUMED",result["status"],result["writer_reconciliation_status"])
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: c-real-manual-scheduled-contract
@@ -257,5 +310,6 @@ jobs:
             /tmp/c-real-receipts/cd-bridge.json
             /tmp/c-real-receipts/bd-recovered-watch.json
             /tmp/c-real-receipts/bd-writer-readback.json
+            /tmp/c-real-receipts/b-published-delivery.json
           retention-days: 7
           if-no-files-found: error
