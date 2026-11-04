@@ -289,6 +289,13 @@ def project_legacy_published_abstention(result, *, writer_readback=None, a2_deli
     if "quote_evidence" in result:
         raise ValueError("quote-complete results must use strict published projection")
     writer = _writer_evidence(writer_readback) if writer_readback is not None else None
+    # A legacy published result still has immutable writer provenance. If D
+    # independently recovers that exact run, contradictory persisted generation
+    # must not be accepted merely because its quotes are unavailable.
+    if writer and writer["source_run_id"] == int(run_id) and writer["source_sha"] == sha:
+        generation = result.get("ledger_generation")
+        if type(generation) is not int or generation != writer["ledger_generation"]:
+            raise ValueError("legacy same-run D persisted generation mismatch")
     a2 = _a2_evidence(a2_delivery) if a2_delivery is not None else None
     learning = _learning_evidence(learning_handoff) if learning_handoff is not None else None
     return {"schema": "paper_delivery_readback_v1", "source_run_id": int(run_id),
