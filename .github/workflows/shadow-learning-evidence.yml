@@ -11,6 +11,7 @@ on:
       - 'paper_pov/test_e1_b_historical_integration.py'
       - 'paper_pov/historical_e1_b_pipeline.py'
       - 'paper_pov/historical_preselection_binding.py'
+      - 'paper_pov/a2_historical_artifact_learning.py'
       - '.github/workflows/shadow-learning-evidence.yml'
   workflow_dispatch:
 permissions:
@@ -60,3 +61,42 @@ jobs:
             cp "../upstream-b/paper_pov/$name.py" "paper_pov/$name.py"
           done
           python -m unittest paper_pov.test_historical_outcome_execution paper_pov.test_e1_b_historical_integration -v
+
+  real-a2-historical-universe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: integration-a-b-c-d-20261103
+          path: upstream-b
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Assemble existing A receipt verification modules
+        run: |
+          cp upstream-b/paper_pov/preselection_universe.py paper_pov/preselection_universe.py
+          cp upstream-b/paper_pov/candidate_snapshot.py paper_pov/candidate_snapshot.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: a2-live-consumer-evidence
+          run-id: 41766615485
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: downloaded-a2
+      - name: Verify genuine sealed A2 receipt and export full historical universe
+        run: |
+          python -m zipfile -c a2-historical-evidence.zip downloaded-a2
+          python -m paper_pov.a2_historical_artifact_learning --a2-artifact a2-historical-evidence.zip --output a2-historical-evidence.json
+          python - <<'PY'
+          import json
+          r = json.load(open('a2-historical-evidence.json'))
+          assert r['frozen_observation_count'] == r['watch_count'] + r['nonwatch_without_outcomes']
+          assert r['status'] == 'NO_QUALIFIED_RULE'
+          assert r['source_authenticated'] is False
+          print('REAL_A2_RECEIPT', r['a_receipt_sha256'], 'OBSERVATIONS', r['frozen_observation_count'], 'WATCH', r['watch_count'])
+          PY
