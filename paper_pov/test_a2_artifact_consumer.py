@@ -96,6 +96,12 @@ class ArtifactConsumerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "published A2 delivery mismatch"):
                 read_published_delivery(root, now=fixture.now)
             (root / "a2-delivery.json").write_text(json.dumps(project_watch_delivery(root, now=fixture.now)))
+            future_age = json.loads((root / "a2-delivery.json").read_text())
+            future_age["snapshot_age_seconds"] = 300
+            (root / "a2-delivery.json").write_text(json.dumps(future_age))
+            with self.assertRaisesRegex(ValueError, "invalid published A2 snapshot age"):
+                read_published_delivery(root, now=fixture.now)
+            (root / "a2-delivery.json").write_text(json.dumps(project_watch_delivery(root, now=fixture.now)))
             with self.assertRaisesRegex(ValueError, "stale"):
                 read_published_delivery(root, now=fixture.now + dt.timedelta(minutes=11))
             tampered = dict(universe)
