@@ -30,7 +30,7 @@ def restore_and_capture(previous, output_root, *, collector=collect):
     if not 1 <= len(pairs) <= MAX_PAIRS:
         raise ValueError("invalid original scored market cohort")
     lines = old_index.read_text().splitlines()
-    if not 1 <= len(lines) < 576:  # bounded 48 hours at five-minute cadence
+    if not 1 <= len(lines) <= 576:  # permits the 577th terminal 48-hour round
         raise ValueError("invalid round count")
     records = [json.loads(line) for line in lines]
     if len({r["batch"] for r in records}) != len(records):
