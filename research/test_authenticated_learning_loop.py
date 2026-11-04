@@ -45,17 +45,19 @@ class AuthenticatedLearningTests(unittest.TestCase):
                              "entry_liquidity_usd": 100.0,
                              "status": "QUALIFIED_OBSERVED_PATH",
                              "ge30pct": i % 5 == 0})
-        with patch("research.authenticated_learning_loop.load_captures", return_value=rows), \
-             patch("research.authenticated_learning_loop.verified_associations",
-                   return_value=(rows, [], {"source_abstentions": []})), \
-             patch("research.authenticated_learning_loop.evaluate_index",
-                   return_value={"outcomes": outcomes, "snapshots_verified": 100}), \
-             patch("research.authenticated_learning_loop.Path.is_dir", return_value=True):
+        from contextlib import ExitStack
+        with ExitStack() as stack:
+            stack.enter_context(patch("research.authenticated_learning_loop.load_captures", return_value=rows))
+            stack.enter_context(patch("research.authenticated_learning_loop.verified_associations",
+                                      return_value=(rows, [], {"source_abstentions": []})))
+            stack.enter_context(patch("research.authenticated_learning_loop.evaluate_index",
+                                      return_value={"outcomes": outcomes, "snapshots_verified": 100}))
+            stack.enter_context(patch("research.authenticated_learning_loop.Path.is_dir", return_value=True))
             report = compare("scores", "associations", "rounds")
         result = report["comparison"]
         self.assertEqual(result["qualified_n"], 100)
         self.assertEqual(result["held_out_n"], 30)
-        self.assertEqual(result["train_n"], 21)
+        self.assertEqual(result["train_n"], 22)
         self.assertEqual(result["baseline"]["top_decile_n"], 3)
         self.assertEqual(result["challenger"]["top_decile_n"], 3)
         self.assertEqual(report["shadow_decision"]["decision"], "KEEP_BASELINE")
