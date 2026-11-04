@@ -7,6 +7,7 @@ import datetime as dt
 import hashlib
 import json
 from pathlib import Path
+import tempfile
 from paper_pov.candidate_snapshot import read_snapshot
 
 
@@ -73,13 +74,51 @@ def export_universe(latest, now=None, historical=False):
             "live_watch_eligible": not historical}
 
 
+
+def export_receipt_history(receipts_dir):
+    """Read-only longitudinal preselection feed for E; never a live signal."""
+    root = Path(receipts_dir)
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("invalid receipt history directory")
+    receipts = sorted(root.glob("*.json"))
+    if not receipts:
+        raise ValueError("empty receipt history")
+    exports = []
+    seen = set()
+    for receipt in receipts:
+        if receipt.is_symlink() or not receipt.is_file():
+            raise ValueError("unsafe historical receipt")
+        raw = receipt.read_bytes()
+        if len(raw) > 2_000_000:
+            raise ValueError("oversized historical receipt")
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder)
+            (base / "receipts").mkdir()
+            (base / "latest.json").write_bytes(raw)
+            (base / "receipts" / receipt.name).write_bytes(raw)
+            result = export_universe(base / "latest.json", historical=True)
+        if result["receipt_sha256"] in seen:
+            raise ValueError("duplicate historical receipt")
+        seen.add(result["receipt_sha256"])
+        exports.append(result)
+    exports.sort(key=lambda x: (x["as_of"], x["receipt_sha256"]))
+    return {"schema": "paper_preselection_history_v1",
+            "snapshot_use": "HISTORICAL_RESEARCH_ONLY",
+            "live_watch_eligible": False, "qualified_for_learning": False,
+            "future_outcomes_authenticated": False, "production_applied": False,
+            "receipt_count": len(exports),
+            "market_observation_count": sum(len(x["markets"]) for x in exports),
+            "snapshots": exports}
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("latest")
+    p.add_argument("--history", action="store_true", help="input is receipts directory; emit historical longitudinal feed")
     p.add_argument("--output", required=True)
     p.add_argument("--historical", action="store_true", help="receipt-verified historical universe; never live WATCH")
     args = p.parse_args()
-    Path(args.output).write_text(json.dumps(export_universe(args.latest, historical=args.historical), sort_keys=True, allow_nan=False) + "\n")
+    Path(args.output).write_text(json.dumps(export_receipt_history(args.latest) if args.history else export_universe(args.latest, historical=args.historical), sort_keys=True, allow_nan=False) + "\n")
 
 
 if __name__ == "__main__":
