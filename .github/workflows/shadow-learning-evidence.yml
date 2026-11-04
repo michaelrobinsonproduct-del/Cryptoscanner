@@ -90,7 +90,7 @@ jobs:
           path: downloaded-a2
       - name: Verify genuine sealed A2 receipt and export full historical universe
         run: |
-          python -m zipfile -c a2-historical-evidence.zip downloaded-a2
+          (cd downloaded-a2 && zip -q -r ../a2-historical-evidence.zip .)
           python -m paper_pov.a2_historical_artifact_learning --a2-artifact a2-historical-evidence.zip --output a2-historical-evidence.json
           python - <<'PY'
           import json
