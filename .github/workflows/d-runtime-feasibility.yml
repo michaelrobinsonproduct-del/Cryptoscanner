@@ -1,0 +1,52 @@
+name: D Runtime Feasibility - read-only artifact proof
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/d-runtime-feasibility.yml'
+      - 'paper_pov/replay_downloaded_artifacts.py'
+      - 'paper_pov/test_replay_downloaded_artifacts.py'
+      - 'paper_pov/missed_slot_recovery.py'
+      - 'paper_pov/test_missed_slot_recovery.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  feasibility:
+    if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Execute real scanner recovery and downloaded-artifact replay fixtures
+        run: |
+          set -euo pipefail
+          python -m unittest paper_pov.test_missed_slot_recovery paper_pov.test_replay_downloaded_artifacts -v 2>&1 | tee /tmp/feasibility-test.log
+          python - <<'PY'
+          import json, os, pathlib, subprocess
+          p = pathlib.Path('feasibility-proof.json')
+          p.write_text(json.dumps({
+              'schema': 1,
+              'source_sha': os.environ['GITHUB_SHA'],
+              'run_id': os.environ['GITHUB_RUN_ID'],
+              'mode': 'fixture_only_no_live_scan',
+              'suite': ['paper_pov.test_missed_slot_recovery','paper_pov.test_replay_downloaded_artifacts'],
+              'result': 'PASS'
+          }, sort_keys=True) + '\n')
+          print(p.read_text())
+          PY
+          cp /tmp/feasibility-test.log feasibility-test.log
+          sha256sum feasibility-proof.json feasibility-test.log > feasibility-SHA256SUMS
+          sha256sum -c feasibility-SHA256SUMS
+      - name: Preserve downloadable evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: d-runtime-feasibility-${{ github.run_id }}
+          path: |
+            feasibility-proof.json
+            feasibility-test.log
+            feasibility-SHA256SUMS
+          retention-days: 7
+          if-no-files-found: error
