@@ -1,6 +1,6 @@
 """Focused decision tests: never fabricate a historical market scan."""
 import unittest
-from paper_pov.missed_slot_recovery import decision, validate_recovery_slot, resolve_writer_slot
+from paper_pov.missed_slot_recovery import decision, validate_recovery_slot, resolve_writer_slot, inspect_slot, fetch_recent_runs
 
 NOW = "2026-11-03T23:24:30Z"
 
@@ -64,6 +64,29 @@ class MissedSlotRecoveryTests(unittest.TestCase):
     def test_manual_run_suppresses_duplicate(self):
         self.assertEqual(decision(NOW, [
             run("2026-11-03T23:15:00Z", event="workflow_dispatch")])["action"], "WAIT")
+
+
+    def test_real_history_adapter_and_missed_slot_receipt(self):
+        import json
+        def response(args, timeout):
+            self.assertIn("branch=main", args)
+            return json.dumps({"total_count": 1, "workflow_runs": [
+                run("2026-11-03T22:39:03Z")]}).encode()
+        actual = fetch_recent_runs("owner/repo",
+                                   now=__import__("paper_pov.missed_slot_recovery", fromlist=["utc"]).utc(NOW),
+                                   command=response)
+        receipt = inspect_slot(NOW, actual)
+        self.assertEqual(receipt["status"], "MISSED_SLOT_RECOVERY_REQUIRED")
+        self.assertEqual(receipt["slot_utc"], "2026-11-03T23:09:00+00:00")
+        self.assertFalse(receipt["writer_dispatched"])
+        self.assertFalse(receipt["ledger_persisted"])
+
+    def test_incomplete_history_never_claims_missed_slot(self):
+        import json
+        with self.assertRaisesRegex(ValueError, "incomplete"):
+            fetch_recent_runs("owner/repo",
+                              command=lambda args, timeout: json.dumps(
+                                  {"total_count": 2, "workflow_runs": [run(NOW)]}).encode())
 
 
 if __name__ == "__main__":
