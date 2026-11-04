@@ -75,6 +75,22 @@ class ShadowEvidenceTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             evaluate_shadow_release(self.a, self.b)
 
+    def test_self_attested_rows_cannot_qualify(self):
+        # A favorable fixture must not be interpreted as authenticated lift.
+        for i, row in enumerate(self.b["observations"]):
+            row["watch"] = (i % 2 == 0)
+        result = evaluate_shadow_release(self.a, self.b, minimum_holdout=10)
+        self.assertEqual(result["status"], "NO_QUALIFIED_RULE")
+        self.assertFalse(result["source_receipt_qualified"])
+
+    def test_receipt_must_match_both_versions(self):
+        receipt = dict(verification="independently_authenticated", artifact_sha256="a"*64,
+                       verifier_commit="b"*40)
+        self.a["source_receipt"] = receipt
+        self.b["source_receipt"] = dict(receipt, artifact_sha256="c"*64)
+        result = evaluate_shadow_release(self.a, self.b, minimum_holdout=10)
+        self.assertFalse(result["source_receipt_qualified"])
+
     def test_weak_sample_abstains(self):
         self.a["observations"] = cohort(10)
         self.b["observations"] = cohort(10)
