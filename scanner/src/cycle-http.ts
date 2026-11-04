@@ -7,7 +7,7 @@ export function createCycleHttpHandler(runner:ReturnType<typeof createCycleRunne
   const a=last.a2_snapshot,clock=now().getTime();
   const fresh=(value:string)=>{const t=Date.parse(value);return Number.isFinite(t)&&t<=clock&&clock-t<=600000};
   if(fresh(a.as_of)&&a.watch.every((candidate:any)=>fresh(candidate.quote_observed_at)))return last;
-  return {...last,a2_snapshot:unavailableA2Snapshot("expired_at_dashboard_read")};
+  return {...last,a2_snapshot:unavailableA2Snapshot("expired_at_dashboard_read"),paper_watch:[],paper_watch_status:"ABSTAIN_A2_EXPIRED",live_watch_certified:false};
  };
  return async (req:Request):Promise<Response>=>{
   const path=new URL(req.url).pathname;
