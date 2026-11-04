@@ -52,7 +52,7 @@ def verify_checksums(files, names):
         raise ValueError("Incorrect artifact manifest length")
     seen = set()
     for line in lines:
-        match = re.fullmatch(r"([0-9a-f]{64})  ([A-Za-z0-9.]+)", line)
+        match = re.fullmatch(r"([0-9a-f]{64})  ([A-Za-z0-9._-]+)", line)
         if not match or match[2] not in names or match[2] in seen:
             raise ValueError("Invalid artifact checksum manifest")
         seen.add(match[2])
