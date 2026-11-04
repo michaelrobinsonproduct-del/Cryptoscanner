@@ -252,8 +252,14 @@ jobs:
           set -euo pipefail
           # Consume B on its owned branch without copying or modifying B code.
           git clone --no-checkout --filter=blob:none "https://github.com/$REPO.git" /tmp/c-b-consumer
-          git -C /tmp/c-b-consumer fetch --depth=1 origin integration-a-b-c-d-20261103
-          git -C /tmp/c-b-consumer checkout --detach FETCH_HEAD
+          # Resolve B's owned branch to an immutable commit before checkout.
+          # This prevents the B consumer changing halfway through C acceptance.
+          B_SHA=$(gh api "repos/$REPO/branches/integration-a-b-c-d-20261103" --jq '.commit.sha')
+          [[ "$B_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          git -C /tmp/c-b-consumer fetch --depth=1 origin "$B_SHA"
+          git -C /tmp/c-b-consumer checkout --detach "$B_SHA"
+          test "$(git -C /tmp/c-b-consumer rev-parse HEAD)" = "$B_SHA"
+          echo "B_CONSUMER_EXACT_SHA=$B_SHA"
           # Find the newest published result with authenticated complete quote
           # evidence. Do not accept a newer legacy cohort merely by recency.
           gh api "repos/$REPO/actions/workflows/paper-pipeline.yml/runs?branch=main&status=success&per_page=30" > /tmp/c-real-receipts/b-runs.json
@@ -341,8 +347,20 @@ jobs:
           r=json.loads(p.read_text())
           quotes=r.get("quote_evidence")
           complete=isinstance(quotes,list) and type(r.get("observed_markets")) is int and len(quotes)==r["observed_markets"]
-          Path("/tmp/c-real-receipts/b-quote-evidence-ready").write_text("yes" if complete else "no")
+          # Quote completeness alone is insufficient: the recovered writer
+          # must describe this exact published scan, not a different cohort.
+          selected=json.loads(Path("/tmp/c-real-receipts/b-selected.json").read_text())
+          recovered=json.loads(Path("/tmp/c-real-receipts/d2-readback.json").read_text())
+          same_scan=(str(recovered.get("run_id"))==str(selected["run_id"])
+                     and recovered.get("source_sha")==selected["sha"])
+          Path("/tmp/c-real-receipts/b-quote-evidence-ready").write_text(
+              "yes" if complete and same_scan else "no")
+          Path("/tmp/c-real-receipts/b-delivery-blocker").write_text(
+              "NONE" if complete and same_scan else
+              "ABSTAIN_PUBLISHED_QUOTE_EVIDENCE_MISSING" if not complete else
+              "ABSTAIN_WRITER_READBACK_DIFFERENT_SCAN")
           print("PUBLISHED_QUOTE_COVERAGE",len(quotes) if isinstance(quotes,list) else "missing",r.get("observed_markets"))
+          print("SAME_SCAN_WRITER_READBACK",same_scan)
           PY
           if [[ "$(cat /tmp/c-real-receipts/b-quote-evidence-ready)" == yes ]]; then
             (cd /tmp/c-b-consumer && python -m paper_pov.github_delivery_projection \
@@ -375,7 +393,7 @@ jobs:
           assert bridge["writer_recovery"]["delivery_projection_ready"]
           assert str(published["run_id"])==str(json.loads((root/"b-selected.json").read_text())["run_id"])
           result={"schema":"paper_c_bd_integration_abstention_v1",
-                  "status":"ABSTAIN_PUBLISHED_QUOTE_EVIDENCE_MISSING",
+                  "status":(root/"b-delivery-blocker").read_text(),
                   "source_run_id":json.loads((root/"b-selected.json").read_text())["run_id"],
                   "source_sha":published["source_sha"],
                   "writer_recovery_status":bridge["writer_recovery"]["status"],
@@ -386,7 +404,7 @@ jobs:
                   "production_applied":False,
                   "single_writer_read_only":True,
                   "b_delivery_projection_executed":False,
-                  "next_action":"Consume a checksum-verified published run with complete per-market quote_evidence using B's existing projection"}
+                  "next_action":"Consume complete quote evidence and same-run D writer readback using B's existing projection"}
           (root/"b-published-delivery.json").write_text(json.dumps(result,sort_keys=True)+chr(10))
           print("B_C_D_INTEGRATION_ABSTAINED",result["status"])
           PY
