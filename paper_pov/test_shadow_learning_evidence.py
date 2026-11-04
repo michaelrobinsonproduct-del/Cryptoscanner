@@ -16,8 +16,8 @@ def cohort(n=40):
 
 class ShadowEvidenceTests(unittest.TestCase):
     def setUp(self):
-        self.a = dict(version="baseline-v1", observations=cohort())
-        self.b = dict(version="challenger-v2", observations=cohort())
+        self.a = dict(version="baseline-v1", training_end_utc="2026-07-29T00:00:00Z", observations=cohort())
+        self.b = dict(version="challenger-v2", training_end_utc="2026-07-29T00:00:00Z", observations=cohort())
 
     def test_no_improvement_never_promotes(self):
         result = evaluate_shadow_release(self.a, self.b)
@@ -90,6 +90,27 @@ class ShadowEvidenceTests(unittest.TestCase):
         self.b["source_receipt"] = dict(receipt, artifact_sha256="c"*64)
         result = evaluate_shadow_release(self.a, self.b, minimum_holdout=10)
         self.assertFalse(result["source_receipt_qualified"])
+
+    def test_training_purge_rejects_overlap(self):
+        self.a["training_end_utc"] = "2026-07-31T00:01:00Z"
+        self.b["training_end_utc"] = "2026-07-31T00:01:00Z"
+        with self.assertRaisesRegex(ValueError, "purge"):
+            evaluate_shadow_release(self.a, self.b)
+
+    def test_training_boundary_must_match(self):
+        self.b["training_end_utc"] = "2026-07-28T00:00:00Z"
+        with self.assertRaisesRegex(ValueError, "boundary"):
+            evaluate_shadow_release(self.a, self.b)
+
+    def test_missed_mover_and_false_positive_accounting(self):
+        for i, row in enumerate(self.b["observations"]):
+            row["watch"] = i % 2 == 0
+        result = evaluate_shadow_release(self.a, self.b, minimum_holdout=10)
+        self.assertEqual(result["baseline"]["false_positives"], 20)
+        self.assertEqual(result["challenger"]["false_positives"], 0)
+        self.assertEqual(result["challenger"]["recall"], 1.0)
+        self.assertEqual(result["challenger"]["coverage"], 0.5)
+        self.assertEqual(result["status"], "NO_QUALIFIED_RULE")
 
     def test_weak_sample_abstains(self):
         self.a["observations"] = cohort(10)
