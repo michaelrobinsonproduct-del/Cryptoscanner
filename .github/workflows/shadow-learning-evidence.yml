@@ -52,7 +52,7 @@ jobs:
           echo "E_HEAD=$(git rev-parse HEAD)"
           echo "E1_SOURCE_SHA=$(git -C ../upstream-e1 rev-parse HEAD)"
           echo "B_SOURCE_SHA=$(git -C ../upstream-b rev-parse HEAD)"
-          for name in historical_outcome_execution historical_outcome_bridge historical_learning_cohort_gate qualified_ohlc_outcomes kraken_trade_csv_adapter verified_trade_bars archive_partition_gate; do
+          for name in historical_outcome_execution historical_outcome_bridge historical_learning_cohort_gate qualified_ohlc_outcomes kraken_trade_csv_adapter verified_trade_bars archive_partition_gate test_historical_outcome_execution; do
             cp "../upstream-e1/paper_pov/$name.py" "paper_pov/$name.py"
           done
           cp ../upstream-b/paper_pov/github_delivery_projection.py paper_pov/github_delivery_projection.py
