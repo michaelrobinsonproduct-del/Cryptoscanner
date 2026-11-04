@@ -1,6 +1,9 @@
 """Focused fixture regressions for read-only multi-horizon evidence adapter."""
+import json
+import tempfile
 import unittest
-from .heldout_outcome_adapter import build_heldout_evidence
+from pathlib import Path
+from .heldout_outcome_adapter import build_heldout_evidence, main
 
 
 def row(key, horizon, **changes):
@@ -50,6 +53,26 @@ class OutcomeAdapterTests(unittest.TestCase):
     def test_unverified_source_abstains(self):
         result = self.evaluate([row("p", 48), row("u", 6, source_authenticated=False)])
         self.assertEqual(result["abstention_counts"], {"UNQUALIFIED_SOURCE_OR_LIQUIDITY": 1})
+
+    def test_cross_horizon_source_conflict_rejected(self):
+        with self.assertRaisesRegex(ValueError, "Cross-horizon"):
+            self.evaluate([row("p", 48), row("p", 6, source_sha256="b"*64)])
+
+    def test_read_only_b_handoff(self):
+        payload = dict(outcomes=[row("p", 48)], baseline_decisions={"p": True},
+                       challenger_decisions={"p": False},
+                       training_end_utc="2026-07-29T00:00:00Z",
+                       holdout_start_utc="2026-08-01T00:00:00Z",
+                       evaluation_asof_utc="2026-08-07T00:00:00Z",
+                       baseline_version="baseline-1", challenger_version="shadow-2")
+        with tempfile.TemporaryDirectory() as folder:
+            source, output = Path(folder)/"input.json", Path(folder)/"evidence.json"
+            source.write_text(json.dumps(payload), encoding="utf-8")
+            main([str(source), "--output", str(output)])
+            result = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(result["status"], "NO_QUALIFIED_RULE")
+            self.assertFalse(result["promotion_authorized"])
+            self.assertFalse(result["source_authentication_verified_by_adapter"])
 
     def test_48h_gap_requires_decision_exclusion(self):
         result = self.evaluate([row("p", 48), row("gap", 48, coverage_complete=False)])
