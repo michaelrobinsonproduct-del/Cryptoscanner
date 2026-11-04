@@ -138,7 +138,7 @@ jobs:
             "source_sha": __import__("os").environ["GITHUB_SHA"],
             "run_id": __import__("os").environ["GITHUB_RUN_ID"],
             "historical_quotes_reconstructed": False,
-          }, sort_keys=True) + "\\n")
+          }, sort_keys=True) + "\n")
           PY
           (cd paper_pov/output && sha256sum latest.json scoreboard.json ledger.json slot_receipt.json > SHA256SUMS)
           cp paper_pov/output/scoreboard.json /tmp/paper-scoreboard.json
