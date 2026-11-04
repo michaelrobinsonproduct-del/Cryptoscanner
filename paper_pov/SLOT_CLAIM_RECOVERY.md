@@ -72,6 +72,26 @@ A successful claim alone must never trigger a retry of a stranded slot.
   can be safely run from a PR branch without touching default-branch
   event handling.
 
+## Bounded reconciliation coverage hardening (isolated)
+
+The claim-to-writer reconciliation must **not** declare `RECONCILED` merely
+because one matching writer and receipt were supplied. The caller must supply
+a separately source-attested `coverage` manifest: the exact source SHA,
+UTC slot, PAPER workflow identity, a closed observation window spanning the
+entire 30-minute slot, capture time after that window, and enumerated sorted
+run IDs and dispatch-receipt run IDs. A missing, incomplete, untrusted or
+mismatched manifest yields `UNVERIFIED`. Unknown run slot provenance,
+unauthenticated other writer runs and duplicate run IDs also abstain. A second
+dispatch receipt for the same slot with a different claim digest yields
+`FAILED`, even when the first receipt and ledger otherwise agree.
+
+The coverage flags are **not** independent proof: a future source adapter
+must demonstrate GitHub API authentication, pagination exhaustion, immutable
+request/response provenance, UTC clock and interval closure. Synthetic
+fixtures test fail-closed logic only. This does not guarantee global writer
+exclusivity, native scheduling, Kraken event freshness or user delivery.
+No live adapter, dispatch, tag ref, production writer or cron was changed.
+
 ## Authorization gates
 
 1. Exact-head offline adversarial tests, source SHA and green PR CI;

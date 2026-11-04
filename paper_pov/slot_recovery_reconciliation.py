@@ -1,4 +1,5 @@
 """Offline-only reconciliation of claimed PAPER recovery slots. No API/dispatch/write."""
+import datetime as dt
 import json
 from .slot_claim_protocol import valid_plan, SHA40, SHA64
 
@@ -10,11 +11,62 @@ def _result(status, reason, run_id=None, published=False, received=False):
                 retry_authorized=False, dispatch_executed=False, ledger_written=False)
 
 
-def reconcile(claim, *, tag_ref_sha, tag, runs, receipts, ledger, delivery=None):
+def _complete_bounded_inventory(claim, runs, receipts, coverage):
+    """Require a source-attested, closed interval and complete enumerated IDs.
+
+    The caller must independently authenticate the manifest and API pagination;
+    a synthetic 'authenticated=True' flag alone is not live-source proof.
+    """
+    if not isinstance(coverage, dict) or coverage.get("authenticated") is not True or (
+        coverage.get("complete") is not True or
+        coverage.get("workflow") != "paper-pipeline.yml" or
+        coverage.get("slot_utc") != claim["slot_utc"] or
+        coverage.get("source_sha") != claim["source_sha"]
+    ):
+        return False
+    try:
+        slot = dt.datetime.fromisoformat(claim["slot_utc"])
+        start = dt.datetime.fromisoformat(coverage["window_start_utc"])
+        end = dt.datetime.fromisoformat(coverage["window_end_utc"])
+        observed = dt.datetime.fromisoformat(coverage["observed_utc"])
+        if any(t.tzinfo is None or t.utcoffset() is None for t in (slot, start, end, observed)):
+            return False
+        if not (start <= slot and end >= slot + dt.timedelta(minutes=30) and observed >= end):
+            return False
+        ids = [r["id"] for r in runs]
+        receipt_ids = [r["run_id"] for r in receipts]
+        if (any(type(i) is not int or i <= 0 for i in ids + receipt_ids) or
+            len(ids) != len(set(ids)) or
+            coverage.get("run_ids") != sorted(ids) or
+            coverage.get("receipt_run_ids") != sorted(receipt_ids)):
+            return False
+        for run in runs:
+            if (run.get("authenticated") is not True or
+                run.get("workflow") != "paper-pipeline.yml" or
+                run.get("event") not in ("schedule", "workflow_dispatch") or
+                type(run.get("run_attempt")) is not int or run["run_attempt"] < 1 or
+                not isinstance(run.get("slot_utc"), str)):
+                return False
+            run_slot = dt.datetime.fromisoformat(run["slot_utc"])
+            if run_slot.tzinfo is None or run_slot.utcoffset() is None:
+                return False
+        for receipt in receipts:
+            if not isinstance(receipt.get("slot_utc"), str):
+                return False
+            receipt_slot = dt.datetime.fromisoformat(receipt["slot_utc"])
+            if receipt_slot.tzinfo is None or receipt_slot.utcoffset() is None:
+                return False
+        return True
+    except (ValueError, TypeError, KeyError, AttributeError, OverflowError):
+        return False
+
+
+def reconcile(claim, *, tag_ref_sha, tag, runs, receipts, ledger, delivery=None,
+              coverage=None):
     """Classify independently authenticated bounded evidence; NEVER authorize retry.
 
-    The caller must verify API provenance, complete candidate-run coverage and
-    capture-time bounds. An 'authenticated' fixture is NOT live source proof.
+    The caller must independently authenticate API provenance and pagination.
+    A coverage fixture is NOT live source proof.
     """
     if not valid_plan(claim):
         return _result("BLOCKED", "INVALID_CLAIM")
@@ -30,6 +82,11 @@ def reconcile(claim, *, tag_ref_sha, tag, runs, receipts, ledger, delivery=None)
         return _result("UNVERIFIED", "INCOMPLETE_EVIDENCE")
     if any(not isinstance(x, dict) for x in runs + receipts):
         return _result("UNVERIFIED", "MALFORMED_RUN_OR_RECEIPT")
+    if not _complete_bounded_inventory(claim, runs, receipts, coverage):
+        return _result("UNVERIFIED", "BOUNDED_RUN_OR_RECEIPT_COVERAGE_NOT_PROVEN")
+    if any(r.get("slot_utc") == claim["slot_utc"] and
+           r.get("claim_digest") != claim["digest"] for r in receipts):
+        return _result("FAILED", "CONFLICTING_DISPATCH_RECEIPT_FOR_SLOT")
     record = json.loads(claim["message"].splitlines()[1])
     relevant = [r for r in receipts if r.get("claim_digest") == claim["digest"]]
     if not relevant:

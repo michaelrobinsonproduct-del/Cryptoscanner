@@ -29,7 +29,13 @@ def fixture():
                     run_id=99993, claim_digest=claim["digest"], generation=58,
                     sha256="d"*64, scan_id="synthetic-scan-58"),
         delivery=dict(authenticated=True, run_id=99993, published=True,
-                      user_receipt=False))
+                      user_receipt=False),
+        coverage=dict(authenticated=True, complete=True, workflow="paper-pipeline.yml",
+                      slot_utc=claim["slot_utc"], source_sha=SOURCE,
+                      window_start_utc=S.isoformat(),
+                      window_end_utc=(S + dt.timedelta(minutes=30)).isoformat(),
+                      observed_utc=(S + dt.timedelta(minutes=31)).isoformat(),
+                      run_ids=[99993], receipt_run_ids=[99993]))
 
 
 class RecoveryReconciliationTests(unittest.TestCase):
@@ -43,6 +49,7 @@ class RecoveryReconciliationTests(unittest.TestCase):
 
     def test_claim_without_receipt_is_stranded_and_not_retried(self):
         a = fixture(); a["receipts"] = []
+        a["coverage"]["receipt_run_ids"] = []
         r = reconcile(**a)
         self.assertEqual(r["reason"], "CLAIMED_WITHOUT_DISPATCH_RECEIPT")
         self.assertFalse(r["retry_authorized"])
@@ -57,6 +64,7 @@ class RecoveryReconciliationTests(unittest.TestCase):
 
     def test_duplicate_receipts_fail(self):
         a = fixture(); a["receipts"].append(dict(a["receipts"][0]))
+        a["coverage"]["receipt_run_ids"] = [99993, 99993]
         self.assertEqual(reconcile(**a)["reason"], "MULTIPLE_DISPATCH_RECEIPTS")
 
     def test_owner_controller_drift_fails(self):
@@ -77,6 +85,7 @@ class RecoveryReconciliationTests(unittest.TestCase):
 
     def test_native_and_recovery_same_slot_are_duplicate(self):
         a = fixture(); a["runs"].append(dict(a["runs"][0], id=99994, event="schedule"))
+        a["coverage"]["run_ids"] = [99993, 99994]
         self.assertEqual(reconcile(**a)["reason"], "MULTIPLE_WRITER_RUNS_FOR_SLOT")
 
     def test_failed_writer_does_not_prove_delivery(self):
@@ -102,6 +111,61 @@ class RecoveryReconciliationTests(unittest.TestCase):
         self.assertTrue(reconcile(**a)["user_receipt_verified"])
         a["delivery"]["authenticated"] = False
         self.assertFalse(reconcile(**a)["user_receipt_verified"])
+
+    def test_missing_coverage_never_reports_reconciled(self):
+        a = fixture(); a.pop("coverage")
+        self.assertEqual(reconcile(**a)["reason"], "BOUNDED_RUN_OR_RECEIPT_COVERAGE_NOT_PROVEN")
+
+    def test_partial_or_untrusted_inventory_abstains(self):
+        for change in ({"complete": False}, {"authenticated": False},
+                       {"run_ids": []}, {"receipt_run_ids": []},
+                       {"workflow": "another-workflow.yml"}):
+            with self.subTest(change=change):
+                a = fixture(); a["coverage"].update(change)
+                self.assertEqual(reconcile(**a)["status"], "UNVERIFIED")
+
+    def test_unclosed_slot_window_abstains(self):
+        a = fixture()
+        a["coverage"]["window_end_utc"] = (S + dt.timedelta(minutes=5)).isoformat()
+        self.assertEqual(reconcile(**a)["status"], "UNVERIFIED")
+
+    def test_observation_before_window_close_abstains(self):
+        a = fixture()
+        a["coverage"]["observed_utc"] = (S + dt.timedelta(minutes=4)).isoformat()
+        self.assertEqual(reconcile(**a)["status"], "UNVERIFIED")
+
+    def test_unknown_slot_for_other_run_abstains(self):
+        a = fixture()
+        a["runs"].append(dict(a["runs"][0], id=99994, slot_utc=None))
+        a["coverage"]["run_ids"] = [99993, 99994]
+        self.assertEqual(reconcile(**a)["status"], "UNVERIFIED")
+
+    def test_duplicate_run_id_in_inventory_abstains(self):
+        a = fixture(); a["runs"].append(dict(a["runs"][0]))
+        a["coverage"]["run_ids"] = [99993, 99993]
+        self.assertEqual(reconcile(**a)["status"], "UNVERIFIED")
+
+    def test_conflicting_dispatch_claim_for_same_slot_fails(self):
+        a = fixture()
+        a["receipts"].append(dict(a["receipts"][0], run_id=99994,
+                                  claim_digest="e"*64))
+        a["coverage"]["receipt_run_ids"] = [99993, 99994]
+        self.assertEqual(reconcile(**a)["reason"], "CONFLICTING_DISPATCH_RECEIPT_FOR_SLOT")
+
+    def test_unrelated_slot_receipt_does_not_block_bounded_reconciliation(self):
+        a = fixture()
+        a["receipts"].append(dict(a["receipts"][0], run_id=99994,
+                                  claim_digest="e"*64,
+                                  slot_utc=(S + dt.timedelta(minutes=30)).isoformat()))
+        a["coverage"]["receipt_run_ids"] = [99993, 99994]
+        self.assertEqual(reconcile(**a)["status"], "RECONCILED")
+
+    def test_untrusted_other_run_abstains(self):
+        a = fixture()
+        a["runs"].append(dict(a["runs"][0], id=99994, authenticated=False,
+                              slot_utc=(S + dt.timedelta(minutes=30)).isoformat()))
+        a["coverage"]["run_ids"] = [99993, 99994]
+        self.assertEqual(reconcile(**a)["status"], "UNVERIFIED")
 
     def test_invalid_claim_blocks_before_evidence(self):
         a = fixture(); a["claim"]["digest"] = "0"*64
