@@ -54,8 +54,8 @@ class VerifiedTradeBarsTests(unittest.TestCase):
     def test_end_to_end_manifest_verified_jsonl_partition(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            data = (json.dumps(trade(0, 100)) + '\\n' +
-                    json.dumps(trade(1, 105)) + '\\n').encode()
+            data = (json.dumps(trade(0, 100)) + '\n' +
+                    json.dumps(trade(1, 105)) + '\n').encode()
             (root / 'XUSD.jsonl').write_bytes(data)
             manifest = {'schema': 'kraken_archive_manifest_v1', 'source': 'Kraken',
                         'partitions': [{'file': 'XUSD.jsonl', 'size_bytes': len(data),
