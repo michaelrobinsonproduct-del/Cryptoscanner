@@ -33,3 +33,18 @@ test("HTTP failure visible on health and dashboard, subsequent manual recovery c
  const state=await (await http(req("/dashboard"))).json();
  expect(state.cycles).toBe(1);expect(state.last_error).toBeNull();
 });
+
+test("dashboard expires cached authenticated A2 paper WATCH without mutating stored scan",async()=>{
+ const snapshot={status:"VERIFIED_SNAPSHOT" as const,as_of:"2026-11-03T04:00:00Z",scan_status:"WATCH",receipt_sha256:"a".repeat(64),watch:[{pair:"TAOUSD",quote_observed_at:"2026-11-03T03:59:00Z"}],eligible_pairs:1,observed_markets:1,abstention_counts:{},source:"a2_verified_readonly" as const,buy_approved:false as const};
+ let clock=new Date("2026-11-03T04:01:00Z");
+ const runner=createCycleRunner(deps(),undefined,undefined,async()=>snapshot as any);
+ const http=createCycleHttpHandler(runner,()=>clock);
+ await runner.run("scheduled");
+ const fresh=await (await http(req("/dashboard"))).json();
+ expect(fresh.last_result.a2_snapshot.status).toBe("VERIFIED_SNAPSHOT");
+ clock=new Date("2026-11-03T04:10:01Z");
+ const expired=await (await http(req("/dashboard"))).json();
+ expect(expired.last_result.a2_snapshot).toMatchObject({status:"UNAVAILABLE",reason:"expired_at_dashboard_read",watch:[]});
+ expect(expired.last_result.candidates).toHaveLength(1);
+ expect(runner.snapshot().last.a2_snapshot.status).toBe("VERIFIED_SNAPSHOT");
+});
