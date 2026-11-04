@@ -337,6 +337,7 @@ def project_legacy_published_abstention(result, *, writer_readback=None, a2_deli
             "published_quote_evidence_count": 0,
             "published_observed_markets": result.get("observed_markets"),
             "published_quote_complete": False,
+            "fresh_watch_delivery_verified": False,
             "client_quote_freshness_verified": False,
             "exchange_event_freshness_verified": False,
             "single_writer_read_only": True, "production_applied": False}
