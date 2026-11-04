@@ -211,20 +211,19 @@ jobs:
           set -euo pipefail
           gh api "repos/$REPO/actions/artifacts?per_page=100" > /tmp/b-delivery/e-artifacts.json
           python - <<'PY'
-          import json,os,subprocess,zipfile,io
+          import hashlib,json,os,subprocess,zipfile,io
           from pathlib import Path
           from paper_pov.github_delivery_projection import _learning_evidence
           artifacts=json.loads(Path("/tmp/b-delivery/e-artifacts.json").read_text()).get("artifacts",[])
           # Only E's explicitly named handoff artifact can qualify; no synthetic labels.
           eligible=[a for a in artifacts if a.get("name")=="e-historical-learning-handoff"
-                    and a.get("expired") is False]
+                    and a.get("expired") is False and str(a.get("digest","")).startswith("sha256:")\n                    and a.get("workflow_run",{}).get("head_sha")]
           status={"status":"LEARNING_HANDOFF_UNAVAILABLE","reason":"NO_PUBLISHED_E_HANDOFF"}
           for a in eligible:
               try:
                   raw=subprocess.check_output(["gh","api","-H","Accept: application/vnd.github+json",
                       f"repos/{os.environ['REPO']}/actions/artifacts/{a['id']}/zip"],timeout=45)
-                  with zipfile.ZipFile(io.BytesIO(raw)) as z:
-                      if z.namelist()!=["learning-handoff.json"]:
+                  if hashlib.sha256(raw).hexdigest()!=a["digest"].removeprefix("sha256:"):\n                      raise ValueError("E_ARTIFACT_SHA256_MISMATCH")\n                  with zipfile.ZipFile(io.BytesIO(raw)) as z:\n                      if z.namelist()!=["learning-handoff.json"]:
                           raise ValueError("E handoff archive layout")
                       data=z.read("learning-handoff.json")
                       if len(data)>500000:
@@ -233,7 +232,7 @@ jobs:
                   _learning_evidence(handoff)
                   Path("/tmp/b-delivery/e-handoff.json").write_text(json.dumps(handoff))
                   status={"status":"E_READ_ONLY_HANDOFF_CONSUMED","artifact_id":a["id"],
-                          "workflow_run_id":a.get("workflow_run",{}).get("id")}
+                          "workflow_run_id":a.get("workflow_run",{}).get("id"),\n                          "source_sha":a["workflow_run"]["head_sha"],"artifact_sha256":a["digest"]}
                   break
               except (ValueError,KeyError,zipfile.BadZipFile,subprocess.CalledProcessError) as exc:
                   status={"status":"LEARNING_HANDOFF_UNAVAILABLE","reason":type(exc).__name__}
