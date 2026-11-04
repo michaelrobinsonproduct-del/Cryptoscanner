@@ -147,6 +147,8 @@ jobs:
           import json
           p=json.load(open("/tmp/c-real-receipts/integration.json"))
           assert p["a2_snapshot_attached"] and p["a2_watch_count"]==12
+          assert len(p["a2_watch_candidates"])==p["a2_watch_count"]
+          assert p["a2_watch_candidates"]
           assert p["a2_eligible_pairs"]==605 and p["a2_observed_markets"]==602
           assert p["a2_source_cohort"]=="authenticated_snapshot_distinct_from_historical_manual_scheduled"
           assert isinstance(p["a2_abstention_counts"],dict)
