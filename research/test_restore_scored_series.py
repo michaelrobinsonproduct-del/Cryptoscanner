@@ -46,7 +46,8 @@ class RestoreScoredSeriesTests(unittest.TestCase):
                 directory.mkdir()
                 fixture(directory)
             new = root / "restored"
-            result = restore_and_capture(source, new, collector=collector)
+            with patch("research.restore_scored_series.evaluate_all", return_value={"mode": "RESEARCH_ONLY_AUTHENTICATED_HELD_OUT", "production_applied": False}):
+                result = restore_and_capture(source, new, collector=collector)
             self.assertEqual(result["rounds_verified"], 2)
             self.assertEqual(result["original_index_sha256"],
                              hashlib.sha256(original_index).hexdigest())
@@ -61,7 +62,8 @@ class RestoreScoredSeriesTests(unittest.TestCase):
             # Another independent job restores the new artifact without
             # rewriting original evidence or synthesizing elapsed 5m slots.
             latest = root / "third-job"
-            resumed = restore_and_capture(new, latest, collector=collector)
+            with patch("research.restore_scored_series.evaluate_all", return_value={"mode": "RESEARCH_ONLY_AUTHENTICATED_HELD_OUT", "production_applied": False}):
+                resumed = restore_and_capture(new, latest, collector=collector)
             self.assertEqual(resumed["rounds_verified"], 3)
             self.assertEqual(evaluate_index(latest / "entry" / "round-index.jsonl")["rounds_verified"], 3)
 
