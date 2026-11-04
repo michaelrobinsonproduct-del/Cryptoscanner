@@ -90,18 +90,74 @@ def project_delivery(transport, writer_readback=None, historical_a2=None):
             "historical_a2": replay}
 
 
+def project_published_result(result, writer_readback=None):
+    """Consume the real results.json emitted by the ONE paper-pipeline writer.
+
+    This is the same schema for scheduled and manual dispatch; it does not
+    re-run Kraken, mutate the ledger, or infer exchange-event freshness.
+    """
+    import re
+    if not isinstance(result, dict) or result.get("schema") != 1:
+        raise ValueError("invalid published paper result")
+    event = result.get("github_event")
+    if event not in ("schedule", "workflow_dispatch"):
+        raise ValueError("untrusted scan trigger")
+    if event == "schedule":
+        cron = result.get("originating_cron")
+        if cron not in ("9 * * * *", "39 * * * *") or result.get("scheduled_slot_verified") is not True or result.get("scheduled_slot_utc_minute") != int(cron.split()[0]):
+            raise ValueError("invalid scheduled provenance")
+    elif result.get("originating_cron") is not None or result.get("scheduled_slot_verified") is not False or result.get("scheduled_slot_utc_minute") is not None:
+        raise ValueError("manual result claims scheduled provenance")
+    run_id, sha = result.get("run_id"), result.get("source_sha")
+    if not isinstance(run_id, str) or not run_id.isdigit() or int(run_id) <= 0 or not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{40}", sha) is None:
+        raise ValueError("invalid published source identity")
+    if result.get("production_applied") is not False or result.get("buy_approved") is not False or result.get("exchange_event_freshness_verified") is not False:
+        raise ValueError("unsupported production or freshness claim")
+    if result.get("remote_readback_verified") is not True or re.fullmatch(r"[0-9a-f]{64}", str(result.get("ledger_sha256", ""))) is None or re.fullmatch(r"[0-9a-f]{40}", str(result.get("ledger_commit", ""))) is None:
+        raise ValueError("missing single-writer readback evidence")
+    generation = result.get("ledger_generation")
+    if type(generation) is not int or generation < 1:
+        raise ValueError("invalid published ledger generation")
+    status = result.get("status")
+    if status not in ("SUCCESS_PAPER_ONLY", "ABSTAIN_NO_WATCH", "ABSTAIN_NO_OBSERVATIONS"):
+        raise ValueError("unsupported published scan status")
+    candidates = result.get("candidates")
+    if not isinstance(candidates, list) or (status == "SUCCESS_PAPER_ONLY") != bool(candidates) or len(candidates) > 12:
+        raise ValueError("published WATCH/status inconsistency")
+    if candidates:
+        age = result.get("max_client_quote_age_seconds")
+        if type(age) not in (int, float) or not 0 <= age <= 600:
+            raise ValueError("WATCH quote freshness invalid")
+    for i, candidate in enumerate(candidates, 1):
+        if not isinstance(candidate, dict) or candidate.get("rank") != i or candidate.get("status") != "WATCH_PAPER_ONLY" or candidate.get("exchange_event_freshness_verified") is not False:
+            raise ValueError("invalid WATCH candidate")
+        for key in ("symbol", "price_usd", "quote_observed_at", "baseline_score", "challenger_score", "move15_pct", "volume_accel", "risk"):
+            if key not in candidate:
+                raise ValueError("incomplete WATCH candidate")
+    writer = _writer_evidence(writer_readback) if writer_readback is not None else None
+    return {"schema": "paper_delivery_readback_v1", "source_run_id": int(run_id),
+            "source_sha": sha, "github_event": event, "status": status,
+            "ledger_generation": generation, "ledger_commit": result["ledger_commit"],
+            "writer_reconciliation_status": writer["reconciliation_status"] if writer else "UNAVAILABLE",
+            "writer_recovery": writer, "historical_watch_count": None, "historical_coverage": None,
+            "live_watch": candidates, "live_watch_authorized": False,
+            "client_quote_freshness_verified": bool(candidates),
+            "exchange_event_freshness_verified": False,
+            "single_writer_read_only": True, "production_applied": False}
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--repo", required=True)
-    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--repo")
+    parser.add_argument("--run-id")
     parser.add_argument("--writer-readback", help="Existing D historical readback JSON")
     parser.add_argument("--historical-a2", help="Existing C/B historical WATCH handoff JSON")
-    parser.add_argument("--output", help="Write read-only delivery JSON; never a ledger")
+    parser.add_argument("--output", help="Write read-only delivery JSON; never a ledger")\n    parser.add_argument("--published-result", help="Actual verified paper-pipeline results.json")
     args = parser.parse_args()
     writer = json.loads(open(args.writer_readback, encoding="utf-8").read()) if args.writer_readback else None
     historical = json.loads(open(args.historical_a2, encoding="utf-8").read()) if args.historical_a2 else None
-    result = project_delivery(read_run(args.repo, args.run_id), writer, historical)
-    rendered = json.dumps(result, sort_keys=True, allow_nan=False) + "\\n"
+    if args.published_result:\n        if args.run_id or args.repo or historical is not None:\n            parser.error("--published-result is exclusive of historical artifact transport")\n        result = project_published_result(json.loads(open(args.published_result, encoding="utf-8").read()), writer)\n    else:\n        if not args.repo or not args.run_id:\n            parser.error("--repo and --run-id required for historical artifact transport")\n        result = project_delivery(read_run(args.repo, args.run_id), writer, historical)
+    rendered = json.dumps(result, sort_keys=True, allow_nan=False) + "\n"
     if args.output:
         from pathlib import Path
         target = Path(args.output)
