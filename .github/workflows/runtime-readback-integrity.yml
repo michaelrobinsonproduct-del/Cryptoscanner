@@ -195,6 +195,7 @@ jobs:
           python - <<'PY'
           import json, os
           from pathlib import Path
+          import subprocess
           from paper_pov.manual_schedule_contract import load_verified_artifact
           try:
               published = load_verified_artifact(Path("/tmp/d2-published-results.zip"))
