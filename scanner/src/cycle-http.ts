@@ -14,8 +14,8 @@ export function createCycleHttpHandler(runner:ReturnType<typeof createCycleRunne
   if(path==="/health"){const s=runner.snapshot();return Response.json({mode:"shadow",running:s.running,cycles:s.cycles,lastError:s.lastError})}
   if(path==="/dashboard"){const s=runner.snapshot();return Response.json({mode:"shadow",running:s.running,cycles:s.cycles,last_error:s.lastError,last_result:safeLast(s.last)})}
   if(path==="/watch"){
-   const s=runner.snapshot(),last=safeLast(s.last);
-   return Response.json({mode:"paper_only",cycles:s.cycles,running:s.running,watch:last?.paper_watch??[],status:last?.paper_watch_status??"ABSTAIN_NO_SCAN",live_watch_certified:false,receipt_sha256:last?.a2_snapshot?.receipt_sha256??null,as_of:last?.a2_snapshot?.as_of??null,scan_status:last?.a2_snapshot?.scan_status??null,eligible_pairs:last?.a2_snapshot?.eligible_pairs??null,observed_markets:last?.a2_snapshot?.observed_markets??null,abstention_counts:last?.a2_snapshot?.abstention_counts??null},{headers:{"cache-control":"no-store"}});
+   const s=runner.snapshot(),last=s.lastError?null:safeLast(s.last);
+   return Response.json({mode:"paper_only",cycles:s.cycles,running:s.running,watch:last?.paper_watch??[],status:s.lastError?"ABSTAIN_LAST_SCAN_FAILED":last?.paper_watch_status??"ABSTAIN_NO_SCAN",live_watch_certified:false,receipt_sha256:last?.a2_snapshot?.receipt_sha256??null,as_of:last?.a2_snapshot?.as_of??null,scan_status:last?.a2_snapshot?.scan_status??null,eligible_pairs:last?.a2_snapshot?.eligible_pairs??null,observed_markets:last?.a2_snapshot?.observed_markets??null,abstention_counts:last?.a2_snapshot?.abstention_counts??null},{headers:{"cache-control":"no-store"}});
   }
   if(path==="/cycle"){const result=await runner.run("manual");return Response.json(result.ok?result.result:{error:result.error},{status:result.status})}
   return Response.json({endpoints:["/health","/dashboard","/watch","/cycle"]});
