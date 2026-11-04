@@ -262,6 +262,21 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     completed = clock().astimezone(UTC)
     if not 0 <= (completed - quote_at).total_seconds() <= 180:
         raise RuntimeError("Quote observations expired during OHLC screening")
+    # OHLC may have been fresh when fetched but expire while later pairs are
+    # screened. Seal only candidates whose completed candle remains fresh at
+    # the actual scan timestamp; otherwise the persisted A2 readback rejects
+    # the entire receipt rather than abstaining the individual stale market.
+    fresh_watch = []
+    for item in watch:
+        closed_at = utc(item["ohlc_last_closed_at"])
+        if not 0 <= (completed - closed_at).total_seconds() <= 600:
+            abstention_counts["stale_or_future_ohlc"] += 1
+            abstentions.append({"pair": item["pair"],
+                "category": "stale_or_future_ohlc",
+                "reason": "completed OHLC expired before scan sealing"})
+        else:
+            fresh_watch.append(item)
+    watch = fresh_watch
     # A valid scan may have no qualified market: preserve its coverage and abstentions.
     # This is a successful paper observation, never a BUY or an invented WATCH.
     watch.sort(key=lambda x: (-x["challenger_score"], x["pair"]))
