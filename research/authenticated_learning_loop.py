@@ -29,18 +29,33 @@ def _extract(captures_dir, associations_dir, round_index, horizon_hours):
                      "reason": "MISSING_DEPTH_ASSOCIATION"} for c in captures]
         provenance = {"source_abstentions": []}
     outcomes = evaluate_index(round_index, horizon_hours)
+    # Raw Kraken depth may be identical at different factual acquisition
+    # times. A SHA-only join can attach a score to a later unrelated outcome.
     by_source = {}
+    identities = set()
     for row in outcomes["outcomes"]:
-        key = (row["pair"], row["entry_source_sha256"])
-        if key in by_source:
-            raise ValueError("duplicate source outcome identity")
-        by_source[key] = row
+        identity = (row["pair"], row["entry_source_sha256"],
+                    row["entry_first_observed_at"])
+        if identity in identities:
+            raise ValueError("duplicate point-in-time source outcome identity")
+        identities.add(identity)
+        by_source.setdefault(identity[:2], []).append(row)
     qualified, abstentions = [], list(excluded)
     for capture in verified:
-        outcome = by_source.get((capture["pair"], capture["source_sha256"]))
-        if outcome is None or outcome["status"] != "QUALIFIED_OBSERVED_PATH":
+        candidates = by_source.get((capture["pair"], capture["source_sha256"]), [])
+        if "source_first_observed_at" in capture:
+            candidates = [row for row in candidates if
+                          row["entry_first_observed_at"] ==
+                          capture["source_first_observed_at"]]
+        if len(candidates) != 1:
             abstentions.append({"prediction_id": capture["prediction_id"],
-                                "reason": outcome["status"] if outcome else "MISSING_SOURCE_OUTCOME"})
+                                "reason": "AMBIGUOUS_SOURCE_OUTCOME"
+                                if len(candidates) > 1 else "MISSING_SOURCE_OUTCOME"})
+            continue
+        outcome = candidates[0]
+        if outcome["status"] != "QUALIFIED_OBSERVED_PATH":
+            abstentions.append({"prediction_id": capture["prediction_id"],
+                                "reason": outcome["status"]})
             continue
         if outcome.get("entry_liquidity_usd") is None or outcome["entry_liquidity_usd"] < 20:
             abstentions.append({"prediction_id": capture["prediction_id"],
