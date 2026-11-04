@@ -217,7 +217,11 @@ jobs:
               Path("/tmp/d2-published-legacy").write_text("true")
               print("D2_B_HISTORICAL_PUBLISHED_ABSTAIN",json.dumps(report,sort_keys=True))
           PY
-          if [ -f /tmp/d2-published-legacy ]; then exit 0; fi
+          if [ -f /tmp/d2-published-legacy ]; then
+            # Legacy abstentions must remain valid JSON for the shared B consumer.
+            python -m json.tool /tmp/d2-b-published-delivery.json >/dev/null
+            exit 0
+          fi
           python -m paper_pov.github_delivery_projection \
             --published-artifact /tmp/d2-published-results.zip \
             --expected-run-id "$WRITER_RUN_ID" \
