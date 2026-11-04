@@ -51,11 +51,40 @@ def read_artifact_zip(archive, now=None):
         raise ValueError("A2 artifact digest mismatch")
     return verified
 
+def read_published_artifact(directory, now=None):
+    """Consume the exact downloaded Actions artifact directory, not a reconstructed ZIP.
+
+    Require both the immutable WATCH transport and complete preselection universe
+    to agree on the same sealed receipt. Never authorize historical/stale WATCH.
+    """
+    from paper_pov.preselection_universe import export_universe
+    root = Path(directory)
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("invalid downloaded A2 artifact directory")
+    transport = root / "a2-verified-transport.zip"
+    universe_file = root / "preselection-universe.json"
+    latest = root / "latest.json"
+    if any(p.is_symlink() or not p.is_file() for p in (transport, universe_file, latest)):
+        raise ValueError("incomplete downloaded A2 artifact")
+    if universe_file.stat().st_size > 2_000_000:
+        raise ValueError("oversized preselection evidence")
+    snapshot = read_artifact_zip(transport, now=now)
+    published = json.loads(universe_file.read_bytes())
+    verified_universe = export_universe(latest, now=now)
+    if published != verified_universe:
+        raise ValueError("published preselection universe mismatch")
+    if verified_universe["receipt_sha256"] != snapshot["receipt_sha256"]:
+        raise ValueError("preselection and WATCH receipt mismatch")
+    if verified_universe["selection_decisions"]["WATCH"] != len(snapshot["watch"]):
+        raise ValueError("preselection WATCH coverage mismatch")
+    return {"snapshot": snapshot, "preselection": verified_universe}
+
+
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("zip", help="downloaded GitHub Actions A2 evidence artifact ZIP")
+    p.add_argument("zip", help="A2 transport ZIP or downloaded Actions artifact directory")
     args = p.parse_args()
-    print(json.dumps(read_artifact_zip(args.zip), sort_keys=True, allow_nan=False))
+    print(json.dumps(read_published_artifact(args.zip) if Path(args.zip).is_dir() else read_artifact_zip(args.zip), sort_keys=True, allow_nan=False))
 
 if __name__ == "__main__":
     main()
