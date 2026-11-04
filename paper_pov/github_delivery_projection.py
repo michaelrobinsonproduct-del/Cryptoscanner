@@ -325,7 +325,8 @@ def main():
             raise ValueError("published artifact run identity mismatch")
         if args.expected_source_sha and published.get("source_sha") != args.expected_source_sha:
             raise ValueError("published artifact source SHA mismatch")
-        result = (project_legacy_published_abstention(published, writer_readback=writer, a2_delivery=a2, learning_handoff=learning)\n                  if "quote_evidence" not in published else project_published_result(published, writer, a2, learning))
+        result = (project_legacy_published_abstention(published, writer_readback=writer, a2_delivery=a2, learning_handoff=learning)
+                  if "quote_evidence" not in published else project_published_result(published, writer, a2, learning))
     else:
         if args.a2_delivery or args.learning_handoff:
             parser.error("--a2-delivery and --learning-handoff require --published-result")
