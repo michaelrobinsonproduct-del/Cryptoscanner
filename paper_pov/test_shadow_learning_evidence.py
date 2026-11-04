@@ -16,7 +16,7 @@ def cohort(n=40):
 
 class ShadowEvidenceTests(unittest.TestCase):
     def setUp(self):
-        self.a = dict(version="baseline-v1", training_end_utc="2026-07-29T00:00:00Z", observations=cohort())
+        self.a = dict(version="baseline-v1", training_end_utc="2026-07-29T00:00:00Z", evaluation_asof_utc="2026-08-07T00:00:00Z", observations=cohort())
         self.b = dict(version="challenger-v2", training_end_utc="2026-07-29T00:00:00Z", observations=cohort())
 
     def test_no_improvement_never_promotes(self):
@@ -111,6 +111,28 @@ class ShadowEvidenceTests(unittest.TestCase):
         self.assertEqual(result["challenger"]["recall"], 1.0)
         self.assertEqual(result["challenger"]["coverage"], 0.5)
         self.assertEqual(result["status"], "NO_QUALIFIED_RULE")
+
+    def test_rejects_future_outcome_not_mature_at_evaluation(self):
+        self.a["evaluation_asof_utc"] = "2026-08-05T00:00:00Z"
+        self.b["evaluation_asof_utc"] = "2026-08-05T00:00:00Z"
+        with self.assertRaisesRegex(ValueError, "immature"):
+            evaluate_shadow_release(self.a, self.b)
+
+    def test_rejects_different_evaluation_cutoffs(self):
+        self.b["evaluation_asof_utc"] = "2026-08-08T00:00:00Z"
+        with self.assertRaisesRegex(ValueError, "cutoff mismatch"):
+            evaluate_shadow_release(self.a, self.b)
+
+    def test_rejects_mixed_holdout_boundaries(self):
+        self.a["observations"][0]["holdout_start_utc"] = "2026-08-02T00:00:00Z"
+        with self.assertRaisesRegex(ValueError, "Mixed held-out"):
+            evaluate_shadow_release(self.a, self.b)
+
+    def test_rejects_missing_evaluation_cutoff(self):
+        self.a.pop("evaluation_asof_utc")
+        self.b.pop("evaluation_asof_utc")
+        with self.assertRaises(ValueError):
+            evaluate_shadow_release(self.a, self.b)
 
     def test_weak_sample_abstains(self):
         self.a["observations"] = cohort(10)
