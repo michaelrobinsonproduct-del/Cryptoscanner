@@ -45,7 +45,7 @@ def _writer_evidence(readback):
             "live_watch_authorized": False, "production_applied": False}
 
 
-def project_delivery(transport, writer_readback=None):
+def project_delivery(transport, writer_readback=None, historical_a2=None):
     if not isinstance(transport, dict):
         raise ValueError("invalid readback")
     run_id = transport.get("source_run_id")
@@ -74,18 +74,41 @@ def project_delivery(transport, writer_readback=None):
     else:
         raise ValueError("unsupported readback")
     writer = _writer_evidence(writer_readback) if writer_readback is not None else None
+    replay = None
+    if historical_a2 is not None:
+        from .c_candidate_handoff import consume
+        replay = consume(historical_a2)
+        # Historical A2 is a different cohort, never an authorized live signal.
+        replay = {"status": replay["status"], "receipt_sha256": replay["receipt_sha256"],
+                  "watch_count": replay["watch_count"], "source_as_of": replay["source_as_of"],
+                  "live_watch_certified": False}
     return {"schema": "paper_delivery_readback_v1", "source_run_id": run_id,
             "source_sha": source_sha, "status": status, "historical_watch_count": historical_watch_count,
             "historical_coverage": coverage, "live_watch": [], "live_watch_authorized": False,
-            "production_applied": False, "single_writer_read_only": True,\n            "writer_recovery": writer, "writer_reconciliation_status": writer["reconciliation_status"] if writer else "UNAVAILABLE"}
+            "production_applied": False, "single_writer_read_only": True,
+            "writer_recovery": writer, "writer_reconciliation_status": writer["reconciliation_status"] if writer else "UNAVAILABLE",
+            "historical_a2": replay}
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", required=True)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--writer-readback", help="Existing D historical readback JSON")
+    parser.add_argument("--historical-a2", help="Existing C/B historical WATCH handoff JSON")
+    parser.add_argument("--output", help="Write read-only delivery JSON; never a ledger")
     args = parser.parse_args()
-    print(json.dumps(project_delivery(read_run(args.repo, args.run_id)), sort_keys=True, allow_nan=False))
+    writer = json.loads(open(args.writer_readback, encoding="utf-8").read()) if args.writer_readback else None
+    historical = json.loads(open(args.historical_a2, encoding="utf-8").read()) if args.historical_a2 else None
+    result = project_delivery(read_run(args.repo, args.run_id), writer, historical)
+    rendered = json.dumps(result, sort_keys=True, allow_nan=False) + "\\n"
+    if args.output:
+        from pathlib import Path
+        target = Path(args.output)
+        if target.exists():
+            raise FileExistsError("refusing to overwrite delivery result")
+        target.write_text(rendered, encoding="utf-8")
+    print(rendered, end="")
 
 
 if __name__ == "__main__":
