@@ -10,6 +10,7 @@ import json
 import os
 import ssl
 import subprocess
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from paper_pov.github_sealed_bundle_readback import read_run
 
@@ -31,6 +32,7 @@ def latest_run(repo, runner=subprocess.check_output):
 def make_handler(repo, token, *, resolver=latest_run, reader=read_run):
     if not token or len(token) < 32:
         raise ValueError("PAPER_BUNDLE_TOKEN must be at least 32 characters")
+    gate = threading.Lock()
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
             if self.path != "/sealed-paper":
@@ -44,7 +46,8 @@ def make_handler(repo, token, *, resolver=latest_run, reader=read_run):
                 self.end_headers()
                 return
             try:
-                record = reader(repo, resolver(repo))
+                with gate:
+                    record = reader(repo, resolver(repo))
                 bundle = record["bundle"]
                 report = json.loads(bundle["receipt_json"])
                 stamp = dt.datetime.fromisoformat(report["as_of"].replace("Z", "+00:00"))
