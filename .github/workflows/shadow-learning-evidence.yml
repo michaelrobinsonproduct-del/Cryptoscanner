@@ -40,7 +40,7 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
-          ref: 2bdf5cf3e2a213293e2210b2001aba2a06ae6562
+          ref: integration-a-b-c-d-20261103
           path: upstream-b
           persist-credentials: false
       - uses: actions/setup-python@v5
