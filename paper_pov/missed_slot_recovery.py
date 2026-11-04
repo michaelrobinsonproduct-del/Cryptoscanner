@@ -110,18 +110,22 @@ def main():
     import os
     import subprocess
     repo = os.environ["GITHUB_REPOSITORY"]
-    # Fail closed if GitHub cannot return a complete authoritative response.
+    # Query only the bounded recovery horizon: unfiltered busy repositories
+    # routinely have 100+ historical runs and would otherwise abstain forever.
     def fetch_runs():
+        cutoff = (dt.datetime.now(UTC) - dt.timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
         raw = subprocess.check_output([
             "gh", "api", "-X", "GET",
             f"repos/{repo}/actions/workflows/paper-pipeline.yml/runs",
             "-f", "branch=main", "-f", "per_page=100",
+            "-f", "created=>=" + cutoff,
         ], timeout=30)
         payload = json.loads(raw)
         if not isinstance(payload, dict) or not isinstance(payload.get("workflow_runs"), list):
             raise ValueError("Missing GitHub workflow run list")
-        if payload.get("total_count", 0) > len(payload["workflow_runs"]) and len(payload["workflow_runs"]) >= 100:
-            raise ValueError("GitHub workflow history truncated")
+        if (not isinstance(payload.get("total_count"), int)
+                or payload["total_count"] != len(payload["workflow_runs"])):
+            raise ValueError("GitHub workflow history incomplete or truncated")
         return [{k: run[k] for k in ("event", "status", "created_at")}
                 for run in payload["workflow_runs"]]
 
