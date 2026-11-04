@@ -27,7 +27,9 @@ class SnapshotTests(unittest.TestCase):
                 "quote_timestamp_semantics": "client_observed_not_exchange_event_time",
                 "prediction_id": hashlib.sha256(("paper-v1|" + STAMP + "|" + pair).encode()).hexdigest(),
                 "price": 1.5, "move15_pct": 2.0, "volume_accel": 1.4,
-                "baseline_score": 45.0, "challenger_score": 60.0, "spread_bps": 5.0}
+                "baseline_score": 45.0, "challenger_score": 60.0, "spread_bps": 5.0,
+                "risk": "ELEVATED", "momentum_reference": "completed_5m_candles_15m",
+                "volume_acceleration_reference": "last_30m_over_prior_30m"}
 
     def seal(self):
         raw = json.dumps(self.report, sort_keys=True, separators=(",", ":")).encode()
@@ -41,6 +43,21 @@ class SnapshotTests(unittest.TestCase):
         self.assertEqual(result["watch"][0]["pair"], "TESTUSD")
         self.assertEqual(result["snapshot_age_seconds"], 30)
         self.assertEqual(result["abstention_counts"]["ohlc_gap_or_schema"], 2)
+
+    def test_missing_or_forged_risk_and_metric_provenance_rejected(self):
+        for field, bad, message in (
+            ("risk", None, "risk classification"),
+            ("risk", "HIGH", "risk classification"),
+            ("momentum_reference", "unverified", "metric provenance"),
+            ("volume_acceleration_reference", None, "metric provenance"),
+        ):
+            with self.subTest(field=field, bad=bad):
+                original = self.report["watch"][0][field]
+                self.report["watch"][0][field] = bad
+                self.seal()
+                with self.assertRaisesRegex(ValueError, message):
+                    read_snapshot(self.latest, NOW)
+                self.report["watch"][0][field] = original
 
     def test_zero_watch_abstention_readback(self):
         self.report.update(watch=[], scan_status="ABSTAIN_NO_QUALIFIED_OHLC")
