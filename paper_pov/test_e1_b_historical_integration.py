@@ -112,6 +112,14 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
             self.assertFalse(all_markets["handoff"]["source_authenticated"])
             decisions = {(r["pair"], r["frozen_selection_status"]) for r in all_markets["handoff"]["diagnostic_outcome_rows"]}
             self.assertEqual(decisions, {("XUSD", "WATCH"), ("YUSD", "SCREEN_REJECTED")})
+            selection_outcomes = all_markets["handoff"]["diagnostic_selection_outcomes"]
+            for horizon in ("1", "6", "24", "48"):
+                self.assertEqual(sum(sum(bucket.values()) for bucket in
+                                     selection_outcomes[horizon].values()), 2)
+                self.assertEqual(selection_outcomes[horizon]["SCREEN_REJECTED"]["abstained"], 1)
+            self.assertEqual(selection_outcomes["48"]["WATCH"]["observed_misses_unqualified"], 1)
+            self.assertEqual(selection_outcomes["48"]["WATCH"]["observed_hits_unqualified"], 0)
+
             overlap = audit_a2_trade_partition_overlap(
                 dict(projection, frozen_observations=[
                     {"prediction_id": rows[0]["observation_id"], "pair": "XUSD",
