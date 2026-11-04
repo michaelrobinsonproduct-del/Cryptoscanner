@@ -7,7 +7,7 @@ from pathlib import Path
 
 from paper_pov.scanner import UTC, scan, persist_report
 from paper_pov.candidate_snapshot import read_snapshot
-from paper_pov.preselection_universe import export_universe
+from paper_pov.preselection_universe import export_universe, export_receipt_history
 
 
 class EndToEndCandidateTests(unittest.TestCase):
@@ -120,6 +120,24 @@ class EndToEndCandidateTests(unittest.TestCase):
             self.assertEqual(research["selection_decisions"]["WATCH"], 0)
             self.assertEqual(research["selection_decisions"]["SCREEN_REJECTED"], 25)
             self.assertFalse(research["live_watch_eligible"])
+
+    def test_receipt_history_exports_longitudinal_complete_universe(self):
+        with tempfile.TemporaryDirectory() as folder:
+            latest = Path(folder) / "latest.json"
+            first = scan(api=self.api, clock=lambda: self.now, sleep=lambda _: None, max_ohlc=4)
+            persist_report(latest, first)
+            later = self.now + dt.timedelta(minutes=5)
+            second = scan(api=self.api, clock=lambda: later, sleep=lambda _: None, max_ohlc=4)
+            persist_report(latest, second)
+            feed = export_receipt_history(latest.parent / "receipts")
+            self.assertEqual(feed["receipt_count"], 2)
+            self.assertEqual(feed["market_observation_count"], 50)
+            self.assertFalse(feed["live_watch_eligible"])
+            self.assertFalse(feed["future_outcomes_authenticated"])
+            self.assertEqual(len({r["observation_id"] for snap in feed["snapshots"]
+                                  for r in snap["markets"]}), 50)
+            self.assertEqual([s["as_of"] for s in feed["snapshots"]],
+                             sorted(s["as_of"] for s in feed["snapshots"]))
 
     def test_reader_rejects_aged_quote_without_rewriting_receipt(self):
         report = scan(api=self.api, clock=lambda: self.now, sleep=lambda _: None, max_ohlc=4)
