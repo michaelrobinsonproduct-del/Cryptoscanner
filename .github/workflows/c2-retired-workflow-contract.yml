@@ -202,7 +202,7 @@ jobs:
               assert len(names)==1 and names[0].endswith("real-writer-recovery.json"), names
               Path("/tmp/c-real-receipts/d2-readback.json").write_bytes(z.read(names[0]))
           PY
-          python -m paper_pov.c_writer_recovery_bridge --integration /tmp/c-real-receipts/integration.json --readback /tmp/c-real-receipts/d2-readback.json --output /tmp/c-real-receipts/cd-bridge.json --bd-output /tmp/c-real-receipts/bd-recovered-watch.json
+          python -m paper_pov.c_writer_recovery_bridge --integration /tmp/c-real-receipts/integration.json --readback /tmp/c-real-receipts/d2-readback.json --output /tmp/c-real-receipts/cd-bridge.json --bd-output /tmp/c-real-receipts/bd-recovered-watch.json --writer-readback-output /tmp/c-real-receipts/bd-writer-readback.json
           python - <<'PY'
           import json
           from pathlib import Path
@@ -227,5 +227,6 @@ jobs:
             /tmp/c-real-receipts/d2-readback.json
             /tmp/c-real-receipts/cd-bridge.json
             /tmp/c-real-receipts/bd-recovered-watch.json
+            /tmp/c-real-receipts/bd-writer-readback.json
           retention-days: 7
           if-no-files-found: error
