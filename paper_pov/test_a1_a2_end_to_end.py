@@ -89,6 +89,38 @@ class EndToEndCandidateTests(unittest.TestCase):
         self.assertEqual(report["preselection_coverage"], {"valid_tickers": 25, "screen_passed": 0, "screen_rejected": 25})
         self.assertTrue(all(x["screen_rejections"] == ["below_early_move"] for x in report["preselection_universe"]))
 
+    def test_historical_universe_research_survives_live_expiry_without_live_watch(self):
+        report = scan(api=self.api, clock=lambda: self.now, sleep=lambda _: None, max_ohlc=4)
+        with tempfile.TemporaryDirectory() as folder:
+            latest = Path(folder) / "latest.json"
+            receipt = persist_report(latest, report)
+            old = self.now + dt.timedelta(days=14)
+            with self.assertRaisesRegex(ValueError, "stale or future paper snapshot"):
+                export_universe(latest, now=old)
+            research = export_universe(latest, now=old, historical=True)
+            self.assertEqual(research["snapshot_use"], "HISTORICAL_RESEARCH_ONLY")
+            self.assertFalse(research["live_watch_eligible"])
+            self.assertFalse(research["qualified_for_learning"])
+            self.assertEqual(research["receipt_sha256"], hashlib.sha256(receipt.read_bytes()).hexdigest())
+            self.assertEqual(len(research["markets"]), 25)
+            self.assertEqual(research["selection_decisions"]["WATCH"], 3)
+            # Research mode still requires the original immutable receipt.
+            receipt.unlink()
+            with self.assertRaisesRegex(ValueError, "immutable receipt"):
+                export_universe(latest, historical=True)
+
+    def test_historical_zero_watch_remains_research_only(self):
+        for ticker in self.ticker.values():
+            ticker["o"] = ticker["c"][0]
+        report = scan(api=self.api, clock=lambda: self.now, sleep=lambda _: None)
+        with tempfile.TemporaryDirectory() as folder:
+            latest = Path(folder) / "latest.json"
+            persist_report(latest, report)
+            research = export_universe(latest, historical=True)
+            self.assertEqual(research["selection_decisions"]["WATCH"], 0)
+            self.assertEqual(research["selection_decisions"]["SCREEN_REJECTED"], 25)
+            self.assertFalse(research["live_watch_eligible"])
+
     def test_reader_rejects_aged_quote_without_rewriting_receipt(self):
         report = scan(api=self.api, clock=lambda: self.now, sleep=lambda _: None, max_ohlc=4)
         with tempfile.TemporaryDirectory() as folder:
