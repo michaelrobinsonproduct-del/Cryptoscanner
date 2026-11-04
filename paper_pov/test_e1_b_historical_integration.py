@@ -14,9 +14,35 @@ from unittest.mock import patch
 
 from .historical_execution_learning_bridge import project_historical_execution
 from .historical_e1_b_pipeline import run_pipeline
+from .historical_preselection_binding import bind_preselection_history
 
 
 class RealHistoricalE1ToBTests(unittest.TestCase):
+    def test_a_historical_universe_retains_unselected_markets(self):
+        receipt = "a" * 64
+        def market(pair, status):
+            return {"pair": pair, "selection_status": status,
+                    "observation_id": hashlib.sha256(
+                        ("paper-preselection-v1|" + receipt + "|" + pair).encode()).hexdigest()}
+        rows = [market("XUSD", "WATCH"), market("YUSD", "SCREEN_REJECTED")]
+        history = {"schema": "paper_preselection_history_v1",
+                   "snapshot_use": "HISTORICAL_RESEARCH_ONLY",
+                   "future_outcomes_authenticated": False, "qualified_for_learning": False,
+                   "receipt_count": 1, "market_observation_count": 2,
+                   "snapshots": [{"schema": "paper_preselection_v1",
+                                  "snapshot_use": "HISTORICAL_RESEARCH_ONLY",
+                                  "receipt_sha256": receipt,
+                                  "as_of": "2026-01-01T00:00:00+00:00",
+                                  "coverage": {"valid_tickers": 2}, "markets": rows}]}
+        watch = [{"prediction_id": rows[0]["observation_id"], "pair": "XUSD",
+                  "as_of": "2026-01-01T00:00:00+00:00", "status": "PAPER_WATCH"}]
+        binding = bind_preselection_history(history, watch)
+        self.assertEqual(binding["preselection_observation_count"], 2)
+        self.assertEqual(binding["unobserved_nonwatch_count"], 1)
+        self.assertFalse(binding["unbiased_learning_qualified"])
+        with self.assertRaisesRegex(ValueError, "WATCH sample"):
+            bind_preselection_history(history, [])
+
     def test_pinned_csv_to_four_horizons_to_b_read_only(self):
         from .historical_outcome_execution import run_historical_outcomes
         # B's module imports its transport at import time; the projection below
