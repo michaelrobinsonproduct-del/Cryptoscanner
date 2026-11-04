@@ -238,7 +238,12 @@ def run_pipeline(manifest, root, schema, partitions, predictions, observed_until
     execution = run_historical_outcomes(
         manifest, root, schema, partitions, predictions, closed_bar_cutoff)
     frozen = binding["frozen_predictions"] if binding is not None else predictions
-    handoff = project_historical_execution(execution, frozen_predictions=frozen)
+    selections = ({row["prediction_id"]: row["selection_status"]
+                   for row in a2_projection["frozen_observations"]}
+                  if a2_projection is not None and isinstance(a2_projection.get("frozen_observations"), list)
+                  else None)
+    handoff = project_historical_execution(execution, frozen_predictions=frozen,
+                                           frozen_selections=selections)
     # Consume B's existing strict read-only learning contract rather than
     # introducing a second evaluator or reimplementing its qualification.
     from .github_delivery_projection import _learning_evidence
