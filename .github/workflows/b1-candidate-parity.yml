@@ -202,8 +202,10 @@ jobs:
                   if total>8_000_000:
                       raise SystemExit("A2_ARTIFACT_UNCOMPRESSED_LIMIT")
                   seen.add(name)
-                  if name in required | optional:
-                      (root/name).write_bytes(archive.read(item))
+                  if name in required | optional or (name.startswith("receipts/") and name.endswith(".json") and name.count("/")==1) or name=="verified-snapshot.json":
+                      destination=root/name
+                      destination.parent.mkdir(parents=True,exist_ok=True)
+                      destination.write_bytes(archive.read(item))
               if not required.issubset(seen):
                   raise SystemExit("A2_REQUIRED_PUBLISHED_FILES_MISSING")
           try:
