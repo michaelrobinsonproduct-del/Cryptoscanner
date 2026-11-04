@@ -318,6 +318,7 @@ jobs:
                   "live_watch_authorized":False,
                   "writer_reconciliation_status":projected["writer_reconciliation_status"],
                   "writer_same_scan_as_delivery":projected["writer_recovery"]["same_scan_as_delivery"],
+                  "writer_source_identity_matches_delivery":projected["writer_source_identity_matches_delivery"],
                   "a2":a2_status,"e":e_status,
                   "learning_qualified":False,
                   "production_applied":False}
