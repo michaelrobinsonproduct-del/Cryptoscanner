@@ -83,6 +83,19 @@ class ShadowEvidenceTests(unittest.TestCase):
         self.assertEqual(result["status"], "NO_QUALIFIED_RULE")
         self.assertFalse(result["source_receipt_qualified"])
 
+    def test_forged_matching_receipt_never_qualifies_favorable_shadow(self):
+        receipt = dict(verification="independently_authenticated",
+                       artifact_sha256="a" * 64, verifier_commit="b" * 40)
+        self.a["source_receipt"] = receipt
+        self.b["source_receipt"] = dict(receipt)
+        for i, row in enumerate(self.b["observations"]):
+            row["watch"] = i % 2 == 0
+        result = evaluate_shadow_release(self.a, self.b, minimum_holdout=10)
+        self.assertGreater(result["precision_delta"], 0)
+        self.assertFalse(result["source_receipt_qualified"])
+        self.assertEqual(result["status"], "NO_QUALIFIED_RULE")
+        self.assertFalse(result["promotion_authorized"])
+
     def test_receipt_must_match_both_versions(self):
         receipt = dict(verification="independently_authenticated", artifact_sha256="a"*64,
                        verifier_commit="b"*40)
