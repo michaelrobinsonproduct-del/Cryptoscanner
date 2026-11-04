@@ -52,7 +52,7 @@ test("gap-abstaining outcomes are explicit abstentions, duplicates or mismatched
 test("shadow coverage distinguishes matured, pending and abstained without changing baseline",async()=>{
  const r=createCycleRunner(deps,async()=>({evidence,outcomes:[],scores}));
  const result=(await r.run("manual")).result;
- expect(result.shadow_evaluation.coverage).toEqual({candidates:1,scored:0,pending_outcome:1,abstained:0,authenticated_outcomes:0,source_qualified:true});
+ expect(result.shadow_evaluation.coverage).toEqual({candidates:1,scored:0,pending_outcome:1,abstained:0,authenticated_outcomes:0,observed_hits:0,observed_misses:0,source_gap_abstentions:0,source_qualified:true});
  expect(result.candidates[0].score).toBe(85);
  const fail=createCycleRunner(deps,async()=>{throw Error("unavailable")});
  const failed=(await fail.run("manual")).result;
@@ -63,4 +63,12 @@ test("B2 source-qualified outcomes and pre-discovery scores join across equivale
  const c={pair:"TAOUSD",score:85,discovered_at:"2026-11-03T03:59:00.000+00:00",decision:"WATCH"};
  const result=evaluateShadowCandidate(c,evidence,outcomes,scores);
  expect(result).toMatchObject({status:"SCORED",outcome_label:"HIT",challenger_score:89,baseline_score:85,production_promoted:false});
+});
+
+test("B2 candidate-matched evidence counts only real labeled outcomes, not unrelated ledger history",async()=>{
+ const extra=[...outcomes,{...outcomes[0],pair:"XRPUSD"}];
+ const r=createCycleRunner(deps,async()=>({evidence:{...evidence,outcome_rows:2},outcomes:extra,scores}));
+ const result=(await r.run("manual")).result;
+ expect(result.shadow_evaluation.coverage).toMatchObject({candidates:1,scored:1,authenticated_outcomes:1,observed_hits:1,observed_misses:0,source_gap_abstentions:0});
+ expect(result.candidates[0].score).toBe(85);
 });
