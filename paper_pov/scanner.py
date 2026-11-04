@@ -238,8 +238,14 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             challenger = round(item["baseline_score"] +
                 max(-25, min(25, move15 * 5)) +
                 max(-15, min(15, (accel - 1) * 10)), 4)
+            # Snapshot consumers require a strictly positive persisted
+            # acceleration. Tiny but valid raw ratios can round to 0.0000;
+            # abstain this market rather than sealing an unreadable WATCH.
+            persisted_accel = round(accel, 4)
+            if persisted_accel <= 0:
+                raise ValueError("volume acceleration below persisted precision")
             item.update({"challenger_score": challenger,
-                "move15_pct": round(move15, 4), "volume_accel": round(accel, 4),
+                "move15_pct": round(move15, 4), "volume_accel": persisted_accel,
                 "ohlc_last_closed_at": dt.datetime.fromtimestamp(starts[-1] + 300, UTC).isoformat(),
                 "ohlc_age_seconds": round(age), "status": "PAPER_WATCH"})
             watch.append(item)
