@@ -238,7 +238,8 @@ class DeliveryProjectionTests(unittest.TestCase):
                 projected = json.loads(output.read_text())
                 self.assertEqual(projected["github_event"], event)
                 self.assertEqual(projected["live_watch_authorized"], False)
-                self.assertEqual(len(projected["live_watch"]), 2)
+                self.assertEqual(projected["live_watch"], [])
+                self.assertEqual(projected["status"], "ABSTAIN_SAME_RUN_PERSISTED_WRITER_UNVERIFIED")
                 with patch("sys.argv", argv[:-2] + ["--expected-source-sha", "f"*40]), patch("sys.stdout", new_callable=io.StringIO):
                     with self.assertRaises(ValueError):
                         main()
