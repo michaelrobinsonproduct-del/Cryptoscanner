@@ -17,6 +17,7 @@ def _bounded_gh(args):
 
 
 def read_run(repo, run_id, *, runner=_bounded_gh):
+    run_id = str(run_id)
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repo or '') or not run_id.isdigit() or int(run_id) <= 0:
         raise ValueError("invalid GitHub artifact locator")
     run = json.loads(runner(["gh", "run", "view", run_id, "-R", repo,
@@ -25,6 +26,8 @@ def read_run(repo, run_id, *, runner=_bounded_gh):
         raise ValueError("paper workflow has not completed successfully")
     if run.get("event") not in ("schedule", "workflow_dispatch") or run.get("headBranch") != "main" or run.get("workflowName") != "Public Kraken Paper POV (scheduled, isolated ledger)":
         raise ValueError("untrusted paper workflow origin")
+    if not re.fullmatch(r"[0-9a-fA-F]{40}", str(run.get("headSha", ""))):
+        raise ValueError("invalid GitHub source SHA")
     with tempfile.TemporaryDirectory() as folder:
         root = Path(folder)
         runner(["gh", "run", "download", run_id, "-R", repo,
@@ -43,7 +46,11 @@ def read_run(repo, run_id, *, runner=_bounded_gh):
         for name in ("latest.json", "scoreboard.json", "ledger.json"):
             if name not in expected:
                 raise ValueError("incomplete artifact checksum manifest")
-            if hashlib.sha256((output / name).read_bytes()).hexdigest() != expected[name]:
+        # Check every declared file, not just the three legacy names. A manifest
+        # entry must never hide corrupted or missing optional payloads.
+        for name, digest in expected.items():
+            target = output / name
+            if not target.is_file() or hashlib.sha256(target.read_bytes()).hexdigest() != digest:
                 raise ValueError("downloaded artifact checksum mismatch: " + name)
         # Legacy public-paper-ledger artifacts have only latest, scoreboard and
         # ledger. Expose their checksum-verified status without claiming sealed WATCH.
