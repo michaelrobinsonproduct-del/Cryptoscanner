@@ -4,6 +4,7 @@ This is a read-only consumer of the existing single-writer's published artifact.
 It never dispatches workflows, publishes artifacts, or writes to a ledger.
 """
 import argparse
+import binascii
 import hashlib
 import json
 import os
@@ -122,7 +123,7 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                         "remote_ledger_sha256": state["sha256"],
                         "recovered_ledger_sha256": old_sha,
                         "independently_authenticated": False, "production_applied": False}
-            except (IntegrityError, subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError, ValueError, KeyError, TypeError) as inner:
+            except (IntegrityError, subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError, ValueError, KeyError, TypeError, binascii.Error) as inner:
                 return {"status": "UNAVAILABLE", "reason": "REMOTE_LEDGER_QUERY_FAILED",
                         "failure_type": type(inner).__name__,
                         "failure_detail": str(inner)[:240] if not isinstance(inner, subprocess.CalledProcessError) else "GITHUB_API_HTTP_" + str(inner.returncode),
@@ -152,7 +153,7 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                 "independently_authenticated": False, "production_applied": False}
     try:
         remote_bytes = base64.b64decode("".join(remote["content"].split()), validate=True)
-    except (ValueError, KeyError, TypeError, AttributeError) as exc:
+    except (ValueError, KeyError, TypeError, AttributeError, binascii.Error) as exc:
         return {"status": "UNAVAILABLE", "reason": "REMOTE_LEDGER_QUERY_FAILED",
                 "failure_type": "REMOTE_LEDGER_BASE64_INVALID",
                 "remote_ref": ref, "remote_path": path,
