@@ -169,3 +169,21 @@ def test_remote_ledger_ref_rejects_unsafe_path_without_api():
     with pytest.raises(IntegrityError):
         reconcile_remote_ledger(REPO, "paper-proof-ledger", "../ledger.json",
                                 {"ledger.json": b"{}"}, runner=fail)
+
+
+def test_missing_independent_ledger_keeps_real_writer_readback_truthful():
+    """A 404 on the branch comparison must not invalidate writer checksummed bytes."""
+    import hashlib
+    from paper_pov.github_artifact_readback import reconcile_remote_ledger
+    recovered = b'{"generation":65}'
+    def missing(args, timeout):
+        assert args[:4] == ["gh", "api", "-X", "GET"]
+        raise subprocess.CalledProcessError(1, args, output=b"Not Found")
+    result = reconcile_remote_ledger(REPO, "paper-proof-ledger",
+                                     "paper_pov/output/ledger.json",
+                                     {"ledger.json": recovered}, runner=missing)
+    assert result["status"] == "UNAVAILABLE"
+    assert result["reason"] == "REMOTE_LEDGER_QUERY_FAILED"
+    assert result["recovered_sha256"] == hashlib.sha256(recovered).hexdigest()
+    assert result["independently_authenticated"] is False
+    assert result["production_applied"] is False
