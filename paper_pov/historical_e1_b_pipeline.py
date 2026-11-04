@@ -68,7 +68,7 @@ def bind_a2_projection(projection, predictions):
             observed[pid] = row
         if {pid for pid, row in observed.items() if row["selection_status"] == "WATCH"} != {p["prediction_id"] for p in watches}:
             raise ValueError("A2 WATCH cohort does not match frozen decisions")
-        if any(observed[p["prediction_id"]]["as_of"] != p["as_of"] for p in watches):
+        if any(utc_time(observed[p["prediction_id"]]["as_of"]) != utc_time(p["as_of"]) for p in watches):
             raise ValueError("A2 WATCH observation time mismatch")
     if any(not isinstance(p, dict) or p.get("status") != "PAPER_WATCH" or
            not isinstance(p.get("as_of"), str) or not p["as_of"] or
