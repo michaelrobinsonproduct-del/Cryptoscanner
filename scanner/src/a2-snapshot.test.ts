@@ -10,7 +10,7 @@ const fixture={as_of:at,scan_status:"WATCH",receipt_sha256:"a".repeat(64),eligib
 const deps={scan:async()=>({candidates:[]}),confirm:async()=>{throw Error("not called")},pause:async()=>{},now:()=>now};
 test("B1 HTTP and scheduled consume same A2 read-only snapshot, persist dashboard and preserve independent baseline",async()=>{
  let reads=0;const reader=createA2SnapshotReader("https://example.org/verified-a2",()=>now,(async(_url,options)=>{reads++;expect(options?.method).toBe("GET");return new Response(JSON.stringify(fixture))}) as any);
- const runner=createCycleRunner(deps,undefined,undefined,reader),http=createCycleHttpHandler(runner);
+ const runner=createCycleRunner(deps,undefined,undefined,reader),http=createCycleHttpHandler(runner,()=>now);
  const manual=await (await http(new Request("http://localhost/cycle"))).json(),scheduled=await runner.run("scheduled");
  expect(manual).toEqual(scheduled.result);expect(reads).toBe(2);expect(manual.scan_status).toBe("NO_DISCOVERY_CANDIDATES");
  expect(manual.a2_snapshot).toMatchObject({status:"VERIFIED_SNAPSHOT",receipt_sha256:fixture.receipt_sha256,watch:[{pair,rank:1,price:100}],buy_approved:false});
@@ -49,7 +49,7 @@ test("B1 verified A2 file is shared by manual HTTP and scheduled, and expires fa
  try{
   const path=join(dir,"verified-snapshot.json");await writeFile(path,JSON.stringify(fixture));
   const runner=createCycleRunner(deps,undefined,undefined,createA2VerifiedFileReader(path,()=>now));
-  const http=createCycleHttpHandler(runner);
+  const http=createCycleHttpHandler(runner,()=>now);
   const manual=await (await http(new Request("http://localhost/cycle"))).json();
   const scheduled=await runner.run("scheduled");
   expect(manual).toEqual(scheduled.result);
@@ -69,7 +69,7 @@ test("B1 actual authenticated A2 export feeds both entry points (CI real Kraken)
  const captured=new Date(Date.parse(raw.as_of)+2000);
  const actualDeps={...deps,now:()=>captured};
  const runner=createCycleRunner(actualDeps,undefined,undefined,createA2VerifiedFileReader(path,()=>captured));
- const http=createCycleHttpHandler(runner);
+ const http=createCycleHttpHandler(runner,()=>captured);
  const manual=await (await http(new Request("http://localhost/cycle"))).json();
  const scheduled=await runner.run("scheduled");
  expect(manual).toEqual(scheduled.result);
