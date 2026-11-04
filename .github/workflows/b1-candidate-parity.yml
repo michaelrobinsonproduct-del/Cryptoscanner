@@ -422,7 +422,7 @@ jobs:
               lines.append(f"#{c['rank']} {c['symbol']} WATCH paper | price ${c['price_usd']} | baseline {c['baseline_score']} | challenger {c['challenger_score']} | 15m {c['move15_pct']}% | volume acceleration {c['volume_accel']} | risk {c['risk']} | quote {c['quote_observed_at']}")
           if not scored:
               lines.append("No authenticated fresh WATCH candidates; delivery abstained or found none.")
-          Path("/tmp/b-delivery/delivery-summary.txt").write_text("\\n".join(lines)+"\\n")
+          Path("/tmp/b-delivery/delivery-summary.txt").write_text("\n".join(lines)+"\n")
           Path("/tmp/b-delivery/integration-status.json").write_text(json.dumps(status,sort_keys=True))
           print("SHARED_MANUAL_SCHEDULED_DELIVERY",projected["source_run_id"],projected["status"])
           PY
