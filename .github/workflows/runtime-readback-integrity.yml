@@ -205,6 +205,19 @@ jobs:
               raise
           # An empty but present quote_evidence array is a legitimate
           # ABSTAIN_NO_OBSERVATIONS cohort, not a missing legacy field.
+          # Bind the published trigger to GitHub's immutable source-run metadata,
+          # not just fields supplied inside a checksummed writer artifact.
+          run_meta=json.loads(subprocess.check_output([
+              "gh", "api", "-X", "GET",
+              f"repos/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['WRITER_RUN_ID']}"
+          ], timeout=45))
+          if (run_meta.get("id") != int(os.environ["WRITER_RUN_ID"]) or
+                  run_meta.get("head_sha") != os.environ["WRITER_SOURCE_SHA"] or
+                  run_meta.get("event") != published.get("github_event") or
+                  run_meta.get("event") not in ("schedule", "workflow_dispatch") or
+                  run_meta.get("status") != "completed" or
+                  run_meta.get("conclusion") != "success"):
+              raise ValueError("published result does not match successful GitHub source run")
           if "quote_evidence" in published:
               writer=json.loads(Path("/tmp/real-writer-recovery.json").read_text())
               if published.get("ledger_generation") != writer["persisted_paper"]["ledger_generation"]:
