@@ -78,3 +78,28 @@ def convert_pinned_csv(manifest, root, *, partition_file, pair, schema):
     result["parsed_trade_count"] = len(trades)
     result["schema_authenticated"] = False
     return result
+
+def main():
+    import argparse
+    import json
+    from .scanner import atomic_json
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--manifest", required=True)
+    parser.add_argument("--schema", required=True)
+    parser.add_argument("--root", required=True)
+    parser.add_argument("--partition", required=True)
+    parser.add_argument("--pair", required=True)
+    parser.add_argument("--output", required=True)
+    args = parser.parse_args()
+    manifest = json.loads(Path(args.manifest).read_text())
+    schema = json.loads(Path(args.schema).read_text())
+    result = convert_pinned_csv(manifest, args.root, partition_file=args.partition,
+                                pair=args.pair, schema=schema)
+    atomic_json(args.output, result)
+    print(json.dumps({"pair": result["pair"], "bar_count": result["bar_count"],
+                      "parsed_trade_count": result["parsed_trade_count"],
+                      "source_authenticated": False}, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()
