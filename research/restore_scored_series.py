@@ -77,6 +77,14 @@ def restore_and_capture(previous, output_root, *, collector=collect, followup_ro
     if output.exists():
         raise FileExistsError("destination must be new")
     shutil.copytree(previous, output, symlinks=False)
+    # Each continuation retains its predecessor's report without replacing
+    # immutable evidence; the newest report is always the root report.
+    prior_report = output / "continuation-report.json"
+    if prior_report.exists():
+        history = output / "continuation-history"
+        history.mkdir(exist_ok=True)
+        history_target = history / ("through-%03d-rounds.json" % len(records))
+        prior_report.rename(history_target)
     new_index = output / "entry" / "round-index.jsonl"
     # Preserve original index bytes as read-only evidence, separately from
     # newly relocated index. Never rewrite the caller's original artifact.
