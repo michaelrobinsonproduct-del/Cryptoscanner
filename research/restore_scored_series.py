@@ -16,11 +16,14 @@ from research.authenticated_learning_loop import evaluate_all
 from research.prospective_outcome_adapter import verified_rows
 from research.acquisition_receipt_pipeline import load_captures
 from research.kraken_prospective_batch import collect, MAX_PAIRS
+from research.live_score_capture import capture_live_scan
+from research.depth_acquisition_associations import associate_indexed_captures
 
 
 def restore_and_capture(previous, output_root, *, collector=collect, followup_rounds=1,
                         interval_seconds=300, clock=time.monotonic, sleep=time.sleep,
-                        epoch_clock=time.time):
+                        epoch_clock=time.time, rescore=False,
+                        scorer=capture_live_scan):
     if type(followup_rounds) is not int or not 1 <= followup_rounds <= 13:
         raise ValueError("follow-up rounds must be 1..13")
     if type(interval_seconds) is not int or interval_seconds < 300:
@@ -109,8 +112,25 @@ def restore_and_capture(previous, output_root, *, collector=collect, followup_ro
     wait = max(0.0, deadline - float(epoch_clock())) if deadline is not None else 0.0
     if wait > interval_seconds + 60:
         raise ValueError("previous source observation is in the future")
+    # Optional scoring-time capture adds genuine new predictions for the same
+    # cohort before observing another independent Kraken depth receipt.
+    score_directory = output / "entry" / "scores"
+    previous_names = {path.name for path in score_directory.glob("*.json")}
+    rescore_failure_class = None
+    if rescore:
+        try:
+            scorer(score_directory, allowed_pairs=pairs, allow_empty=True)
+        except Exception as exc:
+            rescore_failure_class = type(exc).__name__
+            # A failed scan cannot erase the existing verified depth history.
+    new_scores = sorted(path for path in score_directory.glob("*.json")
+                        if path.name not in previous_names)
+    # Scanner latency consumes the real source deadline, not extra fictitious
+    # time added to the five-minute cadence.
+    wait = max(0.0, deadline - float(epoch_clock())) if deadline is not None else 0.0
     if wait:
         sleep(wait)
+    new_associations = {"associated": [], "excluded": []}
     # A 13-round continuation retains twelve bounded five-minute intervals in
     # one runner, rather than depending on a fresh manual dispatch each slot.
     # The first observation is made now: missed intervals are never synthesized.
@@ -129,6 +149,15 @@ def restore_and_capture(previous, output_root, *, collector=collect, followup_ro
         if len(collected_pairs) != len(pairs) or set(collected_pairs) != set(pairs):
             raise ValueError("new depth round differs from scored cohort")
         append_round(new_index, destination)
+        if offset == 0 and new_scores:
+            # Bind ONLY this continuation's immutable receipts: never overwrite
+            # an earlier round's verified score-to-source association.
+            just_scored = output / ("score-round-%03d" % first)
+            just_scored.mkdir()
+            for score in new_scores:
+                shutil.copyfile(score, just_scored / score.name)
+            new_associations = associate_indexed_captures(
+                just_scored, new_index, output / "entry" / "associations")
     coverage = {str(h): evaluate_index(new_index, h) for h in (1, 6, 24, 48)}
     learning = evaluate_all(output / "entry" / "scores",
                             output / "entry" / "associations", new_index,
@@ -139,6 +168,10 @@ def restore_and_capture(previous, output_root, *, collector=collect, followup_ro
             "followup_rounds_acquired": acquired_rounds,
             "previous_last_observed_at": last_observed,
             "resume_wait_seconds": wait,
+            "new_scored_candidates": len(new_scores),
+            "new_source_associations": len(new_associations["associated"]),
+            "new_score_exclusions": new_associations["excluded"],
+            "rescore_failure_class": rescore_failure_class,
             "original_index_sha256": hashlib.sha256(original_bytes).hexdigest(),
             "round_index": str(new_index), "scored_pairs": pairs,
             "coverage": coverage, "learning": learning, "production_applied": False,
@@ -154,9 +187,11 @@ def main():
     p.add_argument("--previous", required=True)
     p.add_argument("--output-root", required=True)
     p.add_argument("--followup-rounds", type=int, default=1)
+    p.add_argument("--rescore", action="store_true")
     a = p.parse_args()
     print(json.dumps(restore_and_capture(a.previous, a.output_root,
-                                         followup_rounds=a.followup_rounds), sort_keys=True))
+                                         followup_rounds=a.followup_rounds,
+                                         rescore=a.rescore), sort_keys=True))
 
 
 if __name__ == "__main__":
