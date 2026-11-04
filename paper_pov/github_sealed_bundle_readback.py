@@ -3,6 +3,7 @@
 Requires authenticated gh CLI; never writes a ledger or starts a scan.
 """
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -26,6 +27,20 @@ def read_run(repo, run_id, *, runner=subprocess.check_output):
                 "-n", "public-paper-ledger-" + run_id, "-D", str(root)])
         # gh download may flatten the original paper_pov/output prefix.
         output = root if (root / "latest.json").is_file() else root / "paper_pov" / "output"
+        # Artifact-level integrity is distinct from projection/receipt consistency.
+        # GitHub's archived SHA256SUMS must bind the actual downloaded files.
+        sums = (output / "SHA256SUMS").read_text().splitlines()
+        expected = {}
+        for line in sums:
+            match = re.fullmatch(r"([0-9a-f]{64})  ([A-Za-z0-9_.-]+)", line)
+            if not match or match.group(2) in expected:
+                raise ValueError("invalid artifact checksum manifest")
+            expected[match.group(2)] = match.group(1)
+        for name in ("latest.json", "scoreboard.json", "ledger.json", "slot_receipt.json"):
+            if name not in expected:
+                raise ValueError("incomplete artifact checksum manifest")
+            if hashlib.sha256((output / name).read_bytes()).hexdigest() != expected[name]:
+                raise ValueError("downloaded artifact checksum mismatch: " + name)
         bundle = build_bundle(output)
         saved = json.loads((output / "sealed-http-bundle.json").read_bytes())
         if saved != bundle:
