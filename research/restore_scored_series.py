@@ -19,7 +19,8 @@ from research.kraken_prospective_batch import collect, MAX_PAIRS
 
 
 def restore_and_capture(previous, output_root, *, collector=collect, followup_rounds=1,
-                        interval_seconds=300, clock=time.monotonic, sleep=time.sleep,\n                        epoch_clock=time.time):
+                        interval_seconds=300, clock=time.monotonic, sleep=time.sleep,
+                        epoch_clock=time.time):
     if type(followup_rounds) is not int or not 1 <= followup_rounds <= 13:
         raise ValueError("follow-up rounds must be 1..13")
     if type(interval_seconds) is not int or interval_seconds < 300:
