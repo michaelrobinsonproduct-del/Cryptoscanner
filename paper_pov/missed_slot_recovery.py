@@ -39,6 +39,8 @@ def decision(now, runs):
     if not eligible:
         return {"action": "WAIT", "reason": "No eligible bounded recovery slot"}
     slot = max(eligible)
+    if len(runs) >= 100:
+        raise ValueError("GitHub workflow run history may be truncated")
     checked = []
     for run in runs:
         if not isinstance(run, dict) or run.get("event") not in ("schedule", "workflow_dispatch"):
@@ -55,9 +57,6 @@ def decision(now, runs):
     # even if the workflow failed after committing the ledger.
     if any(started >= slot for started, _ in checked):
         return {"action": "WAIT", "reason": "Slot already attempted"}
-    # If the API response was truncated, it cannot establish absence.
-    if len(runs) >= 100:
-        raise ValueError("GitHub workflow run history may be truncated")
     return {"action": "DISPATCH", "slot_utc": slot.isoformat(),
             "reason": "No workflow run since eligible scheduled slot"}
 
@@ -66,23 +65,33 @@ def main():
     import json
     import os
     import subprocess
-    now = dt.datetime.now(UTC)
     repo = os.environ["GITHUB_REPOSITORY"]
     # Fail closed if GitHub cannot return a complete authoritative response.
-    raw = subprocess.check_output([
+    def fetch_runs():
+        raw = subprocess.check_output([
         "gh", "api", "-X", "GET", f"repos/{repo}/actions/workflows/paper-pipeline.yml/runs",
         "-f", "branch=main", "-f", "per_page=100",
     ], timeout=30)
-    payload = json.loads(raw)
-    if not isinstance(payload, dict) or not isinstance(payload.get("workflow_runs"), list):
-        raise ValueError("Missing GitHub workflow run list")
-    runs = [{k: run[k] for k in ("event", "status", "created_at")}
-            for run in payload["workflow_runs"]]
-    result = decision(now, runs)
-    print(json.dumps(result, sort_keys=True), flush=True)
-    if result["action"] == "DISPATCH":
-        subprocess.run(["gh", "workflow", "run", "paper-pipeline.yml",
-                        "--ref", "main"], check=True, timeout=30)
+        payload = json.loads(raw)
+        if not isinstance(payload, dict) or not isinstance(payload.get("workflow_runs"), list):
+            raise ValueError("Missing GitHub workflow run list")
+        if payload.get("total_count", 0) > len(payload["workflow_runs"]) and len(payload["workflow_runs"]) >= 100:
+            raise ValueError("GitHub workflow history truncated")
+        return [{k: run[k] for k in ("event", "status", "created_at")}
+                for run in payload["workflow_runs"]]
+
+    first = decision(dt.datetime.now(UTC), fetch_runs())
+    print(json.dumps({"phase": "initial", **first}, sort_keys=True), flush=True)
+    if first["action"] != "DISPATCH":
+        return
+    # Re-query immediately before dispatch. An already queued scheduled run,
+    # manual dispatch or another recovery attempt must suppress this one.
+    second = decision(dt.datetime.now(UTC), fetch_runs())
+    print(json.dumps({"phase": "pre_dispatch", **second}, sort_keys=True), flush=True)
+    if second["action"] != "DISPATCH" or second["slot_utc"] != first["slot_utc"]:
+        return
+    subprocess.run(["gh", "workflow", "run", "paper-pipeline.yml",
+                    "--ref", "main"], check=True, timeout=30)
 
 
 if __name__ == "__main__":
