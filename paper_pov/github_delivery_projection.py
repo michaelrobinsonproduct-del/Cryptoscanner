@@ -267,6 +267,11 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
         persisted_commit = persisted.get("ledger_commit")
         if persisted_commit is not None and persisted_commit != result["ledger_commit"]:
             raise ValueError("same-run D persisted ledger commit contradicts publisher")
+        # A MATCH of a historical ledger generation does not prove the exact
+        # published commit when D's receipt omits that commit. Fail closed.
+        if visible_watch and persisted_commit is None:
+            visible_watch = []
+            delivery_status = "ABSTAIN_SAME_RUN_LEDGER_COMMIT_UNVERIFIED"
     # Fresh quote observations alone are not an accepted fresh WATCH delivery.
     # The same persisted scan must also have independently authenticated D readback.
     accepted_fresh_watch = bool(visible_watch)
