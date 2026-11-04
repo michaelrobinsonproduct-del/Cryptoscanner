@@ -7,6 +7,8 @@ on:
       - '.github/workflows/c2-retired-workflow-contract.yml'
       - 'paper_pov/c_read_only_integration.py'
       - 'paper_pov/test_c_read_only_integration_coverage.py'
+      - 'paper_pov/c_candidate_handoff.py'
+      - 'paper_pov/test_c_candidate_handoff.py'
   pull_request:
     paths:
       - '.github/workflows/**'
@@ -15,6 +17,8 @@ on:
       - 'paper_pov/test_manual_schedule_contract.py'
       - 'paper_pov/c_read_only_integration.py'
       - 'paper_pov/test_c_read_only_integration_coverage.py'
+      - 'paper_pov/c_candidate_handoff.py'
+      - 'paper_pov/test_c_candidate_handoff.py'
   workflow_dispatch:
 permissions:
   contents: read
