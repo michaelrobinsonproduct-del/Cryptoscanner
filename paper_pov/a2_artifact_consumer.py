@@ -142,10 +142,17 @@ def read_published_delivery(directory, now=None):
     for key, value in verified.items():
         if key not in age_keys and published[key] != value:
             raise ValueError("published A2 delivery mismatch: " + key)
-    if type(published["snapshot_age_seconds"]) not in (int, float) or published["snapshot_age_seconds"] < 0:
+    published_age = published["snapshot_age_seconds"]
+    if (type(published_age) not in (int, float) or
+            not 0 <= published_age <= verified["snapshot_age_seconds"] + 0.001):
         raise ValueError("invalid published A2 snapshot age")
-    if not isinstance(published["quote_age_seconds"], dict) or set(published["quote_age_seconds"]) != set(verified["quote_age_seconds"]):
+    ages = published["quote_age_seconds"]
+    if not isinstance(ages, dict) or set(ages) != set(verified["quote_age_seconds"]):
         raise ValueError("invalid published A2 quote age coverage")
+    for pair, age in ages.items():
+        if (type(age) not in (int, float) or
+                not 0 <= age <= verified["quote_age_seconds"][pair] + 0.001):
+            raise ValueError("invalid published A2 quote age")
     return verified
 
 
