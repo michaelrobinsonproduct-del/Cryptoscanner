@@ -112,7 +112,7 @@ def main():
     if downstream is not None:
         args.bd_output.write_text(json.dumps(downstream, sort_keys=True) + "\n")
     args.output.write_text(json.dumps(result, sort_keys=True) + "\n")
-    print(json.dumps({"status": result["status"], "watch_count": result["watch_count"], "receipt_sha256": result["receipt_sha256"]}, sort_keys=True))
+    print(json.dumps({"status": downstream["status"] if downstream is not None else result["status"], "watch_count": result["watch_count"], "receipt_sha256": result["receipt_sha256"], "bd_handoff_written": downstream is not None}, sort_keys=True))
 
 
 if __name__ == "__main__":
