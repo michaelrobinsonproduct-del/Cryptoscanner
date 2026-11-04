@@ -36,7 +36,7 @@ export function createCycleRunner(deps:Dependencies,shadow?:()=>Promise<{evidenc
    if(recoveryStatus){try{output={...output,recovery_status:await recoveryStatus()}}catch{output={...output,recovery_status:unavailableRecovery("read_or_validation_failed")}}}
    if(sourceHealth){try{output={...output,source_run_health:await sourceHealth()}}catch{output={...output,source_run_health:unavailableSourceHealth("read_or_validation_failed")}}}
    if(paperReceipt){let receipt:PaperReceipt;try{receipt=await paperReceipt()}catch{receipt=unavailablePaperReceipt("read_or_validation_failed")};output={...output,paper_receipt:receipt}}
-   if(a2Snapshot){let snapshot:A2Snapshot;try{snapshot=await a2Snapshot()}catch{snapshot=unavailableA2Snapshot("read_or_validation_failed")};output={...output,a2_snapshot:snapshot}}
+   if(a2Snapshot){let snapshot:A2Snapshot;try{snapshot=await a2Snapshot()}catch{snapshot=unavailableA2Snapshot("read_or_validation_failed")};output={...output,a2_snapshot:snapshot,paper_watch:snapshot.status==="VERIFIED_SNAPSHOT"?snapshot.watch:[],paper_watch_status:snapshot.status==="VERIFIED_SNAPSHOT"?"PAPER_ONLY_VERIFIED":"ABSTAIN_A2_UNAVAILABLE",live_watch_certified:false}}
    last=output;lastError=null;cycles++;
    return {ok:true,status:200,origin,result:output};
   }catch(error){lastError=String(error);return {ok:false,status:502,origin,error:lastError}}
