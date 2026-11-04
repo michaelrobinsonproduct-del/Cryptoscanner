@@ -7,7 +7,7 @@ from unittest.mock import patch
 from research.capture_acquisition_scores import capture_score
 from research.prospective_round_store import append_round
 from research.test_prospective_outcome_adapter import fixture
-from research.authenticated_learning_loop import compare, evaluate_all, evaluate_cohorts
+from research.authenticated_learning_loop import compare, evaluate_all, _extract, evaluate_cohorts
 
 
 class AuthenticatedLearningTests(unittest.TestCase):
@@ -29,6 +29,48 @@ class AuthenticatedLearningTests(unittest.TestCase):
                 self.assertEqual(horizon["comparison"]["held_out_n"], 0)
                 self.assertEqual(horizon["shadow_decision"]["decision"], "KEEP_BASELINE")
             self.assertEqual(len((root / "shadow.jsonl").read_text().splitlines()), 1)
+
+    def test_same_raw_kraken_sha_acquired_twice_never_backfills_wrong_outcome(self):
+        sha = "f" * 64
+        score = {"prediction_id": "a" * 64, "pair": "XBTUSD",
+                 "source_sha256": sha, "source_first_observed_at": 2000,
+                 "score_observed_at": 1999,
+                 "baseline_score": 20.0, "challenger_score": 22.0}
+        rows = [
+            {"pair": "XBTUSD", "entry_source_sha256": sha,
+             "entry_first_observed_at": at, "entry_liquidity_usd": 100,
+             "status": "QUALIFIED_OBSERVED_PATH", "ge30pct": hit}
+            for at, hit in ((1000, True), (2000, False))]
+        from contextlib import ExitStack
+        with ExitStack() as stack:
+            stack.enter_context(patch("research.authenticated_learning_loop.load_captures",
+                                      return_value=[score]))
+            stack.enter_context(patch("research.authenticated_learning_loop.verified_associations",
+                                      return_value=([score], [], {"source_abstentions": []})))
+            stack.enter_context(patch("research.authenticated_learning_loop.evaluate_index",
+                                      return_value={"outcomes": rows, "snapshots_verified": 2}))
+            stack.enter_context(patch("research.authenticated_learning_loop.Path.is_dir",
+                                      return_value=True))
+            result = _extract("scores", "associations", "rounds", 1)
+        self.assertEqual(len(result["qualified"]), 1)
+        self.assertFalse(result["qualified"][0]["positive"])
+        # Legacy captures without acquisition timestamps may not select an
+        # arbitrary one of multiple otherwise identical source payloads.
+        legacy = dict(score)
+        legacy.pop("source_first_observed_at")
+        with ExitStack() as stack:
+            stack.enter_context(patch("research.authenticated_learning_loop.load_captures",
+                                      return_value=[legacy]))
+            stack.enter_context(patch("research.authenticated_learning_loop.verified_associations",
+                                      return_value=([legacy], [], {"source_abstentions": []})))
+            stack.enter_context(patch("research.authenticated_learning_loop.evaluate_index",
+                                      return_value={"outcomes": rows, "snapshots_verified": 2}))
+            stack.enter_context(patch("research.authenticated_learning_loop.Path.is_dir",
+                                      return_value=True))
+            denied = _extract("scores", "associations", "rounds", 1)
+        self.assertEqual(denied["qualified"], [])
+        self.assertEqual(denied["abstentions"][0]["reason"],
+                         "AMBIGUOUS_SOURCE_OUTCOME")
 
     def test_identical_held_out_cohort_with_48h_purge(self):
         rows = []
