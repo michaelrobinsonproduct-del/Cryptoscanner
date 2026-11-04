@@ -58,7 +58,7 @@ class DownloadedArtifactReplayTests(unittest.TestCase):
     def test_failed_run_receipt_is_visible_but_never_certified(self):
         failed, markdown = render_failure(RUN, SHA)
         receipt = {"results.json": json.dumps(failed).encode(),
-                   "results.md": (markdown + "\\n").encode()}
+                   "results.md": (markdown + "\n").encode()}
         seal(receipt, ["results.json", "results.md"])
         pack(self.results_path, receipt)
         outcome = replay_visible_result(failure_zip=self.results_path,
@@ -77,7 +77,7 @@ class DownloadedArtifactReplayTests(unittest.TestCase):
     def test_failed_run_cli_reports_nonzero_and_no_ledger(self):
         failed, markdown = render_failure(RUN, SHA)
         receipt = {"results.json": json.dumps(failed).encode(),
-                   "results.md": (markdown + "\\n").encode()}
+                   "results.md": (markdown + "\n").encode()}
         seal(receipt, ["results.json", "results.md"])
         pack(self.results_path, receipt)
         output = io.StringIO()
