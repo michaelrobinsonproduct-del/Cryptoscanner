@@ -84,6 +84,19 @@ class OutcomeAdapterTests(unittest.TestCase):
         self.assertEqual(result["four_horizon_complete_predictions"], 1)
         self.assertEqual(result["cohort_size"], 1)
 
+    def test_abstaining_horizon_cannot_redefine_source_identity(self):
+        with self.assertRaisesRegex(ValueError, "Cross-horizon"):
+            self.evaluate([row("p", 48), row("p", 6, coverage_complete=False,
+                                            source_sha256="b"*64)])
+
+    def test_horizon_counts_are_descriptive_not_authenticated(self):
+        result = self.evaluate([row("p", h, hit=(h != 1)) for h in (1, 6, 24, 48)])
+        self.assertEqual(result["eligible_horizon_counts"]["1"], {"hits": 0, "misses": 1})
+        self.assertEqual(result["eligible_horizon_counts"]["48"], {"hits": 1, "misses": 0})
+        self.assertEqual(result["source_qualified_prediction_count"], 1)
+        self.assertFalse(result["counts_independently_authenticated"])
+        self.assertFalse(result["promotion_authorized"])
+
     def test_48h_gap_requires_decision_exclusion(self):
         result = self.evaluate([row("p", 48), row("gap", 48, coverage_complete=False)])
         self.assertEqual(result["cohort_size"], 1)
