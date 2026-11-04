@@ -74,8 +74,15 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
         # immutable GitHub objects without invoking a second ledger writer.
         if ref == "paper-proof-ledger" and path == "paper_pov/output/ledger.json":
             from paper_pov import segmented_repository as segments, segmented_storage as storage
+            # Pin both packed objects to one immutable branch checkpoint.
+            # A moving writer ref must not mix a manifest from one generation
+            # with a snapshot from another while the read-only consumer runs.
+            ref_data = _github_json([f"repos/{repo}/git/ref/heads/{quote(ref, safe='')}"], runner=runner)
+            pinned_sha = ref_data.get("object", {}).get("sha") if isinstance(ref_data, dict) else None
+            if not isinstance(pinned_sha, str) or len(pinned_sha) != 40 or any(c not in "0123456789abcdef" for c in pinned_sha):
+                raise IntegrityError("Remote writer checkpoint SHA unavailable")
             def remote_object(name):
-                endpoint = f"repos/{repo}/contents/{quote(name, safe='/')}?ref={quote(ref, safe='')}"
+                endpoint = f"repos/{repo}/contents/{quote(name, safe='/')}?ref={pinned_sha}"
                 obj = _github_json([endpoint], runner=runner)
                 if obj.get("type") != "file":
                     raise IntegrityError("Remote packed ledger object unavailable")
@@ -113,7 +120,7 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                 same = old_sha == state["sha256"] and old_generation == state["generation"]
                 return {"status": "MATCH" if same else "DIVERGED",
                         "reason": "PACKED_LEDGER_HEAD_COMPARISON",
-                        "remote_ref": ref, "remote_path": segments.SNAPSHOT,
+                        "remote_ref": ref, "remote_checkpoint_sha": pinned_sha, "remote_path": segments.SNAPSHOT,
                         "remote_generation": state["generation"],
                         "recovered_generation": old_generation,
                         "remote_sha256": state["sha256"],
