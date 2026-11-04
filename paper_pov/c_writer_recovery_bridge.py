@@ -43,7 +43,9 @@ def bridge(integration, readback, *, restored_latest=None):
     # A recovered historical receipt does not imply D persisted a paper ledger.
     # Keep replay usable while making the missing B writer prerequisite explicit.
     writer_delivery_ready = (
-        isinstance(persisted, dict)
+        readback["status"] == "VERIFIED_REMOTE_READBACK"
+        and independent is True
+        and isinstance(persisted, dict)
         and type(persisted.get("ledger_generation")) is int
         and persisted["ledger_generation"] >= 0
         and isinstance(persisted.get("scan_status"), str)
@@ -70,7 +72,8 @@ def bridge(integration, readback, *, restored_latest=None):
             "delivery_projection_ready": writer_delivery_ready,
             "delivery_blocker": (
                 None if writer_delivery_ready else
-                "D_REMOTE_LEDGER_RECONCILIATION_NOT_MATCH"
+                "D_REMOTE_READBACK_NOT_INDEPENDENTLY_AUTHENTICATED"
+                if not independent else "D_REMOTE_LEDGER_RECONCILIATION_NOT_MATCH"
                 if isinstance(reconciliation, dict) and reconciliation.get("status") != "MATCH"
                 else "D_REMOTE_LEDGER_RECONCILIATION_MISSING"
                 if reconciliation is None and isinstance(persisted, dict)
