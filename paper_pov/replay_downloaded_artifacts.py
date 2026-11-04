@@ -150,24 +150,32 @@ def replay_visible_result(ledger_zip=None, results_zip=None, failure_zip=None, *
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ledger-zip", required=True)
-    parser.add_argument("--results-zip", required=True)
+    parser.add_argument("--ledger-zip")
+    parser.add_argument("--results-zip")
+    parser.add_argument("--failure-zip")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--source-sha", required=True)
-    parser.add_argument("--ledger-commit", required=True)
+    parser.add_argument("--ledger-commit")
     args = parser.parse_args()
+    if args.failure_zip:
+        result = replay_visible_result(
+            failure_zip=args.failure_zip, ledger_zip=args.ledger_zip,
+            results_zip=args.results_zip, run_id=args.run_id,
+            source_sha=args.source_sha, ledger_commit=args.ledger_commit)
+        print(json.dumps(result, sort_keys=True))
+        return 2
+    if not all((args.ledger_zip, args.results_zip, args.ledger_commit)):
+        parser.error("successful replay requires both ZIPs and ledger commit")
     try:
-        result = replay(args.ledger_zip, args.results_zip, run_id=args.run_id,
-                        source_sha=args.source_sha, ledger_commit=args.ledger_commit)
+        result = replay_visible_result(
+            args.ledger_zip, args.results_zip, run_id=args.run_id,
+            source_sha=args.source_sha, ledger_commit=args.ledger_commit)
     except ValueError as exc:
-        # A legacy publication lacks per-quote evidence. Report non-certification
-        # without treating any other integrity or identity failure as legacy.
         if str(exc) != "Missing independent quote evidence":
             raise
         print(json.dumps({
             "status": "ABSTAIN_LEGACY_QUOTE_EVIDENCE",
-            "certified": False,
-            "run_id": str(args.run_id),
+            "certified": False, "run_id": str(args.run_id),
             "reason": "Missing independent quote evidence",
             "exchange_event_freshness_verified": False,
         }, sort_keys=True))
