@@ -93,12 +93,33 @@ def project_historical_execution(execution, *, frozen_predictions, frozen_select
             "observed_misses_unqualified": sum(x["observed_30pct_hit"] is False for x in diagnostic_rows if x["horizon_hours"] == h),
         } for h in HORIZONS
     }
+    # Preserve missed-mover diagnostics across the entire frozen A2 cohort.
+    # This is descriptive, never qualified lift: entry is a next-bar proxy
+    # and the pinned archive is not independently publisher-authenticated.
+    diagnostic_selection_outcomes = {
+        str(h): {selection: {"observed_hits_unqualified": 0,
+                             "observed_misses_unqualified": 0,
+                             "abstained": 0}
+                 for selection in ("WATCH", "SCREEN_REJECTED", "NOT_OHLC_SELECTED",
+                                   "OHLC_ABSTAINED", "NOT_RANKED_WATCH")}
+        for h in HORIZONS
+    } if frozen_selections is not None else None
+    if diagnostic_selection_outcomes is not None:
+        for row in diagnostic_rows:
+            bucket = diagnostic_selection_outcomes[str(row["horizon_hours"])][row["frozen_selection_status"]]
+            if row["observed_30pct_hit"] is True:
+                bucket["observed_hits_unqualified"] += 1
+            elif row["observed_30pct_hit"] is False:
+                bucket["observed_misses_unqualified"] += 1
+            else:
+                bucket["abstained"] += 1
     canonical = json.dumps(sorted(universe.items()), separators=(",", ":")).encode()
     cohort_digest = hashlib.sha256(canonical).hexdigest()
     evidence_digest = hashlib.sha256(json.dumps(
         {"source_sha256": batch["source_sha256"], "counts": counts,
          "universe": sorted(universe.items()), "reconstructed": sorted(seen),
-         "diagnostic_rows": diagnostic_rows},
+         "diagnostic_rows": diagnostic_rows,
+         "diagnostic_selection_outcomes": diagnostic_selection_outcomes},
         sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     missing = len(universe) - len(seen)
     # B's existing _learning_evidence contract expects exact cohort arithmetic,
@@ -130,6 +151,7 @@ def project_historical_execution(execution, *, frozen_predictions, frozen_select
         "diagnostic_horizon_status_counts": counts,
         "diagnostic_horizon_hit_miss": diagnostic_hit_miss,
         "diagnostic_outcome_rows": diagnostic_rows,
+        "diagnostic_selection_outcomes": diagnostic_selection_outcomes,
         "qualified_cohort_count": 0,
         "source_authenticated": False,
         "measured_lift_verified": False,
