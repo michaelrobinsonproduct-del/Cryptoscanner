@@ -95,6 +95,28 @@ jobs:
                                       if o['status']=='QUALIFIED_OBSERVED_PATH'),
               'held_out_lift':result['held_out_lift']
           },sort_keys=True))
+          # Report actual identical-cohort chronological E1-E3 evidence, not
+          # merely raw source snapshots or a success flag.
+          report_path=root/'continuation-report.json'
+          if not report_path.is_file():
+              report_path=root/'series-report.json'
+          learning=json.loads(report_path.read_text())['learning']
+          comparison={}
+          for h in ('1','6','24','48'):
+              row=learning['horizons'][h]['comparison']
+              assert row['production_applied'] is False
+              assert row['held_out_n']<=row['qualified_n']<=row['captures_total']
+              comparison[h]={k:row[k] for k in (
+                  'captures_total','associations_verified',
+                  'source_snapshots_verified','qualified_n','train_n',
+                  'held_out_n','baseline','challenger','held_out_lift','rule')}
+          decision=learning['horizons']['48']['shadow_decision']
+          assert decision['production_applied'] is False
+          if comparison['48']['rule']=='NO QUALIFIED RULE':
+              assert decision['decision']=='KEEP_BASELINE'
+          print('E_SOURCE_QUALIFIED_CHRONOLOGICAL_LEARNING',
+                json.dumps({'horizons':comparison,'shadow_decision':decision['decision'],
+                            'production_applied':False},sort_keys=True))
           PY
       - name: Evaluate independent verified scored cohorts in one chronological held-out comparison
         if: inputs.prior_cohort_run_ids != ''
