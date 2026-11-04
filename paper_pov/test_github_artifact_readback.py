@@ -187,3 +187,42 @@ def test_missing_independent_ledger_keeps_real_writer_readback_truthful():
     assert result["recovered_sha256"] == hashlib.sha256(recovered).hexdigest()
     assert result["independently_authenticated"] is False
     assert result["production_applied"] is False
+
+
+def test_packed_single_writer_remote_reconciliation_real_storage_layout():
+    """The production branch contains a packed manifest/snapshot, not output/ledger.json."""
+    import base64
+    import hashlib
+    from paper_pov import ledger, segmented_repository as repo_storage, segmented_storage as packed
+    from paper_pov.github_artifact_readback import reconcile_remote_ledger
+    state = ledger.empty()
+    raw = ledger.canonical(state)
+    blob = packed.pack_snapshot(state)
+    # Build an internally valid zero-generation manifest anchored to a checkpoint.
+    checkpoint = {"git_commit": "a" * 40, "generation": 0,
+                  "ledger_sha256": state["sha256"], "file_sha256": "b" * 64}
+    manifest = {"schema": repo_storage.SCHEMA, "checkpoint": checkpoint,
+                "head": {"generation": 0, "ledger_sha256": state["sha256"],
+                         "snapshot_sha256": hashlib.sha256(blob).hexdigest()},
+                "segments": []}
+    calls = []
+    def github(args, timeout):
+        calls.append(args)
+        endpoint = args[4]
+        if "paper_pov/output/ledger.json" in endpoint:
+            raise subprocess.CalledProcessError(1, args, output=b"Not Found")
+        data = json.dumps(manifest).encode() if repo_storage.MANIFEST in endpoint else blob
+        return json.dumps({"type": "file", "encoding": "base64",
+                           "content": base64.b64encode(data).decode()}).encode()
+    report = reconcile_remote_ledger(REPO, "paper-proof-ledger", "paper_pov/output/ledger.json",
+                                     {"ledger.json": raw}, runner=github)
+    assert report["status"] == "MATCH"
+    assert report["remote_generation"] == 0
+    assert report["remote_sha256"] == report["recovered_sha256"]
+    assert report["independently_authenticated"] is False
+    assert len(calls) == 3
+    other = dict(state)
+    other["generation"] = 1
+    # A valid different ledger is unnecessary: compare a valid original against
+    # a different remote snapshot head in a separate regression.
+    assert report["remote_path"] == repo_storage.SNAPSHOT
