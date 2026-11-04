@@ -4,6 +4,7 @@ No future bars are inferred from a current A2 snapshot. All 1/6/24/48h
 outcomes abstain until independently pinned trade partitions are supplied.
 """
 import argparse
+import datetime as dt
 import json
 import tempfile
 import zipfile
@@ -41,6 +42,20 @@ def project_a2_historical_artifact(archive):
                               "pair": market["pair"], "as_of": snapshot["as_of"],
                               "status": "PAPER_WATCH"})
     binding = bind_preselection_history(history, watch)
+    # Preserve point-in-time decisions for every A candidate, not just WATCH.
+    observations = []
+    for snapshot in history["snapshots"]:
+        as_of = snapshot["as_of"]
+        when = dt.datetime.fromisoformat(as_of.replace("Z", "+00:00"))
+        if when.tzinfo is None or when.utcoffset() != dt.timedelta(0):
+            raise ValueError("A2 observation timestamp must be UTC")
+        for market in snapshot["markets"]:
+            observations.append({"prediction_id": market["observation_id"],
+                                 "pair": market["pair"], "as_of": as_of,
+                                 "selection_status": market["selection_status"]})
+    observations.sort(key=lambda row: (row["as_of"], row["prediction_id"]))
+    if len(observations) != binding["preselection_observation_count"]:
+        raise ValueError("A2 full-universe observation coverage mismatch")
     return {"schema": "a2_historical_e_preselection_v1",
             "a_receipt_sha256": history["snapshots"][0]["receipt_sha256"],
             "as_of": history["snapshots"][0]["as_of"],
@@ -48,6 +63,7 @@ def project_a2_historical_artifact(archive):
             "watch_count": binding["watch_outcome_input_count"],
             "nonwatch_without_outcomes": binding["unobserved_nonwatch_count"],
             "frozen_predictions": binding["frozen_predictions"],
+            "frozen_observations": observations,
             "e1_watch_predictions": binding["e1_watch_predictions"],
             "source_authenticated": False,
             "historical_outcomes_available": False,
