@@ -47,6 +47,9 @@ jobs:
           assert report["status"] == "WRITER_CHECKSUM_ONLY", report
           assert report["independently_authenticated"] is False, report
           assert report["remote_downloaded"] is True, report
+          assert report["persisted_paper"]["ledger_generation"] >= 1, report
+          assert report["persisted_paper"]["live_replay_performed"] is False, report
+          assert report["persisted_paper"]["quote_evidence_certified"] is False, report
           root=Path("/tmp/real-writer-recovered")
           for name in ("latest.json", "ledger.json", "scoreboard.json", "SHA256SUMS"):
               assert ((root / name).is_file() or (root / "paper_pov/output" / name).is_file()), name
