@@ -77,6 +77,32 @@ class ScoredSeriesTests(unittest.TestCase):
                     capture_scored_series(root, rounds=2, entry_capture=entry)
             self.assertFalse((root / "depth-001").exists())
 
+    def test_interrupted_followup_never_claims_complete_evidence(self):
+        elapsed = [500.0]
+        def entry(folder):
+            (folder / "scores").mkdir(parents=True)
+            (folder / "round-index.jsonl").write_text('{"entry":true}\\n')
+            return {"mode": "RESEARCH_ONLY_PROSPECTIVE_SCORE_DEPTH",
+                    "production_applied": False}
+        def fail_second_source(pairs, directory):
+            if directory.name == "depth-002":
+                raise OSError("Kraken network failure")
+            directory.mkdir()
+        def append(index, directory):
+            with Path(index).open("a") as out:
+                out.write(json.dumps({"batch": str(directory)}) + "\\n")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "series"
+            with patch("research.live_scored_series.load_captures",
+                       return_value=[{"pair": "TAOUSD"}]):
+                with self.assertRaisesRegex(OSError, "network failure"):
+                    capture_scored_series(root, rounds=3, clock=lambda: elapsed[0],
+                                          sleep=lambda seconds: elapsed.__setitem__(0, elapsed[0] + seconds),
+                                          entry_capture=entry, collector=fail_second_source,
+                                          indexer=append)
+            self.assertEqual(len((root / "entry" / "round-index.jsonl").read_text().splitlines()), 2)
+            self.assertFalse((root / "series-report.json").exists())
+
     def test_bounds_and_existing_series_fail_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             for n in (0, 1, 14, True, 2.0):
