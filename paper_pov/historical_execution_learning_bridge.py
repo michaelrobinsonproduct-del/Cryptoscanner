@@ -41,6 +41,7 @@ def project_historical_execution(execution, *, frozen_predictions):
         raise ValueError("Inconsistent reconstruction digest")
     counts = {str(h): {status: 0 for status in STATUSES} for h in HORIZONS}
     seen = set()
+    diagnostic_rows = []
     for record in records:
         if not isinstance(record, dict):
             raise ValueError("Malformed reconstructed record")
@@ -69,13 +70,29 @@ def project_historical_execution(execution, *, frozen_predictions):
             elif label.get("observed_30pct_hit") is not None:
                 raise ValueError("Abstaining horizon cannot carry a hit")
             counts[str(horizon)][status] += 1
+            diagnostic_rows.append({
+                "prediction_id": pid, "pair": universe[pid],
+                "horizon_hours": horizon, "status": status,
+                "observed_30pct_hit": label.get("observed_30pct_hit") if status == "MATURED_OBSERVED" else None,
+                "source_sha256": record["source_sha256"],
+                "source_authenticated": False, "liquidity_qualified": False,
+                "qualified_for_learning": False,
+            })
         if observed != set(HORIZONS):
             raise ValueError("Missing reconstructed horizon")
+    diagnostic_rows.sort(key=lambda x: (x["prediction_id"], x["horizon_hours"]))
+    diagnostic_hit_miss = {
+        str(h): {
+            "observed_hits_unqualified": sum(x["observed_30pct_hit"] is True for x in diagnostic_rows if x["horizon_hours"] == h),
+            "observed_misses_unqualified": sum(x["observed_30pct_hit"] is False for x in diagnostic_rows if x["horizon_hours"] == h),
+        } for h in HORIZONS
+    }
     canonical = json.dumps(sorted(universe.items()), separators=(",", ":")).encode()
     cohort_digest = hashlib.sha256(canonical).hexdigest()
     evidence_digest = hashlib.sha256(json.dumps(
         {"source_sha256": batch["source_sha256"], "counts": counts,
-         "universe": sorted(universe.items()), "reconstructed": sorted(seen)},
+         "universe": sorted(universe.items()), "reconstructed": sorted(seen),
+         "diagnostic_rows": diagnostic_rows},
         sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     missing = len(universe) - len(seen)
     # B's existing _learning_evidence contract expects exact cohort arithmetic,
@@ -105,6 +122,8 @@ def project_historical_execution(execution, *, frozen_predictions):
         "reconstructed_prediction_count": len(seen),
         "missing_prediction_count": len(universe) - len(seen),
         "diagnostic_horizon_status_counts": counts,
+        "diagnostic_horizon_hit_miss": diagnostic_hit_miss,
+        "diagnostic_outcome_rows": diagnostic_rows,
         "qualified_cohort_count": 0,
         "source_authenticated": False,
         "measured_lift_verified": False,
