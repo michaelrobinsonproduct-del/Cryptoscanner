@@ -164,7 +164,7 @@ class ScanFailureIsolationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             latest = Path(root) / "latest.json"
             output = io.StringIO()
-            with patch.object(scanner, "scan", return_value=report), patch.dict(
+            with patch.object(scanner, "scan", return_value=report), patch("paper_pov.candidate_snapshot.read_snapshot", return_value={"receipt_sha256": "fixture", "watch": [watch]}), patch("paper_pov.preselection_universe.export_universe", return_value={"receipt_sha256": "fixture", "markets": []}), patch.dict(
                     "os.environ", {"PAPER_REPORT_PATH": str(latest)}), redirect_stdout(output):
                 scanner.main()
             lines = output.getvalue().splitlines()
