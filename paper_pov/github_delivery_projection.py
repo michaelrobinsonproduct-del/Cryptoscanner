@@ -251,6 +251,9 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
             "writer_source_identity_matches_delivery": bool(writer and writer["source_run_id"] == int(run_id) and writer["source_sha"] == sha),
             "a2_receipt_cohort": a2, "learning": learning, "historical_watch_count": len(candidates) if not fresh_at_delivery else None, "historical_coverage": None,
             "live_watch": visible_watch, "live_watch_authorized": False,
+            "published_quote_evidence_count": len(quotes),
+            "published_observed_markets": result["observed_markets"],
+            "published_quote_complete": True,
             "client_quote_freshness_verified": fresh_at_delivery,
             "exchange_event_freshness_verified": False,
             "single_writer_read_only": True, "production_applied": False}
@@ -290,6 +293,9 @@ def project_legacy_published_abstention(result, *, writer_readback=None, a2_deli
             "a2_receipt_cohort": a2, "learning": learning,
             "historical_watch_count": None, "historical_coverage": None,
             "live_watch": [], "live_watch_authorized": False,
+            "published_quote_evidence_count": 0,
+            "published_observed_markets": result.get("observed_markets"),
+            "published_quote_complete": False,
             "client_quote_freshness_verified": False,
             "exchange_event_freshness_verified": False,
             "single_writer_read_only": True, "production_applied": False}
