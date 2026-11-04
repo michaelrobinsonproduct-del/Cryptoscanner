@@ -9,6 +9,8 @@ on:
       - 'paper_pov/test_c_read_only_integration_coverage.py'
       - 'paper_pov/c_candidate_handoff.py'
       - 'paper_pov/test_c_candidate_handoff.py'
+      - 'paper_pov/c_writer_recovery_bridge.py'
+      - 'paper_pov/test_c_writer_recovery_bridge.py'
   pull_request:
     paths:
       - '.github/workflows/**'
@@ -31,7 +33,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m unittest paper_pov.test_retired_workflow_contract paper_pov.test_manual_schedule_contract paper_pov.test_c_read_only_integration_coverage paper_pov.test_c_candidate_handoff -v
+      - run: python -m unittest paper_pov.test_retired_workflow_contract paper_pov.test_manual_schedule_contract paper_pov.test_c_read_only_integration_coverage paper_pov.test_c_candidate_handoff paper_pov.test_c_writer_recovery_bridge -v
 
   authentic-manual-scheduled:
     runs-on: ubuntu-latest
