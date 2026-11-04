@@ -77,6 +77,35 @@ def validate_recovery_slot(slot, event, now=None):
     return stamp.isoformat()
 
 
+def resolve_writer_slot(event, cron="", recovery_slot="", now=None):
+    """Resolve a single ledger-serialized slot or refuse ambiguous late runs.
+
+    GitHub does not supply the original scheduled fire timestamp. We therefore
+    refuse delayed scheduled jobs rather than misattribute their live quotes.
+    """
+    now = dt.datetime.now(UTC) if now is None else (utc(now) if isinstance(now, str) else now)
+    now = now.astimezone(UTC)
+    if event == "workflow_dispatch":
+        if cron:
+            raise ValueError("Manual dispatch cannot assert originating cron")
+        if recovery_slot:
+            return validate_recovery_slot(recovery_slot, event, now)
+        return None
+    if event != "schedule" or recovery_slot:
+        raise ValueError("Unrecognized or mixed slot provenance")
+    minute = {"9 * * * *": 9, "39 * * * *": 39}.get(cron)
+    if minute is None:
+        raise ValueError("Unknown originating cron")
+    candidate = now.replace(minute=minute, second=0, microsecond=0)
+    if candidate > now:
+        candidate -= dt.timedelta(hours=1)
+    # A scheduled invocation that is substantially late must abstain rather
+    # than claim a different slot or silently duplicate recovered evidence.
+    if not dt.timedelta(0) <= now - candidate < dt.timedelta(minutes=25):
+        raise ValueError("Delayed scheduled slot cannot be identified safely")
+    return candidate.isoformat()
+
+
 def main():
     import json
     import os
