@@ -126,7 +126,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p /tmp/b2-real-e
-          gh run download 41733502574 -R michaelrobinsonproduct-del/Cryptoscanner -n e-real-paper-learning-report -D /tmp/b2-real-e
+          gh run download 41745566234 -R michaelrobinsonproduct-del/Cryptoscanner -n e-real-paper-learning-report -D /tmp/b2-real-e
           test -s /tmp/b2-real-e/e-learning-report.json
           sha256sum /tmp/b2-real-e/e-learning-report.json
       - name: Verify E's actual unqualified evidence is KEEP_BASELINE for manual and scheduled
