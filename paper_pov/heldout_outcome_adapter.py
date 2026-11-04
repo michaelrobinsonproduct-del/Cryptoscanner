@@ -4,6 +4,9 @@ This adapter does NOT authenticate Kraken archives. The caller must supply a
 separately verified receipt and source-qualified outcome records. Unverified
 rows abstain; neither predictions nor missing candles create synthetic labels.
 """
+import argparse
+import json
+from pathlib import Path
 from datetime import timedelta
 from .shadow_learning_evidence import utc_time, evaluate_shadow_release, canonical_digest
 
@@ -62,6 +65,15 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
             abstentions[identity] = reason
         else:
             eligible[identity] = record
+    # A single immutable prediction cannot acquire a different entry time,
+    # feature cutoff or source identity at a later horizon. Reject conflicting
+    # records rather than treating them as independent favorable labels.
+    by_prediction = {}
+    for (key, horizon), record in eligible.items():
+        identity = (record["entry_utc"], record["feature_asof_utc"], record["source_sha256"])
+        if key in by_prediction and by_prediction[key] != identity:
+            raise ValueError("Cross-horizon prediction/source identity mismatch")
+        by_prediction[key] = identity
     selected = {key: row for (key, horizon), row in eligible.items() if horizon == 48}
     if set(selected) != set(baseline_decisions) or set(selected) != set(challenger_decisions):
         raise ValueError("Decisions do not cover identical eligible 48h cohort")
@@ -95,3 +107,23 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
     result["source_authentication_verified_by_adapter"] = False
     result["cohort_join_digest"] = canonical_digest(sorted(selected))
     return result
+
+
+def main(argv=None):
+    """Read-only B handoff: JSON input to explicit non-promotable evidence JSON."""
+    parser = argparse.ArgumentParser(description="Build non-promotable held-out evidence")
+    parser.add_argument("input_json", type=Path)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args(argv)
+    payload = json.loads(args.input_json.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Evidence input must be an object")
+    result = build_heldout_evidence(**payload)
+    if result["promotion_authorized"] or result["status"] != "NO_QUALIFIED_RULE":
+        raise ValueError("Unverified evidence must not authorize release")
+    args.output.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    return result
+
+
+if __name__ == "__main__":
+    main()
