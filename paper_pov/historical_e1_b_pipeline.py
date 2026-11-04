@@ -206,12 +206,29 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
             "read_only": True}
 
 
-def run_pipeline(manifest, root, schema, partitions, predictions, observed_until, *, preselection_history=None, a2_projection=None):
+def research_full_universe_predictions(projection):
+    """Research-only E1 adapter for all frozen A2 markets, including non-WATCH."""
+    binding = bind_a2_projection(projection, projection["e1_watch_predictions"])
+    observations = projection.get("frozen_observations")
+    if not isinstance(observations, list) or len(observations) != binding["preselection_observation_count"]:
+        raise ValueError("Full timestamped A2 universe required")
+    by_id = {p["prediction_id"]: p for p in binding["frozen_predictions"]}
+    return [{"prediction_id": row["prediction_id"],
+             "pair": by_id[row["prediction_id"]]["pair"],
+             "as_of": row["as_of"], "status": "PAPER_WATCH"}
+            for row in observations]
+
+
+def run_pipeline(manifest, root, schema, partitions, predictions, observed_until, *, preselection_history=None, a2_projection=None, full_universe_research=False):
     if preselection_history is not None and a2_projection is not None:
         raise ValueError("Select one frozen A provenance source")
     binding = bind_a2_projection(a2_projection, predictions) if a2_projection is not None else None
     if preselection_history is not None:
         binding = bind_preselection_history(preselection_history, predictions)
+    if full_universe_research:
+        if a2_projection is None:
+            raise ValueError("Full-universe research requires A2 projection")
+        predictions = research_full_universe_predictions(a2_projection)
     # E1 uses the target bar's high, but target_at is its OPEN timestamp.
     # A target bar must be closed before it can become an observed outcome.
     # Pass the last-closed-bar cutoff to E1 without modifying E1-owned code.
@@ -229,6 +246,7 @@ def run_pipeline(manifest, root, schema, partitions, predictions, observed_until
     if delivery["status"] != "NO_QUALIFIED_RULE" or delivery["promotion_authorized"]:
         raise ValueError("Historical source cannot authorize a learning rule")
     return {"execution": execution, "handoff": handoff, "delivery": delivery,
+            "research_full_universe": full_universe_research,
             "preselection_binding": binding}
 
 
@@ -238,6 +256,7 @@ def main(argv=None):
         parser.add_argument("--" + key, required=True)
     parser.add_argument("--preselection-history", help="A receipt-verified historical full-universe JSON")
     parser.add_argument("--a2-projection", help="Retained E A2 receipt-bound preselection JSON")
+    parser.add_argument("--full-universe-research", action="store_true", help="Research-only reconstruction of all A2 markets, including rejected markets")
     parser.add_argument("--full-cohort-overlap-output", help="Write checksum-gated A2 all-candidate trade overlap diagnostics")
     parser.add_argument("--a-receipts-dir", help="Original sealed A receipts; verify via A export_receipt_history")
     args = parser.parse_args(argv)
@@ -266,7 +285,8 @@ def main(argv=None):
     result = run_pipeline(manifest, args.root, schema,
                           partitions, predictions, args.observed_until,
                           preselection_history=history,
-                          a2_projection=projection)
+                          a2_projection=projection,
+                          full_universe_research=args.full_universe_research)
     # Serialize both complete outputs before publishing either one.
     rendered_result = json.dumps(result, sort_keys=True, indent=2, allow_nan=False) + "\n"
     rendered_overlap = (json.dumps(overlap, sort_keys=True, indent=2, allow_nan=False) + "\n"
