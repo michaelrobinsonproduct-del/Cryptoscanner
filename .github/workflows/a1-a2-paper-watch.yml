@@ -4,6 +4,7 @@ on:
     paths:
       - 'paper_pov/scanner.py'
       - 'paper_pov/preselection_universe.py'
+      - 'paper_pov/test_a1_a2_end_to_end.py'
       - 'paper_pov/tests/test_scan_failure_isolation.py'
       - 'paper_pov/tests/test_watch_contract.py'
       - 'paper_pov/tests/test_receipt_persistence.py'
@@ -17,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Focused A1/A2 integration and persistence tests
-        run: python -m unittest paper_pov.tests.test_scan_failure_isolation paper_pov.tests.test_watch_contract paper_pov.tests.test_receipt_persistence -v
+        run: python -m unittest paper_pov.test_a1_a2_end_to_end paper_pov.tests.test_scan_failure_isolation paper_pov.tests.test_watch_contract paper_pov.tests.test_receipt_persistence -v
 
   public-kraken-paper:
     runs-on: ubuntu-latest
