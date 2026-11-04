@@ -1,0 +1,67 @@
+"""Fail-closed read-only consumer of persisted A2 paper candidate snapshots."""
+import argparse
+import datetime as dt
+import hashlib
+import json
+import math
+from pathlib import Path
+
+def read_snapshot(latest_path, now=None, max_age_seconds=600):
+    latest = Path(latest_path)
+    if latest.is_symlink() or not latest.is_file():
+        raise ValueError("missing or linked latest snapshot")
+    raw = latest.read_bytes()
+    report = json.loads(raw)
+    stamp = dt.datetime.fromisoformat(report["as_of"].replace("Z", "+00:00"))
+    if stamp.tzinfo is None or stamp.utcoffset() is None:
+        raise ValueError("naive scan timestamp")
+    now = now or dt.datetime.now(dt.timezone.utc)
+    age = (now - stamp).total_seconds()
+    if not 0 <= age <= max_age_seconds:
+        raise ValueError("stale or future paper snapshot")
+    receipt = latest.parent / "receipts" / (stamp.astimezone(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ") + ".json")
+    if receipt.is_symlink() or not receipt.is_file() or receipt.read_bytes() != raw:
+        raise ValueError("missing or mismatched immutable receipt")
+    if report.get("mode") != "PAPER_ONLY" or report.get("buy_approved") is not False:
+        raise ValueError("non-paper report")
+    watch = report.get("watch")
+    if not isinstance(watch, list) or len(watch) > 12:
+        raise ValueError("invalid watch collection")
+    if watch and report.get("scan_status") != "WATCH":
+        raise ValueError("scan status disagrees with candidates")
+    if not watch and report.get("scan_status") not in {"ABSTAIN_NO_LIQUID_CANDIDATES", "ABSTAIN_NO_QUALIFIED_OHLC"}:
+        raise ValueError("invalid abstention status")
+    seen = set()
+    for rank, candidate in enumerate(watch, 1):
+        if not isinstance(candidate, dict) or candidate.get("rank") != rank or candidate.get("status") != "PAPER_WATCH" or candidate.get("buy_approved") is not False:
+            raise ValueError("invalid paper candidate contract")
+        pair = candidate.get("pair")
+        if not isinstance(pair, str) or not pair or pair in seen:
+            raise ValueError("duplicate or invalid pair")
+        seen.add(pair)
+        if candidate.get("as_of") != report["as_of"] or candidate.get("prediction_id") != hashlib.sha256(("paper-v1|" + report["as_of"] + "|" + pair).encode()).hexdigest():
+            raise ValueError("candidate provenance mismatch")
+        if candidate.get("quote_timestamp_semantics") != "client_observed_not_exchange_event_time":
+            raise ValueError("unverified quote timestamp semantics")
+        quote = dt.datetime.fromisoformat(candidate["quote_observed_at"].replace("Z", "+00:00"))
+        if quote.tzinfo is None or quote.utcoffset() is None or not 0 <= (stamp - quote).total_seconds() <= 600:
+            raise ValueError("stale candidate quote")
+        for field in ("price", "move15_pct", "volume_accel", "baseline_score", "challenger_score", "spread_bps"):
+            value = candidate.get(field)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise ValueError("invalid numeric candidate field: " + field)
+        if candidate["price"] <= 0 or candidate["volume_accel"] <= 0 or candidate["spread_bps"] < 0:
+            raise ValueError("invalid candidate market metrics")
+    return {"as_of": report["as_of"], "scan_status": report["scan_status"],
+            "eligible_pairs": report.get("eligible_pairs"), "observed_markets": report.get("observed_markets"),
+            "abstention_counts": report.get("abstention_counts", {}), "watch": watch,
+            "receipt_sha256": hashlib.sha256(raw).hexdigest(), "snapshot_age_seconds": round(age, 3)}
+
+def main():
+    parser = argparse.ArgumentParser(description="Verify and emit immutable A2 paper candidate snapshot")
+    parser.add_argument("latest", help="path to scanner latest.json")
+    args = parser.parse_args()
+    print(json.dumps(read_snapshot(args.latest), sort_keys=True, allow_nan=False))
+
+if __name__ == "__main__":
+    main()
