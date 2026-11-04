@@ -20,10 +20,9 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
         from .historical_outcome_execution import run_historical_outcomes
         # B's module imports its transport at import time; the projection below
         # only needs _learning_evidence, not any transport or external services.
-        with patch.dict(sys.modules, {
-            "paper_pov.github_sealed_bundle_readback":
-                types.ModuleType("paper_pov.github_sealed_bundle_readback")
-        }):
+        transport_stub = types.ModuleType("paper_pov.github_sealed_bundle_readback")
+        transport_stub.read_run = lambda *args, **kwargs: None
+        with patch.dict(sys.modules, {"paper_pov.github_sealed_bundle_readback": transport_stub}):
             from .github_delivery_projection import _learning_evidence
 
         start = dt.datetime(2026, 1, 1, tzinfo=dt.timezone.utc)
