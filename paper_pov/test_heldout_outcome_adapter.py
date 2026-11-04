@@ -145,6 +145,32 @@ class OutcomeAdapterTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 main([str(source), "--output", str(full), "--delivery-output", str(handoff)])
 
+    def test_cli_rolls_back_if_b_handoff_publication_fails(self):
+        from unittest.mock import patch
+        from . import heldout_outcome_adapter as adapter
+        payload = dict(outcomes=[row("p", h) for h in (1, 6, 24, 48)],
+                       baseline_decisions={"p": True}, challenger_decisions={"p": False},
+                       training_end_utc="2026-07-29T00:00:00Z",
+                       holdout_start_utc="2026-08-01T00:00:00Z",
+                       evaluation_asof_utc="2026-08-07T00:00:00Z",
+                       baseline_version="baseline-1", challenger_version="shadow-2")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            source, full, handoff = (root / name for name in ("input.json", "full.json", "b.json"))
+            source.write_text(json.dumps(payload), encoding="utf-8")
+            real_link = adapter.os.link
+            def fail_b(source_path, destination):
+                if Path(destination) == handoff:
+                    raise OSError("injected B publication failure")
+                return real_link(source_path, destination)
+            with patch.object(adapter.os, "link", side_effect=fail_b):
+                with self.assertRaisesRegex(OSError, "injected B"):
+                    main([str(source), "--output", str(full),
+                          "--delivery-output", str(handoff)])
+            self.assertFalse(full.exists())
+            self.assertFalse(handoff.exists())
+            self.assertEqual(list(root.glob(".heldout-*")), [])
+
     def test_48h_gap_requires_decision_exclusion(self):
         result = self.evaluate([row("p", 48), row("gap", 48, coverage_complete=False)])
         self.assertEqual(result["cohort_size"], 1)
