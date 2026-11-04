@@ -67,7 +67,7 @@ class PaperScanTests(unittest.TestCase):
         report = run(zero_volume=True)
         self.assertEqual(report["watch"], [])
         self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
-        self.assertEqual(report["abstention_counts"]["invalid_market_metrics"], 24)
+        self.assertEqual(report["abstention_counts"]["ohlc_gap_or_schema"], 24)
 
     def test_stale_candle_fails_closed(self):
         report = run(stale=True)
