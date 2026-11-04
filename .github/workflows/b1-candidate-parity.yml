@@ -162,6 +162,43 @@ jobs:
                       "observed_markets":verified["observed_markets"]}
                   Path("/tmp/b-delivery/a2-delivery.json").write_text(json.dumps(delivery))
           PY
+      - name: Discover existing E read-only learning handoff without inventing evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/actions/artifacts?per_page=100" > /tmp/b-delivery/e-artifacts.json
+          python - <<'PY'
+          import json,os,subprocess,zipfile,io
+          from pathlib import Path
+          from paper_pov.github_delivery_projection import _learning_evidence
+          artifacts=json.loads(Path("/tmp/b-delivery/e-artifacts.json").read_text()).get("artifacts",[])
+          # Only E's explicitly named handoff artifact can qualify; no synthetic labels.
+          eligible=[a for a in artifacts if a.get("name")=="e-historical-learning-handoff"
+                    and a.get("expired") is False]
+          status={"status":"LEARNING_HANDOFF_UNAVAILABLE","reason":"NO_PUBLISHED_E_HANDOFF"}
+          for a in eligible:
+              try:
+                  raw=subprocess.check_output(["gh","api","-H","Accept: application/vnd.github+json",
+                      f"repos/{os.environ['REPO']}/actions/artifacts/{a['id']}/zip"],timeout=45)
+                  with zipfile.ZipFile(io.BytesIO(raw)) as z:
+                      if z.namelist()!=["learning-handoff.json"]:
+                          raise ValueError("E handoff archive layout")
+                      data=z.read("learning-handoff.json")
+                      if len(data)>500000:
+                          raise ValueError("E handoff oversized")
+                  handoff=json.loads(data)
+                  _learning_evidence(handoff)
+                  Path("/tmp/b-delivery/e-handoff.json").write_text(json.dumps(handoff))
+                  status={"status":"E_READ_ONLY_HANDOFF_CONSUMED","artifact_id":a["id"],
+                          "workflow_run_id":a.get("workflow_run",{}).get("id")}
+                  break
+              except (ValueError,KeyError,zipfile.BadZipFile,subprocess.CalledProcessError) as exc:
+                  status={"status":"LEARNING_HANDOFF_UNAVAILABLE","reason":type(exc).__name__}
+          Path("/tmp/b-delivery/e-status.json").write_text(json.dumps(status))
+          print("E_HANDOFF_DISCOVERY",status)
+          PY
       - name: Consume actual downloaded manual or scheduled result through B shared adapter
         run: |
           set -euo pipefail
@@ -177,8 +214,10 @@ jobs:
           from paper_pov.github_delivery_projection import _writer_evidence
           writer_projection=_writer_evidence(writer)
           a2=json.loads(Path("/tmp/b-delivery/a2-delivery.json").read_text())
-          from paper_pov.github_delivery_projection import _a2_evidence
+          from paper_pov.github_delivery_projection import _a2_evidence, _learning_evidence
           a2_projection=_a2_evidence(a2)
+          e_path=Path("/tmp/b-delivery/e-handoff.json")
+          learning_projection=_learning_evidence(json.loads(e_path.read_text())) if e_path.exists() else None
           if "quote_evidence" not in published:
               Path("/tmp/b-delivery/delivery.json").write_text(json.dumps({
                   "schema":"paper_delivery_abstention_v1","status":"ABSTAIN_PUBLISHED_QUOTE_EVIDENCE_MISSING",
@@ -186,16 +225,19 @@ jobs:
                   "github_event":identity["event"],"live_watch":[],"live_watch_authorized":False,
                   "production_applied":False,"single_writer_read_only":True,
                   "writer_recovery":writer_projection,
-                  "a2_receipt_cohort":a2_projection,"learning":None,
+                  "a2_receipt_cohort":a2_projection,"learning":learning_projection,
                   "writer_reconciliation_status":writer_projection["reconciliation_status"]},sort_keys=True)+"\n")
               print("PUBLISHED_LEGACY_QUOTE_EVIDENCE_ABSTENTION",identity["run_id"])
           else:
-              subprocess.run([sys.executable,"-m","paper_pov.github_delivery_projection",
+              cmd=[sys.executable,"-m","paper_pov.github_delivery_projection",
                   "--published-artifact","/tmp/b-delivery/published.zip",
                   "--writer-readback","/tmp/b-delivery/writer.json",
                   "--a2-delivery","/tmp/b-delivery/a2-delivery.json",
                   "--expected-run-id",identity["run_id"],"--expected-source-sha",identity["source_sha"],
-                  "--output","/tmp/b-delivery/delivery.json"],check=True)
+                  "--output","/tmp/b-delivery/delivery.json"]
+              if e_path.exists():
+                  cmd.extend(["--learning-handoff",str(e_path)])
+              subprocess.run(cmd,check=True)
               projected=json.loads(Path("/tmp/b-delivery/delivery.json").read_text())
               assert projected["live_watch_authorized"] is False and projected["single_writer_read_only"] is True
               print("AUTHENTIC_DOWNLOADED_DELIVERY",projected["source_run_id"],projected["status"])
@@ -207,6 +249,7 @@ jobs:
             /tmp/b-delivery/identity.json
             /tmp/b-delivery/writer.json
             /tmp/b-delivery/a2-delivery.json
+            /tmp/b-delivery/e-status.json
             /tmp/b-delivery/delivery.json
           if-no-files-found: error
           retention-days: 7
