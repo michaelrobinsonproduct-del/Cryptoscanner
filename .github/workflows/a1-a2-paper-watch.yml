@@ -99,6 +99,26 @@ jobs:
           assert exported["future_outcomes_authenticated"] is False
           print("A1_PRESELECTION_EXPORTED", exported["coverage"], exported["receipt_sha256"])
           PY
+      - name: Persist ranked WATCH snapshot from sealed receipt
+        env:
+          PAPER_REPORT_PATH: ${{ runner.temp }}/kraken-paper/latest.json
+        run: |
+          python - <<'PY'
+          import json, os, hashlib
+          from pathlib import Path
+          latest = Path(os.environ["PAPER_REPORT_PATH"])
+          raw = latest.read_bytes()
+          report = json.loads(raw)
+          universe = json.loads((latest.parent / "preselection-universe.json").read_text())
+          if len(report["watch"]) != universe["selection_decisions"].get("WATCH", 0):
+              raise ValueError("WATCH count differs from complete preselection")
+          snapshot = {"schema": "paper_ranked_watch_v1", "as_of": report["as_of"],
+                      "scan_status": report["scan_status"],
+                      "receipt_sha256": hashlib.sha256(raw).hexdigest(),
+                      "watch": report["watch"], "production_applied": False,
+                      "buy_approved": False, "future_outcomes_authenticated": False}
+          (latest.parent / "ranked-watch.json").write_text(json.dumps(snapshot, sort_keys=True) + chr(10))
+          PY
       - name: Retain isolated paper evidence
         if: always()
         uses: actions/upload-artifact@v4
