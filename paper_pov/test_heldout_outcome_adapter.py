@@ -97,6 +97,20 @@ class OutcomeAdapterTests(unittest.TestCase):
         self.assertFalse(result["counts_independently_authenticated"])
         self.assertFalse(result["promotion_authorized"])
 
+    def test_comparable_horizon_rates_exclude_partial_predictions(self):
+        rows = [row("p", h, hit=(h == 48)) for h in (1, 6, 24, 48)]
+        rows += [row("q", 1, hit=True), row("q", 6, hit=True)]
+        result = self.evaluate(rows)
+        self.assertEqual(result["eligible_horizon_counts"]["1"], {"hits": 1, "misses": 1})
+        self.assertEqual(result["complete_cohort_horizon_counts"]["1"], {"hits": 0, "misses": 1})
+        self.assertEqual(result["complete_cohort_horizon_counts"]["48"], {"hits": 1, "misses": 0})
+        self.assertEqual(result["complete_cohort_horizon_rates"]["1"], 0.0)
+        self.assertEqual(result["complete_cohort_horizon_rates"]["48"], 1.0)
+        self.assertEqual(result["incomplete_prediction_horizons"], {"q": [24, 48]})
+        handoff = project_learning_handoff(result)
+        self.assertEqual(handoff["complete_cohort_horizon_counts"], result["complete_cohort_horizon_counts"])
+        self.assertFalse(handoff["measured_lift_verified"])
+
     def test_missing_48h_is_reported_not_silently_dropped(self):
         result = self.evaluate([row("p", h) for h in (1, 6, 24, 48)] +
                                [row("q", h) for h in (1, 6, 24)])
