@@ -33,6 +33,14 @@ class RestoreScoredSeriesTests(unittest.TestCase):
             score = seed(source)
             original_receipt = (score / "scores" / (PID + ".json")).read_bytes()
             original_index = (score / "round-index.jsonl").read_bytes()
+            # Downloaded artifacts retain old absolute GitHub runner paths.
+            # Prove a different job can restore source solely from the local
+            # checksummed archive, never opening the obsolete absolute path.
+            import json
+            original_record = json.loads(original_index)
+            original_record["batch"] = "/home/runner/work/expired/entry/depth"
+            (score / "round-index.jsonl").write_text(json.dumps(original_record) + "\\n")
+            original_index = (score / "round-index.jsonl").read_bytes()
             def collector(pairs, directory):
                 self.assertEqual(pairs, ["XBTUSD"])
                 directory.mkdir()
@@ -80,7 +88,7 @@ class RestoreScoredSeriesTests(unittest.TestCase):
             index.write_text(original)
             import json
             line = json.loads(original)
-            line["batch"] = str(Path(temp).resolve())
+            line["batch"] = "/untrusted/external/depth-999"
             index.write_text(json.dumps(line) + "\n")
             with self.assertRaises(ValueError):
                 restore_and_capture(source, Path(temp) / "new")
