@@ -39,8 +39,8 @@ jobs:
             --artifact-name public-paper-ledger \
             --source-sha 94929a544899ddec63c676b6d4d52539da8e3837 \
             --output /tmp/real-writer-recovery.json \
-            --restore-dir /tmp/real-writer-recovered \\
-            --ledger-ref paper-proof-ledger \\
+            --restore-dir /tmp/real-writer-recovered \
+            --ledger-ref paper-proof-ledger \
             --ledger-path paper_pov/output/ledger.json
           python - <<'PY'
           import json
