@@ -41,6 +41,12 @@ class HistoricalOutcomeExecutionTests(unittest.TestCase):
         self.assertEqual(result["qualified_cohorts"], [])
         self.assertIsNone(result["held_out_lift"])
         self.assertFalse(result["source_authenticated"])
+        gate = result["learning_cohort_gate"]
+        self.assertEqual(gate["candidate_count"], 2)
+        self.assertEqual(gate["learning_qualified_count"], 0)
+        self.assertEqual(gate["excluded_counts"]["UNAUTHENTICATED_ARCHIVE"], 2)
+        self.assertEqual(gate["excluded_counts"]["MISSING_PRESELECTION_UNIVERSE"], 2)
+        self.assertIsNone(gate["held_out_lift"])
 
     def test_tampered_archive_fails_before_label_generation(self):
         (self.root / "XUSD.csv").write_bytes(self.raw.replace(b"100.00", b"101.00", 1))
