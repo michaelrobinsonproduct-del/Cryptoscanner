@@ -86,6 +86,32 @@ jobs:
           state=verify(json.loads(Path("/tmp/paper-ledger-input.json").read_text()),MAX_RAW_BYTES)
           print("PAPER_RESTORED",state["generation"],len(state["runs"]),state["sha256"])
           PY
+      - name: Resolve slot identity against authoritative single-writer ledger
+        env:
+          PAPER_RECOVERY_SLOT: ${{ inputs.recovery_slot_utc }}
+          PAPER_GITHUB_EVENT: ${{ github.event_name }}
+          PAPER_ORIGINATING_CRON: ${{ github.event.schedule }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import datetime as dt, os
+          from pathlib import Path
+          from paper_pov.missed_slot_recovery import resolve_writer_slot
+          slot = resolve_writer_slot(os.environ["PAPER_GITHUB_EVENT"],
+                                     os.environ.get("PAPER_ORIGINATING_CRON", ""),
+                                     os.environ.get("PAPER_RECOVERY_SLOT", ""))
+          Path("/tmp/paper-slot-identity.txt").write_text(slot or "MANUAL")
+          print("PAPER_WRITER_SLOT", slot or "MANUAL")
+          PY
+          SLOT="$(cat /tmp/paper-slot-identity.txt)"
+          if [ "$SLOT" != MANUAL ]; then
+            # Ledger branch is the only durable writer. Its serialized commits
+            # are authoritative even when GitHub workflow run history lags.
+            if git log --format='%B' "$(cat /tmp/paper-base.sha)" -- | grep -Fqx "PAPER_SLOT_ID=$SLOT"; then
+              echo "PAPER_DUPLICATE_SLOT_ABORT $SLOT"
+              exit 1
+            fi
+          fi
       - name: Real bounded public Kraken scan (paper only)
         run: |
           set -euo pipefail
@@ -153,7 +179,7 @@ jobs:
           PYTHONPATH=/tmp/paper-source-root python -m paper_pov.segmented_live_writer apply \
             --repository . --base "$(cat /tmp/paper-base.sha)" --staged /tmp/paper-staged
           git diff --cached --check
-          git commit -m "paper: atomic packed scan ${{ github.run_id }} source ${{ github.sha }}"
+          git commit -m "paper: atomic packed scan ${{ github.run_id }} source ${{ github.sha }}" -m "PAPER_SLOT_ID=$(cat /tmp/paper-slot-identity.txt)"
           git push origin HEAD:refs/heads/paper-proof-ledger
           git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
           test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
