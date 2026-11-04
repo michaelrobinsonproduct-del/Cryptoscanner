@@ -17,12 +17,18 @@ def canonical_bytes(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
 
 
+def safe_receipt_name(name):
+    return (isinstance(name, str) and bool(name) and not name.startswith("/")
+            and chr(92) not in name and all(part not in ("", ".", "..")
+            for part in name.split("/")))
+
+
 def make_manifest(receipts, *, source_sha, run_id):
     if not source_sha or not run_id or not isinstance(receipts, dict) or not receipts:
         raise IntegrityError("Source SHA, run ID and receipts are required")
     entries = {}
     for name, data in sorted(receipts.items()):
-        if not isinstance(name, str) or not name or "/" in name or "\\" in name or name in (".", ".."):
+        if not safe_receipt_name(name):
             raise IntegrityError("Unsafe receipt name")
         if not isinstance(data, bytes):
             raise IntegrityError("Receipt must contain raw persisted bytes")
@@ -41,6 +47,8 @@ def verify_readback(manifest, remote_receipts, *, expected_source_sha, expected_
     if not isinstance(entries, dict) or not entries or set(entries) != set(remote_receipts):
         raise IntegrityError("Missing or unexpected remote receipts")
     for name, expected in entries.items():
+        if not safe_receipt_name(name):
+            raise IntegrityError("Unsafe manifest receipt name")
         if not isinstance(expected, dict) or set(expected) != {"sha256", "bytes"}:
             raise IntegrityError("Malformed receipt metadata")
         data = remote_receipts[name]
