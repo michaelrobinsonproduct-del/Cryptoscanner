@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   receipt-adapter:
     runs-on: ubuntu-latest
@@ -17,16 +18,76 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrobinsonproduct-del/Cryptoscanner
+          ref: 9ef6361a279468bd2de9e45557ddc7195a80af2
+          path: a2-source
+          persist-credentials: false
       - name: Verify source and run all adapter tests
         run: |
           set -euo pipefail
-          git rev-parse HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           python -m unittest tools.test_scan_receipt_gate tools.test_c_integration_receipt_bridge tools.test_a2_verified_snapshot_bridge -v
+      - name: Download actual published A2 transport artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/actual-a2
+          gh run download 41745901223 -R michaelrobinsonproduct-del/Cryptoscanner -n a2-live-consumer-evidence -D /tmp/actual-a2
+          test -s /tmp/actual-a2/a2-verified-transport.zip
+          test -s /tmp/actual-a2/verified-snapshot.json
+      - name: Execute adapter against authenticated A2 ZIP at capture-time and current-time
+        env:
+          PYTHONPATH: a2-source:.
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import datetime as dt, json, subprocess, sys, zipfile
+          from pathlib import Path
+          from paper_pov.a2_artifact_consumer import read_artifact_zip
+          from tools.a2_verified_snapshot_bridge import assess_verified_a2
+          transport=Path("/tmp/actual-a2/a2-verified-transport.zip")
+          with zipfile.ZipFile(transport) as archive:
+              report=json.loads(archive.read("latest.json"))
+          captured=dt.datetime.fromisoformat(report["as_of"].replace("Z","+00:00"))
+          capture_verified=read_artifact_zip(transport, now=captured+dt.timedelta(seconds=15))
+          capture_verdict=assess_verified_a2(capture_verified)
+          assert capture_verdict["accepted"], capture_verdict
+          assert capture_verdict["live_watch_certified"] is False
+          assert capture_verdict["receipt_sha256"]==capture_verified["receipt_sha256"]
+          exported=json.loads(Path("/tmp/actual-a2/verified-snapshot.json").read_bytes())
+          assert exported["receipt_sha256"]==capture_verified["receipt_sha256"]
+          assert exported["watch"]==capture_verified["watch"]
+          # Execute the actual CLI at wall-clock read time. It must accept only
+          # while the source receipt and every quote remain within 10 minutes.
+          proc=subprocess.run([sys.executable,"-m","tools.a2_verified_snapshot_bridge","--a2-zip",str(transport)],capture_output=True,text=True)
+          wall_age=(dt.datetime.now(dt.timezone.utc)-captured).total_seconds()
+          if wall_age <= 600:
+              assert proc.returncode==0, proc.stdout+proc.stderr
+              wall=json.loads(proc.stdout)
+              assert wall["accepted"] and wall["live_watch_certified"] is False
+          else:
+              assert proc.returncode==1, "expired real A2 artifact unexpectedly accepted"
+              assert json.loads(proc.stdout)["accepted"] is False
+          print("A2_REAL_ARTIFACT_ADAPTER_VERIFIED",json.dumps({
+              "receipt_sha256":capture_verified["receipt_sha256"],
+              "watch_count":capture_verdict["paper_watch_count"],
+              "eligible_pairs":capture_verified["eligible_pairs"],
+              "observed_markets":capture_verified["observed_markets"],
+              "capture_time_accepted":True,
+              "wall_clock_age_seconds":round(wall_age,2),
+              "wall_clock_result":"ACCEPTED" if wall_age<=600 else "ABSTAINED_STALE",
+              "live_watch_certified":False,
+              "production_applied":False
+          },sort_keys=True))
+          PY
       - name: Confirm fail-closed CLI exit on invalid report
         run: |
           set -euo pipefail
-          printf '%s\n' '{"scan_status":"WATCH","watch":[]}' > /tmp/invalid-a2.json
-          if python -m tools.a2_verified_snapshot_bridge /tmp/invalid-a2.json; then
+          printf '%s\\n' '{"scan_status":"WATCH","watch":[]}' > /tmp/invalid-a2.json
+          if PYTHONPATH=a2-source:. python -m tools.a2_verified_snapshot_bridge --a2-zip /tmp/invalid-a2.json; then
             echo "FAIL: invalid A2 receipt accepted"
             exit 1
           fi
