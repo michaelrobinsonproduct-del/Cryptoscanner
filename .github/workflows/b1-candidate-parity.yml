@@ -23,6 +23,7 @@ on:
       - 'paper_pov/test_github_sealed_bundle_readback.py'
       - 'paper_pov/github_delivery_projection.py'
       - 'paper_pov/test_github_delivery_projection.py'
+  workflow_dispatch:
 permissions:
   contents: read
   actions: read
