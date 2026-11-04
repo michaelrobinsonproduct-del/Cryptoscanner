@@ -1,0 +1,50 @@
+name: Research market-wide outcome evaluator checks
+on:
+  pull_request:
+    paths:
+      - 'research/marketwide_paper_outcomes.py'
+      - 'research/test_marketwide_paper_outcomes.py'
+      - '.github/workflows/research-marketwide-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  marketwide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify existing segmented PAPER ledger read-only and evaluate authentic observations
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          BASE="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+          if git cat-file -e "${BASE}:paper-segment-manifest.json" 2>/dev/null; then
+            CHECKPOINT="$(git show "${BASE}:paper-segment-manifest.json" | python -c 'import json,sys;print(json.load(sys.stdin)["checkpoint"]["git_commit"])')"
+            git cat-file -e "${CHECKPOINT}^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$CHECKPOINT"
+          fi
+          python -m paper_pov.segmented_repository export-git --repository . --commit "$BASE" --output /tmp/verified-paper-ledger.json --full-replay
+          python -m research.marketwide_paper_outcomes --verified-ledger /tmp/verified-paper-ledger.json --output /tmp/marketwide-outcomes.json
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/marketwide-outcomes.json'))
+          for horizon, row in d['horizons'].items():
+              print('MARKETWIDE_OUTCOME',horizon,json.dumps(row,sort_keys=True))
+              assert row['eligible']==row['matured']+row['abstain_gap']+row['immature']
+          PY
+      - name: Run exact-head evaluator tests
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          python -m unittest research.test_marketwide_paper_outcomes -v
+          python -m compileall -q research/marketwide_paper_outcomes.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: marketwide-outcome-validation-${{ github.run_id }}
+          path: /tmp/marketwide-outcomes.json
+          if-no-files-found: ignore
+          retention-days: 14
