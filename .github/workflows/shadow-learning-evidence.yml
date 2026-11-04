@@ -100,3 +100,10 @@ jobs:
           assert r['source_authenticated'] is False
           print('REAL_A2_RECEIPT', r['a_receipt_sha256'], 'OBSERVATIONS', r['frozen_observation_count'], 'WATCH', r['watch_count'])
           PY
+      - name: Retain authenticated A receipt-bound E historical preselection for B/E1
+        uses: actions/upload-artifact@v4
+        with:
+          name: e-real-a2-historical-preselection
+          path: a2-historical-evidence.json
+          if-no-files-found: error
+          retention-days: 14
