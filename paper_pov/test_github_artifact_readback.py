@@ -221,8 +221,28 @@ def test_packed_single_writer_remote_reconciliation_real_storage_layout():
     assert report["remote_sha256"] == report["recovered_sha256"]
     assert report["independently_authenticated"] is False
     assert len(calls) == 3
-    other = dict(state)
-    other["generation"] = 1
-    # A valid different ledger is unnecessary: compare a valid original against
-    # a different remote snapshot head in a separate regression.
     assert report["remote_path"] == repo_storage.SNAPSHOT
+
+
+def test_packed_branch_corrupt_snapshot_does_not_claim_match():
+    import base64
+    from paper_pov import ledger, segmented_repository as layout
+    from paper_pov.github_artifact_readback import reconcile_remote_ledger
+    state = ledger.empty()
+    manifest = {"schema": layout.SCHEMA,
+                "checkpoint": {"git_commit": "a" * 40, "generation": 0,
+                               "ledger_sha256": state["sha256"], "file_sha256": "b" * 64},
+                "head": {"generation": 0, "ledger_sha256": state["sha256"],
+                         "snapshot_sha256": "c" * 64}, "segments": []}
+    def github(args, timeout):
+        endpoint = args[4]
+        if "paper_pov/output/ledger.json" in endpoint:
+            raise subprocess.CalledProcessError(1, args, output=b"Not Found")
+        raw = json.dumps(manifest).encode() if layout.MANIFEST in endpoint else b"tampered snapshot"
+        return json.dumps({"type": "file", "encoding": "base64",
+                           "content": base64.b64encode(raw).decode()}).encode()
+    result = reconcile_remote_ledger(REPO, "paper-proof-ledger",
+                                     "paper_pov/output/ledger.json",
+                                     {"ledger.json": ledger.canonical(state)}, runner=github)
+    assert result["status"] == "UNAVAILABLE"
+    assert result["independently_authenticated"] is False
