@@ -28,7 +28,7 @@ def stage(name, action, root):
 
 def run_tests(root):
     cmd = [sys.executable, "-m", "unittest", "paper_pov.test_missed_slot_recovery",
-           "paper_pov.test_replay_downloaded_artifacts", "-v"]
+           "paper_pov.test_results_report", "-v"]
     completed = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
     (root / "focused-tests.log").write_text(completed.stdout + completed.stderr)
     if completed.returncode:
