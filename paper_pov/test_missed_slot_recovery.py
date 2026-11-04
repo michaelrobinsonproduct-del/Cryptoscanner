@@ -1,6 +1,6 @@
 """Focused decision tests: never fabricate a historical market scan."""
 import unittest
-from paper_pov.missed_slot_recovery import decision, validate_recovery_slot
+from paper_pov.missed_slot_recovery import decision, validate_recovery_slot, resolve_writer_slot
 
 NOW = "2026-11-03T23:24:30Z"
 
@@ -20,6 +20,20 @@ class MissedSlotRecoveryTests(unittest.TestCase):
             validate_recovery_slot("2026-11-03T23:10:00Z", "workflow_dispatch", NOW)
         with self.assertRaisesRegex(ValueError, "outside bounded"):
             validate_recovery_slot("2026-11-03T22:39:00Z", "workflow_dispatch", NOW)
+
+    def test_serialized_writer_slot_identity(self):
+        now = "2026-11-03T23:25:00Z"
+        self.assertEqual(resolve_writer_slot("schedule", "9 * * * *", now=now),
+                         "2026-11-03T23:09:00+00:00")
+        self.assertEqual(resolve_writer_slot("workflow_dispatch", now=now), None)
+        self.assertEqual(resolve_writer_slot("workflow_dispatch",
+                         recovery_slot="2026-11-03T23:09:00Z", now=now),
+                         "2026-11-03T23:09:00+00:00")
+        with self.assertRaisesRegex(ValueError, "Delayed scheduled"):
+            resolve_writer_slot("schedule", "39 * * * *", now=now)
+        with self.assertRaisesRegex(ValueError, "mixed slot"):
+            resolve_writer_slot("schedule", "9 * * * *",
+                                recovery_slot="2026-11-03T23:09:00Z", now=now)
 
     def test_missing_slot_dispatches_existing_writer(self):
         result = decision(NOW, [run("2026-11-03T22:39:03Z")])
