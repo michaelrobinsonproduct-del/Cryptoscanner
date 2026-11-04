@@ -250,6 +250,15 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
             writer["source_sha"] == sha and
             writer["ledger_generation"] != generation):
         raise ValueError("same-run D persisted generation contradicts published ledger")
+    # A current WATCH must be backed by D readback of the exact persisted
+    # published scan, not merely by an unrelated authenticated historical D run.
+    same_run_writer = bool(writer and writer["source_run_id"] == int(run_id)
+                           and writer["source_sha"] == sha
+                           and writer["independently_authenticated"]
+                           and writer["reconciliation_status"] == "MATCH")
+    if visible_watch and not same_run_writer:
+        visible_watch = []
+        delivery_status = "ABSTAIN_SAME_RUN_PERSISTED_WRITER_UNVERIFIED"
     a2 = _a2_evidence(a2_delivery) if a2_delivery is not None else None
     learning = _learning_evidence(learning_handoff) if learning_handoff is not None else None
     return {"schema": "paper_delivery_readback_v1", "source_run_id": int(run_id),
