@@ -66,6 +66,8 @@ class RestoreScoredSeriesTests(unittest.TestCase):
                 resumed = restore_and_capture(new, latest, collector=collector)
             self.assertEqual(resumed["rounds_verified"], 3)
             self.assertEqual(evaluate_index(latest / "entry" / "round-index.jsonl")["rounds_verified"], 3)
+            self.assertEqual((latest / "continuation-reports" / "rounds-002.json").read_bytes(),
+                             (new / "continuation-report.json").read_bytes())
 
             self.assertEqual(
                 (latest / "continuation-history" / "through-002-rounds.json").read_bytes(),
@@ -134,6 +136,32 @@ class RestoreScoredSeriesTests(unittest.TestCase):
             self.assertEqual(json.loads((target/"continuation-report.json").read_text()),
                              report)
             self.assertFalse(report["production_applied"])
+
+    def test_continuation_waits_for_next_real_receipt_slot(self):
+        from research.prospective_outcome_adapter import verified_rows
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "original"
+            entry = seed(source)
+            verified, _ = verified_rows(entry / "depth")
+            last_observed = max(float(row["first_observed_at"]) for row in verified)
+            elapsed = [1000.0]
+            arrivals = []
+            def collect(pairs, directory):
+                arrivals.append(elapsed[0])
+                directory.mkdir()
+                fixture(directory)
+            with patch("research.restore_scored_series.evaluate_all",
+                       return_value={"mode": "RESEARCH_ONLY_AUTHENTICATED_HELD_OUT",
+                                     "production_applied": False}):
+                report = restore_and_capture(
+                    source, root / "continued", collector=collect,
+                    followup_rounds=1, clock=lambda: elapsed[0],
+                    epoch_clock=lambda: last_observed + 180,
+                    sleep=lambda n: elapsed.__setitem__(0, elapsed[0] + n))
+            self.assertEqual(arrivals, [1120.0])
+            self.assertEqual(report["resume_wait_seconds"], 120)
+            self.assertEqual(report["rounds_verified"], 2)
 
     def test_modified_manifest_fails_before_copy_or_collection(self):
         with tempfile.TemporaryDirectory() as temp:
