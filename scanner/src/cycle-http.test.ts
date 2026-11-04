@@ -83,3 +83,17 @@ test("watch endpoint abstains while a replacement scheduled scan is running",asy
  expect((await scheduled).ok).toBe(true);
  expect(await (await http(req("/watch"))).json()).toMatchObject({running:false,status:"PAPER_ONLY_VERIFIED",watch:[{pair:"TAOUSD"}]});
 });
+
+test("authenticated A2 remains available when legacy collector fails; both sources unavailable return 502",async()=>{
+ const snapshot={status:"VERIFIED_SNAPSHOT" as const,as_of:"2026-11-03T04:00:00Z",scan_status:"WATCH",receipt_sha256:"d".repeat(64),watch:[{pair:"TAOUSD",quote_observed_at:"2026-11-03T03:59:00Z"}],eligible_pairs:1,observed_markets:1,abstention_counts:{},source:"a2_verified_readonly" as const,buy_approved:false as const};
+ const failing=deps({scan:async()=>{throw Error("legacy collector offline")}});
+ const runner=createCycleRunner(failing,undefined,undefined,async()=>snapshot as any);
+ const http=createCycleHttpHandler(runner,()=>new Date("2026-11-03T04:01:00Z"));
+ const manual=await http(req("/cycle"));expect(manual.status).toBe(200);
+ const result=await manual.json();
+ expect(result).toMatchObject({scan_status:"BASELINE_UNAVAILABLE",baseline_error:"Error: legacy collector offline",paper_watch_status:"PAPER_ONLY_VERIFIED",live_watch_certified:false,paper_watch:[{pair:"TAOUSD"}]});
+ const scheduled=await runner.run("scheduled");expect(scheduled.ok).toBe(true);expect(scheduled.result).toEqual(result);
+ expect(await (await http(req("/watch"))).json()).toMatchObject({status:"PAPER_ONLY_VERIFIED",watch:[{pair:"TAOUSD"}]});
+ const unavailable=createCycleRunner(failing,undefined,undefined,async()=>{throw Error("A2 unavailable")});
+ const bad=await unavailable.run("manual");expect(bad.ok).toBe(false);expect(bad.status).toBe(502);
+});
