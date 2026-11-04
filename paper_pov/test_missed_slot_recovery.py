@@ -49,7 +49,7 @@ class MissedSlotRecoveryTests(unittest.TestCase):
             run("2026-11-03T22:39:00Z", "in_progress")])["action"], "WAIT")
 
     def test_before_grace_does_not_dispatch(self):
-        self.assertEqual(decision("2026-11-03T23:12:00Z", [])["action"], "WAIT")
+        self.assertEqual(decision("2026-11-03T23:20:00Z", [])["action"], "WAIT")
 
     def test_old_slots_not_backfilled(self):
         self.assertEqual(decision("2026-11-03T23:55:00Z", [])["slot_utc"],
