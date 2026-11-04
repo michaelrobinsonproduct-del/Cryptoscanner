@@ -176,17 +176,19 @@ jobs:
           python - <<'PY'
           import json,zipfile
           from pathlib import Path
-          from paper_pov.a2_artifact_consumer import read_published_delivery
+          from paper_pov.a2_artifact_consumer import read_published_delivery, project_watch_delivery
           root=Path("/tmp/b-delivery/a2")
           with zipfile.ZipFile("/tmp/b-delivery/a2.zip") as archive:
               required={"a2-verified-transport.zip","preselection-universe.json",
-                        "latest.json","a2-delivery.json"}
+                        "latest.json"}
+              optional={"a2-delivery.json"}
               seen=set()
               total=0
               for item in archive.infolist():
                   name=item.filename
-                  # Scanner may publish additional diagnostic JSON alongside
-                  # the four required inputs. Never execute or trust extras.
+                  # Real A2 live-consumer uploads transport, universe and latest,
+                  # but older successful runs did not publish a2-delivery.json.
+                  # Reconstruct only through the strict read-time verifier.
                   safe=(not name.startswith("/") and chr(92) not in name
                         and all(part not in ("", ".", "..") for part in name.split("/")))
                   if (item.is_dir() or not safe or name in seen
@@ -197,12 +199,14 @@ jobs:
                   if total>8_000_000:
                       raise SystemExit("A2_ARTIFACT_UNCOMPRESSED_LIMIT")
                   seen.add(name)
-                  if name in required:
+                  if name in required | optional:
                       (root/name).write_bytes(archive.read(item))
               if not required.issubset(seen):
                   raise SystemExit("A2_REQUIRED_PUBLISHED_FILES_MISSING")
           try:
-              delivery=read_published_delivery(root)
+              delivery=(read_published_delivery(root)
+                        if (root/"a2-delivery.json").exists()
+                        else project_watch_delivery(root))
           except (ValueError,KeyError) as exc:
               # Old artifacts cannot be retroactively declared fresh; keep
               # their pinned transport for forensic inspection only.
