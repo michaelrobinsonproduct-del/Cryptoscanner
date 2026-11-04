@@ -39,6 +39,14 @@ class C2CoverageContract(unittest.TestCase):
         self.assertFalse(result["production_applied"])
         self.assertFalse(result["trading_approved"])
 
+    def test_malformed_watch_payload_abstains(self):
+        for watch in ([None], ["BTCUSD"], [[]], [{}], [42]):
+            with self.subTest(watch=watch):
+                p, r, s = evidence()
+                s["watch"] = watch
+                with self.assertRaises(ValueError):
+                    combine(p, r, s)
+
     def test_invalid_coverage_abstains(self):
         for key, value in (("eligible_pairs", True), ("eligible_pairs", -1),
                            ("observed_markets", 5), ("observed_markets", 0),
