@@ -47,6 +47,38 @@ class SnapshotTests(unittest.TestCase):
         self.seal()
         self.assertEqual(read_snapshot(self.latest, NOW)["watch"], [])
 
+    def test_read_time_quote_expiration_rejected_even_when_scan_fresh(self):
+        # Scan is only 30 seconds old, but the quote is older than 10m.
+        self.report["watch"][0]["quote_observed_at"] = "2026-11-03T16:50:00+00:00"
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "expired candidate quote"):
+            read_snapshot(self.latest, NOW)
+
+    def test_quote_age_exposed_in_read_only_output(self):
+        self.report["watch"][0]["quote_observed_at"] = "2026-11-03T16:59:00+00:00"
+        self.seal()
+        result = read_snapshot(self.latest, NOW)
+        self.assertEqual(result["quote_age_seconds"], {"TESTUSD": 90.0})
+        self.assertEqual(result["snapshot_age_seconds"], 30)
+
+    def test_future_quote_relative_to_reader_rejected(self):
+        self.report["watch"][0]["quote_observed_at"] = "2026-11-03T17:00:45+00:00"
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "stale candidate quote"):
+            read_snapshot(self.latest, NOW)
+
+    def test_invalid_verification_clock_and_age_policy_rejected(self):
+        with self.assertRaisesRegex(ValueError, "naive verification clock"):
+            read_snapshot(self.latest, dt.datetime(2026, 11, 3, 17, 0, 30))
+        for limit in (0, -1, True, float("nan"), 601):
+            with self.subTest(limit=limit), self.assertRaisesRegex(ValueError, "invalid maximum quote age"):
+                read_snapshot(self.latest, NOW, max_age_seconds=limit)
+
+    def test_zero_watch_has_empty_quote_ages(self):
+        self.report.update(watch=[], scan_status="ABSTAIN_NO_QUALIFIED_OHLC")
+        self.seal()
+        self.assertEqual(read_snapshot(self.latest, NOW)["quote_age_seconds"], {})
+
     def test_missing_receipt_rejected(self):
         next((self.latest.parent / "receipts").glob("*.json")).unlink()
         with self.assertRaisesRegex(ValueError, "immutable receipt"):
@@ -72,6 +104,39 @@ class SnapshotTests(unittest.TestCase):
         self.report["watch"].append(dict(self.report["watch"][0], rank=2))
         self.seal()
         with self.assertRaisesRegex(ValueError, "duplicate"):
+            read_snapshot(self.latest, NOW)
+
+    def test_coverage_cannot_exceed_eligible(self):
+        self.report["observed_markets"] = 21
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "coverage exceeds"):
+            read_snapshot(self.latest, NOW)
+
+    def test_abstention_counts_reject_negative_and_boolean(self):
+        for bad in (-1, True, 1.5):
+            with self.subTest(bad=bad):
+                self.report["abstention_counts"] = {"ohlc_gap_or_schema": bad}
+                self.seal()
+                with self.assertRaisesRegex(ValueError, "invalid abstention"):
+                    read_snapshot(self.latest, NOW)
+
+    def test_watch_cannot_exceed_observed(self):
+        self.report["observed_markets"] = 0
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "watch exceeds"):
+            read_snapshot(self.latest, NOW)
+
+    def test_receipt_directory_symlink_rejected(self):
+        receipt_dir = self.latest.parent / "receipts"
+        target = self.latest.parent / "external"
+        receipt_dir.rename(target)
+        receipt_dir.symlink_to(target, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "immutable receipt"):
+            read_snapshot(self.latest, NOW)
+
+    def test_non_object_json_rejected(self):
+        self.latest.write_text("[]")
+        with self.assertRaisesRegex(ValueError, "invalid snapshot object"):
             read_snapshot(self.latest, NOW)
 
 if __name__ == "__main__":
