@@ -10,8 +10,15 @@ export function createCycleRunner(deps:Dependencies,shadow?:()=>Promise<{evidenc
   if(running)return {ok:false,status:409,error:"cycle_already_running",origin};
   running=true;
   try{
-   const result=await executeCandidateCycle(deps);
-   let output=result;
+   let baselineFailure:string|null=null;
+   let result:Awaited<ReturnType<typeof executeCandidateCycle>>;
+   try{result=await executeCandidateCycle(deps)}
+   catch(error){
+    if(!a2Snapshot)throw error;
+    baselineFailure=String(error);
+    result={mode:"shadow",control_untouched:true,at:deps.now().toISOString(),scan_status:"BASELINE_UNAVAILABLE",coverage:{discovery_rows:0,selected_candidates:0,watch:0,promotion_eligible:0,abstentions:0,discarded_discovery_rows:0},candidates:[]};
+   }
+   let output:any={...result,...(baselineFailure?{baseline_error:baselineFailure}:{} )};
    // E's authenticated qualification decision is an upstream gate, not merely
    // a parallel informational field. A shadow artifact cannot bypass KEEP_BASELINE.
    let learningAllowsShadow=false;
@@ -36,7 +43,7 @@ export function createCycleRunner(deps:Dependencies,shadow?:()=>Promise<{evidenc
    if(recoveryStatus){try{output={...output,recovery_status:await recoveryStatus()}}catch{output={...output,recovery_status:unavailableRecovery("read_or_validation_failed")}}}
    if(sourceHealth){try{output={...output,source_run_health:await sourceHealth()}}catch{output={...output,source_run_health:unavailableSourceHealth("read_or_validation_failed")}}}
    if(paperReceipt){let receipt:PaperReceipt;try{receipt=await paperReceipt()}catch{receipt=unavailablePaperReceipt("read_or_validation_failed")};output={...output,paper_receipt:receipt}}
-   if(a2Snapshot){let snapshot:A2Snapshot;try{snapshot=await a2Snapshot()}catch{snapshot=unavailableA2Snapshot("read_or_validation_failed")};output={...output,a2_snapshot:snapshot,paper_watch:snapshot.status==="VERIFIED_SNAPSHOT"?snapshot.watch:[],paper_watch_status:snapshot.status==="VERIFIED_SNAPSHOT"?"PAPER_ONLY_VERIFIED":"ABSTAIN_A2_UNAVAILABLE",live_watch_certified:false}}
+   if(a2Snapshot){let snapshot:A2Snapshot;try{snapshot=await a2Snapshot()}catch{snapshot=unavailableA2Snapshot("read_or_validation_failed")};if(baselineFailure&&snapshot.status!=="VERIFIED_SNAPSHOT")throw Error("both_baseline_and_a2_unavailable: "+baselineFailure);output={...output,a2_snapshot:snapshot,paper_watch:snapshot.status==="VERIFIED_SNAPSHOT"?snapshot.watch:[],paper_watch_status:snapshot.status==="VERIFIED_SNAPSHOT"?"PAPER_ONLY_VERIFIED":"ABSTAIN_A2_UNAVAILABLE",live_watch_certified:false}}
    last=output;lastError=null;cycles++;
    return {ok:true,status:200,origin,result:output};
   }catch(error){lastError=String(error);return {ok:false,status:502,origin,error:lastError}}
