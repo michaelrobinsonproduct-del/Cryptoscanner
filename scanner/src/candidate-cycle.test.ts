@@ -1,0 +1,15 @@
+import {test,expect} from "bun:test";
+import {executeCandidateCycle} from "./candidate-cycle";
+const row={pair:"TAOUSD",score:85,displacement_pct:1,discovered_at:"2026-11-03T03:59:00Z"};
+const confirm=(pair="TAOUSD")=>({pair,success:true,twoSidedBook:true,executableBbo:true,recentTradeConfirmation:true,newestTradeAgeSeconds:5,bestAsk:100,bestBid:99,fetchedAt:"2026-11-03T03:59:30Z"});
+const deps=(rows:any[],f:(pair:string)=>Promise<any>)=>({scan:async()=>({candidates:rows}),confirm:f,pause:async()=>{},now:()=>new Date("2026-11-03T04:00:00Z")});
+test("identical injected manual/scheduled fixtures produce identical results",async()=>{const d=deps([row],async()=>confirm());const a=await executeCandidateCycle(d),b=await executeCandidateCycle(d);expect(a).toEqual(b);expect(a.candidates[0].discovered_at).toBe(row.discovered_at)});
+test("stale source abstains",async()=>{const a=await executeCandidateCycle(deps([{...row,discovered_at:"2026-11-03T03:00:00Z"}],async()=>confirm()));expect(a.candidates[0].decision).toBe("ABSTAIN")});
+test("cross-pair confirmation abstains",async()=>{const a=await executeCandidateCycle(deps([row],async()=>confirm("XRPUSD")));expect(a.candidates[0].reason).toBe("confirmation_pair_mismatch")});
+test("confirmation exception abstains",async()=>{const a=await executeCandidateCycle(deps([row],async()=>{throw Error("timeout")}));expect(a.candidates[0].decision).toBe("ABSTAIN")});
+test("deduped market confirms exactly twice",async()=>{let n=0;const a=await executeCandidateCycle(deps([row,row],async()=>{n++;return confirm()}));expect(n).toBe(2);expect(a.candidates).toHaveLength(1)});
+
+test("stale discovery never contacts confirmation service",async()=>{let calls=0;const a=await executeCandidateCycle(deps([{...row,discovered_at:"2026-11-03T03:00:00Z"}],async()=>{calls++;return confirm()}));expect(calls).toBe(0);expect(a.candidates[0].reason).toBe("stale_or_invalid_discovery")});
+test("stale confirmation abstains rather than promoting",async()=>{const a=await executeCandidateCycle(deps([row],async()=>({...confirm(),fetchedAt:"2026-11-03T03:00:00Z"})));expect(a.candidates[0].reason).toBe("stale_or_invalid_confirmation")});
+test("future confirmation abstains rather than promoting",async()=>{const a=await executeCandidateCycle(deps([row],async()=>({...confirm(),fetchedAt:"2026-11-03T04:01:00Z"})));expect(a.candidates[0].reason).toBe("stale_or_invalid_confirmation")});
+test("discovery expiring during confirmation abstains",async()=>{let clock=Date.parse("2026-11-03T04:00:00Z");const d={...deps([row],async()=>confirm()),now:()=>new Date(clock),pause:async()=>{clock+=610000}};const a=await executeCandidateCycle(d);expect(a.candidates[0].reason).toBe("stale_or_invalid_discovery")});
