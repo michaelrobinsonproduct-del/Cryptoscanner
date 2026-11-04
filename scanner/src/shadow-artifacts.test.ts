@@ -18,7 +18,7 @@ test("HTTP manual and scheduled both load read-only outcome artifacts and shadow
  let gets=0;
  const verifiedEvidence={...evidence,outcome_ledger_sha:await digest(outcomes),score_ledger_sha:await digest(scores)};
  const fetcher=async(url:any,opts:any)=>{gets++;expect(opts.method).toBe("GET");expect(opts.redirect).toBe("error");return new Response(JSON.stringify(url===gateUrl?researchGate:{evidence:verifiedEvidence,outcomes,scores}),{status:200})};
- const runner=createCycleRunner(deps,createReadOnlyShadowLoader("https://example.org/ledger.json",fetcher as any,source,gateUrl,researchDigest));
+ const runner=createCycleRunner(deps,createReadOnlyShadowLoader("https://example.org/ledger.json",fetcher as any,source,gateUrl,researchDigest),undefined,undefined,async()=>({decision:"SHADOW_ELIGIBLE_REVIEW",held_out_n:42,production_applied:false as const}));
  const manual=await (await createCycleHttpHandler(runner)(new Request("http://localhost/cycle"))).json();
  const scheduled=await runner.run("scheduled");
  expect(manual).toEqual(scheduled.result);expect(gets).toBe(4);
