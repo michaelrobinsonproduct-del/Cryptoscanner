@@ -136,6 +136,46 @@ class OutcomeAdapterTests(unittest.TestCase):
         self.assertEqual(result["cohort_size"], 1)
         self.assertEqual(result["abstention_counts"], {"INCOMPLETE_SOURCE_COVERAGE": 1})
 
+    def test_frozen_universe_accounts_for_never_labeled_prediction(self):
+        rows = [row("p", h) for h in (1, 6, 24, 48)]
+        result = build_heldout_evidence(
+            rows, {"p": True}, {"p": False},
+            training_end_utc="2026-07-29T00:00:00Z",
+            holdout_start_utc="2026-08-01T00:00:00Z",
+            evaluation_asof_utc="2026-08-07T00:00:00Z",
+            baseline_version="baseline-1", challenger_version="shadow-2",
+            prediction_universe=["never-labeled", "p"])
+        self.assertEqual(result["observed_prediction_count"], 2)
+        self.assertEqual(result["unlabeled_prediction_count"], 1)
+        self.assertEqual(result["excluded_prediction_count"], 1)
+        self.assertEqual(result["incomplete_prediction_horizons"]["never-labeled"], [1, 6, 24, 48])
+        self.assertEqual(result["complete_cohort_fraction"], 0.5)
+        self.assertTrue(result["prediction_universe_frozen"])
+        handoff = project_learning_handoff(result)
+        self.assertEqual(handoff["unlabeled_prediction_count"], 1)
+        self.assertFalse(handoff["source_authenticated"])
+
+    def test_outcome_outside_frozen_universe_rejected(self):
+        with self.assertRaisesRegex(ValueError, "outside frozen"):
+            build_heldout_evidence(
+                [row("p", h) for h in (1, 6, 24, 48)],
+                {"p": True}, {"p": False},
+                training_end_utc="2026-07-29T00:00:00Z",
+                holdout_start_utc="2026-08-01T00:00:00Z",
+                evaluation_asof_utc="2026-08-07T00:00:00Z",
+                baseline_version="baseline-1", challenger_version="shadow-2",
+                prediction_universe=["other"])
+
+    def test_duplicate_frozen_universe_rejected(self):
+        with self.assertRaisesRegex(ValueError, "duplicate prediction universe"):
+            build_heldout_evidence(
+                [], {}, {},
+                training_end_utc="2026-07-29T00:00:00Z",
+                holdout_start_utc="2026-08-01T00:00:00Z",
+                evaluation_asof_utc="2026-08-07T00:00:00Z",
+                baseline_version="baseline-1", challenger_version="shadow-2",
+                prediction_universe=["p", "p"])
+
 
 if __name__ == "__main__":
     unittest.main()
