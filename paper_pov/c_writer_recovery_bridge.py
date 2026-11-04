@@ -49,6 +49,11 @@ def bridge(integration, readback, *, restored_latest=None):
         and isinstance(persisted.get("scan_status"), str)
         and bool(persisted["scan_status"])
         and persisted.get("live_replay_performed") is False
+        # A restored historical writer artifact is NOT sufficient to export a
+        # current delivery receipt if the remote ledger has since diverged or
+        # the independent reconciliation could not be completed.
+        and isinstance(reconciliation, dict)
+        and reconciliation.get("status") == "MATCH"
     )
     result = {
         "schema": "c_d_recovered_writer_bridge_v1",
@@ -63,7 +68,14 @@ def bridge(integration, readback, *, restored_latest=None):
             "restored_latest_available": restored_latest is not None,
             "persisted_paper": persisted,
             "delivery_projection_ready": writer_delivery_ready,
-            "delivery_blocker": None if writer_delivery_ready else "D_PERSISTED_PAPER_MISSING_OR_INCOMPLETE",
+            "delivery_blocker": (
+                None if writer_delivery_ready else
+                "D_REMOTE_LEDGER_RECONCILIATION_NOT_MATCH"
+                if isinstance(reconciliation, dict) and reconciliation.get("status") != "MATCH"
+                else "D_REMOTE_LEDGER_RECONCILIATION_MISSING"
+                if reconciliation is None and isinstance(persisted, dict)
+                else "D_PERSISTED_PAPER_MISSING_OR_INCOMPLETE"
+            ),
             "remote_ledger_reconciliation": reconciliation,
         },
         "same_run_or_candidate_parity_claimed": False,
