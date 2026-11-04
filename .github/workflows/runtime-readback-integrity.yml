@@ -154,13 +154,13 @@ jobs:
               # Historical writer receipts remain useful, but do not fabricate a
               # verified published result when the paired artifact is absent.
               print("D2_B_PUBLISHED_RESULTS_ABSTAIN_NO_PAIRED_ARTIFACT")
-              with open(os.environ["GITHUB_ENV"],"a") as out:
-                  out.write("PUBLISHED_RESULTS_AVAILABLE=false\n")
+              from pathlib import Path
+              Path("/tmp/d2-published-available").write_text("false")
           else:
-              with open(os.environ["GITHUB_ENV"],"a") as out:
-                  out.write("PUBLISHED_RESULTS_AVAILABLE=true\n")
+              from pathlib import Path
+              Path("/tmp/d2-published-available").write_text("true")
           PY
-          if [ "$PUBLISHED_RESULTS_AVAILABLE" != "true" ]; then exit 0; fi
+          if [ "$(cat /tmp/d2-published-available)" != "true" ]; then exit 0; fi
           mkdir -p /tmp/d2-published
           gh run download "$WRITER_RUN_ID" --repo "${{ github.repository }}" --name "public-paper-results-$WRITER_RUN_ID" --dir /tmp/d2-published
           python - <<'PY'
