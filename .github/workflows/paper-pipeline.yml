@@ -186,6 +186,17 @@ jobs:
           PYTHONPATH=/tmp/paper-source-root python -m paper_pov.segmented_live_writer verify-remote \
             --repository . --base "$(cat /tmp/paper-base.sha)" \
             --commit "$(git rev-parse HEAD)" --staged /tmp/paper-staged
+          # Confirm the exact slot identity survived the non-force remote push.
+          # A GitHub Actions success without this readback is not accepted.
+          SLOT="$(cat /tmp/paper-slot-identity.txt)"
+          test "$(git log -1 --format='%B' HEAD | grep -Fxc "PAPER_SLOT_ID=$SLOT")" = 1 || {
+            echo "PAPER_REMOTE_SLOT_READBACK_MISMATCH"; exit 1;
+          }
+          if [ "$SLOT" != MANUAL ]; then
+            COUNT="$(git log --format='%B' HEAD -- | grep -Fxc "PAPER_SLOT_ID=$SLOT" || true)"
+            test "$COUNT" = 1 || { echo "PAPER_REMOTE_DUPLICATE_SLOT $COUNT"; exit 1; }
+          fi
+          echo "PAPER_SLOT_REMOTE_READBACK_VERIFIED $SLOT"
           echo "PAPER_LEDGER_REMOTE_READBACK_VERIFIED $(git rev-parse HEAD)"
       - name: Render verified UTC results after ledger remote readback
         env:
