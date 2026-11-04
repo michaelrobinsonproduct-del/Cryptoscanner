@@ -13,6 +13,7 @@ from research.live_score_depth_round import run as capture_entry
 from research.acquisition_receipt_pipeline import load_captures
 from research.kraken_prospective_batch import collect, MAX_PAIRS
 from research.prospective_round_store import append_round, evaluate_index
+from research.authenticated_learning_loop import evaluate_all
 
 MAX_ROUNDS = 13
 MIN_INTERVAL_SECONDS = 300
@@ -52,9 +53,9 @@ def capture_scored_series(output_root, *, rounds=13, interval_seconds=300,
         indexer(index, directory)
     # This verifies every retained manifest and evaluates only genuine coverage.
     coverage = {str(h): evaluate(index, h) for h in (1, 6, 24, 48)}
-    result = {"mode": "RESEARCH_ONLY_SCORED_PROSPECTIVE_SERIES",
+    learning = evaluate_all(entry_root / "scores", entry_root / "associations", index,\n                            ledger_path=root / "shadow-decisions.jsonl")\n    result = {"mode": "RESEARCH_ONLY_SCORED_PROSPECTIVE_SERIES",
               "rounds_indexed": rounds, "scored_pairs": pairs,
-              "round_index": str(index), "coverage": coverage,
+              "round_index": str(index), "coverage": coverage, "learning": learning,
               "production_applied": False, "trading_approved": False}
     # An independent, create-only summary; originals and score receipts unchanged.
     with (root / "series-report.json").open("x", encoding="utf-8") as handle:
