@@ -42,7 +42,7 @@ def read_run(repo, run_id, *, runner=subprocess.check_output):
             if hashlib.sha256((output / name).read_bytes()).hexdigest() != expected[name]:
                 raise ValueError("downloaded artifact checksum mismatch: " + name)
         slot = json.loads((output / "slot_receipt.json").read_bytes())
-        if slot.get("source_sha") != run.get("headSha") or str(slot.get("run_id")) != run_id:
+        if slot.get("source_sha") != run.get("headSha") or str(slot.get("run_id")) != run_id or slot.get("historical_quotes_reconstructed") is not False:
             raise ValueError("artifact run provenance mismatch")
         bundle = build_bundle(output)
         saved = json.loads((output / "sealed-http-bundle.json").read_bytes())
