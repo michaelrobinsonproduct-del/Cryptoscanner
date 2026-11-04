@@ -6,6 +6,10 @@ on:
         description: 'Prior successful scored-series run to extend by twelve actual five-minute depth rounds (blank starts fresh 13-round cohort)'
         required: false
         type: string
+      prior_cohort_run_ids:
+        description: 'Optional comma-separated successful independent research scored-series run IDs for authenticated held-out comparison'
+        required: false
+        type: string
 permissions:
   contents: read
   actions: read
@@ -91,6 +95,49 @@ jobs:
                                       if o['status']=='QUALIFIED_OBSERVED_PATH'),
               'held_out_lift':result['held_out_lift']
           },sort_keys=True))
+          PY
+      - name: Evaluate independent verified scored cohorts in one chronological held-out comparison
+        if: inputs.prior_cohort_run_ids != ''
+        env:
+          PRIOR_COHORT_RUN_IDS: ${{ inputs.prior_cohort_run_ids }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, pathlib, subprocess
+          ids=os.environ["PRIOR_COHORT_RUN_IDS"].split(",")
+          if not 1<=len(ids)<=20 or len(set(ids))!=len(ids):
+              raise ValueError("requires one to twenty unique prior cohort runs")
+          paths=["/tmp/kraken-one-hour"]
+          current_branch=os.environ["GITHUB_REF_NAME"]
+          for i,run_id in enumerate(ids):
+              run_id=run_id.strip()
+              if not run_id.isascii() or not run_id.isdigit() or not 8<=len(run_id)<=20:
+                  raise ValueError("invalid prior cohort run ID")
+              raw=subprocess.check_output(
+                  ["gh","run","view",run_id,"-R",os.environ["GITHUB_REPOSITORY"],
+                   "--json","workflowName,conclusion,headBranch",
+                   ],
+                  text=True).strip()
+              import json
+              info=json.loads(raw)
+              if not (info.get("workflowName")=="Research one-hour source-qualified outcome capture (manual only)" and info.get("conclusion")=="success" and info.get("headBranch")==current_branch):
+                  raise ValueError("not a successful same-branch research series")
+              folder=pathlib.Path("/tmp/independent-cohorts")/str(i)
+              folder.mkdir(parents=True)
+              subprocess.run(
+                  ["gh","run","download",run_id,"-R",os.environ["GITHUB_REPOSITORY"],
+                   "-n","research-scored-series-"+run_id,"-D",str(folder)],
+                  check=True,timeout=120)
+              if not (folder/"entry"/"round-index.jsonl").is_file():
+                  raise ValueError("prior scored cohort missing retained index")
+              paths.append(str(folder))
+          cmd=["python","-m","research.multi_cohort_learning"]
+          for path in paths:
+              cmd+=["--cohort",path]
+          cmd+=["--output","/tmp/kraken-one-hour/multi-cohort-learning.json",
+                "--shadow-ledger","/tmp/kraken-one-hour/multi-cohort-shadow.jsonl"]
+          subprocess.run(cmd,check=True)
           PY
       - name: Retain portable scored-series evidence for next independent job
         uses: actions/upload-artifact@v4
