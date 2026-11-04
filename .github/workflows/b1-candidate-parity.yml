@@ -94,7 +94,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          gh api "repos/$REPO/actions/workflows/runtime-readback-integrity.yml/runs?status=success&per_page=20" > /tmp/b-delivery/d-runs.json
+          gh api "repos/$REPO/actions/workflows/runtime-readback-integrity.yml/runs?status=success&per_page=100" > /tmp/b-delivery/d-runs.json
           python - <<'PY'
           import json,os,subprocess
           from pathlib import Path
@@ -137,7 +137,8 @@ jobs:
                       report.get("source_sha")==identity["source_sha"] and
                       report.get("independently_authenticated") is True and
                       report.get("status")=="VERIFIED_REMOTE_READBACK" and
-                      report.get("remote_ledger_reconciliation",{}).get("status")=="MATCH"):
+                      isinstance(report.get("remote_ledger_reconciliation"),dict) and
+                      report["remote_ledger_reconciliation"].get("status")=="MATCH"):
                   selected=(run,artifact)
                   print("SELECTED_EXACT_SOURCE_D_RECOVERY",run["id"],artifact["id"])
                   break
