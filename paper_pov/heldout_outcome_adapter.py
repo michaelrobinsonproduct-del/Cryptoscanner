@@ -90,14 +90,13 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
     # cohort. A valid 48h label alone must not hide missing 1/6/24h evidence.
     selected = {}
     incomplete_predictions = {}
-    for (key, horizon), record in eligible.items():
-        if horizon != 48:
-            continue
+    all_predictions = sorted({key for key, _ in eligible} | {key for key, _ in abstentions})
+    for key in all_predictions:
         missing = [h for h in HORIZONS if (key, h) not in eligible]
         if missing:
             incomplete_predictions[key] = missing
         else:
-            selected[key] = record
+            selected[key] = eligible[(key, 48)]
     if set(selected) != set(baseline_decisions) or set(selected) != set(challenger_decisions):
         raise ValueError("Decisions do not cover identical eligible 48h cohort")
     if any(type(v) is not bool for v in baseline_decisions.values()) or any(type(v) is not bool for v in challenger_decisions.values()):
@@ -139,8 +138,35 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
     result["source_authentication_verified_by_adapter"] = False
     result["incomplete_prediction_horizons"] = {key: missing for key, missing in sorted(incomplete_predictions.items())}
     result["four_horizon_complete_predictions"] = len(selected)
+    result["observed_prediction_count"] = len(all_predictions)
+    result["excluded_prediction_count"] = len(all_predictions) - len(selected)
+    result["baseline_challenger_same_cohort"] = True
     result["cohort_join_digest"] = canonical_digest(sorted(selected))
     return result
+
+
+def project_learning_handoff(result):
+    """Minimal read-only B integration contract; never carries an executable rule."""
+    if (not isinstance(result, dict) or result.get("schema") != "shadow_learning_evidence_v1"
+            or result.get("promotion_authorized") is not False
+            or result.get("production_applied") is not False
+            or result.get("status") != "NO_QUALIFIED_RULE"
+            or result.get("source_authentication_verified_by_adapter") is not False):
+        raise ValueError("Unsafe or unverified learning handoff")
+    return {"schema": "paper_learning_handoff_v1", "status": "NO_QUALIFIED_RULE",
+            "baseline_version": result["baseline_version"],
+            "challenger_version": result["challenger_version"],
+            "evaluation_asof_utc": result["evaluation_asof_utc"],
+            "evidence_digest": result["evidence_digest"],
+            "cohort_join_digest": result["cohort_join_digest"],
+            "observed_prediction_count": result["observed_prediction_count"],
+            "complete_cohort_count": result["four_horizon_complete_predictions"],
+            "excluded_prediction_count": result["excluded_prediction_count"],
+            "abstention_counts": result["abstention_counts"],
+            "incomplete_prediction_horizons": result["incomplete_prediction_horizons"],
+            "source_authenticated": False, "measured_lift_verified": False,
+            "live_watch_authorized": False, "promotion_authorized": False,
+            "production_applied": False, "read_only": True}
 
 
 def main(argv=None):
@@ -148,6 +174,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Build non-promotable held-out evidence")
     parser.add_argument("input_json", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--delivery-output", type=Path, help="Separate non-promotable B learning handoff")
     args = parser.parse_args(argv)
     payload = json.loads(args.input_json.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -155,7 +182,13 @@ def main(argv=None):
     result = build_heldout_evidence(**payload)
     if result["promotion_authorized"] or result["status"] != "NO_QUALIFIED_RULE":
         raise ValueError("Unverified evidence must not authorize release")
+    if args.delivery_output and args.delivery_output == args.output:
+        raise ValueError("Learning handoff and full evidence must use separate paths")
+    if args.output.exists() or (args.delivery_output and args.delivery_output.exists()):
+        raise FileExistsError("Refusing to overwrite existing evidence")
     args.output.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    if args.delivery_output:
+        args.delivery_output.write_text(json.dumps(project_learning_handoff(result), sort_keys=True, indent=2) + "\n", encoding="utf-8")
     return result
 
 
