@@ -115,12 +115,17 @@ def restore_and_capture(previous, output_root, *, collector=collect, followup_ro
             "original_index_sha256": hashlib.sha256(original_bytes).hexdigest(),
             "round_index": str(new_index), "scored_pairs": pairs,
             "coverage": coverage, "learning": learning, "production_applied": False,
-            "trading_approved": False}\n    with (output / "continuation-report.json").open("x", encoding="utf-8") as handle:\n        json.dump(report, handle, sort_keys=True, allow_nan=False)\n        handle.write("\\n")\n    return report\n\n\ndef main():
+            "trading_approved": False}
+    with (output / "continuation-report.json").open("x", encoding="utf-8") as handle:
+        json.dump(report, handle, sort_keys=True, allow_nan=False)
+        handle.write("\\n")\n    return report\n\n\ndef main():
     p = argparse.ArgumentParser()
     p.add_argument("--previous", required=True)
-    p.add_argument("--output-root", required=True)\n    p.add_argument("--followup-rounds", type=int, default=1)
+    p.add_argument("--output-root", required=True)
+    p.add_argument("--followup-rounds", type=int, default=1)
     a = p.parse_args()
-    print(json.dumps(restore_and_capture(a.previous, a.output_root,\n                                         followup_rounds=a.followup_rounds), sort_keys=True))
+    print(json.dumps(restore_and_capture(a.previous, a.output_root,
+                                         followup_rounds=a.followup_rounds), sort_keys=True))
 
 
 if __name__ == "__main__":
