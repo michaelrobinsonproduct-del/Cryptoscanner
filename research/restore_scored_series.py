@@ -143,16 +143,6 @@ def restore_and_capture(previous, output_root, *, collector=collect, followup_ro
             "round_index": str(new_index), "scored_pairs": pairs,
             "coverage": coverage, "learning": learning, "production_applied": False,
             "trading_approved": False}
-    # Prior continuation summary is immutable evidence. Preserve it under its
-    # previous round ordinal before writing a fresh summary in the copied tree.
-    previous_summary = output / "continuation-report.json"
-    if previous_summary.exists():
-        history = output / "continuation-reports"
-        history.mkdir(exist_ok=True)
-        archived = history / ("rounds-%03d.json" % first)
-        if archived.exists():
-            raise FileExistsError("duplicate archived continuation report")
-        previous_summary.rename(archived)
     with (output / "continuation-report.json").open("x", encoding="utf-8") as handle:
         json.dump(report, handle, sort_keys=True, allow_nan=False)
         handle.write("\n")
