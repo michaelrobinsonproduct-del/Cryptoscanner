@@ -6,6 +6,7 @@ Association files do not modify sealed score captures or the production ledger.
 import hashlib
 import json
 import os
+import math
 from pathlib import Path
 
 from research.prospective_outcome_adapter import verified_rows
@@ -15,7 +16,7 @@ def _digest(value):
     return isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value)
 
 
-def write_association(directory, *, prediction_id, pair, source_sha256, score_receipt_sha256):
+def write_association(directory, *, prediction_id, pair, source_sha256, score_receipt_sha256,\n                      source_first_observed_at=None):
     if not all(map(_digest, (prediction_id, source_sha256, score_receipt_sha256))):
         raise ValueError("invalid receipt digest")
     if not isinstance(pair, str) or not pair.strip():
@@ -23,7 +24,7 @@ def write_association(directory, *, prediction_id, pair, source_sha256, score_re
     record = {"schema": 1, "mode": "RESEARCH_ONLY", "prediction_id": prediction_id,
               "pair": pair, "source_sha256": source_sha256,
               "score_receipt_sha256": score_receipt_sha256}
-    raw = (json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n").encode()
+    if source_first_observed_at is not None:\n        if type(source_first_observed_at) not in (float, int) or not math.isfinite(source_first_observed_at) or source_first_observed_at <= 0:\n            raise ValueError("invalid source receipt observation timestamp")\n        record["source_first_observed_at"] = source_first_observed_at\n    raw = (json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n").encode()
     root = Path(directory)
     root.mkdir(parents=True, exist_ok=True)
     target = root / (prediction_id + ".json")
@@ -49,7 +50,11 @@ def verified_associations(captures_directory, associations_directory, depth_dire
         rows, source_abstentions, _ = verified_index_rows(depth_directory)
     else:
         rows, source_abstentions = verified_rows(depth_directory)
-    verified = {(r["pair"], r["source_sha256"]): r for r in rows}
+    # The same authentic Kraken raw bytes can be seen in separate acquisition
+    # rounds. SHA256 alone is not a unique point-in-time observation identity.
+    verified = {}
+    for row in rows:
+        verified.setdefault((row["pair"], row["source_sha256"]), []).append(row)
     enriched, exclusions = [], []
     for path in sorted(capture_root.glob("*.json")):
         if path.is_symlink() or not path.is_file():
@@ -78,15 +83,24 @@ def verified_associations(captures_directory, associations_directory, depth_dire
             exclusions.append({"prediction_id": pid, "reason": "SCORE_ASSOCIATION_MISMATCH"})
             continue
         source = association.get("source_sha256")
-        row = verified.get((capture.get("pair"), source))
-        if row is None:
-            exclusions.append({"prediction_id": pid, "reason": "UNVERIFIED_DEPTH_ASSOCIATION"})
+        candidates = verified.get((capture.get("pair"), source), [])
+        observed_at = association.get("source_first_observed_at")
+        if observed_at is not None:
+            candidates = [row for row in candidates
+                          if row["first_observed_at"] == observed_at]
+        if len(candidates) != 1:
+            exclusions.append({"prediction_id": pid, "reason":
+                "AMBIGUOUS_SOURCE_RECEIPT" if len(candidates) > 1
+                else "UNVERIFIED_DEPTH_ASSOCIATION"})
             continue
+        row = candidates[0]
         observed = capture.get("score_observed_at")
-        if type(observed) not in (int, float) or not 0 <= observed <= row["first_observed_at"]:
+        if type(observed) not in (int, float) or not (
+                0 <= observed <= row["first_observed_at"] <= observed + 600):
             exclusions.append({"prediction_id": pid, "reason": "SCORE_NOT_PRE_ENTRY"})
             continue
-        enriched.append({**capture, "source_sha256": source})
+        enriched.append({**capture, "source_sha256": source,
+                         "source_first_observed_at": row["first_observed_at"]})
     return enriched, exclusions, {"verified_depth_rows": len(rows),
                                   "source_abstentions": source_abstentions}
 
@@ -107,7 +121,7 @@ def associate_captured_scores(captures_directory, depth_directory, associations_
         digest = hashlib.sha256((Path(captures_directory) / (pid + '.json')).read_bytes()).hexdigest()
         write_association(associations_directory, prediction_id=pid,
                           pair=capture['pair'], source_sha256=matches[0]['source_sha256'],
-                          score_receipt_sha256=digest)
+                          score_receipt_sha256=digest,\n                          source_first_observed_at=matches[0]["first_observed_at"])
         accepted.append(pid)
     return {'associated': accepted, 'excluded': excluded,
             'source_abstentions': abstentions, 'production_applied': False}
@@ -157,7 +171,7 @@ def associate_indexed_captures(captures_directory, round_index, associations_dir
         receipt = hashlib.sha256((Path(captures_directory) / (pid + ".json")).read_bytes()).hexdigest()
         write_association(associations_directory, prediction_id=pid,
                           pair=capture["pair"], source_sha256=matches[0]["source_sha256"],
-                          score_receipt_sha256=receipt)
+                          score_receipt_sha256=receipt,\n                          source_first_observed_at=matches[0]["first_observed_at"])
         accepted.append(pid)
     return {"associated": accepted, "excluded": excluded, "source_abstentions": abstentions,
             "rounds_verified": round_count, "production_applied": False}
