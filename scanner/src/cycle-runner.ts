@@ -43,7 +43,19 @@ export function createCycleRunner(deps:Dependencies,shadow?:()=>Promise<{evidenc
    if(recoveryStatus){try{output={...output,recovery_status:await recoveryStatus()}}catch{output={...output,recovery_status:unavailableRecovery("read_or_validation_failed")}}}
    if(sourceHealth){try{output={...output,source_run_health:await sourceHealth()}}catch{output={...output,source_run_health:unavailableSourceHealth("read_or_validation_failed")}}}
    if(paperReceipt){let receipt:PaperReceipt;try{receipt=await paperReceipt()}catch{receipt=unavailablePaperReceipt("read_or_validation_failed")};output={...output,paper_receipt:receipt}}
-   if(a2Snapshot){let snapshot:A2Snapshot;try{snapshot=await a2Snapshot()}catch{snapshot=unavailableA2Snapshot("read_or_validation_failed")};if(baselineFailure&&snapshot.status!=="VERIFIED_SNAPSHOT")throw Error("both_baseline_and_a2_unavailable: "+baselineFailure);output={...output,a2_snapshot:snapshot,paper_watch:snapshot.status==="VERIFIED_SNAPSHOT"?snapshot.watch:[],paper_watch_status:snapshot.status==="VERIFIED_SNAPSHOT"?"PAPER_ONLY_VERIFIED":"ABSTAIN_A2_UNAVAILABLE",live_watch_certified:false}}
+   if(a2Snapshot){let snapshot:A2Snapshot;try{snapshot=await a2Snapshot()}catch{snapshot=unavailableA2Snapshot("read_or_validation_failed")};if(baselineFailure&&snapshot.status!=="VERIFIED_SNAPSHOT")throw Error("both_baseline_and_a2_unavailable: "+baselineFailure);
+    // Two independent read-only feeds may refer to different scanner runs.
+    // Never display WATCH from A2 as reconciled with a conflicting paper receipt.
+    const receipt=output.paper_receipt as PaperReceipt|undefined;
+    const conflict=snapshot.status==="VERIFIED_SNAPSHOT"&&receipt?.status==="VERIFIED_RECEIPT"&&(
+      receipt.as_of!==snapshot.as_of||receipt.scan_status!==snapshot.scan_status||
+      receipt.watch_count!==snapshot.watch.length||
+      receipt.observed_markets!==snapshot.observed_markets||
+      (receipt.eligible_pairs!==null&&receipt.eligible_pairs!==snapshot.eligible_pairs)
+    );
+    const accepted=snapshot.status==="VERIFIED_SNAPSHOT"&&!conflict;
+    output={...output,a2_snapshot:conflict?unavailableA2Snapshot("paper_receipt_a2_mismatch"):snapshot,paper_watch:accepted?snapshot.watch:[],paper_watch_status:conflict?"ABSTAIN_SOURCE_MISMATCH":accepted?"PAPER_ONLY_VERIFIED":"ABSTAIN_A2_UNAVAILABLE",live_watch_certified:false};
+    if(baselineFailure&&!accepted)throw Error("both_baseline_and_a2_unavailable: "+baselineFailure);}
    last=output;lastError=null;cycles++;
    return {ok:true,status:200,origin,result:output};
   }catch(error){lastError=String(error);return {ok:false,status:502,origin,error:lastError}}
