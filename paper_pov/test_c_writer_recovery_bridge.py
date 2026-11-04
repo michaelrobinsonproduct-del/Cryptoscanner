@@ -71,6 +71,18 @@ class BridgeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             bridge(integration(), readback(), restored_latest={"trading_approved": True})
 
+    def test_real_persisted_writer_status_and_remote_divergence(self):
+        actual = {**readback(),
+                  "persisted_paper": {"ledger_generation": 70, "scan_status": "ABSTAIN_STALE_QUOTE",
+                                      "quote_evidence_certified": False, "live_replay_performed": False},
+                  "remote_ledger_reconciliation": {"status": "DIVERGED", "independently_authenticated": False}}
+        output = bridge(integration(), actual)
+        self.assertEqual(output["writer_recovery"]["persisted_paper"]["ledger_generation"], 70)
+        self.assertEqual(output["writer_recovery"]["remote_ledger_reconciliation"]["status"], "DIVERGED")
+        self.assertFalse(output["live_watch_certified"])
+        with self.assertRaises(ValueError):
+            bridge(integration(), {**actual, "remote_ledger_reconciliation": {"status": "MATCH", "independently_authenticated": True}})
+
     def test_cli_emits_recovered_provenance_and_replay_as_separate_artifacts(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
