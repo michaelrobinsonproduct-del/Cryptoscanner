@@ -1,0 +1,20 @@
+name: Candidate Snapshot Parity (read only)
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/candidate_snapshot_contract.py'
+      - 'paper_pov/test_candidate_snapshot_contract.py'
+      - '.github/workflows/candidate-snapshot-parity.yml'
+permissions:
+  contents: read
+jobs:
+  candidate-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Read-only manual/scheduled candidate contract tests
+        run: python -m unittest paper_pov.test_candidate_snapshot_contract -v
