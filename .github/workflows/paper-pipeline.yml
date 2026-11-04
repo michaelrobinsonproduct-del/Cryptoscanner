@@ -189,6 +189,7 @@ jobs:
           name: public-paper-ledger-${{ github.run_id }}
           path: |
             paper_pov/output/latest.json
+            paper_pov/output/receipts/*.json
             paper_pov/output/ledger.json
             paper_pov/output/scoreboard.json
             paper_pov/output/SHA256SUMS
