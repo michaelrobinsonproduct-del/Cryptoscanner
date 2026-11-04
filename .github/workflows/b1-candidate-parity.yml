@@ -57,7 +57,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: michaelrobinsonproduct-del/Cryptoscanner
-          ref: 9ef6361a279468bd2de9e45557ddc7195a80af2
+          ref: owner-a-a2-quote-freshness-20261103
           path: a2-source
           persist-credentials: false
       - name: Acquire one live public Kraken paper snapshot and verify immutable receipt
@@ -66,6 +66,7 @@ jobs:
           PYTHONPATH: a2-source
         run: |
           cd a2-source
+          test "$(git rev-parse HEAD)" = "9ef6361a279468bd2de9e45557ddc7195a80af2c"
           python -m paper_pov.scanner
           python - <<'PY'
           import json, os, zipfile
