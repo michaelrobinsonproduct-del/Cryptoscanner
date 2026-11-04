@@ -106,11 +106,6 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
                 "missed_movers": sum(x["hit"] and not x["watch"] for x in rows.values())}
     base, candidate = metrics(aa), metrics(bb)
     n = len(aa)
-    qualified = (receipt_valid and n >= minimum_holdout and base["watched"] >= minimum_holdout
-                 and candidate["watched"] >= minimum_holdout
-                 and candidate["precision"] > base["precision"]
-                 and candidate["missed_movers"] <= base["missed_movers"]
-                 and candidate["false_positives"] <= base["false_positives"])
     return {"schema": "shadow_learning_evidence_v1",
             "baseline_version": baseline["version"], "challenger_version": challenger["version"],
             "cohort_size": n, "evaluation_asof_utc": asof_a, "baseline": base, "challenger": candidate,
@@ -119,4 +114,5 @@ def evaluate_shadow_release(baseline, challenger, *, minimum_holdout=30):
             "evidence_digest": canonical_digest({"baseline": baseline, "challenger": challenger}),
             "status": "NO_QUALIFIED_RULE",
             "source_receipt_qualified": receipt_valid,
+            "measured_lift_verified": False, "diagnostic_only": True,
             "promotion_authorized": False, "production_applied": False}
