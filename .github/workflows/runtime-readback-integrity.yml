@@ -179,6 +179,35 @@ jobs:
                   z.write(p,p.name)
           PY
           cd b-delivery-consumer
+          # Older published results contain no quote_evidence. Keep their
+          # authenticated historical ledger recovery, but never authorize WATCH.
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from paper_pov.github_delivery_projection import read_published_artifact
+          try:
+              published = read_published_artifact(
+                  "/tmp/d2-published-results.zip",
+                  expected_run_id=int(os.environ["WRITER_RUN_ID"]),
+                  expected_source_sha=os.environ["WRITER_SOURCE_SHA"])
+          except Exception:
+              # Invalid present evidence must still fail the job.
+              raise
+          if not published.get("quote_evidence"):
+              report = {
+                  "source_run_id": int(os.environ["WRITER_RUN_ID"]),
+                  "status": "HISTORICAL_PUBLISHED_QUOTE_EVIDENCE_UNAVAILABLE",
+                  "reason": "PUBLISHED_QUOTE_EVIDENCE_MISSING",
+                  "single_writer_read_only": True,
+                  "live_watch_authorized": False,
+                  "production_applied": False,
+                  "writer_reconciliation_status": json.loads(Path("/tmp/real-writer-recovery.json").read_text())["remote_ledger_reconciliation"]["status"],
+              }
+              Path("/tmp/d2-b-published-delivery.json").write_text(json.dumps(report,sort_keys=True)+"\\n")
+              Path("/tmp/d2-published-legacy").write_text("true")
+              print("D2_B_HISTORICAL_PUBLISHED_ABSTAIN",json.dumps(report,sort_keys=True))
+          PY
+          if [ -f /tmp/d2-published-legacy ]; then exit 0; fi
           python -m paper_pov.github_delivery_projection \
             --published-artifact /tmp/d2-published-results.zip \
             --expected-run-id "$WRITER_RUN_ID" \
