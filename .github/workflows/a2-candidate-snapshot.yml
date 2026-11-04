@@ -78,6 +78,11 @@ jobs:
               "receipt_sha256": downloaded["receipt_sha256"],
               "snapshot_age_seconds": downloaded["snapshot_age_seconds"],
           }, sort_keys=True))
+          from paper_pov.a2_artifact_consumer import project_watch_delivery
+          delivery=project_watch_delivery(latest.parent)
+          assert delivery["receipt_sha256"]==snapshot["receipt_sha256"]
+          assert delivery["watch_count"]==len(snapshot["watch"])
+          (latest.parent/"a2-delivery.json").write_text(json.dumps(delivery,sort_keys=True,allow_nan=False)+"\n")
           print("A2_LIVE_CONSUMER_EVIDENCE " + json.dumps({
               "as_of": snapshot["as_of"],
               "eligible_pairs": snapshot["eligible_pairs"],
@@ -150,6 +155,12 @@ jobs:
           assert delivery["single_writer_ledger_verified"] is False
           assert delivery["exchange_event_freshness_verified"] is False
           assert delivery["production_applied"] is False
+          published_delivery=json.loads((root/"a2-delivery.json").read_text())
+          immutable_keys=("schema","source","as_of","scan_status","receipt_sha256","watch","watch_count","eligible_pairs","observed_markets","preselection_observations","selection_decisions","abstention_counts")
+          assert all(published_delivery[k]==delivery[k] for k in immutable_keys)
+          assert published_delivery["single_writer_ledger_verified"] is False
+          assert published_delivery["exchange_event_freshness_verified"] is False
+          assert published_delivery["buy_approved"] is False
           print("A2_B_DELIVERY_READY",json.dumps({
               "receipt_sha256":delivery["receipt_sha256"],
               "watch_count":delivery["watch_count"],
