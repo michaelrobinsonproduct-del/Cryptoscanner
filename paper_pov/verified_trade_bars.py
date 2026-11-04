@@ -70,3 +70,48 @@ def convert_verified_partition(trades, *, pair, verification, partition_file):
             "source_authenticated": False, "qualified_for_learning": False,
             "production_applied": False,
             "reason": "Manifest publisher and raw Kraken trade schema not independently authenticated"}
+
+def convert_manifest_partition(manifest, root, *, partition_file, pair):
+    """Read exactly the verified normalized JSONL bytes from the pinned partition.
+
+    Every row is parsed from the same file whose digest was checked. This is
+    not a Kraken raw-trade format adapter and never certifies source identity.
+    """
+    from pathlib import Path
+    from .archive_partition_gate import verify_partitions
+    receipt = verify_partitions(manifest, root)
+    path = (Path(root).resolve() / partition_file).resolve(strict=True)
+    if not path.is_relative_to(Path(root).resolve()):
+        raise ValueError("Unsafe partition path")
+    if not any(p["file"] == partition_file for p in receipt["partitions"]):
+        raise ValueError("Unpinned partition")
+    with path.open("r", encoding="utf-8") as stream:
+        trades = [json.loads(line) for line in stream if line.strip()]
+    result = convert_verified_partition(trades, pair=pair,
+                                        verification=receipt,
+                                        partition_file=partition_file)
+    result["format"] = "normalized_trade_jsonl_v1"
+    return result
+
+
+def main():
+    import argparse
+    from pathlib import Path
+    from .scanner import atomic_json
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--manifest", required=True)
+    parser.add_argument("--root", required=True)
+    parser.add_argument("--partition", required=True)
+    parser.add_argument("--pair", required=True)
+    parser.add_argument("--output", required=True)
+    args = parser.parse_args()
+    manifest = json.loads(Path(args.manifest).read_text())
+    result = convert_manifest_partition(manifest, args.root,
+                                        partition_file=args.partition, pair=args.pair)
+    atomic_json(args.output, result)
+    print(json.dumps({"pair": result["pair"], "bar_count": result["bar_count"],
+                      "source_authenticated": False}, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()
