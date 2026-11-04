@@ -265,3 +265,40 @@ def test_legacy_real_writer_without_status_is_recovered_but_unclassified():
     assert result["outcome"] == "HISTORICAL_UNCLASSIFIED"
     assert result["quote_evidence_certified"] is False
     assert result["live_replay_performed"] is False
+
+
+def test_scan_generation_mismatch_abstains():
+    from paper_pov.github_artifact_readback import summarize_persisted_paper
+    receipts = {"latest.json": b'{"generation":7,"status":"WATCH"}',
+                "ledger.json": b'{"generation":8}',
+                "scoreboard.json": b'{"generation":8}'}
+    with pytest.raises(IntegrityError, match="generation mismatch"):
+        summarize_persisted_paper(receipts)
+
+
+def test_writer_checksum_only_rejects_uninventoried_payload(tmp_path):
+    """Extra artifact payload must not silently become recovered trusted state."""
+    import hashlib
+    from pathlib import Path
+    receipts = {"latest.json": b'{"status":"ABSTAIN"}',
+                "ledger.json": b'{"generation":2}',
+                "scoreboard.json": b'{"generation":2}'}
+    sums = "".join(hashlib.sha256(data).hexdigest() + "  " + name + "\\n"
+                   for name, data in receipts.items()).encode()
+    def runner(args, timeout):
+        if args[:4] == ["gh", "api", "-X", "GET"]:
+            if "/artifacts" in args[4]:
+                return json.dumps({"total_count": 1, "artifacts": [
+                    {"id": 91, "name": "public-paper-ledger-123", "expired": False}]}).encode()
+            return json.dumps({"id": 123, "head_sha": SHA, "status": "completed",
+                "conclusion": "success", "repository": {"full_name": REPO}}).encode()
+        root = Path(args[-1])
+        for name, data in {**receipts, "SHA256SUMS": sums,
+                           "unexpected.json": b'{"fake":"trusted"}'}.items():
+            (root / name).write_bytes(data)
+        return b""
+    destination = tmp_path / "recovered"
+    with pytest.raises(IntegrityError, match="Unexpected files"):
+        retrieve_and_verify(REPO, "123", "public-paper-ledger", None, SHA,
+                            runner=runner, restore_dir=destination)
+    assert not destination.exists()
