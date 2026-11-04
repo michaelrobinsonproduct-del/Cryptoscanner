@@ -14,6 +14,7 @@ test("B1 HTTP and scheduled consume same A2 read-only snapshot, persist dashboar
  const manual=await (await http(new Request("http://localhost/cycle"))).json(),scheduled=await runner.run("scheduled");
  expect(manual).toEqual(scheduled.result);expect(reads).toBe(2);expect(manual.scan_status).toBe("NO_DISCOVERY_CANDIDATES");
  expect(manual.a2_snapshot).toMatchObject({status:"VERIFIED_SNAPSHOT",receipt_sha256:fixture.receipt_sha256,watch:[{pair,rank:1,price:100}],buy_approved:false});
+ expect(manual.paper_watch).toEqual(manual.a2_snapshot.watch);expect(manual.paper_watch_status).toBe("PAPER_ONLY_VERIFIED");expect(manual.live_watch_certified).toBe(false);
  expect((await (await http(new Request("http://localhost/dashboard"))).json()).last_result.a2_snapshot).toEqual(manual.a2_snapshot);
 });
 test("stale read-time quotes and malformed coverage fail closed, never invent WATCH",async()=>{
@@ -75,6 +76,7 @@ test("B1 actual authenticated A2 export feeds both entry points (CI real Kraken)
  expect(manual).toEqual(scheduled.result);
  expect(manual.a2_snapshot).toMatchObject({status:"VERIFIED_SNAPSHOT",receipt_sha256:raw.receipt_sha256,eligible_pairs:raw.eligible_pairs,observed_markets:raw.observed_markets});
  expect(manual.a2_snapshot.watch.length).toBe(raw.watch.length);
+ expect(manual.paper_watch).toEqual(manual.a2_snapshot.watch);expect(manual.paper_watch_status).toBe("PAPER_ONLY_VERIFIED");expect(manual.live_watch_certified).toBe(false);
  expect(manual.a2_snapshot.watch.map((c:any)=>c.prediction_id)).toEqual(raw.watch.map((c:any)=>c.prediction_id));
  expect(manual.a2_snapshot.buy_approved).toBe(false);
  expect((await (await http(new Request("http://localhost/dashboard"))).json()).last_result.a2_snapshot).toEqual(manual.a2_snapshot);
