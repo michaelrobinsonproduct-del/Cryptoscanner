@@ -73,6 +73,23 @@ class DownloadedArtifactReplayTests(unittest.TestCase):
             replay_visible_result(failure_zip=self.results_path,
                                   run_id="999", source_sha=SHA)
 
+    def test_failed_run_cli_reports_nonzero_and_no_ledger(self):
+        failed = {"status": "FAILED_PAPER_ONLY", "run_id": RUN, "source_sha": SHA}
+        receipt = {"results.json": json.dumps(failed).encode(),
+                   "results.md": b"Paper run failed; no publication.\\n"}
+        seal(receipt, ["results.json", "results.md"])
+        pack(self.results_path, receipt)
+        output = io.StringIO()
+        args = ["replay", "--failure-zip", str(self.results_path),
+                "--run-id", RUN, "--source-sha", SHA]
+        with patch("sys.argv", args), contextlib.redirect_stdout(output):
+            code = main()
+        result = json.loads(output.getvalue())
+        self.assertEqual(code, 2)
+        self.assertEqual(result["status"], "FAILED_PAPER_ONLY")
+        self.assertFalse(result["ledger_persisted"])
+        self.assertIsNone(result["watch_candidates"])
+
     def test_complete_downloaded_artifact_replay(self):
         result = self.verify()
         self.assertEqual(result["watch_candidates"], 2)
