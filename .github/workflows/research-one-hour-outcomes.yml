@@ -1,0 +1,67 @@
+name: Research one-hour source-qualified outcome capture (manual only)
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/research-one-hour-outcomes.yml'
+permissions:
+  contents: read
+concurrency:
+  group: research-one-hour-outcomes-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  observed-one-hour:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Assert exact source SHA
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          echo "ONE_HOUR_SOURCE_SHA=$EXPECTED_SHA"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Capture 13 actual five-minute rounds and evaluate source-qualified one-hour paths
+        run: |
+          set -euo pipefail
+          python -m research.kraken_capture_rounds \
+            --pairs XBTUSD,ETHUSD,SOLUSD,XRPUSD \
+            --output-root /tmp/kraken-one-hour \
+            --rounds 13 --interval-seconds 300 | tee /tmp/kraken-one-hour-result.log
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research.prospective_round_store import evaluate_index
+          root=Path('/tmp/kraken-one-hour')
+          result=evaluate_index(root/'rounds.jsonl',1)
+          assert result['rounds_verified']==13
+          assert result['held_out_lift'] is None and not result['production_applied']
+          statuses={}
+          for o in result['outcomes']:
+              statuses[o['status']]=statuses.get(o['status'],0)+1
+          print('ONE_HOUR_OBSERVED_OUTCOMES',json.dumps({
+              'rounds':result['rounds_verified'],
+              'snapshots':result['snapshots_verified'],
+              'qualified_episodes':result['qualified_first_entry_episodes'],
+              'status_counts':statuses,
+              'abstentions':len(result['abstentions']),
+              'positive_episodes':sum(o.get('ge30pct',False) for o in result['outcomes']
+                                      if o['status']=='QUALIFIED_OBSERVED_PATH'),
+              'held_out_lift':result['held_out_lift']
+          },sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kraken-one-hour-source-${{ github.run_id }}
+          path: |
+            /tmp/kraken-one-hour/
+            /tmp/kraken-one-hour-result.log
+          if-no-files-found: warn
+          retention-days: 30
