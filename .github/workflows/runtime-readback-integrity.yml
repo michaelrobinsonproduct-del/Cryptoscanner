@@ -213,7 +213,7 @@ jobs:
                   "production_applied": False,
                   "writer_reconciliation_status": json.loads(Path("/tmp/real-writer-recovery.json").read_text())["remote_ledger_reconciliation"]["status"],
               }
-              Path("/tmp/d2-b-published-delivery.json").write_text(json.dumps(report,sort_keys=True)+"\\n")
+              Path("/tmp/d2-b-published-delivery.json").write_text(json.dumps(report,sort_keys=True)+"\n")
               Path("/tmp/d2-published-legacy").write_text("true")
               print("D2_B_HISTORICAL_PUBLISHED_ABSTAIN",json.dumps(report,sort_keys=True))
           PY
