@@ -215,6 +215,37 @@ class DeliveryProjectionTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         main()
 
+    def test_learning_handoff_same_manual_scheduled_schema_and_no_promotion(self):
+        from paper_pov.test_results_report import fixture
+        from paper_pov.results_report import render
+        scan, score = fixture()
+        learning = {"schema": "paper_learning_handoff_v1", "status": "NO_QUALIFIED_RULE",
+                    "read_only": True, "source_authenticated": False,
+                    "measured_lift_verified": False, "live_watch_authorized": False,
+                    "promotion_authorized": False, "production_applied": False,
+                    "evidence_digest": "a"*64, "cohort_join_digest": "b"*64,
+                    "baseline_version": "baseline", "challenger_version": "shadow",
+                    "evaluation_asof_utc": "2026-11-04T00:00:00Z",
+                    "observed_prediction_count": 5, "complete_cohort_count": 3,
+                    "excluded_prediction_count": 2,
+                    "abstention_counts": {"INCOMPLETE_SOURCE_COVERAGE": 2},
+                    "incomplete_prediction_horizons": {"p1": [48], "p2": [1, 6]}}
+        outputs = []
+        for event, cron in (("workflow_dispatch", None), ("schedule", "9 * * * *")):
+            published, _ = render(scan, score, run_id="41235442591", source_sha=SHA,
+                                  ledger_commit="b"*40, event=event, originating_cron=cron)
+            output = project_published_result(published, learning_handoff=learning)
+            self.assertEqual(output["learning"]["status"], "NO_QUALIFIED_RULE")
+            self.assertEqual(output["learning"]["excluded_prediction_count"], 2)
+            self.assertFalse(output["learning"]["promotion_authorized"])
+            self.assertFalse(output["live_watch_authorized"])
+            outputs.append(output)
+        self.assertEqual(set(outputs[0]), set(outputs[1]))
+        for mutation in ({"promotion_authorized": True}, {"source_authenticated": True},
+                         {"complete_cohort_count": 4}, {"evidence_digest": "bad"}):
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                project_published_result(published, learning_handoff={**learning, **mutation})
+
     def test_untrusted_promotion_and_run_provenance_rejected(self):
         valid = {**BASE, "sealed": False,
                  "artifact_status": "CHECKSUM_VERIFIED_LEGACY_NO_RECEIPT", "scoreboard": {}}
