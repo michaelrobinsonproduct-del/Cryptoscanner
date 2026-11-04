@@ -219,7 +219,7 @@ def test_packed_single_writer_remote_reconciliation_real_storage_layout():
             raise subprocess.CalledProcessError(1, args, output=b"Not Found")
         data = json.dumps(manifest).encode() if repo_storage.MANIFEST in endpoint else blob
         return json.dumps({"type": "file", "encoding": "base64",
-                           "content": "\\n".join([base64.b64encode(data).decode()[i:i+60] for i in range(0, len(base64.b64encode(data).decode()), 60)])}).encode()
+                           "content": "\n".join([base64.b64encode(data).decode()[i:i+60] for i in range(0, len(base64.b64encode(data).decode()), 60)])}).encode()
     report = reconcile_remote_ledger(REPO, "paper-proof-ledger", "paper_pov/output/ledger.json",
                                      {"ledger.json": raw}, runner=github)
     assert report["status"] == "MATCH"
