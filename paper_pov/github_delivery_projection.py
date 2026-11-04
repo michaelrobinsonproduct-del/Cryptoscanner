@@ -228,16 +228,28 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
         quote = by_symbol.get(candidate["symbol"])
         if quote is None or candidate["price_usd"] != quote["price"] or _utc(candidate["quote_observed_at"]) != _utc(quote["observed_at"]):
             raise ValueError("WATCH candidate lacks matching fresh quote")
+    # A checks freshness at artifact consumption, not merely at scan time.
+    # Apply the same read-time boundary to paper results: authenticated old
+    # WATCH remains historical evidence, never a current recommendation.
+    from datetime import datetime, timezone
+    read_at = datetime.now(timezone.utc)
+    fresh_at_delivery = bool(candidates) and all(
+        0 <= (read_at - _utc(q["observed_at"])).total_seconds() <= 600
+        for q in (by_symbol[c["symbol"]] for c in candidates)
+    )
+    visible_watch = candidates if fresh_at_delivery else []
+    delivery_status = ("ABSTAIN_PUBLISHED_WATCH_STALE_AT_DELIVERY"
+                       if candidates and not fresh_at_delivery else status)
     writer = _writer_evidence(writer_readback) if writer_readback is not None else None
     a2 = _a2_evidence(a2_delivery) if a2_delivery is not None else None
     learning = _learning_evidence(learning_handoff) if learning_handoff is not None else None
     return {"schema": "paper_delivery_readback_v1", "source_run_id": int(run_id),
-            "source_sha": sha, "github_event": event, "status": status,
+            "source_sha": sha, "github_event": event, "status": delivery_status,
             "ledger_generation": generation, "ledger_commit": result["ledger_commit"],
             "writer_reconciliation_status": writer["reconciliation_status"] if writer else "UNAVAILABLE",
-            "writer_recovery": writer, "a2_receipt_cohort": a2, "learning": learning, "historical_watch_count": None, "historical_coverage": None,
-            "live_watch": candidates, "live_watch_authorized": False,
-            "client_quote_freshness_verified": bool(candidates),
+            "writer_recovery": writer, "a2_receipt_cohort": a2, "learning": learning, "historical_watch_count": len(candidates) if not fresh_at_delivery else None, "historical_coverage": None,
+            "live_watch": visible_watch, "live_watch_authorized": False,
+            "client_quote_freshness_verified": fresh_at_delivery,
             "exchange_event_freshness_verified": False,
             "single_writer_read_only": True, "production_applied": False}
 
