@@ -56,6 +56,10 @@ def restore_and_capture(previous, output_root, *, collector=collect):
             raise ValueError("missing immutable source manifest")
         if hashlib.sha256(manifest.read_bytes()).hexdigest() != record["manifest_sha256"]:
             raise ValueError("source manifest digest mismatch")
+        manifest_doc = json.loads(manifest.read_bytes())
+        round_pairs = [item.get("pair") for item in manifest_doc.get("entries", [])]
+        if len(round_pairs) != len(pairs) or set(round_pairs) != set(pairs):
+            raise ValueError("indexed round differs from scored cohort")
         rows, abstentions = verified_rows(original)
         if len(rows) != record["snapshots_verified"] or len(abstentions) != record["abstentions"]:
             raise ValueError("original source coverage drift")
