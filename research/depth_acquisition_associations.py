@@ -25,7 +25,13 @@ def write_association(directory, *, prediction_id, pair, source_sha256, score_re
     record = {"schema": 1, "mode": "RESEARCH_ONLY", "prediction_id": prediction_id,
               "pair": pair, "source_sha256": source_sha256,
               "score_receipt_sha256": score_receipt_sha256}
-    if source_first_observed_at is not None:\n        if type(source_first_observed_at) not in (float, int) or not math.isfinite(source_first_observed_at) or source_first_observed_at <= 0:\n            raise ValueError("invalid source receipt observation timestamp")\n        record["source_first_observed_at"] = source_first_observed_at\n    raw = (json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n").encode()
+    if source_first_observed_at is not None:
+        if (type(source_first_observed_at) not in (float, int)
+                or not math.isfinite(source_first_observed_at)
+                or source_first_observed_at <= 0):
+            raise ValueError("invalid source receipt observation timestamp")
+        record["source_first_observed_at"] = source_first_observed_at
+    raw = (json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n").encode()
     root = Path(directory)
     root.mkdir(parents=True, exist_ok=True)
     target = root / (prediction_id + ".json")
