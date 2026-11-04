@@ -33,3 +33,26 @@ test("real authenticated E GitHub artifact is consumed through both paths when s
  expect(manual.learning_gate).toMatchObject({status:"VERIFIED_RESEARCH_ONLY",decision:"KEEP_BASELINE",held_out_n:0,production_applied:false});
  console.log("B2_REAL_E_KEEP_BASELINE_MANUAL_SCHEDULED",JSON.stringify(manual.learning_gate));
 });
+
+test("E KEEP_BASELINE gate blocks otherwise-qualified shadow artifact on both entrypoints",async()=>{
+ let shadowReads=0;
+ const shadow=async()=>{shadowReads++;return {evidence:{version:"v2",source_sha:"a".repeat(64),qualified:true,held_out_samples:42,held_out_lift:4,outcome_ledger_sha:"b".repeat(64),score_ledger_sha:"c".repeat(64),outcome_rows:1},outcomes:[],scores:[]}};
+ const keepBaseline=async()=>({decision:"KEEP_BASELINE",held_out_n:0,production_applied:false as const});
+ const runner=createCycleRunner(deps,shadow,undefined,undefined,keepBaseline),http=createCycleHttpHandler(runner);
+ const manual=await (await http(new Request("http://localhost/cycle"))).json();
+ const scheduled=await runner.run("scheduled");
+ expect(manual).toEqual(scheduled.result);
+ expect(shadowReads).toBe(0);
+ expect(manual.shadow_artifact_status).toBe("REJECTED");
+ expect(manual.shadow_evaluation.coverage).toMatchObject({scored:0,abstained:0,source_qualified:false});
+ expect(manual.learning_gate).toMatchObject({decision:"KEEP_BASELINE",held_out_n:0,production_applied:false});
+});
+test("unavailable E learning evidence blocks shadow loader rather than permitting stale qualification",async()=>{
+ let shadowReads=0;
+ const runner=createCycleRunner(deps,async()=>{shadowReads++;throw Error("must not read")},undefined,undefined,async()=>{throw Error("E report unavailable")});
+ const manual=await runner.run("manual"),scheduled=await runner.run("scheduled");
+ expect(manual.result).toEqual(scheduled.result);
+ expect(shadowReads).toBe(0);
+ expect(manual.result.shadow_artifact_status).toBe("REJECTED");
+ expect(manual.result.learning_gate).toMatchObject({decision:"KEEP_BASELINE",held_out_n:0,production_applied:false});
+});
