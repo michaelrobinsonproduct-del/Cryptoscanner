@@ -302,3 +302,63 @@ def test_writer_checksum_only_rejects_uninventoried_payload(tmp_path):
         retrieve_and_verify(REPO, "123", "public-paper-ledger", None, SHA,
                             runner=runner, restore_dir=destination)
     assert not destination.exists()
+
+
+def test_packed_remote_large_snapshot_uses_sha_bound_git_blob():
+    """GitHub Contents API returns encoding=none for large immutable blobs."""
+    import base64
+    import hashlib
+    from paper_pov import ledger, segmented_repository as segments, segmented_storage as storage
+    from paper_pov.github_artifact_readback import reconcile_remote_ledger
+    state = ledger.empty()
+    packed = storage.pack_snapshot(state)
+    blob_sha = "c" * 40
+    manifest = {
+        "schema": segments.SCHEMA,
+        "checkpoint": {"git_commit": "a" * 40, "generation": 0,
+                       "ledger_sha256": state["sha256"], "file_sha256": "b" * 64},
+        "head": {"generation": 0, "ledger_sha256": state["sha256"],
+                 "snapshot_sha256": hashlib.sha256(packed).hexdigest()},
+        "segments": [],
+    }
+    calls = []
+    def github(args, timeout):
+        endpoint = args[4]
+        calls.append(endpoint)
+        if "paper_pov/output/ledger.json" in endpoint:
+            raise subprocess.CalledProcessError(1, args)
+        if "/git/blobs/" in endpoint:
+            return json.dumps({"sha": blob_sha, "encoding": "base64",
+                               "content": base64.b64encode(packed).decode()}).encode()
+        if segments.SNAPSHOT in endpoint:
+            return json.dumps({"type": "file", "encoding": "none",
+                               "sha": blob_sha, "size": len(packed)}).encode()
+        return json.dumps({"type": "file", "encoding": "base64",
+                           "content": base64.b64encode(json.dumps(manifest).encode()).decode()}).encode()
+    result = reconcile_remote_ledger(REPO, "paper-proof-ledger", "paper_pov/output/ledger.json",
+                                     {"ledger.json": ledger.canonical(state)}, runner=github)
+    assert result["status"] == "MATCH"
+    assert result["independently_authenticated"] is False
+    assert any("/git/blobs/" in endpoint for endpoint in calls)
+
+
+def test_packed_remote_blob_identity_mismatch_abstains():
+    """A wrong Git blob SHA must never be treated as a verified ledger."""
+    import base64
+    from paper_pov.github_artifact_readback import reconcile_remote_ledger
+    def github(args, timeout):
+        endpoint = args[4]
+        if "paper_pov/output/ledger.json" in endpoint:
+            raise subprocess.CalledProcessError(1, args)
+        if "/git/blobs/" in endpoint:
+            return json.dumps({"sha": "d" * 40, "encoding": "base64",
+                               "content": base64.b64encode(b"fake").decode()}).encode()
+        if "paper-ledger.packed.json" in endpoint:
+            return json.dumps({"type": "file", "encoding": "none",
+                               "sha": "c" * 40, "size": 4}).encode()
+        return json.dumps({"type": "file", "encoding": "base64",
+                           "content": base64.b64encode(b'{}').decode()}).encode()
+    result = reconcile_remote_ledger(REPO, "paper-proof-ledger", "paper_pov/output/ledger.json",
+                                     {"ledger.json": b'{}'}, runner=github)
+    assert result["status"] == "UNAVAILABLE"
+    assert result["independently_authenticated"] is False
