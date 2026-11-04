@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'paper_pov/scanner.py'
+      - 'paper_pov/preselection_universe.py'
       - 'paper_pov/tests/test_scan_failure_isolation.py'
       - 'paper_pov/tests/test_watch_contract.py'
       - 'paper_pov/tests/test_receipt_persistence.py'
@@ -81,6 +82,21 @@ jobs:
               "receipt_sha256": receipt_sha256,
               "production_applied": False,
           }, sort_keys=True))
+          PY
+      - name: Export complete observed preselection universe
+        env:
+          PAPER_REPORT_PATH: ${{ runner.temp }}/kraken-paper/latest.json
+        run: |
+          python -m paper_pov.preselection_universe "$PAPER_REPORT_PATH" --output "${{ runner.temp }}/kraken-paper/preselection-universe.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report=json.loads(Path(os.environ["PAPER_REPORT_PATH"]).read_text())
+          exported=json.loads((Path(os.environ["PAPER_REPORT_PATH"]).parent/"preselection-universe.json").read_text())
+          assert len(exported["markets"]) == report["observed_markets"]
+          assert exported["coverage"]["screen_passed"] == report["screened_markets"]
+          assert exported["future_outcomes_authenticated"] is False
+          print("A1_PRESELECTION_EXPORTED", exported["coverage"], exported["receipt_sha256"])
           PY
       - name: Retain isolated paper evidence
         if: always()
