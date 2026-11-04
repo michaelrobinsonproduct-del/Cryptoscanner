@@ -35,15 +35,22 @@ def main(argv=None):
     for key in ("manifest", "root", "schema", "partitions", "predictions", "observed-until", "output"):
         parser.add_argument("--" + key, required=True)
     parser.add_argument("--preselection-history", help="A receipt-verified historical full-universe JSON")
+    parser.add_argument("--a-receipts-dir", help="Original sealed A receipts; verify via A export_receipt_history")
     args = parser.parse_args(argv)
+    if args.preselection_history and args.a_receipts_dir:
+        parser.error("Use either --preselection-history or --a-receipts-dir")
     output = Path(args.output)
     if output.exists():
         raise FileExistsError("Refusing to overwrite prior historical evidence")
     def read(name):
         return json.loads(Path(getattr(args, name)).read_text(encoding="utf-8"))
+    history = read("preselection_history") if args.preselection_history else None
+    if args.a_receipts_dir:
+        from .preselection_universe import export_receipt_history
+        history = export_receipt_history(args.a_receipts_dir)
     result = run_pipeline(read("manifest"), args.root, read("schema"),
                           read("partitions"), read("predictions"), args.observed_until,
-                          preselection_history=read("preselection_history") if args.preselection_history else None)
+                          preselection_history=history)
     output.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"prediction_count": result["execution"]["prediction_count"],
                       "status_counts": result["execution"]["status_counts"],
