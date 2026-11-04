@@ -122,6 +122,19 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
                 manifest, root, schema, {"XUSD": "XUSD.csv"},
                 observed_until=(start + dt.timedelta(hours=49)).isoformat())
             self.assertEqual(sum(shifted["status_counts"].values()), 2)
+            # Future trade bars cannot satisfy a decision's entry or horizon
+            # when they were not complete at the specified observation cutoff.
+            early_cutoff = audit_a2_trade_partition_overlap(
+                dict(projection, frozen_observations=[
+                    {"prediction_id": rows[0]["observation_id"], "pair": "XUSD",
+                     "as_of": start.isoformat(), "selection_status": "WATCH"},
+                    {"prediction_id": rows[1]["observation_id"], "pair": "YUSD",
+                     "as_of": start.isoformat(), "selection_status": "SCREEN_REJECTED"}]),
+                manifest, root, schema, {"XUSD": "XUSD.csv"},
+                observed_until=(start + dt.timedelta(minutes=5)).isoformat())
+            self.assertEqual(early_cutoff["status_counts"]["NO_ENTRY_BAR"], 1)
+            self.assertEqual(early_cutoff["diagnostic_horizon_coverage"]["1"]["ABSTAIN_IMMATURE"], 1)
+
 
             self.assertEqual(retained["handoff"], result["handoff"])
             self.assertEqual(retained["delivery"], result["delivery"])
