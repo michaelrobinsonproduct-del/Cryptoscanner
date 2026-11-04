@@ -91,8 +91,14 @@ def main():
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, sort_keys=True) + "\n")
     if args.writer_readback_output:
-        args.writer_readback_output.parent.mkdir(parents=True, exist_ok=True)
-        args.writer_readback_output.write_text(json.dumps(json.loads(args.readback.read_text()), sort_keys=True) + "\n")
+        # B requires persisted ledger evidence; never export a checksum-only D
+        # report as a ready-to-consume delivery projection.
+        if result["writer_recovery"]["delivery_projection_ready"]:
+            args.writer_readback_output.parent.mkdir(parents=True, exist_ok=True)
+            args.writer_readback_output.write_text(json.dumps(json.loads(args.readback.read_text()), sort_keys=True) + "\n")
+        else:
+            # Do not leave an earlier successful export at this path.
+            args.writer_readback_output.unlink(missing_ok=True)
     if args.bd_output:
         args.bd_output.parent.mkdir(parents=True, exist_ok=True)
         args.bd_output.write_text(json.dumps(result["historical_a2"], sort_keys=True) + "\n")
