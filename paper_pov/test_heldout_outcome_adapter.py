@@ -19,6 +19,10 @@ def row(key, horizon, **changes):
 
 class OutcomeAdapterTests(unittest.TestCase):
     def evaluate(self, rows, base=None, challenger=None):
+        # Existing fixture p has a complete four-horizon source history.
+        seen = {(r["prediction_id"], r["horizon_hours"]) for r in rows}
+        if ("p", 48) in seen:
+            rows = rows + [row("p", h) for h in (1, 6, 24) if ("p", h) not in seen]
         return build_heldout_evidence(
             rows, base if base is not None else {"p": True},
             challenger if challenger is not None else {"p": False},
@@ -59,7 +63,7 @@ class OutcomeAdapterTests(unittest.TestCase):
             self.evaluate([row("p", 48), row("p", 6, source_sha256="b"*64)])
 
     def test_read_only_b_handoff(self):
-        payload = dict(outcomes=[row("p", 48)], baseline_decisions={"p": True},
+        payload = dict(outcomes=[row("p", h) for h in (1, 6, 24, 48)], baseline_decisions={"p": True},
                        challenger_decisions={"p": False},
                        training_end_utc="2026-07-29T00:00:00Z",
                        holdout_start_utc="2026-08-01T00:00:00Z",
@@ -73,6 +77,12 @@ class OutcomeAdapterTests(unittest.TestCase):
             self.assertEqual(result["status"], "NO_QUALIFIED_RULE")
             self.assertFalse(result["promotion_authorized"])
             self.assertFalse(result["source_authentication_verified_by_adapter"])
+
+    def test_incomplete_horizon_abstains_from_comparison(self):
+        result = self.evaluate([row("p", h) for h in (1, 6, 24, 48)] + [row("q", 48)], base={"p": True}, challenger={"p": False})
+        self.assertEqual(result["incomplete_prediction_horizons"], {"q": [1, 6, 24]})
+        self.assertEqual(result["four_horizon_complete_predictions"], 1)
+        self.assertEqual(result["cohort_size"], 1)
 
     def test_48h_gap_requires_decision_exclusion(self):
         result = self.evaluate([row("p", 48), row("gap", 48, coverage_complete=False)])
