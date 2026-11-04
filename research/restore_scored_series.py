@@ -86,6 +86,12 @@ def restore_and_capture(previous, output_root, *, collector=collect):
     number = len(relocated)
     destination = output / ("depth-%03d" % number)
     collector(pairs, destination)
+    # A successful collection must actually cover the original scored cohort;
+    # never index a substituted market simply because the collector returned.
+    manifest_doc = json.loads((destination / "manifest.json").read_bytes())
+    collected_pairs = [row.get("pair") for row in manifest_doc.get("entries", [])]
+    if len(collected_pairs) != len(pairs) or set(collected_pairs) != set(pairs):
+        raise ValueError("new depth round differs from scored cohort")
     append_round(new_index, destination)
     coverage = {str(h): evaluate_index(new_index, h) for h in (1, 6, 24, 48)}
     return {"mode": "RESEARCH_ONLY_CROSS_JOB_FOLLOWUP",
