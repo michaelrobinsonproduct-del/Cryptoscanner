@@ -312,6 +312,23 @@ def project_legacy_published_abstention(result, *, writer_readback=None, a2_deli
     event = result.get("github_event")
     if event not in ("workflow_dispatch", "schedule") or result.get("remote_readback_verified") is not True:
         raise ValueError("unverified legacy event or writer")
+    # Legacy output is never allowed to bypass the same immutable trigger and
+    # single-writer provenance checks used by quote-complete published output.
+    if event == "schedule":
+        cron = result.get("originating_cron")
+        if (cron not in ("9 * * * *", "39 * * * *") or
+                result.get("scheduled_slot_verified") is not True or
+                result.get("scheduled_slot_utc_minute") != int(cron.split()[0])):
+            raise ValueError("invalid legacy scheduled provenance")
+    elif (result.get("originating_cron") is not None or
+          result.get("scheduled_slot_verified") is not False or
+          result.get("scheduled_slot_utc_minute") is not None):
+        raise ValueError("legacy manual result claims scheduled provenance")
+    if (re.fullmatch(r"[0-9a-f]{64}", str(result.get("ledger_sha256", ""))) is None or
+            re.fullmatch(r"[0-9a-f]{40}", str(result.get("ledger_commit", ""))) is None or
+            type(result.get("ledger_generation")) is not int or
+            result["ledger_generation"] < 1):
+        raise ValueError("legacy single-writer provenance incomplete")
     if result.get("production_applied") is not False or result.get("buy_approved") is not False or result.get("exchange_event_freshness_verified") is not False:
         raise ValueError("unsafe legacy authorization")
     if "quote_evidence" in result:
