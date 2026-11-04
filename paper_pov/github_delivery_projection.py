@@ -259,6 +259,14 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
     if visible_watch and not same_run_writer:
         visible_watch = []
         delivery_status = "ABSTAIN_SAME_RUN_PERSISTED_WRITER_UNVERIFIED"
+    # The writer readback must refer to the same immutable ledger commit as
+    # the published paper result; matching run ID, SHA and generation alone
+    # cannot prove the exact persisted payload was recovered.
+    if same_run_writer and writer_readback is not None:
+        persisted = writer_readback["persisted_paper"]
+        persisted_commit = persisted.get("ledger_commit")
+        if persisted_commit is not None and persisted_commit != result["ledger_commit"]:
+            raise ValueError("same-run D persisted ledger commit contradicts publisher")
     # Fresh quote observations alone are not an accepted fresh WATCH delivery.
     # The same persisted scan must also have independently authenticated D readback.
     accepted_fresh_watch = bool(visible_watch)
