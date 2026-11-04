@@ -336,7 +336,7 @@ jobs:
                   "single_writer_read_only":True,
                   "b_delivery_projection_executed":False,
                   "next_action":"Consume a checksum-verified published run with complete per-market quote_evidence using B's existing projection"}
-          (root/"b-published-delivery.json").write_text(json.dumps(result,sort_keys=True)+"\\n")
+          (root/"b-published-delivery.json").write_text(json.dumps(result,sort_keys=True)+chr(10))
           print("B_C_D_INTEGRATION_ABSTAINED",result["status"])
           PY
           fi
