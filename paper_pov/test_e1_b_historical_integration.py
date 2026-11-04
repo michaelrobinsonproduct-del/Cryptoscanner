@@ -129,6 +129,24 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
             self.assertEqual(coverage["YUSD"]["horizons"]["48"], "NO_PINNED_PARTITION")
             self.assertEqual(coverage["XUSD"]["horizons"]["48"], "COMPLETE_BAR_PATH_UNQUALIFIED")
             self.assertEqual(coverage["XUSD"]["entry_status"], "ENTRY_BAR_PRESENT_UNQUALIFIED")
+            # The 48h target opens at 48:05 but is only observable at
+            # 48:10. E's all-market audit must agree with E1's closed bars.
+            cutoff_projection = dict(projection, frozen_observations=[
+                {"prediction_id": rows[0]["observation_id"], "pair": "XUSD",
+                 "as_of": start.isoformat(), "selection_status": "WATCH"},
+                {"prediction_id": rows[1]["observation_id"], "pair": "YUSD",
+                 "as_of": start.isoformat(), "selection_status": "SCREEN_REJECTED"}])
+            before_close = audit_a2_trade_partition_overlap(
+                cutoff_projection, manifest, root, schema, {"XUSD": "XUSD.csv"},
+                observed_until=(start + dt.timedelta(hours=48, minutes=5)).isoformat())
+            after_close = audit_a2_trade_partition_overlap(
+                cutoff_projection, manifest, root, schema, {"XUSD": "XUSD.csv"},
+                observed_until=(start + dt.timedelta(hours=48, minutes=10)).isoformat())
+            before = next(x for x in before_close["cohort_coverage"] if x["pair"] == "XUSD")
+            after = next(x for x in after_close["cohort_coverage"] if x["pair"] == "XUSD")
+            self.assertEqual(before["horizons"]["48"], "ABSTAIN_IMMATURE")
+            self.assertEqual(after["horizons"]["48"], "COMPLETE_BAR_PATH_UNQUALIFIED")
+
             # The decision timestamp's own 5m bar must never count as entry.
             earlier = dict(projection, frozen_observations=[
                 {"prediction_id": rows[0]["observation_id"], "pair": "XUSD",
