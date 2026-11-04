@@ -48,7 +48,7 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             raw = b"".join(
-                f"{int((start + dt.timedelta(minutes=5*i)).timestamp())},100,1\\n".encode()
+                f"{int((start + dt.timedelta(minutes=5*i)).timestamp())},100,1\n".encode()
                 for i in range(578))
             (root / "XUSD.csv").write_bytes(raw)
             manifest = {"schema": "kraken_archive_manifest_v1", "source": "Kraken",
