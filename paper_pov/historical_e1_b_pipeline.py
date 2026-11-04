@@ -327,7 +327,9 @@ def main(argv=None):
         for (destination, _), temporary in zip(destinations, staged):
             if destination.exists():
                 raise FileExistsError("Refusing to overwrite historical evidence")
-            os.replace(temporary, destination)
+            # Exclusive publication: another worker must never be overwritten
+            # between the existence check and commit of this evidence path.
+            os.link(temporary, destination)
             published.append(destination)
     except Exception:
         for destination in published:
