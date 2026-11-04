@@ -1,9 +1,6 @@
 name: Research one-hour source-qualified outcome capture (manual only)
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - '.github/workflows/research-one-hour-outcomes.yml'
 permissions:
   contents: read
 concurrency:
@@ -27,11 +24,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Capture 13 actual five-minute rounds and evaluate source-qualified one-hour paths
+      - name: Capture scoring-time Kraken receipts and 13 real five-minute depth rounds
         run: |
           set -euo pipefail
-          python -m research.kraken_capture_rounds \
-            --pairs XBTUSD,ETHUSD,SOLUSD,XRPUSD \
+          python -m research.live_scored_series \
             --output-root /tmp/kraken-one-hour \
             --rounds 13 --interval-seconds 300 | tee /tmp/kraken-one-hour-result.log
           python - <<'PY'
@@ -39,14 +35,23 @@ jobs:
           from pathlib import Path
           from research.prospective_round_store import evaluate_index
           root=Path('/tmp/kraken-one-hour')
-          result=evaluate_index(root/'rounds.jsonl',1)
+          result=evaluate_index(root/'entry'/'round-index.jsonl',1)
           assert result['rounds_verified']==13
           assert result['held_out_lift'] is None and not result['production_applied']
+          from research.acquisition_receipt_pipeline import load_captures
+          from research.depth_acquisition_associations import verified_associations
+          captures=load_captures(root/'entry'/'scores')
+          associated, excluded, provenance=verified_associations(
+              root/'entry'/'scores',root/'entry'/'associations',
+              root/'entry'/'round-index.jsonl')
           statuses={}
           for o in result['outcomes']:
               statuses[o['status']]=statuses.get(o['status'],0)+1
           print('ONE_HOUR_OBSERVED_OUTCOMES',json.dumps({
               'rounds':result['rounds_verified'],
+              'score_receipts':len(captures),
+              'source_bound_scores':len(associated),
+              'score_exclusions':len(excluded),
               'snapshots':result['snapshots_verified'],
               'qualified_episodes':result['qualified_first_entry_episodes'],
               'status_counts':statuses,
