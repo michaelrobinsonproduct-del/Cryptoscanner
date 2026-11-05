@@ -101,7 +101,9 @@ class HandoffTests(unittest.TestCase):
         }
         with TemporaryDirectory() as temp:
             root = Path(temp)
-            source, candidates, bd = (root / name for name in ("integration.json", "candidates.json", "bd.json"))
+            source = root / "integration.json"
+            candidates = root / "nested" / "c" / "candidates.json"
+            bd = root / "nested" / "b" / "bd.json"
             source.write_text(json.dumps(integration))
             result = subprocess.run(
                 [sys.executable, "-m", "paper_pov.c_candidate_handoff",
