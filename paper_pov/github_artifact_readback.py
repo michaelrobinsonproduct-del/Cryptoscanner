@@ -132,9 +132,33 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                 if hashlib.sha256(packed).hexdigest() != manifest["head"]["snapshot_sha256"]:
                     raise IntegrityError("Remote snapshot SHA mismatch")
                 state = storage.unpack_snapshot(packed)
-                head = manifest["head"]
+                checkpoint, head, entries = segments._check_manifest(manifest)
                 if state["generation"] != head["generation"] or state["sha256"] != head["ledger_sha256"]:
                     raise IntegrityError("Remote packed ledger head mismatch")
+                # A manifest and snapshot alone do not authenticate the
+                # immutable checkpoint or the final transition. Verify their
+                # actual Git bytes before accepting a remote MATCH.
+                checkpoint_bytes = remote_object(segments.CHECKPOINT)
+                if hashlib.sha256(checkpoint_bytes).hexdigest() != checkpoint["file_sha256"]:
+                    raise IntegrityError("Remote checkpoint file checksum mismatch")
+                checkpoint_state = json.loads(checkpoint_bytes)
+                if isinstance(checkpoint_state, dict) and checkpoint_state.get("format") == storage.FORMAT:
+                    checkpoint_state = storage.unpack_snapshot(checkpoint_bytes)
+                else:
+                    from paper_pov import ledger as checkpoint_ledger
+                    checkpoint_ledger.verify(checkpoint_state, storage.MAX_RAW_BYTES)
+                if (checkpoint_state["generation"] != checkpoint["generation"]
+                        or checkpoint_state["sha256"] != checkpoint["ledger_sha256"]):
+                    raise IntegrityError("Remote checkpoint provenance mismatch")
+                if entries:
+                    final = entries[-1]
+                    segment_bytes = remote_object(segments._segment_path(final["generation"]))
+                    if (hashlib.sha256(segment_bytes).hexdigest() != final["segment_sha256"]
+                            or storage.manifest_entry(segment_bytes) != final):
+                        raise IntegrityError("Remote final segment checksum mismatch")
+                    transition = storage.read_segment(segment_bytes)
+                    if transition["after_sha256"] != state["sha256"]:
+                        raise IntegrityError("Remote final segment/head mismatch")
                 old = json.loads(recovered[ledger_paths[0]])
                 from paper_pov import ledger as ledger_module
                 ledger_module.verify(old, storage.MAX_RAW_BYTES)
