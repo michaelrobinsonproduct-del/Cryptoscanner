@@ -268,6 +268,11 @@ class DeliveryProjectionTests(unittest.TestCase):
         self.assertTrue(result["fresh_watch_delivery_verified"])
         self.assertTrue(result["live_watch_authorized"])
         self.assertEqual(result["live_watch"], published["candidates"])
+        d["persisted_paper"]["scan_status"] = "ABSTAIN_NO_WATCH"
+        with patch("datetime.datetime", AtReceiptTime):
+            with self.assertRaisesRegex(ValueError, "scan status contradicts"):
+                project_published_result(published, d)
+        d["persisted_paper"]["scan_status"] = published["status"]
         d["remote_ledger_reconciliation"]["recovered_ledger_sha256"] = "d"*64
         with patch("datetime.datetime", AtReceiptTime):
             with self.assertRaisesRegex(ValueError, "digest contradiction"):
