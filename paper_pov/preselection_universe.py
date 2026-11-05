@@ -41,7 +41,7 @@ def export_universe(latest, now=None, historical=False):
            for x in rows):
         raise ValueError("invalid preselection status or provenance")
     decisions = report.get("preselection_decisions")
-    allowed = {"SCREEN_REJECTED", "NOT_OHLC_SELECTED", "OHLC_ABSTAINED", "WATCH", "NOT_RANKED_WATCH"}
+    allowed = {"SCREEN_REJECTED", "NOT_OHLC_SELECTED", "SOURCE_COVERAGE_ABSTAINED", "OHLC_ABSTAINED", "WATCH", "NOT_RANKED_WATCH"}
     if not isinstance(decisions, dict) or set(decisions) - allowed or sum(decisions.values()) != len(rows):
         raise ValueError("invalid preselection decision accounting")
     if any(x.get("selection_status") not in allowed or
@@ -52,6 +52,12 @@ def export_universe(latest, now=None, historical=False):
         raise ValueError("invalid preselection decision provenance")
     if {name: sum(x["selection_status"] == name for x in rows) for name in decisions} != decisions:
         raise ValueError("preselection decision totals mismatch")
+    # A partial Kraken ticker payload invalidates cohort-level selection.
+    # Preserve observed market research, but never describe the surviving
+    # individually valid quotes as ordinary OHLC budget exclusions.
+    incomplete = report.get("scan_status") == "ABSTAIN_INCOMPLETE_TICKER_COVERAGE"
+    if (incomplete and any(x["screen_passed"] and x["selection_status"] != "SOURCE_COVERAGE_ABSTAINED" for x in rows)) or (not incomplete and decisions.get("SOURCE_COVERAGE_ABSTAINED", 0)):
+        raise ValueError("preselection source coverage decision mismatch")
     # Deterministic receipt-bound identity for EVERY observed ticker, including
     # screen rejects and OHLC budget exclusions. Never call these outcome labels.
     for row in rows:
