@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/b1-candidate-parity.yml'
       - 'paper_pov/github_delivery_projection.py'
+      - 'paper_pov/results_report.py'
       - 'paper_pov/test_github_delivery_projection.py'
       - 'paper_pov/manual_schedule_contract.py'
       - 'paper_pov/test_manual_schedule_contract.py'
@@ -451,7 +452,15 @@ jobs:
                   "rank","symbol","price_usd","quote_observed_at",
                   "baseline_score","challenger_score","move15_pct",
                   "volume_accel","risk","status")})
-          status["ranked_watch"]=scored
+          # Reuse the consumer contract rather than maintaining a second
+          # candidate-ranking implementation in the workflow.
+          shared=projected.get("delivery_summary")
+          if not isinstance(shared,dict):
+              raise SystemExit("SHARED_PUBLISHED_DELIVERY_SUMMARY_MISSING")
+          if shared.get("ranked_watch")!=scored or shared.get("watch_count")!=len(scored):
+              raise SystemExit("SHARED_DELIVERY_SUMMARY_DIVERGENCE")
+          status["delivery_summary"]=shared
+          status["ranked_watch"]=shared["ranked_watch"]
           status["same_scan_overlap"]={"status":"UNAVAILABLE",
               "reason":"NO_INDEPENDENT_SAME_RUN_SECOND_SCANNER",
               "symbols":[]}
