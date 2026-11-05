@@ -111,6 +111,7 @@ jobs:
           python -m paper_pov.github_delivery_projection \
             --published-result paper_pov/output/published-readback/results.json \
             --expected-run-id "$RUN_ID" \
+            --expected-source-sha "$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --json headSha --jq .headSha)" \
             --output paper_pov/output/published-readback/delivery.json
           test -s paper_pov/output/published-readback/delivery.json
           echo "READ_ONLY_DELIVERY_PROJECTED_FROM_MAIN_RUN=$RUN_ID" >> "$GITHUB_STEP_SUMMARY"
