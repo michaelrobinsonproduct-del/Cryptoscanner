@@ -366,7 +366,7 @@ jobs:
               if (isinstance(exact,dict) and str(exact.get("id"))==str(source_id)
                       and exact.get("head_sha")==source_sha
                       and exact.get("name") is not None
-                      and exact.get("path","").endswith("paper-pipeline.yml")
+                      and exact.get("path","").split("@",1)[0].endswith("paper-pipeline.yml")
                       and exact.get("conclusion")=="success"
                       and exact.get("event") in ("schedule","workflow_dispatch")):
                   runs.append(exact)
