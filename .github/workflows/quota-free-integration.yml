@@ -34,6 +34,10 @@ jobs:
             git checkout -B "$BRANCH"
           fi
           mkdir -p .integration
+          # Only the coordination document may keep the integration branch's version.
+          # Source-code conflicts remain fatal and visible.
+          git config merge.keep-current.driver true
+          printf 'docs/EXECUTION_QUEUE.md merge=keep-current\n' >> .git/info/attributes
           # Merge independently authored source branches into a review-only integration
           # branch. Never silently choose ours/theirs when owners conflict.
           for SOURCE in integration-a-b-c-d-20261103 runtime-readback-integrity-20261104 learning-e-cohort-accounting-20261104; do
@@ -49,7 +53,7 @@ jobs:
               echo "ALREADY INTEGRATED: $SOURCE" | tee -a .integration/status.txt
               continue
             fi
-            if git -c merge.ours.driver=true merge --no-ff --no-edit FETCH_HEAD; then
+            if git merge --no-ff --no-edit FETCH_HEAD; then
               echo "MERGED: $SOURCE $(git rev-parse FETCH_HEAD)" | tee -a .integration/status.txt
             else
               git diff --name-only --diff-filter=U | tee .integration/conflicts.txt
@@ -66,7 +70,32 @@ jobs:
           git push origin HEAD:refs/heads/"$BRANCH"
           echo "Review branch: https://github.com/$GITHUB_REPOSITORY/tree/$BRANCH" >> "$GITHUB_STEP_SUMMARY"
           cat .integration/status.txt >> "$GITHUB_STEP_SUMMARY"
-      - name: Execute focused integration tests only after source integration
+      - name: Run the integrated Kraken scanner for real, paper-only
         run: |
           set -euo pipefail
-          python -m unittest paper_pov.test_scanner paper_pov.test_candidate_snapshot paper_pov.test_github_delivery_projection -v
+          mkdir -p paper_pov/output
+          PAPER_REPORT_PATH=paper_pov/output/latest.json python -m paper_pov.scanner
+          python -m paper_pov.candidate_snapshot --help >/dev/null
+          test -s paper_pov/output/latest.json
+          test -s paper_pov/output/candidate-snapshot.json
+          test -s paper_pov/output/preselection-universe.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path('paper_pov/output/latest.json').read_text())
+          snap=json.loads(Path('paper_pov/output/candidate-snapshot.json').read_text())
+          universe=json.loads(Path('paper_pov/output/preselection-universe.json').read_text())
+          assert report['mode']=='PAPER_ONLY' and report['buy_approved'] is False
+          assert snap['receipt_sha256']==universe['receipt_sha256']
+          print('INTEGRATED_PAPER_SCAN',report['scan_status'],len(report['watch']),snap['receipt_sha256'])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quota-free-integrated-paper-${{ github.run_id }}
+          path: |
+            paper_pov/output/latest.json
+            paper_pov/output/candidate-snapshot.json
+            paper_pov/output/preselection-universe.json
+            paper_pov/output/receipts/
+          if-no-files-found: warn
