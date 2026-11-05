@@ -598,6 +598,7 @@ jobs:
                   "published_delivery_summary":summary,
                   "writer_recovery_status":bridge["writer_recovery"]["status"],
                   "writer_recovery_ready":bridge["writer_recovery"]["delivery_projection_ready"],
+                  "writer_same_run_reconciliation":bridge["writer_recovery"].get("same_run_reconciliation"),
                   "historical_a2_watch_count":bridge["historical_a2"]["watch_count"],
                   "live_watch":[],
                   "live_watch_authorized":False,
