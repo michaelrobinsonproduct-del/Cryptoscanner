@@ -92,6 +92,28 @@ jobs:
           assert snap['receipt_sha256']==universe['receipt_sha256']
           print('INTEGRATED_PAPER_SCAN',report['scan_status'],len(report['watch']),snap['receipt_sha256'])
           PY
+      - name: Read actual published single-writer results through existing B delivery adapter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p paper_pov/output/published-readback
+          # This is a read-only consumer of the authoritative main paper pipeline.
+          # Do not substitute this isolated scan for a published ledger-backed run.
+          RUN_ID="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow paper-pipeline.yml --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+          if [ -z "$RUN_ID" ]; then
+            echo "DELIVERY_ABSTAIN: no successful authoritative main paper run" | tee paper_pov/output/published-readback/status.txt
+            exit 0
+          fi
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "public-paper-results-$RUN_ID" --dir paper_pov/output/published-readback
+          test -s paper_pov/output/published-readback/results.json
+          (cd paper_pov/output/published-readback && sha256sum -c SHA256SUMS)
+          python -m paper_pov.github_delivery_projection \
+            --published-result paper_pov/output/published-readback/results.json \
+            --expected-run-id "$RUN_ID" \
+            --output paper_pov/output/published-readback/delivery.json
+          test -s paper_pov/output/published-readback/delivery.json
+          echo "READ_ONLY_DELIVERY_PROJECTED_FROM_MAIN_RUN=$RUN_ID" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -101,4 +123,5 @@ jobs:
             paper_pov/output/candidate-snapshot.json
             paper_pov/output/preselection-universe.json
             paper_pov/output/receipts/
+            paper_pov/output/published-readback/
           if-no-files-found: warn
