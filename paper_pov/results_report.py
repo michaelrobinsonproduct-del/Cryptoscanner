@@ -190,6 +190,18 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
                      f"{p['volume_accel']:.2f}x | {p['spread_bps']:.1f} | "
                      f"{_utc(quote['observed_at']).isoformat()} | "
                      "NOT CALIBRATED / HIGH | WATCH |")
+    # Shared operator-facing summary for both manual and scheduled publication.
+    # This is a paper observation at scan time, not a live buy authorization.
+    summary = {
+        "trigger": "manual" if event == "workflow_dispatch" else "scheduled",
+        "scan_status": result_status,
+        "watch_count": len(records),
+        "top_watch": records[0] if records else None,
+        "ranked_watch": records,
+        "observed_markets": len(observations),
+        "learning_status": "NO_VERIFIED_HELD_OUT_LIFT",
+        "ledger_generation": score["generation"],
+    }
     # The aggregate ledger count cannot be allocated to individual horizons
     # without independent evidence. Never manufacture a per-horizon success.
     horizon_status = ("NOT_MATURED_OR_INELIGIBLE" if score["matured_labels"] == 0
@@ -248,6 +260,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
                                    "observed_at": o["observed_at"], "price": o["price"]}
                                   for o in observations],
                "exchange_event_freshness_verified": False, "candidates": records,
+               "delivery_summary": summary,
                "stablecoin_exclusion_count": scan["excluded_stablecoin_pairs"],
                "abstentions": len(abstentions),
                "matured_labels": score["matured_labels"], "gap_abstentions": score["gap_abstentions"],
