@@ -255,6 +255,15 @@ def run_pipeline(manifest, root, schema, partitions, predictions, observed_until
             raise ValueError("Historical prediction lacks point-in-time timestamp")
         if utc_time(prediction["as_of"]) > observation_cutoff:
             raise ValueError("Historical prediction occurs after observation cutoff")
+    # WATCH-only reconstruction still carries the complete frozen A2 cohort.
+    # A rejected market dated after the cutoff must not be hidden by selecting
+    # only older WATCH predictions for E1.
+    if a2_projection is not None:
+        observations = a2_projection.get("frozen_observations")
+        if observations is not None:
+            for row in observations:
+                if utc_time(row["as_of"]) > observation_cutoff:
+                    raise ValueError("Frozen A2 observation occurs after cutoff")
     closed_bar_cutoff = (observation_cutoff - timedelta(minutes=5)).isoformat()
     execution = run_historical_outcomes(
         manifest, root, schema, partitions, predictions, closed_bar_cutoff)
