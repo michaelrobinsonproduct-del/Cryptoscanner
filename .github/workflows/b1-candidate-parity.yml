@@ -467,6 +467,7 @@ jobs:
                      f"- Delivery: {data['delivery_status']}; WATCH: {data['watch_count']}",
                      f"- Quote complete: {data['published_quote_complete']}; authenticated fresh WATCH: {data['fresh_watch_delivery_verified']}",
                      f"- D same-source run: {data['writer_same_scan_as_delivery']}",
+                     f"- D recovery evidence available: {data['writer_evidence_available']}",
                      f"- Writer reconciliation: {data['writer_reconciliation_status']}",
                      f"- A2: {data['a2']['status']}; E: {data['e']['status']}",
                      f"- Learning: {data['learning_status']}; scoring promotion applied: false",
@@ -487,6 +488,7 @@ jobs:
           path: |
             /tmp/b-delivery/identity.json
             /tmp/b-delivery/writer.json
+            /tmp/b-delivery/d-status.json
             /tmp/b-delivery/a2-status.json
             /tmp/b-delivery/a2-delivery.json
             /tmp/b-delivery/e-status.json
