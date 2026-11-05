@@ -201,7 +201,7 @@ class DeliveryProjectionTests(unittest.TestCase):
         self.assertEqual(project_published_result(published)["status"], "ABSTAIN_PUBLISHED_WATCH_STALE_AT_DELIVERY")
         bad = deepcopy(published)
         bad["candidates"].append({**bad["candidates"][0], "rank": 2})
-        with self.assertRaisesRegex(ValueError, "duplicate published WATCH candidate"):
+        with self.assertRaisesRegex(ValueError, "invalid WATCH candidate"):
             project_published_result(bad)
         for metric, value in (("baseline_score", float("nan")), ("challenger_score", float("inf")), ("volume_accel", True), ("risk", "")):
             bad = deepcopy(published)
