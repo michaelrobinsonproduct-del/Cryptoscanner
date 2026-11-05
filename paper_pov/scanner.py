@@ -142,7 +142,21 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     # per-pair endpoint; never turn a partial response into a complete cohort
     # unless every requested pair is actually returned with its canonical key.
     if isinstance(ticker, dict):
-        missing = [pair for pair in eligible if pair not in ticker]
+        # Recover both absent and structurally unusable bulk quotes. Kraken can
+        # return a market key with incomplete price/volume fields; treating
+        # that as unrecoverable needlessly abstains the whole eligible cohort.
+        def usable_quote(t):
+            try:
+                price, bid, ask, opening, volume = (
+                    finite(t["c"][0]), finite(t["b"][0]), finite(t["a"][0]),
+                    finite(t["o"]), finite(t["v"][1]))
+                return (min(price, bid, ask, opening) > 0 and ask >= bid
+                        and volume >= 0 and all(math.isfinite(x) for x in (
+                            100 * (price / opening - 1),
+                            10000 * (ask / bid - 1), price * volume)))
+            except (KeyError, ValueError, TypeError, IndexError, ZeroDivisionError, OverflowError):
+                return False
+        missing = [pair for pair in eligible if not usable_quote(ticker.get(pair))]
         if 0 < len(missing) <= 6:
             for pair in missing:
                 try:
@@ -157,7 +171,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                         accepted.add(alias)
                     if (isinstance(retry, dict) and len(retry) == 1
                             and next(iter(retry)) in accepted
-                            and isinstance(next(iter(retry.values())), dict)):
+                            and usable_quote(next(iter(retry.values())))):
                         ticker[pair] = next(iter(retry.values()))
                 except (OSError, TimeoutError, RuntimeError, ValueError, KeyError):
                     pass  # Retain incomplete coverage and abstain below.
