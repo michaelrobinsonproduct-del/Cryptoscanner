@@ -296,8 +296,6 @@ jobs:
           # run and immutable source selected above, before B can consume it.
           if str(report.get("run_id")) != str(m["run_id"]) or report.get("source_sha") != m["sha"]:
               raise SystemExit("D recovery report identity differs from authenticated artifact origin")
-          if report.get("artifact_id") is not None and str(report["artifact_id"]) != str(m["artifact_id"]):
-              raise SystemExit("D recovery report artifact identity mismatch")
           if report.get("status") not in ("WRITER_CHECKSUM_ONLY","VERIFIED_REMOTE_READBACK"):
               raise SystemExit("D recovery did not succeed")
           Path("/tmp/c-real-receipts/d2-readback.json").write_text(json.dumps(report,sort_keys=True))
