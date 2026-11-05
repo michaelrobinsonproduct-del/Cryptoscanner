@@ -297,6 +297,38 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["excluded_stablecoin_pairs"], 0)
         self.assertEqual(report["excluded_other_pairs"], 2)
 
+    def test_malformed_online_display_names_never_enter_ticker_or_a2_watch(self):
+        # These public AssetPairs shapes previously passed the /USD suffix
+        # filter, then produced unreadable WATCH symbols at A2 consumption.
+        malformed = {
+            "EXTRA_SLASH": "C0/ALT/USD",
+            "SPACE_STABLE": "USDT /USD",
+            "EMPTY_BASE": "/USD",
+            "TAB_BASE": "C0\\t/USD",
+            "LONG_BASE": ("X" * 64) + "/USD",
+        }
+        base = fixture()
+        def api(path):
+            result = base(path)
+            if path == "AssetPairs":
+                return {**result, **{key: {"status": "online", "wsname": name}
+                                     for key, name in malformed.items()}}
+            if path == "Ticker":
+                return {**result, **{key: result["C0USD"] for key in malformed}}
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["online_usd_pairs"], 30)
+        self.assertEqual(report["excluded_other_pairs"], 5)
+        self.assertEqual(report["eligible_pairs"], 25)
+        self.assertEqual(report["observed_markets"], 25)
+        self.assertEqual(report["scan_status"], "WATCH")
+        self.assertFalse(set(malformed) & {item["pair"] for item in report["watch"]})
+        with tempfile.TemporaryDirectory() as folder:
+            from paper_pov.candidate_snapshot import read_snapshot
+            latest = Path(folder) / "latest.json"
+            scanner.persist_report(latest, report)
+            self.assertEqual(read_snapshot(latest, now=NOW)["watch"], report["watch"])
+
     def test_duplicate_kraken_display_market_is_not_sealed_twice(self):
         def api(path):
             result = fixture()(path)
