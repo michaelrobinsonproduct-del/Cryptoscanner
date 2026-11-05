@@ -415,7 +415,7 @@ jobs:
                   "live_watch_authorized": False,
                   "production_applied": False,
               }
-              path.write_text(json.dumps(report, sort_keys=True) + "\\n")
+              path.write_text(json.dumps(report, sort_keys=True) + "\n")
               print("D_RECOVERY_FAILURE_RETAINED", report["reason"])
           PY
       - name: Retain read-only recovery result
