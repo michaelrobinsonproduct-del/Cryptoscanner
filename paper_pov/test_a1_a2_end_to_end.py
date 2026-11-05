@@ -137,6 +137,24 @@ class EndToEndCandidateTests(unittest.TestCase):
         self.assertEqual(report["watch"], [])
         self.round_trip(report)
 
+    def test_missing_ticker_alias_colliding_with_other_rest_pair_abstains(self):
+        # An altname matching another eligible REST key cannot authenticate
+        # a missing pair: Kraken's returned identity is not unique.
+        pair = "X01USD"
+        self.pairs[pair]["altname"] = "X02USD"
+        def collision_api(path):
+            if path == "Ticker":
+                return {k: v for k, v in self.ticker.items() if k != pair}
+            if path == "Ticker?pair=" + pair:
+                return {"X02USD": self.ticker[pair]}
+            return self.api(path)
+        report = scan(api=collision_api, clock=lambda: self.now,
+                      sleep=lambda _: None)
+        self.assertFalse(report["ticker_coverage_complete"])
+        self.assertEqual(report["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+        self.assertEqual(report["watch"], [])
+        self.round_trip(report)
+
     def test_live_shape_watch_stablecoin_timeout_and_durable_readback(self):
         report = scan(api=self.api, clock=lambda: self.now, sleep=lambda _: None, max_ohlc=4)
         result = self.round_trip(report)
