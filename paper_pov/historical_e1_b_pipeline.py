@@ -208,7 +208,37 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
         d[status] = d.get(status, 0) + 1
     if sum(status_counts.values()) != len(rows):
         raise ValueError("Historical overlap cohort mismatch")
+    # Bind coverage to the exact frozen receipt observations, not merely the
+    # market list. A later receipt with the same pairs but different timestamps
+    # must never reuse this overlap report as its evidence.
+    import hashlib
+    import json
+    frozen_identity = sorted((row["prediction_id"], row["pair"],
+                              utc_time(row["as_of"]).isoformat(),
+                              row["selection_status"]) for row in rows)
+    if len({identity[0] for identity in frozen_identity}) != len(rows):
+        raise ValueError("Duplicate frozen observation identity")
+    frozen_observation_digest = hashlib.sha256(
+        json.dumps(frozen_identity, separators=(",", ":")).encode()).hexdigest()
+    pair_coverage = {}
+    for pair in sorted(pairs):
+        matched = [row for row in cohort_coverage if row["pair"] == pair]
+        pair_coverage[pair] = {
+            "frozen_observations": len(matched),
+            "entry_bar_present_unqualified": sum(
+                row["entry_status"] == "ENTRY_BAR_PRESENT_UNQUALIFIED" for row in matched),
+            "horizon_coverage": {
+                str(h): {status: sum(row["horizons"][str(h)] == status for row in matched)
+                         for status in horizon_counts[str(h)]}
+                for h in (1, 6, 24, 48)},
+            "partition_sha256": provenance[pair].get("partition_sha256"),
+        }
+    if sum(row["frozen_observations"] for row in pair_coverage.values()) != len(rows):
+        raise ValueError("Pair-level historical coverage mismatch")
     return {"schema": "a2_trade_partition_overlap_v1",
+            "frozen_observation_digest": frozen_observation_digest,
+            "observed_until_utc": cutoff.isoformat(),
+            "pair_coverage": pair_coverage,
             "a_receipt_sha256": binding["a_receipt_sha256"],
             "frozen_observation_count": len(rows),
             "status_counts": status_counts, "selection_status_counts": by_selection,
