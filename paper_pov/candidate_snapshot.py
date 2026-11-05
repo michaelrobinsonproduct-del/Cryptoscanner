@@ -55,6 +55,23 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
             raise ValueError("invalid coverage count: " + field)
     if report["observed_markets"] > report["eligible_pairs"]:
         raise ValueError("observed coverage exceeds eligible markets")
+    # A sealed receipt must not claim complete source coverage while its own
+    # per-category Kraken rejection accounting proves otherwise. Older local
+    # fixture receipts without these fields retain their historical contract.
+    if "ticker_rejections" in report or "ticker_coverage_complete" in report:
+        rejections = report.get("ticker_rejections")
+        complete = report.get("ticker_coverage_complete")
+        if (not isinstance(rejections, dict) or
+                set(rejections) != {"missing_or_invalid_payload",
+                                   "invalid_price_or_volume",
+                                   "nonfinite_derived_metric"} or
+                any(type(v) is not int or v < 0 for v in rejections.values()) or
+                type(complete) is not bool or
+                report["observed_markets"] + sum(rejections.values()) != report["eligible_pairs"] or
+                complete != (sum(rejections.values()) == 0)):
+            raise ValueError("contradictory ticker source coverage")
+        if not complete and (watch or report.get("scan_status") != "ABSTAIN_INCOMPLETE_TICKER_COVERAGE"):
+            raise ValueError("incomplete ticker coverage cannot authorize WATCH")
     abstentions = report.get("abstention_counts")
     if not isinstance(abstentions, dict) or any(not isinstance(k, str) or not k or type(v) is not int or v < 0 for k, v in abstentions.items()):
         raise ValueError("invalid abstention counts")
