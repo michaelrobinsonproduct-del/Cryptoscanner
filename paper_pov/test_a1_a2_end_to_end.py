@@ -25,7 +25,10 @@ class EndToEndCandidateTests(unittest.TestCase):
         if path == "AssetPairs":
             return self.pairs
         if path == "Ticker":
-            return self.ticker
+            return self.ticker.copy()
+        if path.startswith("Ticker?pair="):
+            pair = path.split("pair=", 1)[1]
+            return {pair: self.ticker[pair]} if pair in self.ticker else {}
         if path.startswith("OHLC?pair="):
             pair = path.split("pair=", 1)[1].split("&", 1)[0]
             if pair == "X00USD":
@@ -80,6 +83,24 @@ class EndToEndCandidateTests(unittest.TestCase):
         self.assertEqual(report["preselection_decisions"]["NOT_OHLC_SELECTED"], 0)
         result = self.round_trip(report)
         self.assertEqual(result["observed_markets"], 12)
+
+    def test_bounded_missing_ticker_recovery_produces_authentic_watch_receipt(self):
+        # A partial bulk response can be repaired only by real pair-keyed
+        # Kraken responses, never by assuming that a missing quote exists.
+        missing = {"X01USD", "X02USD", "X03USD"}
+        requested = []
+        def partial_bulk_api(path):
+            requested.append(path)
+            if path == "Ticker":
+                return {k: v for k, v in self.ticker.items() if k not in missing}
+            return self.api(path)
+        report = scan(api=partial_bulk_api, clock=lambda: self.now, sleep=lambda _: None, max_ohlc=4)
+        self.assertEqual({p for p in requested if p.startswith("Ticker?pair=")},
+                         {"Ticker?pair=" + p for p in missing})
+        self.assertTrue(report["ticker_coverage_complete"])
+        self.assertEqual(report["observed_markets"], 25)
+        self.assertEqual(report["scan_status"], "WATCH")
+        self.assertEqual(len(self.round_trip(report)["watch"]), 3)
 
     def test_live_shape_watch_stablecoin_timeout_and_durable_readback(self):
         report = scan(api=self.api, clock=lambda: self.now, sleep=lambda _: None, max_ohlc=4)
