@@ -151,6 +151,29 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
                     complete_projection, manifest, root, schema,
                     {"XUSD": "XUSD.csv", "ZUSD": "ZUSD.csv"},
                     observed_until=(start + dt.timedelta(hours=49)).isoformat())
+            self.assertEqual(overlap["pair_coverage"]["XUSD"]["frozen_observations"], 1)
+            self.assertEqual(overlap["pair_coverage"]["YUSD"]["frozen_observations"], 1)
+            self.assertEqual(overlap["pair_coverage"]["XUSD"]["entry_bar_present_unqualified"], 1)
+            self.assertEqual(overlap["pair_coverage"]["YUSD"]["entry_bar_present_unqualified"], 0)
+            self.assertEqual(overlap["pair_coverage"]["XUSD"]["partition_sha256"],
+                             hashlib.sha256(raw).hexdigest())
+            self.assertIsNone(overlap["pair_coverage"]["YUSD"]["partition_sha256"])
+            self.assertEqual(sum(v["frozen_observations"] for v in
+                                 overlap["pair_coverage"].values()), 2)
+            self.assertEqual(overlap["observed_until_utc"],
+                             (start + dt.timedelta(hours=49)).isoformat())
+            self.assertEqual(len(overlap["frozen_observation_digest"]), 64)
+            # A different frozen timestamp changes the cohort evidence identity,
+            # even when the market list and source partition remain identical.
+            shifted = dict(complete_projection, frozen_observations=[
+                dict(complete_projection["frozen_observations"][0],
+                     as_of=(start + dt.timedelta(minutes=1)).isoformat()),
+                complete_projection["frozen_observations"][1]])
+            shifted_overlap = audit_a2_trade_partition_overlap(
+                shifted, manifest, root, schema, {"XUSD": "XUSD.csv"},
+                observed_until=(start + dt.timedelta(hours=49)).isoformat())
+            self.assertNotEqual(overlap["frozen_observation_digest"],
+                                shifted_overlap["frozen_observation_digest"])
             self.assertEqual(sum(overlap["status_counts"].values()), 2)
             self.assertEqual(overlap["status_counts"]["NO_PINNED_PARTITION"], 1)
             self.assertEqual(overlap["status_counts"]["ENTRY_BAR_PRESENT_UNQUALIFIED"], 1)
