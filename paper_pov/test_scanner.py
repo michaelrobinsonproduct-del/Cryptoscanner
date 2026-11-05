@@ -75,6 +75,24 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
         self.assertEqual(report["abstention_counts"]["stale_or_future_ohlc"], 24)
 
+    def test_partial_ticker_payload_abstains_without_discarding_observations(self):
+        base = fixture()
+        def api(path):
+            result = base(path)
+            if path == "Ticker":
+                result = dict(result)
+                result.pop("C0USD")
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+        self.assertFalse(report["ticker_coverage_complete"])
+        self.assertEqual(report["ticker_rejections"]["missing_or_invalid_payload"], 1)
+        self.assertEqual(report["observed_markets"], 24)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["ohlc_screened"], 0)
+        self.assertEqual(report["preselection_decisions"]["NOT_OHLC_SELECTED"],
+                         report["screened_markets"])
+
     def test_insufficient_universe_coverage_fails_closed(self):
         with self.assertRaisesRegex(RuntimeError, "coverage"):
             run(coverage=True)
