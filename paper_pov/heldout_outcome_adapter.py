@@ -151,7 +151,8 @@ def evaluate_shadow_scores(challenger, outcomes, baseline_decisions, *, threshol
                 "promotion_authorized": False}
     labels = {row["prediction_id"]: row["hit"] for row in outcomes
               if row.get("horizon_hours") == 48 and row.get("coverage_complete") is True
-              and type(row.get("hit")) is bool}
+              and type(row.get("hit")) is bool
+              and utc_time(row["label_mature_utc"]) <= utc_time(challenger["evaluation_asof_utc"])}
     scores = challenger["shadow_scores"]
     ids = sorted(set(scores) & set(labels))
     if set(ids) != set(scores) or set(ids) != set(baseline_decisions):
@@ -187,6 +188,7 @@ def build_shadow_learning_state(predictions, candles, baseline_decisions, *,
     challenger = train_shadow_challenger(
         predictions, outcomes, training_end_utc=training_end_utc,
         holdout_start_utc=holdout_start_utc, feature_names=feature_names)
+    challenger["evaluation_asof_utc"] = evaluation_asof_utc
     comparison = evaluate_shadow_scores(challenger, outcomes, baseline_decisions)
     result = {"schema": "paper_learning_state_v1",
               "evaluation_asof_utc": evaluation_asof_utc,
