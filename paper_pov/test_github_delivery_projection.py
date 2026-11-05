@@ -232,6 +232,45 @@ class DeliveryProjectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "commit contradicts"):
             project_published_result(published, d)
 
+    def test_same_run_exact_commit_match_authorizes_fresh_paper_watch(self):
+        from datetime import datetime, timedelta, timezone
+        from unittest.mock import patch
+        from paper_pov.test_results_report import fixture
+        from paper_pov.results_report import render
+        from paper_pov.github_delivery_projection import project_published_result
+        scan, score = fixture()
+        published, _ = render(scan, score, run_id="41235442591",
+                              source_sha=SHA, ledger_commit="b"*40,
+                              event="workflow_dispatch")
+        as_of = datetime.fromisoformat(published["as_of"].replace("Z", "+00:00"))
+        d = {"status": "VERIFIED_REMOTE_READBACK", "remote_downloaded": True,
+             "ledger_writer_invoked": False, "production_applied": False,
+             "independently_authenticated": True, "run_id": published["run_id"],
+             "source_sha": SHA,
+             "persisted_paper": {"ledger_generation": published["ledger_generation"],
+                                 "scan_status": "SUCCESS_PAPER_ONLY",
+                                 "live_replay_performed": False,
+                                 "ledger_commit": published["ledger_commit"]},
+             "remote_ledger_reconciliation": {
+                 "status": "MATCH", "recovered_sha256": "c"*64,
+                 "remote_sha256": "c"*64,
+                 "recovered_generation": published["ledger_generation"],
+                 "remote_generation": published["ledger_generation"],
+                 "independently_authenticated": False, "production_applied": False}}
+        class AtReceiptTime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return as_of + timedelta(seconds=30)
+        with patch("datetime.datetime", AtReceiptTime):
+            result = project_published_result(published, d)
+        self.assertTrue(result["fresh_watch_delivery_verified"])
+        self.assertTrue(result["live_watch_authorized"])
+        self.assertEqual(result["live_watch"], published["candidates"])
+        d["persisted_paper"]["ledger_commit"] = "f"*40
+        with patch("datetime.datetime", AtReceiptTime):
+            with self.assertRaisesRegex(ValueError, "commit contradicts"):
+                project_published_result(published, d)
+
     def test_real_paper_results_zip_to_delivery_cli(self):
         import hashlib
         import io
