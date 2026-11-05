@@ -536,3 +536,28 @@ def test_downloaded_artifact_rejects_special_file(tmp_path):
         return b""
     with pytest.raises(IntegrityError, match="special artifact"):
         retrieve_and_verify(REPO, "123", "paper-ledger", manifest, SHA, runner=fifo)
+
+
+@pytest.mark.parametrize("remote_status,expected_exit", [
+    ("DIVERGED", 2), ("MATCH", 0), ("UNAVAILABLE", 0),
+])
+def test_cli_does_not_silently_succeed_on_remote_divergence(
+        tmp_path, monkeypatch, capsys, remote_status, expected_exit):
+    """A valid downloaded historical artifact must not hide a divergent checkpoint."""
+    from paper_pov import github_artifact_readback as readback
+    def recovered(*args, **kwargs):
+        return {"status": "WRITER_CHECKSUM_ONLY", "remote_downloaded": True,
+                "independently_authenticated": False,
+                "remote_ledger_reconciliation": {"status": remote_status},
+                "same_run_reconciliation": {"status": "ABSTAIN",
+                                             "live_watch_authorized": False}}
+    monkeypatch.setattr(readback, "retrieve_and_verify", recovered)
+    report_path = tmp_path / "recovery-report.json"
+    result = readback.main([
+        "--repo", REPO, "--run-id", "123", "--source-sha", SHA,
+        "--ledger-ref", "paper-proof-ledger", "--output", str(report_path),
+    ])
+    assert result == expected_exit
+    report = json.loads(report_path.read_text())
+    assert report["remote_ledger_reconciliation"]["status"] == remote_status
+    assert report["same_run_reconciliation"]["live_watch_authorized"] is False
