@@ -7,8 +7,19 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+from datetime import datetime, timezone
 
 HORIZONS = (1, 6, 24, 48)
+
+def normalized_source_time(value):
+    """Compare offset-aware reconstructed timestamps to frozen UTC receipts."""
+    if not isinstance(value, str):
+        raise ValueError("Invalid reconstructed timestamp")
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("Reconstructed timestamp lacks timezone")
+    return parsed.astimezone(timezone.utc)
+
 STATUSES = ("MATURED_OBSERVED", "ABSTAIN_ENTRY", "ABSTAIN_IMMATURE", "ABSTAIN_GAP")
 
 
@@ -70,7 +81,7 @@ def project_historical_execution(execution, *, frozen_predictions, frozen_select
             if not isinstance(record.get("as_of"), str):
                 raise ValueError("Reconstructed prediction lacks frozen A2 timestamp")
             from .shadow_learning_evidence import utc_time
-            if utc_time(record["as_of"]) != utc_time(frozen_observation_times[pid]):
+            if normalized_source_time(record["as_of"]) != utc_time(frozen_observation_times[pid]):
                 raise ValueError("Reconstructed prediction time differs from frozen A2 observation")
         if record.get("source_authenticated") is not False or record.get("entry_method") != "next_5m_bar_open_proxy":
             raise ValueError("Unexpected entry qualification or authentication")
