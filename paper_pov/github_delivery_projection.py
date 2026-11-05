@@ -267,8 +267,15 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
         0 <= (read_at - _utc(q["observed_at"])).total_seconds() <= 600
         for q in (by_symbol[c["symbol"]] for c in candidates)
     )
-    visible_watch = candidates if fresh_at_delivery else []
-    delivery_status = ("ABSTAIN_PUBLISHED_WATCH_STALE_AT_DELIVERY"
+    eligible = result.get("eligible_pairs")
+    observed = result["observed_markets"]
+    if type(eligible) is not int or eligible < observed:
+        raise ValueError("published eligible market coverage invalid")
+    market_coverage_complete = observed == eligible
+    visible_watch = candidates if fresh_at_delivery and market_coverage_complete else []
+    delivery_status = ("ABSTAIN_INCOMPLETE_TICKER_COVERAGE"
+                       if candidates and not market_coverage_complete else
+                       "ABSTAIN_PUBLISHED_WATCH_STALE_AT_DELIVERY"
                        if candidates and not fresh_at_delivery else status)
     writer = _writer_evidence(writer_readback) if writer_readback is not None else None
     # D may legitimately be an independently authenticated historical run.
@@ -337,7 +344,7 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
             for c in visible_watch
         ],
         "observed_markets": result["observed_markets"],
-        "quote_evidence_complete": len(quotes) == result["observed_markets"],
+        "quote_evidence_complete": len(quotes) == result["observed_markets"] and market_coverage_complete,
         "delivery_blocked": bool(candidates) and not bool(visible_watch),
         "learning_status": "NO_QUALIFIED_RULE" if learning is not None else "LEARNING_EVIDENCE_UNAVAILABLE",
         "source_run_id": int(run_id),
@@ -355,7 +362,7 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
             "live_watch": visible_watch, "live_watch_authorized": accepted_fresh_watch,
             "published_quote_evidence_count": len(quotes),
             "published_observed_markets": result["observed_markets"],
-            "published_quote_complete": True,
+            "published_quote_complete": market_coverage_complete,
             "client_quote_freshness_verified": fresh_at_delivery,
             "fresh_watch_delivery_verified": accepted_fresh_watch,
             "exchange_event_freshness_verified": False,
