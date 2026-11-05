@@ -104,6 +104,21 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["watch"], [])
         self.assertEqual(report["ohlc_screened"], 0)
 
+    def test_sparse_ticker_receipt_roundtrips_into_candidate_delivery(self):
+        # A -> immutable receipt -> A2 readback must preserve an explicit
+        # zero-WATCH result rather than silently losing a failed scan.
+        from paper_pov.candidate_snapshot import read_snapshot
+        report = run(coverage=True)
+        with tempfile.TemporaryDirectory() as directory:
+            latest = Path(directory) / "latest.json"
+            receipt = scanner.persist_report(latest, report)
+            self.assertEqual(receipt.read_bytes(), latest.read_bytes())
+            projected = read_snapshot(latest, now=NOW)
+            self.assertEqual(projected["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+            self.assertEqual(projected["watch"], [])
+            self.assertEqual(projected["eligible_pairs"], 25)
+            self.assertEqual(projected["observed_markets"], 12)
+
     def test_empty_ticker_persists_explicit_abstention(self):
         base = fixture()
         def api(path):
