@@ -5,6 +5,7 @@ outcomes abstain until independently pinned trade partitions are supplied.
 """
 import argparse
 import datetime as dt
+import hashlib
 import json
 import tempfile
 import zipfile
@@ -12,6 +13,68 @@ from pathlib import Path
 
 from .preselection_universe import export_receipt_history
 from .historical_preselection_binding import bind_preselection_history
+
+
+
+def _legacy_research_history(receipt):
+    """Freeze a pre-coverage-contract receipt for research, never live WATCH."""
+    report = json.loads(receipt)
+    if not isinstance(report, dict) or report.get("mode") != "PAPER_ONLY" or report.get("buy_approved") is not False:
+        raise ValueError("Not a sealed paper research receipt")
+    if "ticker_coverage_complete" in report:
+        raise ValueError("Current receipts must use the strict A/B reader")
+    rejects = report.get("ticker_rejections")
+    eligible, observed = report.get("eligible_pairs"), report.get("observed_markets")
+    if (not isinstance(rejects, dict) or not rejects or
+            any(type(n) is not int or n < 0 for n in rejects.values()) or
+            type(eligible) is not int or type(observed) is not int or
+            observed + sum(rejects.values()) != eligible):
+        raise ValueError("Legacy ticker accounting is not independently consistent")
+    rows = report.get("preselection_universe")
+    coverage = report.get("preselection_coverage")
+    decisions = report.get("preselection_decisions")
+    if (not isinstance(rows, list) or len(rows) != observed or
+            not isinstance(coverage, dict) or coverage.get("valid_tickers") != observed or
+            not isinstance(decisions, dict) or sum(decisions.values()) != observed):
+        raise ValueError("Incomplete frozen legacy universe")
+    allowed = {"SCREEN_REJECTED", "NOT_OHLC_SELECTED", "OHLC_ABSTAINED",
+               "NOT_RANKED_WATCH", "WATCH"}
+    if set(decisions) - allowed or any(
+            not isinstance(row, dict) or row.get("selection_status") not in allowed or
+            not isinstance(row.get("pair"), str) or not row["pair"]
+            for row in rows):
+        raise ValueError("Invalid frozen legacy decisions")
+    if len({row["pair"] for row in rows}) != observed or any(
+            sum(row["selection_status"] == status for row in rows) != count
+            for status, count in decisions.items()):
+        raise ValueError("Legacy selection accounting mismatch")
+    if report.get("scan_status") != "WATCH" or len(report.get("watch", [])) != decisions.get("WATCH", 0):
+        raise ValueError("Legacy WATCH accounting mismatch")
+    as_of = report.get("as_of")
+    if not isinstance(as_of, str):
+        raise ValueError("Missing legacy UTC observation time")
+    stamp = dt.datetime.fromisoformat(as_of.replace("Z", "+00:00"))
+    if stamp.tzinfo is None or stamp.utcoffset() != dt.timedelta(0):
+        raise ValueError("Legacy observation time must be UTC")
+    digest = hashlib.sha256(receipt).hexdigest()
+    markets = []
+    for row in rows:
+        item = dict(row)
+        item["observation_id"] = hashlib.sha256(
+            ("paper-preselection-v1|" + digest + "|" + row["pair"]).encode()).hexdigest()
+        markets.append(item)
+    # Incomplete ticker coverage makes every legacy WATCH non-actionable.
+    # Preserve its historical decision for research only.
+    snapshot = {"schema": "paper_preselection_v1", "snapshot_use": "HISTORICAL_RESEARCH_ONLY",
+                "receipt_sha256": digest, "as_of": as_of, "markets": markets,
+                "coverage": coverage, "selection_decisions": decisions,
+                "legacy_incomplete_ticker_coverage": True}
+    return {"schema": "paper_preselection_history_v1",
+            "snapshot_use": "HISTORICAL_RESEARCH_ONLY",
+            "future_outcomes_authenticated": False, "qualified_for_learning": False,
+            "live_watch_eligible": False, "production_applied": False,
+            "receipt_count": 1, "market_observation_count": observed,
+            "snapshots": [snapshot]}
 
 
 def project_a2_historical_artifact(archive):
@@ -33,7 +96,14 @@ def project_a2_historical_artifact(archive):
         root = Path(directory)
         (root / "receipts").mkdir()
         (root / receipts[0].filename).write_bytes(receipt)
-        history = export_receipt_history(root / "receipts")
+        try:
+            history = export_receipt_history(root / "receipts")
+        except ValueError:
+            # Only the legacy missing-coverage-field contract is eligible.
+            # Current malformed receipts still fail in the strict reader.
+            if "ticker_coverage_complete" in json.loads(receipt):
+                raise
+            history = _legacy_research_history(receipt)
     watch = []
     for snapshot in history["snapshots"]:
         for market in snapshot["markets"]:
@@ -66,6 +136,8 @@ def project_a2_historical_artifact(archive):
             "frozen_observations": observations,
             "e1_watch_predictions": binding["e1_watch_predictions"],
             "source_authenticated": False,
+            "legacy_incomplete_ticker_coverage": bool(history["snapshots"][0].get("legacy_incomplete_ticker_coverage")),
+            "legacy_watch_authorized": False,
             "historical_outcomes_available": False,
             "status": "NO_QUALIFIED_RULE",
             "promotion_authorized": False, "production_applied": False}
