@@ -2,19 +2,19 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 7602,
+      "matured_snapshots": 7614,
       "evaluated": 7038,
-      "coverage_pct": 92.6,
-      "unresolved": 564,
-      "no_observation_in_window": 564
+      "coverage_pct": 92.4,
+      "unresolved": 576,
+      "no_observation_in_window": 576
     },
     {
       "hours": 3,
-      "matured_snapshots": 7602,
+      "matured_snapshots": 7614,
       "evaluated": 6673,
-      "coverage_pct": 87.8,
-      "unresolved": 929,
-      "no_observation_in_window": 929
+      "coverage_pct": 87.6,
+      "unresolved": 941,
+      "no_observation_in_window": 941
     },
     {
       "hours": 6,
@@ -26,11 +26,11 @@
     },
     {
       "hours": 24,
-      "matured_snapshots": 7566,
+      "matured_snapshots": 7578,
       "evaluated": 6518,
-      "coverage_pct": 86.1,
-      "unresolved": 1048,
-      "no_observation_in_window": 1048
+      "coverage_pct": 86.0,
+      "unresolved": 1060,
+      "no_observation_in_window": 1060
     }
   ],
   "outcome_lag_hours_by_horizon": [
@@ -55,12 +55,12 @@
       "average_delay_hours": 0.356
     }
   ],
-  "unresolved_1h_snapshots": 564,
+  "unresolved_1h_snapshots": 576,
   "rank_comparison": {
-    "historical_ranked_samples": 7326,
+    "historical_ranked_samples": 7338,
     "mean_base_minus_early_rank": 1.77
   },
-  "newly_discovered_outside_base_top12": 2,
+  "newly_discovered_outside_base_top12": 3,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
@@ -97,11 +97,6 @@
     "average_return_pct": -0.433
   },
   "missed_breakout_examples": [
-    {
-      "pair": "SOFIDUSD",
-      "observed_at": "2026-10-28T23:08:31.219010+00:00",
-      "next_scan_gain_pct": 48.08
-    },
     {
       "pair": "MFUSD",
       "observed_at": "2026-10-29T22:35:14.131699+00:00",
@@ -146,13 +141,18 @@
       "pair": "MEZOUSD",
       "observed_at": "2026-10-30T18:09:33.822159+00:00",
       "next_scan_gain_pct": 28.13
+    },
+    {
+      "pair": "ROLLUSD",
+      "observed_at": "2026-11-01T01:56:41.136628+00:00",
+      "next_scan_gain_pct": 26.91
     }
   ],
-  "unselected_gainers_5pct_observations": 468,
-  "market_observations": 403270,
-  "market_price_coverage": 611,
-  "feature_rows": 7494,
-  "snapshots": 7614,
+  "unselected_gainers_5pct_observations": 445,
+  "market_observations": 403882,
+  "market_price_coverage": 612,
+  "feature_rows": 7506,
+  "snapshots": 7626,
   "outcomes": 26878,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
