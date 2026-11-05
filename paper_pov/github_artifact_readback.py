@@ -237,10 +237,22 @@ def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, ru
         runner(["gh", "run", "download", str(run_id), "--repo", repo,
                 "--name", artifact_name, "--dir", directory], timeout=120)
         root = Path(directory)
+        # Bound downloaded artifacts before reading bytes into memory.
         paths = list(root.rglob("*"))
-        if any(p.is_symlink() for p in paths):
-            raise IntegrityError("Unexpected nested or symlinked artifact entries")
-        files = {p.relative_to(root).as_posix(): p.read_bytes() for p in paths if p.is_file()}
+        if len(paths) > 64:
+            raise IntegrityError("Remote artifact contains too many entries")
+        if any(p.is_symlink() or not (p.is_file() or p.is_dir()) for p in paths):
+            raise IntegrityError("Unexpected symlink or special artifact entry")
+        files = {}
+        total_size = 0
+        for p in paths:
+            if not p.is_file():
+                continue
+            size = p.stat().st_size
+            total_size += size
+            if size > 32 * 1024 * 1024 or total_size > 64 * 1024 * 1024:
+                raise IntegrityError("Remote artifact exceeds recovery size limit")
+            files[p.relative_to(root).as_posix()] = p.read_bytes()
         if artifact_name == f"public-paper-ledger-{run_id}":
             index = [name for name in files if name == "SHA256SUMS" or name.endswith("/SHA256SUMS")]
             if len(index) != 1:
