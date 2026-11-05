@@ -183,6 +183,29 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
             self.assertEqual(coverage["YUSD"]["horizons"]["48"], "NO_PINNED_PARTITION")
             self.assertEqual(coverage["XUSD"]["horizons"]["48"], "COMPLETE_BAR_PATH_UNQUALIFIED")
             self.assertEqual(coverage["XUSD"]["entry_status"], "ENTRY_BAR_PRESENT_UNQUALIFIED")
+            self.assertFalse(overlap["partition_provenance"]["XUSD"]["publisher_authenticated"])
+            self.assertFalse(overlap["partition_provenance"]["XUSD"]["entry_liquidity_qualified"])
+            # A sparse source can be checksum-valid yet miss a bucket. The
+            # first missing UTC bucket is actionable reacquisition evidence,
+            # not permission to treat an absent trade as a zero-volume bar.
+            sparse = b"".join(
+                f"{int((start + dt.timedelta(minutes=5*i)).timestamp())},100,1\n".encode()
+                for i in range(578) if i != 3)
+            (root / "XUSD-sparse.csv").write_bytes(sparse)
+            sparse_manifest = {"schema": "kraken_archive_manifest_v1", "source": "Kraken",
+                               "partitions": [{"file": "XUSD-sparse.csv",
+                                               "size_bytes": len(sparse),
+                                               "sha256": hashlib.sha256(sparse).hexdigest()}]}
+            sparse_overlap = audit_a2_trade_partition_overlap(
+                complete_projection, sparse_manifest, root, schema,
+                {"XUSD": "XUSD-sparse.csv"},
+                observed_until=(start + dt.timedelta(hours=49)).isoformat())
+            sparse_row = next(x for x in sparse_overlap["cohort_coverage"] if x["pair"] == "XUSD")
+            self.assertEqual(sparse_row["horizons"]["1"], "INCOMPLETE_5M_PATH")
+            self.assertEqual(sparse_row["horizons"]["1_missing_bar_count"], 1)
+            self.assertEqual(sparse_row["horizons"]["1_first_missing_utc"],
+                             (start + dt.timedelta(minutes=15)).isoformat())
+            self.assertEqual(sparse_row["horizons"]["48"], "INCOMPLETE_5M_PATH")
             # The 48h target opens at 48:05 but is only observable at
             # 48:10. E's all-market audit must agree with E1's closed bars.
             cutoff_projection = dict(projection, frozen_observations=[
