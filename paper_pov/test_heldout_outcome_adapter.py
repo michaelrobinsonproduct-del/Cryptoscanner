@@ -87,6 +87,17 @@ class OutcomeAdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Invalid cross-horizon"):
             self.evaluate([row("p", 48), bad])
 
+    def test_all_abstaining_prediction_still_requires_immutable_identity(self):
+        # No eligible horizon exists, but a future evidence join must not
+        # silently accept missing or corrupt source/timestamp identity.
+        for mutation in ({"source_sha256": "bad"},
+                         {"entry_utc": "not-a-time"},
+                         {"feature_asof_utc": None}):
+            with self.subTest(mutation=mutation):
+                with self.assertRaisesRegex(ValueError, "Invalid cross-horizon"):
+                    self.evaluate([row("abstain", 6, coverage_complete=False,
+                                       **mutation)], base={}, challenger={})
+
     def test_read_only_b_handoff(self):
         payload = dict(outcomes=[row("p", h) for h in (1, 6, 24, 48)], baseline_decisions={"p": True},
                        challenger_decisions={"p": False},
