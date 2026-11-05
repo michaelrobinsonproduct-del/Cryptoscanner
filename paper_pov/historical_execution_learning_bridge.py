@@ -48,8 +48,10 @@ def project_historical_execution(execution, *, frozen_predictions, frozen_select
     records = batch.get("records")
     if not isinstance(records, list) or len(records) != batch.get("prediction_count"):
         raise ValueError("Invalid reconstructed record count")
-    if not isinstance(execution.get("outcome_input_sha256"), str) or len(execution["outcome_input_sha256"]) != 64:
-        raise ValueError("Missing input digest")
+    digest = execution.get("outcome_input_sha256")
+    if (not isinstance(digest, str) or len(digest) != 64
+            or any(ch not in "0123456789abcdef" for ch in digest)):
+        raise ValueError("Missing or invalid input digest")
     if batch.get("source_sha256") != execution["outcome_input_sha256"]:
         raise ValueError("Inconsistent reconstruction digest")
     counts = {str(h): {status: 0 for status in STATUSES} for h in HORIZONS}
@@ -62,6 +64,12 @@ def project_historical_execution(execution, *, frozen_predictions, frozen_select
         if pid in seen or pid not in universe or record.get("pair") != universe[pid]:
             raise ValueError("Reconstruction does not match frozen prediction universe")
         seen.add(pid)
+        # E1 may carry the original prediction timestamp. If present it must
+        # match the frozen A2 receipt, not a later reconstructed observation.
+        if frozen_observation_times is not None and "as_of" in record:
+            from .shadow_learning_evidence import utc_time
+            if utc_time(record["as_of"]) != utc_time(frozen_observation_times[pid]):
+                raise ValueError("Reconstructed prediction time differs from frozen A2 observation")
         if record.get("source_authenticated") is not False or record.get("entry_method") != "next_5m_bar_open_proxy":
             raise ValueError("Unexpected entry qualification or authentication")
         if record.get("source_sha256") != batch["source_sha256"]:
