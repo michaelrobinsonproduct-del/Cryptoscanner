@@ -96,6 +96,14 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         if not isinstance(name, str) or not name.endswith("/USD"):
             continue
         online_usd_pairs += 1
+        # Validate the public display identity before accepting its ticker.
+        # Otherwise malformed online /USD metadata (extra slash, whitespace,
+        # empty base) can produce a WATCH that A2 cannot read back, or hide
+        # a stablecoin behind a noncanonical display name.
+        if (name.count("/") != 1 or not name.split("/")[0]
+                or len(name) > 64 or any(ch.isspace() or ord(ch) < 33 for ch in name)):
+            excluded_other_pairs += 1
+            continue
         base = name.split("/")[0].upper()
         if base in STABLE:
             excluded_stablecoin_pairs += 1
