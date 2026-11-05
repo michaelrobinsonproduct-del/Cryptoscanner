@@ -304,7 +304,7 @@ class PaperScanTests(unittest.TestCase):
             "EXTRA_SLASH": "C0/ALT/USD",
             "SPACE_STABLE": "USDT /USD",
             "EMPTY_BASE": "/USD",
-            "TAB_BASE": "C0\\t/USD",
+            "TAB_BASE": "C0\t/USD",
             "LONG_BASE": ("X" * 64) + "/USD",
         }
         base = fixture()
