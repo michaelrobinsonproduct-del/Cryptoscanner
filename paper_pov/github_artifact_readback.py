@@ -395,6 +395,13 @@ def main(argv=None):
     temp.write_bytes(canonical_bytes(report) + b"\n")
     os.replace(temp, output)
     print(json.dumps(report, sort_keys=True))
+    # A checksummed historical download is not a successful remote reconciliation.
+    # Preserve historical recovery when the checkpoint is unavailable, but
+    # never return success when an independently checked remote generation
+    # explicitly contradicts the restored writer ledger.
+    reconciliation = report.get("remote_ledger_reconciliation")
+    if isinstance(reconciliation, dict) and reconciliation.get("status") == "DIVERGED":
+        return 2
     return 0 if report["status"] in ("VERIFIED_REMOTE_READBACK", "WRITER_CHECKSUM_ONLY") else 2
 
 
