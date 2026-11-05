@@ -69,6 +69,27 @@ class HistoricalBridgeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate"):
             project_historical_execution(execution, frozen_predictions=frozen)
 
+    def test_reconstructed_asof_cannot_drift_from_frozen_a2(self):
+        execution, frozen = fixture()
+        execution["outcomes"]["records"][0]["as_of"] = "2026-01-02T00:00:00Z"
+        times = {"p": "2026-01-01T00:00:00Z",
+                 "unlabeled": "2026-01-01T00:00:00Z"}
+        with self.assertRaisesRegex(ValueError, "differs from frozen"):
+            project_historical_execution(
+                execution, frozen_predictions=frozen, frozen_observation_times=times)
+        execution["outcomes"]["records"][0]["as_of"] = "2025-12-31T19:00:00-05:00"
+        result = project_historical_execution(
+            execution, frozen_predictions=frozen, frozen_observation_times=times)
+        self.assertEqual(result["status"], "NO_QUALIFIED_RULE")
+
+    def test_nonhex_source_digest_rejected(self):
+        execution, frozen = fixture()
+        execution["outcome_input_sha256"] = "z" * 64
+        execution["outcomes"]["source_sha256"] = "z" * 64
+        execution["outcomes"]["records"][0]["source_sha256"] = "z" * 64
+        with self.assertRaisesRegex(ValueError, "invalid input digest"):
+            project_historical_execution(execution, frozen_predictions=frozen)
+
     def test_source_digest_disagreement_rejected(self):
         execution, frozen = fixture()
         execution["outcomes"]["source_sha256"] = "b" * 64
