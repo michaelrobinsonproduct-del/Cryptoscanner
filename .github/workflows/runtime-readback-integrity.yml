@@ -396,6 +396,28 @@ jobs:
           path: /tmp/d2-b-delivery.json
           if-no-files-found: warn
           retention-days: 7
+      - name: Preserve explicit recovery failure when source discovery or download aborted
+        if: ${{ always() }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          path = Path("/tmp/real-writer-recovery.json")
+          if not path.exists():
+              report = {
+                  "status": "REMOTE_READBACK_FAILED",
+                  "reason": "SOURCE_DISCOVERY_OR_DOWNLOAD_INCOMPLETE",
+                  "source_run_id": os.environ.get("WRITER_RUN_ID") or None,
+                  "source_sha": os.environ.get("WRITER_SOURCE_SHA") or None,
+                  "remote_downloaded": False,
+                  "ledger_writer_invoked": False,
+                  "independently_authenticated": False,
+                  "live_watch_authorized": False,
+                  "production_applied": False,
+              }
+              path.write_text(json.dumps(report, sort_keys=True) + "\\n")
+              print("D_RECOVERY_FAILURE_RETAINED", report["reason"])
+          PY
       - name: Retain read-only recovery result
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
