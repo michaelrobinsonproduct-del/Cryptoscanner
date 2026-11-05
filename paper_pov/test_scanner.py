@@ -444,8 +444,11 @@ class PaperScanTests(unittest.TestCase):
         calls = []
         def api(path):
             calls.append(path)
+            if path == "Ticker?pair=C0USD":
+                return {"C0USD": base("Ticker")["C0USD"]}
             result = base(path)
             if path == "Ticker":
+                result = dict(result)
                 result["C0USD"] = dict(result["C0USD"], c=["nan"])
             return result
         report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
