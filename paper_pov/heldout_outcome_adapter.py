@@ -196,6 +196,34 @@ def build_shadow_learning_state(predictions, candles, baseline_decisions, *,
     return result
 
 
+def save_shadow_learning_state(path, state):
+    """Persist non-promotable learning evidence for a later paper-only reader."""
+    if state.get("schema") != "paper_learning_state_v1" or state.get("promotion_authorized") is not False:
+        raise ValueError("Unsafe learning state")
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    data = json.dumps(state, sort_keys=True, indent=2, allow_nan=False) + "\n"
+    if target.exists():
+        previous = json.loads(target.read_text(encoding="utf-8"))
+        if utc_time(previous["evaluation_asof_utc"]) > utc_time(state["evaluation_asof_utc"]):
+            raise ValueError("Refusing to roll back learning generation")
+    temporary = target.with_name(target.name + ".tmp")
+    temporary.write_text(data, encoding="utf-8")
+    temporary.replace(target)
+    return state["state_digest"]
+
+
+def read_shadow_learning_state(path):
+    state = json.loads(Path(path).read_text(encoding="utf-8"))
+    digest = state.pop("state_digest")
+    if digest != canonical_digest(state):
+        raise ValueError("Learning state checksum mismatch")
+    state["state_digest"] = digest
+    if state.get("promotion_authorized") is not False or state.get("production_applied") is not False:
+        raise ValueError("Learning state cannot change active scoring")
+    return state
+
+
 def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *,
                            training_end_utc, holdout_start_utc, evaluation_asof_utc,
                            baseline_version, challenger_version, source_receipt=None,
