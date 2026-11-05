@@ -171,7 +171,12 @@ def project_learning_handoff(result):
             or result.get("promotion_authorized") is not False
             or result.get("production_applied") is not False
             or result.get("status") != "NO_QUALIFIED_RULE"
-            or result.get("source_authentication_verified_by_adapter") is not False):
+            or result.get("source_authentication_verified_by_adapter") is not False
+            or result.get("source_receipt_qualified") is not False
+            or result.get("counts_independently_authenticated") is not False
+            or result.get("measured_lift_verified") is True
+            or result.get("live_watch_authorized") is True
+            or result.get("source_authenticated") is True):
         raise ValueError("Unsafe or unverified learning handoff")
     return {"schema": "paper_learning_handoff_v1", "status": "NO_QUALIFIED_RULE",
             "baseline_version": result["baseline_version"],
