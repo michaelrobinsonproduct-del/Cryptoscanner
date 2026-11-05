@@ -104,6 +104,11 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         ohlc_aliases[key] = altname if isinstance(altname, str) and altname else key
     if len(eligible) < 20:
         raise RuntimeError("Insufficient eligible Kraken USD universe")
+    # An altname shared by two distinct eligible pairs is ambiguous even if
+    # Kraken returns one of those names. Never associate its candles by guess.
+    alias_owners = {}
+    for pair, alias in ohlc_aliases.items():
+        alias_owners.setdefault(alias, set()).add(pair)
     ticker = api("Ticker")
     quote_at = clock().astimezone(UTC)
     if not isinstance(ticker, dict) or not 0 <= (quote_at - started).total_seconds() <= 120:
@@ -212,7 +217,10 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             bars = api("OHLC?pair=" + urllib.parse.quote(item["pair"], safe="") + "&interval=5")
             # Kraken's response must identify exactly the requested market.
             # Never accept an unrelated result via first-dictionary-value order.
-            allowed = {item["pair"], ohlc_aliases[item["pair"]]}
+            alias = ohlc_aliases[item["pair"]]
+            allowed = {item["pair"]}
+            if alias_owners[alias] == {item["pair"]}:
+                allowed.add(alias)
             returned = set(bars) - {"last"} if isinstance(bars, dict) else set()
             if not isinstance(bars, dict) or "last" not in bars or len(returned) != 1 or not returned <= allowed:
                 raise ValueError("OHLC response pair mismatch")
