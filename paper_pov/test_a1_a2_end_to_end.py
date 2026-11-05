@@ -59,6 +59,7 @@ class EndToEndCandidateTests(unittest.TestCase):
             self.assertEqual(universe["selection_decisions"]["OHLC_ABSTAINED"], len(report["abstentions"]))
             self.assertEqual(universe["selection_decisions"]["SCREEN_REJECTED"], report["preselection_coverage"]["screen_rejected"])
             self.assertEqual(universe["selection_decisions"]["NOT_OHLC_SELECTED"] +
+                             universe["selection_decisions"].get("SOURCE_COVERAGE_ABSTAINED", 0) +
                              universe["selection_decisions"].get("NOT_RANKED_WATCH", 0) +
                              universe["selection_decisions"]["WATCH"] +
                              universe["selection_decisions"]["OHLC_ABSTAINED"],
@@ -66,6 +67,19 @@ class EndToEndCandidateTests(unittest.TestCase):
             self.assertTrue(all((x["baseline_score"] is not None) == x["screen_passed"] for x in universe["markets"]))
             self.assertEqual(persist_report(latest, report), receipt)
             return result
+
+    def test_sparse_ticker_universe_preserves_source_abstention_through_receipt(self):
+        # A quote-complete candidate selection is impossible with a partial
+        # Kraken Ticker response, even if the surviving markets look liquid.
+        self.ticker = {key: value for key, value in self.ticker.items()
+                       if key in {f"X{i:02d}USD" for i in range(12)}}
+        report = scan(api=self.api, clock=lambda: self.now, sleep=lambda _: None)
+        self.assertEqual(report["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["preselection_decisions"]["SOURCE_COVERAGE_ABSTAINED"], 12)
+        self.assertEqual(report["preselection_decisions"]["NOT_OHLC_SELECTED"], 0)
+        result = self.round_trip(report)
+        self.assertEqual(result["observed_markets"], 12)
 
     def test_live_shape_watch_stablecoin_timeout_and_durable_readback(self):
         report = scan(api=self.api, clock=lambda: self.now, sleep=lambda _: None, max_ohlc=4)
