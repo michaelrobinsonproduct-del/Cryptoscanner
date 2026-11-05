@@ -84,6 +84,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # A historical immutable run may be behind the advancing single-writer
+          # branch. Preserve its verified receipt and project an explicit B
+          # abstention; the CLI correctly exits 2 when requested MATCH fails.
+          recovery_rc=0
           python -m paper_pov.github_artifact_readback \
             --repo "${{ github.repository }}" \
             --run-id "$WRITER_RUN_ID" \
@@ -92,7 +96,21 @@ jobs:
             --output /tmp/real-writer-recovery.json \
             --restore-dir /tmp/real-writer-recovered \
             --ledger-ref paper-proof-ledger \
-            --ledger-path paper_pov/output/ledger.json
+            --ledger-path paper_pov/output/ledger.json || recovery_rc=$?
+          RECOVERY_EXIT_CODE="$recovery_rc" python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report=json.loads(Path("/tmp/real-writer-recovery.json").read_text())
+          status=report.get("remote_ledger_reconciliation",{}).get("status")
+          valid=(report.get("status")=="WRITER_CHECKSUM_ONLY"
+                 and report.get("remote_downloaded") is True
+                 and report.get("source_bound_receipt",{}).get("run_id")==os.environ["WRITER_RUN_ID"]
+                 and status in ("MATCH","DIVERGED","UNAVAILABLE"))
+          expected=0 if status=="MATCH" else 2
+          if not valid or int(os.environ["RECOVERY_EXIT_CODE"])!=expected:
+              raise SystemExit("D_RECOVERY_INVALID_OR_UNEXPECTED_EXIT")
+          print("D_RECOVERY_SOURCE_BOUND",status,"historical_only" if status!="MATCH" else "checkpoint_match")
+          PY
           python - <<'PY'
           import json
           from pathlib import Path
@@ -329,7 +347,9 @@ jobs:
           assert result["single_writer_read_only"] is True
           assert result["live_watch_authorized"] is False
           assert result["production_applied"] is False
-          assert result["writer_reconciliation_status"] == "MATCH"
+          assert result["writer_reconciliation_status"] in ("MATCH", "DIVERGED", "UNAVAILABLE")
+          if result["writer_reconciliation_status"] != "MATCH":
+              assert result["live_watch_authorized"] is False
           print("D2_B_VERIFIED_PUBLISHED_DELIVERY",json.dumps(result,sort_keys=True))
           PY
       - name: Project D historical published abstention through unified B consumer
