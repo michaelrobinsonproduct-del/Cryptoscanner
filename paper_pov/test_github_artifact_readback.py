@@ -99,10 +99,11 @@ def test_source_bound_receipt_never_upgrades_remote_match_to_same_run(tmp_path):
 def test_real_writer_artifact_name_and_nested_paths(tmp_path):
     """Use actual paper-pipeline artifact name and nested receipt layout."""
     from pathlib import Path
+    from paper_pov import ledger as ledger_module
     receipts = {
         "paper_pov/output/latest.json": b'{"status":"ABSTAIN_LEGACY_QUOTE_EVIDENCE"}',
-        "paper_pov/output/ledger.json": b'{"generation":3}',
-        "paper_pov/output/scoreboard.json": b'{"actual_scans":3,"generation":3}',
+        "paper_pov/output/ledger.json": ledger_module.canonical(ledger_module.empty()),
+        "paper_pov/output/scoreboard.json": b'{"actual_scans":0,"generation":0}',
     }
     import hashlib
     sums = "".join(hashlib.sha256(receipts[name]).hexdigest() + "  " + name.split("/")[-1] + "\n"
@@ -134,9 +135,10 @@ def test_real_writer_checksum_only_restores_without_independent_manifest(tmp_pat
     """Recover real-layout single-writer bytes while explicitly refusing independent-auth claim."""
     from pathlib import Path
     import hashlib
+    from paper_pov import ledger as ledger_module
     receipts = {"paper_pov/output/latest.json": b'{"status":"ABSTAIN_LEGACY_QUOTE_EVIDENCE"}',
-                "paper_pov/output/ledger.json": b'{"generation":3}',
-                "paper_pov/output/scoreboard.json": b'{"actual_scans":3,"generation":3}'}
+                "paper_pov/output/ledger.json": ledger_module.canonical(ledger_module.empty()),
+                "paper_pov/output/scoreboard.json": b'{"actual_scans":0,"generation":0}'}
     sums = "".join(hashlib.sha256(value).hexdigest() + "  " + name.rsplit("/", 1)[-1] + "\n"
                    for name, value in receipts.items())
     receipts["paper_pov/output/SHA256SUMS"] = sums.encode()
@@ -159,7 +161,7 @@ def test_real_writer_checksum_only_restores_without_independent_manifest(tmp_pat
     assert report["status"] == "WRITER_CHECKSUM_ONLY"
     assert report["independently_authenticated"] is False
     assert report["remote_downloaded"] is True
-    assert report["persisted_paper"]["ledger_generation"] == 3
+    assert report["persisted_paper"]["ledger_generation"] == 0
     assert report["persisted_paper"]["outcome"] == "ABSTAIN"
     assert report["persisted_paper"]["quote_evidence_certified"] is False
     assert (restored / "paper_pov/output/ledger.json").read_bytes() == receipts["paper_pov/output/ledger.json"]
