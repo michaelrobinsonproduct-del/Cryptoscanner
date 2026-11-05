@@ -415,8 +415,21 @@ jobs:
           assert str(result["source_run_id"])==str(json.loads(Path("/tmp/c-real-receipts/b-selected.json").read_text())["run_id"])
           assert result["writer_recovery"] is not None
           assert result["single_writer_read_only"] and not result["production_applied"]
-          assert not result["live_watch_authorized"]
-          print("B_C_D_READ_ONLY_DELIVERY_CONSUMED",result["status"],result["writer_reconciliation_status"])
+          # Fresh same-run authenticated D MATCH may authorize paper WATCH.
+          # Historical or stale observations must still abstain.
+          assert result["live_watch_authorized"] is result["fresh_watch_delivery_verified"]
+          assert result["live_watch_authorized"] is bool(result["live_watch"])
+          assert result["published_quote_complete"] is True
+          assert result["published_quote_evidence_count"] == result["published_observed_markets"]
+          if result["live_watch_authorized"]:
+              assert result["client_quote_freshness_verified"] is True
+              assert result["writer_reconciliation_status"] == "MATCH"
+              assert result["writer_source_identity_matches_delivery"] is True
+              assert result["status"] == "SUCCESS_PAPER_ONLY"
+          else:
+              assert result["live_watch"] == []
+          assert result["exchange_event_freshness_verified"] is False
+          print("B_C_D_READ_ONLY_DELIVERY_CONSUMED",result["status"],result["writer_reconciliation_status"],"paper_watch",result["live_watch_authorized"])
           PY
           else
             # Emit a truthful, machine-readable integration abstention. D's
