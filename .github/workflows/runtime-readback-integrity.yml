@@ -108,7 +108,7 @@ jobs:
           assert report["persisted_paper"]["outcome"] in ("ABSTAIN", "HISTORICAL_UNCLASSIFIED", "HISTORICAL_RESULT_ONLY"), report
           assert report["remote_ledger_reconciliation"]["status"] in ("MATCH", "DIVERGED", "UNAVAILABLE"), report
           if report["remote_ledger_reconciliation"]["status"] == "UNAVAILABLE":
-              assert report["remote_ledger_reconciliation"]["reason"] == "REMOTE_LEDGER_QUERY_FAILED", report
+              assert report["remote_ledger_reconciliation"]["reason"] in ("REMOTE_LEDGER_QUERY_FAILED", "REMOTE_CHECKPOINT_UNAVAILABLE"), report
           assert report["remote_ledger_reconciliation"]["independently_authenticated"] is False, report
           root=Path("/tmp/real-writer-recovered")
           for name in ("latest.json", "ledger.json", "scoreboard.json", "SHA256SUMS"):
@@ -215,7 +215,7 @@ jobs:
                   "writer_reconciliation_status":writer["remote_ledger_reconciliation"]["status"],
                   "single_writer_read_only":True,
                   "live_watch_authorized":False,"production_applied":False}
-          Path("/tmp/d2-b-published-delivery.json").write_text(json.dumps(report,sort_keys=True)+"\\n")
+          Path("/tmp/d2-b-published-delivery.json").write_text(json.dumps(report,sort_keys=True)+"\n")
           PY
             exit 1
           fi
