@@ -584,7 +584,7 @@ def test_pinned_remote_match_exposes_source_bound_receipt_without_watch_authoriz
         "scoreboard.json": b'{"generation":0}',
     }
     files["SHA256SUMS"] = "".join(
-        hashlib.sha256(data).hexdigest() + "  " + name + "\\n"
+        hashlib.sha256(data).hexdigest() + "  " + name + "\n"
         for name, data in files.items()
     ).encode()
     def runner(args, timeout):
