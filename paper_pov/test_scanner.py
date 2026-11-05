@@ -93,6 +93,27 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["preselection_decisions"]["NOT_OHLC_SELECTED"],
                          report["screened_markets"])
 
+    def test_severely_sparse_ticker_persists_truthful_abstention(self):
+        report = run(coverage=True)
+        self.assertEqual(report["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+        self.assertEqual(report["eligible_pairs"], 25)
+        self.assertEqual(report["matched_tickers"], 12)
+        self.assertEqual(report["observed_markets"], 12)
+        self.assertEqual(report["ticker_rejections"]["missing_or_invalid_payload"], 13)
+        self.assertFalse(report["ticker_coverage_complete"])
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["ohlc_screened"], 0)
+
+    def test_empty_ticker_persists_explicit_abstention(self):
+        base = fixture()
+        def api(path):
+            return {} if path == "Ticker" else base(path)
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+        self.assertEqual(report["observed_markets"], 0)
+        self.assertEqual(report["ticker_rejections"]["missing_or_invalid_payload"], 25)
+        self.assertEqual(report["watch"], [])
+
     def test_invalid_ticker_price_fails_closed_without_losing_valid_inventory(self):
         base = fixture()
         def api(path):
