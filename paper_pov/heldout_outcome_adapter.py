@@ -173,6 +173,29 @@ def evaluate_shadow_scores(challenger, outcomes, baseline_decisions, *, threshol
             "production_applied": False}
 
 
+def build_shadow_learning_state(predictions, candles, baseline_decisions, *,
+                                training_end_utc, holdout_start_utc,
+                                evaluation_asof_utc, feature_names):
+    """Compose the outcome, learning, and evaluation stages into one paper-only state."""
+    outcomes = reconstruct_forward_outcomes(
+        predictions, candles, evaluation_asof_utc=evaluation_asof_utc)
+    challenger = train_shadow_challenger(
+        predictions, outcomes, training_end_utc=training_end_utc,
+        holdout_start_utc=holdout_start_utc, feature_names=feature_names)
+    comparison = evaluate_shadow_scores(challenger, outcomes, baseline_decisions)
+    result = {"schema": "paper_learning_state_v1",
+              "evaluation_asof_utc": evaluation_asof_utc,
+              "outcome_count": len(outcomes),
+              "matured_count": sum(o["outcome_status"] == "MATURE" for o in outcomes),
+              "hit_counts": {str(h): sum(o["horizon_hours"] == h and o["hit"] is True
+                                         for o in outcomes) for h in HORIZONS},
+              "challenger": challenger, "comparison": comparison,
+              "source_authenticated": False, "promotion_authorized": False,
+              "production_applied": False}
+    result["state_digest"] = canonical_digest(result)
+    return result
+
+
 def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *,
                            training_end_utc, holdout_start_utc, evaluation_asof_utc,
                            baseline_version, challenger_version, source_receipt=None,
