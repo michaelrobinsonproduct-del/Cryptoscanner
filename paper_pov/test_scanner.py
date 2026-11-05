@@ -93,6 +93,38 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["preselection_decisions"]["NOT_OHLC_SELECTED"],
                          report["screened_markets"])
 
+    def test_invalid_ticker_price_fails_closed_without_losing_valid_inventory(self):
+        base = fixture()
+        def api(path):
+            result = base(path)
+            if path == "Ticker":
+                result = {key: dict(value) for key, value in result.items()}
+                result["C0USD"]["c"] = ["0"]
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+        self.assertFalse(report["ticker_coverage_complete"])
+        self.assertEqual(report["ticker_rejections"]["invalid_price_or_volume"], 1)
+        self.assertEqual(report["observed_markets"], 24)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["ohlc_screened"], 0)
+
+    def test_nonfinite_derived_ticker_metric_fails_closed(self):
+        base = fixture()
+        def api(path):
+            result = base(path)
+            if path == "Ticker":
+                result = {key: dict(value) for key, value in result.items()}
+                result["C0USD"]["v"] = ["1", "1e308"]
+                result["C0USD"]["c"] = ["1e308"]
+                result["C0USD"]["a"] = ["1e308"]
+                result["C0USD"]["b"] = ["1e308"]
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+        self.assertEqual(report["ticker_rejections"]["nonfinite_derived_metric"], 1)
+        self.assertEqual(report["watch"], [])
+
     def test_insufficient_universe_coverage_fails_closed(self):
         with self.assertRaisesRegex(RuntimeError, "coverage"):
             run(coverage=True)
