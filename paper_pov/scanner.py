@@ -28,7 +28,17 @@ def utc(value):
     return result.astimezone(UTC)
 
 def finite(value):
-    v = float(value)
+    """Reject malformed and unrepresentable public market numbers uniformly.
+
+    Python treats bool as numeric and raises OverflowError for extremely large
+    JSON integers; neither may escape the scanner's per-market abstention path.
+    """
+    if isinstance(value, bool):
+        raise ValueError("boolean market value")
+    try:
+        v = float(value)
+    except (OverflowError, TypeError) as exc:
+        raise ValueError("unrepresentable market value") from exc
     if not math.isfinite(v):
         raise ValueError("nonfinite market value")
     return v
