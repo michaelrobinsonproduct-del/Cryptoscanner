@@ -151,12 +151,19 @@ jobs:
                       report.get("production_applied") is not False or
                       report.get("ledger_writer_invoked") is not False):
                   continue
+              persisted=report.get("persisted_paper")
+              reconciliation=report.get("remote_ledger_reconciliation")
               if (str(report.get("run_id"))==identity["run_id"] and
                       report.get("source_sha")==identity["source_sha"] and
                       report.get("independently_authenticated") is True and
                       report.get("status")=="VERIFIED_REMOTE_READBACK" and
-                      isinstance(report.get("remote_ledger_reconciliation"),dict) and
-                      report["remote_ledger_reconciliation"].get("status")=="MATCH"):
+                      isinstance(persisted,dict) and
+                      isinstance(reconciliation,dict) and
+                      reconciliation.get("status")=="MATCH" and
+                      isinstance(reconciliation.get("recovered_ledger_sha256"),str) and
+                      len(reconciliation["recovered_ledger_sha256"])==64 and
+                      isinstance(persisted.get("ledger_commit"),str) and
+                      len(persisted["ledger_commit"])==40):
                   selected=(run,artifact)
                   print("SELECTED_EXACT_SOURCE_D_RECOVERY",run["id"],artifact["id"])
                   break
