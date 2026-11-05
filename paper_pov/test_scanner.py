@@ -109,6 +109,21 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["excluded_stablecoin_pairs"], 0)
         self.assertEqual(report["excluded_other_pairs"], 2)
 
+    def test_duplicate_kraken_display_market_is_not_sealed_twice(self):
+        def api(path):
+            result = fixture()(path)
+            if path == "AssetPairs":
+                result["ZZ_DUPLICATE"] = {"status": "online", "wsname": "C0/USD"}
+            if path == "Ticker":
+                result["ZZ_DUPLICATE"] = result["C0USD"]
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["online_usd_pairs"], 26)
+        self.assertEqual(report["excluded_other_pairs"], 1)
+        self.assertEqual(report["eligible_pairs"], 25)
+        self.assertEqual(len({c["symbol"] for c in report["watch"]}), len(report["watch"]))
+        self.assertNotIn("ZZ_DUPLICATE", {c["pair"] for c in report["watch"]})
+
     def test_documented_fiat_pegs_are_explicitly_excluded(self):
         # The source-backed fixture catches omissions even if ranking changes.
         official = {"BRL1", "QCAD", "USDG", "USDQ", "USDS", "USDR",
