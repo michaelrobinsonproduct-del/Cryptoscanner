@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: '27 * * * *'
 permissions:
+  actions: read
   contents: write
   pull-requests: write
   issues: write
