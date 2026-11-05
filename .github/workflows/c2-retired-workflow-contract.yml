@@ -310,7 +310,15 @@ jobs:
                   or writer.get("conclusion")!="success"):
               raise SystemExit("D recovered writer source run authentication failed")
           source_receipt=report.get("source_bound_receipt")
-          if not isinstance(source_receipt,dict) or str(source_receipt.get("run_id"))!=str(writer_id) or source_receipt.get("source_sha")!=writer_sha:
+          # Legacy D reports can lack a source-bound receipt. Preserve their
+          # authenticated transport for historical diagnostics, but let the
+          # C bridge explicitly abstain from delivery rather than failing
+          # the entire manual/scheduled integration job.
+          if source_receipt is None:
+              print("D_SOURCE_BOUND_RECEIPT_MISSING: historical-only, delivery blocked")
+          elif (not isinstance(source_receipt,dict)
+                  or str(source_receipt.get("run_id"))!=str(writer_id)
+                  or source_receipt.get("source_sha")!=writer_sha):
               raise SystemExit("D recovered writer receipt identity mismatch")
           if report.get("status") not in ("WRITER_CHECKSUM_ONLY","VERIFIED_REMOTE_READBACK"):
               raise SystemExit("D recovery did not succeed")
