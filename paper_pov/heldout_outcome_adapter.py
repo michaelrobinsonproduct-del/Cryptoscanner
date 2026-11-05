@@ -8,6 +8,7 @@ import argparse
 import json
 from pathlib import Path
 from datetime import timedelta
+from math import isfinite
 from .shadow_learning_evidence import utc_time, evaluate_shadow_release, canonical_digest
 
 HORIZONS = (1, 6, 24, 48)
@@ -22,7 +23,6 @@ def reconstruct_forward_outcomes(predictions, candles, *, evaluation_asof_utc):
     evidence must independently verify the archive before qualifying a rule.
     """
     from datetime import timedelta
-    from math import isfinite
     asof = utc_time(evaluation_asof_utc)
     by_pair = {}
     for candle in candles:
@@ -79,6 +79,64 @@ def reconstruct_forward_outcomes(predictions, candles, *, evaluation_asof_utc):
                     ("IMMATURE" if not mature else "MISSING_CANDLES"),
             })
     return outcomes
+
+
+def train_shadow_challenger(predictions, outcomes, *, training_end_utc,
+                            holdout_start_utc, feature_names):
+    """Learn from mature historical +30% labels without changing live scoring."""
+    training_end = utc_time(training_end_utc)
+    holdout_start = utc_time(holdout_start_utc)
+    if holdout_start < training_end + timedelta(hours=48):
+        raise ValueError("48h chronological purge required")
+    labels = {}
+    for outcome in outcomes:
+        if outcome.get("horizon_hours") != 48 or outcome.get("coverage_complete") is not True:
+            continue
+        if type(outcome.get("hit")) is not bool:
+            continue
+        if utc_time(outcome["label_mature_utc"]) > training_end:
+            continue
+        key = outcome["prediction_id"]
+        if key in labels:
+            raise ValueError("Duplicate training label")
+        labels[key] = outcome["hit"]
+    training = []
+    heldout = []
+    for prediction in predictions:
+        entry = utc_time(prediction["entry_utc"])
+        if utc_time(prediction["feature_asof_utc"]) > entry:
+            raise ValueError("Feature lookahead")
+        values = prediction.get("features", {})
+        if not all(isinstance(values.get(k), (int, float)) and isfinite(values[k]) for k in feature_names):
+            continue
+        if entry < training_end and prediction["prediction_id"] in labels:
+            training.append((prediction, labels[prediction["prediction_id"]]))
+        elif entry >= holdout_start:
+            heldout.append(prediction)
+    positives = [p for p, hit in training if hit]
+    negatives = [p for p, hit in training if not hit]
+    state = {"schema": "shadow_challenger_v1", "training_count": len(training),
+             "positive_count": len(positives), "negative_count": len(negatives),
+             "holdout_count": len(heldout), "training_end_utc": training_end_utc,
+             "holdout_start_utc": holdout_start_utc, "feature_names": list(feature_names),
+             "promotion_authorized": False, "production_applied": False}
+    if not positives or not negatives or not feature_names:
+        state["status"] = "INSUFFICIENT_LABEL_VARIETY"
+        state["shadow_decisions"] = {}
+    else:
+        weights = {}
+        for key in feature_names:
+            positive_mean = sum(p["features"][key] for p in positives) / len(positives)
+            negative_mean = sum(p["features"][key] for p in negatives) / len(negatives)
+            weights[key] = positive_mean - negative_mean
+        state["feature_weights"] = weights
+        state["shadow_scores"] = {
+            p["prediction_id"]: sum(p["features"][key] * weights[key] for key in feature_names)
+            for p in heldout}
+        state["status"] = "SHADOW_ONLY"
+    state["version"] = canonical_digest(state)
+    return state
+
 
 def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *,
                            training_end_utc, holdout_start_utc, evaluation_asof_utc,
