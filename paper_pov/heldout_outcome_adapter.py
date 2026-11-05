@@ -153,7 +153,12 @@ def evaluate_shadow_scores(challenger, outcomes, baseline_decisions, *, threshol
               if row.get("horizon_hours") == 48 and row.get("coverage_complete") is True
               and type(row.get("hit")) is bool}
     scores = challenger["shadow_scores"]
-    ids = sorted(set(scores) & set(labels) & set(baseline_decisions))
+    ids = sorted(set(scores) & set(labels))
+    if set(ids) != set(scores) or set(ids) != set(baseline_decisions):
+        return {"schema": "shadow_score_comparison_v1", "status": "INCOMPLETE_HELDOUT_COHORT",
+                "missing_labels": len(set(scores) - set(labels)),
+                "missing_baseline": len(set(scores) - set(baseline_decisions)),
+                "promotion_authorized": False, "production_applied": False}
     def metrics(decisions):
         watched = [key for key in ids if decisions[key]]
         hits = sum(labels[key] for key in watched)
