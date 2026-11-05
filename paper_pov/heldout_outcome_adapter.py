@@ -79,16 +79,13 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
             entry_identity = utc_time(record["entry_utc"])
             feature_identity = utc_time(record["feature_asof_utc"])
         except (TypeError, ValueError):
-            # This record is already abstaining, but its identity must remain
-            # checkable if any horizon for this prediction is eligible.
-            if any(k == key for k, _ in eligible):
-                raise ValueError("Invalid cross-horizon prediction/source identity")
-            continue
+            # Even an all-abstaining prediction must preserve an auditable
+            # immutable event identity. Otherwise a later qualified horizon
+            # could silently attach to a different event.
+            raise ValueError("Invalid cross-horizon prediction/source identity")
         digest = record["source_sha256"]
         if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest.lower()):
-            if any(k == key for k, _ in eligible):
-                raise ValueError("Invalid cross-horizon prediction/source identity")
-            continue
+            raise ValueError("Invalid cross-horizon prediction/source identity")
         identity = (entry_identity, feature_identity, digest.lower())
         if key in by_prediction and by_prediction[key] != identity:
             raise ValueError("Cross-horizon prediction/source identity mismatch")
