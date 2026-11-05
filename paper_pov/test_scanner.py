@@ -169,8 +169,10 @@ class PaperScanTests(unittest.TestCase):
                 return {returned: result[key], "last": result["last"]}
             return result
         report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
-        self.assertNotIn("C0USD", {item["pair"] for item in report["watch"]})
-        self.assertEqual(report["abstention_counts"]["ohlc_gap_or_schema"], 1)
+        watched = {item["pair"] for item in report["watch"]}
+        self.assertNotIn("C0USD", watched)
+        self.assertNotIn("C1USD", watched)
+        self.assertEqual(report["abstention_counts"]["ohlc_gap_or_schema"], 2)
         self.assertEqual(report["ohlc_screened"], 24)
 
     def test_ohlc_unrelated_alias_abstains_without_wrong_market_data(self):
