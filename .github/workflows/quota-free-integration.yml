@@ -1,0 +1,71 @@
+name: Cryptoscanner quota-free source integration (12-minute)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '27 * * * *'
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+concurrency:
+  group: cryptoscanner-quota-free-integration
+  cancel-in-progress: false
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Integrate owner code without an AI API or production writes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          BRANCH=cryptoscanner-quota-free-integration
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$BRANCH" --silent >/dev/null 2>&1; then
+            git fetch origin "$BRANCH"
+            git checkout -B "$BRANCH" FETCH_HEAD
+          else
+            git checkout -B "$BRANCH"
+          fi
+          mkdir -p .integration
+          # Merge independently authored source branches into a review-only integration
+          # branch. Never silently choose ours/theirs when owners conflict.
+          for SOURCE in integration-a-b-c-d-20261103 runtime-readback-integrity-20261104 learning-e-cohort-accounting-20261104; do
+            if ! git ls-remote --exit-code --heads origin "$SOURCE" >/dev/null; then
+              echo "MISSING SOURCE: $SOURCE" | tee -a .integration/status.txt
+              continue
+            fi
+            git fetch origin "$SOURCE"
+            if git merge-base --is-ancestor FETCH_HEAD HEAD; then
+              echo "ALREADY INTEGRATED: $SOURCE" | tee -a .integration/status.txt
+              continue
+            fi
+            if git merge --no-ff --no-edit FETCH_HEAD; then
+              echo "MERGED: $SOURCE $(git rev-parse FETCH_HEAD)" | tee -a .integration/status.txt
+            else
+              git diff --name-only --diff-filter=U | tee .integration/conflicts.txt
+              git merge --abort
+              echo "CONFLICT BLOCKED: $SOURCE" | tee -a .integration/status.txt
+              break
+            fi
+          done
+          git add .integration/status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "integration: record source merge checkpoint"
+          fi
+          gh auth setup-git
+          git push origin HEAD:refs/heads/"$BRANCH"
+          if ! gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number' | grep -q '[0-9]'; then
+            gh pr create --base main --head "$BRANCH" --title "Quota-free Cryptoscanner A/B/D/E source integration" --body "Automated non-force source integration only. Review conflicts, source authenticity and focused CI. No merge to main or production deployment."
+          fi
+          cat .integration/status.txt >> "$GITHUB_STEP_SUMMARY"
+      - name: Execute focused integration tests only after source integration
+        run: |
+          set -euo pipefail
+          python -m unittest paper_pov.test_scanner paper_pov.test_candidate_snapshot paper_pov.test_github_delivery_projection -v
