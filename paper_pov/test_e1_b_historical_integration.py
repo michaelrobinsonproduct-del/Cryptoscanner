@@ -166,9 +166,9 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
             # A different frozen timestamp changes the cohort evidence identity,
             # even when the market list and source partition remain identical.
             shifted = dict(complete_projection, frozen_observations=[
-                dict(complete_projection["frozen_observations"][0],
-                     as_of=(start + dt.timedelta(minutes=1)).isoformat()),
-                complete_projection["frozen_observations"][1]])
+                complete_projection["frozen_observations"][0],
+                dict(complete_projection["frozen_observations"][1],
+                     as_of=(start + dt.timedelta(minutes=1)).isoformat())])
             shifted_overlap = audit_a2_trade_partition_overlap(
                 shifted, manifest, root, schema, {"XUSD": "XUSD.csv"},
                 observed_until=(start + dt.timedelta(hours=49)).isoformat())
