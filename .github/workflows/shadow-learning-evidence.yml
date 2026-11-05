@@ -27,6 +27,47 @@ jobs:
           python-version: '3.11'
       - run: python -m unittest paper_pov.test_shadow_learning_evidence paper_pov.test_heldout_outcome_adapter paper_pov.test_historical_execution_learning_bridge -v
 
+  historical-fixture-integration:
+    # Independent of the A2 archive ingestion gate: actual E1/B source+fixture
+    # integration must still run when an upstream historical receipt is rejected.
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: workspace
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: historical-outcome-execution-20261103
+          path: upstream-e1
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: integration-a-b-c-d-20261103
+          path: upstream-b
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exercise source-qualified E1 to B fixture integration independently
+        working-directory: workspace
+        run: |
+          set -euo pipefail
+          echo "E_HEAD=$(git rev-parse HEAD)"
+          echo "E1_SOURCE_SHA=$(git -C ../upstream-e1 rev-parse HEAD)"
+          echo "B_SOURCE_SHA=$(git -C ../upstream-b rev-parse HEAD)"
+          for name in historical_outcome_execution historical_outcome_bridge historical_learning_cohort_gate qualified_ohlc_outcomes kraken_trade_csv_adapter verified_trade_bars archive_partition_gate test_historical_outcome_execution; do
+            cp "../upstream-e1/paper_pov/$name.py" "paper_pov/$name.py"
+          done
+          for name in github_delivery_projection preselection_universe candidate_snapshot; do
+            cp "../upstream-b/paper_pov/$name.py" "paper_pov/$name.py"
+          done
+          python -m unittest paper_pov.test_historical_outcome_execution paper_pov.test_e1_b_historical_integration -v
+
   historical-e1-b-integration:
     needs: real-a2-historical-universe
     permissions:
