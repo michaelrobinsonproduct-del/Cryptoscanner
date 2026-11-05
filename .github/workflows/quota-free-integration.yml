@@ -110,10 +110,22 @@ jobs:
           PROMPT
           # An AI coding agent is necessary for open-ended code implementation;
           # do not pretend shell-only branch merging can write missing functionality.
+          git rev-parse HEAD > /tmp/cryptoscanner-agent-base.sha
           copilot -p "$(cat /tmp/cryptoscanner-build-prompt.txt)" --allow-all-tools
+          python - <<'PY'
+          import subprocess
+          base=open("/tmp/cryptoscanner-agent-base.sha").read().strip()
+          paths=set(subprocess.check_output(["git","diff","--name-only",base,"HEAD"],text=True).splitlines())
+          paths.update(subprocess.check_output(["git","diff","--name-only"],text=True).splitlines())
+          paths.update(subprocess.check_output(["git","ls-files","--others","--exclude-standard"],text=True).splitlines())
+          forbidden=[p for p in paths if not (p.startswith("paper_pov/") or p.startswith("docs/") or p.startswith(".integration/"))]
+          if forbidden:
+              raise SystemExit("Agent changed unauthorized paths: "+", ".join(sorted(forbidden)))
+          print("AGENT_CHANGED_PATHS",len(paths))
+          PY
           git diff --check
           git status --short
-          if ! git diff --quiet || ! git diff --cached --quiet; then
+          if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard -- paper_pov docs .integration)" ]; then
             git add -- paper_pov docs .integration
             git diff --cached --check
             git commit -m "integration: implement A-E completion batch"
