@@ -369,7 +369,7 @@ jobs:
                       checked.add(match[2])
                   # Do not accept an artifact with unmanifested payloads or
                   # a manifest that silently omits other published files.
-                  if not verified or checked != set(files) or "results.json" not in checked:
+                  if not verified or checked != (set(files) - {"SHA256SUMS"}) or "results.json" not in checked:
                       continue
                   result=json.loads(files["results.json"])
                   if str(result.get("run_id"))!=str(rid) or result.get("source_sha")!=run["head_sha"]:
