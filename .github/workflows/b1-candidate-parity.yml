@@ -122,7 +122,6 @@ jobs:
           runs=json.loads(Path("/tmp/b-delivery/d-runs.json").read_text()).get("workflow_runs",[])
           identity=json.loads(Path("/tmp/b-delivery/identity.json").read_text())
           selected=None
-          fallback=None
           import hashlib,io,zipfile
           for run in runs:
               if run.get("conclusion")!="success" or run.get("head_branch")!="runtime-readback-integrity-20261104":
@@ -152,8 +151,6 @@ jobs:
                       report.get("production_applied") is not False or
                       report.get("ledger_writer_invoked") is not False):
                   continue
-              if fallback is None:
-                  fallback=(run,artifact)
               if (str(report.get("run_id"))==identity["run_id"] and
                       report.get("source_sha")==identity["source_sha"] and
                       report.get("independently_authenticated") is True and
@@ -164,12 +161,12 @@ jobs:
                   print("SELECTED_EXACT_SOURCE_D_RECOVERY",run["id"],artifact["id"])
                   break
           if selected is None:
-              selected=fallback
-          if selected is None:
               Path("/tmp/b-delivery/d-status.json").write_text(json.dumps({
-                  "status":"D_RECOVERY_UNAVAILABLE",
-                  "reason":"NO_VERIFIED_D_RECOVERY_ARTIFACT"}))
-              print("D_RECOVERY_UNAVAILABLE: paper WATCH must abstain")
+                  "status":"D_SAME_RUN_RECOVERY_UNAVAILABLE",
+                  "reason":"NO_INDEPENDENTLY_AUTHENTICATED_EXACT_SOURCE_D_MATCH",
+                  "published_run_id":identity["run_id"],
+                  "published_source_sha":identity["source_sha"]}))
+              print("D_SAME_RUN_RECOVERY_UNAVAILABLE: paper WATCH must abstain")
               raise SystemExit(0)
           Path("/tmp/b-delivery/d-meta.json").write_text(json.dumps(selected[1]))
           print("SELECTED_D_RECOVERY",selected[0]["id"],selected[1]["id"])
