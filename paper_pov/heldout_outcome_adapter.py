@@ -9,10 +9,20 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from .shadow_learning_evidence import utc_time, evaluate_shadow_release, canonical_digest
 
 HORIZONS = (1, 6, 24, 48)
+
+def normalized_utc(value):
+    """Normalize aware source timestamps without accepting naive times."""
+    if not isinstance(value, str):
+        raise ValueError("Missing timestamp")
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("Timestamp lacks timezone")
+    return parsed.astimezone(timezone.utc)
+
 
 
 def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *,
@@ -47,9 +57,9 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
             raise ValueError("Duplicate prediction/horizon")
         reason = None
         try:
-            entry = utc_time(record["entry_utc"])
-            feature = utc_time(record["feature_asof_utc"])
-            mature = utc_time(record["label_mature_utc"])
+            entry = normalized_utc(record["entry_utc"])
+            feature = normalized_utc(record["feature_asof_utc"])
+            mature = normalized_utc(record["label_mature_utc"])
             if entry < start or feature > entry or mature < entry + timedelta(hours=horizon) or mature > cutoff:
                 reason = "OUT_OF_WINDOW_OR_IMMATURE"
         except (KeyError, ValueError, TypeError):
@@ -76,8 +86,8 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
         if not all(field in record for field in ("entry_utc", "feature_asof_utc", "source_sha256")):
             raise ValueError("Missing cross-horizon prediction/source identity")
         try:
-            entry_identity = utc_time(record["entry_utc"])
-            feature_identity = utc_time(record["feature_asof_utc"])
+            entry_identity = normalized_utc(record["entry_utc"])
+            feature_identity = normalized_utc(record["feature_asof_utc"])
         except (TypeError, ValueError):
             # Even an all-abstaining prediction must preserve an auditable
             # immutable event identity. Otherwise a later qualified horizon
@@ -112,9 +122,9 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
             rows.append(dict(prediction_id=key, partition="held_out", horizon_hours=48,
                              source_authenticated=True, liquidity_qualified=True,
                              source_sha256=record["source_sha256"], hit=record["hit"],
-                             watch=decisions[key], entry_utc=record["entry_utc"],
-                             feature_asof_utc=record["feature_asof_utc"],
-                             label_mature_utc=record["label_mature_utc"],
+                             watch=decisions[key], entry_utc=normalized_utc(record["entry_utc"]).isoformat(),
+                             feature_asof_utc=normalized_utc(record["feature_asof_utc"]).isoformat(),
+                             label_mature_utc=normalized_utc(record["label_mature_utc"]).isoformat(),
                              holdout_start_utc=holdout_start_utc))
         return dict(version=version, training_end_utc=training_end_utc,
                     evaluation_asof_utc=evaluation_asof_utc, source_receipt=source_receipt,
