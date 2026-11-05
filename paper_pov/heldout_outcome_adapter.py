@@ -189,6 +189,7 @@ def build_shadow_learning_state(predictions, candles, baseline_decisions, *,
         predictions, outcomes, training_end_utc=training_end_utc,
         holdout_start_utc=holdout_start_utc, feature_names=feature_names)
     challenger["evaluation_asof_utc"] = evaluation_asof_utc
+    challenger["version"] = canonical_digest({k: v for k, v in challenger.items() if k != "version"})
     comparison = evaluate_shadow_scores(challenger, outcomes, baseline_decisions)
     result = {"schema": "paper_learning_state_v1",
               "evaluation_asof_utc": evaluation_asof_utc,
