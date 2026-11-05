@@ -42,11 +42,14 @@ jobs:
               continue
             fi
             git fetch origin "$SOURCE"
+            # Coordination docs differ between owner branches; retain the main queue.
+            # Never silently resolve conflicts in executable source.
+            git -c merge.renormalize=false merge-base HEAD FETCH_HEAD >/dev/null || { echo "UNRELATED SOURCE: $SOURCE" | tee -a .integration/status.txt; continue; }
             if git merge-base --is-ancestor FETCH_HEAD HEAD; then
               echo "ALREADY INTEGRATED: $SOURCE" | tee -a .integration/status.txt
               continue
             fi
-            if git merge --no-ff --no-edit FETCH_HEAD; then
+            if git -c merge.ours.driver=true merge --no-ff --no-edit FETCH_HEAD; then
               echo "MERGED: $SOURCE $(git rev-parse FETCH_HEAD)" | tee -a .integration/status.txt
             else
               git diff --name-only --diff-filter=U | tee .integration/conflicts.txt
@@ -61,9 +64,7 @@ jobs:
           fi
           gh auth setup-git
           git push origin HEAD:refs/heads/"$BRANCH"
-          if ! gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number' | grep -q '[0-9]'; then
-            gh pr create --base main --head "$BRANCH" --title "Quota-free Cryptoscanner A/B/D/E source integration" --body "Automated non-force source integration only. Review conflicts, source authenticity and focused CI. No merge to main or production deployment."
-          fi
+          echo "Review branch: https://github.com/$GITHUB_REPOSITORY/tree/$BRANCH" >> "$GITHUB_STEP_SUMMARY"
           cat .integration/status.txt >> "$GITHUB_STEP_SUMMARY"
       - name: Execute focused integration tests only after source integration
         run: |
