@@ -145,6 +145,11 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
                             "trade_count": result["parsed_trade_count"],
                             "bar_count": result["bar_count"]}
     bar_sets = {pair: set(times) for pair, times in bars.items()}
+    # A manifest can prove byte integrity without proving Kraken publisher
+    # authenticity. Keep that distinction in every per-market diagnostic.
+    for pair in pairs:
+        provenance[pair]["publisher_authenticated"] = False
+        provenance[pair]["entry_liquidity_qualified"] = False
     status_counts = {"NO_PINNED_PARTITION": 0, "NO_ENTRY_BAR": 0,
                      "ENTRY_BAR_PRESENT_UNQUALIFIED": 0}
     # Horizon coverage is diagnostic only. Sparse bars cannot prove a complete
@@ -193,10 +198,17 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
                 # E1 checks the entry bar AND 12*h forward target bars.
                 # Excluding the final target bar falsely marks gaps complete.
                 required = hours * 12 + 1
+                # Record the first missing five-minute bucket without claiming
+                # a missing bucket means no trades. This distinguishes genuine
+                # contiguous coverage from a sparse but hash-valid archive.
+                missing = [first + timedelta(minutes=5 * i)
+                           for i in range(required)
+                           if first + timedelta(minutes=5 * i) not in timeset]
                 horizon = ("COMPLETE_BAR_PATH_UNQUALIFIED"
-                           if all(first + timedelta(minutes=5 * i) in timeset
-                                  for i in range(required))
-                           else "INCOMPLETE_5M_PATH")
+                           if not missing else "INCOMPLETE_5M_PATH")
+                if missing:
+                    row_horizons[str(hours) + "_first_missing_utc"] = missing[0].isoformat()
+                    row_horizons[str(hours) + "_missing_bar_count"] = len(missing)
             horizon_counts[str(hours)][horizon] += 1
             row_horizons[str(hours)] = horizon
         cohort_coverage.append({"prediction_id": row["prediction_id"],
