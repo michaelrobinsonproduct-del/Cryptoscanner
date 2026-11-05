@@ -82,8 +82,10 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
     for (key, horizon), record in list(eligible.items()) + [(k, next(
             r for r in outcomes if (r["prediction_id"], r["horizon_hours"]) == k))
             for k in abstentions]:
+        # Abstaining horizons must retain immutable source and entry identity.
+        # Missing fields cannot silently bypass cross-horizon consistency.
         if not all(field in record for field in ("entry_utc", "feature_asof_utc", "source_sha256")):
-            continue
+            raise ValueError("Missing cross-horizon prediction/source identity")
         identity = (record["entry_utc"], record["feature_asof_utc"], record["source_sha256"])
         if key in by_prediction and by_prediction[key] != identity:
             raise ValueError("Cross-horizon prediction/source identity mismatch")
