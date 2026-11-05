@@ -78,7 +78,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     online_usd_pairs = 0
     excluded_stablecoin_pairs = 0
     excluded_other_pairs = 0
-    for key, meta in pairs.items():
+    for key, meta in sorted(pairs.items()):
         if not isinstance(meta, dict) or meta.get("status") != "online":
             continue
         name = meta.get("wsname", "")
