@@ -57,6 +57,28 @@ class PaperScanTests(unittest.TestCase):
         self.assertTrue(all(x["ohlc_age_seconds"] <= 600 for x in a["watch"]))
         self.assertTrue(all(x["quote_observed_at"] <= x["as_of"] for x in a["watch"]))
 
+    def test_invalid_assetpairs_rest_identifiers_do_not_hide_valid_usd_markets(self):
+        base = fixture()
+        def api(path):
+            result = base(path)
+            if path == "AssetPairs":
+                return {**result, None: {"status": "online", "wsname": "BAD0/USD"},
+                        "BAD KEY": {"status": "online", "wsname": "BAD1/USD"},
+                        "": {"status": "online", "wsname": "BAD2/USD"}}
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["online_usd_pairs"], 28)
+        self.assertEqual(report["excluded_other_pairs"], 3)
+        self.assertEqual(report["eligible_pairs"], 25)
+        self.assertEqual(report["observed_markets"], 25)
+        self.assertEqual(report["scan_status"], "WATCH")
+        self.assertEqual(len(report["watch"]), 12)
+
+    def test_invalid_assetpairs_top_level_fails_explicitly(self):
+        with self.assertRaisesRegex(ValueError, "invalid Kraken AssetPairs"):
+            scanner.scan(api=lambda path: [] if path == "AssetPairs" else fixture()(path),
+                         clock=lambda: NOW, sleep=lambda _: None)
+
     def test_gap_fails_closed(self):
         report = run(gap=True)
         self.assertEqual(report["watch"], [])
