@@ -62,9 +62,9 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
         rejections = report.get("ticker_rejections")
         complete = report.get("ticker_coverage_complete")
         if (not isinstance(rejections, dict) or
-                set(rejections) != {"missing_or_invalid_payload",
-                                   "invalid_price_or_volume",
-                                   "nonfinite_derived_metric"} or
+                not rejections or not set(rejections).issubset({
+                    "missing_or_invalid_payload", "invalid_price_or_volume",
+                    "nonfinite_derived_metric"}) or
                 any(type(v) is not int or v < 0 for v in rejections.values()) or
                 type(complete) is not bool or
                 report["observed_markets"] + sum(rejections.values()) != report["eligible_pairs"] or
