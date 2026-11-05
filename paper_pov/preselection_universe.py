@@ -23,7 +23,13 @@ def export_universe(latest, now=None, historical=False):
         verified = read_snapshot(latest, now=stamp)
     else:
         verified = read_snapshot(latest, now=now)
-    report = json.loads(Path(latest).read_bytes())
+    # Bind the research export to the exact bytes authenticated by A2.
+    # A concurrent latest.json replacement must not attach a prior receipt's
+    # digest/observation IDs to a different market universe.
+    raw = Path(latest).read_bytes()
+    if hashlib.sha256(raw).hexdigest() != verified["receipt_sha256"]:
+        raise ValueError("preselection receipt changed during readback")
+    report = json.loads(raw)
     rows = report.get("preselection_universe")
     coverage = report.get("preselection_coverage")
     if not isinstance(rows, list) or not isinstance(coverage, dict):
@@ -52,6 +58,11 @@ def export_universe(latest, now=None, historical=False):
         raise ValueError("invalid preselection decision provenance")
     if {name: sum(x["selection_status"] == name for x in rows) for name in decisions} != decisions:
         raise ValueError("preselection decision totals mismatch")
+    # A rejected ticker screen cannot legitimately be an OHLC/WATCH candidate;
+    # likewise a passed screen cannot be retroactively labeled rejected.
+    if any((row["selection_status"] == "SCREEN_REJECTED") != (not row["screen_passed"])
+           for row in rows):
+        raise ValueError("preselection screen and selection decision mismatch")
     # A partial Kraken ticker payload invalidates cohort-level selection.
     # Preserve observed market research, but never describe the surviving
     # individually valid quotes as ordinary OHLC budget exclusions.
