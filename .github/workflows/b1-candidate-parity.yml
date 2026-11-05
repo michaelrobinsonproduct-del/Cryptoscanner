@@ -1,0 +1,162 @@
+name: B1 isolated candidate parity acceptance
+on:
+  push:
+    branches:
+      - owner-b-b2-research-gate-content-binding
+    paths:
+      - 'scanner/src/**'
+      - '.github/workflows/b1-candidate-parity.yml'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scanner/src/candidate-contract.ts'
+      - 'scanner/src/candidate-contract.test.ts'
+      - 'scanner/src/candidate-cycle.ts'
+      - 'scanner/src/candidate-cycle.test.ts'
+      - 'scanner/src/learning-report.ts'
+      - 'scanner/src/shadow-artifacts.ts'
+      - 'scanner/src/shadow-artifacts.test.ts'
+      - 'scanner/src/shadow-evaluation.ts'
+      - 'scanner/src/shadow-evaluation.test.ts'
+      - 'scanner/src/cycle-http.ts'
+      - 'scanner/src/cycle-http.test.ts'
+      - 'scanner/src/paper-receipt.ts'
+      - 'scanner/src/paper-receipt.test.ts'
+      - 'scanner/src/cycle-coverage.test.ts'
+      - 'scanner/src/cycle-runner.ts'
+      - 'scanner/src/cycle-runner.test.ts'
+      - 'scanner/src/server.ts'
+      - 'scanner/src/a2-snapshot.ts'
+      - 'scanner/src/a2-snapshot.test.ts'
+      - 'scanner/src/learning-report.ts'
+      - 'scanner/src/learning-report.test.ts'
+      - 'scanner/src/source-health.ts'
+      - 'scanner/src/source-health.test.ts'
+      - '.github/workflows/b1-candidate-parity.yml'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Focused B1 candidate and native-entry parity regression
+        run: bun test scanner/src/a2-snapshot.test.ts scanner/src/cycle-http.test.ts scanner/src/cycle-runner.test.ts scanner/src/shadow-artifacts.test.ts scanner/src/source-health.test.ts
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+  authenticated-a2-manual-scheduled:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrobinsonproduct-del/Cryptoscanner
+          ref: owner-a-a2-quote-freshness-20261103
+          path: a2-source
+          persist-credentials: false
+      - name: Acquire one live public Kraken paper snapshot and verify immutable receipt
+        env:
+          PAPER_REPORT_PATH: ${{ runner.temp }}/b1-real-a2/latest.json
+          PYTHONPATH: a2-source
+        run: |
+          cd a2-source
+          test "$(git rev-parse HEAD)" = "9ef6361a279468bd2de9e45557ddc7195a80af2c"
+          python -m paper_pov.scanner
+          python - <<'PY'
+          import json, os, zipfile
+          from pathlib import Path
+          from paper_pov.a2_artifact_consumer import read_artifact_zip
+          from paper_pov.candidate_snapshot import read_snapshot
+          latest=Path(os.environ["PAPER_REPORT_PATH"])
+          receipts=list((latest.parent/"receipts").glob("*.json"))
+          assert len(receipts)==1, "expected exactly one immutable receipt"
+          receipt=receipts[0]
+          assert json.loads(latest.read_bytes())==json.loads(receipt.read_bytes()), "producer latest/receipt payload drift"
+          staging=latest.parent/"authenticated-consumer"
+          (staging/"receipts").mkdir(parents=True,exist_ok=False)
+          (staging/"latest.json").write_bytes(receipt.read_bytes())
+          (staging/"receipts"/receipt.name).write_bytes(receipt.read_bytes())
+          latest=staging/"latest.json"
+          verified=read_snapshot(latest)
+          export=latest.parent/"verified-snapshot.json"
+          export.write_text(json.dumps(verified,sort_keys=True,allow_nan=False)+"\n")
+          receipt=list((latest.parent/"receipts").glob("*.json"))
+          assert len(receipt)==1
+          archive=latest.parent/"transport.zip"
+          with zipfile.ZipFile(archive,"w",compression=zipfile.ZIP_DEFLATED) as z:
+              z.write(latest,"latest.json")
+              z.write(export,"verified-snapshot.json")
+              z.write(receipt[0],"receipts/"+receipt[0].name)
+          checked=read_artifact_zip(archive)
+          assert checked["receipt_sha256"]==verified["receipt_sha256"]
+          assert checked["watch"]==verified["watch"]
+          Path(os.environ["PAPER_REPORT_PATH"]).parent.joinpath("verified-snapshot.json").write_text(json.dumps(checked,sort_keys=True,allow_nan=False)+"\n")
+          print("B1_A2_AUTHENTICATED_TRANSPORT",json.dumps({"watch_count":len(checked["watch"]),"eligible_pairs":checked["eligible_pairs"],"observed_markets":checked["observed_markets"],"abstention_counts":checked["abstention_counts"],"receipt_sha256":checked["receipt_sha256"]},sort_keys=True))
+          PY
+      - name: Actual authenticated A2 into B shared HTTP and scheduled runner
+        env:
+          B1_REAL_A2_VERIFIED_FILE: ${{ runner.temp }}/b1-real-a2/verified-snapshot.json
+        run: bun test scanner/src/a2-snapshot.test.ts
+      - name: Publish authenticated A2 snapshot for C read-only integration
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b-authenticated-a2-snapshot
+          path: |
+            ${{ runner.temp }}/b1-real-a2/authenticated-consumer/transport.zip
+            ${{ runner.temp }}/b1-real-a2/verified-snapshot.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Verify exact B checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+  authenticated-e-learning-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Download E's real authenticated Kraken paper research artifact read-only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/b2-real-e
+          gh run download 41745566234 -R michaelrobinsonproduct-del/Cryptoscanner -n e-real-paper-learning-report -D /tmp/b2-real-e
+          test -s /tmp/b2-real-e/e-learning-report.json
+          sha256sum /tmp/b2-real-e/e-learning-report.json
+      - name: Verify E's actual unqualified evidence is KEEP_BASELINE for manual and scheduled
+        env:
+          B2_REAL_E_REPORT_FILE: /tmp/b2-real-e/e-learning-report.json
+        run: |
+          export B2_REAL_E_REPORT_SHA256="$(sha256sum "$B2_REAL_E_REPORT_FILE" | cut -d ' ' -f 1)"
+          bun test scanner/src/learning-report.test.ts
+      - name: Verify exact B checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+  authenticated-d-recovery-status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Download D's actual persisted downstream consumer outcome
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/b-real-d
+          gh run download 41736851502 -R michaelrobinsonproduct-del/Cryptoscanner -n d2-recovery-consumer-status -D /tmp/b-real-d
+          test -s /tmp/b-real-d/status.json
+      - name: Consume real D status through B manual and scheduled reporting
+        env:
+          B_REAL_D_STATUS_FILE: /tmp/b-real-d/status.json
+        run: |
+          export B_REAL_D_STATUS_SHA256="$(sha256sum "$B_REAL_D_STATUS_FILE" | cut -d ' ' -f 1)"
+          bun test scanner/src/recovery-status.test.ts
+      - name: Verify exact B checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
