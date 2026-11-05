@@ -598,7 +598,7 @@ jobs:
                   "source_run_id":selected["run_id"],
                   "source_sha":published["source_sha"],
                   "published_scan_status":published.get("status"),
-                  "published_trigger":published.get("event"),
+                  "published_trigger":published.get("github_event"),
                   "published_observed_markets":published.get("observed_markets"),
                   "published_eligible_pairs":published.get("eligible_pairs"),
                   "published_delivery_summary":summary,
