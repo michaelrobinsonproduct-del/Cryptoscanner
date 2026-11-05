@@ -351,7 +351,7 @@ jobs:
               "--expected-source-sha",identity["source_sha"],
               "--output","/tmp/b-delivery/delivery.json"]
           if a2_path.exists():
-              cmd.extend(["--a2-delivery","/tmp/b-delivery/a2"])
+              cmd.extend(["--a2-delivery",str(a2_path)])
           if e_path.exists():
               cmd.extend(["--learning-handoff",str(e_path)])
           subprocess.run(cmd,check=True)
