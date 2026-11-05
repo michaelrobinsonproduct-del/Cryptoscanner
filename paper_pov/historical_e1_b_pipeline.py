@@ -1,0 +1,428 @@
+"""Run the existing E1 historical reconstruction and E-to-B learning handoff.
+
+All input files are caller-supplied pinned historical archive evidence.
+Never fetches live data, modifies scanner state or certifies source authenticity.
+"""
+import argparse
+import hashlib
+import json
+import os
+import tempfile
+from pathlib import Path
+
+from .historical_outcome_execution import run_historical_outcomes
+from .historical_execution_learning_bridge import project_historical_execution
+from .historical_preselection_binding import bind_preselection_history
+
+
+def bind_a2_projection(projection, predictions):
+    """Consume the retained, receipt-bound A2 full-universe E projection.
+
+    The projection is diagnostic evidence, not independent publisher authentication.
+    All non-WATCH identities remain explicit in the B cohort.
+    """
+    from .historical_preselection_binding import bind_preselection_history
+    if not isinstance(projection, dict) or projection.get("schema") != "a2_historical_e_preselection_v1":
+        raise ValueError("Invalid retained A2 projection")
+    if (projection.get("status") != "NO_QUALIFIED_RULE" or
+            projection.get("source_authenticated") is not False or
+            projection.get("historical_outcomes_available") is not False or
+            projection.get("promotion_authorized") is not False or
+            projection.get("production_applied") is not False):
+        raise ValueError("Unsafe A2 projection qualification")
+    receipt = projection.get("a_receipt_sha256")
+    if not isinstance(receipt, str) or len(receipt) != 64 or any(c not in "0123456789abcdef" for c in receipt):
+        raise ValueError("Missing A2 receipt identity")
+    frozen, watches = projection.get("frozen_predictions"), projection.get("e1_watch_predictions")
+    if not isinstance(frozen, list) or not isinstance(watches, list) or not frozen:
+        raise ValueError("Missing A2 frozen universe")
+    ids = [p.get("prediction_id") for p in frozen if isinstance(p, dict)]
+    if len(ids) != len(frozen) or len(set(ids)) != len(ids):
+        raise ValueError("Duplicate A2 frozen identity")
+    for p in frozen:
+        if not isinstance(p.get("pair"), str) or not p["pair"] or not isinstance(p.get("prediction_id"), str) or len(p["prediction_id"]) != 64:
+            raise ValueError("Malformed A2 frozen identity")
+        expected = hashlib.sha256(("paper-preselection-v1|" + receipt + "|" + p["pair"]).encode()).hexdigest()
+        if p["prediction_id"] != expected:
+            raise ValueError("A2 identity is not bound to sealed receipt")
+    frozen_pairs = {p["prediction_id"]: p["pair"] for p in frozen}
+    # New A2 projections carry every pre-outcome decision and timestamp.
+    # Validate this full cohort before E1 can consume its WATCH subset.
+    observations = projection.get("frozen_observations")
+    if observations is not None:
+        if not isinstance(observations, list) or len(observations) != len(frozen):
+            raise ValueError("Incomplete A2 point-in-time universe")
+        observed = {}
+        for row in observations:
+            if not isinstance(row, dict) or row.get("prediction_id") in observed:
+                raise ValueError("Duplicate or malformed A2 observation")
+            pid = row.get("prediction_id")
+            if pid not in {p["prediction_id"] for p in frozen}:
+                raise ValueError("Unknown A2 observation")
+            if row.get("pair") != next(p["pair"] for p in frozen if p["prediction_id"] == pid):
+                raise ValueError("A2 observation pair mismatch")
+            if row.get("selection_status") not in ("WATCH", "SCREEN_REJECTED", "NOT_OHLC_SELECTED", "OHLC_ABSTAINED", "NOT_RANKED_WATCH"):
+                raise ValueError("Invalid A2 frozen selection")
+            if not isinstance(row.get("as_of"), str):
+                raise ValueError("Missing A2 observation time")
+            from .shadow_learning_evidence import utc_time
+            utc_time(row["as_of"])
+            observed[pid] = row
+        if {pid for pid, row in observed.items() if row["selection_status"] == "WATCH"} != {p["prediction_id"] for p in watches}:
+            raise ValueError("A2 WATCH cohort does not match frozen decisions")
+        if any(utc_time(observed[p["prediction_id"]]["as_of"]) != utc_time(p["as_of"]) for p in watches):
+            raise ValueError("A2 WATCH observation time mismatch")
+    if any(not isinstance(p, dict) or p.get("status") != "PAPER_WATCH" or
+           not isinstance(p.get("as_of"), str) or not p["as_of"] or
+           frozen_pairs.get(p.get("prediction_id")) != p.get("pair")
+           for p in watches):
+        raise ValueError("Invalid A2 WATCH decision or timestamp")
+    watch_ids = {p.get("prediction_id") for p in watches if isinstance(p, dict)}
+    if len(watch_ids) != len(watches) or not watch_ids.issubset(set(ids)):
+        raise ValueError("Invalid A2 WATCH subset")
+    if predictions != watches:
+        # Order is irrelevant, but the identity, time and decision are not.
+        def indexed(rows):
+            return {p["prediction_id"]: p for p in rows}
+        if not isinstance(predictions, list) or len(predictions) != len(watches) or indexed(predictions) != indexed(watches):
+            raise ValueError("E1 predictions differ from sealed A2 WATCH sample")
+    if (projection.get("frozen_observation_count") != len(frozen) or
+            projection.get("watch_count") != len(watches) or
+            projection.get("nonwatch_without_outcomes") != len(frozen) - len(watches)):
+        raise ValueError("A2 frozen universe arithmetic mismatch")
+    return {"frozen_predictions": frozen, "e1_watch_predictions": watches,
+            "preselection_observation_count": len(frozen),
+            "watch_outcome_input_count": len(watches),
+            "unobserved_nonwatch_count": len(frozen) - len(watches),
+            "a_receipt_sha256": receipt, "unbiased_learning_qualified": False}
+
+
+def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partitions, *, observed_until):
+    """Read-only, checksum-gated overlap inventory for the FULL frozen A2 cohort.
+
+    This never calls a trade hit a qualified learning label. It exposes exactly
+    which pre-outcome observations have pinned trade-bar evidence and which
+    abstain because no partition or matching observation window exists.
+    """
+    binding = bind_a2_projection(projection, projection["e1_watch_predictions"])
+    rows = projection.get("frozen_observations")
+    if not isinstance(rows, list) or len(rows) != binding["preselection_observation_count"]:
+        raise ValueError("Complete timestamped A2 universe required")
+    from .kraken_trade_csv_adapter import convert_pinned_csv
+    from .shadow_learning_evidence import utc_time
+    from datetime import timedelta
+    from bisect import bisect_left
+    if not isinstance(observed_until, str):
+        raise ValueError("Missing historical observation cutoff")
+    cutoff = utc_time(observed_until)
+    if not isinstance(partitions, dict):
+        raise ValueError("Missing explicit partition map")
+    pairs = {row["pair"] for row in rows}
+    # A partition is a market-specific source. Reusing one file for two
+    # frozen pairs would create counterfeit cross-market coverage.
+    if any(pair not in pairs for pair in partitions):
+        raise ValueError("Partition map includes a market outside frozen A2 cohort")
+    paths = [str(value) for value in partitions.values()]
+    if any(not isinstance(value, str) or not value for value in partitions.values()):
+        raise ValueError("Invalid pinned partition path")
+    if len(set(paths)) != len(paths):
+        raise ValueError("Pinned trade partition reused across A2 markets")
+    bars = {}
+    provenance = {}
+    for pair in sorted(pairs):
+        partition = partitions.get(pair)
+        if partition is None:
+            bars[pair] = []
+            provenance[pair] = {"status": "NO_PINNED_PARTITION"}
+            continue
+        result = convert_pinned_csv(manifest, root, partition_file=partition,
+                                    pair=pair, schema=schema)
+        bars[pair] = sorted(utc_time(b["open_at"]) for b in result["bars"]
+                            if utc_time(b["open_at"]) + timedelta(minutes=5) <= cutoff)
+        provenance[pair] = {"status": "PINNED_BYTES_VERIFIED",
+                            "partition": partition,
+                            "partition_sha256": result["partition_sha256"],
+                            "trade_count": result["parsed_trade_count"],
+                            "bar_count": result["bar_count"],
+                            "usable_bar_count_before_cutoff": len(bars[pair]),
+                            "first_usable_bar_utc": bars[pair][0].isoformat() if bars[pair] else None,
+                            "last_usable_bar_utc": bars[pair][-1].isoformat() if bars[pair] else None}
+    bar_sets = {pair: set(times) for pair, times in bars.items()}
+    # A manifest can prove byte integrity without proving Kraken publisher
+    # authenticity. Keep that distinction in every per-market diagnostic.
+    for pair in pairs:
+        provenance[pair]["publisher_authenticated"] = False
+        provenance[pair]["entry_liquidity_qualified"] = False
+    status_counts = {"NO_PINNED_PARTITION": 0, "NO_ENTRY_BAR": 0,
+                     "ENTRY_BAR_PRESENT_UNQUALIFIED": 0}
+    # Horizon coverage is diagnostic only. Sparse bars cannot prove a complete
+    # price path, and an observed bar cannot authenticate executable liquidity.
+    horizon_counts = {str(h): {"NO_PINNED_PARTITION": 0,
+                               "ABSTAIN_IMMATURE": 0,
+                               "INCOMPLETE_5M_PATH": 0,
+                               "COMPLETE_BAR_PATH_UNQUALIFIED": 0}
+                      for h in (1, 6, 24, 48)}
+    by_selection = {}
+    cohort_coverage = []
+    for row in rows:
+        at = utc_time(row["as_of"])
+        if at > cutoff:
+            raise ValueError("A2 observation is after historical cutoff")
+        times = bars[row["pair"]]
+        if not times:
+            status = ("NO_PINNED_PARTITION" if row["pair"] not in partitions
+                      else "NO_ENTRY_BAR")
+        else:
+            # A next-five-minute bar is diagnostic, never executable liquidity.
+            start = at.replace(second=0, microsecond=0)
+            start -= timedelta(minutes=start.minute % 5)
+            target = start + timedelta(minutes=5)
+            idx = bisect_left(times, target)
+            status = ("ENTRY_BAR_PRESENT_UNQUALIFIED"
+                      if idx < len(times) and times[idx] == target
+                      else "NO_ENTRY_BAR")
+        status_counts[status] += 1
+        row_horizons = {}
+        for hours in (1, 6, 24, 48):
+            if row["pair"] not in partitions:
+                horizon = "NO_PINNED_PARTITION"
+            elif (at.replace(second=0, microsecond=0) - timedelta(minutes=at.minute % 5)
+                  + timedelta(hours=hours, minutes=10)) > cutoff:
+                horizon = "ABSTAIN_IMMATURE"
+            elif status != "ENTRY_BAR_PRESENT_UNQUALIFIED":
+                horizon = "INCOMPLETE_5M_PATH"
+            else:
+                # Exact contiguous 5m opens from first post-observation bar
+                # through the horizon. Missing even one bar abstains.
+                start = at.replace(second=0, microsecond=0)
+                start -= timedelta(minutes=start.minute % 5)
+                first = start + timedelta(minutes=5)
+                timeset = bar_sets[row["pair"]]
+                # E1 checks the entry bar AND 12*h forward target bars.
+                # Excluding the final target bar falsely marks gaps complete.
+                required = hours * 12 + 1
+                # Record the first missing five-minute bucket without claiming
+                # a missing bucket means no trades. This distinguishes genuine
+                # contiguous coverage from a sparse but hash-valid archive.
+                missing = [first + timedelta(minutes=5 * i)
+                           for i in range(required)
+                           if first + timedelta(minutes=5 * i) not in timeset]
+                horizon = ("COMPLETE_BAR_PATH_UNQUALIFIED"
+                           if not missing else "INCOMPLETE_5M_PATH")
+                if missing:
+                    row_horizons[str(hours) + "_first_missing_utc"] = missing[0].isoformat()
+                    row_horizons[str(hours) + "_missing_bar_count"] = len(missing)
+            horizon_counts[str(hours)][horizon] += 1
+            row_horizons[str(hours)] = horizon
+        cohort_coverage.append({"prediction_id": row["prediction_id"],
+                                "pair": row["pair"], "as_of": row["as_of"],
+                                "selection_status": row["selection_status"],
+                                "entry_status": status, "horizons": row_horizons})
+        by_selection.setdefault(row["selection_status"], {})
+        d = by_selection[row["selection_status"]]
+        d[status] = d.get(status, 0) + 1
+    if sum(status_counts.values()) != len(rows):
+        raise ValueError("Historical overlap cohort mismatch")
+    # Bind coverage to the exact frozen receipt observations, not merely the
+    # market list. A later receipt with the same pairs but different timestamps
+    # must never reuse this overlap report as its evidence.
+    import hashlib
+    import json
+    frozen_identity = sorted((row["prediction_id"], row["pair"],
+                              utc_time(row["as_of"]).isoformat(),
+                              row["selection_status"]) for row in rows)
+    if len({identity[0] for identity in frozen_identity}) != len(rows):
+        raise ValueError("Duplicate frozen observation identity")
+    frozen_observation_digest = hashlib.sha256(
+        json.dumps(frozen_identity, separators=(",", ":")).encode()).hexdigest()
+    pair_coverage = {}
+    for pair in sorted(pairs):
+        matched = [row for row in cohort_coverage if row["pair"] == pair]
+        pair_coverage[pair] = {
+            "frozen_observations": len(matched),
+            "entry_bar_present_unqualified": sum(
+                row["entry_status"] == "ENTRY_BAR_PRESENT_UNQUALIFIED" for row in matched),
+            "horizon_coverage": {
+                str(h): {status: sum(row["horizons"][str(h)] == status for row in matched)
+                         for status in horizon_counts[str(h)]}
+                for h in (1, 6, 24, 48)},
+            "partition_sha256": provenance[pair].get("partition_sha256"),
+        }
+    if sum(row["frozen_observations"] for row in pair_coverage.values()) != len(rows):
+        raise ValueError("Pair-level historical coverage mismatch")
+    # Bind checked partition bytes, cutoff, and coverage to the frozen receipt.
+    # The cohort digest alone cannot detect a swapped source partition.
+    overlap_evidence_sha256 = hashlib.sha256(json.dumps({
+        "a_receipt_sha256": binding["a_receipt_sha256"],
+        "frozen_observation_digest": frozen_observation_digest,
+        "observed_until_utc": cutoff.isoformat(),
+        "partition_provenance": provenance,
+        "cohort_coverage": sorted(cohort_coverage, key=lambda x: x["prediction_id"]),
+    }, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    return {"schema": "a2_trade_partition_overlap_v1",
+            "frozen_observation_digest": frozen_observation_digest,
+            "overlap_evidence_sha256": overlap_evidence_sha256,
+            "observed_until_utc": cutoff.isoformat(),
+            "pair_coverage": pair_coverage,
+            "a_receipt_sha256": binding["a_receipt_sha256"],
+            "frozen_observation_count": len(rows),
+            "status_counts": status_counts, "selection_status_counts": by_selection,
+            "diagnostic_horizon_coverage": horizon_counts,
+            "cohort_coverage": sorted(cohort_coverage, key=lambda x: x["prediction_id"]),
+            "partition_provenance": provenance,
+            "qualified_outcome_count": 0, "source_authenticated": False,
+            "qualified_for_learning": False, "promotion_authorized": False,
+            "read_only": True}
+
+
+def research_full_universe_predictions(projection):
+    """Research-only E1 adapter for all frozen A2 markets, including non-WATCH."""
+    binding = bind_a2_projection(projection, projection["e1_watch_predictions"])
+    observations = projection.get("frozen_observations")
+    if not isinstance(observations, list) or len(observations) != binding["preselection_observation_count"]:
+        raise ValueError("Full timestamped A2 universe required")
+    by_id = {p["prediction_id"]: p for p in binding["frozen_predictions"]}
+    return [{"prediction_id": row["prediction_id"],
+             "pair": by_id[row["prediction_id"]]["pair"],
+             "as_of": row["as_of"], "status": "PAPER_WATCH"}
+            for row in observations]
+
+
+def run_pipeline(manifest, root, schema, partitions, predictions, observed_until, *, preselection_history=None, a2_projection=None, full_universe_research=False):
+    if preselection_history is not None and a2_projection is not None:
+        raise ValueError("Select one frozen A provenance source")
+    binding = bind_a2_projection(a2_projection, predictions) if a2_projection is not None else None
+    if preselection_history is not None:
+        binding = bind_preselection_history(preselection_history, predictions)
+    if full_universe_research:
+        if a2_projection is None:
+            raise ValueError("Full-universe research requires A2 projection")
+        predictions = research_full_universe_predictions(a2_projection)
+    # E1 uses the target bar's high, but target_at is its OPEN timestamp.
+    # A target bar must be closed before it can become an observed outcome.
+    # Pass the last-closed-bar cutoff to E1 without modifying E1-owned code.
+    from .shadow_learning_evidence import utc_time
+    from datetime import timedelta
+    # Reject future-dated frozen predictions before reconstructing outcomes.
+    observation_cutoff = utc_time(observed_until)
+    for prediction in predictions:
+        if not isinstance(prediction, dict) or not isinstance(prediction.get("as_of"), str):
+            raise ValueError("Historical prediction lacks point-in-time timestamp")
+        if utc_time(prediction["as_of"]) > observation_cutoff:
+            raise ValueError("Historical prediction occurs after observation cutoff")
+    # WATCH-only reconstruction still carries the complete frozen A2 cohort.
+    # A rejected market dated after the cutoff must not be hidden by selecting
+    # only older WATCH predictions for E1.
+    if a2_projection is not None:
+        observations = a2_projection.get("frozen_observations")
+        if observations is not None:
+            for row in observations:
+                if utc_time(row["as_of"]) > observation_cutoff:
+                    raise ValueError("Frozen A2 observation occurs after cutoff")
+    closed_bar_cutoff = (observation_cutoff - timedelta(minutes=5)).isoformat()
+    execution = run_historical_outcomes(
+        manifest, root, schema, partitions, predictions, closed_bar_cutoff)
+    frozen = binding["frozen_predictions"] if binding is not None else predictions
+    selections = ({row["prediction_id"]: row["selection_status"]
+                   for row in a2_projection["frozen_observations"]}
+                  if a2_projection is not None and isinstance(a2_projection.get("frozen_observations"), list)
+                  else None)
+    observation_times = ({row["prediction_id"]: row["as_of"]
+                          for row in a2_projection["frozen_observations"]}
+                         if a2_projection is not None and isinstance(a2_projection.get("frozen_observations"), list)
+                         else None)
+    handoff = project_historical_execution(execution, frozen_predictions=frozen,
+                                           frozen_selections=selections,
+                                           frozen_observation_times=observation_times)
+    # Consume B's existing strict read-only learning contract rather than
+    # introducing a second evaluator or reimplementing its qualification.
+    from .github_delivery_projection import _learning_evidence
+    delivery = _learning_evidence(handoff)
+    if delivery["status"] != "NO_QUALIFIED_RULE" or delivery["promotion_authorized"]:
+        raise ValueError("Historical source cannot authorize a learning rule")
+    return {"execution": execution, "handoff": handoff, "delivery": delivery,
+            "research_full_universe": full_universe_research,
+            "preselection_binding": binding}
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="E1 pinned historical outcomes to B read-only consumer")
+    for key in ("manifest", "root", "schema", "partitions", "predictions", "observed-until", "output"):
+        parser.add_argument("--" + key, required=True)
+    parser.add_argument("--preselection-history", help="A receipt-verified historical full-universe JSON")
+    parser.add_argument("--a2-projection", help="Retained E A2 receipt-bound preselection JSON")
+    parser.add_argument("--full-universe-research", action="store_true", help="Research-only reconstruction of all A2 markets, including rejected markets")
+    parser.add_argument("--full-cohort-overlap-output", help="Write checksum-gated A2 all-candidate trade overlap diagnostics")
+    parser.add_argument("--a-receipts-dir", help="Original sealed A receipts; verify via A export_receipt_history")
+    args = parser.parse_args(argv)
+    if sum(bool(v) for v in (args.preselection_history, args.a_receipts_dir, args.a2_projection)) > 1:
+        parser.error("Select only one A preselection provenance source")
+    output = Path(args.output)
+    if output.exists():
+        raise FileExistsError("Refusing to overwrite prior historical evidence")
+    def read(name):
+        return json.loads(Path(getattr(args, name)).read_text(encoding="utf-8"))
+    history = read("preselection_history") if args.preselection_history else None
+    if args.a_receipts_dir:
+        from .preselection_universe import export_receipt_history
+        history = export_receipt_history(args.a_receipts_dir)
+    manifest, schema, partitions, predictions = (read(k) for k in ("manifest", "schema", "partitions", "predictions"))
+    projection = read("a2_projection") if args.a2_projection else None
+    if args.full_cohort_overlap_output:
+        if projection is None:
+            parser.error("--full-cohort-overlap-output requires --a2-projection")
+        overlap_path = Path(args.full_cohort_overlap_output)
+        if overlap_path.exists():
+            raise FileExistsError("Refusing to overwrite historical overlap evidence")
+        overlap = audit_a2_trade_partition_overlap(projection, manifest, args.root, schema, partitions,
+                                                   observed_until=args.observed_until)
+        # Commit diagnostic output only after the complete E1-to-B pipeline succeeds.
+    result = run_pipeline(manifest, args.root, schema,
+                          partitions, predictions, args.observed_until,
+                          preselection_history=history,
+                          a2_projection=projection,
+                          full_universe_research=args.full_universe_research)
+    # Serialize both complete outputs before publishing either one.
+    rendered_result = json.dumps(result, sort_keys=True, indent=2, allow_nan=False) + "\n"
+    rendered_overlap = (json.dumps(overlap, sort_keys=True, indent=2, allow_nan=False) + "\n"
+                        if args.full_cohort_overlap_output else None)
+    # Stage both outputs before publishing, and roll back a partial handoff.
+    destinations = [(output, rendered_result)]
+    if args.full_cohort_overlap_output:
+        destinations.append((overlap_path, rendered_overlap))
+    if len({path.resolve() for path, _ in destinations}) != len(destinations):
+        raise ValueError("Historical outputs must have distinct paths")
+    staged, published = [], []
+    try:
+        for destination, rendered in destinations:
+            if destination.exists():
+                raise FileExistsError("Refusing to overwrite historical evidence")
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8",
+                                             dir=destination.parent, prefix=".e1-b-",
+                                             delete=False) as handle:
+                staged.append(Path(handle.name))
+                handle.write(rendered)
+                handle.flush()
+                os.fsync(handle.fileno())
+        for (destination, _), temporary in zip(destinations, staged):
+            if destination.exists():
+                raise FileExistsError("Refusing to overwrite historical evidence")
+            # Exclusive publication: another worker must never be overwritten
+            # between the existence check and commit of this evidence path.
+            os.link(temporary, destination)
+            published.append(destination)
+    except Exception:
+        for destination in published:
+            destination.unlink(missing_ok=True)
+        raise
+    finally:
+        for temporary in staged:
+            temporary.unlink(missing_ok=True)
+    print(json.dumps({"prediction_count": result["execution"]["prediction_count"],
+                      "status_counts": result["execution"]["status_counts"],
+                      "qualified_cohort_count": result["handoff"]["qualified_cohort_count"],
+                      "learning_status": result["delivery"]["status"]}, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()
