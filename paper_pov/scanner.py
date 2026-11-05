@@ -152,7 +152,8 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                     # Resolve only an unambiguous, source-declared identity.
                     alias = ohlc_aliases[pair]
                     accepted = {pair}
-                    if len(alias_owners[alias]) == 1:
+                    if (alias_owners[alias] == {pair}
+                            and (alias == pair or alias not in eligible)):
                         accepted.add(alias)
                     if (isinstance(retry, dict) and len(retry) == 1
                             and next(iter(retry)) in accepted
