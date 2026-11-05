@@ -620,3 +620,18 @@ def test_pinned_remote_match_exposes_source_bound_receipt_without_watch_authoriz
     divergent = recovery.retrieve_and_verify(REPO, "123", "public-paper-ledger", None,
                                              SHA, runner=runner, ledger_ref="paper-proof-ledger")
     assert divergent["same_run_reconciliation"]["status"] == "ABSTAIN"
+
+
+def test_cli_requested_remote_readback_unavailable_exits_failure(tmp_path, monkeypatch):
+    """A valid writer download cannot mask a failed requested remote check."""
+    from paper_pov import github_artifact_readback as readback
+    def recovered(*args, **kwargs):
+        return {"status": "WRITER_CHECKSUM_ONLY",
+                "remote_ledger_reconciliation": {"status": "UNAVAILABLE",
+                                                  "reason": "REMOTE_CHECKPOINT_UNAVAILABLE"}}
+    monkeypatch.setattr(readback, "retrieve_and_verify", recovered)
+    args = ["--repo", REPO, "--run-id", "123", "--source-sha", SHA,
+            "--output", str(tmp_path / "report.json"), "--ledger-ref", "paper-proof-ledger"]
+    assert readback.main(args) == 2
+    assert json.loads((tmp_path / "report.json").read_text())["remote_ledger_reconciliation"]["status"] == "UNAVAILABLE"
+    assert readback.main(args[:-2]) == 0
