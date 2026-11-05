@@ -365,7 +365,7 @@ jobs:
               cmd.extend(["--learning-handoff",str(e_path)])
           subprocess.run(cmd,check=True)
           projected=json.loads(Path("/tmp/b-delivery/delivery.json").read_text())
-          if projected["schema"]!="paper_delivery_readback_v1" or projected["live_watch_authorized"] is not False or projected["single_writer_read_only"] is not True:
+          if projected["schema"]!="paper_delivery_readback_v1" or projected["live_watch_authorized"] is not projected["fresh_watch_delivery_verified"] or projected["single_writer_read_only"] is not True:
               raise SystemExit("UNSAFE_DELIVERY_PROJECTION")
           # Publish the actual integration outcome, including unavailable
           # evidence, in one retained report rather than silently dropping it.
@@ -394,7 +394,7 @@ jobs:
                   "published_observed_markets":projected["published_observed_markets"],
                   "published_quote_evidence_count":projected["published_quote_evidence_count"],
                   "published_quote_complete":projected["published_quote_complete"],
-                  "live_watch_authorized":False,
+                  "live_watch_authorized":projected["live_watch_authorized"],
                   "writer_reconciliation_status":projected["writer_reconciliation_status"],
                   "writer_same_scan_as_delivery":projected["writer_source_identity_matches_delivery"],
                   "fresh_watch_delivery_verified":projected.get("fresh_watch_delivery_verified",False),
