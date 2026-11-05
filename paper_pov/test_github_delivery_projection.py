@@ -406,6 +406,26 @@ class DeliveryProjectionTests(unittest.TestCase):
             outputs.append(delivery)
         self.assertEqual(set(outputs[0]), set(outputs[1]))
 
+    def test_incomplete_market_coverage_abstains_for_manual_and_scheduled(self):
+        from paper_pov.test_results_report import fixture
+        from paper_pov.results_report import render
+        from paper_pov.github_delivery_projection import project_published_result
+        scan, score = fixture()
+        for event, cron in (("workflow_dispatch", None), ("schedule", "9 * * * *")):
+            with self.subTest(event=event):
+                published, _ = render(scan, score, run_id="41235442591",
+                                      source_sha=SHA, ledger_commit="b"*40,
+                                      event=event, originating_cron=cron)
+                # Preserve authentic same-run quote evidence while declaring
+                # one additional eligible market that was never observed.
+                published["eligible_pairs"] += 1
+                delivery = project_published_result(published)
+                self.assertFalse(delivery["published_quote_complete"])
+                self.assertEqual(delivery["live_watch"], [])
+                self.assertFalse(delivery["live_watch_authorized"])
+                if published["candidates"]:
+                    self.assertEqual(delivery["status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+
     def test_untrusted_promotion_and_run_provenance_rejected(self):
         valid = {**BASE, "sealed": False,
                  "artifact_status": "CHECKSUM_VERIFIED_LEGACY_NO_RECEIPT", "scoreboard": {}}

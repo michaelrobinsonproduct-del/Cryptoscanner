@@ -49,9 +49,43 @@ def _writer_evidence(readback):
                 raise ValueError("writer recovered generation mismatch")
             if mg is not None and (type(mg) is not int or mg < 0 or (status == "MATCH" and mg != persisted["ledger_generation"])):
                 raise ValueError("writer remote generation contradiction")
+    # D's pinned-checkpoint receipt is a separate source-bound proof. It is
+    # never interchangeable with independent publisher/quote authentication.
+    same = readback.get("same_run_reconciliation")
+    same_status = "UNAVAILABLE"
+    if same is not None:
+        import re
+        receipt = readback.get("source_bound_receipt")
+        if not isinstance(same, dict) or not isinstance(receipt, dict):
+            raise ValueError("D source-bound receipt missing")
+        if (same.get("run_id") != run_id or same.get("source_sha") != sha or
+                receipt.get("run_id") != run_id or receipt.get("source_sha") != sha):
+            raise ValueError("D source-bound identity mismatch")
+        for key in ("artifact_id", "sha256sums_sha256", "ledger_receipt_sha256",
+                    "ledger_sha256", "ledger_generation"):
+            if same.get(key) != receipt.get(key):
+                raise ValueError("D source-bound receipt contradiction")
+        if (same.get("ledger_generation") != persisted["ledger_generation"] or
+                not isinstance(same.get("ledger_sha256"), str) or
+                re.fullmatch(r"[0-9a-f]{64}", same["ledger_sha256"]) is None or
+                same.get("status") not in ("MATCH", "ABSTAIN") or
+                same.get("live_watch_authorized") is not False or
+                same.get("independently_authenticated") is not False or
+                same.get("production_applied") is not False):
+            raise ValueError("D source-bound reconciliation invalid")
+        if same["status"] == "MATCH":
+            if (status != "MATCH" or
+                    same["ledger_sha256"] != reconciliation.get("recovered_ledger_sha256",
+                                                               reconciliation.get("recovered_sha256")) or
+                    same["ledger_sha256"] != reconciliation.get("remote_ledger_sha256",
+                                                               reconciliation.get("remote_sha256")) or
+                    not isinstance(same.get("remote_checkpoint_sha"), str) or
+                    re.fullmatch(r"[0-9a-f]{40}", same["remote_checkpoint_sha"]) is None):
+                raise ValueError("D pinned checkpoint MATCH contradicts remote readback")
+        same_status = same["status"]
     return {"source_run_id": int(run_id), "source_sha": sha,
             "recovery_status": readback["status"], "ledger_generation": persisted["ledger_generation"],
-            "scan_status": persisted["scan_status"], "reconciliation_status": status,
+            "scan_status": persisted["scan_status"], "reconciliation_status": status, "same_run_reconciliation_status": same_status,
             "independently_authenticated": independent, "same_scan_as_delivery": False,
             "live_watch_authorized": False, "production_applied": False}
 
@@ -98,6 +132,7 @@ def project_delivery(transport, writer_readback=None, historical_a2=None):
             "historical_coverage": coverage, "live_watch": [], "live_watch_authorized": False,
             "production_applied": False, "single_writer_read_only": True,
             "writer_recovery": writer, "writer_reconciliation_status": writer["reconciliation_status"] if writer else "UNAVAILABLE",
+            "writer_same_run_reconciliation_status": writer["same_run_reconciliation_status"] if writer else "UNAVAILABLE",
             "historical_a2": replay}
 
 
@@ -244,6 +279,20 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
         quote = by_symbol.get(symbol)
         if quote is None or candidate["price_usd"] != quote["price"] or _utc(candidate["quote_observed_at"]) != _utc(quote["observed_at"]):
             raise ValueError("WATCH candidate lacks matching fresh quote")
+    # The producer and consumer now share one manual/scheduled summary contract.
+    # Never deliver a summary that disagrees with the immutable candidate list.
+    published_summary = result.get("delivery_summary")
+    if published_summary is not None:
+        expected_trigger = "manual" if event == "workflow_dispatch" else "scheduled"
+        if (not isinstance(published_summary, dict) or
+                published_summary.get("trigger") != expected_trigger or
+                published_summary.get("scan_status") != status or
+                published_summary.get("watch_count") != len(candidates) or
+                published_summary.get("top_watch") != (candidates[0] if candidates else None) or
+                published_summary.get("ranked_watch") != candidates or
+                published_summary.get("observed_markets") != result["observed_markets"] or
+                published_summary.get("ledger_generation") != generation):
+            raise ValueError("published summary differs from persisted candidate evidence")
     # A checks freshness at artifact consumption, not merely at scan time.
     # Apply the same read-time boundary to paper results: authenticated old
     # WATCH remains historical evidence, never a current recommendation.
@@ -253,8 +302,15 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
         0 <= (read_at - _utc(q["observed_at"])).total_seconds() <= 600
         for q in (by_symbol[c["symbol"]] for c in candidates)
     )
-    visible_watch = candidates if fresh_at_delivery else []
-    delivery_status = ("ABSTAIN_PUBLISHED_WATCH_STALE_AT_DELIVERY"
+    eligible = result.get("eligible_pairs")
+    observed = result["observed_markets"]
+    if type(eligible) is not int or eligible < observed:
+        raise ValueError("published eligible market coverage invalid")
+    market_coverage_complete = observed == eligible
+    visible_watch = candidates if fresh_at_delivery and market_coverage_complete else []
+    delivery_status = ("ABSTAIN_INCOMPLETE_TICKER_COVERAGE"
+                       if not market_coverage_complete else
+                       "ABSTAIN_PUBLISHED_WATCH_STALE_AT_DELIVERY"
                        if candidates and not fresh_at_delivery else status)
     writer = _writer_evidence(writer_readback) if writer_readback is not None else None
     # D may legitimately be an independently authenticated historical run.
@@ -306,10 +362,34 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
     accepted_fresh_watch = bool(visible_watch)
     a2 = _a2_evidence(a2_delivery) if a2_delivery is not None else None
     learning = _learning_evidence(learning_handoff) if learning_handoff is not None else None
+    # A single consumer-facing summary is shared by manual and scheduled runs.
+    # It describes only the actually authorized visible paper candidates.
+    delivery_summary = {
+        "scan_status": delivery_status,
+        "trigger": "manual" if event == "workflow_dispatch" else "scheduled",
+        "watch_count": len(visible_watch),
+        "top_watch": visible_watch[0] if visible_watch else None,
+        "ranked_watch": [
+            {"rank": c["rank"], "symbol": c["symbol"],
+             "price_usd": c["price_usd"], "baseline_score": c["baseline_score"],
+             "challenger_score": c["challenger_score"],
+             "move15_pct": c["move15_pct"], "volume_accel": c["volume_accel"],
+             "quote_observed_at": c["quote_observed_at"], "risk": c["risk"],
+             "status": c["status"]}
+            for c in visible_watch
+        ],
+        "observed_markets": result["observed_markets"],
+        "quote_evidence_complete": len(quotes) == result["observed_markets"] and market_coverage_complete,
+        "delivery_blocked": (not market_coverage_complete) or (bool(candidates) and not bool(visible_watch)),
+        "learning_status": "NO_QUALIFIED_RULE" if learning is not None else "LEARNING_EVIDENCE_UNAVAILABLE",
+        "source_run_id": int(run_id),
+        "ledger_generation": generation,
+    }
     return {"schema": "paper_delivery_readback_v1", "source_run_id": int(run_id),
-            "source_sha": sha, "github_event": event, "status": delivery_status,
+            "source_sha": sha, "github_event": event, "status": delivery_status, "delivery_summary": delivery_summary,
             "ledger_generation": generation, "ledger_commit": result["ledger_commit"],
             "writer_reconciliation_status": writer["reconciliation_status"] if writer else "UNAVAILABLE",
+            "writer_same_run_reconciliation_status": writer["same_run_reconciliation_status"] if writer else "UNAVAILABLE",
             "writer_recovery": writer,
             "writer_source_identity_matches_delivery": bool(writer and writer["source_run_id"] == int(run_id) and writer["source_sha"] == sha),
             "a2_receipt_cohort": a2, "learning": learning,
@@ -318,7 +398,7 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
             "live_watch": visible_watch, "live_watch_authorized": accepted_fresh_watch,
             "published_quote_evidence_count": len(quotes),
             "published_observed_markets": result["observed_markets"],
-            "published_quote_complete": True,
+            "published_quote_complete": market_coverage_complete,
             "client_quote_freshness_verified": fresh_at_delivery,
             "fresh_watch_delivery_verified": accepted_fresh_watch,
             "exchange_event_freshness_verified": False,
