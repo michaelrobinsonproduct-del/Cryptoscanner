@@ -157,6 +157,12 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
             self.assertEqual(overlap["pair_coverage"]["YUSD"]["entry_bar_present_unqualified"], 0)
             self.assertEqual(overlap["pair_coverage"]["XUSD"]["partition_sha256"],
                              hashlib.sha256(raw).hexdigest())
+            self.assertEqual(overlap["partition_provenance"]["XUSD"]["usable_bar_count_before_cutoff"], 578)
+            self.assertEqual(overlap["partition_provenance"]["XUSD"]["first_usable_bar_utc"], start.isoformat())
+            self.assertEqual(overlap["partition_provenance"]["XUSD"]["last_usable_bar_utc"],
+                             (start + dt.timedelta(minutes=5 * 577)).isoformat())
+            self.assertNotIn("first_usable_bar_utc", overlap["partition_provenance"]["YUSD"])
+
             self.assertIsNone(overlap["pair_coverage"]["YUSD"]["partition_sha256"])
             self.assertEqual(sum(v["frozen_observations"] for v in
                                  overlap["pair_coverage"].values()), 2)
