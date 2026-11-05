@@ -77,17 +77,35 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
             # Pin both packed objects to one immutable branch checkpoint.
             # A moving writer ref must not mix a manifest from one generation
             # with a snapshot from another while the read-only consumer runs.
-            ref_data = _github_json([f"repos/{repo}/git/ref/heads/{quote(ref, safe='')}"], runner=runner)
-            pinned_sha = ref_data.get("object", {}).get("sha") if isinstance(ref_data, dict) else None
-            if not isinstance(pinned_sha, str) or len(pinned_sha) != 40 or any(c not in "0123456789abcdef" for c in pinned_sha):
-                raise IntegrityError("Remote writer checkpoint SHA unavailable")
+            try:
+                ref_data = _github_json([f"repos/{repo}/git/ref/heads/{quote(ref, safe='')}"], runner=runner)
+                pinned_sha = ref_data.get("object", {}).get("sha") if isinstance(ref_data, dict) else None
+                if not isinstance(pinned_sha, str) or len(pinned_sha) != 40 or any(c not in "0123456789abcdef" for c in pinned_sha):
+                    raise IntegrityError("Remote writer checkpoint SHA unavailable")
+            except (IntegrityError, subprocess.CalledProcessError, subprocess.TimeoutExpired,
+                    OSError, ValueError, KeyError, TypeError) as checkpoint_error:
+                return {"status": "UNAVAILABLE", "reason": "REMOTE_CHECKPOINT_UNAVAILABLE",
+                        "failure_type": type(checkpoint_error).__name__,
+                        "remote_ref": ref, "remote_path": segments.SNAPSHOT,
+                        "recovered_sha256": hashlib.sha256(recovered[ledger_paths[0]]).hexdigest(),
+                        "independently_authenticated": False, "production_applied": False}
             def remote_object(name):
                 endpoint = f"repos/{repo}/contents/{quote(name, safe='/')}?ref={pinned_sha}"
                 obj = _github_json([endpoint], runner=runner)
                 if obj.get("type") != "file":
                     raise IntegrityError("Remote packed ledger object unavailable")
                 if obj.get("encoding") == "base64":
-                    return base64.b64decode("".join(obj["content"].split()), validate=True)
+                    payload = base64.b64decode("".join(obj["content"].split()), validate=True)
+                    # Contents API inline bytes must match their immutable Git
+                    # blob identity, not just a checksum in the packed manifest.
+                    blob_sha = obj.get("sha")
+                    expected_blob = hashlib.sha1(
+                        b"blob " + str(len(payload)).encode("ascii") + b"\\0" + payload
+                    ).hexdigest()
+                    if (obj.get("size") != len(payload) or
+                            not isinstance(blob_sha, str) or blob_sha != expected_blob):
+                        raise IntegrityError("Remote packed ledger Git blob identity mismatch")
+                    return payload
                 # GitHub Contents API omits inline bytes for large blobs.
                 # Resolve the immutable blob SHA through the read-only Git Data API.
                 blob_sha = obj.get("sha")
@@ -97,8 +115,11 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                 if blob.get("sha") != blob_sha or blob.get("encoding") != "base64":
                     raise IntegrityError("Remote packed ledger blob identity mismatch")
                 payload = base64.b64decode("".join(blob["content"].split()), validate=True)
-                if len(payload) != obj.get("size"):
-                    raise IntegrityError("Remote packed ledger blob size mismatch")
+                expected_blob = hashlib.sha1(
+                    b"blob " + str(len(payload)).encode("ascii") + b"\\0" + payload
+                ).hexdigest()
+                if len(payload) != obj.get("size") or expected_blob != blob_sha:
+                    raise IntegrityError("Remote packed ledger blob identity mismatch")
                 return payload
             try:
                 manifest_bytes = remote_object(segments.MANIFEST)
