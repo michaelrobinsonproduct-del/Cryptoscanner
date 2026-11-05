@@ -362,7 +362,13 @@ jobs:
                   manifests=[n for n in names if Path(n).name=="SHA256SUMS"]
                   if len(results)!=1 or len(manifests)!=1:
                       continue
-                  files={Path(n).name:archive.read(n) for n in names if not n.endswith("/")}
+                  # SHA256SUMS uses basenames. Reject duplicate basenames and
+                  # nested paths rather than silently overwriting one ZIP member
+                  # in the dict and authenticating a different payload.
+                  members=[n for n in names if not n.endswith("/")]
+                  if any(Path(n).name != n for n in members) or len({Path(n).name for n in members}) != len(members):
+                      continue
+                  files={n:archive.read(n) for n in members}
                   verified=True
                   checked=set()
                   for line in files["SHA256SUMS"].decode().splitlines():
