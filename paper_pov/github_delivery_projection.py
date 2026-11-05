@@ -306,8 +306,19 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
     accepted_fresh_watch = bool(visible_watch)
     a2 = _a2_evidence(a2_delivery) if a2_delivery is not None else None
     learning = _learning_evidence(learning_handoff) if learning_handoff is not None else None
+    # A single consumer-facing summary is shared by manual and scheduled runs.
+    # It describes only the actually authorized visible paper candidates.
+    delivery_summary = {
+        "scan_status": delivery_status,
+        "trigger": "manual" if event == "workflow_dispatch" else "scheduled",
+        "watch_count": len(visible_watch),
+        "top_watch": visible_watch[0] if visible_watch else None,
+        "learning_status": "NO_QUALIFIED_RULE" if learning is not None else "LEARNING_EVIDENCE_UNAVAILABLE",
+        "source_run_id": int(run_id),
+        "ledger_generation": generation,
+    }
     return {"schema": "paper_delivery_readback_v1", "source_run_id": int(run_id),
-            "source_sha": sha, "github_event": event, "status": delivery_status,
+            "source_sha": sha, "github_event": event, "status": delivery_status, "delivery_summary": delivery_summary,
             "ledger_generation": generation, "ledger_commit": result["ledger_commit"],
             "writer_reconciliation_status": writer["reconciliation_status"] if writer else "UNAVAILABLE",
             "writer_recovery": writer,
