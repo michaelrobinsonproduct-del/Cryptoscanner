@@ -137,6 +137,20 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     for pair, alias in ohlc_aliases.items():
         alias_owners.setdefault(alias, set()).add(pair)
     ticker = api("Ticker")
+    # Kraken's all-market Ticker response can omit a small number of otherwise
+    # online USD markets. Recover only missing identities through the public
+    # per-pair endpoint; never turn a partial response into a complete cohort
+    # unless every requested pair is actually returned with its canonical key.
+    if isinstance(ticker, dict):
+        missing = [pair for pair in eligible if pair not in ticker]
+        if 0 < len(missing) <= 6:
+            for pair in missing:
+                try:
+                    retry = api("Ticker?pair=" + urllib.parse.quote(pair, safe=""))
+                    if isinstance(retry, dict) and set(retry) == {pair} and isinstance(retry[pair], dict):
+                        ticker[pair] = retry[pair]
+                except (OSError, TimeoutError, RuntimeError, ValueError, KeyError):
+                    pass  # Retain incomplete coverage and abstain below.
     quote_at = clock().astimezone(UTC)
     if not isinstance(ticker, dict) or not 0 <= (quote_at - started).total_seconds() <= 120:
         raise RuntimeError("Ticker request stale")
