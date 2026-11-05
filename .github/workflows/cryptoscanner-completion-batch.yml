@@ -1,0 +1,81 @@
+name: Cryptoscanner consolidated completion batch (paper-only)
+on:
+  push:
+    branches: [integration-a-b-c-d-20261103]
+    paths:
+      - '.github/workflows/cryptoscanner-completion-batch.yml'
+      - '.github/workflows/b1-candidate-parity.yml'
+      - 'paper_pov/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: cryptoscanner-completion-batch-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  consolidated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: oven-sh/setup-bun@v2
+      - name: Preserve immutable execution identity and checkpoint
+        run: |
+          mkdir -p /tmp/completion-batch
+          python - <<'PY'
+          import json,os,pathlib
+          pathlib.Path("/tmp/completion-batch/checkpoint.json").write_text(json.dumps({
+            "schema":"cryptoscanner_completion_batch_v1",
+            "run_id":os.environ["GITHUB_RUN_ID"],"source_sha":os.environ["GITHUB_SHA"],
+            "paper_only":True,"completed":[],"status":"STARTED",
+            "next_stage":"A_SOURCE_CONTRACT"},indent=2))
+          PY
+      - name: A — real Kraken source, quote and published-result contract
+        run: |
+          python -m unittest paper_pov.test_scanner paper_pov.test_candidate_snapshot paper_pov.test_results_report -v
+          python - <<'PY'
+          import json,pathlib
+          p=pathlib.Path("/tmp/completion-batch/checkpoint.json")
+          d=json.loads(p.read_text());d["completed"].append("A_SOURCE_CONTRACT");d["next_stage"]="D_READBACK_CONTRACT";p.write_text(json.dumps(d,indent=2))
+          PY
+      - name: D — independently checked read-only artifact and ledger contracts
+        run: |
+          python -m unittest paper_pov.test_github_sealed_bundle_readback -v
+          python - <<'PY'
+          import json,pathlib
+          p=pathlib.Path("/tmp/completion-batch/checkpoint.json")
+          d=json.loads(p.read_text());d["completed"].append("D_READBACK_CONTRACT");d["next_stage"]="B_DELIVERY_CONTRACT";p.write_text(json.dumps(d,indent=2))
+          PY
+      - name: B — unified paper delivery and shadow parity
+        run: |
+          python -m unittest paper_pov.test_github_delivery_projection -v
+          bun test scanner/src/shadow-evaluation.test.ts scanner/src/shadow-artifacts.test.ts
+          python - <<'PY'
+          import json,pathlib
+          p=pathlib.Path("/tmp/completion-batch/checkpoint.json")
+          d=json.loads(p.read_text());d["completed"].append("B_DELIVERY_CONTRACT");d["next_stage"]="LIVE_EVIDENCE_ACCEPTANCE";p.write_text(json.dumps(d,indent=2))
+          PY
+      - name: Record bounded acceptance — tests do not authorize live WATCH
+        run: |
+          python - <<'PY'
+          import json,pathlib
+          p=pathlib.Path("/tmp/completion-batch/checkpoint.json")
+          d=json.loads(p.read_text());d["status"]="CONTRACTS_PASSED_LIVE_SOURCE_AUTHENTICATION_PENDING"
+          d["live_watch_authorized"]=False
+          d["next_stage"]="B1_DOWNLOADED_DELIVERY_EXACT_SOURCE_CI"
+          p.write_text(json.dumps(d,indent=2))
+          with open(__import__("os").environ["GITHUB_STEP_SUMMARY"],"a") as out:
+            out.write("### Cryptoscanner completion batch\n")
+            out.write("A/D/B contract acceptance passed; live same-run A/D readback and B1 downloaded-delivery remain independently gated. No WATCH authorized.\n")
+          PY
+      - name: Save checkpoint even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cryptoscanner-completion-checkpoint
+          path: /tmp/completion-batch/checkpoint.json
+          retention-days: 14
