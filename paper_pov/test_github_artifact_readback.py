@@ -291,7 +291,7 @@ def test_packed_single_writer_remote_reconciliation_real_storage_layout():
     blob = packed.pack_snapshot(state)
     # Build an internally valid zero-generation manifest anchored to a checkpoint.
     checkpoint = {"git_commit": "a" * 40, "generation": 0,
-                  "ledger_sha256": state["sha256"], "file_sha256": "b" * 64}
+                  "ledger_sha256": state["sha256"], "file_sha256": hashlib.sha256(raw).hexdigest()}
     manifest = {"schema": repo_storage.SCHEMA, "checkpoint": checkpoint,
                 "head": {"generation": 0, "ledger_sha256": state["sha256"],
                          "snapshot_sha256": hashlib.sha256(blob).hexdigest()},
@@ -304,7 +304,8 @@ def test_packed_single_writer_remote_reconciliation_real_storage_layout():
             return json.dumps({"object": {"sha": "e" * 40}}).encode()
         if "paper_pov/output/ledger.json" in endpoint:
             raise subprocess.CalledProcessError(1, args, output=b"Not Found")
-        data = json.dumps(manifest).encode() if repo_storage.MANIFEST in endpoint else blob
+        data = (json.dumps(manifest).encode() if repo_storage.MANIFEST in endpoint else
+                raw if repo_storage.CHECKPOINT in endpoint else blob)
         git_sha = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\x00" + data).hexdigest()
         return json.dumps({"type": "file", "encoding": "base64", "sha": git_sha,
                            "size": len(data),
@@ -315,7 +316,7 @@ def test_packed_single_writer_remote_reconciliation_real_storage_layout():
     assert report["remote_generation"] == 0
     assert report["remote_sha256"] == report["recovered_sha256"]
     assert report["independently_authenticated"] is False
-    assert len(calls) == 4
+    assert len(calls) == 5
     assert report["remote_checkpoint_sha"] == "e" * 40
     assert report["remote_path"] == repo_storage.SNAPSHOT
 
@@ -408,7 +409,7 @@ def test_packed_remote_large_snapshot_uses_sha_bound_git_blob():
     manifest = {
         "schema": segments.SCHEMA,
         "checkpoint": {"git_commit": "a" * 40, "generation": 0,
-                       "ledger_sha256": state["sha256"], "file_sha256": "b" * 64},
+                       "ledger_sha256": state["sha256"], "file_sha256": hashlib.sha256(ledger.canonical(state)).hexdigest()},
         "head": {"generation": 0, "ledger_sha256": state["sha256"],
                  "snapshot_sha256": hashlib.sha256(packed).hexdigest()},
         "segments": [],
@@ -427,7 +428,7 @@ def test_packed_remote_large_snapshot_uses_sha_bound_git_blob():
         if segments.SNAPSHOT in endpoint:
             return json.dumps({"type": "file", "encoding": "none",
                                "sha": blob_sha, "size": len(packed)}).encode()
-        raw = json.dumps(manifest).encode()
+        raw = ledger.canonical(state) if segments.CHECKPOINT in endpoint else json.dumps(manifest).encode()
         manifest_sha = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\x00" + raw).hexdigest()
         return json.dumps({"type": "file", "encoding": "base64", "sha": manifest_sha,
                            "size": len(raw),
