@@ -66,7 +66,9 @@ def project_historical_execution(execution, *, frozen_predictions, frozen_select
         seen.add(pid)
         # E1 may carry the original prediction timestamp. If present it must
         # match the frozen A2 receipt, not a later reconstructed observation.
-        if frozen_observation_times is not None and "as_of" in record:
+        if frozen_observation_times is not None:
+            if not isinstance(record.get("as_of"), str):
+                raise ValueError("Reconstructed prediction lacks frozen A2 timestamp")
             from .shadow_learning_evidence import utc_time
             if utc_time(record["as_of"]) != utc_time(frozen_observation_times[pid]):
                 raise ValueError("Reconstructed prediction time differs from frozen A2 observation")
