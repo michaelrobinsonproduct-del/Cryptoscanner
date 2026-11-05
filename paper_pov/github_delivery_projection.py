@@ -221,13 +221,18 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
         raise ValueError("published quote freshness summary mismatch")
     if (status == "ABSTAIN_NO_OBSERVATIONS") != (not quotes) or (status == "ABSTAIN_NO_WATCH") != (bool(quotes) and not candidates):
         raise ValueError("published abstention/coverage contradiction")
+    seen_candidate_symbols = set()
     for i, candidate in enumerate(candidates, 1):
         if not isinstance(candidate, dict) or candidate.get("rank") != i or candidate.get("status") != "WATCH_PAPER_ONLY" or candidate.get("exchange_event_freshness_verified") is not False:
             raise ValueError("invalid WATCH candidate")
         for key in ("symbol", "price_usd", "quote_observed_at", "baseline_score", "challenger_score", "move15_pct", "volume_accel", "risk"):
             if key not in candidate:
                 raise ValueError("incomplete WATCH candidate")
-        quote = by_symbol.get(candidate["symbol"])
+        symbol = candidate["symbol"]
+        if symbol in seen_candidate_symbols:
+            raise ValueError("duplicate published WATCH candidate")
+        seen_candidate_symbols.add(symbol)
+        quote = by_symbol.get(symbol)
         if quote is None or candidate["price_usd"] != quote["price"] or _utc(candidate["quote_observed_at"]) != _utc(quote["observed_at"]):
             raise ValueError("WATCH candidate lacks matching fresh quote")
     # A checks freshness at artifact consumption, not merely at scan time.
