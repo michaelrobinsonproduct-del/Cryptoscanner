@@ -105,7 +105,31 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          # Authenticate the legacy recovery artifact against its own GitHub run,
+          # source commit and GitHub transport digest before reading its JSON.
+          gh api "repos/$REPO/actions/artifacts/13276401753" > /tmp/c-real-receipts/legacy-d-meta.json
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+          m=json.loads(Path("/tmp/c-real-receipts/legacy-d-meta.json").read_text())
+          if (m.get("id")!=13276401753 or m.get("expired") is not False
+                  or not isinstance(m.get("workflow_run"),dict)
+                  or type(m["workflow_run"].get("id")) is not int
+                  or re.fullmatch(r"[0-9a-f]{40}",str(m["workflow_run"].get("head_sha",""))) is None
+                  or re.fullmatch(r"sha256:[0-9a-f]{64}",str(m.get("digest",""))) is None):
+              raise SystemExit("LEGACY_D_GITHUB_ARTIFACT_IDENTITY_MISSING")
+          PY
           gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/13276401753/zip" > /tmp/c-real-receipts/recovery.zip
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          root=Path("/tmp/c-real-receipts")
+          meta=json.loads((root/"legacy-d-meta.json").read_text())
+          with (root/"recovery.zip").open("rb") as stream:
+              actual=hashlib.file_digest(stream,"sha256").hexdigest()
+          if actual!=meta["digest"].removeprefix("sha256:"):
+              raise SystemExit("LEGACY_D_GITHUB_ZIP_DIGEST_MISMATCH")
+          PY
           python - <<'PY'
           import zipfile
           from pathlib import Path
