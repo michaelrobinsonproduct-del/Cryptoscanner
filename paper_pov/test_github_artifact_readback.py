@@ -1,5 +1,6 @@
 import json
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -227,7 +228,7 @@ def test_missing_independent_ledger_keeps_real_writer_readback_truthful():
                                      "paper_pov/output/ledger.json",
                                      {"ledger.json": recovered}, runner=missing)
     assert result["status"] == "UNAVAILABLE"
-    assert result["reason"] == "REMOTE_LEDGER_QUERY_FAILED"
+    assert result["reason"] == "REMOTE_CHECKPOINT_UNAVAILABLE"
     assert result["recovered_sha256"] == hashlib.sha256(recovered).hexdigest()
     assert result["independently_authenticated"] is False
     assert result["production_applied"] is False
