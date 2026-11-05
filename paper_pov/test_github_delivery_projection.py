@@ -167,7 +167,7 @@ class DeliveryProjectionTests(unittest.TestCase):
             self.assertFalse(output["live_watch_authorized"])
             outputs.append(output)
         self.assertEqual(set(outputs[0]), set(outputs[1]))
-        for status in ("ABSTAIN_NO_LIQUID_CANDIDATES", "ABSTAIN_NO_QUALIFIED_OHLC"):
+        for status in ("ABSTAIN_NO_LIQUID_CANDIDATES", "ABSTAIN_NO_QUALIFIED_OHLC", "ABSTAIN_INCOMPLETE_TICKER_COVERAGE"):
             abstaining_a2 = {**a2, "scan_status": status, "watch": [], "watch_count": 0}
             result = project_published_result(published, d, abstaining_a2)
             self.assertEqual(result["a2_receipt_cohort"]["status"], status)
