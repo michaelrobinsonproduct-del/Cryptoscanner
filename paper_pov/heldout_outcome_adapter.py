@@ -13,6 +13,73 @@ from .shadow_learning_evidence import utc_time, evaluate_shadow_release, canonic
 HORIZONS = (1, 6, 24, 48)
 
 
+
+def reconstruct_forward_outcomes(predictions, candles, *, evaluation_asof_utc):
+    """Reconstruct real 1/6/24/48h forward outcomes from supplied timestamped candles.
+
+    Candles must be source-backed observations, never interpolated prices.
+    This function deliberately does not authenticate the source: downstream
+    evidence must independently verify the archive before qualifying a rule.
+    """
+    from datetime import timedelta
+    from math import isfinite
+    asof = utc_time(evaluation_asof_utc)
+    by_pair = {}
+    for candle in candles:
+        pair = candle["pair"]
+        timestamp = utc_time(candle["timestamp_utc"])
+        close = float(candle["close"])
+        high = float(candle["high"])
+        if not (isfinite(close) and isfinite(high) and 0 < close <= high):
+            raise ValueError("Invalid observed candle price")
+        by_pair.setdefault(pair, []).append((timestamp, close, high))
+    for observations in by_pair.values():
+        observations.sort(key=lambda item: item[0])
+        if len({item[0] for item in observations}) != len(observations):
+            raise ValueError("Duplicate candle timestamp")
+    outcomes = []
+    seen = set()
+    for prediction in predictions:
+        key = prediction["prediction_id"]
+        if key in seen:
+            raise ValueError("Duplicate prediction")
+        seen.add(key)
+        entry = utc_time(prediction["entry_utc"])
+        feature = utc_time(prediction["feature_asof_utc"])
+        if feature > entry:
+            raise ValueError("Prediction features occur after entry")
+        price = float(prediction["entry_price"])
+        if not isfinite(price) or price <= 0:
+            raise ValueError("Invalid entry price")
+        observations = by_pair.get(prediction["pair"], [])
+        for horizon in HORIZONS:
+            end = entry + timedelta(hours=horizon)
+            observed = [(t, close, high) for t, close, high in observations if entry < t <= end]
+            mature = end <= asof
+            # A missing interval cannot be silently treated as a miss.
+            complete = mature and bool(observed) and all(
+                observed[i][0] - observed[i - 1][0] == timedelta(minutes=5)
+                for i in range(1, len(observed))
+            ) and observed[0][0] == entry + timedelta(minutes=5) and observed[-1][0] == end
+            max_return = max((high / price - 1 for _, _, high in observed), default=None)
+            close_return = observed[-1][1] / price - 1 if complete else None
+            outcomes.append({
+                "prediction_id": key, "pair": prediction["pair"],
+                "entry_utc": prediction["entry_utc"],
+                "feature_asof_utc": prediction["feature_asof_utc"],
+                "horizon_hours": horizon, "label_mature_utc": end.isoformat(),
+                "entry_price": price, "close_return": close_return,
+                "max_favorable_return": max_return if complete else None,
+                "hit": max_return >= 0.30 if complete else None,
+                "coverage_complete": complete,
+                "source_sha256": prediction.get("source_sha256"),
+                "source_authenticated": False,
+                "liquidity_qualified": prediction.get("liquidity_qualified") is True,
+                "outcome_status": "MATURE" if complete else
+                    ("IMMATURE" if not mature else "MISSING_CANDLES"),
+            })
+    return outcomes
+
 def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *,
                            training_end_utc, holdout_start_utc, evaluation_asof_utc,
                            baseline_version, challenger_version, source_receipt=None,
