@@ -1,0 +1,29 @@
+name: Paper missed-slot recovery (dispatch only; no ledger writer)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '24 * * * *'
+    - cron: '54 * * * *'
+permissions:
+  actions: write
+  contents: read
+concurrency:
+  group: paper-missed-slot-dispatch
+  cancel-in-progress: false
+jobs:
+  recover:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Decide and dispatch existing single writer only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m unittest paper_pov.test_missed_slot_recovery -v
+          python -m paper_pov.missed_slot_recovery

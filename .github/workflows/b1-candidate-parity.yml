@@ -1,0 +1,514 @@
+name: B1 isolated candidate parity acceptance
+on:
+  push:
+    branches:
+      - integration-a-b-c-d-20261103
+    paths:
+      - '.github/workflows/b1-candidate-parity.yml'
+      - 'paper_pov/github_delivery_projection.py'
+      - 'paper_pov/test_github_delivery_projection.py'
+      - 'paper_pov/scanner.py'
+      - 'paper_pov/test_scanner.py'
+      - 'paper_pov/candidate_snapshot.py'
+      - 'paper_pov/test_candidate_snapshot.py'
+      - 'paper_pov/github_sealed_bundle_readback.py'
+      - 'paper_pov/test_github_sealed_bundle_readback.py'
+      - 'scanner/src/**'
+  pull_request:
+    paths:
+      - 'scanner/src/candidate-contract.ts'
+      - 'scanner/src/candidate-contract.test.ts'
+      - 'scanner/src/candidate-cycle.ts'
+      - 'scanner/src/candidate-cycle.test.ts'
+      - 'scanner/src/shadow-artifacts.ts'
+      - 'scanner/src/shadow-artifacts.test.ts'
+      - 'scanner/src/shadow-evaluation.ts'
+      - 'scanner/src/shadow-evaluation.test.ts'
+      - 'scanner/src/cycle-http.ts'
+      - 'scanner/src/cycle-http.test.ts'
+      - 'scanner/src/paper-receipt.ts'
+      - 'scanner/src/paper-receipt.test.ts'
+      - 'scanner/src/cycle-coverage.test.ts'
+      - 'scanner/src/cycle-runner.ts'
+      - 'scanner/src/cycle-runner.test.ts'
+      - 'scanner/src/server.ts'
+      - '.github/workflows/b1-candidate-parity.yml'
+      - 'paper_pov/github_sealed_bundle_readback.py'
+      - 'paper_pov/test_github_sealed_bundle_readback.py'
+      - 'paper_pov/github_delivery_projection.py'
+      - 'paper_pov/test_github_delivery_projection.py'
+      - 'paper_pov/scanner.py'
+      - 'paper_pov/test_scanner.py'
+      - 'paper_pov/candidate_snapshot.py'
+      - 'paper_pov/test_candidate_snapshot.py'
+      - 'scanner/src/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Focused B1 candidate and native-entry parity regression
+        run: bun test scanner/src/shadow-evaluation.test.ts scanner/src/shadow-artifacts.test.ts scanner/src/cycle-runner.test.ts scanner/src/cycle-http.test.ts scanner/src/paper-receipt.test.ts
+      - name: A core Kraken quote-to-immutable-snapshot acceptance
+        run: python -m unittest paper_pov.test_scanner paper_pov.test_candidate_snapshot -v
+      - name: Read-only GitHub artifact transport and checksum acceptance
+        run: python -m unittest paper_pov.test_github_sealed_bundle_readback paper_pov.test_github_delivery_projection -v
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+  downloaded-delivery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Select genuine successful main paper run and downloadable results
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b-delivery
+          gh api "repos/$REPO/actions/workflows/paper-pipeline.yml/runs?branch=main&status=success&per_page=20" > /tmp/b-delivery/runs.json
+          python - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          runs=json.loads(Path("/tmp/b-delivery/runs.json").read_text()).get("workflow_runs",[])
+          for run in runs:
+              if run.get("event") not in ("schedule","workflow_dispatch") or run.get("conclusion")!="success":
+                  continue
+              raw=subprocess.check_output(["gh","api",f"repos/{os.environ['REPO']}/actions/runs/{run['id']}/artifacts"],timeout=30)
+              artifacts=json.loads(raw).get("artifacts",[])
+              matches=[a for a in artifacts if a.get("name")==f"public-paper-results-{run['id']}" and a.get("expired") is False
+                       and str(a.get("digest","")).startswith("sha256:")
+                       and a.get("workflow_run",{}).get("id")==run["id"]
+                       and a.get("workflow_run",{}).get("head_sha")==run["head_sha"]]
+              if len(matches)!=1:
+                  continue
+              Path("/tmp/b-delivery/identity.json").write_text(json.dumps({"run_id":str(run["id"]),"source_sha":run["head_sha"],"event":run["event"],"artifact_id":matches[0]["id"],"artifact_digest":matches[0]["digest"]}))
+              print("SELECTED_AUTHENTIC_MAIN_RESULT",run["id"],run["event"],run["head_sha"])
+              break
+          else:
+              raise SystemExit("NO_SUCCESSFUL_MAIN_RESULTS_ARTIFACT: visible delivery failure")
+          PY
+          ARTIFACT="$(python -c 'import json;print(json.load(open("/tmp/b-delivery/identity.json"))["artifact_id"])')"
+          gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/$ARTIFACT/zip" > /tmp/b-delivery/published.zip
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          identity=json.loads(Path("/tmp/b-delivery/identity.json").read_text())
+          observed=hashlib.sha256(Path("/tmp/b-delivery/published.zip").read_bytes()).hexdigest()
+          if observed!=identity["artifact_digest"].removeprefix("sha256:"):
+              raise SystemExit("PUBLISHED_GITHUB_ARTIFACT_DIGEST_MISMATCH")
+          PY
+      - name: Download existing D recovered-ledger evidence independently
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/actions/workflows/runtime-readback-integrity.yml/runs?status=success&per_page=100" > /tmp/b-delivery/d-runs.json
+          python - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          runs=json.loads(Path("/tmp/b-delivery/d-runs.json").read_text()).get("workflow_runs",[])
+          identity=json.loads(Path("/tmp/b-delivery/identity.json").read_text())
+          selected=None
+          import hashlib,io,zipfile
+          for run in runs:
+              if run.get("conclusion")!="success" or run.get("head_branch")!="runtime-readback-integrity-20261104":
+                  continue
+              raw=subprocess.check_output(["gh","api",f"repos/{os.environ['REPO']}/actions/runs/{run['id']}/artifacts"],timeout=30)
+              matches=[a for a in json.loads(raw).get("artifacts",[]) if a.get("name")=="d2-real-writer-recovery-report"
+                  and a.get("expired") is False and a.get("workflow_run",{}).get("id")==run["id"]
+                  and str(a.get("digest","")).startswith("sha256:")]
+              if len(matches)!=1:
+                  continue
+              artifact=matches[0]
+              blob=subprocess.check_output(["gh","api","-H","Accept: application/vnd.github+json",
+                  f"repos/{os.environ['REPO']}/actions/artifacts/{artifact['id']}/zip"],timeout=45)
+              if hashlib.sha256(blob).hexdigest()!=artifact["digest"].removeprefix("sha256:"):
+                  continue
+              with zipfile.ZipFile(io.BytesIO(blob)) as archive:
+                  names=archive.namelist()
+                  if len(names)!=1 or names[0].split("/")[-1] not in ("real-writer-recovery.json","recovery.json"):
+                      continue
+                  data=archive.read(names[0])
+                  if len(data)>100000:
+                      continue
+                  if data.endswith(bytes((92,110))):
+                      data=data[:-2]+bytes((10,))
+                  report=json.loads(data)
+              if (report.get("remote_downloaded") is not True or
+                      report.get("production_applied") is not False or
+                      report.get("ledger_writer_invoked") is not False):
+                  continue
+              persisted=report.get("persisted_paper")
+              reconciliation=report.get("remote_ledger_reconciliation")
+              if (str(report.get("run_id"))==identity["run_id"] and
+                      report.get("source_sha")==identity["source_sha"] and
+                      report.get("independently_authenticated") is True and
+                      report.get("status")=="VERIFIED_REMOTE_READBACK" and
+                      isinstance(persisted,dict) and
+                      isinstance(reconciliation,dict) and
+                      reconciliation.get("status")=="MATCH" and
+                      isinstance(reconciliation.get("recovered_ledger_sha256"),str) and
+                      len(reconciliation["recovered_ledger_sha256"])==64 and
+                      isinstance(persisted.get("ledger_commit"),str) and
+                      len(persisted["ledger_commit"])==40):
+                  selected=(run,artifact)
+                  print("SELECTED_EXACT_SOURCE_D_RECOVERY",run["id"],artifact["id"])
+                  break
+          if selected is None:
+              Path("/tmp/b-delivery/d-status.json").write_text(json.dumps({
+                  "status":"D_SAME_RUN_RECOVERY_UNAVAILABLE",
+                  "reason":"NO_INDEPENDENTLY_AUTHENTICATED_EXACT_SOURCE_D_MATCH",
+                  "published_run_id":identity["run_id"],
+                  "published_source_sha":identity["source_sha"]}))
+              print("D_SAME_RUN_RECOVERY_UNAVAILABLE: paper WATCH must abstain")
+              raise SystemExit(0)
+          Path("/tmp/b-delivery/d-meta.json").write_text(json.dumps(selected[1]))
+          print("SELECTED_D_RECOVERY",selected[0]["id"],selected[1]["id"])
+          PY
+          if test -f /tmp/b-delivery/d-meta.json; then
+          D_ARTIFACT="$(python -c 'import json;print(json.load(open("/tmp/b-delivery/d-meta.json"))["id"])')"
+          gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/$D_ARTIFACT/zip" > /tmp/b-delivery/d-recovery.zip
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          m=json.loads(Path("/tmp/b-delivery/d-meta.json").read_text())
+          if hashlib.sha256(Path("/tmp/b-delivery/d-recovery.zip").read_bytes()).hexdigest()!=m["digest"].removeprefix("sha256:"):
+              raise SystemExit("D_RECOVERY_ZIP_SHA_MISMATCH")
+          PY
+          python - <<'PY'
+          import json,zipfile
+          from pathlib import Path
+          with zipfile.ZipFile("/tmp/b-delivery/d-recovery.zip") as z:
+              names=z.namelist()
+              if len(names)!=1 or names[0].split("/")[-1] not in ("real-writer-recovery.json","recovery.json"):
+                  raise SystemExit("D_RECOVERY_ARCHIVE_LAYOUT_MISMATCH")
+              raw=z.read(names[0])
+              if len(raw)>100000:
+                  raise SystemExit("D_RECOVERY_REPORT_OVERSIZED")
+              if raw.endswith(bytes((92,110))):
+                  raw=raw[:-2]+bytes((10,))
+              obj=json.loads(raw)
+              if obj.get("remote_downloaded") is not True or obj.get("production_applied") is not False:
+                  raise SystemExit("D_RECOVERY_REPORT_NOT_READ_ONLY")
+              Path("/tmp/b-delivery/writer.json").write_text(json.dumps(obj))
+          PY
+          fi
+      - name: Verify complete A2 artifact at consumption time or record historical-only evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/b-delivery/a2
+          gh api "repos/$REPO/actions/artifacts?per_page=100" > /tmp/b-delivery/a2-artifacts.json
+          if ! gh api "repos/$REPO/actions/workflows/a2-candidate-snapshot.yml/runs?status=success&per_page=100" > /tmp/b-delivery/a2-successful-runs.json; then
+            # This optional producer may exist only on an unmerged PR branch.
+            # Absence must be explicit, never a fabricated successful handoff.
+            echo '{"workflow_runs":[]}' > /tmp/b-delivery/a2-successful-runs.json
+            echo "OPTIONAL_A2_WORKFLOW_NOT_REGISTERED"
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          artifacts=json.loads(Path("/tmp/b-delivery/a2-artifacts.json").read_text()).get("artifacts",[])
+          successful={run["id"] for run in json.loads(Path("/tmp/b-delivery/a2-successful-runs.json").read_text()).get("workflow_runs",[]) if run.get("conclusion")=="success"}
+          matches=[a for a in artifacts if a.get("name")=="a2-live-consumer-evidence"
+                   and a.get("expired") is False
+                   and str(a.get("digest","")).startswith("sha256:")
+                   and a.get("workflow_run",{}).get("id") in successful
+                   and a.get("workflow_run",{}).get("head_sha")]
+          if matches:
+              chosen=max(matches,key=lambda a:a["id"])
+              Path("/tmp/b-delivery/a2-meta.json").write_text(json.dumps(chosen))
+              print("SELECTED_A2_ARTIFACT",chosen["id"],chosen["workflow_run"]["id"])
+          else:
+              Path("/tmp/b-delivery/a2-status.json").write_text(json.dumps({"status":"A2_FRESH_DELIVERY_UNAVAILABLE","reason":"NO_SUCCESSFUL_CHECKSUMMED_A2_ARTIFACT"}))
+              print("A2_FRESH_DELIVERY_UNAVAILABLE")
+          PY
+          if test -f /tmp/b-delivery/a2-meta.json; then
+          A2_ID="$(python -c 'import json;print(json.load(open("/tmp/b-delivery/a2-meta.json"))["id"])')"
+          gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/$A2_ID/zip" > /tmp/b-delivery/a2.zip
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          meta=json.loads(Path("/tmp/b-delivery/a2-meta.json").read_text())
+          observed=hashlib.sha256(Path("/tmp/b-delivery/a2.zip").read_bytes()).hexdigest()
+          if observed!=meta["digest"].removeprefix("sha256:"):
+              raise SystemExit("A2_GITHUB_ARTIFACT_DIGEST_MISMATCH")
+          PY
+          python - <<'PY'
+          import json,zipfile
+          from pathlib import Path
+          from paper_pov.a2_artifact_consumer import read_published_delivery, project_watch_delivery
+          root=Path("/tmp/b-delivery/a2")
+          with zipfile.ZipFile("/tmp/b-delivery/a2.zip") as archive:
+              required={"a2-verified-transport.zip","preselection-universe.json",
+                        "latest.json"}
+              optional={"a2-delivery.json"}
+              seen=set()
+              total=0
+              for item in archive.infolist():
+                  name=item.filename
+                  # Real A2 live-consumer uploads transport, universe and latest,
+                  # but older successful runs did not publish a2-delivery.json.
+                  # Reconstruct only through the strict read-time verifier.
+                  safe=(not name.startswith("/") and chr(92) not in name
+                        and all(part not in ("", ".", "..") for part in name.split("/")))
+                  if (item.is_dir() or not safe or name in seen
+                      or item.file_size>2_000_000
+                      or (item.external_attr >> 16)&0o170000==0o120000):
+                      raise SystemExit("A2_UNSAFE_OR_DUPLICATE_ARTIFACT_MEMBER")
+                  total+=item.file_size
+                  if total>8_000_000:
+                      raise SystemExit("A2_ARTIFACT_UNCOMPRESSED_LIMIT")
+                  seen.add(name)
+                  if name in required | optional or (name.startswith("receipts/") and name.endswith(".json") and name.count("/")==1) or name=="verified-snapshot.json":
+                      destination=root/name
+                      destination.parent.mkdir(parents=True,exist_ok=True)
+                      destination.write_bytes(archive.read(item))
+              if not required.issubset(seen):
+                  raise SystemExit("A2_REQUIRED_PUBLISHED_FILES_MISSING")
+          try:
+              delivery=(read_published_delivery(root)
+                        if (root/"a2-delivery.json").exists()
+                        else project_watch_delivery(root))
+          except (ValueError,KeyError) as exc:
+              # Old artifacts cannot be retroactively declared fresh; keep
+              # their pinned transport for forensic inspection only.
+              status={"status":"A2_FRESH_DELIVERY_UNAVAILABLE","reason":str(exc)[:200]}
+          else:
+              status={"status":"A2_READ_TIME_FRESHNESS_VERIFIED",
+                      "receipt_sha256":delivery["receipt_sha256"],
+                      "watch_count":delivery["watch_count"]}
+              Path("/tmp/b-delivery/a2-delivery.json").write_text(json.dumps(delivery))
+          Path("/tmp/b-delivery/a2-status.json").write_text(json.dumps(status))
+          print("A2_DELIVERY_STATUS",status)
+          PY
+          fi
+      - name: Discover existing E read-only learning handoff without inventing evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/actions/artifacts?per_page=100" > /tmp/b-delivery/e-artifacts.json
+          if ! gh api "repos/$REPO/actions/workflows/shadow-learning-evidence.yml/runs?status=success&per_page=100" > /tmp/b-delivery/e-successful-runs.json; then
+            # This optional producer may exist only on an unmerged PR branch.
+            # Absence must be explicit, never a fabricated successful handoff.
+            echo '{"workflow_runs":[]}' > /tmp/b-delivery/e-successful-runs.json
+            echo "OPTIONAL_E_WORKFLOW_NOT_REGISTERED"
+          fi
+          python - <<'PY'
+          import hashlib,json,os,subprocess,zipfile,io
+          from pathlib import Path
+          from paper_pov.github_delivery_projection import _learning_evidence
+          artifacts=json.loads(Path("/tmp/b-delivery/e-artifacts.json").read_text()).get("artifacts",[])
+          successful={run["id"]:run for run in json.loads(Path("/tmp/b-delivery/e-successful-runs.json").read_text()).get("workflow_runs",[]) if run.get("conclusion")=="success"}
+          # Only E's explicitly named handoff artifact can qualify; no synthetic labels.
+          eligible=[a for a in artifacts if a.get("name")=="e-historical-learning-handoff"
+                    and a.get("expired") is False and str(a.get("digest","")).startswith("sha256:")
+                    and a.get("workflow_run",{}).get("head_sha")
+                    and a.get("workflow_run",{}).get("id") in successful
+                    and successful[a["workflow_run"]["id"]].get("head_sha")==a["workflow_run"]["head_sha"]]
+          eligible.sort(key=lambda a:a["id"],reverse=True)
+          status={"status":"LEARNING_HANDOFF_UNAVAILABLE","reason":"NO_PUBLISHED_E_HANDOFF"}
+          for a in eligible:
+              try:
+                  raw=subprocess.check_output(["gh","api","-H","Accept: application/vnd.github+json",
+                      f"repos/{os.environ['REPO']}/actions/artifacts/{a['id']}/zip"],timeout=45)
+                  if hashlib.sha256(raw).hexdigest()!=a["digest"].removeprefix("sha256:"):
+                      raise ValueError("E_ARTIFACT_SHA256_MISMATCH")
+                  with zipfile.ZipFile(io.BytesIO(raw)) as z:
+                      if z.namelist()!=["learning-handoff.json"]:
+                          raise ValueError("E handoff archive layout")
+                      data=z.read("learning-handoff.json")
+                      if len(data)>500000:
+                          raise ValueError("E handoff oversized")
+                  handoff=json.loads(data)
+                  _learning_evidence(handoff)
+                  Path("/tmp/b-delivery/e-handoff.json").write_text(json.dumps(handoff))
+                  status={"status":"E_READ_ONLY_HANDOFF_CONSUMED","artifact_id":a["id"],
+                          "workflow_run_id":a.get("workflow_run",{}).get("id"),
+                          "source_sha":a["workflow_run"]["head_sha"],"artifact_sha256":a["digest"]}
+                  break
+              except (ValueError,KeyError,zipfile.BadZipFile,subprocess.CalledProcessError) as exc:
+                  status={"status":"LEARNING_HANDOFF_UNAVAILABLE","reason":type(exc).__name__}
+          Path("/tmp/b-delivery/e-status.json").write_text(json.dumps(status))
+          print("E_HANDOFF_DISCOVERY",status)
+          PY
+      - name: Consume actual downloaded manual or scheduled result through B shared adapter
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,subprocess,sys
+          from pathlib import Path
+          from paper_pov.manual_schedule_contract import load_verified_artifact
+          identity=json.loads(Path("/tmp/b-delivery/identity.json").read_text())
+          published=load_verified_artifact(Path("/tmp/b-delivery/published.zip"))
+          if str(published.get("run_id"))!=identity["run_id"] or published.get("source_sha")!=identity["source_sha"] or published.get("github_event")!=identity["event"]:
+              raise SystemExit("GITHUB_METADATA_RESULT_IDENTITY_MISMATCH")
+          writer_path=Path("/tmp/b-delivery/writer.json")
+          writer=json.loads(writer_path.read_text()) if writer_path.exists() else None
+          from paper_pov.github_delivery_projection import _writer_evidence
+          writer_projection=_writer_evidence(writer) if writer is not None else None
+          a2_path=Path("/tmp/b-delivery/a2-delivery.json")
+          from paper_pov.github_delivery_projection import _a2_evidence, _learning_evidence
+          a2_projection=_a2_evidence(json.loads(a2_path.read_text())) if a2_path.exists() else None
+          e_path=Path("/tmp/b-delivery/e-handoff.json")
+          learning_projection=_learning_evidence(json.loads(e_path.read_text())) if e_path.exists() else None
+          cmd=[sys.executable,"-m","paper_pov.github_delivery_projection",
+              "--published-artifact","/tmp/b-delivery/published.zip",
+              "--expected-run-id",identity["run_id"],
+              "--expected-source-sha",identity["source_sha"],
+              "--output","/tmp/b-delivery/delivery.json"]
+          if writer_path.exists():
+              cmd.extend(["--writer-readback",str(writer_path)])
+          if a2_path.exists():
+              cmd.extend(["--a2-delivery",str(a2_path)])
+          if e_path.exists():
+              cmd.extend(["--learning-handoff",str(e_path)])
+          subprocess.run(cmd,check=True)
+          projected=json.loads(Path("/tmp/b-delivery/delivery.json").read_text())
+          if projected["schema"]!="paper_delivery_readback_v1" or projected["live_watch_authorized"] is not projected["fresh_watch_delivery_verified"] or projected["single_writer_read_only"] is not True:
+              raise SystemExit("UNSAFE_DELIVERY_PROJECTION")
+          # Publish the actual integration outcome, including unavailable
+          # evidence, in one retained report rather than silently dropping it.
+          a2_status=json.loads(Path("/tmp/b-delivery/a2-status.json").read_text())
+          e_status=json.loads(Path("/tmp/b-delivery/e-status.json").read_text())
+          d_status_path=Path("/tmp/b-delivery/d-status.json")
+          d_status=(json.loads(d_status_path.read_text()) if d_status_path.exists()
+                    else {"status":"D_EXACT_SOURCE_RECEIPT_SELECTED",
+                          "source_run_id":int(identity["run_id"]),
+                          "source_sha":identity["source_sha"]})
+          if d_status["status"]=="D_EXACT_SOURCE_RECEIPT_SELECTED" and writer is None:
+              raise SystemExit("D_SELECTED_RECEIPT_MISSING")
+          if d_status["status"]!="D_EXACT_SOURCE_RECEIPT_SELECTED" and writer is not None:
+              raise SystemExit("D_ABSTENTION_WITH_UNEXPECTED_WRITER")
+          if projected["source_run_id"]!=int(identity["run_id"]):
+              raise SystemExit("DELIVERY_RUN_IDENTITY_MISMATCH")
+          if projected["source_sha"]!=identity["source_sha"] or projected["github_event"]!=identity["event"]:
+              raise SystemExit("DELIVERY_SOURCE_IDENTITY_MISMATCH")
+          if projected["writer_recovery"]!=writer_projection:
+              raise SystemExit("D_RECOVERY_NOT_CONSUMED")
+          if bool(projected.get("a2_receipt_cohort")) != bool(a2_path.exists()):
+              raise SystemExit("A2_EVIDENCE_NOT_CONSUMED")
+          if bool(projected.get("learning")) != bool(e_path.exists()):
+              raise SystemExit("E_LEARNING_NOT_CONSUMED")
+          expected_learning="NO_QUALIFIED_RULE" if e_path.exists() else "LEARNING_EVIDENCE_UNAVAILABLE"
+          if (projected.get("learning_status")!=expected_learning or
+                  projected.get("scoring_promotion_applied") is not False):
+              raise SystemExit("E_FALLBACK_OR_PROMOTION_STATUS_MISMATCH")
+          status={"schema":"b_integrated_delivery_status_v1",
+                  "source_run_id":projected["source_run_id"],
+                  "source_sha":projected["source_sha"],
+                  "github_event":projected["github_event"],
+                  "delivery_status":projected["status"],
+                  "watch_count":len(projected["live_watch"]),
+                  "published_observed_markets":projected["published_observed_markets"],
+                  "published_quote_evidence_count":projected["published_quote_evidence_count"],
+                  "published_quote_complete":projected["published_quote_complete"],
+                  "live_watch_authorized":projected["live_watch_authorized"],
+                  "writer_reconciliation_status":projected["writer_reconciliation_status"],
+                  "writer_evidence_available":writer is not None,
+                  "d":d_status,
+                  "writer_same_scan_as_delivery":projected["writer_source_identity_matches_delivery"],
+                  "fresh_watch_delivery_verified":projected.get("fresh_watch_delivery_verified",False),
+                  "writer_source_identity_matches_delivery":projected["writer_source_identity_matches_delivery"],
+                  "a2":a2_status,"e":e_status,
+                  "learning_qualified":False,
+                  "learning_status":projected["learning_status"],
+                  "scoring_promotion_applied":False,
+                  "production_applied":False}
+          # Human and machine consumers share one authenticated projection. Never
+          # turn A2's independent historical cohort into a same-run overlap.
+          scored=[]
+          for c in projected["live_watch"]:
+              scored.append({key:c.get(key) for key in (
+                  "rank","symbol","price_usd","quote_observed_at",
+                  "baseline_score","challenger_score","move15_pct",
+                  "volume_accel","risk","status")})
+          status["ranked_watch"]=scored
+          status["same_scan_overlap"]={"status":"UNAVAILABLE",
+              "reason":"NO_INDEPENDENT_SAME_RUN_SECOND_SCANNER",
+              "symbols":[]}
+          status["a2_historical_watch_count"]=(
+              a2_status.get("watch_count") if a2_status.get("status")=="A2_READ_TIME_FRESHNESS_VERIFIED" else None)
+          # Do not manufacture a score or a second scanner result from a
+          # different source run, even if a symbol string happens to match.
+          lines=[f"Paper delivery {status['source_run_id']} ({status['github_event']})",
+                 f"Status: {status['delivery_status']}",
+                 f"Published quote complete: {status['published_quote_complete']}",
+                 f"D same-run: {status['writer_same_scan_as_delivery']} / {status['writer_reconciliation_status']}",
+                 f"A2: {a2_status['status']} | E: {e_status['status']}",
+                 f"Learning: {status['learning_status']} (promotion: NO)",
+                 "Same-run scanner overlap: unavailable (no authenticated second scanner)"]
+          for c in scored:
+              lines.append(f"#{c['rank']} {c['symbol']} WATCH paper | price ${c['price_usd']} | baseline {c['baseline_score']} | challenger {c['challenger_score']} | 15m {c['move15_pct']}% | volume acceleration {c['volume_accel']} | risk {c['risk']} | quote {c['quote_observed_at']}")
+          if not scored:
+              lines.append("No authenticated fresh WATCH candidates; delivery abstained or found none.")
+          Path("/tmp/b-delivery/delivery-summary.txt").write_text("\n".join(lines)+"\n")
+          Path("/tmp/b-delivery/integration-status.json").write_text(json.dumps(status,sort_keys=True))
+          print("SHARED_MANUAL_SCHEDULED_DELIVERY",projected["source_run_id"],projected["status"])
+          PY
+      - name: Publish delivery outcome and explicit missing-evidence status
+        if: always()
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path("/tmp/b-delivery")
+          status=root/"integration-status.json"
+          delivery=root/"delivery.json"
+          a2=root/"a2-status.json"
+          e=root/"e-status.json"
+          if status.exists():
+              data=json.loads(status.read_text())
+              lines=["### B authenticated manual/scheduled delivery",
+                     f"- Source run: {data['source_run_id']} ({data['github_event']})",
+                     f"- Delivery: {data['delivery_status']}; WATCH: {data['watch_count']}",
+                     f"- Quote complete: {data['published_quote_complete']}; authenticated fresh WATCH: {data['fresh_watch_delivery_verified']}",
+                     f"- D same-source run: {data['writer_same_scan_as_delivery']}",
+                     f"- D recovery evidence available: {data['writer_evidence_available']}",
+                     f"- D exact-source status: {data['d']['status']}",
+                     f"- Writer reconciliation: {data['writer_reconciliation_status']}",
+                     f"- A2: {data['a2']['status']}; E: {data['e']['status']}",
+                     f"- Learning: {data['learning_status']}; scoring promotion applied: false",
+                     "- Paper only; no scoring promotion or second writer"]
+          else:
+              lines=["### B authenticated manual/scheduled delivery",
+                     "- **INCOMPLETE:** required authenticated readback or integration failed",
+                     f"- Published delivery file present: {delivery.exists()}",
+                     f"- A2 status available: {a2.exists()}; E status available: {e.exists()}",
+                     "- Inspect the first failed downloaded-delivery step; do not infer WATCH or learning"]
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf-8") as out:
+              out.write("\n".join(lines)+"\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b-authenticated-downloaded-delivery
+          path: |
+            /tmp/b-delivery/identity.json
+            /tmp/b-delivery/writer.json
+            /tmp/b-delivery/d-status.json
+            /tmp/b-delivery/a2-status.json
+            /tmp/b-delivery/a2-delivery.json
+            /tmp/b-delivery/e-status.json
+            /tmp/b-delivery/delivery.json
+            /tmp/b-delivery/integration-status.json
+            /tmp/b-delivery/delivery-summary.txt
+          if-no-files-found: warn
+          retention-days: 7

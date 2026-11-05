@@ -58,16 +58,40 @@ class PaperScanTests(unittest.TestCase):
         self.assertTrue(all(x["quote_observed_at"] <= x["as_of"] for x in a["watch"]))
 
     def test_gap_fails_closed(self):
-        with self.assertRaisesRegex(RuntimeError, "No fresh"):
-            run(gap=True)
+        report = run(gap=True)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+        self.assertEqual(report["abstention_counts"]["ohlc_gap_or_schema"], 24)
 
     def test_zero_volume_no_trade_abstains(self):
-        with self.assertRaisesRegex(RuntimeError, "No fresh"):
-            run(zero_volume=True)
+        report = run(zero_volume=True)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+        self.assertEqual(report["abstention_counts"]["ohlc_gap_or_schema"], 24)
 
     def test_stale_candle_fails_closed(self):
-        with self.assertRaisesRegex(RuntimeError, "No fresh"):
-            run(stale=True)
+        report = run(stale=True)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+        self.assertEqual(report["abstention_counts"]["stale_or_future_ohlc"], 24)
+
+    def test_partial_ticker_payload_abstains_without_discarding_observations(self):
+        base = fixture()
+        def api(path):
+            result = base(path)
+            if path == "Ticker":
+                result = dict(result)
+                result.pop("C0USD")
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+        self.assertFalse(report["ticker_coverage_complete"])
+        self.assertEqual(report["ticker_rejections"]["missing_or_invalid_payload"], 1)
+        self.assertEqual(report["observed_markets"], 24)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["ohlc_screened"], 0)
+        self.assertEqual(report["preselection_decisions"]["NOT_OHLC_SELECTED"],
+                         report["screened_markets"])
 
     def test_insufficient_universe_coverage_fails_closed(self):
         with self.assertRaisesRegex(RuntimeError, "coverage"):
@@ -103,6 +127,21 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["excluded_stablecoin_pairs"], 0)
         self.assertEqual(report["excluded_other_pairs"], 2)
 
+    def test_duplicate_kraken_display_market_is_not_sealed_twice(self):
+        def api(path):
+            result = fixture()(path)
+            if path == "AssetPairs":
+                result["ZZ_DUPLICATE"] = {"status": "online", "wsname": "C0/USD"}
+            if path == "Ticker":
+                result["ZZ_DUPLICATE"] = result["C0USD"]
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["online_usd_pairs"], 26)
+        self.assertEqual(report["excluded_other_pairs"], 1)
+        self.assertEqual(report["eligible_pairs"], 25)
+        self.assertEqual(len({c["symbol"] for c in report["watch"]}), len(report["watch"]))
+        self.assertNotIn("ZZ_DUPLICATE", {c["pair"] for c in report["watch"]})
+
     def test_documented_fiat_pegs_are_explicitly_excluded(self):
         # The source-backed fixture catches omissions even if ranking changes.
         official = {"BRL1", "QCAD", "USDG", "USDQ", "USDS", "USDR",
@@ -132,6 +171,37 @@ class PaperScanTests(unittest.TestCase):
         report = scanner.scan(api=bad_api, clock=lambda: NOW, sleep=lambda _: None)
         self.assertNotIn("C0USD", {x["pair"] for x in report["watch"]})
 
+    def test_ohlc_expiring_during_screening_abstains_before_sealing(self):
+        # The candle closes at 14:55; it is 9m old during OHLC
+        # requests, but 11m old when the final scan receipt is sealed.
+        calls = 0
+        def clock():
+            nonlocal calls
+            calls += 1
+            return NOW + dt.timedelta(minutes=6 if calls > 26 else 4)
+        report = scanner.scan(api=fixture(), clock=clock, sleep=lambda _: None)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+        self.assertEqual(report["abstention_counts"]["stale_or_future_ohlc"], 24)
+        self.assertEqual(report["preselection_decisions"]["OHLC_ABSTAINED"], 24)
+        self.assertEqual(report["preselection_decisions"]["NOT_OHLC_SELECTED"], 1)
+
+    def test_tiny_positive_acceleration_abstains_before_snapshot_seal(self):
+        # Raw OHLC volume acceleration is positive, but the persisted four
+        # decimal representation would be zero and fail A2 readback.
+        def api(path):
+            result = fixture()(path)
+            if path.startswith("OHLC?"):
+                pair = next(k for k in result if k != "last")
+                for row in result[pair][-7:-1]:
+                    row[6] = "0.000001"
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+        self.assertEqual(report["abstention_counts"]["invalid_market_metrics"], 24)
+        self.assertEqual(report["preselection_decisions"]["OHLC_ABSTAINED"], 24)
+
     def test_future_ohlc_rejected(self):
         def future_api(path):
             result = fixture()(path)
@@ -140,8 +210,9 @@ class PaperScanTests(unittest.TestCase):
                 for row in result[key]:
                     row[0] += 900
             return result
-        with self.assertRaisesRegex(RuntimeError, "No fresh"):
-            scanner.scan(api=future_api, clock=lambda: NOW, sleep=lambda _: None)
+        report = scanner.scan(api=future_api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["abstention_counts"]["stale_or_future_ohlc"], 24)
 
 if __name__ == "__main__":
     unittest.main()

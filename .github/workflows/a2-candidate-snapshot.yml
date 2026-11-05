@@ -1,0 +1,186 @@
+name: A2 immutable snapshot and scanner-to-consumer acceptance
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/scanner.py'
+      - 'paper_pov/candidate_snapshot.py'
+      - 'paper_pov/preselection_universe.py'
+      - 'paper_pov/test_candidate_snapshot.py'
+      - 'paper_pov/test_a1_a2_end_to_end.py'
+      - 'paper_pov/a2_artifact_consumer.py'
+      - 'paper_pov/test_a2_artifact_consumer.py'
+      - '.github/workflows/a2-candidate-snapshot.yml'
+  workflow_dispatch:
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Focused A1-to-A2 durable readback and snapshot regression
+        run: python -m unittest paper_pov.test_a1_a2_end_to_end paper_pov.test_candidate_snapshot paper_pov.test_a2_artifact_consumer -v
+  live-consumer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Public Kraken scan to sealed receipt to verified consumer
+        env:
+          PAPER_REPORT_PATH: ${{ runner.temp }}/paper-a2/latest.json
+        run: |
+          python -m paper_pov.scanner
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from paper_pov.candidate_snapshot import read_snapshot
+          latest = Path(os.environ["PAPER_REPORT_PATH"])
+          report = json.loads(latest.read_text())
+          snapshot = read_snapshot(latest)
+          assert snapshot["watch"] == report["watch"]
+          assert snapshot["eligible_pairs"] == report["eligible_pairs"]
+          assert snapshot["observed_markets"] == report["observed_markets"]
+          assert snapshot["abstention_counts"] == report["abstention_counts"]
+          assert snapshot["scan_status"] == report["scan_status"]
+          from paper_pov.preselection_universe import export_universe
+          universe=export_universe(latest)
+          assert universe["receipt_sha256"]==snapshot["receipt_sha256"]
+          assert len(universe["markets"])==snapshot["observed_markets"]
+          assert len({x["observation_id"] for x in universe["markets"]})==len(universe["markets"])
+          assert universe["selection_decisions"]["WATCH"]==len(snapshot["watch"])
+          (latest.parent/"preselection-universe.json").write_text(
+              json.dumps(universe,sort_keys=True,allow_nan=False)+chr(10))
+          assert all(0 <= age <= 600 for age in snapshot["quote_age_seconds"].values())
+          assert report["mode"] == "PAPER_ONLY" and not report["production_applied"]
+          # Publish only verified, read-only consumer JSON; never raw mutable latest.json as a trusted API.
+          export_path = latest.parent / "verified-snapshot.json"
+          export_path.write_text(json.dumps(snapshot, sort_keys=True, allow_nan=False) + "\n")
+          assert json.loads(export_path.read_text()) == snapshot
+          # Exercise the same ZIP transport consumed by B, using real Kraken data.
+          import zipfile
+          from paper_pov.a2_artifact_consumer import read_artifact_zip
+          transport = latest.parent / "a2-verified-transport.zip"
+          with zipfile.ZipFile(transport, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+              archive.write(latest, "latest.json")
+              archive.write(export_path, "verified-snapshot.json")
+              receipts = sorted((latest.parent / "receipts").glob("*.json"))
+              assert len(receipts) == 1
+              archive.write(receipts[0], "receipts/" + receipts[0].name)
+          downloaded = read_artifact_zip(transport)
+          assert downloaded["watch"] == snapshot["watch"]
+          assert downloaded["receipt_sha256"] == snapshot["receipt_sha256"]
+          assert downloaded["scan_status"] == snapshot["scan_status"]
+          assert transport.is_file() and transport.stat().st_size > 0
+          print("A2_ZIP_TRANSPORT_VERIFIED " + json.dumps({
+              "watch_count": len(downloaded["watch"]),
+              "receipt_sha256": downloaded["receipt_sha256"],
+              "snapshot_age_seconds": downloaded["snapshot_age_seconds"],
+          }, sort_keys=True))
+          from paper_pov.a2_artifact_consumer import project_watch_delivery
+          delivery=project_watch_delivery(latest.parent)
+          assert delivery["receipt_sha256"]==snapshot["receipt_sha256"]
+          assert delivery["watch_count"]==len(snapshot["watch"])
+          (latest.parent/"a2-delivery.json").write_text(json.dumps(delivery,sort_keys=True,allow_nan=False)+"\n")
+          print("A2_LIVE_CONSUMER_EVIDENCE " + json.dumps({
+              "as_of": snapshot["as_of"],
+              "eligible_pairs": snapshot["eligible_pairs"],
+              "observed_markets": snapshot["observed_markets"],
+              "stablecoin_exclusions": report["excluded_stablecoin_pairs"],
+              "screened_markets": report["screened_markets"],
+              "ohlc_screened": report["ohlc_screened"],
+              "watch_count": len(snapshot["watch"]),
+              "abstention_counts": snapshot["abstention_counts"],
+              "scan_status": snapshot["scan_status"],
+              "receipt_sha256": snapshot["receipt_sha256"],
+              "snapshot_age_seconds": snapshot["snapshot_age_seconds"],
+              "max_quote_age_seconds": max(snapshot["quote_age_seconds"].values(), default=None),
+              "consumer_verified": True, "production_applied": False,
+          }, sort_keys=True))
+          PY
+      - name: Retain B-consumable authenticated transport ZIP and paper readback evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a2-live-consumer-evidence
+          path: ${{ runner.temp }}/paper-a2/
+          retention-days: 7
+          if-no-files-found: warn
+
+  independent-downloaded-consumer:
+    needs: live-consumer
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: a2-live-consumer-evidence
+          path: ${{ runner.temp }}/downloaded-a2
+      - name: Independent downstream readback of published real Kraken A2 transport
+        env:
+          A2_DOWNLOADED_DIR: ${{ runner.temp }}/downloaded-a2
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from paper_pov.a2_artifact_consumer import read_published_artifact
+          root=Path(os.environ["A2_DOWNLOADED_DIR"])
+          consumed=read_published_artifact(root)
+          snapshot=consumed["snapshot"]
+          exported=json.loads((root/"verified-snapshot.json").read_bytes())
+          assert snapshot["receipt_sha256"]==exported["receipt_sha256"]
+          assert snapshot["watch"]==exported["watch"]
+          universe=consumed["preselection"]
+          published=json.loads((root/"preselection-universe.json").read_bytes())
+          assert published==universe
+          assert universe["receipt_sha256"]==snapshot["receipt_sha256"]
+          assert universe["selection_decisions"]["WATCH"]==len(snapshot["watch"])
+          assert snapshot["eligible_pairs"]==exported["eligible_pairs"]
+          assert snapshot["observed_markets"]==exported["observed_markets"]
+          assert snapshot["scan_status"]==exported["scan_status"]
+          assert all(age<=600 for age in snapshot["quote_age_seconds"].values())
+          # B's actual read-only consumer contract, exercised against the
+          # downloaded artifact rather than reconstructed in-process data.
+          from paper_pov.a2_artifact_consumer import read_published_delivery
+          delivery=read_published_delivery(root)
+          assert delivery["receipt_sha256"]==snapshot["receipt_sha256"]
+          assert delivery["watch_count"]==len(snapshot["watch"])
+          assert delivery["preselection_observations"]==snapshot["observed_markets"]
+          assert delivery["scan_status"]==snapshot["scan_status"]
+          assert delivery["client_quote_freshness_verified"] is True
+          assert delivery["exchange_event_freshness_verified"] is False
+          assert delivery["single_writer_ledger_verified"] is False
+          assert [c["rank"] for c in delivery["watch"]]==list(range(1,len(snapshot["watch"])+1))
+          assert all(c["price"]>0 and c["volume_accel"]>0 and c["buy_approved"] is False for c in delivery["watch"])
+          assert delivery["single_writer_ledger_verified"] is False
+          assert delivery["exchange_event_freshness_verified"] is False
+          assert delivery["production_applied"] is False
+          from paper_pov.a2_artifact_consumer import read_published_delivery
+          published_delivery=read_published_delivery(root)
+          assert published_delivery["receipt_sha256"]==delivery["receipt_sha256"]
+          immutable_keys=("schema","source","as_of","scan_status","receipt_sha256","watch","watch_count","eligible_pairs","observed_markets","preselection_observations","selection_decisions","abstention_counts")
+          assert all(published_delivery[k]==delivery[k] for k in immutable_keys)
+          assert published_delivery["single_writer_ledger_verified"] is False
+          assert published_delivery["exchange_event_freshness_verified"] is False
+          assert published_delivery["buy_approved"] is False
+          print("A2_B_DELIVERY_READY",json.dumps({
+              "receipt_sha256":delivery["receipt_sha256"],
+              "watch_count":delivery["watch_count"],
+              "preselection_observations":delivery["preselection_observations"],
+              "scan_status":delivery["scan_status"],
+          },sort_keys=True))
+          print("A2_PUBLISHED_ARTIFACT_DOWNSTREAM_VERIFIED",json.dumps({
+              "receipt_sha256":snapshot["receipt_sha256"],
+              "watch_count":len(snapshot["watch"]),
+              "eligible_pairs":snapshot["eligible_pairs"],
+              "observed_markets":snapshot["observed_markets"],
+              "snapshot_age_seconds":snapshot["snapshot_age_seconds"],
+              "production_applied":False,
+          },sort_keys=True))
+          PY
+      - name: Verify exact A checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"

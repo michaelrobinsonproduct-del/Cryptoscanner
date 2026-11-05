@@ -10,6 +10,7 @@ import json
 import math
 import os
 import re
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -62,8 +63,8 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         raise ValueError("Invalid scan clock")
     watches = scan["watch"]
     observations = scan["observations"]
-    if not isinstance(watches, list) or not 1 <= len(watches) <= 12:
-        raise ValueError("Missing or excessive watch candidates")
+    if not isinstance(watches, list) or not 0 <= len(watches) <= 12:
+        raise ValueError("Invalid or excessive watch candidates")
     if not isinstance(observations, list) or len(observations) != scan.get("observed_markets"):
         raise ValueError("Missing market universe evidence")
     if type(score.get("generation")) is not int or score["generation"] < 1:
@@ -83,6 +84,8 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
     if (scan["online_usd_pairs"] != scan["eligible_pairs"] +
             scan["excluded_stablecoin_pairs"] + scan["excluded_other_pairs"]):
         raise ValueError("Kraken USD eligibility partition mismatch")
+    if not observations and (scan["ohlc_screened"] or watches):
+        raise ValueError("No quote observations for OHLC/WATCH evidence")
     if not len(observations) <= scan["eligible_pairs"] or not scan["ohlc_screened"] <= len(observations):
         raise ValueError("Market coverage exceeds observed/eligible universe")
     if score["market_observations"] < len(observations):
@@ -108,10 +111,14 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
             raise ValueError("Stale, future, or invalid quote")
         ages.append(age)
         quotes[pair] = o
+    if len(watches) > scan["ohlc_screened"]:
+        raise ValueError("WATCH count exceeds screened OHLC evidence")
+    result_status = ("ABSTAIN_NO_OBSERVATIONS" if not observations else
+                     "ABSTAIN_NO_WATCH" if not watches else "SUCCESS_PAPER_ONLY")
     lines = [
         "# Kraken paper scanner — verified results",
         "",
-        "**Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders",
+        f"**Scan:** {result_status} — PAPER ONLY, no trades or approved BUY orders",
         "",
         f"**UTC as-of:** {as_of.isoformat()}  ",
         f"**GitHub trigger:** {'scheduled' if event == 'schedule' else 'manual dispatch'} (verified event={event}; "
@@ -123,8 +130,9 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         f"**Ledger commit:** {ledger_commit}  ",
         f"**Ledger generation:** {score['generation']} (remote push/readback verified)",
         "",
-        f"**Freshness:** Kraken public ticker client-observed, max quote age {max(ages):.0f}s (limit 600s). "
-        "Ticker exchange-event freshness is NOT independently proven.",
+        ("**Freshness:** Kraken public ticker client-observed, max quote age "
+         + (f"{max(ages):.0f}s (limit 600s)." if ages else "NOT VERIFIED (zero observations).")
+         + " Ticker exchange-event freshness is NOT independently proven."),
         f"**Kraken online /USD pairs:** {scan['online_usd_pairs']}; "
         f"stablecoin-base exclusions: {scan['excluded_stablecoin_pairs']}; "
         f"other suffix exclusions: {scan['excluded_other_pairs']}; "
@@ -136,6 +144,8 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         "| # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | Confidence / risk | Status |",
         "|---:|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|",
     ]
+    if not watches:
+        lines.append("| — | No qualifying WATCH candidates | — | — | — | — | — | — | — | — | — | ABSTAIN |")
     records = []
     seen = set()
     for index, p in enumerate(watches, 1):
@@ -169,6 +179,9 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
                         "spread_bps": p["spread_bps"], "baseline_score": p["baseline_score"],
                         "challenger_score": p["challenger_score"],
                         "quote_observed_at": quote["observed_at"],
+                        "quote_source": quote["source"],
+                        "client_quote_age_seconds": (as_of - _utc(quote["observed_at"])).total_seconds(),
+                        "exchange_event_freshness_verified": False,
                         "ohlc_age_seconds": p["ohlc_age_seconds"],
                         "prediction_id": p["prediction_id"]})
         lines.append(f"| {index} | {symbol} | {price:.8g} | "
@@ -214,10 +227,10 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         "details in immutable scan JSON artifact.",
         "- Storage: checksum-sealed ledger pushed non-force and read back before this report. "
         "Independent artifact recovery is NOT VERIFIED by this scan alone.",
-        "- Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.",
+        "- Scan result is an explicit abstention when market coverage or WATCH candidates are absent; a failed workflow must not publish a SUCCESS report.",
         "",
     ])
-    payload = {"schema": 1, "status": "SUCCESS_PAPER_ONLY", "run_id": str(run_id),
+    payload = {"schema": 1, "status": result_status, "run_id": str(run_id),
                "as_of": as_of.isoformat(), "source_sha": source_sha,
                "github_event": event, "originating_cron": originating_cron or None,
                "scheduled_slot_utc_minute": scheduled_minute,
@@ -230,7 +243,10 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
                "excluded_stablecoin_pairs": scan["excluded_stablecoin_pairs"],
                "excluded_other_pairs": scan["excluded_other_pairs"],
                "observed_markets": len(observations),
-               "max_client_quote_age_seconds": max(ages),
+               "max_client_quote_age_seconds": max(ages) if ages else None,
+               "quote_evidence": [{"pair": o["pair"], "symbol": o["symbol"],
+                                   "observed_at": o["observed_at"], "price": o["price"]}
+                                  for o in observations],
                "exchange_event_freshness_verified": False, "candidates": records,
                "stablecoin_exclusion_count": scan["excluded_stablecoin_pairs"],
                "abstentions": len(abstentions),
@@ -242,35 +258,169 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
     return payload, "\n".join(lines)
 
 
+
+def verify_published(directory, *, run_id, source_sha, ledger_commit, ledger_sha256, scan=None, scoreboard=None):
+    """Independent on-disk result readback before artifact upload."""
+    directory = Path(directory)
+    required = {"results.json", "results.md", "SHA256SUMS"}
+    if directory.is_symlink() or not directory.is_dir():
+        raise ValueError("Missing or redirected results directory")
+    if {p.name for p in directory.iterdir()} != required:
+        raise ValueError("Missing or unexpected result artifact")
+    for name in required:
+        if (directory / name).is_symlink() or not (directory / name).is_file():
+            raise ValueError("Redirected or missing result file")
+    records = (directory / "SHA256SUMS").read_text().splitlines()
+    if len(records) != 2:
+        raise ValueError("Invalid result checksum manifest")
+    seen = set()
+    for record in records:
+        match = re.fullmatch(r"([0-9a-f]{64})  (results[.](?:json|md))", record)
+        if not match or match[2] in seen:
+            raise ValueError("Invalid or duplicate result checksum entry")
+        seen.add(match[2])
+        if hashlib.sha256((directory / match[2]).read_bytes()).hexdigest() != match[1]:
+            raise ValueError("Result artifact checksum mismatch")
+    if seen != {"results.json", "results.md"}:
+        raise ValueError("Incomplete result checksum manifest")
+    payload = json.loads((directory / "results.json").read_bytes())
+    expected = {"run_id": str(run_id), "source_sha": source_sha,
+                "ledger_commit": ledger_commit, "ledger_sha256": ledger_sha256,
+                "remote_readback_verified": True, "buy_approved": False,
+                "production_applied": False}
+    if any(payload.get(k) != v or type(payload.get(k)) is not type(v)
+           for k, v in expected.items()):
+        raise ValueError("Result identity or persistence mismatch")
+    if payload.get("status") not in ("SUCCESS_PAPER_ONLY", "ABSTAIN_NO_WATCH",
+                                      "ABSTAIN_NO_OBSERVATIONS"):
+        raise ValueError("Invalid persisted result status")
+    # Independent, checksum-bound freshness replay from the published artifact.
+    # Never accept an aggregate max-age assertion without individual quotes.
+    evidence = payload.get("quote_evidence")
+    if not isinstance(evidence, list) or len(evidence) != payload.get("observed_markets"):
+        raise ValueError("Missing independent quote evidence")
+    as_of = _utc(payload.get("as_of"))
+    ages = []
+    by_symbol = {}
+    pairs = set()
+    for quote in evidence:
+        if not isinstance(quote, dict):
+            raise ValueError("Malformed quote evidence")
+        pair, symbol = quote.get("pair"), quote.get("symbol")
+        if (not isinstance(pair, str) or not PAIR.fullmatch(pair) or pair in pairs
+                or not isinstance(symbol, str) or not PAIR.fullmatch(symbol)
+                or symbol.count("/") != 1 or not symbol.endswith("/USD")
+                or symbol.split("/")[0].upper() in STABLE or symbol in by_symbol):
+            raise ValueError("Duplicate or excluded quote evidence")
+        age = (as_of - _utc(quote.get("observed_at"))).total_seconds()
+        if not 0 <= age <= 600 or _number(quote.get("price"), "quote price") <= 0:
+            raise ValueError("Stale or invalid independent quote evidence")
+        ages.append(age)
+        pairs.add(pair)
+        by_symbol[symbol] = quote
+    actual_max = max(ages) if ages else None
+    if payload.get("max_client_quote_age_seconds") != actual_max:
+        raise ValueError("Quote freshness summary mismatch")
+    status = payload["status"]
+    if (status == "ABSTAIN_NO_OBSERVATIONS") != (len(evidence) == 0):
+        raise ValueError("Observation abstention status mismatch")
+    candidates = payload.get("candidates")
+    if not isinstance(candidates, list):
+        raise ValueError("Missing candidates")
+    if (status == "ABSTAIN_NO_WATCH") != (bool(evidence) and not candidates):
+        raise ValueError("WATCH abstention status mismatch")
+    if status == "SUCCESS_PAPER_ONLY" and not candidates:
+        raise ValueError("Success without candidates")
+    if len(candidates) > 12 or len(candidates) > len(evidence):
+        raise ValueError("Candidate count exceeds verified quote evidence")
+    seen_predictions = set()
+    for rank, candidate in enumerate(candidates, 1):
+        if not isinstance(candidate, dict):
+            raise ValueError("Malformed candidate")
+        prediction_id = candidate.get("prediction_id")
+        if (type(candidate.get("rank")) is not int or candidate["rank"] != rank
+                or candidate.get("status") != "WATCH_PAPER_ONLY"
+                or not isinstance(prediction_id, str) or not prediction_id
+                or prediction_id in seen_predictions):
+            raise ValueError("Invalid or duplicate published WATCH identity")
+        seen_predictions.add(prediction_id)
+        quote = by_symbol.get(candidate.get("symbol"))
+        if (quote is None or candidate.get("price_usd") != quote["price"]
+                or _utc(candidate.get("quote_observed_at")) != _utc(quote["observed_at"])):
+            raise ValueError("Candidate lacks independently verified quote")
+    if (scan is None) != (scoreboard is None):
+        raise ValueError("Scan and scoreboard must be supplied together")
+    if scan is not None:
+        # Bind the downloaded publication to its independently retained scan
+        # and ledger scoreboard. Recomputed checksums alone cannot prove that
+        # a publication has not omitted or relabelled a real WATCH candidate.
+        expected_payload, expected_markdown = render(
+            scan, scoreboard, run_id=run_id, source_sha=source_sha,
+            ledger_commit=ledger_commit, event=payload.get("github_event"),
+            originating_cron=payload.get("originating_cron"))
+        if payload != expected_payload:
+            raise ValueError("Published results differ from retained scan/scoreboard")
+        if (directory / "results.md").read_text() != expected_markdown + "\n":
+            raise ValueError("Published markdown differs from retained evidence")
+    return payload
+
+
 def main():
     p = argparse.ArgumentParser()
+    p.add_argument("--verify-only", action="store_true")
+    p.add_argument("--ledger-sha256")
     for arg in ("scan", "scoreboard", "run-id", "source-sha", "ledger-commit", "output-dir", "event"):
-        p.add_argument("--" + arg, required=True)
+        p.add_argument("--" + arg, required=arg not in ("scan", "scoreboard", "event"))
     p.add_argument("--originating-cron", default=None,
                    help="Exact github.event.schedule, empty for manual dispatch")
     a = p.parse_args()
+    if a.verify_only:
+        if not a.ledger_sha256:
+            raise ValueError("Missing expected ledger SHA256")
+        verify_published(a.output_dir, run_id=a.run_id, source_sha=a.source_sha,
+                         ledger_commit=a.ledger_commit, ledger_sha256=a.ledger_sha256,
+                         scan=json.loads(Path(a.scan).read_text()) if a.scan else None,
+                         scoreboard=json.loads(Path(a.scoreboard).read_text()) if a.scoreboard else None)
+        print("PAPER_RESULTS_REMOTE_LINK_VERIFIED", a.run_id)
+        return
+    if not a.scan or not a.scoreboard or not a.event:
+        raise ValueError("Missing inputs for results publication")
     scan = json.loads(Path(a.scan).read_text())
     score = json.loads(Path(a.scoreboard).read_text())
     payload, markdown = render(scan, score, run_id=a.run_id,
                                source_sha=a.source_sha, ledger_commit=a.ledger_commit,
                                event=a.event, originating_cron=a.originating_cron)
+    # Build a complete checksummed publication outside the visible destination.
+    # A failed write cannot expose a half-published result or overwrite a prior run.
     directory = Path(a.output_dir)
-    directory.mkdir(parents=True, exist_ok=True)
-    atomic_json(directory / "results.json", payload)
-    fd, tmp = tempfile.mkstemp(dir=directory, prefix=".results-", suffix=".tmp")
+    directory.parent.mkdir(parents=True, exist_ok=True)
+    if directory.exists() or directory.is_symlink():
+        raise FileExistsError("Refuse to replace published paper results")
+    staged = Path(tempfile.mkdtemp(prefix=".paper-results-", dir=directory.parent))
     try:
-        with os.fdopen(fd, "w") as f:
-            f.write(markdown + "\n")
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, directory / "results.md")
+        atomic_json(staged / "results.json", payload)
+        with (staged / "results.md").open("w") as stream:
+            stream.write(markdown + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        digests = []
+        for name in ("results.json", "results.md"):
+            digests.append(hashlib.sha256((staged / name).read_bytes()).hexdigest() + "  " + name)
+        with (staged / "SHA256SUMS").open("w") as stream:
+            stream.write("\n".join(digests) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        for record in digests:
+            digest, name = record.split("  ", 1)
+            if hashlib.sha256((staged / name).read_bytes()).hexdigest() != digest:
+                raise ValueError("Staged paper result checksum readback mismatch")
+        # Destination is private to this job; never replace an existing result.
+        if directory.exists() or directory.is_symlink():
+            raise FileExistsError("Competing paper result publication")
+        staged.rename(directory)
     finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
-    digests = []
-    for name in ("results.json", "results.md"):
-        digests.append(hashlib.sha256((directory / name).read_bytes()).hexdigest() + "  " + name)
-    (directory / "SHA256SUMS").write_text("\n".join(digests) + "\n")
+        if staged.exists():
+            shutil.rmtree(staged)
     print("PAPER_RESULTS_VERIFIED", a.run_id, payload["ledger_generation"],
           len(payload["candidates"]))
 
