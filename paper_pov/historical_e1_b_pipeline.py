@@ -143,7 +143,10 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
                             "partition": partition,
                             "partition_sha256": result["partition_sha256"],
                             "trade_count": result["parsed_trade_count"],
-                            "bar_count": result["bar_count"]}
+                            "bar_count": result["bar_count"],
+                            "usable_bar_count_before_cutoff": len(bars[pair]),
+                            "first_usable_bar_utc": bars[pair][0].isoformat() if bars[pair] else None,
+                            "last_usable_bar_utc": bars[pair][-1].isoformat() if bars[pair] else None}
     bar_sets = {pair: set(times) for pair, times in bars.items()}
     # A manifest can prove byte integrity without proving Kraken publisher
     # authenticity. Keep that distinction in every per-market diagnostic.
