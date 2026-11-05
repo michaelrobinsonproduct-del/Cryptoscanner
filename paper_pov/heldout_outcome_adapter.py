@@ -124,15 +124,21 @@ def train_shadow_challenger(predictions, outcomes, *, training_end_utc,
         state["status"] = "INSUFFICIENT_LABEL_VARIETY"
         state["shadow_decisions"] = {}
     else:
-        weights = {}
-        for key in feature_names:
-            positive_mean = sum(p["features"][key] for p in positives) / len(positives)
-            negative_mean = sum(p["features"][key] for p in negatives) / len(negatives)
-            weights[key] = positive_mean - negative_mean
+        centers = {key: sum(p["features"][key] for p, _ in training) / len(training)
+                   for key in feature_names}
+        scales = {key: max((sum((p["features"][key] - centers[key]) ** 2
+                                  for p, _ in training) / len(training)) ** 0.5, 1e-9)
+                  for key in feature_names}
+        weights = {key: (
+            sum((p["features"][key] - centers[key]) / scales[key] for p in positives) / len(positives)
+            - sum((p["features"][key] - centers[key]) / scales[key] for p in negatives) / len(negatives))
+            for key in feature_names}
         state["feature_weights"] = weights
+        state["feature_centers"] = centers
+        state["feature_scales"] = scales
         state["shadow_scores"] = {
-            p["prediction_id"]: sum(p["features"][key] * weights[key] for key in feature_names)
-            for p in heldout}
+            p["prediction_id"]: sum((p["features"][key] - centers[key]) / scales[key] * weights[key]
+                                    for key in feature_names) for p in heldout}
         state["status"] = "SHADOW_ONLY"
     state["version"] = canonical_digest(state)
     return state
