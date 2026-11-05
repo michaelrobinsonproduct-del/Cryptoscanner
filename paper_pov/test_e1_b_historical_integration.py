@@ -163,6 +163,16 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
             self.assertEqual(overlap["observed_until_utc"],
                              (start + dt.timedelta(hours=49)).isoformat())
             self.assertEqual(len(overlap["frozen_observation_digest"]), 64)
+            self.assertEqual(len(overlap["overlap_evidence_sha256"]), 64)
+            earlier_overlap = audit_a2_trade_partition_overlap(
+                complete_projection, manifest, root, schema,
+                {"XUSD": "XUSD.csv"},
+                observed_until=(start + dt.timedelta(hours=48)).isoformat())
+            self.assertEqual(overlap["frozen_observation_digest"],
+                             earlier_overlap["frozen_observation_digest"])
+            self.assertNotEqual(overlap["overlap_evidence_sha256"],
+                                earlier_overlap["overlap_evidence_sha256"])
+
             # A different frozen timestamp changes the cohort evidence identity,
             # even when the market list and source partition remain identical.
             shifted = dict(complete_projection, frozen_observations=[
