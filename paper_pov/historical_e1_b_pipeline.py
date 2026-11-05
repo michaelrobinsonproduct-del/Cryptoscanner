@@ -247,8 +247,18 @@ def audit_a2_trade_partition_overlap(projection, manifest, root, schema, partiti
         }
     if sum(row["frozen_observations"] for row in pair_coverage.values()) != len(rows):
         raise ValueError("Pair-level historical coverage mismatch")
+    # Bind checked partition bytes, cutoff, and coverage to the frozen receipt.
+    # The cohort digest alone cannot detect a swapped source partition.
+    overlap_evidence_sha256 = hashlib.sha256(json.dumps({
+        "a_receipt_sha256": binding["a_receipt_sha256"],
+        "frozen_observation_digest": frozen_observation_digest,
+        "observed_until_utc": cutoff.isoformat(),
+        "partition_provenance": provenance,
+        "cohort_coverage": sorted(cohort_coverage, key=lambda x: x["prediction_id"]),
+    }, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     return {"schema": "a2_trade_partition_overlap_v1",
             "frozen_observation_digest": frozen_observation_digest,
+            "overlap_evidence_sha256": overlap_evidence_sha256,
             "observed_until_utc": cutoff.isoformat(),
             "pair_coverage": pair_coverage,
             "a_receipt_sha256": binding["a_receipt_sha256"],
