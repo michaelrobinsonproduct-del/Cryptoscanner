@@ -82,6 +82,23 @@ class HistoricalBridgeTests(unittest.TestCase):
             execution, frozen_predictions=frozen, frozen_observation_times=times)
         self.assertEqual(result["status"], "NO_QUALIFIED_RULE")
 
+    def test_missing_reconstructed_timestamp_cannot_join_frozen_a2(self):
+        execution, frozen = fixture()
+        times = {"p": "2026-01-01T00:00:00Z",
+                 "unlabeled": "2026-01-01T00:00:00Z"}
+        # A matching ID and pair are insufficient to establish the original
+        # prediction time. An omitted time must never inherit A2's timestamp.
+        with self.assertRaisesRegex(ValueError, "lacks frozen A2 timestamp"):
+            project_historical_execution(
+                execution, frozen_predictions=frozen,
+                frozen_observation_times=times)
+        execution["outcomes"]["records"][0]["as_of"] = times["p"]
+        self.assertEqual(
+            project_historical_execution(
+                execution, frozen_predictions=frozen,
+                frozen_observation_times=times)["status"],
+            "NO_QUALIFIED_RULE")
+
     def test_per_horizon_qualification_claim_rejected_even_on_abstention(self):
         for field in ("source_authenticated", "qualified_for_learning"):
             execution, frozen = fixture()
