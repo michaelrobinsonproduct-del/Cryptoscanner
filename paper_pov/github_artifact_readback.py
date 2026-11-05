@@ -355,15 +355,36 @@ def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, ru
             result["remote_ledger_reconciliation"] = reconciliation
             # MATCH to a moving branch does not prove the branch checkpoint
             # was published by this specific historical source run.
+            # The source run's immutable artifact identity and checksummed
+            # ledger can be compared to a pinned remote checkpoint. Expose
+            # that equality to B without misrepresenting the advancing Git
+            # branch as an independently source-authenticated publisher.
+            receipt = result.get("source_bound_receipt") or {}
+            matching = (
+                reconciliation["status"] == "MATCH"
+                and reconciliation.get("remote_generation") == receipt.get("ledger_generation")
+                and reconciliation.get("recovered_generation") == receipt.get("ledger_generation")
+                and reconciliation.get("remote_ledger_sha256", reconciliation.get("remote_sha256"))
+                    == receipt.get("ledger_sha256")
+                and reconciliation.get("recovered_ledger_sha256", reconciliation.get("recovered_sha256"))
+                    == receipt.get("ledger_sha256")
+                and isinstance(reconciliation.get("remote_checkpoint_sha"), str)
+            )
             result["same_run_reconciliation"] = {
-                "status": "ABSTAIN",
-                "reason": "REMOTE_" + reconciliation["status"] + "_NOT_IMMUTABLY_BOUND_TO_SOURCE_RUN",
+                "status": "MATCH" if matching else "ABSTAIN",
+                "reason": ("SOURCE_RECEIPT_MATCHES_PINNED_REMOTE_CHECKPOINT"
+                           if matching else "REMOTE_" + reconciliation["status"] + "_NOT_SOURCE_BOUND"),
                 "run_id": str(run_id),
                 "source_sha": source_sha,
+                "artifact_id": receipt.get("artifact_id"),
+                "sha256sums_sha256": receipt.get("sha256sums_sha256"),
+                "ledger_receipt_sha256": receipt.get("ledger_receipt_sha256"),
+                "ledger_sha256": receipt.get("ledger_sha256"),
+                "ledger_generation": receipt.get("ledger_generation"),
                 "remote_checkpoint_sha": reconciliation.get("remote_checkpoint_sha"),
-                "ledger_receipt_sha256": result.get("source_bound_receipt", {}).get("ledger_receipt_sha256"),
                 "live_watch_authorized": False,
                 "independently_authenticated": False,
+                "production_applied": False,
             }
         if restore_dir is not None:
             destination = Path(restore_dir)
@@ -424,7 +445,9 @@ def main(argv=None):
     # never return success when an independently checked remote generation
     # explicitly contradicts the restored writer ledger.
     reconciliation = report.get("remote_ledger_reconciliation")
-    if isinstance(reconciliation, dict) and reconciliation.get("status") == "DIVERGED":
+    if args.ledger_ref and (not isinstance(reconciliation, dict) or reconciliation.get("status") != "MATCH"):
+        # The caller explicitly requested remote persistence proof. A valid
+        # historical download alone must not make a failed readback green.
         return 2
     return 0 if report["status"] in ("VERIFIED_REMOTE_READBACK", "WRITER_CHECKSUM_ONLY") else 2
 
