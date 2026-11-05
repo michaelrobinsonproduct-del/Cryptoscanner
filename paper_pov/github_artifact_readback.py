@@ -77,17 +77,35 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
             # Pin both packed objects to one immutable branch checkpoint.
             # A moving writer ref must not mix a manifest from one generation
             # with a snapshot from another while the read-only consumer runs.
-            ref_data = _github_json([f"repos/{repo}/git/ref/heads/{quote(ref, safe='')}"], runner=runner)
-            pinned_sha = ref_data.get("object", {}).get("sha") if isinstance(ref_data, dict) else None
-            if not isinstance(pinned_sha, str) or len(pinned_sha) != 40 or any(c not in "0123456789abcdef" for c in pinned_sha):
-                raise IntegrityError("Remote writer checkpoint SHA unavailable")
+            try:
+                ref_data = _github_json([f"repos/{repo}/git/ref/heads/{quote(ref, safe='')}"], runner=runner)
+                pinned_sha = ref_data.get("object", {}).get("sha") if isinstance(ref_data, dict) else None
+                if not isinstance(pinned_sha, str) or len(pinned_sha) != 40 or any(c not in "0123456789abcdef" for c in pinned_sha):
+                    raise IntegrityError("Remote writer checkpoint SHA unavailable")
+            except (IntegrityError, subprocess.CalledProcessError, subprocess.TimeoutExpired,
+                    OSError, ValueError, KeyError, TypeError) as checkpoint_error:
+                return {"status": "UNAVAILABLE", "reason": "REMOTE_CHECKPOINT_UNAVAILABLE",
+                        "failure_type": type(checkpoint_error).__name__,
+                        "remote_ref": ref, "remote_path": segments.SNAPSHOT,
+                        "recovered_sha256": hashlib.sha256(recovered[ledger_paths[0]]).hexdigest(),
+                        "independently_authenticated": False, "production_applied": False}
             def remote_object(name):
                 endpoint = f"repos/{repo}/contents/{quote(name, safe='/')}?ref={pinned_sha}"
                 obj = _github_json([endpoint], runner=runner)
                 if obj.get("type") != "file":
                     raise IntegrityError("Remote packed ledger object unavailable")
                 if obj.get("encoding") == "base64":
-                    return base64.b64decode("".join(obj["content"].split()), validate=True)
+                    payload = base64.b64decode("".join(obj["content"].split()), validate=True)
+                    # Contents API inline bytes must match their immutable Git
+                    # blob identity, not just a checksum in the packed manifest.
+                    blob_sha = obj.get("sha")
+                    expected_blob = hashlib.sha1(
+                        b"blob " + str(len(payload)).encode("ascii") + b"\x00" + payload
+                    ).hexdigest()
+                    if (obj.get("size") != len(payload) or
+                            not isinstance(blob_sha, str) or blob_sha != expected_blob):
+                        raise IntegrityError("Remote packed ledger Git blob identity mismatch")
+                    return payload
                 # GitHub Contents API omits inline bytes for large blobs.
                 # Resolve the immutable blob SHA through the read-only Git Data API.
                 blob_sha = obj.get("sha")
@@ -97,8 +115,11 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                 if blob.get("sha") != blob_sha or blob.get("encoding") != "base64":
                     raise IntegrityError("Remote packed ledger blob identity mismatch")
                 payload = base64.b64decode("".join(blob["content"].split()), validate=True)
-                if len(payload) != obj.get("size"):
-                    raise IntegrityError("Remote packed ledger blob size mismatch")
+                expected_blob = hashlib.sha1(
+                    b"blob " + str(len(payload)).encode("ascii") + b"\x00" + payload
+                ).hexdigest()
+                if len(payload) != obj.get("size") or expected_blob != blob_sha:
+                    raise IntegrityError("Remote packed ledger blob identity mismatch")
                 return payload
             try:
                 manifest_bytes = remote_object(segments.MANIFEST)
@@ -216,17 +237,33 @@ def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, ru
         runner(["gh", "run", "download", str(run_id), "--repo", repo,
                 "--name", artifact_name, "--dir", directory], timeout=120)
         root = Path(directory)
+        # Bound downloaded artifacts before reading bytes into memory.
         paths = list(root.rglob("*"))
-        if any(p.is_symlink() for p in paths):
-            raise IntegrityError("Unexpected nested or symlinked artifact entries")
-        files = {p.relative_to(root).as_posix(): p.read_bytes() for p in paths if p.is_file()}
+        if len(paths) > 64:
+            raise IntegrityError("Remote artifact contains too many entries")
+        if any(p.is_symlink() or not (p.is_file() or p.is_dir()) for p in paths):
+            raise IntegrityError("Unexpected symlink or special artifact entry")
+        files = {}
+        total_size = 0
+        for p in paths:
+            if not p.is_file():
+                continue
+            size = p.stat().st_size
+            total_size += size
+            if size > 32 * 1024 * 1024 or total_size > 64 * 1024 * 1024:
+                raise IntegrityError("Remote artifact exceeds recovery size limit")
+            files[p.relative_to(root).as_posix()] = p.read_bytes()
         if artifact_name == f"public-paper-ledger-{run_id}":
             index = [name for name in files if name == "SHA256SUMS" or name.endswith("/SHA256SUMS")]
             if len(index) != 1:
                 raise IntegrityError("Writer checksum index missing or ambiguous")
             parent = index[0].rpartition("/")[0]
             seen = set()
-            for line in files[index[0]].decode("utf-8").splitlines():
+            try:
+                checksum_lines = files[index[0]].decode("utf-8").splitlines()
+            except UnicodeDecodeError as exc:
+                raise IntegrityError("Writer checksum inventory is not UTF-8") from exc
+            for line in checksum_lines:
                 digest, sep, relative = line.partition("  ")
                 target = (parent + "/" if parent else "") + relative
                 if (not sep or len(digest) != 64 or
@@ -328,12 +365,16 @@ def main(argv=None):
     parser.add_argument("--ledger-path", default="paper_pov/output/ledger.json")
     args = parser.parse_args(argv)
     report = {"status": "REMOTE_READBACK_FAILED", "remote_downloaded": False,
-              "ledger_writer_invoked": False, "production_applied": False}
+              "run_id": args.run_id, "source_sha": args.source_sha,
+              "artifact_name": args.artifact_name, "ledger_writer_invoked": False,
+              "production_applied": False, "independently_authenticated": False,
+              "live_watch_authorized": False}
     try:
         manifest = json.loads(Path(args.manifest).read_text()) if args.manifest else None
         report = retrieve_and_verify(args.repo, args.run_id, args.artifact_name, manifest, args.source_sha,
                                      restore_dir=args.restore_dir, ledger_ref=args.ledger_ref, ledger_path=args.ledger_path)
-    except (IntegrityError, OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError,
+    except (IntegrityError, OSError, ValueError, KeyError, TypeError, AttributeError,
+            UnicodeError, binascii.Error, subprocess.CalledProcessError,
             subprocess.TimeoutExpired) as exc:
         report["reason"] = type(exc).__name__
         if isinstance(exc, IntegrityError):

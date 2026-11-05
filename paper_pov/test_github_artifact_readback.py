@@ -1,5 +1,6 @@
 import json
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -70,7 +71,7 @@ def test_source_bound_receipt_never_upgrades_remote_match_to_same_run(tmp_path):
              "ledger.json": raw,
              "scoreboard.json": b'{"generation":0}'}
     files["SHA256SUMS"] = "".join(
-        hashlib.sha256(data).hexdigest() + "  " + name + "\\n"
+        hashlib.sha256(data).hexdigest() + "  " + name + "\n"
         for name, data in files.items()).encode()
     def runner(args, timeout):
         if args[:4] == ["gh", "api", "-X", "GET"]:
@@ -227,7 +228,7 @@ def test_missing_independent_ledger_keeps_real_writer_readback_truthful():
                                      "paper_pov/output/ledger.json",
                                      {"ledger.json": recovered}, runner=missing)
     assert result["status"] == "UNAVAILABLE"
-    assert result["reason"] == "REMOTE_LEDGER_QUERY_FAILED"
+    assert result["reason"] == "REMOTE_CHECKPOINT_UNAVAILABLE"
     assert result["recovered_sha256"] == hashlib.sha256(recovered).hexdigest()
     assert result["independently_authenticated"] is False
     assert result["production_applied"] is False
@@ -258,7 +259,9 @@ def test_packed_single_writer_remote_reconciliation_real_storage_layout():
         if "paper_pov/output/ledger.json" in endpoint:
             raise subprocess.CalledProcessError(1, args, output=b"Not Found")
         data = json.dumps(manifest).encode() if repo_storage.MANIFEST in endpoint else blob
-        return json.dumps({"type": "file", "encoding": "base64",
+        git_sha = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\x00" + data).hexdigest()
+        return json.dumps({"type": "file", "encoding": "base64", "sha": git_sha,
+                           "size": len(data),
                            "content": "\n".join([base64.b64encode(data).decode()[i:i+60] for i in range(0, len(base64.b64encode(data).decode()), 60)])}).encode()
     report = reconcile_remote_ledger(REPO, "paper-proof-ledger", "paper_pov/output/ledger.json",
                                      {"ledger.json": raw}, runner=github)
@@ -355,7 +358,7 @@ def test_packed_remote_large_snapshot_uses_sha_bound_git_blob():
     from paper_pov.github_artifact_readback import reconcile_remote_ledger
     state = ledger.empty()
     packed = storage.pack_snapshot(state)
-    blob_sha = "c" * 40
+    blob_sha = hashlib.sha1(b"blob " + str(len(packed)).encode() + b"\x00" + packed).hexdigest()
     manifest = {
         "schema": segments.SCHEMA,
         "checkpoint": {"git_commit": "a" * 40, "generation": 0,
@@ -378,8 +381,11 @@ def test_packed_remote_large_snapshot_uses_sha_bound_git_blob():
         if segments.SNAPSHOT in endpoint:
             return json.dumps({"type": "file", "encoding": "none",
                                "sha": blob_sha, "size": len(packed)}).encode()
-        return json.dumps({"type": "file", "encoding": "base64",
-                           "content": base64.b64encode(json.dumps(manifest).encode()).decode()}).encode()
+        raw = json.dumps(manifest).encode()
+        manifest_sha = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\x00" + raw).hexdigest()
+        return json.dumps({"type": "file", "encoding": "base64", "sha": manifest_sha,
+                           "size": len(raw),
+                           "content": base64.b64encode(raw).decode()}).encode()
     result = reconcile_remote_ledger(REPO, "paper-proof-ledger", "paper_pov/output/ledger.json",
                                      {"ledger.json": ledger.canonical(state)}, runner=github)
     assert result["status"] == "MATCH"
@@ -431,3 +437,63 @@ def test_malformed_remote_direct_ledger_preserves_historical_recovery_as_unavail
         assert report["reason"] == "REMOTE_LEDGER_QUERY_FAILED"
         assert report["independently_authenticated"] is False
         assert report["production_applied"] is False
+
+def test_non_utf8_writer_checksum_inventory_abstains(tmp_path):
+    """A malformed remote receipt must be an integrity failure, not a traceback."""
+    from paper_pov import ledger as ledger_module
+    receipts = {
+        "latest.json": b'{"status":"ABSTAIN"}',
+        "ledger.json": ledger_module.canonical(ledger_module.empty()),
+        "scoreboard.json": b'{"generation":0}',
+        "SHA256SUMS": bytes([255, 254]),
+    }
+    def run(args, timeout):
+        if args[:4] == ["gh", "api", "-X", "GET"]:
+            if "/artifacts" in args[4]:
+                return json.dumps({"total_count": 1, "artifacts": [
+                    {"id": 91, "name": "public-paper-ledger-123", "expired": False}]}).encode()
+            return json.dumps({"id": 123, "head_sha": SHA, "status": "completed",
+                "conclusion": "success", "repository": {"full_name": REPO}}).encode()
+        root = Path(args[-1])
+        for name, data in receipts.items():
+            (root / name).write_bytes(data)
+        return b""
+    with pytest.raises(IntegrityError, match="not UTF-8"):
+        retrieve_and_verify(REPO, "123", "public-paper-ledger", None, SHA, runner=run)
+
+
+def test_downloaded_artifact_rejects_oversized_receipt_before_read(tmp_path):
+    """A valid run cannot force unbounded artifact bytes into memory."""
+    manifest = make_manifest(RECEIPTS, source_sha=SHA, run_id="123")
+    def oversized(args, timeout):
+        if args[:4] == ["gh", "api", "-X", "GET"]:
+            if "/artifacts" in args[4]:
+                return json.dumps({"total_count": 1, "artifacts": [
+                    {"id": 88, "name": "paper-ledger", "expired": False}]}).encode()
+            return json.dumps({"id": 123, "head_sha": SHA, "status": "completed",
+                "conclusion": "success", "repository": {"full_name": REPO}}).encode()
+        root = Path(args[-1])
+        with (root / "large.bin").open("wb") as stream:
+            stream.truncate(32 * 1024 * 1024 + 1)
+        return b""
+    with pytest.raises(IntegrityError, match="size limit"):
+        retrieve_and_verify(REPO, "123", "paper-ledger", manifest, SHA, runner=oversized)
+
+
+def test_downloaded_artifact_rejects_special_file(tmp_path):
+    """Never attempt to read FIFO nodes that could hang a recovery job."""
+    import os
+    if not hasattr(os, "mkfifo"):
+        pytest.skip("FIFO unsupported")
+    manifest = make_manifest(RECEIPTS, source_sha=SHA, run_id="123")
+    def fifo(args, timeout):
+        if args[:4] == ["gh", "api", "-X", "GET"]:
+            if "/artifacts" in args[4]:
+                return json.dumps({"total_count": 1, "artifacts": [
+                    {"id": 88, "name": "paper-ledger", "expired": False}]}).encode()
+            return json.dumps({"id": 123, "head_sha": SHA, "status": "completed",
+                "conclusion": "success", "repository": {"full_name": REPO}}).encode()
+        os.mkfifo(Path(args[-1]) / "blocked.fifo")
+        return b""
+    with pytest.raises(IntegrityError, match="special artifact"):
+        retrieve_and_verify(REPO, "123", "paper-ledger", manifest, SHA, runner=fifo)
