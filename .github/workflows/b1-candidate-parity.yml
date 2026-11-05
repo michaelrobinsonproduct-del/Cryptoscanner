@@ -7,6 +7,13 @@ on:
       - '.github/workflows/b1-candidate-parity.yml'
       - 'paper_pov/github_delivery_projection.py'
       - 'paper_pov/test_github_delivery_projection.py'
+      - 'paper_pov/scanner.py'
+      - 'paper_pov/test_scanner.py'
+      - 'paper_pov/candidate_snapshot.py'
+      - 'paper_pov/test_candidate_snapshot.py'
+      - 'paper_pov/github_sealed_bundle_readback.py'
+      - 'paper_pov/test_github_sealed_bundle_readback.py'
+      - 'scanner/src/**'
   pull_request:
     paths:
       - 'scanner/src/candidate-contract.ts'
