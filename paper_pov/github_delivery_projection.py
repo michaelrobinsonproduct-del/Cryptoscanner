@@ -229,6 +229,8 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
             if key not in candidate:
                 raise ValueError("incomplete WATCH candidate")
         symbol = candidate["symbol"]
+        if not isinstance(symbol, str):
+            raise ValueError("invalid published WATCH symbol")
         if symbol in seen_candidate_symbols:
             raise ValueError("duplicate published WATCH candidate")
         seen_candidate_symbols.add(symbol)
