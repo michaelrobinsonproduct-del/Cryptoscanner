@@ -148,7 +148,7 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
     # fixture receipts without either ledger retain their older contract.
     observations = report.get("observations")
     preselection = report.get("preselection_universe")
-    if observations is not None or preselection is not None:
+    if preselection is not None:
         if not isinstance(observations, list) or not isinstance(preselection, list):
             raise ValueError("incomplete WATCH source inventory")
         if len(observations) != report["observed_markets"] or len(preselection) != len(observations):
