@@ -103,6 +103,26 @@ class EndToEndCandidateTests(unittest.TestCase):
         self.assertEqual(report["preselection_coverage"], {"valid_tickers": 25, "screen_passed": 0, "screen_rejected": 25})
         self.assertTrue(all(x["screen_rejections"] == ["below_early_move"] for x in report["preselection_universe"]))
 
+    def test_nonwatch_ticker_provenance_cannot_poison_historical_learning(self):
+        # An unranked ticker is still an E historical observation; a forged
+        # source timestamp must not survive a freshly resealed receipt.
+        report = scan(api=self.api, clock=lambda: self.now, sleep=lambda _: None, max_ohlc=4)
+        nonwatch = next(row for row in report["observations"]
+                        if row["pair"] not in {w["pair"] for w in report["watch"]})
+        from copy import deepcopy
+        for field, bad in (("observed_at", (self.now + dt.timedelta(minutes=1)).isoformat()),
+                           ("observed_at", (self.now - dt.timedelta(minutes=11)).isoformat()),
+                           ("source", "unverified_exchange_timestamp"),
+                           ("price", float("nan"))):
+            with self.subTest(field=field, bad=str(bad)):
+                forged = deepcopy(report)
+                next(row for row in forged["observations"] if row["pair"] == nonwatch["pair"])[field] = bad
+                with tempfile.TemporaryDirectory() as folder:
+                    latest = Path(folder) / "latest.json"
+                    persist_report(latest, forged)
+                    with self.assertRaisesRegex(ValueError, "source observation"):
+                        read_snapshot(latest, now=self.now)
+
     def test_preselection_export_rejects_relabelled_screen_failure(self):
         # A sealed zero-WATCH receipt can still carry internally contradictory
         # research decisions; reject false historical miss labels at export.
