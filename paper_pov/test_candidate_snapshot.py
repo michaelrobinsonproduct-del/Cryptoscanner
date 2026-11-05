@@ -76,6 +76,29 @@ class SnapshotTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "ticker evidence"):
                     read_snapshot(self.latest, NOW)
 
+    def test_immutable_watch_rejects_contradictory_ticker_coverage(self):
+        self.report["ticker_coverage_complete"] = True
+        self.report["ticker_rejections"] = {"missing_or_invalid_payload": 0,
+                                            "invalid_price_or_volume": 0,
+                                            "nonfinite_derived_metric": 0}
+        self.seal()
+        self.assertEqual(len(read_snapshot(self.latest, NOW)["watch"]), 1)
+        self.report["ticker_rejections"]["invalid_price_or_volume"] = 1
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "contradictory ticker source coverage"):
+            read_snapshot(self.latest, NOW)
+
+    def test_immutable_abstention_rejects_coverage_partition_forgery(self):
+        self.report.update(watch=[], scan_status="ABSTAIN_INCOMPLETE_TICKER_COVERAGE",
+                           ticker_coverage_complete=False, observed_markets=19,
+                           ticker_rejections={"invalid_price_or_volume": 1})
+        self.seal()
+        self.assertEqual(read_snapshot(self.latest, NOW)["watch"], [])
+        self.report["observed_markets"] = 18
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "contradictory ticker source coverage"):
+            read_snapshot(self.latest, NOW)
+
     def test_realistic_watch_readback(self):
         result = read_snapshot(self.latest, NOW)
         self.assertEqual(result["watch"][0]["pair"], "TESTUSD")
