@@ -437,3 +437,27 @@ def test_malformed_remote_direct_ledger_preserves_historical_recovery_as_unavail
         assert report["reason"] == "REMOTE_LEDGER_QUERY_FAILED"
         assert report["independently_authenticated"] is False
         assert report["production_applied"] is False
+
+def test_non_utf8_writer_checksum_inventory_abstains(tmp_path):
+    """A malformed remote receipt must be an integrity failure, not a traceback."""
+    from paper_pov import ledger as ledger_module
+    receipts = {
+        "latest.json": b'{"status":"ABSTAIN"}',
+        "ledger.json": ledger_module.canonical(ledger_module.empty()),
+        "scoreboard.json": b'{"generation":0}',
+        "SHA256SUMS": bytes([255, 254]),
+    }
+    def run(args, timeout):
+        if args[:4] == ["gh", "api", "-X", "GET"]:
+            if "/artifacts" in args[4]:
+                return json.dumps({"total_count": 1, "artifacts": [
+                    {"id": 91, "name": "public-paper-ledger-123", "expired": False}]}).encode()
+            return json.dumps({"id": 123, "head_sha": SHA, "status": "completed",
+                "conclusion": "success", "repository": {"full_name": REPO}}).encode()
+        root = Path(args[-1])
+        for name, data in receipts.items():
+            (root / name).write_bytes(data)
+        return b""
+    with pytest.raises(IntegrityError, match="not UTF-8"):
+        retrieve_and_verify(REPO, "123", "public-paper-ledger", None, SHA, runner=run)
+
