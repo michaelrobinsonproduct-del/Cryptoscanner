@@ -43,7 +43,9 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
         if report.get("ticker_coverage_complete") is not False:
             raise ValueError("incomplete coverage abstention missing source evidence")
         rejections = report.get("ticker_rejections")
-        if (not isinstance(rejections, dict) or not rejections or\n                any(type(v) is not int or v < 0 for v in rejections.values()) or\n                sum(rejections.values()) <= 0):
+        if (not isinstance(rejections, dict) or not rejections or 
+                any(type(v) is not int or v < 0 for v in rejections.values()) or 
+                sum(rejections.values()) <= 0):
             raise ValueError("incomplete coverage abstention without missing ticker evidence")
     elif report.get("ticker_coverage_complete") is False:
         raise ValueError("incomplete ticker coverage cannot authorize WATCH")
