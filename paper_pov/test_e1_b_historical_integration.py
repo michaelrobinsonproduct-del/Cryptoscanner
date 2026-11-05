@@ -95,6 +95,17 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
                  "as_of": start.isoformat(), "selection_status": "WATCH"},
                 {"prediction_id": rows[1]["observation_id"], "pair": "YUSD",
                  "as_of": start.isoformat(), "selection_status": "SCREEN_REJECTED"}])
+            # A future-dated rejected market cannot be concealed by the
+            # WATCH-only reconstruction subset.
+            future_nonwatch = dict(complete_projection, frozen_observations=[
+                complete_projection["frozen_observations"][0],
+                dict(complete_projection["frozen_observations"][1],
+                     as_of=(start + dt.timedelta(hours=50)).isoformat())])
+            with patch.dict(sys.modules, {"paper_pov.github_sealed_bundle_readback": transport_stub}):
+                with self.assertRaisesRegex(ValueError, "Frozen A2 observation occurs after cutoff"):
+                    run_pipeline(manifest, root, schema, {"XUSD": "XUSD.csv"},
+                                 watch, (start + dt.timedelta(hours=49)).isoformat(),
+                                 a2_projection=future_nonwatch)
             research_predictions = research_full_universe_predictions(complete_projection)
             self.assertEqual(len(research_predictions), 2)
             self.assertEqual({p["pair"] for p in research_predictions}, {"XUSD", "YUSD"})
