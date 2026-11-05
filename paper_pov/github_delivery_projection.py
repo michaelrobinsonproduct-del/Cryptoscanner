@@ -267,6 +267,17 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
         persisted_commit = persisted.get("ledger_commit")
         if persisted_commit is not None and persisted_commit != result["ledger_commit"]:
             raise ValueError("same-run D persisted ledger commit contradicts publisher")
+        # Reconciliation MATCH alone can refer to a different ledger payload.
+        # When D reports the canonical recovered ledger checksum, it must
+        # match the publisher's exact immutable ledger checksum as well.
+        reconciliation = writer_readback.get("remote_ledger_reconciliation")
+        recovered_digest = (reconciliation.get("recovered_ledger_sha256")
+                            if isinstance(reconciliation, dict) else None)
+        if recovered_digest is not None and recovered_digest != result["ledger_sha256"]:
+            raise ValueError("same-run D ledger checksum contradicts publisher")
+        if visible_watch and recovered_digest is None:
+            visible_watch = []
+            delivery_status = "ABSTAIN_SAME_RUN_LEDGER_CHECKSUM_UNVERIFIED"
         # A MATCH of a historical ledger generation does not prove the exact
         # published commit when D's receipt omits that commit. Fail closed.
         if visible_watch and persisted_commit is None:
