@@ -28,7 +28,17 @@ def utc(value):
     return result.astimezone(UTC)
 
 def finite(value):
-    v = float(value)
+    """Reject malformed and unrepresentable public market numbers uniformly.
+
+    Python treats bool as numeric and raises OverflowError for extremely large
+    JSON integers; neither may escape the scanner's per-market abstention path.
+    """
+    if isinstance(value, bool):
+        raise ValueError("boolean market value")
+    try:
+        v = float(value)
+    except (OverflowError, TypeError) as exc:
+        raise ValueError("unrepresentable market value") from exc
     if not math.isfinite(v):
         raise ValueError("nonfinite market value")
     return v
@@ -71,6 +81,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     started = clock().astimezone(UTC)
     pairs = api("AssetPairs")
     eligible = {}
+    ohlc_aliases = {}
     # Kraken may expose multiple pair identifiers for the same display market.
     # Snapshot consumers require unique symbols: choose one canonical pair
     # deterministically before ticker screening, not after sealing a WATCH.
@@ -85,6 +96,14 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         if not isinstance(name, str) or not name.endswith("/USD"):
             continue
         online_usd_pairs += 1
+        # Validate the public display identity before accepting its ticker.
+        # Otherwise malformed online /USD metadata (extra slash, whitespace,
+        # empty base) can produce a WATCH that A2 cannot read back, or hide
+        # a stablecoin behind a noncanonical display name.
+        if (name.count("/") != 1 or not name.split("/")[0]
+                or len(name) > 64 or any(ch.isspace() or ord(ch) < 33 for ch in name)):
+            excluded_other_pairs += 1
+            continue
         base = name.split("/")[0].upper()
         if base in STABLE:
             excluded_stablecoin_pairs += 1
@@ -97,8 +116,17 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             continue
         seen_display_symbols.add(name)
         eligible[key] = name
+        # Kraken OHLC may return the AssetPairs altname rather than the
+        # REST AssetPairs dictionary key. Accept only declared identities.
+        altname = meta.get("altname")
+        ohlc_aliases[key] = altname if isinstance(altname, str) and altname else key
     if len(eligible) < 20:
         raise RuntimeError("Insufficient eligible Kraken USD universe")
+    # An altname shared by two distinct eligible pairs is ambiguous even if
+    # Kraken returns one of those names. Never associate its candles by guess.
+    alias_owners = {}
+    for pair, alias in ohlc_aliases.items():
+        alias_owners.setdefault(alias, set()).add(pair)
     ticker = api("Ticker")
     quote_at = clock().astimezone(UTC)
     if not isinstance(ticker, dict) or not 0 <= (quote_at - started).total_seconds() <= 120:
@@ -173,13 +201,14 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             continue
     if len(observations) + sum(ticker_rejections.values()) != len(eligible):
         raise RuntimeError("Ticker coverage accounting mismatch")
-    if matched < max(20, math.ceil(len(eligible) * 0.8)):
-        raise RuntimeError("Incomplete Kraken ticker universe coverage")
-    if len(observations) < max(20, math.ceil(matched * 0.8)):
-        raise RuntimeError("Insufficient valid ticker observations")
+    # A sparse but structurally valid Ticker response is an observable scan
+    # abstention, not an uncaught failure that prevents receipt persistence.
+    # Preserve exact missing/invalid counts so B can deliver the failure reason.
     if len(preselection) != len(observations):
         raise RuntimeError("Preselection universe coverage mismatch")
-    # Any missing, malformed, or nonfinite ticker prevents WATCH authorization.\n    # Retain valid observations for coverage research without treating them as a\n    # complete market snapshot or silently ranking around invalid prices.
+    # Any missing, malformed, or nonfinite ticker prevents WATCH authorization.
+    # Retain valid observations for coverage research without treating them as a
+    # complete market snapshot or silently ranking around invalid prices.
     incomplete_ticker = any(ticker_rejections.values())
     screened.sort(key=lambda x: (-x["baseline_score"], x["pair"]))
     selected = []
@@ -205,9 +234,27 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             bars = api("OHLC?pair=" + urllib.parse.quote(item["pair"], safe="") + "&interval=5")
             # Kraken's response must identify exactly the requested market.
             # Never accept an unrelated result via first-dictionary-value order.
-            if not isinstance(bars, dict) or set(bars) != {item["pair"], "last"}:
+            alias = ohlc_aliases[item["pair"]]
+            # If another market declares this pair's REST key as its alias,
+            # neither market has unambiguous identity for this scan. Do not
+            # authorize the pair through a different alias response.
+            if alias_owners.get(item["pair"], set()) - {item["pair"]}:
+                raise ValueError("OHLC ambiguous AssetPairs market identity")
+            allowed = set()
+            # Even the requested dictionary key is ambiguous when a different
+            # eligible pair declares that exact string as its altname.
+            if not (alias_owners.get(item["pair"], set()) - {item["pair"]}):
+                allowed.add(item["pair"])
+            # An altname that equals another eligible AssetPairs dictionary
+            # key is ambiguous even if it has only one declared alias owner.
+            # The OHLC response could belong to that other market.
+            if alias_owners[alias] == {item["pair"]} and (
+                    alias == item["pair"] or alias not in eligible):
+                allowed.add(alias)
+            returned = set(bars) - {"last"} if isinstance(bars, dict) else set()
+            if not isinstance(bars, dict) or "last" not in bars or len(returned) != 1 or not returned <= allowed:
                 raise ValueError("OHLC response pair mismatch")
-            raw = bars[item["pair"]]
+            raw = bars[next(iter(returned))]
             if not isinstance(raw, list) or len(raw) < 14:
                 raise ValueError("insufficient completed OHLC")
             closed = raw[:-1][-13:]  # Kraken last candle is not committed
@@ -316,12 +363,17 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     screened_by_pair = {x["pair"]: x for x in screened}
     preselection_decisions = {
         "SCREEN_REJECTED": 0, "NOT_OHLC_SELECTED": 0,
+        "SOURCE_COVERAGE_ABSTAINED": 0,
         "OHLC_ABSTAINED": 0, "WATCH": 0,
     }
     for row in preselection:
         pair = row["pair"]
         if not row["screen_passed"]:
             decision = "SCREEN_REJECTED"
+        elif incomplete_ticker:
+            # Valid individual quotes cannot be treated as OHLC-budget misses
+            # when incomplete source coverage disabled the entire selection.
+            decision = "SOURCE_COVERAGE_ABSTAINED"
         elif pair not in selected_pairs:
             decision = "NOT_OHLC_SELECTED"
         elif pair in abstention_by_pair:

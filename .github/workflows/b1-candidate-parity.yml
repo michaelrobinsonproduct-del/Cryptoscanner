@@ -7,8 +7,14 @@ on:
       - '.github/workflows/b1-candidate-parity.yml'
       - 'paper_pov/github_delivery_projection.py'
       - 'paper_pov/test_github_delivery_projection.py'
+      - 'paper_pov/manual_schedule_contract.py'
+      - 'paper_pov/test_manual_schedule_contract.py'
       - 'paper_pov/scanner.py'
       - 'paper_pov/test_scanner.py'
+      - 'paper_pov/preselection_universe.py'
+      - 'paper_pov/test_a1_a2_end_to_end.py'
+      - 'paper_pov/a2_artifact_consumer.py'
+      - 'paper_pov/test_a2_artifact_consumer.py'
       - 'paper_pov/candidate_snapshot.py'
       - 'paper_pov/test_candidate_snapshot.py'
       - 'paper_pov/github_sealed_bundle_readback.py'
@@ -39,6 +45,10 @@ on:
       - 'paper_pov/test_github_delivery_projection.py'
       - 'paper_pov/scanner.py'
       - 'paper_pov/test_scanner.py'
+      - 'paper_pov/preselection_universe.py'
+      - 'paper_pov/test_a1_a2_end_to_end.py'
+      - 'paper_pov/a2_artifact_consumer.py'
+      - 'paper_pov/test_a2_artifact_consumer.py'
       - 'paper_pov/candidate_snapshot.py'
       - 'paper_pov/test_candidate_snapshot.py'
       - 'scanner/src/**'
@@ -56,9 +66,9 @@ jobs:
       - name: Focused B1 candidate and native-entry parity regression
         run: bun test scanner/src/shadow-evaluation.test.ts scanner/src/shadow-artifacts.test.ts scanner/src/cycle-runner.test.ts scanner/src/cycle-http.test.ts scanner/src/paper-receipt.test.ts
       - name: A core Kraken quote-to-immutable-snapshot acceptance
-        run: python -m unittest paper_pov.test_scanner paper_pov.test_candidate_snapshot -v
+        run: python -m unittest paper_pov.test_scanner paper_pov.test_candidate_snapshot paper_pov.test_a1_a2_end_to_end paper_pov.test_a2_artifact_consumer -v
       - name: Read-only GitHub artifact transport and checksum acceptance
-        run: python -m unittest paper_pov.test_github_sealed_bundle_readback paper_pov.test_github_delivery_projection -v
+        run: python -m unittest paper_pov.test_github_sealed_bundle_readback paper_pov.test_github_delivery_projection paper_pov.test_manual_schedule_contract -v
       - name: Verify exact checkout
         run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 
@@ -129,6 +139,7 @@ jobs:
               raw=subprocess.check_output(["gh","api",f"repos/{os.environ['REPO']}/actions/runs/{run['id']}/artifacts"],timeout=30)
               matches=[a for a in json.loads(raw).get("artifacts",[]) if a.get("name")=="d2-real-writer-recovery-report"
                   and a.get("expired") is False and a.get("workflow_run",{}).get("id")==run["id"]
+                  and a.get("workflow_run",{}).get("head_sha")==run.get("head_sha")
                   and str(a.get("digest","")).startswith("sha256:")]
               if len(matches)!=1:
                   continue

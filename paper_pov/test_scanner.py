@@ -93,6 +93,46 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["preselection_decisions"]["NOT_OHLC_SELECTED"],
                          report["screened_markets"])
 
+    def test_severely_sparse_ticker_persists_truthful_abstention(self):
+        report = run(coverage=True)
+        self.assertEqual(report["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+        self.assertEqual(report["eligible_pairs"], 25)
+        self.assertEqual(report["matched_tickers"], 12)
+        self.assertEqual(report["observed_markets"], 12)
+        self.assertEqual(report["ticker_rejections"]["missing_or_invalid_payload"], 13)
+        self.assertEqual(report["preselection_decisions"]["SOURCE_COVERAGE_ABSTAINED"], report["screened_markets"])
+        self.assertEqual(report["preselection_decisions"]["NOT_OHLC_SELECTED"], 0)
+        self.assertTrue(all(row["selection_status"] == "SOURCE_COVERAGE_ABSTAINED"
+                            for row in report["preselection_universe"] if row["screen_passed"]))
+        self.assertFalse(report["ticker_coverage_complete"])
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["ohlc_screened"], 0)
+
+    def test_sparse_ticker_receipt_roundtrips_into_candidate_delivery(self):
+        # A -> immutable receipt -> A2 readback must preserve an explicit
+        # zero-WATCH result rather than silently losing a failed scan.
+        from paper_pov.candidate_snapshot import read_snapshot
+        report = run(coverage=True)
+        with tempfile.TemporaryDirectory() as directory:
+            latest = Path(directory) / "latest.json"
+            receipt = scanner.persist_report(latest, report)
+            self.assertEqual(receipt.read_bytes(), latest.read_bytes())
+            projected = read_snapshot(latest, now=NOW)
+            self.assertEqual(projected["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+            self.assertEqual(projected["watch"], [])
+            self.assertEqual(projected["eligible_pairs"], 25)
+            self.assertEqual(projected["observed_markets"], 12)
+
+    def test_empty_ticker_persists_explicit_abstention(self):
+        base = fixture()
+        def api(path):
+            return {} if path == "Ticker" else base(path)
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+        self.assertEqual(report["observed_markets"], 0)
+        self.assertEqual(report["ticker_rejections"]["missing_or_invalid_payload"], 25)
+        self.assertEqual(report["watch"], [])
+
     def test_invalid_ticker_price_fails_closed_without_losing_valid_inventory(self):
         base = fixture()
         def api(path):
@@ -125,9 +165,107 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["ticker_rejections"]["nonfinite_derived_metric"], 1)
         self.assertEqual(report["watch"], [])
 
+    def test_boolean_and_overflowed_ticker_fields_abstain_without_scan_crash(self):
+        for malformed in (True, 10 ** 400):
+            with self.subTest(malformed=str(malformed)[:20]):
+                base = fixture()
+                def api(path):
+                    result = base(path)
+                    if path == "Ticker":
+                        result = {key: dict(value) for key, value in result.items()}
+                        result["C0USD"]["c"] = [malformed]
+                    return result
+                report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+                self.assertEqual(report["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+                self.assertEqual(report["ticker_rejections"]["missing_or_invalid_payload"], 1)
+                self.assertEqual(report["observed_markets"], 24)
+                self.assertEqual(report["watch"], [])
+
+    def test_boolean_and_overflowed_ohlc_fields_abstain_per_market(self):
+        for malformed in (True, 10 ** 400):
+            with self.subTest(malformed=str(malformed)[:20]):
+                base = fixture()
+                def api(path):
+                    result = base(path)
+                    if path.startswith("OHLC?"):
+                        key = next(k for k in result if k != "last")
+                        result[key][0][4] = malformed
+                    return result
+                report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+                self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+                self.assertEqual(report["abstention_counts"]["invalid_market_metrics"], 24)
+                self.assertEqual(report["watch"], [])
+
+    def test_ohlc_assetpairs_declared_altname_is_accepted(self):
+        base = fixture()
+        def api(path):
+            result = base(path)
+            if path == "AssetPairs":
+                return {key: dict(meta, altname="ALT" + key) for key, meta in result.items()}
+            if path.startswith("OHLC?"):
+                key = path.split("pair=")[1].split("&")[0]
+                return {"ALT" + key: result[key], "last": result["last"]}
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["scan_status"], "WATCH")
+        self.assertEqual(len(report["watch"]), 12)
+        self.assertEqual(report["ohlc_screened"], 24)
+
+    def test_ohlc_duplicate_altname_cannot_cross_pair_boundary(self):
+        base = fixture()
+        def api(path):
+            result = base(path)
+            if path == "AssetPairs":
+                return {key: dict(meta, altname="SHAREDUSD") for key, meta in result.items()}
+            if path.startswith("OHLC?"):
+                key = path.split("pair=")[1].split("&")[0]
+                return {"SHAREDUSD": result[key], "last": result["last"]}
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+        self.assertEqual(report["abstention_counts"]["ohlc_gap_or_schema"], 24)
+
+    def test_ohlc_altname_colliding_with_another_pair_key_abstains(self):
+        base = fixture()
+        def api(path):
+            result = base(path)
+            if path == "AssetPairs":
+                return {key: dict(meta, altname=("C1USD" if key == "C0USD"
+                                               else "ALT" + key))
+                        for key, meta in result.items()}
+            if path.startswith("OHLC?"):
+                key = path.split("pair=")[1].split("&")[0]
+                returned = "C1USD" if key == "C0USD" else "ALT" + key
+                return {returned: result[key], "last": result["last"]}
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        watched = {item["pair"] for item in report["watch"]}
+        self.assertNotIn("C0USD", watched)
+        self.assertNotIn("C1USD", watched)
+        self.assertEqual(report["abstention_counts"]["ohlc_gap_or_schema"], 2)
+        self.assertEqual(report["ohlc_screened"], 24)
+
+    def test_ohlc_unrelated_alias_abstains_without_wrong_market_data(self):
+        base = fixture()
+        def api(path):
+            result = base(path)
+            if path.startswith("OHLC?"):
+                key = path.split("pair=")[1].split("&")[0]
+                return {"UNRELATED" + key: result[key], "last": result["last"]}
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["abstention_counts"]["ohlc_gap_or_schema"], 24)
+
     def test_insufficient_universe_coverage_fails_closed(self):
-        with self.assertRaisesRegex(RuntimeError, "coverage"):
-            run(coverage=True)
+        report = run(coverage=True)
+        self.assertEqual(report["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["eligible_pairs"], 25)
+        self.assertEqual(report["observed_markets"], 12)
+        self.assertEqual(report["ticker_rejections"]["missing_or_invalid_payload"], 13)
 
     def test_stablecoin_is_excluded(self):
         result = run(stable=True)
@@ -158,6 +296,38 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["online_usd_pairs"], 27)
         self.assertEqual(report["excluded_stablecoin_pairs"], 0)
         self.assertEqual(report["excluded_other_pairs"], 2)
+
+    def test_malformed_online_display_names_never_enter_ticker_or_a2_watch(self):
+        # These public AssetPairs shapes previously passed the /USD suffix
+        # filter, then produced unreadable WATCH symbols at A2 consumption.
+        malformed = {
+            "EXTRA_SLASH": "C0/ALT/USD",
+            "SPACE_STABLE": "USDT /USD",
+            "EMPTY_BASE": "/USD",
+            "TAB_BASE": "C0\t/USD",
+            "LONG_BASE": ("X" * 64) + "/USD",
+        }
+        base = fixture()
+        def api(path):
+            result = base(path)
+            if path == "AssetPairs":
+                return {**result, **{key: {"status": "online", "wsname": name}
+                                     for key, name in malformed.items()}}
+            if path == "Ticker":
+                return {**result, **{key: result["C0USD"] for key in malformed}}
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["online_usd_pairs"], 30)
+        self.assertEqual(report["excluded_other_pairs"], 5)
+        self.assertEqual(report["eligible_pairs"], 25)
+        self.assertEqual(report["observed_markets"], 25)
+        self.assertEqual(report["scan_status"], "WATCH")
+        self.assertFalse(set(malformed) & {item["pair"] for item in report["watch"]})
+        with tempfile.TemporaryDirectory() as folder:
+            from paper_pov.candidate_snapshot import read_snapshot
+            latest = Path(folder) / "latest.json"
+            scanner.persist_report(latest, report)
+            self.assertEqual(read_snapshot(latest, now=NOW)["watch"], report["watch"])
 
     def test_duplicate_kraken_display_market_is_not_sealed_twice(self):
         def api(path):

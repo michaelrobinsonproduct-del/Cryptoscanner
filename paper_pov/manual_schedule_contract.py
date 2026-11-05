@@ -16,7 +16,8 @@ SHA64 = re.compile(r"[0-9a-f]{64}\Z")
 CANDIDATE_KEYS = frozenset(("rank", "symbol", "price_usd", "status", "confidence",
     "risk", "move_since_utc_open_pct", "move15_pct", "volume_accel", "spread_bps",
     "baseline_score", "challenger_score", "quote_observed_at", "ohlc_age_seconds",
-    "prediction_id"))
+    "prediction_id", "quote_source", "client_quote_age_seconds",
+    "exchange_event_freshness_verified"))
 
 
 def inspect(manual, scheduled):
@@ -35,7 +36,7 @@ def inspect(manual, scheduled):
     if manual.get("scheduled_slot_utc_minute") is not None:
         raise ValueError("Manual result has a scheduled minute")
     for label, payload in (("manual", manual), ("scheduled", scheduled)):
-        if payload.get("schema") != 1 or payload.get("status") != "SUCCESS_PAPER_ONLY":
+        if payload.get("schema") != 1 or payload.get("status") not in ("SUCCESS_PAPER_ONLY", "ABSTAIN_NO_WATCH", "ABSTAIN_NO_OBSERVATIONS"):
             raise ValueError(label + " has incompatible result schema/status")
         if payload.get("production_applied") is not False or payload.get("buy_approved") is not False:
             raise ValueError(label + " violates paper-only safety")
@@ -49,13 +50,20 @@ def inspect(manual, scheduled):
             raise ValueError(label + " lacks ledger checksum")
         if type(payload.get("ledger_generation")) is not int or payload["ledger_generation"] < 1:
             raise ValueError(label + " lacks ledger generation")
-        if type(payload.get("max_client_quote_age_seconds")) not in (int, float) or not 0 <= payload["max_client_quote_age_seconds"] <= 600:
-            raise ValueError(label + " has stale/invalid client quote evidence")
+        if payload.get("max_client_quote_age_seconds") is not None:
+            if type(payload["max_client_quote_age_seconds"]) not in (int, float) or not 0 <= payload["max_client_quote_age_seconds"] <= 600:
+                raise ValueError(label + " has stale/invalid client quote evidence")
+        elif payload["status"] != "ABSTAIN_NO_OBSERVATIONS":
+            raise ValueError(label + " lacks quote freshness evidence")
         if payload.get("exchange_event_freshness_verified") is not False:
             raise ValueError(label + " overclaims exchange event freshness")
         candidates = payload.get("candidates")
-        if not isinstance(candidates, list) or not 1 <= len(candidates) <= 12:
-            raise ValueError(label + " lacks WATCH candidates")
+        if not isinstance(candidates, list) or len(candidates) > 12 or (payload["status"] == "SUCCESS_PAPER_ONLY") != bool(candidates):
+            raise ValueError(label + " WATCH/status mismatch")
+        if payload["status"] == "ABSTAIN_NO_OBSERVATIONS" and payload.get("observed_markets") != 0:
+            raise ValueError(label + " zero-observation abstention contradicts coverage")
+        if payload["status"] == "ABSTAIN_NO_WATCH" and (type(payload.get("observed_markets")) is not int or payload["observed_markets"] <= 0):
+            raise ValueError(label + " no-WATCH abstention lacks observations")
         for i, candidate in enumerate(candidates, 1):
             if not isinstance(candidate, dict) or frozenset(candidate) != CANDIDATE_KEYS:
                 raise ValueError(label + " candidate schema mismatch")

@@ -49,6 +49,16 @@ class DeliveryProjectionTests(unittest.TestCase):
                         "reason": "REMOTE_LEDGER_QUERY_FAILED",
                         "independently_authenticated": False, "production_applied": False}}
         result = project_delivery(base, recovery)
+        # D distinguishes an inaccessible immutable checkpoint from a
+        # generic ledger query failure; both remain non-MATCH abstentions.
+        recovery["remote_ledger_reconciliation"]["reason"] = "REMOTE_CHECKPOINT_UNAVAILABLE"
+        unavailable = project_delivery(base, recovery)
+        self.assertEqual(unavailable["writer_reconciliation_status"], "UNAVAILABLE")
+        self.assertFalse(unavailable["live_watch_authorized"])
+        recovery["remote_ledger_reconciliation"]["reason"] = "UNEXPECTED_REMOTE_FAILURE"
+        with self.assertRaisesRegex(ValueError, "unexplained remote ledger unavailability"):
+            project_delivery(base, recovery)
+        recovery["remote_ledger_reconciliation"]["reason"] = "REMOTE_LEDGER_QUERY_FAILED"
         self.assertEqual(result["writer_reconciliation_status"], "UNAVAILABLE")
         self.assertEqual(result["writer_recovery"]["ledger_generation"], 7)
         self.assertEqual(result["writer_recovery"]["source_run_id"], 456)
@@ -189,6 +199,19 @@ class DeliveryProjectionTests(unittest.TestCase):
                               ledger_commit="b"*40, event="workflow_dispatch")
         self.assertEqual(project_published_result(published)["live_watch"], [])
         self.assertEqual(project_published_result(published)["status"], "ABSTAIN_PUBLISHED_WATCH_STALE_AT_DELIVERY")
+        bad = deepcopy(published)
+        bad["candidates"].append({**bad["candidates"][0], "rank": 2})
+        with self.assertRaisesRegex(ValueError, "duplicate published WATCH candidate"):
+            project_published_result(bad)
+        for metric, value in (("baseline_score", float("nan")), ("challenger_score", float("inf")), ("volume_accel", True), ("risk", "")):
+            bad = deepcopy(published)
+            bad["candidates"][0][metric] = value
+            with self.subTest(metric=metric), self.assertRaisesRegex(ValueError, "invalid published WATCH"):
+                project_published_result(bad)
+        bad = deepcopy(published)
+        bad["candidates"][0]["symbol"] = []
+        with self.assertRaisesRegex(ValueError, "invalid published WATCH symbol"):
+            project_published_result(bad)
         bad = deepcopy(published)
         bad["candidates"][0]["price_usd"] *= 2
         with self.assertRaisesRegex(ValueError, "matching fresh quote"):

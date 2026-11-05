@@ -1,8 +1,21 @@
 name: A2 immutable snapshot and scanner-to-consumer acceptance
 on:
+  push:
+    branches: [integration-a-b-c-d-20261103]
+    paths:
+      - 'paper_pov/scanner.py'
+      - 'paper_pov/test_scanner.py'
+      - 'paper_pov/candidate_snapshot.py'
+      - 'paper_pov/preselection_universe.py'
+      - 'paper_pov/test_a1_a2_end_to_end.py'
+      - 'paper_pov/test_candidate_snapshot.py'
+      - 'paper_pov/a2_artifact_consumer.py'
+      - 'paper_pov/test_a2_artifact_consumer.py'
+      - '.github/workflows/a2-candidate-snapshot.yml'
   pull_request:
     paths:
       - 'paper_pov/scanner.py'
+      - 'paper_pov/test_scanner.py'
       - 'paper_pov/candidate_snapshot.py'
       - 'paper_pov/preselection_universe.py'
       - 'paper_pov/test_candidate_snapshot.py'
@@ -19,8 +32,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Focused A1-to-A2 durable readback and snapshot regression
-        run: python -m unittest paper_pov.test_a1_a2_end_to_end paper_pov.test_candidate_snapshot paper_pov.test_a2_artifact_consumer -v
+        run: python -m unittest paper_pov.test_scanner paper_pov.test_a1_a2_end_to_end paper_pov.test_candidate_snapshot paper_pov.test_a2_artifact_consumer -v
   live-consumer:
+    needs: focused
     runs-on: ubuntu-latest
     timeout-minutes: 12
     permissions:

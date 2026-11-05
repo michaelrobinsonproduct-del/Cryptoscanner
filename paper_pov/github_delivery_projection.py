@@ -31,7 +31,7 @@ def _writer_evidence(readback):
         if (not isinstance(reconciliation, dict) or reconciliation.get("status") not in ("MATCH", "DIVERGED", "UNAVAILABLE") or reconciliation.get("independently_authenticated") is not False or reconciliation.get("production_applied") is not False):
             raise ValueError("writer reconciliation invalid")
         status = reconciliation["status"]
-        if status == "UNAVAILABLE" and reconciliation.get("reason") != "REMOTE_LEDGER_QUERY_FAILED":
+        if status == "UNAVAILABLE" and reconciliation.get("reason") not in ("REMOTE_LEDGER_QUERY_FAILED", "REMOTE_CHECKPOINT_UNAVAILABLE"):
             raise ValueError("unexplained remote ledger unavailability")
         if status in ("MATCH", "DIVERGED"):
             import re
@@ -221,13 +221,27 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
         raise ValueError("published quote freshness summary mismatch")
     if (status == "ABSTAIN_NO_OBSERVATIONS") != (not quotes) or (status == "ABSTAIN_NO_WATCH") != (bool(quotes) and not candidates):
         raise ValueError("published abstention/coverage contradiction")
+    seen_candidate_symbols = set()
     for i, candidate in enumerate(candidates, 1):
         if not isinstance(candidate, dict) or candidate.get("rank") != i or candidate.get("status") != "WATCH_PAPER_ONLY" or candidate.get("exchange_event_freshness_verified") is not False:
             raise ValueError("invalid WATCH candidate")
         for key in ("symbol", "price_usd", "quote_observed_at", "baseline_score", "challenger_score", "move15_pct", "volume_accel", "risk"):
             if key not in candidate:
                 raise ValueError("incomplete WATCH candidate")
-        quote = by_symbol.get(candidate["symbol"])
+        symbol = candidate["symbol"]
+        if not isinstance(symbol, str):
+            raise ValueError("invalid published WATCH symbol")
+        if symbol in seen_candidate_symbols:
+            raise ValueError("duplicate published WATCH candidate")
+        seen_candidate_symbols.add(symbol)
+        import math
+        for metric in ("price_usd", "baseline_score", "challenger_score", "move15_pct", "volume_accel"):
+            value = candidate[metric]
+            if type(value) not in (int, float) or not math.isfinite(value):
+                raise ValueError("invalid published WATCH numeric evidence")
+        if candidate["price_usd"] <= 0 or not isinstance(candidate["risk"], str) or not candidate["risk"]:
+            raise ValueError("invalid published WATCH price or risk")
+        quote = by_symbol.get(symbol)
         if quote is None or candidate["price_usd"] != quote["price"] or _utc(candidate["quote_observed_at"]) != _utc(quote["observed_at"]):
             raise ValueError("WATCH candidate lacks matching fresh quote")
     # A checks freshness at artifact consumption, not merely at scan time.

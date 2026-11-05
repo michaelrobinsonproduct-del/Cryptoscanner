@@ -23,7 +23,13 @@ def export_universe(latest, now=None, historical=False):
         verified = read_snapshot(latest, now=stamp)
     else:
         verified = read_snapshot(latest, now=now)
-    report = json.loads(Path(latest).read_bytes())
+    # Bind the research export to the exact bytes authenticated by A2.
+    # A concurrent latest.json replacement must not attach a prior receipt's
+    # digest/observation IDs to a different market universe.
+    raw = Path(latest).read_bytes()
+    if hashlib.sha256(raw).hexdigest() != verified["receipt_sha256"]:
+        raise ValueError("preselection receipt changed during readback")
+    report = json.loads(raw)
     rows = report.get("preselection_universe")
     coverage = report.get("preselection_coverage")
     if not isinstance(rows, list) or not isinstance(coverage, dict):
@@ -41,7 +47,7 @@ def export_universe(latest, now=None, historical=False):
            for x in rows):
         raise ValueError("invalid preselection status or provenance")
     decisions = report.get("preselection_decisions")
-    allowed = {"SCREEN_REJECTED", "NOT_OHLC_SELECTED", "OHLC_ABSTAINED", "WATCH", "NOT_RANKED_WATCH"}
+    allowed = {"SCREEN_REJECTED", "NOT_OHLC_SELECTED", "SOURCE_COVERAGE_ABSTAINED", "OHLC_ABSTAINED", "WATCH", "NOT_RANKED_WATCH"}
     if not isinstance(decisions, dict) or set(decisions) - allowed or sum(decisions.values()) != len(rows):
         raise ValueError("invalid preselection decision accounting")
     if any(x.get("selection_status") not in allowed or
@@ -52,6 +58,20 @@ def export_universe(latest, now=None, historical=False):
         raise ValueError("invalid preselection decision provenance")
     if {name: sum(x["selection_status"] == name for x in rows) for name in decisions} != decisions:
         raise ValueError("preselection decision totals mismatch")
+    # A rejected ticker screen cannot legitimately be an OHLC/WATCH candidate;
+    # likewise a passed screen cannot be retroactively labeled rejected.
+    if any((row["selection_status"] == "SCREEN_REJECTED") != (not row["screen_passed"])
+           for row in rows):
+        raise ValueError("preselection screen and selection decision mismatch")
+    # A partial Kraken ticker payload invalidates cohort-level selection.
+    # Preserve observed market research, but never describe the surviving
+    # individually valid quotes as ordinary OHLC budget exclusions.
+    incomplete = report.get("scan_status") == "ABSTAIN_INCOMPLETE_TICKER_COVERAGE"
+    # Historical receipts sealed before this explicit decision existed remain
+    # readable for research; they still carry incomplete scan status and can
+    # never be promoted to live WATCH or qualified outcome evidence.
+    if (incomplete and "SOURCE_COVERAGE_ABSTAINED" in decisions and any(x["screen_passed"] and x["selection_status"] != "SOURCE_COVERAGE_ABSTAINED" for x in rows)) or (not incomplete and decisions.get("SOURCE_COVERAGE_ABSTAINED", 0)):
+        raise ValueError("preselection source coverage decision mismatch")
     # Deterministic receipt-bound identity for EVERY observed ticker, including
     # screen rejects and OHLC budget exclusions. Never call these outcome labels.
     for row in rows:
