@@ -2,7 +2,14 @@ import json
 import subprocess
 from pathlib import Path
 
-import pytest
+try:
+    import pytest
+except ImportError as exc:
+    # This module contains pytest function tests, not unittest.TestCase tests.
+    # Broad unittest discovery must not fail importing a pytest-only module;
+    # focused pytest CI still collects and executes every test here.
+    import unittest
+    raise unittest.SkipTest("pytest-only tests require the focused pytest runner") from exc
 
 from paper_pov.github_artifact_readback import retrieve_and_verify
 from paper_pov.runtime_readback_integrity import IntegrityError, make_manifest
