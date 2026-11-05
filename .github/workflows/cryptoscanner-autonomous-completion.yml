@@ -1,0 +1,121 @@
+name: Cryptoscanner autonomous completion (12-minute coding batches)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+concurrency:
+  group: cryptoscanner-autonomous-completion
+  cancel-in-progress: false
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Resume saved work on isolated branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/cryptoscanner-autonomous-completion" --silent >/dev/null 2>&1; then
+            git fetch origin cryptoscanner-autonomous-completion
+            git checkout -B cryptoscanner-autonomous-completion FETCH_HEAD
+          else
+            git checkout -B cryptoscanner-autonomous-completion
+          fi
+          mkdir -p .autonomous
+          if test -f .autonomous/COMPLETE; then
+            echo 'ALREADY_COMPLETE=true' >> "$GITHUB_ENV"
+          fi
+      - name: Check available coding-agent credentials before spending runner time
+        if: env.ALREADY_COMPLETE != 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if test -z "$OPENAI_API_KEY"; then
+            echo "::error::OPENAI_API_KEY is missing. Cannot perform autonomous coding."
+            exit 1
+          fi
+      - name: Install Codex coding agent
+        if: env.ALREADY_COMPLETE != 'true'
+        run: npm install --global @openai/codex
+      - name: Implement remaining scanner functionality, commit after each bounded coding session
+        if: env.ALREADY_COMPLETE != 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          cat > /tmp/completion-task.txt <<'PROMPT'
+          You are the implementation engineer, not a verification-only auditor.
+          Continue the full Cryptoscanner requirements in GitHub issue #34, its handoffs,
+          docs/EXECUTION_QUEUE.md when present, and existing owner PRs A/B/C/D/E.
+          Work on the current isolated development branch; never merge or deploy.
+          FIRST implement the next missing functional integration, not another report.
+          Priorities: A authentic Kraken quote-complete paper publisher with scores and
+          sealed as-of source receipts; D independently authenticated exact-run
+          canonical single-writer ledger SHA/generation/status/commit remote readback;
+          B shared manual/scheduled delivery using same-run A/D proof with explicit
+          abstention on incomplete evidence; C architecture cleanup and E genuine
+          1/6/24/48h qualified historical outcomes, chronological held-out learning,
+          hit/miss feedback and shadow challenger. Preserve stablecoin exclusions,
+          fresh timestamps, source checksums, no leakage and no invented improvement.
+          Read existing PR branches and avoid overwriting or duplicating owned code.
+          Make real source changes and connect systems, run only focused tests necessary
+          for modified code, fix observed failures, and continue to the next unfinished
+          implementation task within this session. Do not stop after a single change,
+          passing test, status message or checkpoint.
+          Update .autonomous/progress.md with concrete code changes, test evidence,
+          remaining exact steps and any external blocker. Do not fabricate source data.
+          Only write .autonomous/COMPLETE if ALL requirements are actually integrated,
+          end-to-end acceptance is evidenced, and no blockers remain.
+          Never trade, deploy, restart production, promote scoring, weaken gates,
+          force-push, or introduce a second writer.
+          PROMPT
+          timeout --signal=INT --kill-after=20s 8m codex exec --sandbox workspace-write --skip-git-repo-check - < /tmp/completion-task.txt
+          echo "CODEX_EXIT=$?" >> "$GITHUB_ENV"
+      - name: Persist implementation and resume checkpoint even if agent fails
+        if: always() && env.ALREADY_COMPLETE != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          mkdir -p .autonomous
+          git add -A
+          if ! git diff --cached --quiet; then
+            git diff --cached --check
+            git commit -m "autonomous: implementation checkpoint ${GITHUB_RUN_ID}"
+          fi
+          gh auth setup-git
+          git push origin HEAD:refs/heads/cryptoscanner-autonomous-completion
+          if ! gh pr list --head cryptoscanner-autonomous-completion --state open --json number --jq '.[0].number' | grep -q '[0-9]'; then
+            if ! git diff --quiet origin/main...HEAD; then
+              gh pr create --base main --head cryptoscanner-autonomous-completion --title "Autonomous Cryptoscanner remaining implementation" --body "Review only; never automatically merge or deploy. Check .autonomous/progress.md and actual CI evidence."
+            fi
+          fi
+          if test -f .autonomous/COMPLETE; then
+            echo 'All requirements marked complete; verify evidence before merge.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Unfinished: next scheduled or manual run resumes from this branch.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Surface agent failures honestly
+        if: always() && env.ALREADY_COMPLETE != 'true'
+        run: |
+          if test "${CODEX_EXIT:-missing}" != 0; then
+            echo "::error::Coding agent failed or exhausted quota (exit ${CODEX_EXIT:-missing}); no completion claimed"
+            exit 1
+          fi
