@@ -1,0 +1,43 @@
+name: Consolidated Kraken Read-Only Execution Batch
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/consolidated-readonly-batch.yml'
+      - 'paper_pov/read_only_execution_batch.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  scanner-batch:
+    if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run consolidated scanner functionality
+        id: execute
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BATCH_OUTPUT_DIR: batch-evidence
+        run: python -m paper_pov.read_only_execution_batch
+      - name: Verify evidence integrity
+        if: always()
+        run: |
+          if [ -f batch-evidence/SHA256SUMS ]; then
+            cd batch-evidence && sha256sum -c SHA256SUMS
+          else
+            echo 'Missing batch evidence manifest'
+            exit 1
+          fi
+      - name: Upload complete evidence even on scanner failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: consolidated-scanner-batch-${{ github.run_id }}
+          path: batch-evidence/
+          if-no-files-found: error
+          retention-days: 7
