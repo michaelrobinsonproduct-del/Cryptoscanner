@@ -219,7 +219,11 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             # Never accept an unrelated result via first-dictionary-value order.
             alias = ohlc_aliases[item["pair"]]
             allowed = {item["pair"]}
-            if alias_owners[alias] == {item["pair"]}:
+            # An altname that equals another eligible AssetPairs dictionary
+            # key is ambiguous even if it has only one declared alias owner.
+            # The OHLC response could belong to that other market.
+            if alias_owners[alias] == {item["pair"]} and (
+                    alias == item["pair"] or alias not in eligible):
                 allowed.add(alias)
             returned = set(bars) - {"last"} if isinstance(bars, dict) else set()
             if not isinstance(bars, dict) or "last" not in bars or len(returned) != 1 or not returned <= allowed:
