@@ -253,7 +253,7 @@ jobs:
           for run in runs:
               if (run.get("conclusion") != "success"
                       or run.get("head_branch") != "runtime-readback-integrity-20261104"
-                      or run.get("event") not in ("push", "workflow_dispatch")
+                      or run.get("event") not in ("push", "workflow_dispatch", "pull_request")
                       or str(run.get("path", "")).split("@", 1)[0] != ".github/workflows/runtime-readback-integrity.yml"):
                   continue
               rid=run["id"]
