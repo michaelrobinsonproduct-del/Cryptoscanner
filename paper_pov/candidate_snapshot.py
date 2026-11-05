@@ -157,6 +157,22 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
         for row in observations:
             if not isinstance(row, dict) or not isinstance(row.get("pair"), str) or row["pair"] in observed_by_pair:
                 raise ValueError("duplicate or invalid source observation")
+            # Every frozen observation is used by E's point-in-time learner,
+            # not only the ranked WATCH subset. Reject future/stale/nonpositive
+            # source quotes before exporting a receipt-bound historical cohort.
+            source_time = row.get("observed_at")
+            if (row.get("source") != "kraken_public_ticker_client_observed" or
+                    not isinstance(source_time, str) or
+                    type(row.get("price")) not in (int, float) or
+                    not math.isfinite(row["price"]) or row["price"] <= 0):
+                raise ValueError("invalid source observation provenance")
+            try:
+                source_stamp = dt.datetime.fromisoformat(source_time.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise ValueError("invalid source observation timestamp") from exc
+            if (source_stamp.tzinfo is None or source_stamp.utcoffset() is None or
+                    not 0 <= (stamp - source_stamp).total_seconds() <= 600):
+                raise ValueError("stale or future source observation")
             observed_by_pair[row["pair"]] = row
         selection_by_pair = {}
         for row in preselection:
