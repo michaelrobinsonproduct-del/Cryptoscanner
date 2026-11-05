@@ -76,6 +76,11 @@ class OutcomeAdapterTests(unittest.TestCase):
         self.assertEqual(result["four_horizon_complete_predictions"], 1)
         self.assertEqual(result["status"], "NO_QUALIFIED_RULE")
 
+    def test_naive_offsetless_identity_is_not_assumed_utc(self):
+        with self.assertRaisesRegex(ValueError, "Invalid cross-horizon"):
+            self.evaluate([row("p", 48), row("p", 6,
+                              entry_utc="2026-08-04T00:00:00")])
+
     def test_invalid_abstention_identity_cannot_hide_behind_valid_48h(self):
         bad = row("p", 6, coverage_complete=False,
                   entry_utc="not-a-timestamp")
