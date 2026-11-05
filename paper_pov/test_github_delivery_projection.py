@@ -119,7 +119,7 @@ class DeliveryProjectionTests(unittest.TestCase):
             projected = project_published_result(result)
             self.assertEqual(projected["github_event"], event)
             self.assertEqual(projected["live_watch"], [])
-            self.assertEqual(projected["status"], "ABSTAIN_SAME_RUN_PERSISTED_WRITER_UNVERIFIED")
+            self.assertEqual(projected["status"], "ABSTAIN_PUBLISHED_WATCH_STALE_AT_DELIVERY")
             self.assertFalse(projected["live_watch_authorized"])
             self.assertFalse(projected["exchange_event_freshness_verified"])
             results.append(projected)
@@ -188,7 +188,7 @@ class DeliveryProjectionTests(unittest.TestCase):
         published, _ = render(scan, score, run_id="41235442591", source_sha=SHA,
                               ledger_commit="b"*40, event="workflow_dispatch")
         self.assertEqual(project_published_result(published)["live_watch"], [])
-        self.assertEqual(project_published_result(published)["status"], "ABSTAIN_SAME_RUN_PERSISTED_WRITER_UNVERIFIED")
+        self.assertEqual(project_published_result(published)["status"], "ABSTAIN_PUBLISHED_WATCH_STALE_AT_DELIVERY")
         bad = deepcopy(published)
         bad["candidates"][0]["price_usd"] *= 2
         with self.assertRaisesRegex(ValueError, "matching fresh quote"):
@@ -224,8 +224,10 @@ class DeliveryProjectionTests(unittest.TestCase):
                  "remote_sha256": "c"*64, "recovered_generation": published["ledger_generation"],
                  "remote_generation": published["ledger_generation"],
                  "independently_authenticated": False, "production_applied": False}}
+        # This frozen October fixture is historical at CI runtime; read-time
+        # freshness takes precedence over otherwise matching D evidence.
         output = project_published_result(published, d)
-        self.assertEqual(output["status"], "ABSTAIN_SAME_RUN_LEDGER_COMMIT_UNVERIFIED")
+        self.assertEqual(output["status"], "ABSTAIN_PUBLISHED_WATCH_STALE_AT_DELIVERY")
         self.assertEqual(output["live_watch"], [])
         self.assertFalse(output["fresh_watch_delivery_verified"])
         d["persisted_paper"]["ledger_commit"] = "f"*40
@@ -318,7 +320,7 @@ class DeliveryProjectionTests(unittest.TestCase):
                 self.assertEqual(projected["github_event"], event)
                 self.assertEqual(projected["live_watch_authorized"], False)
                 self.assertEqual(projected["live_watch"], [])
-                self.assertEqual(projected["status"], "ABSTAIN_SAME_RUN_PERSISTED_WRITER_UNVERIFIED")
+                self.assertEqual(projected["status"], "ABSTAIN_PUBLISHED_WATCH_STALE_AT_DELIVERY")
                 with patch("sys.argv", argv[:-2] + ["--expected-source-sha", "f"*40]), patch("sys.stdout", new_callable=io.StringIO):
                     with self.assertRaises(ValueError):
                         main()
