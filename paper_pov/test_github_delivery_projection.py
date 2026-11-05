@@ -203,6 +203,15 @@ class DeliveryProjectionTests(unittest.TestCase):
         bad["candidates"].append({**bad["candidates"][0], "rank": 2})
         with self.assertRaisesRegex(ValueError, "duplicate published WATCH candidate"):
             project_published_result(bad)
+        for metric, value in (("baseline_score", float("nan")), ("challenger_score", float("inf")), ("volume_accel", True), ("risk", "")):
+            bad = deepcopy(published)
+            bad["candidates"][0][metric] = value
+            with self.subTest(metric=metric), self.assertRaisesRegex(ValueError, "invalid published WATCH"):
+                project_published_result(bad)
+        bad = deepcopy(published)
+        bad["candidates"][0]["symbol"] = []
+        with self.assertRaisesRegex(ValueError, "invalid published WATCH symbol"):
+            project_published_result(bad)
         bad = deepcopy(published)
         bad["candidates"][0]["price_usd"] *= 2
         with self.assertRaisesRegex(ValueError, "matching fresh quote"):
