@@ -1,0 +1,634 @@
+name: C2 retired workflow caller contract
+on:
+  push:
+    branches:
+      - owner-c-c2-remove-superseded-continuation-20261103
+    paths:
+      - '.github/workflows/c2-retired-workflow-contract.yml'
+      - 'paper_pov/c_read_only_integration.py'
+      - 'paper_pov/test_c_read_only_integration_coverage.py'
+      - 'paper_pov/c_candidate_handoff.py'
+      - 'paper_pov/test_c_candidate_handoff.py'
+      - 'paper_pov/c_writer_recovery_bridge.py'
+      - 'paper_pov/test_c_writer_recovery_bridge.py'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'paper_pov/test_retired_workflow_contract.py'
+      - 'paper_pov/manual_schedule_contract.py'
+      - 'paper_pov/test_manual_schedule_contract.py'
+      - 'paper_pov/c_read_only_integration.py'
+      - 'paper_pov/test_c_read_only_integration_coverage.py'
+      - 'paper_pov/c_candidate_handoff.py'
+      - 'paper_pov/test_c_candidate_handoff.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest paper_pov.test_retired_workflow_contract paper_pov.test_manual_schedule_contract paper_pov.test_c_read_only_integration_coverage paper_pov.test_c_candidate_handoff paper_pov.test_c_writer_recovery_bridge -v
+
+  authentic-manual-scheduled:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download and authenticate two historical REAL scanner result artifacts (read-only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/c-real-receipts
+          for pair in "manual:41636714169:13231321360:workflow_dispatch" "scheduled:41626400391:13226916072:schedule"; do
+            IFS=: read -r label run artifact event <<< "$pair"
+            gh api "repos/$REPO/actions/runs/$run" > "/tmp/c-real-receipts/$label-run.json"
+            python - "$label" "$run" "$event" <<'PY'
+          import json,sys,os
+          label,run,event=sys.argv[1:]
+          data=json.load(open("/tmp/c-real-receipts/"+label+"-run.json"))
+          assert str(data["id"])==run and data["event"]==event, "GitHub authenticated event mismatch"
+          assert data["conclusion"]=="success", "Real scan did not succeed"
+          assert data["head_sha"]=="94929a544899ddec63c676b6d4d52539da8e3837", "Real scan source drift"
+          print("AUTHENTIC_RUN",label,run,event,data["head_sha"])
+          PY
+            # Bind the downloaded ZIP to the same GitHub run and source SHA;
+            # checksums inside a ZIP alone do not authenticate its publisher.
+            gh api "repos/$REPO/actions/artifacts/$artifact" > "/tmp/c-real-receipts/$label-artifact.json"
+            python - "$label" "$run" "$artifact" <<'PY'
+          import json,re,sys
+          label,run,artifact=sys.argv[1:]
+          meta=json.load(open("/tmp/c-real-receipts/"+label+"-artifact.json"))
+          source=json.load(open("/tmp/c-real-receipts/"+label+"-run.json"))
+          if (str(meta.get("id"))!=artifact or meta.get("expired") is not False
+                  or meta.get("workflow_run",{}).get("id")!=int(run)
+                  or meta.get("workflow_run",{}).get("head_sha")!=source["head_sha"]
+                  or not re.fullmatch(r"sha256:[0-9a-f]{64}",str(meta.get("digest","")))):
+              raise SystemExit("MANUAL_SCHEDULED_ARTIFACT_PROVENANCE_MISMATCH")
+          PY
+            gh api -H "Accept: application/vnd.github+json" "repos/$REPO/actions/artifacts/$artifact/zip" > "/tmp/c-real-receipts/$label.zip"
+            python - "$label" <<'PY'
+          import hashlib,json,sys
+          label=sys.argv[1]
+          meta=json.load(open("/tmp/c-real-receipts/"+label+"-artifact.json"))
+          with open("/tmp/c-real-receipts/"+label+".zip","rb") as stream:
+              actual=hashlib.file_digest(stream,"sha256").hexdigest()
+          if actual!=meta["digest"].split(":")[1]:
+              raise SystemExit("MANUAL_SCHEDULED_ARTIFACT_ZIP_DIGEST_MISMATCH")
+          PY
+          done
+      - name: Execute exact-code read-only dual ZIP acceptance
+        run: |
+          set -euo pipefail
+          python -m paper_pov.manual_schedule_contract --zip-artifacts --manual /tmp/c-real-receipts/manual.zip --scheduled /tmp/c-real-receipts/scheduled.zip > /tmp/c-real-receipts/parity.json
+          python - <<'PY'
+          import json
+          p=json.load(open("/tmp/c-real-receipts/parity.json"))
+          assert p["manual_run"]=="41636714169" and p["scheduled_run"]=="41626400391"
+          assert p["manual_watch_count"]==12 and p["scheduled_watch_count"]==12
+          assert p["same_source_sha"] is True and p["candidate_schema_parity"] is True
+          assert p["market_time_candidate_equality_claimed"] is False
+          print("REAL_MANUAL_SCHEDULED_CONTRACT_VERIFIED",json.dumps(p,sort_keys=True))
+          PY
+      - name: Consume independently published D recovery artifact into unified C report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Authenticate the legacy recovery artifact against its own GitHub run,
+          # source commit and GitHub transport digest before reading its JSON.
+          gh api "repos/$REPO/actions/artifacts/13276401753" > /tmp/c-real-receipts/legacy-d-meta.json
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+          m=json.loads(Path("/tmp/c-real-receipts/legacy-d-meta.json").read_text())
+          if (m.get("id")!=13276401753 or m.get("expired") is not False
+                  or not isinstance(m.get("workflow_run"),dict)
+                  or type(m["workflow_run"].get("id")) is not int
+                  or re.fullmatch(r"[0-9a-f]{40}",str(m["workflow_run"].get("head_sha",""))) is None
+                  or re.fullmatch(r"sha256:[0-9a-f]{64}",str(m.get("digest",""))) is None):
+              raise SystemExit("LEGACY_D_GITHUB_ARTIFACT_IDENTITY_MISSING")
+          PY
+          LEGACY_D_RUN=$(python -c 'import json;print(json.load(open("/tmp/c-real-receipts/legacy-d-meta.json"))["workflow_run"]["id"])')
+          gh api "repos/$REPO/actions/runs/$LEGACY_D_RUN" > /tmp/c-real-receipts/legacy-d-run.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("/tmp/c-real-receipts")
+          meta=json.loads((root/"legacy-d-meta.json").read_text())
+          run=json.loads((root/"legacy-d-run.json").read_text())
+          if (run.get("id")!=meta["workflow_run"]["id"]
+                  or run.get("head_sha")!=meta["workflow_run"]["head_sha"]
+                  or run.get("conclusion")!="success"):
+              raise SystemExit("LEGACY_D_GITHUB_RUN_IDENTITY_MISMATCH")
+          PY
+          gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/13276401753/zip" > /tmp/c-real-receipts/recovery.zip
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          root=Path("/tmp/c-real-receipts")
+          meta=json.loads((root/"legacy-d-meta.json").read_text())
+          with (root/"recovery.zip").open("rb") as stream:
+              actual=hashlib.file_digest(stream,"sha256").hexdigest()
+          if actual!=meta["digest"].removeprefix("sha256:"):
+              raise SystemExit("LEGACY_D_GITHUB_ZIP_DIGEST_MISMATCH")
+          PY
+          python - <<'PY'
+          import zipfile
+          from pathlib import Path
+          archive=Path("/tmp/c-real-receipts/recovery.zip")
+          with zipfile.ZipFile(archive) as z:
+              names=z.namelist()
+              assert names == ["recovery.json"], names
+              payload=z.read("recovery.json")
+              assert len(payload) < 100000
+              # D artifact 13276401753 ends with literal backslash-n after JSON.
+              # Normalize ONLY this observed transport defect; do not relax JSON parsing.
+              if payload.endswith(bytes((92, 110))):
+                  payload = payload[:-2] + bytes((10,))
+              Path("/tmp/c-real-receipts/recovery.json").write_bytes(payload)
+          PY
+          python -m paper_pov.c_read_only_integration --parity /tmp/c-real-receipts/parity.json --recovery /tmp/c-real-receipts/recovery.json --output /tmp/c-real-receipts/integration.json
+          python - <<'PY'
+          import json
+          r=json.load(open("/tmp/c-real-receipts/integration.json"))
+          assert r["recovery_verified"] is True and r["status"] == "ABSTAIN_LEGACY_QUOTE_EVIDENCE"
+          assert r["production_applied"] is False and r["trading_approved"] is False
+          print("C_REAL_RECOVERY_AND_PARITY_CONSUMED",json.dumps(r,sort_keys=True))
+          PY
+      - name: Attach A authenticated A2 snapshot to recovered C report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/actions/artifacts/13281329000" > /tmp/c-real-receipts/a2-metadata.json
+          python - <<'PY'
+          import json
+          meta=json.load(open("/tmp/c-real-receipts/a2-metadata.json"))
+          assert meta["id"]==13281329000 and meta["name"]=="a2-live-consumer-evidence"
+          assert meta["expired"] is False and meta["workflow_run"]["id"]==41743237429
+          assert meta["workflow_run"]["head_sha"]=="9af09e21d9f0c132e7630ed60b508ef2286c0fb0"
+          assert meta["digest"]=="sha256:f331501461593cc1600d6043cb304a243e396145d29c9d322d3a159b512fb68e"
+          PY
+          gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/13281329000/zip" > /tmp/c-real-receipts/a2.zip
+          echo 'f331501461593cc1600d6043cb304a243e396145d29c9d322d3a159b512fb68e  /tmp/c-real-receipts/a2.zip' | sha256sum --check --status
+          python - <<'PY'
+          import hashlib, json, zipfile
+          from pathlib import Path
+          with zipfile.ZipFile("/tmp/c-real-receipts/a2.zip") as outer:
+              names=outer.namelist()
+              transport=[n for n in names if n.endswith("transport.zip")]
+              exports=[n for n in names if n.endswith("verified-snapshot.json")]
+              assert len(transport)==1 and len(exports)==1, names
+              with zipfile.ZipFile(__import__("io").BytesIO(outer.read(transport[0]))) as inner:
+                  members=inner.namelist()
+                  receipts=[n for n in members if n.startswith("receipts/") and n.endswith(".json")]
+                  assert len(members)==3 and len(receipts)==1 and "latest.json" in members and "verified-snapshot.json" in members
+                  receipt=inner.read(receipts[0])
+                  assert inner.read("latest.json")==receipt
+                  verified=json.loads(inner.read("verified-snapshot.json"))
+                  exported=json.loads(outer.read(exports[0]))
+                  for key in ("as_of","scan_status","eligible_pairs","observed_markets","abstention_counts","watch","receipt_sha256"):
+                      assert verified[key]==exported[key], key
+                  assert exported["snapshot_age_seconds"]>=0
+                  assert set(exported["quote_age_seconds"])==set(verified["quote_age_seconds"])
+                  assert verified["receipt_sha256"]==hashlib.sha256(receipt).hexdigest()
+                  assert verified["watch"] and isinstance(verified["watch"],list)
+                  assert verified["scan_status"]!="BUY"
+                  Path("/tmp/c-real-receipts/a2.json").write_text(json.dumps(verified,sort_keys=True))
+          PY
+          python -m paper_pov.c_read_only_integration --parity /tmp/c-real-receipts/parity.json --recovery /tmp/c-real-receipts/recovery.json --a2 /tmp/c-real-receipts/a2.json --output /tmp/c-real-receipts/integration.json
+          python - <<'PY'
+          import json
+          p=json.load(open("/tmp/c-real-receipts/integration.json"))
+          assert p["a2_snapshot_attached"] and p["a2_watch_count"]==12
+          assert len(p["a2_watch_candidates"])==p["a2_watch_count"]
+          assert p["a2_watch_candidates"]
+          assert p["a2_eligible_pairs"]==605 and p["a2_observed_markets"]==602
+          assert p["a2_source_cohort"]=="authenticated_snapshot_distinct_from_historical_manual_scheduled"
+          assert isinstance(p["a2_abstention_counts"],dict)
+          assert p["a2_as_of"]
+          assert p["recovery_verified"] and p["status"]=="ABSTAIN_LEGACY_QUOTE_EVIDENCE"
+          assert not p["trading_approved"] and not p["production_applied"]
+          print("C_B_A2_RECOVERY_CONNECTED",json.dumps(p,sort_keys=True))
+          PY
+          python -m paper_pov.c_candidate_handoff /tmp/c-real-receipts/integration.json --from-integration --output /tmp/c-real-receipts/candidates.json --bd-output /tmp/c-real-receipts/bd-handoff.json
+      - name: Consume C artifact through B/D read-only executable interface
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          src=json.loads(Path("/tmp/c-real-receipts/candidates.json").read_text())
+          out=json.loads(Path("/tmp/c-real-receipts/bd-handoff.json").read_text())
+          assert out["watch"]==src["watch"] and out["watch_count"]==12
+          assert out["receipt_sha256"]==src["receipt_sha256"]
+          assert out["status"]=="WATCH_REPLAY_ONLY_NOT_LIVE"
+          assert out["live_watch_certified"] is False and out["production_applied"] is False
+          print("BD_READ_ONLY_CANDIDATES_CONSUMED",out["watch_count"])
+          PY
+      - name: Consume real D writer readback in C/B replay bridge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Select D's newest successful owned-branch recovery artifact, not the
+          # obsolete hard-coded pre-persisted-paper artifact.
+          gh api "repos/$REPO/actions/workflows/runtime-readback-integrity.yml/runs?branch=runtime-readback-integrity-20261104&status=success&per_page=20" > /tmp/c-real-receipts/d-runs.json
+          python - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          runs=json.loads(Path("/tmp/c-real-receipts/d-runs.json").read_text()).get("workflow_runs", [])
+          for run in runs:
+              if (run.get("conclusion") != "success"
+                      or run.get("head_branch") != "runtime-readback-integrity-20261104"
+                      or run.get("event") not in ("push", "workflow_dispatch", "pull_request")
+                      or str(run.get("path", "")).split("@", 1)[0] != ".github/workflows/runtime-readback-integrity.yml"):
+                  continue
+              rid=run["id"]
+              listing=json.loads(subprocess.check_output(["gh","api",f"repos/{__import__('os').environ['REPO']}/actions/runs/{rid}/artifacts"]))
+              matches=[a for a in listing.get("artifacts",[]) if a.get("name")=="d2-real-writer-recovery-report" and a.get("expired") is False]
+              if len(matches)!=1:
+                  continue
+              artifact=matches[0]
+              meta=json.loads(subprocess.check_output(["gh","api",f"repos/{__import__('os').environ['REPO']}/actions/artifacts/{artifact['id']}"]))
+              if (meta.get("id") != artifact["id"]
+                      or meta.get("name") != "d2-real-writer-recovery-report"
+                      or meta.get("expired") is not False
+                      or meta.get("workflow_run",{}).get("id") != rid
+                      or meta["workflow_run"].get("head_sha") != run["head_sha"]):
+                  continue
+              Path("/tmp/c-real-receipts/d-selected.json").write_text(json.dumps({"run_id":rid,"sha":run["head_sha"],"artifact_id":artifact["id"],"digest":meta.get("digest")}))
+              break
+          else:
+              raise SystemExit("No successful D owned-branch run with unexpired recovery artifact; cannot certify B/D integration")
+          PY
+          python - <<'PY'
+          import json,os,subprocess,hashlib,zipfile,re
+          from pathlib import Path
+          m=json.loads(Path("/tmp/c-real-receipts/d-selected.json").read_text())
+          digest=m["digest"]
+          if not isinstance(digest,str) or re.fullmatch(r"sha256:[0-9a-f]{64}",digest) is None:
+              raise SystemExit("D artifact digest missing")
+          data=subprocess.check_output(["gh","api","-H","Accept: application/vnd.github+json",f"repos/{os.environ['REPO']}/actions/artifacts/{m['artifact_id']}/zip"])
+          if hashlib.sha256(data).hexdigest()!=digest.split(":")[1]:
+              raise SystemExit("D artifact ZIP digest mismatch")
+          import io
+          with zipfile.ZipFile(io.BytesIO(data)) as z:
+              names=z.namelist()
+              # The writer report artifact is a single flat JSON file. Do not
+              # allow nested paths, symlinks, or directory aliases to pass as
+              # an authenticated recovery report.
+              entries=z.infolist()
+              if (len(entries)!=1 or len(names)!=1
+                      or names[0] != "real-writer-recovery.json"
+                      or entries[0].is_dir()
+                      or ((entries[0].external_attr >> 16) & 0o170000) == 0o120000
+                      or entries[0].file_size > 2_000_000):
+                  raise SystemExit("Unexpected D recovery artifact layout")
+              report=json.loads(z.read(names[0]))
+          # The D workflow run and the original writer run are distinct.
+          # Independently bind the recovered writer identity to the original
+          # successful GitHub run rather than falsely equating those runs.
+          writer_id=report.get("run_id")
+          writer_sha=report.get("source_sha")
+          if not str(writer_id).isdigit() or not isinstance(writer_sha,str) or re.fullmatch(r"[0-9a-f]{40}",writer_sha) is None:
+              raise SystemExit("D recovered writer identity missing")
+          writer=json.loads(subprocess.check_output(["gh","api",f"repos/{os.environ['REPO']}/actions/runs/{writer_id}"]))
+          if (str(writer.get("id"))!=str(writer_id) or writer.get("head_sha")!=writer_sha
+                  or writer.get("conclusion")!="success"):
+              raise SystemExit("D recovered writer source run authentication failed")
+          source_receipt=report.get("source_bound_receipt")
+          # Legacy D reports can lack a source-bound receipt. Preserve their
+          # authenticated transport for historical diagnostics, but let the
+          # C bridge explicitly abstain from delivery rather than failing
+          # the entire manual/scheduled integration job.
+          if source_receipt is None:
+              print("D_SOURCE_BOUND_RECEIPT_MISSING: historical-only, delivery blocked")
+          elif (not isinstance(source_receipt,dict)
+                  or str(source_receipt.get("run_id"))!=str(writer_id)
+                  or source_receipt.get("source_sha")!=writer_sha):
+              raise SystemExit("D recovered writer receipt identity mismatch")
+          if report.get("status") not in ("WRITER_CHECKSUM_ONLY","VERIFIED_REMOTE_READBACK"):
+              raise SystemExit("D recovery did not succeed")
+          Path("/tmp/c-real-receipts/d2-readback.json").write_text(json.dumps(report,sort_keys=True))
+          print("D_AUTHENTICATED_ARTIFACT_SELECTED",m["run_id"],m["sha"],m["artifact_id"])
+          PY
+          python -m paper_pov.c_writer_recovery_bridge --integration /tmp/c-real-receipts/integration.json --readback /tmp/c-real-receipts/d2-readback.json --output /tmp/c-real-receipts/cd-bridge.json --bd-output /tmp/c-real-receipts/bd-recovered-watch.json --writer-readback-output /tmp/c-real-receipts/bd-writer-readback.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          b=json.loads(Path("/tmp/c-real-receipts/cd-bridge.json").read_text())
+          w=json.loads(Path("/tmp/c-real-receipts/bd-recovered-watch.json").read_text())
+          assert b["writer_recovery"]["run_id"]==str(json.loads(Path("/tmp/c-real-receipts/d2-readback.json").read_text())["run_id"])
+          assert b["writer_recovery"]["status"] in ("WRITER_CHECKSUM_ONLY","VERIFIED_REMOTE_READBACK")
+          assert b["writer_recovery"]["delivery_projection_ready"] == (b["writer_recovery"]["delivery_blocker"] is None)
+          if not b["writer_recovery"]["delivery_projection_ready"]:
+              assert b["writer_recovery"]["delivery_blocker"] in ("D_REMOTE_READBACK_NOT_INDEPENDENTLY_AUTHENTICATED", "D_REMOTE_LEDGER_RECONCILIATION_NOT_MATCH", "D_REMOTE_LEDGER_RECONCILIATION_MISSING", "D_PERSISTED_PAPER_MISSING_OR_INCOMPLETE")
+              assert not Path("/tmp/c-real-receipts/bd-writer-readback.json").exists()
+          assert b["historical_a2"]["watch"]==w["watch"]
+          assert not b["live_watch_certified"] and not b["same_run_or_candidate_parity_claimed"]
+          print("C_D_REAL_WRITER_BRIDGE_CONNECTED",b["writer_recovery"]["run_id"],w["watch_count"])
+          PY
+      - name: Execute B's real read-only published-results consumer with D recovery
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Consume B on its owned branch without copying or modifying B code.
+          git clone --no-checkout --filter=blob:none "https://github.com/$REPO.git" /tmp/c-b-consumer
+          # Resolve B's owned branch to an immutable commit before checkout.
+          # This prevents the B consumer changing halfway through C acceptance.
+          B_SHA=$(gh api "repos/$REPO/branches/integration-a-b-c-d-20261103" --jq '.commit.sha')
+          [[ "$B_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          git -C /tmp/c-b-consumer fetch --depth=1 origin "$B_SHA"
+          git -C /tmp/c-b-consumer checkout --detach "$B_SHA"
+          test "$(git -C /tmp/c-b-consumer rev-parse HEAD)" = "$B_SHA"
+          echo "B_CONSUMER_EXACT_SHA=$B_SHA"
+          # Find the newest published result with authenticated complete quote
+          # evidence. Do not accept a newer legacy cohort merely by recency.
+          # Resolve the exact writer source first. A recent-runs page is not a
+          # reliable join key: the D recovered writer may be older than 30 runs.
+          # GitHub's run endpoint supplies independent identity; the consumer
+          # below still authenticates the artifact, ZIP digest and manifest.
+          python - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          root=Path("/tmp/c-real-receipts")
+          recovered=json.loads((root/"d2-readback.json").read_text())
+          source_id=recovered.get("run_id")
+          source_sha=recovered.get("source_sha")
+          runs=[]
+          if str(source_id).isdigit() and isinstance(source_sha,str) and len(source_sha)==40:
+              try:
+                  exact=json.loads(subprocess.check_output(
+                      ["gh","api",f"repos/{os.environ['REPO']}/actions/runs/{source_id}"],
+                      stderr=subprocess.DEVNULL))
+              except subprocess.CalledProcessError:
+                  exact=None
+              if (isinstance(exact,dict) and str(exact.get("id"))==str(source_id)
+                      and exact.get("head_sha")==source_sha
+                      and exact.get("name") is not None
+                      and exact.get("path","").split("@",1)[0].endswith("paper-pipeline.yml")
+                      and exact.get("conclusion")=="success"
+                      and exact.get("event") in ("schedule","workflow_dispatch")):
+                  runs.append(exact)
+          recent=json.loads(subprocess.check_output(
+              ["gh","api",f"repos/{os.environ['REPO']}/actions/workflows/paper-pipeline.yml/runs?branch=main&status=success&per_page=30"]
+          )).get("workflow_runs",[])
+          seen={str(run["id"]) for run in runs}
+          for run in recent:
+              if str(run.get("id")) not in seen:
+                  runs.append(run)
+                  seen.add(str(run.get("id")))
+          (root/"b-runs.json").write_text(json.dumps({"workflow_runs":runs}))
+          print("PUBLISHED_RUN_COHORT",len(runs),"exact_D_source_first",bool(runs and str(runs[0].get("id"))==str(source_id)))
+          PY
+          python - <<'PY'
+          import hashlib,io,json,os,re,subprocess,zipfile
+          from pathlib import Path
+          root=Path("/tmp/c-real-receipts")
+          runs=json.loads((root/"b-runs.json").read_text()).get("workflow_runs",[])
+          fallback=None
+          # D's independently authenticated recovery is already available.
+          # Select a published candidate for THAT exact run/source; selecting
+          # the newest unrelated quote-complete run makes B delivery impossible.
+          recovered=json.loads((root/"d2-readback.json").read_text())
+          for run in runs:
+              if run.get("conclusion")!="success" or run.get("event") not in ("schedule","workflow_dispatch"):
+                  continue
+              rid=run["id"]
+              listing=json.loads(subprocess.check_output(["gh","api",f"repos/{os.environ['REPO']}/actions/runs/{rid}/artifacts"]))
+              matches=[a for a in listing.get("artifacts",[]) if a.get("name")==f"public-paper-results-{rid}" and not a.get("expired")]
+              if len(matches)!=1:
+                  continue
+              # Verify GitHub's independent artifact/run binding and transport digest,
+              # not merely the self-declared SHA256SUMS inside the downloaded ZIP.
+              artifact=matches[0]
+              meta=json.loads(subprocess.check_output(["gh","api",f"repos/{os.environ['REPO']}/actions/artifacts/{artifact['id']}"]))
+              digest=meta.get("digest")
+              if (meta.get("id")!=artifact["id"] or meta.get("expired") is not False
+                      or meta.get("workflow_run",{}).get("id")!=rid
+                      or meta.get("workflow_run",{}).get("head_sha")!=run["head_sha"]
+                      or not isinstance(digest,str) or re.fullmatch(r"sha256:[0-9a-f]{64}",digest) is None):
+                  continue
+              data=subprocess.check_output(["gh","api","-H","Accept: application/vnd.github+json",f"repos/{os.environ['REPO']}/actions/artifacts/{artifact['id']}/zip"])
+              if hashlib.sha256(data).hexdigest()!=digest.removeprefix("sha256:"):
+                  continue
+              with zipfile.ZipFile(io.BytesIO(data)) as archive:
+                  names=archive.namelist()
+                  if len(names)!=len(set(names)) or any(n.startswith("/") or ".." in Path(n).parts for n in names):
+                      continue
+                  results=[n for n in names if Path(n).name=="results.json"]
+                  manifests=[n for n in names if Path(n).name=="SHA256SUMS"]
+                  if len(results)!=1 or len(manifests)!=1:
+                      continue
+                  # SHA256SUMS uses basenames. Reject duplicate basenames and
+                  # nested paths rather than silently overwriting one ZIP member
+                  # in the dict and authenticating a different payload.
+                  members=[n for n in names if not n.endswith("/")]
+                  if any(Path(n).name != n for n in members) or len({Path(n).name for n in members}) != len(members):
+                      continue
+                  files={n:archive.read(n) for n in members}
+                  verified=True
+                  checked=set()
+                  for line in files["SHA256SUMS"].decode().splitlines():
+                      match=re.fullmatch(r"([0-9a-f]{64})  ([^/]+)",line)
+                      if not match or match[2] in checked or match[2] not in files or hashlib.sha256(files[match[2]]).hexdigest()!=match[1]:
+                          verified=False
+                          break
+                      checked.add(match[2])
+                  # Do not accept an artifact with unmanifested payloads or
+                  # a manifest that silently omits other published files.
+                  if not verified or checked != (set(files) - {"SHA256SUMS"}) or "results.json" not in checked:
+                      continue
+                  result=json.loads(files["results.json"])
+                  if str(result.get("run_id"))!=str(rid) or result.get("source_sha")!=run["head_sha"]:
+                      continue
+                  quotes=result.get("quote_evidence")
+                  complete=(isinstance(quotes,list)
+                            and type(result.get("eligible_pairs")) is int
+                            and type(result.get("observed_markets")) is int
+                            and result["eligible_pairs"] > 0
+                            and result["observed_markets"] == result["eligible_pairs"]
+                            and len(quotes) == result["observed_markets"]
+                            and all(isinstance(q,dict) for q in quotes))
+                  # Prefer a verified artifact from D's exact source even if
+                  # its quote cohort is incomplete. This preserves the correct
+                  # missing-quote abstention instead of selecting an unrelated
+                  # newer historical result and misreporting source mismatch.
+                  same_d_source=(str(recovered.get("run_id"))==str(rid)
+                                 and recovered.get("source_sha")==run["head_sha"])
+                  if fallback is None or (same_d_source and not fallback[2]):
+                      fallback=(run,files,same_d_source)
+                  if not complete:
+                      continue
+                  if not same_d_source:
+                      # Quote-complete but not independently paired to D.
+                      # Preserve legacy abstention instead of authorizing WATCH.
+                      continue
+                  selected=(run,files)
+                  break
+          else:
+              if fallback is None:
+                  raise SystemExit("No checksum-verified published scanner results available")
+              selected=fallback[:2]
+          run,files=selected
+          target=root/"b-published"
+          target.mkdir(exist_ok=True)
+          for name,data in files.items():
+              (target/name).write_bytes(data)
+          (root/"b-selected.json").write_text(json.dumps({"run_id":run["id"],"sha":run["head_sha"]}))
+          (root/"b-published-run.json").write_text(json.dumps(run))
+          print("SELECTED_PUBLISHED_QUOTE_COHORT",run["id"],"D_same_source" if str(recovered.get("run_id"))==str(run["id"]) and recovered.get("source_sha")==run["head_sha"] else "unmatched_abstention")
+          PY
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          run=json.loads(Path("/tmp/c-real-receipts/b-published-run.json").read_text())
+          assert run["id"]==json.loads(Path("/tmp/c-real-receipts/b-selected.json").read_text())["run_id"] and run["conclusion"]=="success"
+          assert run["event"] in ("schedule","workflow_dispatch")
+          assert run["head_sha"]==json.loads(Path("/tmp/c-real-receipts/b-selected.json").read_text())["sha"]
+          PY
+          SELECTED_RUN=$(python -c 'import json;print(json.load(open("/tmp/c-real-receipts/b-selected.json"))["run_id"])')
+          # ZIP members were independently checksum-verified during selection.
+          (cd /tmp/c-real-receipts/b-published && sha256sum -c SHA256SUMS)
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          bridge=json.loads(Path("/tmp/c-real-receipts/cd-bridge.json").read_text())
+          Path("/tmp/c-real-receipts/b-writer-ready").write_text("yes" if bridge["writer_recovery"]["delivery_projection_ready"] else "no")
+          print("D_WRITER_DELIVERY_GATE",bridge["writer_recovery"]["delivery_blocker"] or "READY")
+          PY
+          # Legacy published runs can have valid SHA256SUMS and writer recovery
+          # but no per-market quote_evidence. Never reclassify those as live WATCH.
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("/tmp/c-real-receipts/b-published/results.json")
+          r=json.loads(p.read_text())
+          quotes=r.get("quote_evidence")
+          complete=(isinstance(quotes,list)
+                    and type(r.get("eligible_pairs")) is int
+                    and type(r.get("observed_markets")) is int
+                    and r["eligible_pairs"] > 0
+                    and r["observed_markets"] == r["eligible_pairs"]
+                    and len(quotes) == r["observed_markets"]
+                    and all(isinstance(q,dict) for q in quotes))
+          # Quote completeness alone is insufficient: the recovered writer
+          # must describe this exact published scan, not a different cohort.
+          selected=json.loads(Path("/tmp/c-real-receipts/b-selected.json").read_text())
+          recovered=json.loads(Path("/tmp/c-real-receipts/d2-readback.json").read_text())
+          same_scan=(str(recovered.get("run_id"))==str(selected["run_id"])
+                     and recovered.get("source_sha")==selected["sha"])
+          writer_ready=Path("/tmp/c-real-receipts/b-writer-ready").read_text()=="yes"
+          Path("/tmp/c-real-receipts/b-quote-evidence-ready").write_text(
+              "yes" if complete and same_scan and writer_ready else "no")
+          Path("/tmp/c-real-receipts/b-delivery-blocker").write_text(
+              "NONE" if complete and same_scan and writer_ready else
+              "ABSTAIN_D_WRITER_READBACK_NOT_VERIFIED" if not writer_ready else
+              "ABSTAIN_INCOMPLETE_TICKER_COVERAGE" if not complete else
+              "ABSTAIN_WRITER_READBACK_DIFFERENT_SCAN")
+          print("PUBLISHED_QUOTE_COVERAGE",len(quotes) if isinstance(quotes,list) else "missing",r.get("observed_markets"))
+          print("SAME_SCAN_WRITER_READBACK",same_scan)
+          PY
+          if [[ "$(cat /tmp/c-real-receipts/b-quote-evidence-ready)" == yes ]]; then
+            (cd /tmp/c-b-consumer && python -m paper_pov.github_delivery_projection \
+              --published-result /tmp/c-real-receipts/b-published/results.json \
+              --expected-run-id "$SELECTED_RUN" \
+              --expected-source-sha "$(python -c 'import json;print(json.load(open("/tmp/c-real-receipts/b-selected.json"))["sha"])')" \
+              --writer-readback /tmp/c-real-receipts/bd-writer-readback.json \
+              --output /tmp/c-real-receipts/b-published-delivery.json)
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path("/tmp/c-real-receipts/b-published-delivery.json").read_text())
+          assert result["schema"]=="paper_delivery_readback_v1"
+          assert str(result["source_run_id"])==str(json.loads(Path("/tmp/c-real-receipts/b-selected.json").read_text())["run_id"])
+          assert result["writer_recovery"] is not None
+          assert result["single_writer_read_only"] and not result["production_applied"]
+          # Fresh same-run authenticated D MATCH may authorize paper WATCH.
+          # Historical or stale observations must still abstain.
+          assert result["live_watch_authorized"] is result["fresh_watch_delivery_verified"]
+          assert result["live_watch_authorized"] is bool(result["live_watch"])
+          assert result["published_quote_complete"] is True
+          assert result["published_quote_evidence_count"] == result["published_observed_markets"]
+          if result["live_watch_authorized"]:
+              assert result["client_quote_freshness_verified"] is True
+              assert result["writer_reconciliation_status"] == "MATCH"
+              assert result["writer_source_identity_matches_delivery"] is True
+              assert result["status"] == "SUCCESS_PAPER_ONLY"
+          else:
+              assert result["live_watch"] == []
+          assert result["exchange_event_freshness_verified"] is False
+          print("B_C_D_READ_ONLY_DELIVERY_CONSUMED",result["status"],result["writer_reconciliation_status"],"paper_watch",result["live_watch_authorized"])
+          PY
+          else
+            # Emit a truthful, machine-readable integration abstention. D's
+            # recovered ledger remains useful, but does not fill missing quote
+            # observations from a different scan/cohort.
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("/tmp/c-real-receipts")
+          bridge=json.loads((root/"cd-bridge.json").read_text())
+          published=json.loads((root/"b-published/results.json").read_text())
+          assert str(published["run_id"])==str(json.loads((root/"b-selected.json").read_text())["run_id"])
+          selected=json.loads((root/"b-selected.json").read_text())
+          # A blocked delivery must still carry the actual published scan's
+          # useful status, trigger and candidate summary. Never substitute
+          # C's unrelated historical A2 replay as current WATCH results.
+          summary=published.get("delivery_summary")
+          if not isinstance(summary,dict):
+              summary=None
+          result={"schema":"paper_c_bd_integration_abstention_v1",
+                  "status":(root/"b-delivery-blocker").read_text(),
+                  "source_run_id":selected["run_id"],
+                  "source_sha":published["source_sha"],
+                  "published_scan_status":published.get("status"),
+                  "published_trigger":published.get("github_event"),
+                  "published_observed_markets":published.get("observed_markets"),
+                  "published_eligible_pairs":published.get("eligible_pairs"),
+                  "published_delivery_summary":summary,
+                  "writer_recovery_status":bridge["writer_recovery"]["status"],
+                  "writer_recovery_ready":bridge["writer_recovery"]["delivery_projection_ready"],
+                  "writer_same_run_reconciliation":bridge["writer_recovery"].get("same_run_reconciliation"),
+                  "historical_a2_watch_count":bridge["historical_a2"]["watch_count"],
+                  "live_watch":[],
+                  "live_watch_authorized":False,
+                  "production_applied":False,
+                  "single_writer_read_only":True,
+                  "b_delivery_projection_executed":False,
+                  "next_action":"Consume complete quote evidence and same-run D writer readback using B's existing projection"}
+          (root/"b-published-delivery.json").write_text(json.dumps(result,sort_keys=True)+chr(10))
+          print("B_C_D_INTEGRATION_ABSTAINED",result["status"])
+          PY
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: c-real-manual-scheduled-contract
+          path: |
+            /tmp/c-real-receipts/parity.json
+            /tmp/c-real-receipts/integration.json
+            /tmp/c-real-receipts/a2.json
+            /tmp/c-real-receipts/candidates.json
+            /tmp/c-real-receipts/bd-handoff.json
+            /tmp/c-real-receipts/d2-readback.json
+            /tmp/c-real-receipts/cd-bridge.json
+            /tmp/c-real-receipts/bd-recovered-watch.json
+            /tmp/c-real-receipts/bd-writer-readback.json
+            /tmp/c-real-receipts/b-published-delivery.json
+          retention-days: 7
+          if-no-files-found: error
