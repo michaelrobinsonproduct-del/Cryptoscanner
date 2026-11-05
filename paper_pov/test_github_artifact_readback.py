@@ -258,7 +258,7 @@ def test_packed_single_writer_remote_reconciliation_real_storage_layout():
         if "paper_pov/output/ledger.json" in endpoint:
             raise subprocess.CalledProcessError(1, args, output=b"Not Found")
         data = json.dumps(manifest).encode() if repo_storage.MANIFEST in endpoint else blob
-        git_sha = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\\x00" + data).hexdigest()
+        git_sha = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\x00" + data).hexdigest()
         return json.dumps({"type": "file", "encoding": "base64", "sha": git_sha,
                            "size": len(data),
                            "content": "\n".join([base64.b64encode(data).decode()[i:i+60] for i in range(0, len(base64.b64encode(data).decode()), 60)])}).encode()
@@ -357,7 +357,7 @@ def test_packed_remote_large_snapshot_uses_sha_bound_git_blob():
     from paper_pov.github_artifact_readback import reconcile_remote_ledger
     state = ledger.empty()
     packed = storage.pack_snapshot(state)
-    blob_sha = hashlib.sha1(b"blob " + str(len(packed)).encode() + b"\\x00" + packed).hexdigest()
+    blob_sha = hashlib.sha1(b"blob " + str(len(packed)).encode() + b"\x00" + packed).hexdigest()
     manifest = {
         "schema": segments.SCHEMA,
         "checkpoint": {"git_commit": "a" * 40, "generation": 0,
@@ -381,7 +381,7 @@ def test_packed_remote_large_snapshot_uses_sha_bound_git_blob():
             return json.dumps({"type": "file", "encoding": "none",
                                "sha": blob_sha, "size": len(packed)}).encode()
         raw = json.dumps(manifest).encode()
-        manifest_sha = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\\x00" + raw).hexdigest()
+        manifest_sha = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\x00" + raw).hexdigest()
         return json.dumps({"type": "file", "encoding": "base64", "sha": manifest_sha,
                            "size": len(raw),
                            "content": base64.b64encode(raw).decode()}).encode()
