@@ -388,6 +388,15 @@ jobs:
           # evidence, in one retained report rather than silently dropping it.
           a2_status=json.loads(Path("/tmp/b-delivery/a2-status.json").read_text())
           e_status=json.loads(Path("/tmp/b-delivery/e-status.json").read_text())
+          d_status_path=Path("/tmp/b-delivery/d-status.json")
+          d_status=(json.loads(d_status_path.read_text()) if d_status_path.exists()
+                    else {"status":"D_EXACT_SOURCE_RECEIPT_SELECTED",
+                          "source_run_id":int(identity["run_id"]),
+                          "source_sha":identity["source_sha"]})
+          if d_status["status"]=="D_EXACT_SOURCE_RECEIPT_SELECTED" and writer is None:
+              raise SystemExit("D_SELECTED_RECEIPT_MISSING")
+          if d_status["status"]!="D_EXACT_SOURCE_RECEIPT_SELECTED" and writer is not None:
+              raise SystemExit("D_ABSTENTION_WITH_UNEXPECTED_WRITER")
           if projected["source_run_id"]!=int(identity["run_id"]):
               raise SystemExit("DELIVERY_RUN_IDENTITY_MISMATCH")
           if projected["source_sha"]!=identity["source_sha"] or projected["github_event"]!=identity["event"]:
@@ -414,6 +423,7 @@ jobs:
                   "live_watch_authorized":projected["live_watch_authorized"],
                   "writer_reconciliation_status":projected["writer_reconciliation_status"],
                   "writer_evidence_available":writer is not None,
+                  "d":d_status,
                   "writer_same_scan_as_delivery":projected["writer_source_identity_matches_delivery"],
                   "fresh_watch_delivery_verified":projected.get("fresh_watch_delivery_verified",False),
                   "writer_source_identity_matches_delivery":projected["writer_source_identity_matches_delivery"],
@@ -472,6 +482,7 @@ jobs:
                      f"- Quote complete: {data['published_quote_complete']}; authenticated fresh WATCH: {data['fresh_watch_delivery_verified']}",
                      f"- D same-source run: {data['writer_same_scan_as_delivery']}",
                      f"- D recovery evidence available: {data['writer_evidence_available']}",
+                     f"- D exact-source status: {data['d']['status']}",
                      f"- Writer reconciliation: {data['writer_reconciliation_status']}",
                      f"- A2: {data['a2']['status']}; E: {data['e']['status']}",
                      f"- Learning: {data['learning_status']}; scoring promotion applied: false",
