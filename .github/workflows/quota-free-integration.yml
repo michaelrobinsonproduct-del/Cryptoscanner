@@ -34,8 +34,7 @@ jobs:
           else
             git checkout -B "$BRANCH"
           fi
-          mkdir -p .integration
-          # Do not dirty the worktree before merging source branches.
+          # Rebase the persistent integration work onto the current main source\n          # so completion checks cannot silently use stale production contracts.\n          git fetch origin main\n          if ! git merge-base --is-ancestor origin/main HEAD; then\n            git merge --no-ff --no-edit origin/main || { echo 'MAIN_INTEGRATION_CONFLICT'; exit 1; }\n          fi\n          mkdir -p .integration\n          # Do not dirty the worktree before merging source branches.
           STATUS_FILE="$RUNNER_TEMP/integration-status.txt"
           : > "$STATUS_FILE"
           # Only the coordination document may keep the integration branch's version.
@@ -47,12 +46,12 @@ jobs:
           for SOURCE in integration-a-b-c-d-20261103 runtime-readback-integrity-20261104 learning-e-cohort-accounting-20261104; do
             if ! git ls-remote --exit-code --heads origin "$SOURCE" >/dev/null; then
               echo "MISSING SOURCE: $SOURCE" | tee -a "$STATUS_FILE"
-              continue
+              exit 1
             fi
             git fetch origin "$SOURCE"
             # Coordination docs differ between owner branches; retain the main queue.
             # Never silently resolve conflicts in executable source.
-            git -c merge.renormalize=false merge-base HEAD FETCH_HEAD >/dev/null || { echo "UNRELATED SOURCE: $SOURCE" | tee -a "$STATUS_FILE"; continue; }
+            git -c merge.renormalize=false merge-base HEAD FETCH_HEAD >/dev/null || { echo "UNRELATED SOURCE: $SOURCE" | tee -a "$STATUS_FILE"; exit 1; }
             if git merge-base --is-ancestor FETCH_HEAD HEAD; then
               echo "ALREADY INTEGRATED: $SOURCE" | tee -a "$STATUS_FILE"
               continue
@@ -99,10 +98,10 @@ jobs:
               importlib.import_module(name)
           publisher = Path('paper_pov/results_report.py').read_text()
           delivery = Path('paper_pov/github_delivery_projection.py').read_text()
-          assert '"quote_evidence"' in publisher, 'publisher missing authenticated quote evidence'
+          assert '"quote_evidence"' in publisher, 'publisher missing quote evidence schema'
           assert 'project_published_result' in delivery, 'published results not connected to B delivery'
           assert 'project_legacy_published_abstention' in delivery, 'legacy abstention safety missing'
-          print('INTEGRATION_CONTRACTS_PRESENT')
+          # Schema existence is only a prerequisite, never proof of end-to-end delivery.\n          print('INTEGRATION_CONTRACTS_PRESENT_NOT_END_TO_END_VERIFIED')
           PY
       - name: Report real integration outcome without creating another writer
         if: always()
