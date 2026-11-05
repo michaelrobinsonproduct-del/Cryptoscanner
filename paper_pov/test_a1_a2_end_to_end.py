@@ -102,6 +102,41 @@ class EndToEndCandidateTests(unittest.TestCase):
         self.assertEqual(report["scan_status"], "WATCH")
         self.assertEqual(len(self.round_trip(report)["watch"]), 3)
 
+    def test_missing_ticker_recovers_declared_unique_altname(self):
+        # Real Kraken single-market responses may use AssetPairs.altname
+        # instead of the REST dictionary key. Preserve canonical receipt IDs.
+        pair = "X01USD"
+        self.pairs[pair]["altname"] = "X01ALTUSD"
+        def altname_api(path):
+            if path == "Ticker":
+                return {k: v for k, v in self.ticker.items() if k != pair}
+            if path == "Ticker?pair=" + pair:
+                return {"X01ALTUSD": self.ticker[pair]}
+            return self.api(path)
+        report = scan(api=altname_api, clock=lambda: self.now,
+                      sleep=lambda _: None, max_ohlc=4)
+        self.assertTrue(report["ticker_coverage_complete"])
+        self.assertEqual(report["observed_markets"], 25)
+        self.assertEqual(report["scan_status"], "WATCH")
+        self.assertEqual(len(self.round_trip(report)["watch"]), 3)
+
+    def test_missing_ticker_rejects_ambiguous_or_unrelated_altname(self):
+        pair = "X01USD"
+        self.pairs[pair]["altname"] = "SHARED"
+        self.pairs["X02USD"]["altname"] = "SHARED"
+        def ambiguous_api(path):
+            if path == "Ticker":
+                return {k: v for k, v in self.ticker.items() if k != pair}
+            if path == "Ticker?pair=" + pair:
+                return {"SHARED": self.ticker[pair]}
+            return self.api(path)
+        report = scan(api=ambiguous_api, clock=lambda: self.now,
+                      sleep=lambda _: None)
+        self.assertFalse(report["ticker_coverage_complete"])
+        self.assertEqual(report["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+        self.assertEqual(report["watch"], [])
+        self.round_trip(report)
+
     def test_live_shape_watch_stablecoin_timeout_and_durable_readback(self):
         report = scan(api=self.api, clock=lambda: self.now, sleep=lambda _: None, max_ohlc=4)
         result = self.round_trip(report)
