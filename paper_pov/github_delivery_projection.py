@@ -49,9 +49,43 @@ def _writer_evidence(readback):
                 raise ValueError("writer recovered generation mismatch")
             if mg is not None and (type(mg) is not int or mg < 0 or (status == "MATCH" and mg != persisted["ledger_generation"])):
                 raise ValueError("writer remote generation contradiction")
+    # D's pinned-checkpoint receipt is a separate source-bound proof. It is
+    # never interchangeable with independent publisher/quote authentication.
+    same = readback.get("same_run_reconciliation")
+    same_status = "UNAVAILABLE"
+    if same is not None:
+        import re
+        receipt = readback.get("source_bound_receipt")
+        if not isinstance(same, dict) or not isinstance(receipt, dict):
+            raise ValueError("D source-bound receipt missing")
+        if (same.get("run_id") != run_id or same.get("source_sha") != sha or
+                receipt.get("run_id") != run_id or receipt.get("source_sha") != sha):
+            raise ValueError("D source-bound identity mismatch")
+        for key in ("artifact_id", "sha256sums_sha256", "ledger_receipt_sha256",
+                    "ledger_sha256", "ledger_generation"):
+            if same.get(key) != receipt.get(key):
+                raise ValueError("D source-bound receipt contradiction")
+        if (same.get("ledger_generation") != persisted["ledger_generation"] or
+                not isinstance(same.get("ledger_sha256"), str) or
+                re.fullmatch(r"[0-9a-f]{64}", same["ledger_sha256"]) is None or
+                same.get("status") not in ("MATCH", "ABSTAIN") or
+                same.get("live_watch_authorized") is not False or
+                same.get("independently_authenticated") is not False or
+                same.get("production_applied") is not False):
+            raise ValueError("D source-bound reconciliation invalid")
+        if same["status"] == "MATCH":
+            if (status != "MATCH" or
+                    same["ledger_sha256"] != reconciliation.get("recovered_ledger_sha256",
+                                                               reconciliation.get("recovered_sha256")) or
+                    same["ledger_sha256"] != reconciliation.get("remote_ledger_sha256",
+                                                               reconciliation.get("remote_sha256")) or
+                    not isinstance(same.get("remote_checkpoint_sha"), str) or
+                    re.fullmatch(r"[0-9a-f]{40}", same["remote_checkpoint_sha"]) is None):
+                raise ValueError("D pinned checkpoint MATCH contradicts remote readback")
+        same_status = same["status"]
     return {"source_run_id": int(run_id), "source_sha": sha,
             "recovery_status": readback["status"], "ledger_generation": persisted["ledger_generation"],
-            "scan_status": persisted["scan_status"], "reconciliation_status": status,
+            "scan_status": persisted["scan_status"], "reconciliation_status": status, "same_run_reconciliation_status": same_status,
             "independently_authenticated": independent, "same_scan_as_delivery": False,
             "live_watch_authorized": False, "production_applied": False}
 
@@ -98,6 +132,7 @@ def project_delivery(transport, writer_readback=None, historical_a2=None):
             "historical_coverage": coverage, "live_watch": [], "live_watch_authorized": False,
             "production_applied": False, "single_writer_read_only": True,
             "writer_recovery": writer, "writer_reconciliation_status": writer["reconciliation_status"] if writer else "UNAVAILABLE",
+            "writer_same_run_reconciliation_status": writer["same_run_reconciliation_status"] if writer else "UNAVAILABLE",
             "historical_a2": replay}
 
 
@@ -354,6 +389,7 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
             "source_sha": sha, "github_event": event, "status": delivery_status, "delivery_summary": delivery_summary,
             "ledger_generation": generation, "ledger_commit": result["ledger_commit"],
             "writer_reconciliation_status": writer["reconciliation_status"] if writer else "UNAVAILABLE",
+            "writer_same_run_reconciliation_status": writer["same_run_reconciliation_status"] if writer else "UNAVAILABLE",
             "writer_recovery": writer,
             "writer_source_identity_matches_delivery": bool(writer and writer["source_run_id"] == int(run_id) and writer["source_sha"] == sha),
             "a2_receipt_cohort": a2, "learning": learning,
