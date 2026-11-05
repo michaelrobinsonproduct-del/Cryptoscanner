@@ -4,6 +4,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from .shadow_learning_runner import score_future_paper_predictions
 from .heldout_outcome_adapter import (
     build_shadow_learning_state, read_shadow_learning_state, save_shadow_learning_state,
 )
@@ -41,6 +42,9 @@ class ShadowPipelineAcceptance(unittest.TestCase):
             save_shadow_learning_state(path, state)
             loaded = read_shadow_learning_state(path)
             self.assertEqual(loaded["state_digest"], state["state_digest"])
+            future = score_future_paper_predictions(path, [{"prediction_id": "future", "features": {"momentum": 4.0}}])
+            self.assertEqual(len(future["scores"]), 1)
+            self.assertFalse(future["scores"][0]["watch_authorized"])
 
 if __name__ == "__main__":
     unittest.main()
