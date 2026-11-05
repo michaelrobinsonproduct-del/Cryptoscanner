@@ -82,6 +82,15 @@ class HistoricalBridgeTests(unittest.TestCase):
             execution, frozen_predictions=frozen, frozen_observation_times=times)
         self.assertEqual(result["status"], "NO_QUALIFIED_RULE")
 
+    def test_per_horizon_qualification_claim_rejected_even_on_abstention(self):
+        for field in ("source_authenticated", "qualified_for_learning"):
+            execution, frozen = fixture()
+            label = execution["outcomes"]["records"][0]["labels"][1]
+            label.update(status="ABSTAIN_GAP", observed_30pct_hit=None)
+            label[field] = True
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "qualification"):
+                project_historical_execution(execution, frozen_predictions=frozen)
+
     def test_nonhex_source_digest_rejected(self):
         execution, frozen = fixture()
         execution["outcome_input_sha256"] = "z" * 64
