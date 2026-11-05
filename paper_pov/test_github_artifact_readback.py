@@ -461,3 +461,39 @@ def test_non_utf8_writer_checksum_inventory_abstains(tmp_path):
     with pytest.raises(IntegrityError, match="not UTF-8"):
         retrieve_and_verify(REPO, "123", "public-paper-ledger", None, SHA, runner=run)
 
+
+def test_downloaded_artifact_rejects_oversized_receipt_before_read(tmp_path):
+    """A valid run cannot force unbounded artifact bytes into memory."""
+    manifest = make_manifest(RECEIPTS, source_sha=SHA, run_id="123")
+    def oversized(args, timeout):
+        if args[:4] == ["gh", "api", "-X", "GET"]:
+            if "/artifacts" in args[4]:
+                return json.dumps({"total_count": 1, "artifacts": [
+                    {"id": 88, "name": "paper-ledger", "expired": False}]}).encode()
+            return json.dumps({"id": 123, "head_sha": SHA, "status": "completed",
+                "conclusion": "success", "repository": {"full_name": REPO}}).encode()
+        root = Path(args[-1])
+        with (root / "large.bin").open("wb") as stream:
+            stream.truncate(32 * 1024 * 1024 + 1)
+        return b""
+    with pytest.raises(IntegrityError, match="size limit"):
+        retrieve_and_verify(REPO, "123", "paper-ledger", manifest, SHA, runner=oversized)
+
+
+def test_downloaded_artifact_rejects_special_file(tmp_path):
+    """Never attempt to read FIFO nodes that could hang a recovery job."""
+    import os
+    if not hasattr(os, "mkfifo"):
+        pytest.skip("FIFO unsupported")
+    manifest = make_manifest(RECEIPTS, source_sha=SHA, run_id="123")
+    def fifo(args, timeout):
+        if args[:4] == ["gh", "api", "-X", "GET"]:
+            if "/artifacts" in args[4]:
+                return json.dumps({"total_count": 1, "artifacts": [
+                    {"id": 88, "name": "paper-ledger", "expired": False}]}).encode()
+            return json.dumps({"id": 123, "head_sha": SHA, "status": "completed",
+                "conclusion": "success", "repository": {"full_name": REPO}}).encode()
+        os.mkfifo(Path(args[-1]) / "blocked.fifo")
+        return b""
+    with pytest.raises(IntegrityError, match="special artifact"):
+        retrieve_and_verify(REPO, "123", "paper-ledger", manifest, SHA, runner=fifo)
