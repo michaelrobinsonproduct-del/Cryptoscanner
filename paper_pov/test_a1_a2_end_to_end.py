@@ -103,6 +103,26 @@ class EndToEndCandidateTests(unittest.TestCase):
         self.assertEqual(report["preselection_coverage"], {"valid_tickers": 25, "screen_passed": 0, "screen_rejected": 25})
         self.assertTrue(all(x["screen_rejections"] == ["below_early_move"] for x in report["preselection_universe"]))
 
+    def test_preselection_export_rejects_relabelled_screen_failure(self):
+        # A sealed zero-WATCH receipt can still carry internally contradictory
+        # research decisions; reject false historical miss labels at export.
+        for ticker in self.ticker.values():
+            ticker["o"] = ticker["c"][0]
+        report = scan(api=self.api, clock=lambda: self.now, sleep=lambda _: None)
+        row = report["preselection_universe"][0]
+        self.assertFalse(row["screen_passed"])
+        row["selection_status"] = "NOT_OHLC_SELECTED"
+        report["preselection_decisions"]["SCREEN_REJECTED"] -= 1
+        report["preselection_decisions"]["NOT_OHLC_SELECTED"] += 1
+        with tempfile.TemporaryDirectory() as folder:
+            latest = Path(folder) / "latest.json"
+            persist_report(latest, report)
+            # A2 validates WATCH evidence; the preselection exporter owns
+            # the stricter historical selection semantics.
+            self.assertEqual(read_snapshot(latest, now=self.now)["watch"], [])
+            with self.assertRaisesRegex(ValueError, "screen and selection decision mismatch"):
+                export_universe(latest, now=self.now)
+
     def test_historical_universe_research_survives_live_expiry_without_live_watch(self):
         report = scan(api=self.api, clock=lambda: self.now, sleep=lambda _: None, max_ohlc=4)
         with tempfile.TemporaryDirectory() as folder:
