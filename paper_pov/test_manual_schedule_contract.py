@@ -32,6 +32,24 @@ class ManualScheduledContractTests(unittest.TestCase):
         self.assertEqual(report["scheduled_watch_count"], 2)
         self.assertFalse(report["market_time_candidate_equality_claimed"])
 
+    def test_zero_watch_manual_scheduled_abstentions(self):
+        for observed, status in ((0, "ABSTAIN_NO_OBSERVATIONS"), (1, "ABSTAIN_NO_WATCH")):
+            with self.subTest(status=status):
+                m, s = self.pair()
+                for result in (m, s):
+                    result["candidates"] = []
+                    result["status"] = status
+                    result["observed_markets"] = observed
+                    result["quote_evidence"] = result["quote_evidence"][:observed]
+                    result["max_client_quote_age_seconds"] = (
+                        None if observed == 0 else result["max_client_quote_age_seconds"])
+                report = inspect(m, s)
+                self.assertEqual(report["manual_watch_count"], 0)
+                self.assertEqual(report["scheduled_watch_count"], 0)
+                s["status"] = "SUCCESS_PAPER_ONLY"
+                with self.assertRaises(ValueError):
+                    inspect(m, s)
+
     def test_fail_closed_provenance_and_safety(self):
         for key, value in (("remote_readback_verified", False),
                            ("buy_approved", True), ("ledger_sha256", "fake"),
