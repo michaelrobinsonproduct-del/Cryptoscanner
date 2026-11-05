@@ -329,6 +329,10 @@ jobs:
           root=Path("/tmp/c-real-receipts")
           runs=json.loads((root/"b-runs.json").read_text()).get("workflow_runs",[])
           fallback=None
+          # D's independently authenticated recovery is already available.
+          # Select a published candidate for THAT exact run/source; selecting
+          # the newest unrelated quote-complete run makes B delivery impossible.
+          recovered=json.loads((root/"d2-readback.json").read_text())
           for run in runs:
               if run.get("conclusion")!="success" or run.get("event") not in ("schedule","workflow_dispatch"):
                   continue
@@ -383,6 +387,11 @@ jobs:
                       fallback=(run,files)
                   if not complete:
                       continue
+                  if (str(recovered.get("run_id"))!=str(rid)
+                          or recovered.get("source_sha")!=run["head_sha"]):
+                      # Quote-complete but not independently paired to D.
+                      # Preserve legacy abstention instead of authorizing WATCH.
+                      continue
                   selected=(run,files)
                   break
           else:
@@ -396,7 +405,7 @@ jobs:
               (target/name).write_bytes(data)
           (root/"b-selected.json").write_text(json.dumps({"run_id":run["id"],"sha":run["head_sha"]}))
           (root/"b-published-run.json").write_text(json.dumps(run))
-          print("SELECTED_PUBLISHED_QUOTE_COHORT",run["id"],"complete" if isinstance(json.loads(files["results.json"]).get("quote_evidence"),list) else "legacy_abstention")
+          print("SELECTED_PUBLISHED_QUOTE_COHORT",run["id"],"D_same_source" if str(recovered.get("run_id"))==str(run["id"]) and recovered.get("source_sha")==run["head_sha"] else "unmatched_abstention")
           PY
           python - <<'PY'
           import json
