@@ -309,7 +309,7 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
     market_coverage_complete = observed == eligible
     visible_watch = candidates if fresh_at_delivery and market_coverage_complete else []
     delivery_status = ("ABSTAIN_INCOMPLETE_TICKER_COVERAGE"
-                       if candidates and not market_coverage_complete else
+                       if not market_coverage_complete else
                        "ABSTAIN_PUBLISHED_WATCH_STALE_AT_DELIVERY"
                        if candidates and not fresh_at_delivery else status)
     writer = _writer_evidence(writer_readback) if writer_readback is not None else None
@@ -380,7 +380,7 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
         ],
         "observed_markets": result["observed_markets"],
         "quote_evidence_complete": len(quotes) == result["observed_markets"] and market_coverage_complete,
-        "delivery_blocked": bool(candidates) and not bool(visible_watch),
+        "delivery_blocked": (not market_coverage_complete) or (bool(candidates) and not bool(visible_watch)),
         "learning_status": "NO_QUALIFIED_RULE" if learning is not None else "LEARNING_EVIDENCE_UNAVAILABLE",
         "source_run_id": int(run_id),
         "ledger_generation": generation,
