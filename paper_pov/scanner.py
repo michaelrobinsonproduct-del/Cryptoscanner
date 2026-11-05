@@ -179,9 +179,8 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         raise RuntimeError("Insufficient valid ticker observations")
     if len(preselection) != len(observations):
         raise RuntimeError("Preselection universe coverage mismatch")
-    # A partial ticker response cannot authorize ranked WATCH candidates even
-    # when the 80% minimum permits preserving the observed market inventory.
-    incomplete_ticker = ticker_rejections["missing_or_invalid_payload"] > 0
+    # Any missing, malformed, or nonfinite ticker prevents WATCH authorization.\n    # Retain valid observations for coverage research without treating them as a\n    # complete market snapshot or silently ranking around invalid prices.
+    incomplete_ticker = any(ticker_rejections.values())
     screened.sort(key=lambda x: (-x["baseline_score"], x["pair"]))
     selected = []
     seen = set()
