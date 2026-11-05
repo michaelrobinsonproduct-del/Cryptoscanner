@@ -119,9 +119,14 @@ class EndToEndCandidateTests(unittest.TestCase):
                 next(row for row in forged["observations"] if row["pair"] == nonwatch["pair"])[field] = bad
                 with tempfile.TemporaryDirectory() as folder:
                     latest = Path(folder) / "latest.json"
-                    persist_report(latest, forged)
-                    with self.assertRaisesRegex(ValueError, "source observation"):
-                        read_snapshot(latest, now=self.now)
+                    if field == "price":
+                        # Nonfinite JSON is rejected at immutable receipt serialization.
+                        with self.assertRaisesRegex(ValueError, "Out of range float"):
+                            persist_report(latest, forged)
+                    else:
+                        persist_report(latest, forged)
+                        with self.assertRaisesRegex(ValueError, "source observation"):
+                            read_snapshot(latest, now=self.now)
 
     def test_preselection_export_rejects_relabelled_screen_failure(self):
         # A sealed zero-WATCH receipt can still carry internally contradictory
