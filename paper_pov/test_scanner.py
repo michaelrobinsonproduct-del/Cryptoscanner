@@ -100,6 +100,10 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["matched_tickers"], 12)
         self.assertEqual(report["observed_markets"], 12)
         self.assertEqual(report["ticker_rejections"]["missing_or_invalid_payload"], 13)
+        self.assertEqual(report["preselection_decisions"]["SOURCE_COVERAGE_ABSTAINED"], report["screened_markets"])
+        self.assertEqual(report["preselection_decisions"]["NOT_OHLC_SELECTED"], 0)
+        self.assertTrue(all(row["selection_status"] == "SOURCE_COVERAGE_ABSTAINED"
+                            for row in report["preselection_universe"] if row["screen_passed"]))
         self.assertFalse(report["ticker_coverage_complete"])
         self.assertEqual(report["watch"], [])
         self.assertEqual(report["ohlc_screened"], 0)
