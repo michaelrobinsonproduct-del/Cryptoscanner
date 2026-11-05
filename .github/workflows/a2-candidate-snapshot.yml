@@ -6,6 +6,8 @@ on:
       - 'paper_pov/scanner.py'
       - 'paper_pov/test_scanner.py'
       - 'paper_pov/candidate_snapshot.py'
+      - 'paper_pov/preselection_universe.py'
+      - 'paper_pov/test_a1_a2_end_to_end.py'
       - 'paper_pov/test_candidate_snapshot.py'
       - 'paper_pov/a2_artifact_consumer.py'
       - 'paper_pov/test_a2_artifact_consumer.py'
@@ -32,6 +34,7 @@ jobs:
       - name: Focused A1-to-A2 durable readback and snapshot regression
         run: python -m unittest paper_pov.test_scanner paper_pov.test_a1_a2_end_to_end paper_pov.test_candidate_snapshot paper_pov.test_a2_artifact_consumer -v
   live-consumer:
+    needs: focused
     runs-on: ubuntu-latest
     timeout-minutes: 12
     permissions:
