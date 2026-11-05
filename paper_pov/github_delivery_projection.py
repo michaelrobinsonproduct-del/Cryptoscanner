@@ -31,7 +31,7 @@ def _writer_evidence(readback):
         if (not isinstance(reconciliation, dict) or reconciliation.get("status") not in ("MATCH", "DIVERGED", "UNAVAILABLE") or reconciliation.get("independently_authenticated") is not False or reconciliation.get("production_applied") is not False):
             raise ValueError("writer reconciliation invalid")
         status = reconciliation["status"]
-        if status == "UNAVAILABLE" and reconciliation.get("reason") != "REMOTE_LEDGER_QUERY_FAILED":
+        if status == "UNAVAILABLE" and reconciliation.get("reason") not in ("REMOTE_LEDGER_QUERY_FAILED", "REMOTE_CHECKPOINT_UNAVAILABLE"):
             raise ValueError("unexplained remote ledger unavailability")
         if status in ("MATCH", "DIVERGED"):
             import re
