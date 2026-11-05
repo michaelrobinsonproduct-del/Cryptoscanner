@@ -125,6 +125,37 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["ticker_rejections"]["nonfinite_derived_metric"], 1)
         self.assertEqual(report["watch"], [])
 
+    def test_boolean_and_overflowed_ticker_fields_abstain_without_scan_crash(self):
+        for malformed in (True, 10 ** 400):
+            with self.subTest(malformed=str(malformed)[:20]):
+                base = fixture()
+                def api(path):
+                    result = base(path)
+                    if path == "Ticker":
+                        result = {key: dict(value) for key, value in result.items()}
+                        result["C0USD"]["c"] = [malformed]
+                    return result
+                report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+                self.assertEqual(report["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+                self.assertEqual(report["ticker_rejections"]["missing_or_invalid_payload"], 1)
+                self.assertEqual(report["observed_markets"], 24)
+                self.assertEqual(report["watch"], [])
+
+    def test_boolean_and_overflowed_ohlc_fields_abstain_per_market(self):
+        for malformed in (True, 10 ** 400):
+            with self.subTest(malformed=str(malformed)[:20]):
+                base = fixture()
+                def api(path):
+                    result = base(path)
+                    if path.startswith("OHLC?"):
+                        key = next(k for k in result if k != "last")
+                        result[key][0][4] = malformed
+                    return result
+                report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+                self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+                self.assertEqual(report["abstention_counts"]["invalid_market_metrics"], 24)
+                self.assertEqual(report["watch"], [])
+
     def test_ohlc_assetpairs_declared_altname_is_accepted(self):
         base = fixture()
         def api(path):
