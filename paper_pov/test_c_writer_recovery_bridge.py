@@ -159,6 +159,7 @@ class BridgeTests(unittest.TestCase):
     def test_writer_export_rejects_diverged_and_unavailable_remote_ledger(self):
         actual = {**readback(), "status": "VERIFIED_REMOTE_READBACK", "independently_authenticated": True, "persisted_paper": {"ledger_generation": 70, "scan_status": "WATCH", "live_replay_performed": False},
                   "remote_ledger_reconciliation": {"status": "MATCH", "independently_authenticated": False}}
+        actual["source_bound_receipt"] = {"run_id": actual["run_id"], "source_sha": actual["source_sha"]}
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             (root / "integration.json").write_text(json.dumps(integration()))
