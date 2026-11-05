@@ -38,6 +38,21 @@ class SnapshotTests(unittest.TestCase):
         directory.mkdir(exist_ok=True)
         (directory / "20261103T170000000000Z.json").write_bytes(raw)
 
+    def test_incomplete_ticker_abstention_round_trip_and_contradiction(self):
+        self.report["watch"] = []
+        self.report["scan_status"] = "ABSTAIN_INCOMPLETE_TICKER_COVERAGE"
+        self.report["ticker_coverage_complete"] = False
+        self.report["ticker_rejections"] = {"missing_or_invalid_payload": 1}
+        self.report["observed_markets"] = 19
+        self.seal()
+        result = read_snapshot(self.latest, NOW)
+        self.assertEqual(result["watch"], [])
+        self.assertEqual(result["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+        self.report["ticker_coverage_complete"] = True
+        self.seal()
+        with self.assertRaisesRegex(ValueError, "missing source evidence"):
+            read_snapshot(self.latest, NOW)
+
     def test_realistic_watch_readback(self):
         result = read_snapshot(self.latest, NOW)
         self.assertEqual(result["watch"][0]["pair"], "TESTUSD")
