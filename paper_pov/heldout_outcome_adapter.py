@@ -67,26 +67,29 @@ def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *
             abstentions[identity] = reason
         else:
             eligible[identity] = record
-    # A single immutable prediction cannot acquire a different entry time,
-    # feature cutoff or source identity at a later horizon. Reject conflicting
-    # records rather than treating them as independent favorable labels.
+    # One immutable event per prediction across ALL horizons, including abstentions.
+    # Normalize equivalent UTC offsets; never let malformed abstaining evidence
+    # bypass the cross-horizon join or silently redefine its source identity.
     by_prediction = {}
-    for (key, horizon), record in eligible.items():
-        identity = (record["entry_utc"], record["feature_asof_utc"], record["source_sha256"])
-        if key in by_prediction and by_prediction[key] != identity:
-            raise ValueError("Cross-horizon prediction/source identity mismatch")
-        by_prediction[key] = identity
-    # A prediction is one point-in-time event across all horizons, including
-    # abstaining horizons. A failed source/coverage horizon cannot silently
-    # redefine the entry or feature cutoff used by a valid 48h row.
-    for (key, horizon), record in list(eligible.items()) + [(k, next(
-            r for r in outcomes if (r["prediction_id"], r["horizon_hours"]) == k))
-            for k in abstentions]:
-        # Abstaining horizons must retain immutable source and entry identity.
-        # Missing fields cannot silently bypass cross-horizon consistency.
+    for record in outcomes:
+        key = record["prediction_id"]
         if not all(field in record for field in ("entry_utc", "feature_asof_utc", "source_sha256")):
             raise ValueError("Missing cross-horizon prediction/source identity")
-        identity = (record["entry_utc"], record["feature_asof_utc"], record["source_sha256"])
+        try:
+            entry_identity = utc_time(record["entry_utc"])
+            feature_identity = utc_time(record["feature_asof_utc"])
+        except (TypeError, ValueError):
+            # This record is already abstaining, but its identity must remain
+            # checkable if any horizon for this prediction is eligible.
+            if any(k == key for k, _ in eligible):
+                raise ValueError("Invalid cross-horizon prediction/source identity")
+            continue
+        digest = record["source_sha256"]
+        if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest.lower()):
+            if any(k == key for k, _ in eligible):
+                raise ValueError("Invalid cross-horizon prediction/source identity")
+            continue
+        identity = (entry_identity, feature_identity, digest.lower())
         if key in by_prediction and by_prediction[key] != identity:
             raise ValueError("Cross-horizon prediction/source identity mismatch")
         by_prediction[key] = identity
