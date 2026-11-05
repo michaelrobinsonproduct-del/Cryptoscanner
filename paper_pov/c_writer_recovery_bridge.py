@@ -70,6 +70,11 @@ def bridge(integration, readback, *, restored_latest=None):
         and isinstance(reconciliation, dict)
         and reconciliation.get("status") == "MATCH"
     )
+    # D's source-bound reconciliation is mandatory when supplied: a generic
+    # remote ledger MATCH alone must not advertise a same-run B handoff.
+    same_run = readback.get("same_run_reconciliation")
+    if same_run is not None and (not isinstance(same_run, dict) or same_run.get("status") != "MATCH"):
+        writer_delivery_ready = False
     result = {
         "schema": "c_d_recovered_writer_bridge_v1",
         "status": "READ_ONLY_COHORTS_CONNECTED_NOT_LIVE",
@@ -85,6 +90,7 @@ def bridge(integration, readback, *, restored_latest=None):
             "delivery_projection_ready": writer_delivery_ready,
             "delivery_blocker": (
                 None if writer_delivery_ready else
+                "D_SAME_RUN_RECONCILIATION_NOT_MATCH" if same_run is not None and (not isinstance(same_run, dict) or same_run.get("status") != "MATCH") else
                 "D_REMOTE_READBACK_NOT_INDEPENDENTLY_AUTHENTICATED"
                 if not independent else "D_SOURCE_BOUND_RECEIPT_MISSING"
                 if not receipt_matches else "D_REMOTE_LEDGER_RECONCILIATION_NOT_MATCH"
