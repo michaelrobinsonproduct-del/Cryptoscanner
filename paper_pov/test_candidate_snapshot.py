@@ -99,6 +99,36 @@ class SnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "contradictory ticker source coverage"):
             read_snapshot(self.latest, NOW)
 
+    def test_real_scanner_watch_must_match_source_quote_and_selection_ledger(self):
+        from paper_pov import scanner
+        from paper_pov.test_scanner import fixture, NOW as SCAN_NOW
+        from copy import deepcopy
+        report = scanner.scan(api=fixture(), clock=lambda: SCAN_NOW, sleep=lambda _: None)
+        self.assertEqual(report["scan_status"], "WATCH")
+        pair = report["watch"][0]["pair"]
+        cases = (
+            ("quote", lambda x: x["watch"][0].__setitem__("price", x["watch"][0]["price"] * 2),
+             "WATCH candidate contradicts source quote"),
+            ("selection", lambda x: next(row for row in x["preselection_universe"] if row["pair"] == pair).__setitem__("selection_status", "NOT_OHLC_SELECTED"),
+             "WATCH candidate not authorized by selection ledger"),
+            ("rank", lambda x: next(row for row in x["preselection_universe"] if row["pair"] == pair).__setitem__("watch_rank", 99),
+             "WATCH source selection contradiction"),
+            ("observation", lambda x: next(row for row in x["observations"] if row["pair"] == pair).__setitem__("price", 999),
+             "preselection quote contradicts observed source"),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            latest = Path(directory) / "latest.json"
+            scanner.persist_report(latest, report)
+            self.assertEqual(read_snapshot(latest, SCAN_NOW)["watch"], report["watch"])
+        for name, mutate, error in cases:
+            with self.subTest(case=name), tempfile.TemporaryDirectory() as directory:
+                changed = deepcopy(report)
+                mutate(changed)
+                latest = Path(directory) / "latest.json"
+                scanner.persist_report(latest, changed)
+                with self.assertRaisesRegex(ValueError, error):
+                    read_snapshot(latest, SCAN_NOW)
+
     def test_realistic_watch_readback(self):
         result = read_snapshot(self.latest, NOW)
         self.assertEqual(result["watch"][0]["pair"], "TESTUSD")
