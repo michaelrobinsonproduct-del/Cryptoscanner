@@ -166,10 +166,15 @@ jobs:
           if selected is None:
               selected=fallback
           if selected is None:
-              raise SystemExit("NO_VERIFIED_D_RECOVERY_ARTIFACT")
+              Path("/tmp/b-delivery/d-status.json").write_text(json.dumps({
+                  "status":"D_RECOVERY_UNAVAILABLE",
+                  "reason":"NO_VERIFIED_D_RECOVERY_ARTIFACT"}))
+              print("D_RECOVERY_UNAVAILABLE: paper WATCH must abstain")
+              raise SystemExit(0)
           Path("/tmp/b-delivery/d-meta.json").write_text(json.dumps(selected[1]))
           print("SELECTED_D_RECOVERY",selected[0]["id"],selected[1]["id"])
           PY
+          if test -f /tmp/b-delivery/d-meta.json; then
           D_ARTIFACT="$(python -c 'import json;print(json.load(open("/tmp/b-delivery/d-meta.json"))["id"])')"
           gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/$D_ARTIFACT/zip" > /tmp/b-delivery/d-recovery.zip
           python - <<'PY'
@@ -196,6 +201,7 @@ jobs:
                   raise SystemExit("D_RECOVERY_REPORT_NOT_READ_ONLY")
               Path("/tmp/b-delivery/writer.json").write_text(json.dumps(obj))
           PY
+          fi
       - name: Verify complete A2 artifact at consumption time or record historical-only evidence
         env:
           GH_TOKEN: ${{ github.token }}
@@ -350,9 +356,10 @@ jobs:
           published=load_verified_artifact(Path("/tmp/b-delivery/published.zip"))
           if str(published.get("run_id"))!=identity["run_id"] or published.get("source_sha")!=identity["source_sha"] or published.get("github_event")!=identity["event"]:
               raise SystemExit("GITHUB_METADATA_RESULT_IDENTITY_MISMATCH")
-          writer=json.loads(Path("/tmp/b-delivery/writer.json").read_text())
+          writer_path=Path("/tmp/b-delivery/writer.json")
+          writer=json.loads(writer_path.read_text()) if writer_path.exists() else None
           from paper_pov.github_delivery_projection import _writer_evidence
-          writer_projection=_writer_evidence(writer)
+          writer_projection=_writer_evidence(writer) if writer is not None else None
           a2_path=Path("/tmp/b-delivery/a2-delivery.json")
           from paper_pov.github_delivery_projection import _a2_evidence, _learning_evidence
           a2_projection=_a2_evidence(json.loads(a2_path.read_text())) if a2_path.exists() else None
@@ -360,10 +367,11 @@ jobs:
           learning_projection=_learning_evidence(json.loads(e_path.read_text())) if e_path.exists() else None
           cmd=[sys.executable,"-m","paper_pov.github_delivery_projection",
               "--published-artifact","/tmp/b-delivery/published.zip",
-              "--writer-readback","/tmp/b-delivery/writer.json",
               "--expected-run-id",identity["run_id"],
               "--expected-source-sha",identity["source_sha"],
               "--output","/tmp/b-delivery/delivery.json"]
+          if writer_path.exists():
+              cmd.extend(["--writer-readback",str(writer_path)])
           if a2_path.exists():
               cmd.extend(["--a2-delivery",str(a2_path)])
           if e_path.exists():
@@ -401,6 +409,7 @@ jobs:
                   "published_quote_complete":projected["published_quote_complete"],
                   "live_watch_authorized":projected["live_watch_authorized"],
                   "writer_reconciliation_status":projected["writer_reconciliation_status"],
+                  "writer_evidence_available":writer is not None,
                   "writer_same_scan_as_delivery":projected["writer_source_identity_matches_delivery"],
                   "fresh_watch_delivery_verified":projected.get("fresh_watch_delivery_verified",False),
                   "writer_source_identity_matches_delivery":projected["writer_source_identity_matches_delivery"],
