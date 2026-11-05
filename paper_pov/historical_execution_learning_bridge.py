@@ -90,6 +90,11 @@ def project_historical_execution(execution, *, frozen_predictions, frozen_select
                     raise ValueError("Unqualified observed label malformed")
             elif label.get("observed_30pct_hit") is not None:
                 raise ValueError("Abstaining horizon cannot carry a hit")
+            # A source or qualification assertion on any horizon is unsafe,
+            # including abstentions: do not allow contradictory evidence to
+            # be republished as an explicitly unqualified B diagnostic.
+            if label.get("source_authenticated") is True or label.get("qualified_for_learning") is True:
+                raise ValueError("Reconstructed horizon claims unsupported qualification")
             counts[str(horizon)][status] += 1
             diagnostic_rows.append({
                 "prediction_id": pid, "pair": universe[pid],
