@@ -175,6 +175,21 @@ class BridgeTests(unittest.TestCase):
                 self.assertEqual((root / "writer.json").exists(), status == "MATCH")
                 self.assertEqual(json.loads((root / "combined.json").read_text())["writer_recovery"]["delivery_projection_ready"], status == "MATCH")
 
+    def test_explicit_d_same_run_abstention_blocks_b_export(self):
+        actual = {**readback(), "status": "VERIFIED_REMOTE_READBACK",
+                  "independently_authenticated": True,
+                  "persisted_paper": {"ledger_generation": 70, "scan_status": "WATCH", "live_replay_performed": False},
+                  "remote_ledger_reconciliation": {"status": "MATCH", "independently_authenticated": False}}
+        actual["source_bound_receipt"] = {"run_id": actual["run_id"], "source_sha": actual["source_sha"]}
+        for status in ("ABSTAIN", "UNAVAILABLE"):
+            with self.subTest(status=status):
+                actual["same_run_reconciliation"] = {"status": status}
+                result = bridge(integration(), actual)
+                self.assertFalse(result["writer_recovery"]["delivery_projection_ready"])
+                self.assertEqual(result["writer_recovery"]["delivery_blocker"], "D_SAME_RUN_RECONCILIATION_NOT_MATCH")
+        actual["same_run_reconciliation"] = {"status": "MATCH"}
+        self.assertTrue(bridge(integration(), actual)["writer_recovery"]["delivery_projection_ready"])
+
     def test_checksum_only_match_never_exports_delivery_receipt(self):
         # A checksum-matched artifact is not independent remote ledger proof.
         actual = {**readback(), "persisted_paper": {"ledger_generation": 70, "scan_status": "WATCH", "live_replay_performed": False},
