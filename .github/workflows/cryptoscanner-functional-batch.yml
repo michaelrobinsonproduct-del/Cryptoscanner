@@ -53,6 +53,23 @@ jobs:
               f.write("Source status: "+str(out["source_scan_status"])+"; candidate WATCH: "+str(out["watch_count"])+"\n")
               f.write("D independent canonical ledger readback NOT ESTABLISHED; do not claim authenticated B delivery.\n")
           PY
+      - name: Publish human-readable paper candidates to GitHub run summary
+        if: success()
+        run: |
+          python - <<'PY'
+          import json,os,pathlib
+          root=pathlib.Path("/tmp/cryptoscanner-functional")
+          r=json.loads((root/"latest.json").read_text())
+          rows=r.get("watch",[])
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a") as out:
+              out.write("\n### Ranked paper WATCH candidates (not trade approvals)\n")
+              out.write("| Rank | Pair | Price | Baseline | Challenger | 15m move | Volume acceleration | Risk |\n")
+              out.write("|---:|---|---:|---:|---:|---:|---:|---|\n")
+              for x in rows:
+                  out.write(f"| {x.get('rank','')} | {x.get('symbol','')} | {x.get('price','')} | {x.get('baseline_score','')} | {x.get('challenger_score','')} | {x.get('move15_pct','')}% | {x.get('volume_accel','')} | {x.get('risk','')} |\n")
+              if not rows: out.write("No paper WATCH candidates from this run.\n")
+              out.write("\n**Ledger D remote readback not established; this report is not authenticated production delivery.**\n")
+          PY
       - name: Preserve actual scan receipts and status even if unsuccessful
         if: always()
         uses: actions/upload-artifact@v4
