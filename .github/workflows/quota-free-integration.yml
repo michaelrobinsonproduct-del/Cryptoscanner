@@ -34,7 +34,9 @@ jobs:
             git checkout -B "$BRANCH"
           fi
           mkdir -p .integration
-          : > .integration/status.txt
+          # Do not dirty the worktree before merging source branches.
+          STATUS_FILE="$RUNNER_TEMP/integration-status.txt"
+          : > "$STATUS_FILE"
           # Only the coordination document may keep the integration branch's version.
           # Source-code conflicts remain fatal and visible.
           git config merge.keep-current.driver true
@@ -43,26 +45,27 @@ jobs:
           # branch. Never silently choose ours/theirs when owners conflict.
           for SOURCE in integration-a-b-c-d-20261103 runtime-readback-integrity-20261104 learning-e-cohort-accounting-20261104; do
             if ! git ls-remote --exit-code --heads origin "$SOURCE" >/dev/null; then
-              echo "MISSING SOURCE: $SOURCE" | tee -a .integration/status.txt
+              echo "MISSING SOURCE: $SOURCE" | tee -a "$STATUS_FILE"
               continue
             fi
             git fetch origin "$SOURCE"
             # Coordination docs differ between owner branches; retain the main queue.
             # Never silently resolve conflicts in executable source.
-            git -c merge.renormalize=false merge-base HEAD FETCH_HEAD >/dev/null || { echo "UNRELATED SOURCE: $SOURCE" | tee -a .integration/status.txt; continue; }
+            git -c merge.renormalize=false merge-base HEAD FETCH_HEAD >/dev/null || { echo "UNRELATED SOURCE: $SOURCE" | tee -a "$STATUS_FILE"; continue; }
             if git merge-base --is-ancestor FETCH_HEAD HEAD; then
-              echo "ALREADY INTEGRATED: $SOURCE" | tee -a .integration/status.txt
+              echo "ALREADY INTEGRATED: $SOURCE" | tee -a "$STATUS_FILE"
               continue
             fi
             if git merge --no-ff --no-edit FETCH_HEAD; then
-              echo "MERGED: $SOURCE $(git rev-parse FETCH_HEAD)" | tee -a .integration/status.txt
+              echo "MERGED: $SOURCE $(git rev-parse FETCH_HEAD)" | tee -a "$STATUS_FILE"
             else
               git diff --name-only --diff-filter=U | tee .integration/conflicts.txt
               git merge --abort
-              echo "CONFLICT BLOCKED: $SOURCE" | tee -a .integration/status.txt
+              echo "CONFLICT BLOCKED: $SOURCE" | tee -a "$STATUS_FILE"
               exit 1
             fi
           done
+          cp "$STATUS_FILE" .integration/status.txt
           git add .integration/status.txt
           if ! git diff --cached --quiet; then
             git commit -m "integration: record source merge checkpoint"
