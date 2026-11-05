@@ -256,8 +256,12 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["abstention_counts"]["ohlc_gap_or_schema"], 24)
 
     def test_insufficient_universe_coverage_fails_closed(self):
-        with self.assertRaisesRegex(RuntimeError, "coverage"):
-            run(coverage=True)
+        report = run(coverage=True)
+        self.assertEqual(report["scan_status"], "ABSTAIN_INCOMPLETE_TICKER_COVERAGE")
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["eligible_pairs"], 25)
+        self.assertEqual(report["observed_markets"], 12)
+        self.assertEqual(report["ticker_rejections"]["missing_or_invalid_payload"], 13)
 
     def test_stablecoin_is_excluded(self):
         result = run(stable=True)
