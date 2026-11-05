@@ -140,6 +140,21 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(len(report["watch"]), 12)
         self.assertEqual(report["ohlc_screened"], 24)
 
+    def test_ohlc_duplicate_altname_cannot_cross_pair_boundary(self):
+        base = fixture()
+        def api(path):
+            result = base(path)
+            if path == "AssetPairs":
+                return {key: dict(meta, altname="SHAREDUSD") for key, meta in result.items()}
+            if path.startswith("OHLC?"):
+                key = path.split("pair=")[1].split("&")[0]
+                return {"SHAREDUSD": result[key], "last": result["last"]}
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+        self.assertEqual(report["abstention_counts"]["ohlc_gap_or_schema"], 24)
+
     def test_ohlc_unrelated_alias_abstains_without_wrong_market_data(self):
         base = fixture()
         def api(path):
