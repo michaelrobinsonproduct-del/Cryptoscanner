@@ -179,6 +179,9 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         raise RuntimeError("Insufficient valid ticker observations")
     if len(preselection) != len(observations):
         raise RuntimeError("Preselection universe coverage mismatch")
+    # A partial ticker response cannot authorize ranked WATCH candidates even
+    # when the 80% minimum permits preserving the observed market inventory.
+    incomplete_ticker = ticker_rejections["missing_or_invalid_payload"] > 0
     screened.sort(key=lambda x: (-x["baseline_score"], x["pair"]))
     selected = []
     seen = set()
@@ -192,6 +195,8 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                 selected.append(item.copy())
                 seen.add(item["pair"])
                 limit -= 1
+    if incomplete_ticker:
+        selected = []  # Preserve inventory, but fail closed on incomplete source coverage.
     watch = []
     abstentions = []
     abstention_counts = {"request_failure": 0, "stale_or_future_ohlc": 0,
@@ -336,7 +341,8 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     if sum(preselection_decisions.values()) != len(preselection):
         raise RuntimeError("Preselection decision coverage mismatch")
     return {"schema": 1, "mode": "PAPER_ONLY", "buy_approved": False,
-        "scan_status": ("WATCH" if watch else
+        "scan_status": ("ABSTAIN_INCOMPLETE_TICKER_COVERAGE" if incomplete_ticker else
+                        "WATCH" if watch else
                         "ABSTAIN_NO_LIQUID_CANDIDATES" if not selected else
                         "ABSTAIN_NO_QUALIFIED_OHLC"),
         "source": "Kraken public REST (ticker client-observed; OHLC completed)",
@@ -345,6 +351,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         "eligible_pairs": len(eligible), "online_usd_pairs": online_usd_pairs,
         "excluded_stablecoin_pairs": excluded_stablecoin_pairs,
         "excluded_other_pairs": excluded_other_pairs, "matched_tickers": matched,
+        "ticker_coverage_complete": not incomplete_ticker,
         "observed_markets": len(observations), "ticker_rejections": ticker_rejections,
         "screening_rejections": screening_rejections,
         "screened_markets": len(screened),
