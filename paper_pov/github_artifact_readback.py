@@ -92,7 +92,7 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
             def remote_object(name):
                 endpoint = f"repos/{repo}/contents/{quote(name, safe='/')}?ref={pinned_sha}"
                 obj = _github_json([endpoint], runner=runner)
-                if obj.get("type") != "file":
+                if not isinstance(obj, dict) or obj.get("type") != "file":
                     raise IntegrityError("Remote packed ledger object unavailable")
                 if obj.get("encoding") == "base64":
                     payload = base64.b64decode("".join(obj["content"].split()), validate=True)
@@ -112,7 +112,8 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                 if obj.get("encoding") != "none" or not isinstance(blob_sha, str) or len(blob_sha) != 40 or any(c not in "0123456789abcdef" for c in blob_sha):
                     raise IntegrityError("Remote packed ledger blob identity unavailable")
                 blob = _github_json([f"repos/{repo}/git/blobs/{blob_sha}"], runner=runner)
-                if blob.get("sha") != blob_sha or blob.get("encoding") != "base64":
+                if (not isinstance(blob, dict) or blob.get("sha") != blob_sha
+                        or blob.get("encoding") != "base64"):
                     raise IntegrityError("Remote packed ledger blob identity mismatch")
                 payload = base64.b64decode("".join(blob["content"].split()), validate=True)
                 expected_blob = hashlib.sha1(
@@ -131,9 +132,33 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                 if hashlib.sha256(packed).hexdigest() != manifest["head"]["snapshot_sha256"]:
                     raise IntegrityError("Remote snapshot SHA mismatch")
                 state = storage.unpack_snapshot(packed)
-                head = manifest["head"]
+                checkpoint, head, entries = segments._check_manifest(manifest)
                 if state["generation"] != head["generation"] or state["sha256"] != head["ledger_sha256"]:
                     raise IntegrityError("Remote packed ledger head mismatch")
+                # A manifest and snapshot alone do not authenticate the
+                # immutable checkpoint or the final transition. Verify their
+                # actual Git bytes before accepting a remote MATCH.
+                checkpoint_bytes = remote_object(segments.CHECKPOINT)
+                if hashlib.sha256(checkpoint_bytes).hexdigest() != checkpoint["file_sha256"]:
+                    raise IntegrityError("Remote checkpoint file checksum mismatch")
+                checkpoint_state = json.loads(checkpoint_bytes)
+                if isinstance(checkpoint_state, dict) and checkpoint_state.get("format") == storage.FORMAT:
+                    checkpoint_state = storage.unpack_snapshot(checkpoint_bytes)
+                else:
+                    from paper_pov import ledger as checkpoint_ledger
+                    checkpoint_ledger.verify(checkpoint_state, storage.MAX_RAW_BYTES)
+                if (checkpoint_state["generation"] != checkpoint["generation"]
+                        or checkpoint_state["sha256"] != checkpoint["ledger_sha256"]):
+                    raise IntegrityError("Remote checkpoint provenance mismatch")
+                if entries:
+                    final = entries[-1]
+                    segment_bytes = remote_object(segments._segment_path(final["generation"]))
+                    if (hashlib.sha256(segment_bytes).hexdigest() != final["segment_sha256"]
+                            or storage.manifest_entry(segment_bytes) != final):
+                        raise IntegrityError("Remote final segment checksum mismatch")
+                    transition = storage.read_segment(segment_bytes)
+                    if transition["after_sha256"] != state["sha256"]:
+                        raise IntegrityError("Remote final segment/head mismatch")
                 old = json.loads(recovered[ledger_paths[0]])
                 from paper_pov import ledger as ledger_module
                 ledger_module.verify(old, storage.MAX_RAW_BYTES)
@@ -151,7 +176,7 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                         "remote_ledger_sha256": state["sha256"],
                         "recovered_ledger_sha256": old_sha,
                         "independently_authenticated": False, "production_applied": False}
-            except (IntegrityError, subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError, ValueError, KeyError, TypeError, binascii.Error) as inner:
+            except (IntegrityError, subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError, ValueError, KeyError, TypeError, AttributeError, binascii.Error, UnicodeError) as inner:
                 return {"status": "UNAVAILABLE", "reason": "REMOTE_LEDGER_QUERY_FAILED",
                         "failure_type": type(inner).__name__,
                         "failure_detail": str(inner)[:240] if not isinstance(inner, subprocess.CalledProcessError) else "GITHUB_API_HTTP_" + str(inner.returncode),
@@ -230,9 +255,18 @@ def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, ru
         raise IntegrityError("Artifact listing incomplete")
     if artifact_name == "public-paper-ledger":
         artifact_name = f"public-paper-ledger-{run_id}"
+    if any(not isinstance(a, dict) for a in artifacts):
+        raise IntegrityError("Malformed remote artifact listing")
     matches = [a for a in artifacts if a.get("name") == artifact_name]
-    if len(matches) != 1 or matches[0].get("expired") is not False:
-        raise IntegrityError("Missing, duplicated or expired artifact")
+    if len(matches) != 1:
+        raise IntegrityError("Missing or duplicated remote artifact")
+    if matches[0].get("expired") is not False:
+        raise IntegrityError("Remote artifact expired or expiration unknown")
+    origin = matches[0].get("workflow_run")
+    if origin is not None and (not isinstance(origin, dict)
+            or str(origin.get("id")) != str(run_id)
+            or origin.get("head_sha") != source_sha):
+        raise IntegrityError("Remote artifact provenance differs from source run")
     with tempfile.TemporaryDirectory(prefix="scanner-remote-readback-") as directory:
         runner(["gh", "run", "download", str(run_id), "--repo", repo,
                 "--name", artifact_name, "--dir", directory], timeout=120)
@@ -385,6 +419,13 @@ def main(argv=None):
     temp.write_bytes(canonical_bytes(report) + b"\n")
     os.replace(temp, output)
     print(json.dumps(report, sort_keys=True))
+    # A checksummed historical download is not a successful remote reconciliation.
+    # Preserve historical recovery when the checkpoint is unavailable, but
+    # never return success when an independently checked remote generation
+    # explicitly contradicts the restored writer ledger.
+    reconciliation = report.get("remote_ledger_reconciliation")
+    if isinstance(reconciliation, dict) and reconciliation.get("status") == "DIVERGED":
+        return 2
     return 0 if report["status"] in ("VERIFIED_REMOTE_READBACK", "WRITER_CHECKSUM_ONLY") else 2
 
 

@@ -2,7 +2,14 @@ import json
 import subprocess
 from pathlib import Path
 
-import pytest
+try:
+    import pytest
+except ImportError as exc:
+    # This module contains pytest function tests, not unittest.TestCase tests.
+    # Broad unittest discovery must not fail importing a pytest-only module;
+    # focused pytest CI still collects and executes every test here.
+    import unittest
+    raise unittest.SkipTest("pytest-only tests require the focused pytest runner") from exc
 
 from paper_pov.github_artifact_readback import retrieve_and_verify
 from paper_pov.runtime_readback_integrity import IntegrityError, make_manifest
@@ -51,6 +58,45 @@ def test_remote_evidence_fail_closed(tmp_path, mismatch):
         retrieve_and_verify(REPO, "123", "paper-ledger", manifest, SHA, runner=run)
     if mismatch != "tamper":
         assert not any(c[:3] == ["gh", "run", "download"] for c in calls)
+
+
+
+@pytest.mark.parametrize("origin", [
+    {"id": 999, "head_sha": SHA},
+    {"id": 123, "head_sha": "b" * 40},
+    {"id": 123},
+    "not-a-workflow-run",
+])
+def test_cross_run_artifact_metadata_rejected_before_download(tmp_path, origin):
+    run, calls = runner_factory(tmp_path)
+    def with_origin(args, timeout):
+        raw = run(args, timeout)
+        if args[:4] == ["gh", "api", "-X", "GET"] and "/artifacts" in args[4]:
+            listing = json.loads(raw)
+            listing["artifacts"][0]["workflow_run"] = origin
+            return json.dumps(listing).encode()
+        return raw
+    with pytest.raises(IntegrityError, match="artifact provenance"):
+        retrieve_and_verify(REPO, "123", "paper-ledger",
+                            make_manifest(RECEIPTS, source_sha=SHA, run_id="123"),
+                            SHA, runner=with_origin)
+    assert not any(call[:3] == ["gh", "run", "download"] for call in calls)
+
+
+def test_expired_artifact_explicitly_rejected_before_download(tmp_path):
+    run, calls = runner_factory(tmp_path)
+    def expired(args, timeout):
+        raw = run(args, timeout)
+        if args[:4] == ["gh", "api", "-X", "GET"] and "/artifacts" in args[4]:
+            listing = json.loads(raw)
+            listing["artifacts"][0]["expired"] = True
+            return json.dumps(listing).encode()
+        return raw
+    with pytest.raises(IntegrityError, match="expired"):
+        retrieve_and_verify(REPO, "123", "paper-ledger",
+                            make_manifest(RECEIPTS, source_sha=SHA, run_id="123"),
+                            SHA, runner=expired)
+    assert not any(call[:3] == ["gh", "run", "download"] for call in calls)
 
 
 def test_wrong_manifest_run_never_fetches(tmp_path):
@@ -245,7 +291,7 @@ def test_packed_single_writer_remote_reconciliation_real_storage_layout():
     blob = packed.pack_snapshot(state)
     # Build an internally valid zero-generation manifest anchored to a checkpoint.
     checkpoint = {"git_commit": "a" * 40, "generation": 0,
-                  "ledger_sha256": state["sha256"], "file_sha256": "b" * 64}
+                  "ledger_sha256": state["sha256"], "file_sha256": hashlib.sha256(raw).hexdigest()}
     manifest = {"schema": repo_storage.SCHEMA, "checkpoint": checkpoint,
                 "head": {"generation": 0, "ledger_sha256": state["sha256"],
                          "snapshot_sha256": hashlib.sha256(blob).hexdigest()},
@@ -258,7 +304,8 @@ def test_packed_single_writer_remote_reconciliation_real_storage_layout():
             return json.dumps({"object": {"sha": "e" * 40}}).encode()
         if "paper_pov/output/ledger.json" in endpoint:
             raise subprocess.CalledProcessError(1, args, output=b"Not Found")
-        data = json.dumps(manifest).encode() if repo_storage.MANIFEST in endpoint else blob
+        data = (json.dumps(manifest).encode() if repo_storage.MANIFEST in endpoint else
+                raw if repo_storage.CHECKPOINT in endpoint else blob)
         git_sha = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\x00" + data).hexdigest()
         return json.dumps({"type": "file", "encoding": "base64", "sha": git_sha,
                            "size": len(data),
@@ -269,7 +316,7 @@ def test_packed_single_writer_remote_reconciliation_real_storage_layout():
     assert report["remote_generation"] == 0
     assert report["remote_sha256"] == report["recovered_sha256"]
     assert report["independently_authenticated"] is False
-    assert len(calls) == 4
+    assert len(calls) == 5
     assert report["remote_checkpoint_sha"] == "e" * 40
     assert report["remote_path"] == repo_storage.SNAPSHOT
 
@@ -362,7 +409,7 @@ def test_packed_remote_large_snapshot_uses_sha_bound_git_blob():
     manifest = {
         "schema": segments.SCHEMA,
         "checkpoint": {"git_commit": "a" * 40, "generation": 0,
-                       "ledger_sha256": state["sha256"], "file_sha256": "b" * 64},
+                       "ledger_sha256": state["sha256"], "file_sha256": hashlib.sha256(ledger.canonical(state)).hexdigest()},
         "head": {"generation": 0, "ledger_sha256": state["sha256"],
                  "snapshot_sha256": hashlib.sha256(packed).hexdigest()},
         "segments": [],
@@ -381,7 +428,7 @@ def test_packed_remote_large_snapshot_uses_sha_bound_git_blob():
         if segments.SNAPSHOT in endpoint:
             return json.dumps({"type": "file", "encoding": "none",
                                "sha": blob_sha, "size": len(packed)}).encode()
-        raw = json.dumps(manifest).encode()
+        raw = ledger.canonical(state) if segments.CHECKPOINT in endpoint else json.dumps(manifest).encode()
         manifest_sha = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\x00" + raw).hexdigest()
         return json.dumps({"type": "file", "encoding": "base64", "sha": manifest_sha,
                            "size": len(raw),
@@ -497,3 +544,28 @@ def test_downloaded_artifact_rejects_special_file(tmp_path):
         return b""
     with pytest.raises(IntegrityError, match="special artifact"):
         retrieve_and_verify(REPO, "123", "paper-ledger", manifest, SHA, runner=fifo)
+
+
+@pytest.mark.parametrize("remote_status,expected_exit", [
+    ("DIVERGED", 2), ("MATCH", 0), ("UNAVAILABLE", 0),
+])
+def test_cli_does_not_silently_succeed_on_remote_divergence(
+        tmp_path, monkeypatch, capsys, remote_status, expected_exit):
+    """A valid downloaded historical artifact must not hide a divergent checkpoint."""
+    from paper_pov import github_artifact_readback as readback
+    def recovered(*args, **kwargs):
+        return {"status": "WRITER_CHECKSUM_ONLY", "remote_downloaded": True,
+                "independently_authenticated": False,
+                "remote_ledger_reconciliation": {"status": remote_status},
+                "same_run_reconciliation": {"status": "ABSTAIN",
+                                             "live_watch_authorized": False}}
+    monkeypatch.setattr(readback, "retrieve_and_verify", recovered)
+    report_path = tmp_path / "recovery-report.json"
+    result = readback.main([
+        "--repo", REPO, "--run-id", "123", "--source-sha", SHA,
+        "--ledger-ref", "paper-proof-ledger", "--output", str(report_path),
+    ])
+    assert result == expected_exit
+    report = json.loads(report_path.read_text())
+    assert report["remote_ledger_reconciliation"]["status"] == remote_status
+    assert report["same_run_reconciliation"]["live_watch_authorized"] is False
