@@ -247,7 +247,11 @@ def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, ru
                 raise IntegrityError("Writer checksum index missing or ambiguous")
             parent = index[0].rpartition("/")[0]
             seen = set()
-            for line in files[index[0]].decode("utf-8").splitlines():
+            try:
+                checksum_lines = files[index[0]].decode("utf-8").splitlines()
+            except UnicodeDecodeError as exc:
+                raise IntegrityError("Writer checksum inventory is not UTF-8") from exc
+            for line in checksum_lines:
                 digest, sep, relative = line.partition("  ")
                 target = (parent + "/" if parent else "") + relative
                 if (not sep or len(digest) != 64 or
@@ -354,7 +358,8 @@ def main(argv=None):
         manifest = json.loads(Path(args.manifest).read_text()) if args.manifest else None
         report = retrieve_and_verify(args.repo, args.run_id, args.artifact_name, manifest, args.source_sha,
                                      restore_dir=args.restore_dir, ledger_ref=args.ledger_ref, ledger_path=args.ledger_path)
-    except (IntegrityError, OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError,
+    except (IntegrityError, OSError, ValueError, KeyError, TypeError, AttributeError,
+            UnicodeError, binascii.Error, subprocess.CalledProcessError,
             subprocess.TimeoutExpired) as exc:
         report["reason"] = type(exc).__name__
         if isinstance(exc, IntegrityError):
