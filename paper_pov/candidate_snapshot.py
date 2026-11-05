@@ -37,8 +37,16 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
         raise ValueError("invalid watch collection")
     if watch and report.get("scan_status") != "WATCH":
         raise ValueError("scan status disagrees with candidates")
-    if not watch and report.get("scan_status") not in {"ABSTAIN_NO_LIQUID_CANDIDATES", "ABSTAIN_NO_QUALIFIED_OHLC"}:
+    if not watch and report.get("scan_status") not in {"ABSTAIN_NO_LIQUID_CANDIDATES", "ABSTAIN_NO_QUALIFIED_OHLC", "ABSTAIN_INCOMPLETE_TICKER_COVERAGE"}:
         raise ValueError("invalid abstention status")
+    if report.get("scan_status") == "ABSTAIN_INCOMPLETE_TICKER_COVERAGE":
+        if report.get("ticker_coverage_complete") is not False:
+            raise ValueError("incomplete coverage abstention missing source evidence")
+        rejections = report.get("ticker_rejections")
+        if not isinstance(rejections, dict) or type(rejections.get("missing_or_invalid_payload")) is not int or rejections["missing_or_invalid_payload"] <= 0:
+            raise ValueError("incomplete coverage abstention without missing ticker evidence")
+    elif report.get("ticker_coverage_complete") is False:
+        raise ValueError("incomplete ticker coverage cannot authorize WATCH")
     for field in ("eligible_pairs", "observed_markets"):
         value = report.get(field)
         if type(value) is not int or value < 0:
