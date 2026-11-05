@@ -367,13 +367,18 @@ jobs:
                           verified=False
                           break
                       checked.add(match[2])
-                  if not verified or "results.json" not in checked:
+                  # Do not accept an artifact with unmanifested payloads or
+                  # a manifest that silently omits other published files.
+                  if not verified or checked != set(files) or "results.json" not in checked:
                       continue
                   result=json.loads(files["results.json"])
                   if str(result.get("run_id"))!=str(rid) or result.get("source_sha")!=run["head_sha"]:
                       continue
                   quotes=result.get("quote_evidence")
-                  complete=isinstance(quotes,list) and type(result.get("observed_markets")) is int and len(quotes)==result["observed_markets"]
+                  complete=(isinstance(quotes,list) and type(result.get("observed_markets")) is int
+                            and result["observed_markets"] > 0
+                            and len(quotes)==result["observed_markets"]
+                            and all(isinstance(q,dict) for q in quotes))
                   if fallback is None:
                       fallback=(run,files)
                   if not complete:
@@ -419,7 +424,10 @@ jobs:
           p=Path("/tmp/c-real-receipts/b-published/results.json")
           r=json.loads(p.read_text())
           quotes=r.get("quote_evidence")
-          complete=isinstance(quotes,list) and type(r.get("observed_markets")) is int and len(quotes)==r["observed_markets"]
+          complete=(isinstance(quotes,list) and type(r.get("observed_markets")) is int
+                    and r["observed_markets"] > 0
+                    and len(quotes)==r["observed_markets"]
+                    and all(isinstance(q,dict) for q in quotes))
           # Quote completeness alone is insufficient: the recovered writer
           # must describe this exact published scan, not a different cohort.
           selected=json.loads(Path("/tmp/c-real-receipts/b-selected.json").read_text())
