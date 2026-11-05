@@ -125,6 +125,34 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["ticker_rejections"]["nonfinite_derived_metric"], 1)
         self.assertEqual(report["watch"], [])
 
+    def test_ohlc_assetpairs_declared_altname_is_accepted(self):
+        base = fixture()
+        def api(path):
+            result = base(path)
+            if path == "AssetPairs":
+                return {key: dict(meta, altname="ALT" + key) for key, meta in result.items()}
+            if path.startswith("OHLC?"):
+                key = path.split("pair=")[1].split("&")[0]
+                return {"ALT" + key: result[key], "last": result["last"]}
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["scan_status"], "WATCH")
+        self.assertEqual(len(report["watch"]), 12)
+        self.assertEqual(report["ohlc_screened"], 24)
+
+    def test_ohlc_unrelated_alias_abstains_without_wrong_market_data(self):
+        base = fixture()
+        def api(path):
+            result = base(path)
+            if path.startswith("OHLC?"):
+                key = path.split("pair=")[1].split("&")[0]
+                return {"UNRELATED" + key: result[key], "last": result["last"]}
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
+        self.assertEqual(report["watch"], [])
+        self.assertEqual(report["abstention_counts"]["ohlc_gap_or_schema"], 24)
+
     def test_insufficient_universe_coverage_fails_closed(self):
         with self.assertRaisesRegex(RuntimeError, "coverage"):
             run(coverage=True)
