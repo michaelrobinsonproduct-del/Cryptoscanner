@@ -365,7 +365,10 @@ def main(argv=None):
     parser.add_argument("--ledger-path", default="paper_pov/output/ledger.json")
     args = parser.parse_args(argv)
     report = {"status": "REMOTE_READBACK_FAILED", "remote_downloaded": False,
-              "ledger_writer_invoked": False, "production_applied": False}
+              "run_id": args.run_id, "source_sha": args.source_sha,
+              "artifact_name": args.artifact_name, "ledger_writer_invoked": False,
+              "production_applied": False, "independently_authenticated": False,
+              "live_watch_authorized": False}
     try:
         manifest = json.loads(Path(args.manifest).read_text()) if args.manifest else None
         report = retrieve_and_verify(args.repo, args.run_id, args.artifact_name, manifest, args.source_sha,
