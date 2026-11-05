@@ -155,6 +155,14 @@ class OutcomeAdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unsafe"):
             project_learning_handoff(dict(result, promotion_authorized=True))
 
+    def test_b_handoff_rejects_contradictory_authentication_claims(self):
+        result = self.evaluate([row("p", h) for h in (1, 6, 24, 48)])
+        for field in ("source_receipt_qualified", "counts_independently_authenticated",
+                      "measured_lift_verified", "live_watch_authorized",
+                      "source_authenticated"):
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "Unsafe"):
+                project_learning_handoff(dict(result, **{field: True}))
+
     def test_cli_writes_separate_b_handoff_and_refuses_overwrite(self):
         payload = dict(outcomes=[row("p", h) for h in (1, 6, 24, 48)],
                        baseline_decisions={"p": True}, challenger_decisions={"p": False},
