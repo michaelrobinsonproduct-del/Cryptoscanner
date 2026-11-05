@@ -389,12 +389,17 @@ jobs:
                             and result["observed_markets"] > 0
                             and len(quotes)==result["observed_markets"]
                             and all(isinstance(q,dict) for q in quotes))
-                  if fallback is None:
-                      fallback=(run,files)
+                  # Prefer a verified artifact from D's exact source even if
+                  # its quote cohort is incomplete. This preserves the correct
+                  # missing-quote abstention instead of selecting an unrelated
+                  # newer historical result and misreporting source mismatch.
+                  same_d_source=(str(recovered.get("run_id"))==str(rid)
+                                 and recovered.get("source_sha")==run["head_sha"])
+                  if fallback is None or (same_d_source and not fallback[2]):
+                      fallback=(run,files,same_d_source)
                   if not complete:
                       continue
-                  if (str(recovered.get("run_id"))!=str(rid)
-                          or recovered.get("source_sha")!=run["head_sha"]):
+                  if not same_d_source:
                       # Quote-complete but not independently paired to D.
                       # Preserve legacy abstention instead of authorizing WATCH.
                       continue
@@ -403,7 +408,7 @@ jobs:
           else:
               if fallback is None:
                   raise SystemExit("No checksum-verified published scanner results available")
-              selected=fallback
+              selected=fallback[:2]
           run,files=selected
           target=root/"b-published"
           target.mkdir(exist_ok=True)
