@@ -6,6 +6,7 @@ on:
       - 'paper_pov/test_shadow_learning_evidence.py'
       - 'paper_pov/heldout_outcome_adapter.py'
       - 'paper_pov/test_heldout_outcome_adapter.py'
+      - 'paper_pov/shadow_learning_runner.py'
       - '.github/workflows/shadow-learning-evidence.yml'
   workflow_dispatch:
 permissions:
