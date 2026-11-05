@@ -56,7 +56,10 @@ def export_universe(latest, now=None, historical=False):
     # Preserve observed market research, but never describe the surviving
     # individually valid quotes as ordinary OHLC budget exclusions.
     incomplete = report.get("scan_status") == "ABSTAIN_INCOMPLETE_TICKER_COVERAGE"
-    if (incomplete and any(x["screen_passed"] and x["selection_status"] != "SOURCE_COVERAGE_ABSTAINED" for x in rows)) or (not incomplete and decisions.get("SOURCE_COVERAGE_ABSTAINED", 0)):
+    # Historical receipts sealed before this explicit decision existed remain
+    # readable for research; they still carry incomplete scan status and can
+    # never be promoted to live WATCH or qualified outcome evidence.
+    if (incomplete and "SOURCE_COVERAGE_ABSTAINED" in decisions and any(x["screen_passed"] and x["selection_status"] != "SOURCE_COVERAGE_ABSTAINED" for x in rows)) or (not incomplete and decisions.get("SOURCE_COVERAGE_ABSTAINED", 0)):
         raise ValueError("preselection source coverage decision mismatch")
     # Deterministic receipt-bound identity for EVERY observed ticker, including
     # screen rejects and OHLC budget exclusions. Never call these outcome labels.
