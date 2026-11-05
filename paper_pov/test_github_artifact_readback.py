@@ -53,6 +53,45 @@ def test_remote_evidence_fail_closed(tmp_path, mismatch):
         assert not any(c[:3] == ["gh", "run", "download"] for c in calls)
 
 
+
+@pytest.mark.parametrize("origin", [
+    {"id": 999, "head_sha": SHA},
+    {"id": 123, "head_sha": "b" * 40},
+    {"id": 123},
+    "not-a-workflow-run",
+])
+def test_cross_run_artifact_metadata_rejected_before_download(tmp_path, origin):
+    run, calls = runner_factory(tmp_path)
+    def with_origin(args, timeout):
+        raw = run(args, timeout)
+        if args[:4] == ["gh", "api", "-X", "GET"] and "/artifacts" in args[4]:
+            listing = json.loads(raw)
+            listing["artifacts"][0]["workflow_run"] = origin
+            return json.dumps(listing).encode()
+        return raw
+    with pytest.raises(IntegrityError, match="artifact provenance"):
+        retrieve_and_verify(REPO, "123", "paper-ledger",
+                            make_manifest(RECEIPTS, source_sha=SHA, run_id="123"),
+                            SHA, runner=with_origin)
+    assert not any(call[:3] == ["gh", "run", "download"] for call in calls)
+
+
+def test_expired_artifact_explicitly_rejected_before_download(tmp_path):
+    run, calls = runner_factory(tmp_path)
+    def expired(args, timeout):
+        raw = run(args, timeout)
+        if args[:4] == ["gh", "api", "-X", "GET"] and "/artifacts" in args[4]:
+            listing = json.loads(raw)
+            listing["artifacts"][0]["expired"] = True
+            return json.dumps(listing).encode()
+        return raw
+    with pytest.raises(IntegrityError, match="expired"):
+        retrieve_and_verify(REPO, "123", "paper-ledger",
+                            make_manifest(RECEIPTS, source_sha=SHA, run_id="123"),
+                            SHA, runner=expired)
+    assert not any(call[:3] == ["gh", "run", "download"] for call in calls)
+
+
 def test_wrong_manifest_run_never_fetches(tmp_path):
     run, calls = runner_factory(tmp_path)
     manifest = make_manifest(RECEIPTS, source_sha=SHA, run_id="999")
