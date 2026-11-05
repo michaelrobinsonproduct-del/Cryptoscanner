@@ -215,6 +215,29 @@ class RealHistoricalE1ToBTests(unittest.TestCase):
 
 
 
+    def test_future_prediction_abstains_before_e1_execution(self):
+        from .historical_e1_b_pipeline import run_pipeline
+        from unittest.mock import patch as mock_patch
+        predictions = [{"prediction_id": "future", "pair": "XUSD",
+                        "as_of": "2026-01-03T00:00:01+00:00",
+                        "status": "PAPER_WATCH"}]
+        with mock_patch("paper_pov.historical_e1_b_pipeline.run_historical_outcomes") as execution:
+            with self.assertRaisesRegex(ValueError, "after observation cutoff"):
+                run_pipeline({}, ".", {}, {}, predictions,
+                             "2026-01-03T00:00:00+00:00")
+            execution.assert_not_called()
+
+    def test_missing_prediction_timestamp_fails_closed(self):
+        from .historical_e1_b_pipeline import run_pipeline
+        from unittest.mock import patch as mock_patch
+        predictions = [{"prediction_id": "unknown", "pair": "XUSD",
+                        "status": "PAPER_WATCH"}]
+        with mock_patch("paper_pov.historical_e1_b_pipeline.run_historical_outcomes") as execution:
+            with self.assertRaisesRegex(ValueError, "lacks point-in-time"):
+                run_pipeline({}, ".", {}, {}, predictions,
+                             "2026-01-03T00:00:00+00:00")
+            execution.assert_not_called()
+
     def test_historical_outputs_roll_back_partial_publication(self):
         from .historical_e1_b_pipeline import main
         from unittest.mock import patch as mock_patch
