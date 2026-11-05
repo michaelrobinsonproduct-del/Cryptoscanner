@@ -49,6 +49,16 @@ class DeliveryProjectionTests(unittest.TestCase):
                         "reason": "REMOTE_LEDGER_QUERY_FAILED",
                         "independently_authenticated": False, "production_applied": False}}
         result = project_delivery(base, recovery)
+        # D distinguishes an inaccessible immutable checkpoint from a
+        # generic ledger query failure; both remain non-MATCH abstentions.
+        recovery["remote_ledger_reconciliation"]["reason"] = "REMOTE_CHECKPOINT_UNAVAILABLE"
+        unavailable = project_delivery(base, recovery)
+        self.assertEqual(unavailable["writer_reconciliation_status"], "UNAVAILABLE")
+        self.assertFalse(unavailable["live_watch_authorized"])
+        recovery["remote_ledger_reconciliation"]["reason"] = "UNEXPECTED_REMOTE_FAILURE"
+        with self.assertRaisesRegex(ValueError, "unexplained remote ledger unavailability"):
+            project_delivery(base, recovery)
+        recovery["remote_ledger_reconciliation"]["reason"] = "REMOTE_LEDGER_QUERY_FAILED"
         self.assertEqual(result["writer_reconciliation_status"], "UNAVAILABLE")
         self.assertEqual(result["writer_recovery"]["ledger_generation"], 7)
         self.assertEqual(result["writer_recovery"]["source_run_id"], 456)
