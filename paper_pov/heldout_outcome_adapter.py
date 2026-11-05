@@ -144,6 +144,35 @@ def train_shadow_challenger(predictions, outcomes, *, training_end_utc,
     return state
 
 
+def evaluate_shadow_scores(challenger, outcomes, baseline_decisions, *, threshold=0.0):
+    """Compare baseline and challenger on the identical matured 48h cohort."""
+    if challenger.get("status") != "SHADOW_ONLY":
+        return {"status": "NO_QUALIFIED_RULE", "reason": "INSUFFICIENT_TRAINING",
+                "promotion_authorized": False}
+    labels = {row["prediction_id"]: row["hit"] for row in outcomes
+              if row.get("horizon_hours") == 48 and row.get("coverage_complete") is True
+              and type(row.get("hit")) is bool}
+    scores = challenger["shadow_scores"]
+    ids = sorted(set(scores) & set(labels) & set(baseline_decisions))
+    def metrics(decisions):
+        watched = [key for key in ids if decisions[key]]
+        hits = sum(labels[key] for key in watched)
+        movers = sum(labels[key] for key in ids)
+        return {"cohort": len(ids), "watched": len(watched), "true_positives": hits,
+                "false_positives": len(watched) - hits,
+                "precision": hits / len(watched) if watched else None,
+                "recall": hits / movers if movers else None,
+                "coverage": len(watched) / len(ids) if ids else None,
+                "missed_movers": movers - hits}
+    base = metrics(baseline_decisions)
+    shadow = metrics({key: scores[key] >= threshold for key in ids})
+    return {"schema": "shadow_score_comparison_v1", "status": "SHADOW_EVALUATED",
+            "challenger_version": challenger["version"], "baseline": base,
+            "challenger": shadow, "cohort_ids_digest": canonical_digest(ids),
+            "measured_lift_verified": False, "promotion_authorized": False,
+            "production_applied": False}
+
+
 def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *,
                            training_end_utc, holdout_start_utc, evaluation_asof_utc,
                            baseline_version, challenger_version, source_receipt=None,
