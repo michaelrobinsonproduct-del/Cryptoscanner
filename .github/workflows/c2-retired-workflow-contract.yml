@@ -251,7 +251,10 @@ jobs:
           from pathlib import Path
           runs=json.loads(Path("/tmp/c-real-receipts/d-runs.json").read_text()).get("workflow_runs", [])
           for run in runs:
-              if run.get("conclusion") != "success" or run.get("head_branch") != "runtime-readback-integrity-20261104":
+              if (run.get("conclusion") != "success"
+                      or run.get("head_branch") != "runtime-readback-integrity-20261104"
+                      or run.get("event") not in ("push", "workflow_dispatch")
+                      or str(run.get("path", "")).split("@", 1)[0] != ".github/workflows/runtime-readback-integrity.yml"):
                   continue
               rid=run["id"]
               listing=json.loads(subprocess.check_output(["gh","api",f"repos/{__import__('os').environ['REPO']}/actions/runs/{rid}/artifacts"]))
@@ -260,7 +263,11 @@ jobs:
                   continue
               artifact=matches[0]
               meta=json.loads(subprocess.check_output(["gh","api",f"repos/{__import__('os').environ['REPO']}/actions/artifacts/{artifact['id']}"]))
-              if meta.get("workflow_run",{}).get("id")!=rid or meta["workflow_run"].get("head_sha")!=run["head_sha"]:
+              if (meta.get("id") != artifact["id"]
+                      or meta.get("name") != "d2-real-writer-recovery-report"
+                      or meta.get("expired") is not False
+                      or meta.get("workflow_run",{}).get("id") != rid
+                      or meta["workflow_run"].get("head_sha") != run["head_sha"]):
                   continue
               Path("/tmp/c-real-receipts/d-selected.json").write_text(json.dumps({"run_id":rid,"sha":run["head_sha"],"artifact_id":artifact["id"],"digest":meta.get("digest")}))
               break
