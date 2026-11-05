@@ -109,7 +109,12 @@ def main():
         parser.error("--bd-output requires --from-integration")
     result = from_integration(source) if args.from_integration else consume(source)
     downstream = consume(result) if args.bd_output else None
+    # C2 callers pass nested artifact destinations. Create both directories
+    # before writing so the optional B/D handoff cannot fail halfway through
+    # solely because its parent was absent.
+    args.output.parent.mkdir(parents=True, exist_ok=True)
     if downstream is not None:
+        args.bd_output.parent.mkdir(parents=True, exist_ok=True)
         args.bd_output.write_text(json.dumps(downstream, sort_keys=True) + "\n")
     args.output.write_text(json.dumps(result, sort_keys=True) + "\n")
     print(json.dumps({"status": downstream["status"] if downstream is not None else result["status"], "watch_count": result["watch_count"], "receipt_sha256": result["receipt_sha256"], "bd_handoff_written": downstream is not None}, sort_keys=True))
