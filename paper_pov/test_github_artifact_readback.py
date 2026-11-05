@@ -60,6 +60,42 @@ def test_wrong_manifest_run_never_fetches(tmp_path):
     assert calls == []
 
 
+def test_source_bound_receipt_never_upgrades_remote_match_to_same_run(tmp_path):
+    from paper_pov import ledger
+    from paper_pov.github_artifact_readback import retrieve_and_verify
+    import hashlib
+    state = ledger.empty()
+    raw = ledger.canonical(state)
+    files = {"latest.json": b'{"status":"ABSTAIN"}',
+             "ledger.json": raw,
+             "scoreboard.json": b'{"generation":0}'}
+    files["SHA256SUMS"] = "".join(
+        hashlib.sha256(data).hexdigest() + "  " + name + "\\n"
+        for name, data in files.items()).encode()
+    def runner(args, timeout):
+        if args[:4] == ["gh", "api", "-X", "GET"]:
+            endpoint = args[4]
+            if "/artifacts" in endpoint:
+                return json.dumps({"total_count":1,"artifacts":[
+                    {"id":91,"name":"public-paper-ledger-123","expired":False}]}).encode()
+            if "/actions/runs/" in endpoint:
+                return json.dumps({"id":123,"head_sha":SHA,"status":"completed",
+                    "conclusion":"success","repository":{"full_name":REPO}}).encode()
+            raise subprocess.CalledProcessError(1, args, output=b"Not Found")
+        root = Path(args[-1])
+        for name, data in files.items():
+            (root / name).write_bytes(data)
+        return b""
+    result = retrieve_and_verify(REPO, "123", "public-paper-ledger", None, SHA,
+                                 runner=runner, ledger_ref="historical-ledger")
+    bound = result["source_bound_receipt"]
+    assert bound["run_id"] == "123" and bound["source_sha"] == SHA
+    assert bound["ledger_receipt_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert bound["sha256sums_sha256"] == hashlib.sha256(files["SHA256SUMS"]).hexdigest()
+    assert result["same_run_reconciliation"]["status"] == "ABSTAIN"
+    assert result["same_run_reconciliation"]["live_watch_authorized"] is False
+
+
 def test_real_writer_artifact_name_and_nested_paths(tmp_path):
     """Use actual paper-pipeline artifact name and nested receipt layout."""
     from pathlib import Path
