@@ -253,6 +253,8 @@ class DeliveryProjectionTests(unittest.TestCase):
                                  "ledger_commit": published["ledger_commit"]},
              "remote_ledger_reconciliation": {
                  "status": "MATCH", "recovered_sha256": "c"*64,
+                 "recovered_ledger_sha256": published["ledger_sha256"],
+                 "remote_ledger_sha256": published["ledger_sha256"],
                  "remote_sha256": "c"*64,
                  "recovered_generation": published["ledger_generation"],
                  "remote_generation": published["ledger_generation"],
@@ -266,6 +268,11 @@ class DeliveryProjectionTests(unittest.TestCase):
         self.assertTrue(result["fresh_watch_delivery_verified"])
         self.assertTrue(result["live_watch_authorized"])
         self.assertEqual(result["live_watch"], published["candidates"])
+        d["remote_ledger_reconciliation"]["recovered_ledger_sha256"] = "d"*64
+        with patch("datetime.datetime", AtReceiptTime):
+            with self.assertRaisesRegex(ValueError, "digest contradiction"):
+                project_published_result(published, d)
+        d["remote_ledger_reconciliation"]["recovered_ledger_sha256"] = published["ledger_sha256"]
         d["persisted_paper"]["ledger_commit"] = "f"*40
         with patch("datetime.datetime", AtReceiptTime):
             with self.assertRaisesRegex(ValueError, "commit contradicts"):
