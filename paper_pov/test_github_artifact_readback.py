@@ -71,7 +71,7 @@ def test_source_bound_receipt_never_upgrades_remote_match_to_same_run(tmp_path):
              "ledger.json": raw,
              "scoreboard.json": b'{"generation":0}'}
     files["SHA256SUMS"] = "".join(
-        hashlib.sha256(data).hexdigest() + "  " + name + "\\n"
+        hashlib.sha256(data).hexdigest() + "  " + name + "\n"
         for name, data in files.items()).encode()
     def runner(args, timeout):
         if args[:4] == ["gh", "api", "-X", "GET"]:
