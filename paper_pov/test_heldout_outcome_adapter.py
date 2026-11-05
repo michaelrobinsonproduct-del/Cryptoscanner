@@ -68,6 +68,25 @@ class OutcomeAdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Missing cross-horizon"):
             self.evaluate([row("p", 48), incomplete])
 
+    def test_equivalent_utc_offsets_share_frozen_identity(self):
+        result = self.evaluate([row("p", 48), row("p", 6,
+            entry_utc="2026-08-03T20:00:00-04:00",
+            feature_asof_utc="2026-08-03T19:55:00-04:00",
+            source_sha256="A"*64)])
+        self.assertEqual(result["four_horizon_complete_predictions"], 1)
+        self.assertEqual(result["status"], "NO_QUALIFIED_RULE")
+
+    def test_invalid_abstention_identity_cannot_hide_behind_valid_48h(self):
+        bad = row("p", 6, coverage_complete=False,
+                  entry_utc="not-a-timestamp")
+        with self.assertRaisesRegex(ValueError, "Invalid cross-horizon"):
+            self.evaluate([row("p", 48), bad])
+
+    def test_invalid_abstention_digest_cannot_hide_behind_valid_48h(self):
+        bad = row("p", 6, coverage_complete=False, source_sha256="bad")
+        with self.assertRaisesRegex(ValueError, "Invalid cross-horizon"):
+            self.evaluate([row("p", 48), bad])
+
     def test_read_only_b_handoff(self):
         payload = dict(outcomes=[row("p", h) for h in (1, 6, 24, 48)], baseline_decisions={"p": True},
                        challenger_decisions={"p": False},
