@@ -53,6 +53,29 @@ class SnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "missing source evidence"):
             read_snapshot(self.latest, NOW)
 
+    def test_incomplete_coverage_all_rejection_categories(self):
+        self.report["watch"] = []
+        self.report["scan_status"] = "ABSTAIN_INCOMPLETE_TICKER_COVERAGE"
+        self.report["ticker_coverage_complete"] = False
+        self.report["observed_markets"] = 19
+        for category in ("missing_or_invalid_payload", "invalid_price_or_volume",
+                         "nonfinite_derived_metric"):
+            with self.subTest(category=category):
+                self.report["ticker_rejections"] = {
+                    "missing_or_invalid_payload": 0,
+                    "invalid_price_or_volume": 0,
+                    "nonfinite_derived_metric": 0,
+                }
+                self.report["ticker_rejections"][category] = 1
+                self.seal()
+                self.assertEqual(read_snapshot(self.latest, NOW)["watch"], [])
+        for bad in (0, -1, True, "1"):
+            with self.subTest(bad=bad):
+                self.report["ticker_rejections"] = {"invalid_price_or_volume": bad}
+                self.seal()
+                with self.assertRaisesRegex(ValueError, "ticker evidence"):
+                    read_snapshot(self.latest, NOW)
+
     def test_realistic_watch_readback(self):
         result = read_snapshot(self.latest, NOW)
         self.assertEqual(result["watch"][0]["pair"], "TESTUSD")
