@@ -264,6 +264,10 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
     # cannot prove the exact persisted payload was recovered.
     if same_run_writer and writer_readback is not None:
         persisted = writer_readback["persisted_paper"]
+        # An exact-run ledger receipt must attest the same scan outcome.
+        # A recovered ABSTAIN must never authorize a publisher's WATCH.
+        if persisted["scan_status"] != result["status"]:
+            raise ValueError("same-run D persisted scan status contradicts publisher")
         persisted_commit = persisted.get("ledger_commit")
         if persisted_commit is not None and persisted_commit != result["ledger_commit"]:
             raise ValueError("same-run D persisted ledger commit contradicts publisher")
