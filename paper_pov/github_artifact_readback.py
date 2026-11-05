@@ -255,9 +255,45 @@ def retrieve_and_verify(repo, run_id, artifact_name, manifest, source_sha, *, ru
             result["independently_authenticated"] = True
         if artifact_name == f"public-paper-ledger-{run_id}":
             result["persisted_paper"] = summarize_persisted_paper(files)
+            # Bind the restored receipt to the immutable source run, exact
+            # checksum inventory and logical ledger. This is not independent
+            # authentication of the advancing remote branch.
+            inventory_path = next(name for name in files
+                                  if name == "SHA256SUMS" or name.endswith("/SHA256SUMS"))
+            ledger_file = next(name for name in files
+                               if name == "ledger.json" or name.endswith("/ledger.json"))
+            from paper_pov import ledger as ledger_module, segmented_storage as storage
+            try:
+                ledger_state = json.loads(files[ledger_file])
+                ledger_module.verify(ledger_state, storage.MAX_RAW_BYTES)
+            except (ValueError, TypeError, KeyError, IntegrityError) as exc:
+                raise IntegrityError("Restored writer ledger failed logical verification") from exc
+            result["source_bound_receipt"] = {
+                "run_id": str(run_id),
+                "source_sha": source_sha,
+                "artifact_id": matches[0].get("id"),
+                "sha256sums_sha256": hashlib.sha256(files[inventory_path]).hexdigest(),
+                "ledger_receipt_sha256": hashlib.sha256(files[ledger_file]).hexdigest(),
+                "ledger_sha256": ledger_state["sha256"],
+                "ledger_generation": ledger_state["generation"],
+                "independently_authenticated": False,
+            }
         if ledger_ref is not None:
-            result["remote_ledger_reconciliation"] = reconcile_remote_ledger(
+            reconciliation = reconcile_remote_ledger(
                 repo, ledger_ref, ledger_path, files, runner=runner)
+            result["remote_ledger_reconciliation"] = reconciliation
+            # MATCH to a moving branch does not prove the branch checkpoint
+            # was published by this specific historical source run.
+            result["same_run_reconciliation"] = {
+                "status": "ABSTAIN",
+                "reason": "REMOTE_" + reconciliation["status"] + "_NOT_IMMUTABLY_BOUND_TO_SOURCE_RUN",
+                "run_id": str(run_id),
+                "source_sha": source_sha,
+                "remote_checkpoint_sha": reconciliation.get("remote_checkpoint_sha"),
+                "ledger_receipt_sha256": result.get("source_bound_receipt", {}).get("ledger_receipt_sha256"),
+                "live_watch_authorized": False,
+                "independently_authenticated": False,
+            }
         if restore_dir is not None:
             destination = Path(restore_dir)
             if destination.exists():
