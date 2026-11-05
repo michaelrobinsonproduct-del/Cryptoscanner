@@ -147,8 +147,17 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             for pair in missing:
                 try:
                     retry = api("Ticker?pair=" + urllib.parse.quote(pair, safe=""))
-                    if isinstance(retry, dict) and set(retry) == {pair} and isinstance(retry[pair], dict):
-                        ticker[pair] = retry[pair]
+                    # Kraken can key a single-pair Ticker result by the
+                    # declared altname instead of its AssetPairs REST key.
+                    # Resolve only an unambiguous, source-declared identity.
+                    alias = ohlc_aliases[pair]
+                    accepted = {pair}
+                    if len(alias_owners[alias]) == 1:
+                        accepted.add(alias)
+                    if (isinstance(retry, dict) and len(retry) == 1
+                            and next(iter(retry)) in accepted
+                            and isinstance(next(iter(retry.values())), dict)):
+                        ticker[pair] = next(iter(retry.values()))
                 except (OSError, TimeoutError, RuntimeError, ValueError, KeyError):
                     pass  # Retain incomplete coverage and abstain below.
     quote_at = clock().astimezone(UTC)
