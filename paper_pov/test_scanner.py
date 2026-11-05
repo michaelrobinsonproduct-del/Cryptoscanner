@@ -155,6 +155,24 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["scan_status"], "ABSTAIN_NO_QUALIFIED_OHLC")
         self.assertEqual(report["abstention_counts"]["ohlc_gap_or_schema"], 24)
 
+    def test_ohlc_altname_colliding_with_another_pair_key_abstains(self):
+        base = fixture()
+        def api(path):
+            result = base(path)
+            if path == "AssetPairs":
+                return {key: dict(meta, altname=("C1USD" if key == "C0USD"
+                                               else "ALT" + key))
+                        for key, meta in result.items()}
+            if path.startswith("OHLC?"):
+                key = path.split("pair=")[1].split("&")[0]
+                returned = "C1USD" if key == "C0USD" else "ALT" + key
+                return {returned: result[key], "last": result["last"]}
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertNotIn("C0USD", {item["pair"] for item in report["watch"]})
+        self.assertEqual(report["abstention_counts"]["ohlc_gap_or_schema"], 1)
+        self.assertEqual(report["ohlc_screened"], 24)
+
     def test_ohlc_unrelated_alias_abstains_without_wrong_market_data(self):
         base = fixture()
         def api(path):
