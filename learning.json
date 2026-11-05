@@ -2,19 +2,19 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 7638,
+      "matured_snapshots": 7647,
       "evaluated": 7038,
-      "coverage_pct": 92.1,
-      "unresolved": 600,
-      "no_observation_in_window": 600
+      "coverage_pct": 92.0,
+      "unresolved": 609,
+      "no_observation_in_window": 609
     },
     {
       "hours": 3,
-      "matured_snapshots": 7638,
+      "matured_snapshots": 7647,
       "evaluated": 6673,
-      "coverage_pct": 87.4,
-      "unresolved": 965,
-      "no_observation_in_window": 965
+      "coverage_pct": 87.3,
+      "unresolved": 974,
+      "no_observation_in_window": 974
     },
     {
       "hours": 6,
@@ -26,11 +26,11 @@
     },
     {
       "hours": 24,
-      "matured_snapshots": 7602,
+      "matured_snapshots": 7614,
       "evaluated": 6518,
-      "coverage_pct": 85.7,
-      "unresolved": 1084,
-      "no_observation_in_window": 1084
+      "coverage_pct": 85.6,
+      "unresolved": 1096,
+      "no_observation_in_window": 1096
     }
   ],
   "outcome_lag_hours_by_horizon": [
@@ -55,9 +55,9 @@
       "average_delay_hours": 0.356
     }
   ],
-  "unresolved_1h_snapshots": 600,
+  "unresolved_1h_snapshots": 609,
   "rank_comparison": {
-    "historical_ranked_samples": 7359,
+    "historical_ranked_samples": 7365,
     "mean_base_minus_early_rank": 1.77
   },
   "newly_discovered_outside_base_top12": 0,
@@ -108,11 +108,6 @@
       "next_scan_gain_pct": 41.71
     },
     {
-      "pair": "SYNDUSD",
-      "observed_at": "2026-10-29T19:45:38.230920+00:00",
-      "next_scan_gain_pct": 33.71
-    },
-    {
       "pair": "FRNTUSD",
       "observed_at": "2026-10-31T14:08:49.750367+00:00",
       "next_scan_gain_pct": 33.33
@@ -146,13 +141,18 @@
       "pair": "DENTUSD",
       "observed_at": "2026-10-30T04:43:01.634552+00:00",
       "next_scan_gain_pct": 24.58
+    },
+    {
+      "pair": "WARUSD",
+      "observed_at": "2026-10-30T14:30:17.316025+00:00",
+      "next_scan_gain_pct": 24.0
     }
   ],
-  "unselected_gainers_5pct_observations": 372,
-  "market_observations": 405110,
-  "market_price_coverage": 614,
-  "feature_rows": 7527,
-  "snapshots": 7647,
+  "unselected_gainers_5pct_observations": 329,
+  "market_observations": 405726,
+  "market_price_coverage": 616,
+  "feature_rows": 7533,
+  "snapshots": 7653,
   "outcomes": 26890,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
