@@ -14,7 +14,7 @@ concurrency:
 jobs:
   integrate:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 330
     steps:
       - uses: actions/checkout@v4
         with:
@@ -77,6 +77,49 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Autonomous implementation prerequisites (fail visibly; no green no-op)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$COPILOT_GITHUB_TOKEN" ]; then
+            echo "::error::Autonomous coding requires the COPILOT_GITHUB_TOKEN repository secret with GitHub Copilot CLI access. Source merging and tests alone cannot implement missing code."
+            exit 1
+          fi
+          npm install --global @github/copilot
+          command -v copilot
+      - name: Implement unfinished A-E functionality on persistent integration branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cat > /tmp/cryptoscanner-build-prompt.txt <<'PROMPT'
+          You are implementing unfinished Cryptoscanner A-E functionality, not running a scanner or writing reports.
+          Read docs/EXECUTION_QUEUE.md and source. Work on the existing checked-out cryptoscanner-quota-free-integration branch.
+          Implement a substantial coherent batch, prioritizing in order:
+          1. Connect the actual single-writer main paper publisher to authenticated quote-complete results and B manual/scheduled delivery parity, without a second writer.
+          2. Integrate A2 receipt and D exact-source readback, preserving fail-closed stale/invalid data semantics.
+          3. Connect E source-qualified 1/6/24/48-hour outcomes and 48h-purged identical-cohort learning with no-improvement fallback.
+          4. Make genuine scored WATCH output and abstentions visible, with numerical baseline/challenger scores and provenance.
+          Work in code, not status-only changes. Fix failures caused by your edits. Run focused tests, then proceed to the next code task.
+          Never deploy, merge, restart production, trade, force push, mutate paper-proof-ledger, fabricate data, bypass checks, or promote scoring.
+          Only modify the isolated integration branch. Do not touch GitHub workflow files.
+          At the end summarize exact changed paths, tests, functional behavior and remaining gaps in .integration/implementation-summary.md.
+          PROMPT
+          # An AI coding agent is necessary for open-ended code implementation;
+          # do not pretend shell-only branch merging can write missing functionality.
+          copilot -p "$(cat /tmp/cryptoscanner-build-prompt.txt)" --allow-all-tools
+          git diff --check
+          git status --short
+          if ! git diff --quiet || ! git diff --cached --quiet; then
+            git add -- paper_pov docs .integration
+            git diff --cached --check
+            git commit -m "integration: implement A-E completion batch"
+          fi
+          gh auth setup-git
+          git push origin HEAD:refs/heads/cryptoscanner-quota-free-integration
       - name: Compile all integrated Python sources before running tests
         run: |
           set -euo pipefail
