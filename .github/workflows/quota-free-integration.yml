@@ -118,6 +118,29 @@ jobs:
             echo "Tests and contract gates must pass before review; this job does not deploy or write the paper ledger."
             echo "The authoritative main publisher is unchanged until an explicitly reviewed integration."
           } | tee .integration/completion-report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep one review PR and issue 34 updated with the actual integration result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          BRANCH=cryptoscanner-quota-free-integration
+          PR_URL="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --state open --json url --jq '.[0].url // empty')"
+          if [ -z "$PR_URL" ]; then
+            PR_URL="$(gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title 'A-E integrated scanner completion (review only)' --body 'Integration of existing owner code. CI compiles and runs full regression gates. Do not merge until verified published quote-complete delivery and historical learning are functional. No production writer changes.' 2>&1)" || {
+              echo "PR_CREATION_UNAVAILABLE: $PR_URL" >> "$GITHUB_STEP_SUMMARY"
+              PR_URL=""
+            }
+          fi
+          {
+            echo "### A-E completion integration: $JOB_STATUS"
+            echo "Run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "Integrated branch: $BRANCH"
+            echo "Review PR: ${PR_URL:-UNAVAILABLE}"
+            echo "Publisher/delivery/learning completion is NOT implied by a green job."
+          } > /tmp/cryptoscanner-integration-comment.md
+          gh issue comment 34 --repo "$GITHUB_REPOSITORY" --body-file /tmp/cryptoscanner-integration-comment.md
       - uses: actions/upload-artifact@v4
         if: always()
         with:
