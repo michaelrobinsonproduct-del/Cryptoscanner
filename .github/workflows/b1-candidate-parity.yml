@@ -7,6 +7,8 @@ on:
       - '.github/workflows/b1-candidate-parity.yml'
       - 'paper_pov/github_delivery_projection.py'
       - 'paper_pov/test_github_delivery_projection.py'
+      - 'paper_pov/manual_schedule_contract.py'
+      - 'paper_pov/test_manual_schedule_contract.py'
       - 'paper_pov/scanner.py'
       - 'paper_pov/test_scanner.py'
       - 'paper_pov/preselection_universe.py'
@@ -66,7 +68,7 @@ jobs:
       - name: A core Kraken quote-to-immutable-snapshot acceptance
         run: python -m unittest paper_pov.test_scanner paper_pov.test_candidate_snapshot paper_pov.test_a1_a2_end_to_end paper_pov.test_a2_artifact_consumer -v
       - name: Read-only GitHub artifact transport and checksum acceptance
-        run: python -m unittest paper_pov.test_github_sealed_bundle_readback paper_pov.test_github_delivery_projection -v
+        run: python -m unittest paper_pov.test_github_sealed_bundle_readback paper_pov.test_github_delivery_projection paper_pov.test_manual_schedule_contract -v
       - name: Verify exact checkout
         run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 
