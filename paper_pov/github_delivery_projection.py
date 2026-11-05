@@ -234,6 +234,13 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
         if symbol in seen_candidate_symbols:
             raise ValueError("duplicate published WATCH candidate")
         seen_candidate_symbols.add(symbol)
+        import math
+        for metric in ("price_usd", "baseline_score", "challenger_score", "move15_pct", "volume_accel"):
+            value = candidate[metric]
+            if type(value) not in (int, float) or not math.isfinite(value):
+                raise ValueError("invalid published WATCH numeric evidence")
+        if candidate["price_usd"] <= 0 or not isinstance(candidate["risk"], str) or not candidate["risk"]:
+            raise ValueError("invalid published WATCH price or risk")
         quote = by_symbol.get(symbol)
         if quote is None or candidate["price_usd"] != quote["price"] or _utc(candidate["quote_observed_at"]) != _utc(quote["observed_at"]):
             raise ValueError("WATCH candidate lacks matching fresh quote")
