@@ -129,6 +129,7 @@ jobs:
               raw=subprocess.check_output(["gh","api",f"repos/{os.environ['REPO']}/actions/runs/{run['id']}/artifacts"],timeout=30)
               matches=[a for a in json.loads(raw).get("artifacts",[]) if a.get("name")=="d2-real-writer-recovery-report"
                   and a.get("expired") is False and a.get("workflow_run",{}).get("id")==run["id"]
+                  and a.get("workflow_run",{}).get("head_sha")==run.get("head_sha")
                   and str(a.get("digest","")).startswith("sha256:")]
               if len(matches)!=1:
                   continue
