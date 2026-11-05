@@ -355,12 +355,17 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     screened_by_pair = {x["pair"]: x for x in screened}
     preselection_decisions = {
         "SCREEN_REJECTED": 0, "NOT_OHLC_SELECTED": 0,
+        "SOURCE_COVERAGE_ABSTAINED": 0,
         "OHLC_ABSTAINED": 0, "WATCH": 0,
     }
     for row in preselection:
         pair = row["pair"]
         if not row["screen_passed"]:
             decision = "SCREEN_REJECTED"
+        elif incomplete_ticker:
+            # Valid individual quotes cannot be treated as OHLC-budget misses
+            # when incomplete source coverage disabled the entire selection.
+            decision = "SOURCE_COVERAGE_ABSTAINED"
         elif pair not in selected_pairs:
             decision = "NOT_OHLC_SELECTED"
         elif pair in abstention_by_pair:
