@@ -580,10 +580,22 @@ jobs:
           bridge=json.loads((root/"cd-bridge.json").read_text())
           published=json.loads((root/"b-published/results.json").read_text())
           assert str(published["run_id"])==str(json.loads((root/"b-selected.json").read_text())["run_id"])
+          selected=json.loads((root/"b-selected.json").read_text())
+          # A blocked delivery must still carry the actual published scan's
+          # useful status, trigger and candidate summary. Never substitute
+          # C's unrelated historical A2 replay as current WATCH results.
+          summary=published.get("delivery_summary")
+          if not isinstance(summary,dict):
+              summary=None
           result={"schema":"paper_c_bd_integration_abstention_v1",
                   "status":(root/"b-delivery-blocker").read_text(),
-                  "source_run_id":json.loads((root/"b-selected.json").read_text())["run_id"],
+                  "source_run_id":selected["run_id"],
                   "source_sha":published["source_sha"],
+                  "published_scan_status":published.get("status"),
+                  "published_trigger":published.get("event"),
+                  "published_observed_markets":published.get("observed_markets"),
+                  "published_eligible_pairs":published.get("eligible_pairs"),
+                  "published_delivery_summary":summary,
                   "writer_recovery_status":bridge["writer_recovery"]["status"],
                   "writer_recovery_ready":bridge["writer_recovery"]["delivery_projection_ready"],
                   "historical_a2_watch_count":bridge["historical_a2"]["watch_count"],
