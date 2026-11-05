@@ -458,9 +458,12 @@ jobs:
                   if str(result.get("run_id"))!=str(rid) or result.get("source_sha")!=run["head_sha"]:
                       continue
                   quotes=result.get("quote_evidence")
-                  complete=(isinstance(quotes,list) and type(result.get("observed_markets")) is int
-                            and result["observed_markets"] > 0
-                            and len(quotes)==result["observed_markets"]
+                  complete=(isinstance(quotes,list)
+                            and type(result.get("eligible_pairs")) is int
+                            and type(result.get("observed_markets")) is int
+                            and result["eligible_pairs"] > 0
+                            and result["observed_markets"] == result["eligible_pairs"]
+                            and len(quotes) == result["observed_markets"]
                             and all(isinstance(q,dict) for q in quotes))
                   # Prefer a verified artifact from D's exact source even if
                   # its quote cohort is incomplete. This preserves the correct
@@ -517,9 +520,12 @@ jobs:
           p=Path("/tmp/c-real-receipts/b-published/results.json")
           r=json.loads(p.read_text())
           quotes=r.get("quote_evidence")
-          complete=(isinstance(quotes,list) and type(r.get("observed_markets")) is int
-                    and r["observed_markets"] > 0
-                    and len(quotes)==r["observed_markets"]
+          complete=(isinstance(quotes,list)
+                    and type(r.get("eligible_pairs")) is int
+                    and type(r.get("observed_markets")) is int
+                    and r["eligible_pairs"] > 0
+                    and r["observed_markets"] == r["eligible_pairs"]
+                    and len(quotes) == r["observed_markets"]
                     and all(isinstance(q,dict) for q in quotes))
           # Quote completeness alone is insufficient: the recovered writer
           # must describe this exact published scan, not a different cohort.
@@ -533,7 +539,7 @@ jobs:
           Path("/tmp/c-real-receipts/b-delivery-blocker").write_text(
               "NONE" if complete and same_scan and writer_ready else
               "ABSTAIN_D_WRITER_READBACK_NOT_VERIFIED" if not writer_ready else
-              "ABSTAIN_PUBLISHED_QUOTE_EVIDENCE_MISSING" if not complete else
+              "ABSTAIN_INCOMPLETE_TICKER_COVERAGE" if not complete else
               "ABSTAIN_WRITER_READBACK_DIFFERENT_SCAN")
           print("PUBLISHED_QUOTE_COVERAGE",len(quotes) if isinstance(quotes,list) else "missing",r.get("observed_markets"))
           print("SAME_SCAN_WRITER_READBACK",same_scan)
