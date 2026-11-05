@@ -24,6 +24,15 @@ def bridge(integration, readback, *, restored_latest=None):
     sha = readback.get("source_sha")
     if not isinstance(run_id, str) or not run_id.isdigit() or not isinstance(sha, str) or len(sha) != 40 or any(c not in "0123456789abcdef" for c in sha):
         raise ValueError("D run identity missing")
+    # The D artifact transport and the recovered writer are distinct identities.
+    # Validate a supplied source-bound receipt at this C boundary too, so
+    # direct bridge callers cannot bypass the workflow-level identity check.
+    receipt = readback.get("source_bound_receipt")
+    if receipt is not None:
+        if (not isinstance(receipt, dict)
+                or str(receipt.get("run_id")) != run_id
+                or receipt.get("source_sha") != sha):
+            raise ValueError("D source-bound receipt disagrees with recovered writer")
     independent = readback.get("independently_authenticated")
     if independent is not (readback["status"] == "VERIFIED_REMOTE_READBACK"):
         raise ValueError("D independent verification status inconsistent")
