@@ -313,6 +313,18 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
         "trigger": "manual" if event == "workflow_dispatch" else "scheduled",
         "watch_count": len(visible_watch),
         "top_watch": visible_watch[0] if visible_watch else None,
+        "ranked_watch": [
+            {"rank": c["rank"], "symbol": c["symbol"],
+             "price_usd": c["price_usd"], "baseline_score": c["baseline_score"],
+             "challenger_score": c["challenger_score"],
+             "move15_pct": c["move15_pct"], "volume_accel": c["volume_accel"],
+             "quote_observed_at": c["quote_observed_at"], "risk": c["risk"],
+             "status": c["status"]}
+            for c in visible_watch
+        ],
+        "observed_markets": result["observed_markets"],
+        "quote_evidence_complete": len(quotes) == result["observed_markets"],
+        "delivery_blocked": bool(candidates) and not bool(visible_watch),
         "learning_status": "NO_QUALIFIED_RULE" if learning is not None else "LEARNING_EVIDENCE_UNAVAILABLE",
         "source_run_id": int(run_id),
         "ledger_generation": generation,
