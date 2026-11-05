@@ -100,7 +100,7 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                     # blob identity, not just a checksum in the packed manifest.
                     blob_sha = obj.get("sha")
                     expected_blob = hashlib.sha1(
-                        b"blob " + str(len(payload)).encode("ascii") + b"\\0" + payload
+                        b"blob " + str(len(payload)).encode("ascii") + b"\x00" + payload
                     ).hexdigest()
                     if (obj.get("size") != len(payload) or
                             not isinstance(blob_sha, str) or blob_sha != expected_blob):
@@ -116,7 +116,7 @@ def reconcile_remote_ledger(repo, ref, path, recovered, *, runner=subprocess.che
                     raise IntegrityError("Remote packed ledger blob identity mismatch")
                 payload = base64.b64decode("".join(blob["content"].split()), validate=True)
                 expected_blob = hashlib.sha1(
-                    b"blob " + str(len(payload)).encode("ascii") + b"\\0" + payload
+                    b"blob " + str(len(payload)).encode("ascii") + b"\x00" + payload
                 ).hexdigest()
                 if len(payload) != obj.get("size") or expected_blob != blob_sha:
                     raise IntegrityError("Remote packed ledger blob identity mismatch")
