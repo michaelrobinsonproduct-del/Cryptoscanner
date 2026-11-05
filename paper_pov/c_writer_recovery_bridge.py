@@ -33,6 +33,7 @@ def bridge(integration, readback, *, restored_latest=None):
                 or str(receipt.get("run_id")) != run_id
                 or receipt.get("source_sha") != sha):
             raise ValueError("D source-bound receipt disagrees with recovered writer")
+    receipt_matches = isinstance(receipt, dict) and type(receipt.get("run_id")) is str and receipt["run_id"] == run_id and receipt.get("source_sha") == sha
     independent = readback.get("independently_authenticated")
     if independent is not (readback["status"] == "VERIFIED_REMOTE_READBACK"):
         raise ValueError("D independent verification status inconsistent")
@@ -54,6 +55,9 @@ def bridge(integration, readback, *, restored_latest=None):
     writer_delivery_ready = (
         readback["status"] == "VERIFIED_REMOTE_READBACK"
         and independent is True
+        # Historical fixtures without a receipt remain readable, but cannot
+        # export an unbound writer identity to B as delivery-ready.
+        and receipt_matches
         and isinstance(persisted, dict)
         and type(persisted.get("ledger_generation")) is int
         and persisted["ledger_generation"] >= 0
@@ -82,7 +86,8 @@ def bridge(integration, readback, *, restored_latest=None):
             "delivery_blocker": (
                 None if writer_delivery_ready else
                 "D_REMOTE_READBACK_NOT_INDEPENDENTLY_AUTHENTICATED"
-                if not independent else "D_REMOTE_LEDGER_RECONCILIATION_NOT_MATCH"
+                if not independent else "D_SOURCE_BOUND_RECEIPT_MISSING"
+                if not receipt_matches else "D_REMOTE_LEDGER_RECONCILIATION_NOT_MATCH"
                 if isinstance(reconciliation, dict) and reconciliation.get("status") != "MATCH"
                 else "D_REMOTE_LEDGER_RECONCILIATION_MISSING"
                 if reconciliation is None and isinstance(persisted, dict)
