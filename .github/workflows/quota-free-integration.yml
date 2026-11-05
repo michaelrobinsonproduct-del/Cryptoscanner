@@ -34,6 +34,7 @@ jobs:
             git checkout -B "$BRANCH"
           fi
           mkdir -p .integration
+          : > .integration/status.txt
           # Only the coordination document may keep the integration branch's version.
           # Source-code conflicts remain fatal and visible.
           git config merge.keep-current.driver true
@@ -59,7 +60,7 @@ jobs:
               git diff --name-only --diff-filter=U | tee .integration/conflicts.txt
               git merge --abort
               echo "CONFLICT BLOCKED: $SOURCE" | tee -a .integration/status.txt
-              break
+              exit 1
             fi
           done
           git add .integration/status.txt
@@ -75,7 +76,6 @@ jobs:
           set -euo pipefail
           mkdir -p paper_pov/output
           PAPER_REPORT_PATH=paper_pov/output/latest.json python -m paper_pov.scanner
-          python -m paper_pov.candidate_snapshot --help >/dev/null
           test -s paper_pov/output/latest.json
           test -s paper_pov/output/candidate-snapshot.json
           test -s paper_pov/output/preselection-universe.json
