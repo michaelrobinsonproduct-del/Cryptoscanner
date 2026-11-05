@@ -80,6 +80,8 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     clock = clock or (lambda: dt.datetime.now(UTC))
     started = clock().astimezone(UTC)
     pairs = api("AssetPairs")
+    if not isinstance(pairs, dict):
+        raise ValueError("invalid Kraken AssetPairs response")
     eligible = {}
     ohlc_aliases = {}
     # Kraken may expose multiple pair identifiers for the same display market.
@@ -89,13 +91,20 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     online_usd_pairs = 0
     excluded_stablecoin_pairs = 0
     excluded_other_pairs = 0
-    for key, meta in sorted(pairs.items()):
+    # A malformed REST identifier must not abort sorting of otherwise valid
+    # Kraken markets or leak into a Ticker/OHLC request. Count online USD
+    # entries with invalid keys as non-tradable source exclusions.
+    for key, meta in sorted(pairs.items(), key=lambda entry: str(entry[0])):
         if not isinstance(meta, dict) or meta.get("status") != "online":
             continue
         name = meta.get("wsname", "")
         if not isinstance(name, str) or not name.endswith("/USD"):
             continue
         online_usd_pairs += 1
+        if (not isinstance(key, str) or not key or len(key) > 128
+                or any(ch.isspace() or ord(ch) < 33 for ch in key)):
+            excluded_other_pairs += 1
+            continue
         # Validate the public display identity before accepting its ticker.
         # Otherwise malformed online /USD metadata (extra slash, whitespace,
         # empty base) can produce a WATCH that A2 cannot read back, or hide
