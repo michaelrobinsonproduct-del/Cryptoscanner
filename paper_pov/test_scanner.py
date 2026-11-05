@@ -112,8 +112,9 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["observed_markets"], 24)
         self.assertEqual(report["watch"], [])
         self.assertEqual(report["ohlc_screened"], 0)
-        self.assertEqual(report["preselection_decisions"]["NOT_OHLC_SELECTED"],
+        self.assertEqual(report["preselection_decisions"]["SOURCE_COVERAGE_ABSTAINED"],
                          report["screened_markets"])
+        self.assertEqual(report["preselection_decisions"]["NOT_OHLC_SELECTED"], 0)
 
     def test_severely_sparse_ticker_persists_truthful_abstention(self):
         report = run(coverage=True)
