@@ -193,10 +193,9 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             continue
     if len(observations) + sum(ticker_rejections.values()) != len(eligible):
         raise RuntimeError("Ticker coverage accounting mismatch")
-    if matched < max(20, math.ceil(len(eligible) * 0.8)):
-        raise RuntimeError("Incomplete Kraken ticker universe coverage")
-    if len(observations) < max(20, math.ceil(matched * 0.8)):
-        raise RuntimeError("Insufficient valid ticker observations")
+    # A sparse but structurally valid Ticker response is an observable scan
+    # abstention, not an uncaught failure that prevents receipt persistence.
+    # Preserve exact missing/invalid counts so B can deliver the failure reason.
     if len(preselection) != len(observations):
         raise RuntimeError("Preselection universe coverage mismatch")
     # Any missing, malformed, or nonfinite ticker prevents WATCH authorization.
