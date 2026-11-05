@@ -142,6 +142,50 @@ def read_snapshot(latest_path, now=None, max_age_seconds=600):
                          else "ELEVATED")
         if candidate.get("risk") != expected_risk:
             raise ValueError("invalid WATCH risk classification")
+    # A current scanner receipt carries the full ticker inventory and the
+    # selected-market decision ledger. The WATCH projection must agree with
+    # that source evidence, not merely be internally well-formed. Historical
+    # fixture receipts without either ledger retain their older contract.
+    observations = report.get("observations")
+    preselection = report.get("preselection_universe")
+    if observations is not None or preselection is not None:
+        if not isinstance(observations, list) or not isinstance(preselection, list):
+            raise ValueError("incomplete WATCH source inventory")
+        if len(observations) != report["observed_markets"] or len(preselection) != len(observations):
+            raise ValueError("WATCH source inventory coverage mismatch")
+        observed_by_pair = {}
+        for row in observations:
+            if not isinstance(row, dict) or not isinstance(row.get("pair"), str) or row["pair"] in observed_by_pair:
+                raise ValueError("duplicate or invalid source observation")
+            observed_by_pair[row["pair"]] = row
+        selection_by_pair = {}
+        for row in preselection:
+            if not isinstance(row, dict) or not isinstance(row.get("pair"), str) or row["pair"] in selection_by_pair:
+                raise ValueError("duplicate or invalid preselection source")
+            selection_by_pair[row["pair"]] = row
+        if set(observed_by_pair) != set(selection_by_pair):
+            raise ValueError("WATCH source inventory identity mismatch")
+        watch_by_pair = {c["pair"]: c for c in watch}
+        for pair, row in selection_by_pair.items():
+            observed = observed_by_pair[pair]
+            if (row.get("symbol") != observed.get("symbol") or
+                    row.get("price") != observed.get("price") or
+                    row.get("quote_observed_at") != observed.get("observed_at")):
+                raise ValueError("preselection quote contradicts observed source")
+            if row.get("selection_status") == "WATCH":
+                candidate = watch_by_pair.get(pair)
+                if (candidate is None or row.get("screen_passed") is not True or
+                        row.get("watch_rank") != candidate["rank"] or
+                        row.get("baseline_score") != candidate["baseline_score"]):
+                    raise ValueError("WATCH source selection contradiction")
+            elif pair in watch_by_pair:
+                raise ValueError("WATCH candidate not authorized by selection ledger")
+        for candidate in watch:
+            observed = observed_by_pair.get(candidate["pair"])
+            if (observed is None or candidate["symbol"] != observed.get("symbol") or
+                    candidate["price"] != observed.get("price") or
+                    candidate["quote_observed_at"] != observed.get("observed_at")):
+                raise ValueError("WATCH candidate contradicts source quote")
     if latest.is_symlink() or latest.read_bytes() != raw:
         raise ValueError("snapshot changed during verification")
     return {"as_of": report["as_of"], "scan_status": report["scan_status"],
