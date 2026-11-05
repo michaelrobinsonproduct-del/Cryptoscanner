@@ -71,6 +71,10 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     started = clock().astimezone(UTC)
     pairs = api("AssetPairs")
     eligible = {}
+    # Kraken may expose multiple pair identifiers for the same display market.
+    # Snapshot consumers require unique symbols: choose one canonical pair
+    # deterministically before ticker screening, not after sealing a WATCH.
+    seen_display_symbols = set()
     online_usd_pairs = 0
     excluded_stablecoin_pairs = 0
     excluded_other_pairs = 0
@@ -88,6 +92,10 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         if base.endswith(".S") or base.endswith(".M"):
             excluded_other_pairs += 1
             continue
+        if name in seen_display_symbols:
+            excluded_other_pairs += 1
+            continue
+        seen_display_symbols.add(name)
         eligible[key] = name
     if len(eligible) < 20:
         raise RuntimeError("Insufficient eligible Kraken USD universe")
