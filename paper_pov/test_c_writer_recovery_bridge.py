@@ -71,6 +71,23 @@ class BridgeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             bridge(integration(), readback(), restored_latest={"trading_approved": True})
 
+    def test_source_bound_receipt_cannot_disagree_with_writer(self):
+        good = readback()
+        good["source_bound_receipt"] = {
+            "run_id": good["run_id"], "source_sha": good["source_sha"]
+        }
+        self.assertFalse(bridge(integration(), good)["live_watch_certified"])
+        for changed in (
+            {"run_id": "999", "source_sha": good["source_sha"]},
+            {"run_id": good["run_id"], "source_sha": "0" * 40},
+            "not-a-receipt",
+        ):
+            with self.subTest(receipt=changed):
+                bad = copy.deepcopy(good)
+                bad["source_bound_receipt"] = changed
+                with self.assertRaisesRegex(ValueError, "source-bound receipt"):
+                    bridge(integration(), bad)
+
     def test_real_persisted_writer_status_and_remote_divergence(self):
         actual = {**readback(), "status": "VERIFIED_REMOTE_READBACK", "independently_authenticated": True,
                   "persisted_paper": {"ledger_generation": 70, "scan_status": "ABSTAIN_STALE_QUOTE",
