@@ -218,7 +218,11 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             # Kraken's response must identify exactly the requested market.
             # Never accept an unrelated result via first-dictionary-value order.
             alias = ohlc_aliases[item["pair"]]
-            allowed = {item["pair"]}
+            allowed = set()
+            # Even the requested dictionary key is ambiguous when a different
+            # eligible pair declares that exact string as its altname.
+            if not (alias_owners.get(item["pair"], set()) - {item["pair"]}):
+                allowed.add(item["pair"])
             # An altname that equals another eligible AssetPairs dictionary
             # key is ambiguous even if it has only one declared alias owner.
             # The OHLC response could belong to that other market.
