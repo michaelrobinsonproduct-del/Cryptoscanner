@@ -129,6 +129,15 @@ class SnapshotTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, error):
                     read_snapshot(latest, SCAN_NOW)
 
+    def test_legacy_observation_only_receipt_remains_readable(self):
+        # Older sealed reports predate the preselection decision ledger.
+        # They cannot claim source-joined WATCH verification, but their
+        # existing readback contract must not be broken by the new join.
+        self.report["observations"] = [{"pair": "TESTUSD", "symbol": "TEST/USD",
+                                         "price": 1.5, "observed_at": STAMP}]
+        self.seal()
+        self.assertEqual(read_snapshot(self.latest, NOW)["watch"][0]["pair"], "TESTUSD")
+
     def test_realistic_watch_readback(self):
         result = read_snapshot(self.latest, NOW)
         self.assertEqual(result["watch"][0]["pair"], "TESTUSD")
