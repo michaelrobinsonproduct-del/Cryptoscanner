@@ -94,6 +94,10 @@ def bridge(integration, readback, *, restored_latest=None):
                 else "D_PERSISTED_PAPER_MISSING_OR_INCOMPLETE"
             ),
             "remote_ledger_reconciliation": reconciliation,
+            # D's immutable source-run/checkpoint equality is distinct from
+            # generic remote ledger equality. Carry it to the existing B/D
+            # integration artifact, without authorizing WATCH on its own.
+            "same_run_reconciliation": readback.get("same_run_reconciliation"),
         },
         "same_run_or_candidate_parity_claimed": False,
         "live_watch_certified": False,
