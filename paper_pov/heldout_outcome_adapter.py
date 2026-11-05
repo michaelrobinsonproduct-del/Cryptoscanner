@@ -216,6 +216,8 @@ def save_shadow_learning_state(path, state):
 def read_shadow_learning_state(path):
     state = json.loads(Path(path).read_text(encoding="utf-8"))
     digest = state.pop("state_digest")
+    if state.get("schema") != "paper_learning_state_v1":
+        raise ValueError("Unexpected learning state schema")
     if digest != canonical_digest(state):
         raise ValueError("Learning state checksum mismatch")
     state["state_digest"] = digest
