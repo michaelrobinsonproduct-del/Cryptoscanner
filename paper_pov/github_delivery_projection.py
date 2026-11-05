@@ -286,7 +286,7 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
             "a2_receipt_cohort": a2, "learning": learning,
             "learning_status": "NO_QUALIFIED_RULE" if learning is not None else "LEARNING_EVIDENCE_UNAVAILABLE",
             "scoring_promotion_applied": False, "historical_watch_count": len(candidates) if not fresh_at_delivery else None, "historical_coverage": None,
-            "live_watch": visible_watch, "live_watch_authorized": False,
+            "live_watch": visible_watch, "live_watch_authorized": accepted_fresh_watch,
             "published_quote_evidence_count": len(quotes),
             "published_observed_markets": result["observed_markets"],
             "published_quote_complete": True,
