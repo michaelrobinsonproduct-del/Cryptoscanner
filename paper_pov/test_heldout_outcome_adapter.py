@@ -62,6 +62,12 @@ class OutcomeAdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Cross-horizon"):
             self.evaluate([row("p", 48), row("p", 6, source_sha256="b"*64)])
 
+    def test_abstaining_horizon_cannot_omit_source_identity(self):
+        incomplete = row("p", 6, coverage_complete=False)
+        del incomplete["source_sha256"]
+        with self.assertRaisesRegex(ValueError, "Missing cross-horizon"):
+            self.evaluate([row("p", 48), incomplete])
+
     def test_read_only_b_handoff(self):
         payload = dict(outcomes=[row("p", h) for h in (1, 6, 24, 48)], baseline_decisions={"p": True},
                        challenger_decisions={"p": False},
