@@ -200,6 +200,10 @@ class DeliveryProjectionTests(unittest.TestCase):
         self.assertEqual(project_published_result(published)["live_watch"], [])
         self.assertEqual(project_published_result(published)["status"], "ABSTAIN_PUBLISHED_WATCH_STALE_AT_DELIVERY")
         bad = deepcopy(published)
+        bad["candidates"].append({**bad["candidates"][0], "rank": 2})
+        with self.assertRaisesRegex(ValueError, "duplicate published WATCH candidate"):
+            project_published_result(bad)
+        bad = deepcopy(published)
         bad["candidates"][0]["price_usd"] *= 2
         with self.assertRaisesRegex(ValueError, "matching fresh quote"):
             project_published_result(bad)
