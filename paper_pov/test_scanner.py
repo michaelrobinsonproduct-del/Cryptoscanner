@@ -439,5 +439,25 @@ class PaperScanTests(unittest.TestCase):
         self.assertEqual(report["watch"], [])
         self.assertEqual(report["abstention_counts"]["stale_or_future_ohlc"], 24)
 
+    def test_malformed_bulk_quote_recovered_from_authentic_single_pair(self):
+        base = fixture()
+        calls = []
+        def api(path):
+            calls.append(path)
+            result = base(path)
+            if path == "Ticker":
+                result["C0USD"] = dict(result["C0USD"], c=["nan"])
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertIn("Ticker?pair=C0USD", calls)
+        self.assertTrue(report["ticker_coverage_complete"])
+        self.assertEqual(report["observed_markets"], 25)
+        self.assertEqual(report["scan_status"], "WATCH")
+        with tempfile.TemporaryDirectory() as folder:
+            from paper_pov.candidate_snapshot import read_snapshot
+            latest = Path(folder) / "latest.json"
+            scanner.persist_report(latest, report)
+            self.assertEqual(read_snapshot(latest, now=NOW)["watch"], report["watch"])
+
 if __name__ == "__main__":
     unittest.main()
