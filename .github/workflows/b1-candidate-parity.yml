@@ -9,6 +9,10 @@ on:
       - 'paper_pov/test_github_delivery_projection.py'
       - 'paper_pov/scanner.py'
       - 'paper_pov/test_scanner.py'
+      - 'paper_pov/preselection_universe.py'
+      - 'paper_pov/test_a1_a2_end_to_end.py'
+      - 'paper_pov/a2_artifact_consumer.py'
+      - 'paper_pov/test_a2_artifact_consumer.py'
       - 'paper_pov/candidate_snapshot.py'
       - 'paper_pov/test_candidate_snapshot.py'
       - 'paper_pov/github_sealed_bundle_readback.py'
@@ -39,6 +43,10 @@ on:
       - 'paper_pov/test_github_delivery_projection.py'
       - 'paper_pov/scanner.py'
       - 'paper_pov/test_scanner.py'
+      - 'paper_pov/preselection_universe.py'
+      - 'paper_pov/test_a1_a2_end_to_end.py'
+      - 'paper_pov/a2_artifact_consumer.py'
+      - 'paper_pov/test_a2_artifact_consumer.py'
       - 'paper_pov/candidate_snapshot.py'
       - 'paper_pov/test_candidate_snapshot.py'
       - 'scanner/src/**'
@@ -56,7 +64,7 @@ jobs:
       - name: Focused B1 candidate and native-entry parity regression
         run: bun test scanner/src/shadow-evaluation.test.ts scanner/src/shadow-artifacts.test.ts scanner/src/cycle-runner.test.ts scanner/src/cycle-http.test.ts scanner/src/paper-receipt.test.ts
       - name: A core Kraken quote-to-immutable-snapshot acceptance
-        run: python -m unittest paper_pov.test_scanner paper_pov.test_candidate_snapshot -v
+        run: python -m unittest paper_pov.test_scanner paper_pov.test_candidate_snapshot paper_pov.test_a1_a2_end_to_end paper_pov.test_a2_artifact_consumer -v
       - name: Read-only GitHub artifact transport and checksum acceptance
         run: python -m unittest paper_pov.test_github_sealed_bundle_readback paper_pov.test_github_delivery_projection -v
       - name: Verify exact checkout
