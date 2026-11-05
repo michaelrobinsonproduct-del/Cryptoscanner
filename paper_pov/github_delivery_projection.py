@@ -244,6 +244,20 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
         quote = by_symbol.get(symbol)
         if quote is None or candidate["price_usd"] != quote["price"] or _utc(candidate["quote_observed_at"]) != _utc(quote["observed_at"]):
             raise ValueError("WATCH candidate lacks matching fresh quote")
+    # The producer and consumer now share one manual/scheduled summary contract.
+    # Never deliver a summary that disagrees with the immutable candidate list.
+    published_summary = result.get("delivery_summary")
+    if published_summary is not None:
+        expected_trigger = "manual" if event == "workflow_dispatch" else "scheduled"
+        if (not isinstance(published_summary, dict) or
+                published_summary.get("trigger") != expected_trigger or
+                published_summary.get("scan_status") != status or
+                published_summary.get("watch_count") != len(candidates) or
+                published_summary.get("top_watch") != (candidates[0] if candidates else None) or
+                published_summary.get("ranked_watch") != candidates or
+                published_summary.get("observed_markets") != result["observed_markets"] or
+                published_summary.get("ledger_generation") != generation):
+            raise ValueError("published summary differs from persisted candidate evidence")
     # A checks freshness at artifact consumption, not merely at scan time.
     # Apply the same read-time boundary to paper results: authenticated old
     # WATCH remains historical evidence, never a current recommendation.
