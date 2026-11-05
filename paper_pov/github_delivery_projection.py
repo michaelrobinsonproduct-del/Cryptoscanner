@@ -325,7 +325,8 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
     same_run_writer = bool(writer and writer["source_run_id"] == int(run_id)
                            and writer["source_sha"] == sha
                            and writer["independently_authenticated"]
-                           and writer["reconciliation_status"] == "MATCH")
+                           and writer["reconciliation_status"] == "MATCH"
+                           and writer["same_run_reconciliation_status"] == "MATCH")
     if visible_watch and not same_run_writer:
         visible_watch = []
         delivery_status = "ABSTAIN_SAME_RUN_PERSISTED_WRITER_UNVERIFIED"
