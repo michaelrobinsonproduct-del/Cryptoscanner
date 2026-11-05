@@ -1,0 +1,63 @@
+name: Cryptoscanner functional A-to-B paper batch
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cryptoscanner-functional-paper-batch
+  cancel-in-progress: false
+jobs:
+  functional-paper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout existing integration implementation (never main ledger)
+        uses: actions/checkout@v4
+        with:
+          ref: integration-a-b-c-d-20261103
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Execute real Kraken paper scanner and seal local candidate outputs
+        env:
+          PAPER_REPORT_PATH: /tmp/cryptoscanner-functional/latest.json
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/cryptoscanner-functional
+          python -m paper_pov.scanner
+      - name: Validate real same-run source and candidate receipt linkage
+        env:
+          PAPER_REPORT_PATH: /tmp/cryptoscanner-functional/latest.json
+        run: |
+          python - <<'PY'
+          import json,os,pathlib
+          from paper_pov.candidate_snapshot import read_snapshot
+          from paper_pov.preselection_universe import export_universe
+          from paper_pov.scanner import utc
+          p=pathlib.Path(os.environ["PAPER_REPORT_PATH"])
+          r=json.loads(p.read_text())
+          candidate=read_snapshot(p,now=utc(r["as_of"]))
+          universe=export_universe(p,now=utc(r["as_of"]))
+          if candidate["receipt_sha256"] != universe["receipt_sha256"]:
+              raise SystemExit("FAIL: candidate/universe receipt mismatch")
+          out={"source_scan_status":r["scan_status"],"as_of":r["as_of"],
+               "watch_count":len(candidate["watch"]),"receipt_sha256":candidate["receipt_sha256"],
+               "eligible_pairs":r.get("eligible_pairs"),"paper_only":True,
+               "independent_D_remote_readback":"NOT_ESTABLISHED",
+               "live_WATCH_delivery_authorized":False}
+          pathlib.Path("/tmp/cryptoscanner-functional/functional-status.json").write_text(json.dumps(out,indent=2))
+          print(json.dumps(out,indent=2))
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a") as f:
+              f.write("### Real Kraken paper scan (no ledger writer)\n")
+              f.write("Source status: "+str(out["source_scan_status"])+"; candidate WATCH: "+str(out["watch_count"])+"\n")
+              f.write("D independent canonical ledger readback NOT ESTABLISHED; do not claim authenticated B delivery.\n")
+          PY
+      - name: Preserve actual scan receipts and status even if unsuccessful
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cryptoscanner-real-paper-scan
+          path: /tmp/cryptoscanner-functional/
+          if-no-files-found: warn
+          retention-days: 7
