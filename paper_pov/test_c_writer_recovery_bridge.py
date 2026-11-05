@@ -88,11 +88,22 @@ class BridgeTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "source-bound receipt"):
                     bridge(integration(), bad)
 
+    def test_verified_writer_without_bound_receipt_cannot_export(self):
+        actual = {**readback(), "status": "VERIFIED_REMOTE_READBACK", "independently_authenticated": True,
+                  "persisted_paper": {"ledger_generation": 70, "scan_status": "WATCH", "live_replay_performed": False},
+                  "remote_ledger_reconciliation": {"status": "MATCH", "independently_authenticated": False}}
+        result = bridge(integration(), actual)
+        self.assertFalse(result["writer_recovery"]["delivery_projection_ready"])
+        self.assertEqual(result["writer_recovery"]["delivery_blocker"], "D_SOURCE_BOUND_RECEIPT_MISSING")
+        actual["source_bound_receipt"] = {"run_id": actual["run_id"], "source_sha": actual["source_sha"]}
+        self.assertTrue(bridge(integration(), actual)["writer_recovery"]["delivery_projection_ready"])
+
     def test_real_persisted_writer_status_and_remote_divergence(self):
         actual = {**readback(), "status": "VERIFIED_REMOTE_READBACK", "independently_authenticated": True,
                   "persisted_paper": {"ledger_generation": 70, "scan_status": "ABSTAIN_STALE_QUOTE",
                                       "quote_evidence_certified": False, "live_replay_performed": False},
                   "remote_ledger_reconciliation": {"status": "DIVERGED", "independently_authenticated": False}}
+        actual["source_bound_receipt"] = {"run_id": actual["run_id"], "source_sha": actual["source_sha"]}
         output = bridge(integration(), actual)
         self.assertEqual(output["writer_recovery"]["persisted_paper"]["ledger_generation"], 70)
         self.assertEqual(output["writer_recovery"]["remote_ledger_reconciliation"]["status"], "DIVERGED")
@@ -132,6 +143,7 @@ class BridgeTests(unittest.TestCase):
 
     def test_writer_delivery_export_requires_real_persisted_paper(self):
         actual = {**readback(), "status": "VERIFIED_REMOTE_READBACK", "independently_authenticated": True, "persisted_paper": {"ledger_generation": 70, "scan_status": "ABSTAIN_STALE_QUOTE", "live_replay_performed": False}, "remote_ledger_reconciliation": {"status": "MATCH", "independently_authenticated": False}}
+        actual["source_bound_receipt"] = {"run_id": actual["run_id"], "source_sha": actual["source_sha"]}
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             (root / "integration.json").write_text(json.dumps(integration()))
