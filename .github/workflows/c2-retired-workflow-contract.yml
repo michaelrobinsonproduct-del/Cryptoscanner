@@ -344,7 +344,43 @@ jobs:
           echo "B_CONSUMER_EXACT_SHA=$B_SHA"
           # Find the newest published result with authenticated complete quote
           # evidence. Do not accept a newer legacy cohort merely by recency.
-          gh api "repos/$REPO/actions/workflows/paper-pipeline.yml/runs?branch=main&status=success&per_page=30" > /tmp/c-real-receipts/b-runs.json
+          # Resolve the exact writer source first. A recent-runs page is not a
+          # reliable join key: the D recovered writer may be older than 30 runs.
+          # GitHub's run endpoint supplies independent identity; the consumer
+          # below still authenticates the artifact, ZIP digest and manifest.
+          python - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          root=Path("/tmp/c-real-receipts")
+          recovered=json.loads((root/"d2-readback.json").read_text())
+          source_id=recovered.get("run_id")
+          source_sha=recovered.get("source_sha")
+          runs=[]
+          if str(source_id).isdigit() and isinstance(source_sha,str) and len(source_sha)==40:
+              try:
+                  exact=json.loads(subprocess.check_output(
+                      ["gh","api",f"repos/{os.environ['REPO']}/actions/runs/{source_id}"],
+                      stderr=subprocess.DEVNULL))
+              except subprocess.CalledProcessError:
+                  exact=None
+              if (isinstance(exact,dict) and str(exact.get("id"))==str(source_id)
+                      and exact.get("head_sha")==source_sha
+                      and exact.get("name") is not None
+                      and exact.get("path","").endswith("paper-pipeline.yml")
+                      and exact.get("conclusion")=="success"
+                      and exact.get("event") in ("schedule","workflow_dispatch")):
+                  runs.append(exact)
+          recent=json.loads(subprocess.check_output(
+              ["gh","api",f"repos/{os.environ['REPO']}/actions/workflows/paper-pipeline.yml/runs?branch=main&status=success&per_page=30"]
+          )).get("workflow_runs",[])
+          seen={str(run["id"]) for run in runs}
+          for run in recent:
+              if str(run.get("id")) not in seen:
+                  runs.append(run)
+                  seen.add(str(run.get("id")))
+          (root/"b-runs.json").write_text(json.dumps({"workflow_runs":runs}))
+          print("PUBLISHED_RUN_COHORT",len(runs),"exact_D_source_first",bool(runs and str(runs[0].get("id"))==str(source_id)))
+          PY
           python - <<'PY'
           import hashlib,io,json,os,re,subprocess,zipfile
           from pathlib import Path
