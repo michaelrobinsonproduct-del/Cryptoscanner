@@ -455,12 +455,23 @@ jobs:
           # Reuse the consumer contract rather than maintaining a second
           # candidate-ranking implementation in the workflow.
           shared=projected.get("delivery_summary")
-          if not isinstance(shared,dict):
-              raise SystemExit("SHARED_PUBLISHED_DELIVERY_SUMMARY_MISSING")
-          if shared.get("ranked_watch")!=scored or shared.get("watch_count")!=len(scored):
+          if shared is None:
+              # Existing successful main artifacts predate the shared summary.
+              # Preserve their verified consumer projection without pretending
+              # that the historical producer emitted this newer contract.
+              shared={"scan_status":projected["status"],
+                      "trigger":"manual" if identity["event"]=="workflow_dispatch" else "scheduled",
+                      "watch_count":len(scored),
+                      "top_watch":projected["live_watch"][0] if scored else None,
+                      "ranked_watch":scored,
+                      "observed_markets":projected["published_observed_markets"],
+                      "ledger_generation":projected["ledger_generation"],
+                      "learning_status":projected["learning_status"],
+                      "historical_publisher_summary":True}
+          elif shared.get("ranked_watch")!=scored or shared.get("watch_count")!=len(scored):
               raise SystemExit("SHARED_DELIVERY_SUMMARY_DIVERGENCE")
           status["delivery_summary"]=shared
-          status["ranked_watch"]=shared["ranked_watch"]
+          status["ranked_watch"]=scored
           status["same_scan_overlap"]={"status":"UNAVAILABLE",
               "reason":"NO_INDEPENDENT_SAME_RUN_SECOND_SCANNER",
               "symbols":[]}
