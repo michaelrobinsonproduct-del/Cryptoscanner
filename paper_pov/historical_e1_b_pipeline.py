@@ -248,7 +248,14 @@ def run_pipeline(manifest, root, schema, partitions, predictions, observed_until
     # Pass the last-closed-bar cutoff to E1 without modifying E1-owned code.
     from .shadow_learning_evidence import utc_time
     from datetime import timedelta
-    closed_bar_cutoff = (utc_time(observed_until) - timedelta(minutes=5)).isoformat()
+    # Reject future-dated frozen predictions before reconstructing outcomes.
+    observation_cutoff = utc_time(observed_until)
+    for prediction in predictions:
+        if not isinstance(prediction, dict) or not isinstance(prediction.get("as_of"), str):
+            raise ValueError("Historical prediction lacks point-in-time timestamp")
+        if utc_time(prediction["as_of"]) > observation_cutoff:
+            raise ValueError("Historical prediction occurs after observation cutoff")
+    closed_bar_cutoff = (observation_cutoff - timedelta(minutes=5)).isoformat()
     execution = run_historical_outcomes(
         manifest, root, schema, partitions, predictions, closed_bar_cutoff)
     frozen = binding["frozen_predictions"] if binding is not None else predictions
