@@ -569,3 +569,54 @@ def test_cli_does_not_silently_succeed_on_remote_divergence(
     report = json.loads(report_path.read_text())
     assert report["remote_ledger_reconciliation"]["status"] == remote_status
     assert report["same_run_reconciliation"]["live_watch_authorized"] is False
+
+
+def test_pinned_remote_match_exposes_source_bound_receipt_without_watch_authorization(monkeypatch):
+    """The D-to-B handoff must distinguish genuine pinned equality from WATCH permission."""
+    import hashlib
+    from paper_pov import ledger
+    from paper_pov import github_artifact_readback as recovery
+    state = ledger.empty()
+    raw = ledger.canonical(state)
+    files = {
+        "latest.json": b'{"status":"ABSTAIN"}',
+        "ledger.json": raw,
+        "scoreboard.json": b'{"generation":0}',
+    }
+    files["SHA256SUMS"] = "".join(
+        hashlib.sha256(data).hexdigest() + "  " + name + "\\n"
+        for name, data in files.items()
+    ).encode()
+    def runner(args, timeout):
+        if args[:4] == ["gh", "api", "-X", "GET"]:
+            if "/artifacts" in args[4]:
+                return json.dumps({"total_count": 1, "artifacts": [
+                    {"id": 91, "name": "public-paper-ledger-123", "expired": False}]}).encode()
+            return json.dumps({"id": 123, "head_sha": SHA, "status": "completed",
+                "conclusion": "success", "repository": {"full_name": REPO}}).encode()
+        root = Path(args[-1])
+        for name, data in files.items():
+            (root / name).write_bytes(data)
+        return b""
+    def matched(*args, **kwargs):
+        return {"status": "MATCH", "remote_generation": 0, "recovered_generation": 0,
+                "remote_ledger_sha256": state["sha256"],
+                "recovered_ledger_sha256": state["sha256"],
+                "remote_checkpoint_sha": "a" * 40,
+                "independently_authenticated": False, "production_applied": False}
+    monkeypatch.setattr(recovery, "reconcile_remote_ledger", matched)
+    result = recovery.retrieve_and_verify(REPO, "123", "public-paper-ledger", None,
+                                          SHA, runner=runner, ledger_ref="paper-proof-ledger")
+    bound = result["same_run_reconciliation"]
+    assert bound["status"] == "MATCH"
+    assert bound["run_id"] == "123" and bound["source_sha"] == SHA
+    assert bound["sha256sums_sha256"] == hashlib.sha256(files["SHA256SUMS"]).hexdigest()
+    assert bound["ledger_receipt_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert bound["remote_checkpoint_sha"] == "a" * 40
+    assert bound["live_watch_authorized"] is False
+    assert bound["independently_authenticated"] is False
+    monkeypatch.setattr(recovery, "reconcile_remote_ledger",
+                        lambda *args, **kwargs: {**matched(), "remote_generation": 1})
+    divergent = recovery.retrieve_and_verify(REPO, "123", "public-paper-ledger", None,
+                                             SHA, runner=runner, ledger_ref="paper-proof-ledger")
+    assert divergent["same_run_reconciliation"]["status"] == "ABSTAIN"
