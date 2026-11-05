@@ -117,7 +117,7 @@ def _a2_evidence(delivery):
     count = delivery.get("watch_count")
     if not isinstance(watch, list) or type(count) is not int or count != len(watch) or count > 12:
         raise ValueError("A2 WATCH count mismatch")
-    if delivery.get("scan_status") not in ("WATCH", "ABSTAIN_NO_LIQUID_CANDIDATES", "ABSTAIN_NO_QUALIFIED_OHLC"):
+    if delivery.get("scan_status") not in ("WATCH", "ABSTAIN_NO_LIQUID_CANDIDATES", "ABSTAIN_NO_QUALIFIED_OHLC", "ABSTAIN_INCOMPLETE_TICKER_COVERAGE"):
         raise ValueError("A2 scan status invalid")
     if (delivery["scan_status"] == "WATCH") != bool(watch):
         raise ValueError("A2 WATCH/status mismatch")
