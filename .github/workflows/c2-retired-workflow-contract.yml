@@ -119,6 +119,19 @@ jobs:
                   or re.fullmatch(r"sha256:[0-9a-f]{64}",str(m.get("digest",""))) is None):
               raise SystemExit("LEGACY_D_GITHUB_ARTIFACT_IDENTITY_MISSING")
           PY
+          LEGACY_D_RUN=$(python -c 'import json;print(json.load(open("/tmp/c-real-receipts/legacy-d-meta.json"))["workflow_run"]["id"])')
+          gh api "repos/$REPO/actions/runs/$LEGACY_D_RUN" > /tmp/c-real-receipts/legacy-d-run.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("/tmp/c-real-receipts")
+          meta=json.loads((root/"legacy-d-meta.json").read_text())
+          run=json.loads((root/"legacy-d-run.json").read_text())
+          if (run.get("id")!=meta["workflow_run"]["id"]
+                  or run.get("head_sha")!=meta["workflow_run"]["head_sha"]
+                  or run.get("conclusion")!="success"):
+              raise SystemExit("LEGACY_D_GITHUB_RUN_IDENTITY_MISMATCH")
+          PY
           gh api -H 'Accept: application/vnd.github+json' "repos/$REPO/actions/artifacts/13276401753/zip" > /tmp/c-real-receipts/recovery.zip
           python - <<'PY'
           import hashlib,json
