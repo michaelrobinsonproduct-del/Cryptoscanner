@@ -82,6 +82,7 @@ jobs:
           print("Distinct predictions:", x["unique_predictions"])
           print("Distinct outcome rows:", x["unique_outcomes"])
           print("Recovered mature outcome rows:", x["recovered_mature_outcomes"])
+          print("Source-claimed training rows (not independently authenticated):", x["source_claimed_training_count"])
           print("Source authenticated: false; no scoring promotion.")
           PY
       - name: Publish learning summary in workflow results
