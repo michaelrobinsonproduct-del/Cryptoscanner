@@ -300,7 +300,10 @@ jobs:
                       destination.parent.mkdir(parents=True,exist_ok=True)
                       destination.write_bytes(archive.read(item))
               if not required.issubset(seen):
-                  raise SystemExit("A2_REQUIRED_PUBLISHED_FILES_MISSING")
+                  status={"status":"A2_FRESH_DELIVERY_UNAVAILABLE","reason":"A2_REQUIRED_PUBLISHED_FILES_MISSING"}
+                  Path("/tmp/b-delivery/a2-status.json").write_text(json.dumps(status))
+                  print("A2_DELIVERY_STATUS",status)
+                  raise SystemExit(0)
           try:
               delivery=(read_published_delivery(root)
                         if (root/"a2-delivery.json").exists()
