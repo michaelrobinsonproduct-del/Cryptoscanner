@@ -18,7 +18,7 @@ class PaperCronAttributionContracts(unittest.TestCase):
 
     def test_exact_two_slots_on_same_workflow(self):
         cron = re.findall(r"^\s+- cron: '([^']+)'\s*$", self.text, re.M)
-        self.assertEqual(cron, ["9 * * * *", "39 * * * *"])
+        self.assertEqual(cron, ["54 * * * *", "24 * * * *"])
         self.assertEqual(self.text.count("  schedule:\n"), 1)
         self.assertEqual(self.text.count("  workflow_dispatch:\n"), 1)
 
@@ -39,7 +39,7 @@ class PaperCronAttributionContracts(unittest.TestCase):
                         self.text.index("name: Non-force, single-writer ledger push"))
         self.assertIn("PAPER_GITHUB_EVENT: ${{ github.event_name }}", self.text)
         self.assertIn("PAPER_CRON_EXPRESSION: ${{ github.event.schedule }}", self.text)
-        self.assertIn("'9 * * * *'|'39 * * * *'", self.text)
+        self.assertIn("'54 * * * *'|'24 * * * *'", self.text)
         self.assertIn("PAPER_UNRECOGNIZED_ORIGINATING_CRON", self.text)
         self.assertIn("PAPER_UNRECOGNIZED_GITHUB_EVENT", self.text)
         self.assertIn("PAPER_MANUAL_WITH_SCHEDULE_PAYLOAD", self.text)

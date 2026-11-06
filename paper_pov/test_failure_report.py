@@ -63,8 +63,8 @@ class FailureReportTests(unittest.TestCase):
         self.assertIn("PAPER_FAILURE_ISSUE_READBACK_VERIFIED", text)
         self.assertEqual(text.count("git push origin HEAD:refs/heads/paper-proof-ledger"), 1)
         self.assertIn("group: public-paper-proof-ledger-single-writer", text)
-        self.assertEqual(text.count("cron: '9 * * * *'"), 1)
-        self.assertEqual(text.count("cron: '39 * * * *'"), 1)
+        self.assertEqual(text.count("cron: '54 * * * *'"), 1)
+        self.assertEqual(text.count("cron: '24 * * * *'"), 1)
         self.assertEqual(text.count("  schedule:\n"), 1)
         self.assertNotIn("git push --force", text)
 
