@@ -25,6 +25,8 @@ def fixture(*, gap=False, zero_volume=False, stale=False, coverage=False, stable
             return pairs
         if path == "Ticker":
             return tickers
+        if path.startswith("Ticker?pair="):
+            return {}  # Fixture models an unavailable retry; scanner must abstain.
         if path.startswith("OHLC?"):
             pair = path.split("pair=")[1].split("&")[0]
             start = int(NOW.timestamp()) - (14 * 300) - (3600 if stale else 0)
