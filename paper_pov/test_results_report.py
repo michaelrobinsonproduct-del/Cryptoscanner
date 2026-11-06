@@ -84,7 +84,7 @@ class PaperResultsContracts(unittest.TestCase):
                 self.assertEqual(payload["originating_cron"], cron)
                 self.assertIn(f"intended UTC minute=:{minute:02d}", md)
                 self.assertFalse(payload["scheduled_start_punctuality_verified"])
-        for bad in (None, "", "9,10 * * * *", "10 * * * *",
+        for bad in (None, "", "9,10 * * * *", "24 * * * *",
                     "10 * * * *; echo spoof", "40 * * * *\\n10 * * * *", True):
             with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "originating scheduled cron"):
                 self.report(cron=bad)
