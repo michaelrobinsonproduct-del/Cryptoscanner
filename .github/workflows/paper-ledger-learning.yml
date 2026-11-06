@@ -68,6 +68,9 @@ jobs:
             mkdir -p history/prior
             gh api "repos/$GH_REPO/actions/artifacts/$PRIOR_ID/zip" > history/prior.zip
             unzip -oq history/prior.zip -d history/prior
+            if [ -f history/prior/historical-cohort.json ]; then
+              jq -e '.prediction_rows and .outcome_rows' history/prior/historical-cohort.json >/dev/null || rm history/prior/historical-cohort.json
+            fi
           fi
           python -m paper_pov.historical_paper_cohort history --output evidence/historical-cohort.json
       - name: Append recovered historical outcome coverage
