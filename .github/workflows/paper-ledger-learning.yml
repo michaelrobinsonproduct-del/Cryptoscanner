@@ -41,7 +41,6 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           RUN_ID="$REQUESTED_RUN"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then RUN_ID=42124179171; fi
           if [ -z "$RUN_ID" ]; then
             RUN_ID=$(gh api -X GET "repos/$GH_REPO/actions/artifacts?per_page=100" --jq '.artifacts[] | select(.expired == false and (.name | startswith("public-paper-ledger-"))) | .workflow_run.id' | head -n 1)
           fi
@@ -78,39 +77,22 @@ jobs:
           python -m paper_pov.kraken_observed_candles evidence/recent-pairs.json --output evidence/kraken-candles.json
           python -m paper_pov.observed_kraken_outcomes evidence/ledger.json evidence/kraken-candles.json --output evidence/observed-outcomes.json
           python -m paper_pov.observed_shadow_handoff evidence/ledger.json evidence/observed-outcomes.json --candles-json evidence/kraken-candles.json --output evidence/shadow-handoff.json
-      - name: Recover archived per-prediction outcomes from earlier paper ledgers
-        env:
-          GH_REPO: ${{ github.repository }}
-        run: |
-          mkdir -p history
-          gh api -X GET "repos/$GH_REPO/actions/artifacts?per_page=100" --jq '.artifacts[] | select(.expired == false and (.name | startswith("public-paper-ledger-"))) | .workflow_run.id' | head -n 12 > history/run_ids.txt
-          while IFS= read -r run_id; do
-            test -n "$run_id" || continue
-            mkdir -p "history/$run_id"
-            gh run download "$run_id" -n "public-paper-ledger-$run_id" -D "history/$run_id"
-            (cd "history/$run_id" && sha256sum -c SHA256SUMS)
-          done < history/run_ids.txt
-          PRIOR_ID=$(gh api -X GET "repos/$GH_REPO/actions/artifacts?per_page=100" --jq '.artifacts[] | select(.expired == false and (.name | startswith("public-paper-learning-"))) | .id' | head -n 1)
-          if [ -n "$PRIOR_ID" ]; then
-            mkdir -p history/prior
-            gh api "repos/$GH_REPO/actions/artifacts/$PRIOR_ID/zip" > history/prior.zip
-            unzip -oq history/prior.zip -d history/prior
-            if [ -f history/prior/historical-cohort.json ]; then
-              jq -e '.prediction_rows and .outcome_rows' history/prior/historical-cohort.json >/dev/null || rm history/prior/historical-cohort.json
-            fi
-          fi
-          python -m paper_pov.historical_paper_cohort history --output evidence/historical-cohort.json
-      - name: Append recovered historical outcome coverage
+      - name: Publish shadow-learning decision alongside paper results
         run: |
           python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
-          x = json.load(open("evidence/historical-cohort.json"))
-          print("## Recovered historical per-prediction outcomes")
-          print("Distinct predictions:", x["unique_predictions"])
-          print("Distinct outcome rows:", x["unique_outcomes"])
-          print("Recovered mature outcome rows:", x["recovered_mature_outcomes"])
-          print("Source-claimed training rows (not independently authenticated):", x["source_claimed_training_count"])
-          print("Source authenticated: false; no scoring promotion.")
+          from pathlib import Path
+          outcomes = json.loads(Path("evidence/observed-outcomes.json").read_text())
+          state = json.loads(Path("evidence/shadow-handoff.json").read_text())
+          print("## Kraken paper learning")
+          print("Completed forward outcomes:", outcomes["complete_5m_outcomes"])
+          print("Completed 48h outcomes:", state["observed_complete_48h"])
+          print("Predictions with point-in-time features:", state["feature_complete_predictions"])
+          print("Shadow learning:", state["status"])
+          print("Reason:", state["reason"])
+          if "shadow_state" in state:
+              print("Baseline versus challenger:", state["shadow_state"]["comparison"])
+          print("Paper-only; no production scoring promotion.")
           PY
       - name: Publish learning summary in workflow results
         run: cat evidence/learning-report.md >> "$GITHUB_STEP_SUMMARY"
@@ -121,7 +103,6 @@ jobs:
           path: |
             evidence/learning-state.json
             evidence/learning-report.md
-            evidence/historical-cohort.json
             evidence/observed-outcomes.json
             evidence/kraken-candles.json
             evidence/shadow-handoff.json
