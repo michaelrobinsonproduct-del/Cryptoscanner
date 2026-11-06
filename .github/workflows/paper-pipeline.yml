@@ -335,6 +335,11 @@ jobs:
             "Readable UTC WATCH results: https://github.com/"+os.environ["GITHUB_REPOSITORY"]+"/actions/runs/"+os.environ["GITHUB_RUN_ID"]+" (job summary + checksummed artifact public-paper-results-"+os.environ["GITHUB_RUN_ID"]+").",
             "Configured GitHub schedule: :09 and :39 UTC in ONE workflow with ONE writer; unattended slot reliability NOT YET ACCEPTED. Gaps over 45m abstain; no model promotion."
           ]
+          overlay=Path("paper_pov/output/learning-overlay/learned-scores.md")
+          if overlay.exists():
+            lines.extend(["Learned challenger report (read-only; separate from sealed results):", overlay.read_text()])
+          lines.extend([
+          ]
           Path("/tmp/paper-issue-comment.txt").write_text("\n\n".join(lines))
           PY
           gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/34/comments" -f body="$(cat /tmp/paper-issue-comment.txt)" > /tmp/paper-comment-response.json
