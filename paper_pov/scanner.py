@@ -156,7 +156,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                             10000 * (ask / bid - 1), price * volume)))
             except (KeyError, ValueError, TypeError, IndexError, ZeroDivisionError, OverflowError):
                 return False
-        missing = [pair for pair in eligible if not usable_quote(ticker.get(pair))]
+        missing = [pair for pair in eligible if pair not in ticker]
         if 0 < len(missing) <= 6:
             for pair in missing:
                 try:
