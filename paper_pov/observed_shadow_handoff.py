@@ -55,6 +55,9 @@ def build_observed_shadow_handoff(ledger, observed, *, evaluation_asof_utc, cand
             "entry_price": p.get("entry_price") or p["price"],
             "features": features, "liquidity_qualified": False})
     result["feature_complete_predictions"] = len(predictions)
+    result["excluded_without_point_in_time_features"] = len(mature) - len(predictions)
+    result["training_predictions"] = 0
+    result["heldout_predictions"] = 0
     if len(predictions) >= 4:
         entries = sorted(utc_time(p["entry_utc"]) for p in predictions)
         split = entries[len(entries) // 2]
@@ -63,6 +66,8 @@ def build_observed_shadow_handoff(ledger, observed, *, evaluation_asof_utc, cand
         # the purge; recent Kraken OHLC may not reach back far enough.
         trainable = [p for p in predictions
                      if utc_time(p["entry_utc"]) + timedelta(hours=48) <= training_end]
+        result["training_predictions"] = len(trainable)
+        result["heldout_predictions"] = sum(utc_time(p["entry_utc"]) >= split for p in predictions)
         if trainable:
             baseline = {p["prediction_id"]: float(by_id[p["prediction_id"]]["baseline_score"]) >= 50
                         for p in predictions if utc_time(p["entry_utc"]) >= split}
