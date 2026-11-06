@@ -5,6 +5,7 @@ Never modifies the immutable result artifact or baseline WATCH ranking.
 import argparse
 import json
 import hashlib
+from datetime import datetime, timezone
 from pathlib import Path
 
 from math import isfinite
@@ -39,7 +40,7 @@ def render_shadow_overlay(published, shadow):
     return "\n".join(lines) + "\n"
 
 
-def score_future_paper_predictions(state_path, predictions):
+def score_future_paper_predictions(state_path, predictions, *, scan_asof=None):
     """Consume frozen E model without importing an unmerged E branch."""
     state = json.loads(Path(state_path).read_text())
     if (state.get("schema") != "paper_learning_state_v1"
@@ -52,6 +53,14 @@ def score_future_paper_predictions(state_path, predictions):
                                        allow_nan=False).encode()).hexdigest()
     if not isinstance(digest, str) or digest != actual:
         raise ValueError("Frozen E learning state checksum mismatch")
+    if scan_asof is not None:
+        def instant(value):
+            t = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            if t.tzinfo is None or t.utcoffset() != timezone.utc.utcoffset(t):
+                raise ValueError("Non-UTC learning timestamp")
+            return t
+        if instant(state["evaluation_asof_utc"]) >= instant(scan_asof):
+            raise ValueError("Future or same-scan learning state cannot score paper candidates")
     model = state["challenger"]
     version = model["version"]
     if model["status"] != "SHADOW_ONLY":
@@ -95,7 +104,8 @@ def main(argv=None):
     published = json.loads(args.published_json.read_text())
     if bool(args.shadow_scores_json) == bool(args.score_state):
         raise ValueError("Supply exactly one of --score-state or --shadow-scores-json")
-    shadow = (score_future_paper_predictions(args.score_state, candidate_features(published))
+    shadow = (score_future_paper_predictions(args.score_state, candidate_features(published),
+                                             scan_asof=published["as_of"])
               if args.score_state else json.loads(args.shadow_scores_json.read_text()))
     report = render_shadow_overlay(published, shadow)
     args.output.parent.mkdir(parents=True, exist_ok=True)
