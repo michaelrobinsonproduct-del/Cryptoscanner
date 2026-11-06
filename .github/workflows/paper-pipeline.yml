@@ -3,12 +3,12 @@ on:
   workflow_dispatch:
     inputs:
       recovery_slot_utc:
-        description: 'Missed :09/:39 UTC slot; empty for normal manual scan'
+        description: 'Missed :24/:54 UTC slot; empty for normal manual scan'
         required: false
         type: string
   schedule:
-    - cron: '9 * * * *'
-    - cron: '39 * * * *'
+    - cron: '24 * * * *'
+    - cron: '54 * * * *'
 permissions:
   contents: write
   issues: write
@@ -34,7 +34,7 @@ jobs:
           case "$PAPER_GITHUB_EVENT" in
             schedule)
               case "$PAPER_CRON_EXPRESSION" in
-                '9 * * * *'|'39 * * * *') ;;
+                '24 * * * *'|'54 * * * *') ;;
                 *) echo "PAPER_UNRECOGNIZED_ORIGINATING_CRON"; exit 1 ;;
               esac
               ;;
