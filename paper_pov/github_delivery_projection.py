@@ -435,7 +435,7 @@ def project_legacy_published_abstention(result, *, writer_readback=None, a2_deli
     # single-writer provenance checks used by quote-complete published output.
     if event == "schedule":
         cron = result.get("originating_cron")
-        if (cron not in ("9 * * * *", "39 * * * *") or
+        if (cron not in ("24 * * * *", "54 * * * *") or
                 result.get("scheduled_slot_verified") is not True or
                 result.get("scheduled_slot_utc_minute") != int(cron.split()[0])):
             raise ValueError("invalid legacy scheduled provenance")
