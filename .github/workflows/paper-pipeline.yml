@@ -287,7 +287,10 @@ jobs:
           mkdir -p paper_pov/output/learning-overlay
           # The E branch may not yet be merged; never make a healthy scan fail
           # because a qualified frozen learning artifact is unavailable.
-          LEARNING_RUN=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --jq '[.artifacts[] | select(.expired == false and (.name | startswith("public-paper-learning-")))] | sort_by(.created_at) | reverse | .[0].workflow_run.id // empty' || true)
+          # Only consume learning artifacts produced from the default branch.
+          # A PR/push artifact from an unmerged E branch must never be treated
+          # as the active scanner's authenticated learning handoff.
+          LEARNING_RUN=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --jq '[.artifacts[] | select(.expired == false and (.name | startswith("public-paper-learning-")) and .workflow_run.head_branch == "main")] | sort_by(.created_at) | reverse | .[0].workflow_run.id // empty' || true)
           if [ -n "$LEARNING_RUN" ] && gh run download "$LEARNING_RUN" -n "public-paper-learning-$LEARNING_RUN" -D paper_pov/output/learning-overlay/source; then
             STATE=paper_pov/output/learning-overlay/source/shadow-handoff.json
             if [ -f "$STATE" ]; then
