@@ -63,6 +63,12 @@ jobs:
             gh run download "$run_id" -n "public-paper-ledger-$run_id" -D "history/$run_id"
             (cd "history/$run_id" && sha256sum -c SHA256SUMS)
           done < history/run_ids.txt
+          PRIOR_ID=$(gh api -X GET "repos/$GH_REPO/actions/artifacts?per_page=100" --jq '.artifacts[] | select(.expired == false and (.name | startswith("public-paper-learning-"))) | .id' | head -n 1)
+          if [ -n "$PRIOR_ID" ]; then
+            mkdir -p history/prior
+            gh api "repos/$GH_REPO/actions/artifacts/$PRIOR_ID/zip" > history/prior.zip
+            unzip -oq history/prior.zip -d history/prior
+          fi
           python -m paper_pov.historical_paper_cohort history --output evidence/historical-cohort.json
       - name: Append recovered historical outcome coverage
         run: |
