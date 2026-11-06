@@ -3,7 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from .public_ledger_learning import learn_from_public_ledger, process_ledger_file
+from .public_ledger_learning import learn_from_public_ledger, process_ledger_file, render_learning_report
 
 class PublicLedgerAcceptance(unittest.TestCase):
     def test_abstentions_are_not_learning_labels(self):
@@ -25,6 +25,7 @@ class PublicLedgerAcceptance(unittest.TestCase):
             self.assertEqual(result["outcome_counts"]["1"]["abstentions"], 1)
             self.assertEqual(result["archived_prediction_count"], 740)
             self.assertFalse(result["promotion_authorized"])
+            self.assertIn("Retained trainable labels: 0", render_learning_report(result))
             self.assertEqual(json.loads(output.read_text())["evidence_digest"], result["evidence_digest"])
 
 if __name__ == "__main__":
