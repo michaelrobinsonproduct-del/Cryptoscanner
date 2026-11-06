@@ -4,6 +4,7 @@ Never modifies the immutable result artifact or baseline WATCH ranking.
 """
 import argparse
 import json
+import hashlib
 from pathlib import Path
 
 from math import isfinite
@@ -45,6 +46,12 @@ def score_future_paper_predictions(state_path, predictions):
             or state.get("promotion_authorized") is not False
             or state.get("production_applied") is not False):
         raise ValueError("Unsafe learned model")
+    digest = state.get("state_digest")
+    unsigned = {key: value for key, value in state.items() if key != "state_digest"}
+    actual = hashlib.sha256(json.dumps(unsigned, sort_keys=True, separators=(",", ":"),
+                                       allow_nan=False).encode()).hexdigest()
+    if not isinstance(digest, str) or digest != actual:
+        raise ValueError("Frozen E learning state checksum mismatch")
     model = state["challenger"]
     version = model["version"]
     if model["status"] != "SHADOW_ONLY":
