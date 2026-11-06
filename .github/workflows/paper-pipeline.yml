@@ -336,10 +336,12 @@ jobs:
           else
             printf '## Learned challenger — paper only\\n\\nNO QUALIFIED RULE: no authenticated held-out-evaluated frozen E learning state available. Existing baseline and WATCH ranking unchanged.\\n' > paper_pov/output/learning-overlay/learned-scores.md
           fi
+          export LEARNING_RUN
           # Expose an explicit machine-readable learning outcome alongside the
           # human-readable report; no state or model means no learning claim.
           python - <<'PY'
           import json
+          import os
           from pathlib import Path
           folder = Path("paper_pov/output/learning-overlay")
           frozen = folder / "frozen-state.json"
@@ -349,6 +351,7 @@ jobs:
           observed = json.loads(observed_path.read_text()) if observed_path.exists() else {}
           status = {
               "schema": "paper_learning_run_status_v1",
+              "learning_artifact_run_id": os.environ.get("LEARNING_RUN") or None,
               "state_available": state is not None,
               "observed_handoff_status": observed.get("status", "NOT_AVAILABLE"),
               "observed_handoff_reason": observed.get("reason", "NO_E_ARTIFACT"),
@@ -406,6 +409,7 @@ jobs:
             lines.extend([
               "Learning pipeline: "+str(learning["challenger_status"]),
               "Observed E handoff: "+str(learning["observed_handoff_status"])+"; reason: "+str(learning["observed_handoff_reason"]),
+              "E learning artifact run: "+str(learning["learning_artifact_run_id"] or "NONE"),
               "Completed observed 48h outcomes: "+str(learning["observed_complete_48h"]),
               "Point-in-time feature-complete predictions: "+str(learning["feature_complete_predictions"]),
               "Authenticated learning state: "+("YES" if learning["source_authenticated"] else "NO"),
