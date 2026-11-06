@@ -320,6 +320,15 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
             writer["source_sha"] == sha and
             writer["ledger_generation"] != generation):
         raise ValueError("same-run D persisted generation contradicts published ledger")
+    # An independently authenticated readback claiming this exact source may
+    # not contradict its published ledger commit, even when the separate
+    # source-bound receipt is unavailable and WATCH remains unauthorized.
+    if (writer and writer["source_run_id"] == int(run_id)
+            and writer["source_sha"] == sha
+            and writer["independently_authenticated"]):
+        claimed_commit = writer_readback["persisted_paper"].get("ledger_commit")
+        if claimed_commit is not None and claimed_commit != result["ledger_commit"]:
+            raise ValueError("same-run D persisted ledger commit contradicts publisher")
     # A current WATCH must be backed by D readback of the exact persisted
     # published scan, not merely by an unrelated authenticated historical D run.
     same_run_writer = bool(writer and writer["source_run_id"] == int(run_id)
