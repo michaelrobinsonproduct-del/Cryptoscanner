@@ -18,6 +18,12 @@ class HistoricalPaperCohortTest(unittest.TestCase):
         self.assertEqual(result["recovered_mature_outcomes"], 1)
         self.assertFalse(result["source_authenticated"])
         self.assertFalse(result["promotion_authorized"])
+        carried = {"schema": "recovered_cohort", "generation": -1,
+                   "predictions": result["prediction_rows"],
+                   "outcomes": result["outcome_rows"]}
+        replay = reconstruct_history([("retained", carried), ("new", late)])
+        self.assertEqual(replay["recovered_mature_outcomes"], 1)
+        self.assertEqual(replay["unique_predictions"], 1)
 
 if __name__ == "__main__":
     unittest.main()
