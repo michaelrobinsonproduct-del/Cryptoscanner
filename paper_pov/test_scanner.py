@@ -57,17 +57,24 @@ class PaperScanTests(unittest.TestCase):
         self.assertTrue(all(x["ohlc_age_seconds"] <= 600 for x in a["watch"]))
         self.assertTrue(all(x["quote_observed_at"] <= x["as_of"] for x in a["watch"]))
 
-    def test_gap_fails_closed(self):
-        with self.assertRaisesRegex(RuntimeError, "No fresh"):
-            run(gap=True)
+    def assert_market_abstentions(self, report, expected_category):
+        # OHLC failures are isolated per candidate: one bad market must not
+        # discard other markets or turn the whole scan into a false success.
+        self.assertEqual(report["watch"], [])
+        self.assertTrue(report["abstentions"])
+        self.assertEqual(len(report["abstentions"]), report["ohlc_screened"])
+        self.assertEqual(sum(report["abstention_counts"].values()), len(report["abstentions"]))
+        self.assertTrue(all(row["category"] == expected_category
+                            for row in report["abstentions"]))
 
-    def test_zero_volume_no_trade_abstains(self):
-        with self.assertRaisesRegex(RuntimeError, "No fresh"):
-            run(zero_volume=True)
+    def test_gap_fails_closed_per_market(self):
+        self.assert_market_abstentions(run(gap=True), "ohlc_gap_or_schema")
 
-    def test_stale_candle_fails_closed(self):
-        with self.assertRaisesRegex(RuntimeError, "No fresh"):
-            run(stale=True)
+    def test_zero_volume_no_trade_abstains_per_market(self):
+        self.assert_market_abstentions(run(zero_volume=True), "ohlc_gap_or_schema")
+
+    def test_stale_candle_abstains_per_market(self):
+        self.assert_market_abstentions(run(stale=True), "stale_or_future_ohlc")
 
     def test_insufficient_universe_coverage_fails_closed(self):
         with self.assertRaisesRegex(RuntimeError, "coverage"):
@@ -132,7 +139,7 @@ class PaperScanTests(unittest.TestCase):
         report = scanner.scan(api=bad_api, clock=lambda: NOW, sleep=lambda _: None)
         self.assertNotIn("C0USD", {x["pair"] for x in report["watch"]})
 
-    def test_future_ohlc_rejected(self):
+    def test_future_ohlc_abstains_per_market(self):
         def future_api(path):
             result = fixture()(path)
             if path.startswith("OHLC?"):
@@ -140,8 +147,8 @@ class PaperScanTests(unittest.TestCase):
                 for row in result[key]:
                     row[0] += 900
             return result
-        with self.assertRaisesRegex(RuntimeError, "No fresh"):
-            scanner.scan(api=future_api, clock=lambda: NOW, sleep=lambda _: None)
+        report = scanner.scan(api=future_api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assert_market_abstentions(report, "stale_or_future_ohlc")
 
 if __name__ == "__main__":
     unittest.main()

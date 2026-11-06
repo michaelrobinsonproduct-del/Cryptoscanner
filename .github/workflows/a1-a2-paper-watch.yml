@@ -1,0 +1,115 @@
+name: A1 A2 focused Kraken paper scan acceptance
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/scanner.py'
+      - 'paper_pov/scanner_prediction_export.py'
+      - 'paper_pov/test_scanner_prediction_export.py'
+      - 'paper_pov/tests/test_scan_failure_isolation.py'
+      - 'paper_pov/tests/test_watch_contract.py'
+      - 'paper_pov/tests/test_receipt_persistence.py'
+      - '.github/workflows/a1-a2-paper-watch.yml'
+  workflow_dispatch:
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Focused A1/A2 integration and persistence tests
+        run: python -m unittest paper_pov.test_scanner_prediction_export paper_pov.tests.test_scan_failure_isolation paper_pov.tests.test_watch_contract paper_pov.tests.test_receipt_persistence -v
+
+  public-kraken-paper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Capture public Kraken PAPER scan and verify local receipt
+        env:
+          PAPER_REPORT_PATH: ${{ runner.temp }}/kraken-paper/latest.json
+        run: |
+          python -m paper_pov.scanner
+          python - <<'PY'
+          import datetime as dt, hashlib, json, math, os
+          from pathlib import Path
+          latest = Path(os.environ["PAPER_REPORT_PATH"])
+          report = json.loads(latest.read_text())
+          receipts = sorted((latest.parent / "receipts").glob("*.json"))
+          assert len(receipts) == 1, "expected one immutable receipt"
+          assert json.loads(receipts[0].read_text()) == report, "receipt readback mismatch"
+          assert report["mode"] == "PAPER_ONLY" and report["production_applied"] is False
+          assert all(not x["buy_approved"] for x in report["watch"])
+          expected_status = ("WATCH" if report["watch"] else
+                             "ABSTAIN_NO_LIQUID_CANDIDATES" if report["ohlc_screened"] == 0 else
+                             "ABSTAIN_NO_QUALIFIED_OHLC")
+          assert report["scan_status"] == expected_status
+          assert report["watch"] or report["abstentions"] or report["ohlc_screened"] == 0
+          assert sum(report["abstention_counts"].values()) == len(report["abstentions"])
+          assert (report["observed_markets"] + sum(report["ticker_rejections"].values())
+                  == report["eligible_pairs"]), "ticker coverage must reconcile"
+          assert 0 <= report["ohlc_screened"] <= report["screened_markets"] <= report["observed_markets"]
+          assert all(isinstance(v, int) and v >= 0 for v in report["screening_rejections"].values())
+          assert len(report["watch"]) + len(report["abstentions"]) <= report["ohlc_screened"]
+          assert len({x["prediction_id"] for x in report["watch"]}) == len(report["watch"])
+          assert [x["rank"] for x in report["watch"]] == list(range(1, len(report["watch"]) + 1))
+          for x in report["watch"]:
+              assert x["status"] == "PAPER_WATCH" and x["risk"] in ("HIGH", "ELEVATED")
+              assert x["quote_timestamp_semantics"] == "client_observed_not_exchange_event_time"
+              assert 0 <= x["quote_age_seconds"] <= 600
+              assert 0 <= x["ohlc_age_seconds"] <= 600
+              assert all(math.isfinite(float(x[k])) for k in (
+                  "price", "move15_pct", "volume_accel", "baseline_score",
+                  "challenger_score", "spread_bps", "notional_24h_usd"))
+              assert x["price"] > 0 and x["volume_accel"] > 0
+              assert dt.datetime.fromisoformat(x["quote_observed_at"]) <= dt.datetime.fromisoformat(x["as_of"])
+          receipt_sha256 = hashlib.sha256(receipts[0].read_bytes()).hexdigest()
+          print("LIVE_PAPER_EVIDENCE " + json.dumps({
+              "as_of": report["as_of"],
+              "eligible_pairs": report["eligible_pairs"],
+              "observed_markets": report["observed_markets"],
+              "ticker_rejections": report["ticker_rejections"],
+              "ohlc_screened": report["ohlc_screened"],
+              "screened_markets": report["screened_markets"],
+              "screening_rejections": report["screening_rejections"],
+              "watch_count": len(report["watch"]),
+              "scan_status": report["scan_status"],
+              "abstentions": len(report["abstentions"]),
+              "abstention_counts": report["abstention_counts"],
+              "stablecoins_excluded": report["excluded_stablecoin_pairs"],
+              "receipt_verified": True,
+              "receipt_sha256": receipt_sha256,
+              "production_applied": False,
+          }, sort_keys=True))
+          PY
+      - name: Export real scored paper predictions for learning
+        env:
+          PAPER_REPORT_PATH: ${{ runner.temp }}/kraken-paper/latest.json
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from paper_pov.scanner_prediction_export import export_predictions
+          import json
+          latest = Path(os.environ["PAPER_REPORT_PATH"])
+          receipts = sorted((latest.parent / "receipts").glob("*.json"))
+          if len(receipts) != 1:
+              raise SystemExit("expected one immutable receipt")
+          exported = export_predictions(latest, receipts[0])
+          (latest.parent / "scored-predictions.json").write_text(
+              json.dumps(exported, sort_keys=True, allow_nan=False) + "\\n")
+          print("PAPER_LEARNING_EXPORT " + json.dumps({
+              "prediction_count": len(exported["predictions"]),
+              "receipt_sha256": exported["receipt_sha256"],
+              "qualified_outcomes": exported["qualified_outcomes"]}, sort_keys=True))
+          PY
+      - name: Retain isolated paper evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-a2-live-paper-evidence
+          path: ${{ runner.temp }}/kraken-paper/
+          retention-days: 7
+          if-no-files-found: warn
