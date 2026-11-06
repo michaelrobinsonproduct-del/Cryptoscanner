@@ -33,8 +33,21 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Run non-promotable paper learning")
     parser.add_argument("input_json", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--predictions-jsonl", type=Path)
+    parser.add_argument("--candles-jsonl", type=Path)
+    parser.add_argument("--baseline-json", type=Path)
     args = parser.parse_args(argv)
     payload = json.loads(args.input_json.read_text(encoding="utf-8"))
+    if args.predictions_jsonl:
+        payload["predictions"] = [json.loads(line) for line in
+                                  args.predictions_jsonl.read_text(encoding="utf-8").splitlines()
+                                  if line.strip()]
+    if args.candles_jsonl:
+        payload["candles"] = [json.loads(line) for line in
+                              args.candles_jsonl.read_text(encoding="utf-8").splitlines()
+                              if line.strip()]
+    if args.baseline_json:
+        payload["baseline_decisions"] = json.loads(args.baseline_json.read_text(encoding="utf-8"))
     state = build_shadow_learning_state(**payload)
     save_shadow_learning_state(args.output, state)
     print(json.dumps({
