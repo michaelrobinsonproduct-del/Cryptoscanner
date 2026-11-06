@@ -4,8 +4,8 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from .shadow_learning_runner import score_future_paper_predictions
-from .heldout_outcome_adapter import (
+from paper_pov.shadow_learning_runner import score_future_paper_predictions
+from paper_pov.heldout_outcome_adapter import (
     build_shadow_learning_state, read_shadow_learning_state, save_shadow_learning_state,
 )
 
