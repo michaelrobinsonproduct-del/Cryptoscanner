@@ -60,7 +60,8 @@ def reconstruct_forward_outcomes(predictions, candles, *, evaluation_asof_utc):
             # Only completed full 5m candles strictly after the entry may
             # contribute; never include a candle partly before prediction time.
             first_full = entry.replace(second=0, microsecond=0)
-            first_full = first_full - timedelta(minutes=first_full.minute % 5) + timedelta(minutes=10)
+            first_full = first_full - timedelta(minutes=first_full.minute % 5) + timedelta(
+                minutes=5 if entry.minute % 5 == 0 and entry.second == 0 and entry.microsecond == 0 else 10)
             last_full = end.replace(second=0, microsecond=0)
             last_full = last_full - timedelta(minutes=last_full.minute % 5)
             complete = mature and first_full <= last_full and bool(observed) and all(
