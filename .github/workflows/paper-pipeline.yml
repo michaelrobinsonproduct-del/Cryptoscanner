@@ -334,7 +334,7 @@ jobs:
           if [ "$AUTHENTICATED" = yes ]; then
             python -m paper_pov.learned_score_overlay paper_pov/output/results/results.json --score-state paper_pov/output/learning-overlay/frozen-state.json --output paper_pov/output/learning-overlay/learned-scores.md
           else
-            printf '## Learned challenger — paper only\\n\\nNO QUALIFIED RULE: no authenticated held-out-evaluated frozen E learning state available. Existing baseline and WATCH ranking unchanged.\\n' > paper_pov/output/learning-overlay/learned-scores.md
+            printf '%s\n' '## Learned challenger — paper only' '' 'NO QUALIFIED RULE: no authenticated held-out-evaluated frozen E learning state available. Existing baseline and WATCH ranking unchanged.' > paper_pov/output/learning-overlay/learned-scores.md
           fi
           export LEARNING_RUN
           # Expose an explicit machine-readable learning outcome alongside the
