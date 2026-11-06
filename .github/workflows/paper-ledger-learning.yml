@@ -12,6 +12,8 @@ on:
     paths:
       - 'paper_pov/public_ledger_learning.py'
       - 'paper_pov/historical_paper_cohort.py'
+      - 'paper_pov/kraken_observed_candles.py'
+      - 'paper_pov/observed_kraken_outcomes.py'
       - 'paper_pov/test_historical_paper_cohort.py'
       - 'paper_pov/test_public_ledger_learning.py'
       - '.github/workflows/paper-ledger-learning.yml'
@@ -51,6 +53,28 @@ jobs:
           sha256sum -c SHA256SUMS
       - name: Reconstruct real persisted paper outcome accounting
         run: python -m paper_pov.public_ledger_learning evidence/ledger.json --output evidence/learning-state.json --report evidence/learning-report.md
+      - name: Select pairs with recent persisted paper predictions
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from datetime import datetime, timedelta, timezone
+          ledger = json.loads(Path("evidence/ledger.json").read_text())
+          cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
+          pairs = set()
+          for p in ledger.get("predictions", []):
+              try:
+                  stamp = datetime.fromisoformat((p.get("entry_utc") or p.get("as_of")).replace("Z", "+00:00"))
+                  if stamp >= cutoff and p.get("pair"):
+                      pairs.add(p["pair"])
+              except (ValueError, TypeError, AttributeError):
+                  continue
+          Path("evidence/recent-pairs.json").write_text(json.dumps(sorted(pairs)[:30]))
+          PY
+      - name: Capture real recent Kraken candles and outcomes
+        run: |
+          python -m paper_pov.kraken_observed_candles evidence/recent-pairs.json --output evidence/kraken-candles.json
+          python -m paper_pov.observed_kraken_outcomes evidence/ledger.json evidence/kraken-candles.json --output evidence/observed-outcomes.json
       - name: Recover archived per-prediction outcomes from earlier paper ledgers
         env:
           GH_REPO: ${{ github.repository }}
@@ -95,4 +119,6 @@ jobs:
             evidence/learning-state.json
             evidence/learning-report.md
             evidence/historical-cohort.json
+            evidence/observed-outcomes.json
+            evidence/kraken-candles.json
           retention-days: 30
