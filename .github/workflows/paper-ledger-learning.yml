@@ -1,5 +1,14 @@
 name: Paper Ledger Learning Read Only
 on:
+  push:
+    branches:
+      - learning-e-cohort-accounting-20261104
+    paths:
+      - '.github/workflows/paper-ledger-learning.yml'
+      - 'paper_pov/observed_shadow_handoff.py'
+      - 'paper_pov/observed_kraken_outcomes.py'
+      - 'paper_pov/kraken_observed_candles.py'
+      - 'paper_pov/heldout_outcome_adapter.py'
   workflow_run:
     workflows: ["Public Kraken Paper POV (scheduled, isolated ledger)"]
     types: [completed]
