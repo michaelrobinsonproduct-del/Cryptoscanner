@@ -99,6 +99,9 @@ jobs:
               print(f"{horizon}h: {len(complete)}/{len(rows)} complete; +30% hits: {sum(row['hit'] is True for row in complete)}")
           print("Completed 48h outcomes:", state["observed_complete_48h"])
           print("Predictions with point-in-time features:", state["feature_complete_predictions"])
+          print("Mature predictions excluded for missing pre-entry features:", state["excluded_without_point_in_time_features"])
+          print("Chronological training predictions:", state["training_predictions"])
+          print("Chronological held-out predictions:", state["heldout_predictions"])
           print("Shadow learning:", state["status"])
           print("Reason:", state["reason"])
           if "shadow_state" in state:
@@ -119,6 +122,9 @@ jobs:
               *[f"{h}h qualified coverage: {sum(row['coverage_complete'] is True for row in o['outcomes'] if row['horizon_hours']==h)}/{sum(row['horizon_hours']==h for row in o['outcomes'])}; +30% observed hits: {sum(row['hit'] is True for row in o['outcomes'] if row['horizon_hours']==h and row['coverage_complete'] is True)}" for h in (1,6,24,48)],
               "Mature 48h outcomes: " + str(x["observed_complete_48h"]),
               "Predictions with point-in-time features: " + str(x["feature_complete_predictions"]),
+              "Mature predictions missing pre-entry features: " + str(x["excluded_without_point_in_time_features"]),
+              "Chronological training predictions: " + str(x["training_predictions"]),
+              "Chronological held-out predictions: " + str(x["heldout_predictions"]),
               "Baseline vs challenger: " + x["status"],
               "Reason: " + x["reason"],
               "Production scoring unchanged."
