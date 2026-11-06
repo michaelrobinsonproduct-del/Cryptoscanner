@@ -547,7 +547,7 @@ def test_downloaded_artifact_rejects_special_file(tmp_path):
 
 
 @pytest.mark.parametrize("remote_status,expected_exit", [
-    ("DIVERGED", 2), ("MATCH", 0), ("UNAVAILABLE", 0),
+    ("DIVERGED", 2), ("MATCH", 0), ("UNAVAILABLE", 2),
 ])
 def test_cli_does_not_silently_succeed_on_remote_divergence(
         tmp_path, monkeypatch, capsys, remote_status, expected_exit):
