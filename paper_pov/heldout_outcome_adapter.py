@@ -64,6 +64,7 @@ def reconstruct_forward_outcomes(predictions, candles, *, evaluation_asof_utc):
                 minutes=5 if entry.minute % 5 == 0 and entry.second == 0 and entry.microsecond == 0 else 10)
             last_full = end.replace(second=0, microsecond=0)
             last_full = last_full - timedelta(minutes=last_full.minute % 5)
+            observed = [(t, close, high) for t, close, high in observed if first_full <= t <= last_full]
             complete = mature and first_full <= last_full and bool(observed) and all(
                 observed[i][0] - observed[i - 1][0] == timedelta(minutes=5)
                 for i in range(1, len(observed))
