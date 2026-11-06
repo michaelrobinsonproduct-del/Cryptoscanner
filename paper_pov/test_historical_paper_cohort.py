@@ -1,6 +1,6 @@
 """Focused historical per-prediction cohort recovery acceptance."""
 import unittest
-from .historical_paper_cohort import reconstruct_history
+from paper_pov.historical_paper_cohort import reconstruct_history
 
 class HistoricalPaperCohortTest(unittest.TestCase):
     def test_maturing_prediction_is_recovered_once(self):
