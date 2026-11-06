@@ -81,15 +81,19 @@ jobs:
           # outcome needs an entry older than 48h, so selecting only the
           # last 48h systematically excluded the mature cohort.
           cutoff = datetime.now(timezone.utc) - timedelta(hours=60)
-          pairs = set()
+          latest_by_pair = {}
           for p in ledger.get("predictions", []):
               try:
                   stamp = datetime.fromisoformat((p.get("entry_utc") or p.get("as_of")).replace("Z", "+00:00"))
-                  if stamp >= cutoff and p.get("pair"):
-                      pairs.add(p["pair"])
+                  pair = p.get("pair")
+                  if stamp >= cutoff and pair:
+                      latest_by_pair[pair] = max(stamp, latest_by_pair.get(pair, stamp))
               except (ValueError, TypeError, AttributeError):
                   continue
-          Path("evidence/recent-pairs.json").write_text(json.dumps(sorted(pairs)[:30]))
+          # Select the most recently observed pairs, not the first 30
+          # alphabetically, which can silently omit active predictions.
+          pairs = sorted(latest_by_pair, key=lambda pair: (-latest_by_pair[pair].timestamp(), pair))[:30]
+          Path("evidence/recent-pairs.json").write_text(json.dumps(pairs))
           PY
       - name: Capture real recent Kraken candles and outcomes
         run: |
