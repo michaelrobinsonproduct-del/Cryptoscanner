@@ -57,6 +57,15 @@ jobs:
         run: |
           RUN_ID="$REQUESTED_RUN"
           if [ "${{ github.event_name }}" = "workflow_run" ]; then RUN_ID="${{ github.event.workflow_run.id }}"; fi
+          if [ -n "$RUN_ID" ]; then
+            # Manual and event-linked runs must be the successful main
+            # scanner producer, never an arbitrary user-supplied run.
+            gh api -X GET "repos/$GH_REPO/actions/runs/$RUN_ID" --jq '
+              select(.name == "Public Kraken Paper POV (scheduled, isolated ledger)"
+                and .head_branch == "main" and .conclusion == "success"
+                and (.event == "schedule" or .event == "workflow_dispatch"))
+              | .id' | grep -Fx "$RUN_ID"
+          fi
           if [ -z "$RUN_ID" ]; then
             # Select a completed main-branch paper producer, not an artifact
             # from an unmerged PR or a different workflow.
