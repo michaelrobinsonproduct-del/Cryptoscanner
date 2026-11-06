@@ -14,6 +14,7 @@ on:
       - 'paper_pov/historical_paper_cohort.py'
       - 'paper_pov/kraken_observed_candles.py'
       - 'paper_pov/observed_kraken_outcomes.py'
+      - 'paper_pov/observed_shadow_handoff.py'
       - 'paper_pov/test_historical_paper_cohort.py'
       - 'paper_pov/test_public_ledger_learning.py'
       - '.github/workflows/paper-ledger-learning.yml'
@@ -75,6 +76,7 @@ jobs:
         run: |
           python -m paper_pov.kraken_observed_candles evidence/recent-pairs.json --output evidence/kraken-candles.json
           python -m paper_pov.observed_kraken_outcomes evidence/ledger.json evidence/kraken-candles.json --output evidence/observed-outcomes.json
+          python -m paper_pov.observed_shadow_handoff evidence/ledger.json evidence/observed-outcomes.json --output evidence/shadow-handoff.json
       - name: Recover archived per-prediction outcomes from earlier paper ledgers
         env:
           GH_REPO: ${{ github.repository }}
@@ -121,4 +123,5 @@ jobs:
             evidence/historical-cohort.json
             evidence/observed-outcomes.json
             evidence/kraken-candles.json
+            evidence/shadow-handoff.json
           retention-days: 30
