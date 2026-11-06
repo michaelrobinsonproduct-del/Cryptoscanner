@@ -290,20 +290,36 @@ jobs:
           LEARNING_RUN=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --jq '[.artifacts[] | select(.expired == false and (.name | startswith("public-paper-learning-")))] | sort_by(.created_at) | reverse | .[0].workflow_run.id // empty' || true)
           if [ -n "$LEARNING_RUN" ] && gh run download "$LEARNING_RUN" -n "public-paper-learning-$LEARNING_RUN" -D paper_pov/output/learning-overlay/source; then
             STATE=paper_pov/output/learning-overlay/source/shadow-handoff.json
-            python - <<'PY'
+            if [ -f "$STATE" ]; then
+              python - <<'PY'
           import json
           from pathlib import Path
           p=Path("paper_pov/output/learning-overlay/source/shadow-handoff.json")
           data=json.loads(p.read_text())
           state=data.get("shadow_state")
-          if state and state.get("schema")=="paper_learning_state_v1":
+          if isinstance(state,dict) and state.get("schema")=="paper_learning_state_v1":
               Path("paper_pov/output/learning-overlay/frozen-state.json").write_text(json.dumps(state))
           PY
+            fi
           fi
+          # Do not advertise unverified historical observations as learned
+          # scores. A frozen but unauthenticated E state is visible in the
+          # machine-readable status, never promoted into the paper overlay.
           if [ -f paper_pov/output/learning-overlay/frozen-state.json ]; then
+            AUTHENTICATED=$(python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path("paper_pov/output/learning-overlay/frozen-state.json").read_text())
+          print("yes" if s.get("source_authenticated") is True else "no")
+          PY
+          )
+          else
+            AUTHENTICATED=no
+          fi
+          if [ "$AUTHENTICATED" = yes ]; then
             python -m paper_pov.learned_score_overlay paper_pov/output/results/results.json --score-state paper_pov/output/learning-overlay/frozen-state.json --output paper_pov/output/learning-overlay/learned-scores.md
           else
-            printf '## Learned challenger — paper only\n\nNO QUALIFIED RULE: no frozen E learning state available. Existing baseline and WATCH ranking unchanged.\n' > paper_pov/output/learning-overlay/learned-scores.md
+            printf '## Learned challenger — paper only\\n\\nNO QUALIFIED RULE: no authenticated frozen E learning state available. Existing baseline and WATCH ranking unchanged.\\n' > paper_pov/output/learning-overlay/learned-scores.md
           fi
           # Expose an explicit machine-readable learning outcome alongside the
           # human-readable report; no state or model means no learning claim.
