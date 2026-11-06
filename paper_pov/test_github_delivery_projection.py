@@ -309,6 +309,18 @@ class DeliveryProjectionTests(unittest.TestCase):
                  "recovered_generation": published["ledger_generation"],
                  "remote_generation": published["ledger_generation"],
                  "independently_authenticated": False, "production_applied": False}}
+        # D requires a source-bound pinned-checkpoint receipt in addition to
+        # canonical ledger MATCH; without it no current WATCH is authorized.
+        receipt = {"run_id": published["run_id"], "source_sha": SHA,
+                   "artifact_id": 123, "sha256sums_sha256": "e"*64,
+                   "ledger_receipt_sha256": "f"*64,
+                   "ledger_sha256": published["ledger_sha256"],
+                   "ledger_generation": published["ledger_generation"]}
+        d["source_bound_receipt"] = receipt
+        d["same_run_reconciliation"] = {
+            **receipt, "status": "MATCH", "remote_checkpoint_sha": "d"*40,
+            "live_watch_authorized": False,
+            "independently_authenticated": False, "production_applied": False}
         class AtReceiptTime(datetime):
             @classmethod
             def now(cls, tz=None):
