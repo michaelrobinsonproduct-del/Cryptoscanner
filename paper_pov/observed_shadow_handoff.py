@@ -40,8 +40,10 @@ def build_observed_shadow_handoff(ledger, observed, *, evaluation_asof_utc, cand
             continue
         last = prior[-1]
         before_15 = prior[-4]
-        previous_volume = sum(float(c["volume"]) for c in prior[-7:-4])
-        recent_volume = sum(float(c["volume"]) for c in prior[-4:-1])
+        # Two adjacent, non-overlapping completed 15m windows ending
+        # at the same last pre-entry candle used for price momentum.
+        previous_volume = sum(float(c["volume"]) for c in prior[-6:-3])
+        recent_volume = sum(float(c["volume"]) for c in prior[-3:])
         if float(before_15["close"]) <= 0 or previous_volume <= 0:
             continue
         features = {
