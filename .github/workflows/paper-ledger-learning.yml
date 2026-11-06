@@ -2,6 +2,9 @@ name: Paper Ledger Learning Read Only
 on:
   schedule:
     - cron: '54 * * * *'
+  workflow_run:
+    workflows: ["Public Kraken Paper POV (scheduled, isolated ledger)"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       paper_run_id:
@@ -24,6 +27,11 @@ permissions:
   actions: read
 jobs:
   paper-ledger-learning:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.repository.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -41,6 +49,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           RUN_ID="$REQUESTED_RUN"
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then RUN_ID="${{ github.event.workflow_run.id }}"; fi
           if [ -z "$RUN_ID" ]; then
             RUN_ID=$(gh api -X GET "repos/$GH_REPO/actions/artifacts?per_page=100" --jq '.artifacts[] | select(.expired == false and (.name | startswith("public-paper-ledger-"))) | .workflow_run.id' | head -n 1)
           fi
@@ -84,7 +93,7 @@ jobs:
           from pathlib import Path
           outcomes = json.loads(Path("evidence/observed-outcomes.json").read_text())
           state = json.loads(Path("evidence/shadow-handoff.json").read_text())
-          print("## Kraken paper learning")
+          print("## Kraken paper learning — paper scan", __import__("os").environ["PAPER_RUN_ID"])
           print("Completed forward outcomes:", outcomes["complete_5m_outcomes"])
           print("Completed 48h outcomes:", state["observed_complete_48h"])
           print("Predictions with point-in-time features:", state["feature_complete_predictions"])
@@ -93,6 +102,27 @@ jobs:
           if "shadow_state" in state:
               print("Baseline versus challenger:", state["shadow_state"]["comparison"])
           print("Paper-only; no production scoring promotion.")
+          PY
+      - name: Retain readable learning feedback with existing paper results
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          x = json.loads(Path("evidence/shadow-handoff.json").read_text())
+          o = json.loads(Path("evidence/observed-outcomes.json").read_text())
+          lines = [
+              "## Paper scan learning — run " + os.environ["PAPER_RUN_ID"],
+              "",
+              "Forward outcomes: " + str(o["complete_5m_outcomes"]),
+              "Mature 48h outcomes: " + str(x["observed_complete_48h"]),
+              "Predictions with point-in-time features: " + str(x["feature_complete_predictions"]),
+              "Baseline vs challenger: " + x["status"],
+              "Reason: " + x["reason"],
+              "Production scoring unchanged."
+          ]
+          if "shadow_state" in x:
+              lines.append("Comparison: " + json.dumps(x["shadow_state"]["comparison"], sort_keys=True))
+          Path("evidence/paper-learning-results.md").write_text(chr(10).join(lines) + chr(10))
           PY
       - name: Publish learning summary in workflow results
         run: cat evidence/learning-report.md >> "$GITHUB_STEP_SUMMARY"
@@ -103,6 +133,7 @@ jobs:
           path: |
             evidence/learning-state.json
             evidence/learning-report.md
+            evidence/paper-learning-results.md
             evidence/observed-outcomes.json
             evidence/kraken-candles.json
             evidence/shadow-handoff.json
