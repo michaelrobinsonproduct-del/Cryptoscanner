@@ -1,5 +1,8 @@
 name: Shadow Learning Evidence
 on:
+  push:
+    branches:
+      - learning-e-cohort-accounting-20261104
   pull_request:
     paths:
       - 'paper_pov/shadow_learning_evidence.py'
