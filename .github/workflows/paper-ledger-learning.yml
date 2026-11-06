@@ -76,7 +76,7 @@ jobs:
         run: |
           python -m paper_pov.kraken_observed_candles evidence/recent-pairs.json --output evidence/kraken-candles.json
           python -m paper_pov.observed_kraken_outcomes evidence/ledger.json evidence/kraken-candles.json --output evidence/observed-outcomes.json
-          python -m paper_pov.observed_shadow_handoff evidence/ledger.json evidence/observed-outcomes.json --output evidence/shadow-handoff.json
+          python -m paper_pov.observed_shadow_handoff evidence/ledger.json evidence/observed-outcomes.json --candles-json evidence/kraken-candles.json --output evidence/shadow-handoff.json
       - name: Recover archived per-prediction outcomes from earlier paper ledgers
         env:
           GH_REPO: ${{ github.repository }}
