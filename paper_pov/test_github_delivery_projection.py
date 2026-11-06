@@ -122,6 +122,11 @@ class DeliveryProjectionTests(unittest.TestCase):
         from paper_pov.test_results_report import fixture
         from paper_pov.results_report import render
         scan, score = fixture()
+        # Delivery WATCH fixtures must have full quote coverage; the shared
+        # results fixture intentionally models partial inventory instead.
+        scan['eligible_pairs'] = scan['observed_markets']
+        scan['online_usd_pairs'] = (scan['eligible_pairs'] + scan['excluded_stablecoin_pairs']
+                                    + scan['excluded_other_pairs'])
         results = []
         for event, cron in (("workflow_dispatch", None), ("schedule", "9 * * * *")):
             result, _ = render(scan, score, run_id="41235442591", source_sha=SHA,
@@ -148,6 +153,11 @@ class DeliveryProjectionTests(unittest.TestCase):
         from paper_pov.test_results_report import fixture
         from paper_pov.results_report import render
         scan, score = fixture()
+        # Delivery WATCH fixtures must have full quote coverage; the shared
+        # results fixture intentionally models partial inventory instead.
+        scan['eligible_pairs'] = scan['observed_markets']
+        scan['online_usd_pairs'] = (scan['eligible_pairs'] + scan['excluded_stablecoin_pairs']
+                                    + scan['excluded_other_pairs'])
         a2 = {"schema": "a2_published_watch_delivery_v1",
               "source": "kraken_public_rest_client_observed",
               "receipt_sha256": "c"*64, "as_of": "2026-11-04T08:00:00Z",
@@ -195,6 +205,11 @@ class DeliveryProjectionTests(unittest.TestCase):
         from paper_pov.test_results_report import fixture
         from paper_pov.results_report import render
         scan, score = fixture()
+        # Delivery WATCH fixtures must have full quote coverage; the shared
+        # results fixture intentionally models partial inventory instead.
+        scan['eligible_pairs'] = scan['observed_markets']
+        scan['online_usd_pairs'] = (scan['eligible_pairs'] + scan['excluded_stablecoin_pairs']
+                                    + scan['excluded_other_pairs'])
         published, _ = render(scan, score, run_id="41235442591", source_sha=SHA,
                               ledger_commit="b"*40, event="workflow_dispatch")
         self.assertEqual(project_published_result(published)["live_watch"], [])
@@ -233,6 +248,11 @@ class DeliveryProjectionTests(unittest.TestCase):
         from paper_pov.test_results_report import fixture
         from paper_pov.results_report import render
         scan, score = fixture()
+        # Delivery WATCH fixtures must have full quote coverage; the shared
+        # results fixture intentionally models partial inventory instead.
+        scan['eligible_pairs'] = scan['observed_markets']
+        scan['online_usd_pairs'] = (scan['eligible_pairs'] + scan['excluded_stablecoin_pairs']
+                                    + scan['excluded_other_pairs'])
         published, _ = render(scan, score, run_id="41235442591", source_sha=SHA,
                               ledger_commit="b"*40, event="workflow_dispatch")
         d = {"status": "VERIFIED_REMOTE_READBACK", "remote_downloaded": True,
@@ -264,6 +284,11 @@ class DeliveryProjectionTests(unittest.TestCase):
         from paper_pov.results_report import render
         from paper_pov.github_delivery_projection import project_published_result
         scan, score = fixture()
+        # Delivery WATCH fixtures must have full quote coverage; the shared
+        # results fixture intentionally models partial inventory instead.
+        scan['eligible_pairs'] = scan['observed_markets']
+        scan['online_usd_pairs'] = (scan['eligible_pairs'] + scan['excluded_stablecoin_pairs']
+                                    + scan['excluded_other_pairs'])
         published, _ = render(scan, score, run_id="41235442591",
                               source_sha=SHA, ledger_commit="b"*40,
                               event="workflow_dispatch")
@@ -284,6 +309,18 @@ class DeliveryProjectionTests(unittest.TestCase):
                  "recovered_generation": published["ledger_generation"],
                  "remote_generation": published["ledger_generation"],
                  "independently_authenticated": False, "production_applied": False}}
+        # D requires a source-bound pinned-checkpoint receipt in addition to
+        # canonical ledger MATCH; without it no current WATCH is authorized.
+        receipt = {"run_id": published["run_id"], "source_sha": SHA,
+                   "artifact_id": 123, "sha256sums_sha256": "e"*64,
+                   "ledger_receipt_sha256": "f"*64,
+                   "ledger_sha256": published["ledger_sha256"],
+                   "ledger_generation": published["ledger_generation"]}
+        d["source_bound_receipt"] = receipt
+        d["same_run_reconciliation"] = {
+            **receipt, "status": "MATCH", "remote_checkpoint_sha": "d"*40,
+            "live_watch_authorized": False,
+            "independently_authenticated": False, "production_applied": False}
         class AtReceiptTime(datetime):
             @classmethod
             def now(cls, tz=None):
@@ -320,6 +357,11 @@ class DeliveryProjectionTests(unittest.TestCase):
         from paper_pov.test_results_report import fixture
         from paper_pov.results_report import render
         scan, score = fixture()
+        # Delivery WATCH fixtures must have full quote coverage; the shared
+        # results fixture intentionally models partial inventory instead.
+        scan['eligible_pairs'] = scan['observed_markets']
+        scan['online_usd_pairs'] = (scan['eligible_pairs'] + scan['excluded_stablecoin_pairs']
+                                    + scan['excluded_other_pairs'])
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             for event, cron in (("workflow_dispatch", None), ("schedule", "9 * * * *")):
@@ -352,6 +394,11 @@ class DeliveryProjectionTests(unittest.TestCase):
         from paper_pov.test_results_report import fixture
         from paper_pov.results_report import render
         scan, score = fixture()
+        # Delivery WATCH fixtures must have full quote coverage; the shared
+        # results fixture intentionally models partial inventory instead.
+        scan['eligible_pairs'] = scan['observed_markets']
+        scan['online_usd_pairs'] = (scan['eligible_pairs'] + scan['excluded_stablecoin_pairs']
+                                    + scan['excluded_other_pairs'])
         learning = {"schema": "paper_learning_handoff_v1", "status": "NO_QUALIFIED_RULE",
                     "read_only": True, "source_authenticated": False,
                     "measured_lift_verified": False, "live_watch_authorized": False,
@@ -386,6 +433,11 @@ class DeliveryProjectionTests(unittest.TestCase):
         from paper_pov.results_report import render
         from paper_pov.github_delivery_projection import project_legacy_published_abstention
         scan, score = fixture()
+        # Delivery WATCH fixtures must have full quote coverage; the shared
+        # results fixture intentionally models partial inventory instead.
+        scan['eligible_pairs'] = scan['observed_markets']
+        scan['online_usd_pairs'] = (scan['eligible_pairs'] + scan['excluded_stablecoin_pairs']
+                                    + scan['excluded_other_pairs'])
         outputs = []
         for event, cron in (("workflow_dispatch", None), ("schedule", "9 * * * *")):
             published, _ = render(scan, score, run_id="41235442591",
@@ -411,6 +463,11 @@ class DeliveryProjectionTests(unittest.TestCase):
         from paper_pov.results_report import render
         from paper_pov.github_delivery_projection import project_published_result
         scan, score = fixture()
+        # Delivery WATCH fixtures must have full quote coverage; the shared
+        # results fixture intentionally models partial inventory instead.
+        scan['eligible_pairs'] = scan['observed_markets']
+        scan['online_usd_pairs'] = (scan['eligible_pairs'] + scan['excluded_stablecoin_pairs']
+                                    + scan['excluded_other_pairs'])
         for event, cron in (("workflow_dispatch", None), ("schedule", "9 * * * *")):
             with self.subTest(event=event):
                 published, _ = render(scan, score, run_id="41235442591",

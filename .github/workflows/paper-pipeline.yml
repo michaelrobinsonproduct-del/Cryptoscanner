@@ -3,12 +3,12 @@ on:
   workflow_dispatch:
     inputs:
       recovery_slot_utc:
-        description: 'Missed :09/:39 UTC slot; empty for normal manual scan'
+        description: 'Missed :24/:54 UTC slot; empty for normal manual scan'
         required: false
         type: string
   schedule:
-    - cron: '9 * * * *'
-    - cron: '39 * * * *'
+    - cron: '24 * * * *'
+    - cron: '54 * * * *'
 permissions:
   contents: write
   issues: write
@@ -34,7 +34,7 @@ jobs:
           case "$PAPER_GITHUB_EVENT" in
             schedule)
               case "$PAPER_CRON_EXPRESSION" in
-                '9 * * * *'|'39 * * * *') ;;
+                '24 * * * *'|'54 * * * *') ;;
                 *) echo "PAPER_UNRECOGNIZED_ORIGINATING_CRON"; exit 1 ;;
               esac
               ;;
@@ -279,6 +279,110 @@ jobs:
             paper_pov/output/results/SHA256SUMS
           retention-days: 90
           if-no-files-found: error
+      - name: Render learned challenger overlay from available frozen E state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p paper_pov/output/learning-overlay
+          # The E branch may not yet be merged; never make a healthy scan fail
+          # because a qualified frozen learning artifact is unavailable.
+          # Only consume learning artifacts produced from the default branch.
+          # A PR/push artifact from an unmerged E branch must never be treated
+          # as the active scanner's authenticated learning handoff.
+          LEARNING_RUN=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --jq '[.artifacts[] | select(.expired == false and (.name | startswith("public-paper-learning-")) and .workflow_run.head_branch == "main")] | sort_by(.created_at) | reverse | .[0].workflow_run.id // empty' || true)
+          if [ -n "$LEARNING_RUN" ] && gh run download "$LEARNING_RUN" -n "public-paper-learning-$LEARNING_RUN" -D paper_pov/output/learning-overlay/source; then
+            STATE=paper_pov/output/learning-overlay/source/shadow-handoff.json
+            if [ -f "$STATE" ]; then
+              python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          p=Path("paper_pov/output/learning-overlay/source/shadow-handoff.json")
+          data=json.loads(p.read_text())
+          digest=data.get("evidence_digest")
+          unsigned={k:v for k,v in data.items() if k!="evidence_digest"}
+          actual=hashlib.sha256(json.dumps(unsigned,sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
+          if not isinstance(digest,str) or digest!=actual:
+              raise ValueError("E learning handoff evidence checksum mismatch")
+          if data.get("schema")!="observed_shadow_handoff_v1":
+              raise ValueError("Unexpected E learning handoff schema")
+          folder=Path("paper_pov/output/learning-overlay")
+          (folder/"observed-handoff.json").write_text(json.dumps({
+              "status":data.get("status"),"reason":data.get("reason"),
+              "observed_complete_48h":data.get("observed_complete_48h"),
+              "feature_complete_predictions":data.get("feature_complete_predictions"),
+              "source_authenticated":data.get("source_authenticated") is True,
+              "evidence_digest":digest},sort_keys=True))
+          state=data.get("shadow_state")
+          if isinstance(state,dict) and state.get("schema")=="paper_learning_state_v1":
+              (folder/"frozen-state.json").write_text(json.dumps(state))
+          PY
+            fi
+          fi
+          # Do not advertise unverified historical observations as learned
+          # scores. A frozen but unauthenticated E state is visible in the
+          # machine-readable status, never promoted into the paper overlay.
+          if [ -f paper_pov/output/learning-overlay/frozen-state.json ]; then
+            AUTHENTICATED=$(python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path("paper_pov/output/learning-overlay/frozen-state.json").read_text())
+          print("yes" if (s.get("source_authenticated") is True and s.get("challenger",{}).get("status")=="SHADOW_ONLY" and s.get("comparison",{}).get("status")=="SHADOW_EVALUATED") else "no")
+          PY
+          )
+          else
+            AUTHENTICATED=no
+          fi
+          if [ "$AUTHENTICATED" = yes ]; then
+            python -m paper_pov.learned_score_overlay paper_pov/output/results/results.json --score-state paper_pov/output/learning-overlay/frozen-state.json --output paper_pov/output/learning-overlay/learned-scores.md
+          else
+            printf '%s\n' '## Learned challenger — paper only' '' 'NO QUALIFIED RULE: no authenticated held-out-evaluated frozen E learning state available. Existing baseline and WATCH ranking unchanged.' > paper_pov/output/learning-overlay/learned-scores.md
+          fi
+          export LEARNING_RUN
+          # Expose an explicit machine-readable learning outcome alongside the
+          # human-readable report; no state or model means no learning claim.
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          folder = Path("paper_pov/output/learning-overlay")
+          frozen = folder / "frozen-state.json"
+          state = json.loads(frozen.read_text()) if frozen.exists() else None
+          challenger = state.get("challenger", {}) if state else {}
+          observed_path = folder / "observed-handoff.json"
+          observed = json.loads(observed_path.read_text()) if observed_path.exists() else {}
+          status = {
+              "schema": "paper_learning_run_status_v1",
+              "learning_artifact_run_id": os.environ.get("LEARNING_RUN") or None,
+              "state_available": state is not None,
+              "observed_handoff_status": observed.get("status", "NOT_AVAILABLE"),
+              "observed_handoff_reason": observed.get("reason", "NO_E_ARTIFACT"),
+              "observed_complete_48h": observed.get("observed_complete_48h", 0),
+              "feature_complete_predictions": observed.get("feature_complete_predictions", 0),
+              "handoff_evidence_digest": observed.get("evidence_digest"),
+              "state_digest": state.get("state_digest") if state else None,
+              "outcome_count": state.get("outcome_count") if state else None,
+              "matured_count": state.get("matured_count") if state else None,
+              "source_authenticated": state.get("source_authenticated") is True if state else False,
+              "challenger_status": challenger.get("status", "NO_QUALIFIED_RULE"),
+              "comparison_status": state.get("comparison", {}).get("status", "NOT_EVALUATED") if state else "NOT_EVALUATED",
+              "measured_lift_verified": state.get("comparison", {}).get("measured_lift_verified") is True if state else False,
+              "production_applied": False,
+          }
+          (folder / "learning-status.json").write_text(json.dumps(status, sort_keys=True, indent=2) + "\n")
+          print("PAPER_LEARNING_STATUS", json.dumps(status, sort_keys=True))
+          PY
+          cat paper_pov/output/learning-overlay/learned-scores.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain separate read-only learned-score report
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-paper-learned-scores-${{ github.run_id }}
+          path: |
+            paper_pov/output/learning-overlay/learned-scores.md
+            paper_pov/output/learning-overlay/learning-status.json
+            paper_pov/output/learning-overlay/observed-handoff.json
+          retention-days: 30
       - name: Publish actual scoreboard to issue 34 and verify comment readback
         env:
           GH_TOKEN: ${{ github.token }}
@@ -302,6 +406,23 @@ jobs:
             "Readable UTC WATCH results: https://github.com/"+os.environ["GITHUB_REPOSITORY"]+"/actions/runs/"+os.environ["GITHUB_RUN_ID"]+" (job summary + checksummed artifact public-paper-results-"+os.environ["GITHUB_RUN_ID"]+").",
             "Configured GitHub schedule: :09 and :39 UTC in ONE workflow with ONE writer; unattended slot reliability NOT YET ACCEPTED. Gaps over 45m abstain; no model promotion."
           ]
+          learning_status=Path("paper_pov/output/learning-overlay/learning-status.json")
+          if learning_status.exists():
+            learning=json.loads(learning_status.read_text())
+            lines.extend([
+              "Learning pipeline: "+str(learning["challenger_status"]),
+              "Observed E handoff: "+str(learning["observed_handoff_status"])+"; reason: "+str(learning["observed_handoff_reason"]),
+              "E learning artifact run: "+str(learning["learning_artifact_run_id"] or "NONE"),
+              "Completed observed 48h outcomes: "+str(learning["observed_complete_48h"]),
+              "Point-in-time feature-complete predictions: "+str(learning["feature_complete_predictions"]),
+              "Authenticated learning state: "+("YES" if learning["source_authenticated"] else "NO"),
+              "Matured learning outcomes: "+str(learning["matured_count"] if learning["matured_count"] is not None else "NOT AVAILABLE"),
+              "Held-out comparison: "+str(learning["comparison_status"]),
+              "Verified learning improvement: "+("YES" if learning["measured_lift_verified"] else "NOT DEMONSTRATED"),
+            ])
+          overlay=Path("paper_pov/output/learning-overlay/learned-scores.md")
+          if overlay.exists():
+            lines.extend(["Learned challenger report (read-only; separate from sealed results):", overlay.read_text()])
           Path("/tmp/paper-issue-comment.txt").write_text("\n\n".join(lines))
           PY
           gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/34/comments" -f body="$(cat /tmp/paper-issue-comment.txt)" > /tmp/paper-comment-response.json

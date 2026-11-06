@@ -25,6 +25,8 @@ def fixture(*, gap=False, zero_volume=False, stale=False, coverage=False, stable
             return pairs
         if path == "Ticker":
             return tickers
+        if path.startswith("Ticker?pair="):
+            return {}  # Fixture models an unavailable retry; scanner must abstain.
         if path.startswith("OHLC?"):
             pair = path.split("pair=")[1].split("&")[0]
             start = int(NOW.timestamp()) - (14 * 300) - (3600 if stale else 0)
@@ -438,6 +440,29 @@ class PaperScanTests(unittest.TestCase):
         report = scanner.scan(api=future_api, clock=lambda: NOW, sleep=lambda _: None)
         self.assertEqual(report["watch"], [])
         self.assertEqual(report["abstention_counts"]["stale_or_future_ohlc"], 24)
+
+    def test_malformed_bulk_quote_recovered_from_authentic_single_pair(self):
+        base = fixture()
+        calls = []
+        def api(path):
+            calls.append(path)
+            if path == "Ticker?pair=C0USD":
+                return {"C0USD": base("Ticker")["C0USD"]}
+            result = base(path)
+            if path == "Ticker":
+                result = dict(result)
+                result["C0USD"] = dict(result["C0USD"], c=["nan"])
+            return result
+        report = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertIn("Ticker?pair=C0USD", calls)
+        self.assertTrue(report["ticker_coverage_complete"])
+        self.assertEqual(report["observed_markets"], 25)
+        self.assertEqual(report["scan_status"], "WATCH")
+        with tempfile.TemporaryDirectory() as folder:
+            from paper_pov.candidate_snapshot import read_snapshot
+            latest = Path(folder) / "latest.json"
+            scanner.persist_report(latest, report)
+            self.assertEqual(read_snapshot(latest, now=NOW)["watch"], report["watch"])
 
 if __name__ == "__main__":
     unittest.main()

@@ -34,7 +34,6 @@ jobs:
       - name: Focused A1-to-A2 durable readback and snapshot regression
         run: python -m unittest paper_pov.test_scanner paper_pov.test_a1_a2_end_to_end paper_pov.test_candidate_snapshot paper_pov.test_a2_artifact_consumer -v
   live-consumer:
-    needs: focused
     runs-on: ubuntu-latest
     timeout-minutes: 12
     permissions:
