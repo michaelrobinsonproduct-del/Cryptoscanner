@@ -2,8 +2,8 @@ name: Public Kraken Paper POV (scheduled, isolated ledger)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '9 * * * *'
-    - cron: '39 * * * *'
+    - cron: '54 * * * *'
+    - cron: '24 * * * *'
 permissions:
   contents: write
   issues: write
@@ -29,7 +29,7 @@ jobs:
           case "$PAPER_GITHUB_EVENT" in
             schedule)
               case "$PAPER_CRON_EXPRESSION" in
-                '9 * * * *'|'39 * * * *') ;;
+                '54 * * * *'|'24 * * * *') ;;
                 *) echo "PAPER_UNRECOGNIZED_ORIGINATING_CRON"; exit 1 ;;
               esac
               ;;
@@ -196,7 +196,7 @@ jobs:
             "Ledger SHA256: "+s["ledger_sha256"],
             "Persistence: non-force push and exact remote readback VERIFIED; downloadable 90-day SHA256 artifact in run.",
             "Readable UTC WATCH results: https://github.com/"+os.environ["GITHUB_REPOSITORY"]+"/actions/runs/"+os.environ["GITHUB_RUN_ID"]+" (job summary + checksummed artifact public-paper-results-"+os.environ["GITHUB_RUN_ID"]+").",
-            "Configured GitHub schedule: :09 and :39 UTC in ONE workflow with ONE writer; unattended slot reliability NOT YET ACCEPTED. Gaps over 45m abstain; no model promotion."
+            "Configured GitHub schedule: :54 and :24 UTC in ONE workflow with ONE writer; unattended slot reliability NOT YET ACCEPTED. Gaps over 45m abstain; no model promotion."
           ]
           Path("/tmp/paper-issue-comment.txt").write_text("\n\n".join(lines))
           PY
