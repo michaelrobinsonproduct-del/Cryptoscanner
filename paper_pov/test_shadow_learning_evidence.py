@@ -1,6 +1,6 @@
 """Deterministic fail-closed tests for isolated shadow evidence gate."""
 import unittest
-from .shadow_learning_evidence import evaluate_shadow_release
+from paper_pov.shadow_learning_evidence import evaluate_shadow_release
 
 
 def cohort(n=40):

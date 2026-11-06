@@ -3,7 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from .heldout_outcome_adapter import build_heldout_evidence, main, project_learning_handoff
+from paper_pov.heldout_outcome_adapter import build_heldout_evidence, main, project_learning_handoff
 
 
 def row(key, horizon, **changes):

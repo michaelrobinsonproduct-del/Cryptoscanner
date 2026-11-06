@@ -8,9 +8,238 @@ import argparse
 import json
 from pathlib import Path
 from datetime import timedelta
+from math import isfinite
 from .shadow_learning_evidence import utc_time, evaluate_shadow_release, canonical_digest
 
 HORIZONS = (1, 6, 24, 48)
+
+
+
+def reconstruct_forward_outcomes(predictions, candles, *, evaluation_asof_utc):
+    """Reconstruct real 1/6/24/48h forward outcomes from supplied timestamped candles.
+
+    Candles must be source-backed observations, never interpolated prices.
+    This function deliberately does not authenticate the source: downstream
+    evidence must independently verify the archive before qualifying a rule.
+    """
+    from datetime import timedelta
+    asof = utc_time(evaluation_asof_utc)
+    by_pair = {}
+    for candle in candles:
+        pair = candle["pair"]
+        timestamp = utc_time(candle["timestamp_utc"])
+        close = float(candle["close"])
+        high = float(candle["high"])
+        if not (isfinite(close) and isfinite(high) and 0 < close <= high):
+            raise ValueError("Invalid observed candle price")
+        by_pair.setdefault(pair, []).append((timestamp, close, high))
+    for observations in by_pair.values():
+        observations.sort(key=lambda item: item[0])
+        if len({item[0] for item in observations}) != len(observations):
+            raise ValueError("Duplicate candle timestamp")
+    outcomes = []
+    seen = set()
+    for prediction in predictions:
+        key = prediction["prediction_id"]
+        if key in seen:
+            raise ValueError("Duplicate prediction")
+        seen.add(key)
+        entry = utc_time(prediction["entry_utc"])
+        feature = utc_time(prediction["feature_asof_utc"])
+        if feature > entry:
+            raise ValueError("Prediction features occur after entry")
+        price = float(prediction["entry_price"])
+        if not isfinite(price) or price <= 0:
+            raise ValueError("Invalid entry price")
+        observations = by_pair.get(prediction["pair"], [])
+        for horizon in HORIZONS:
+            end = entry + timedelta(hours=horizon)
+            observed = [(t, close, high) for t, close, high in observations if entry < t <= end]
+            mature = end <= asof
+            # A missing interval cannot be silently treated as a miss.
+            # Only completed full 5m candles strictly after the entry may
+            # contribute; never include a candle partly before prediction time.
+            first_full = entry.replace(second=0, microsecond=0)
+            first_full = first_full - timedelta(minutes=first_full.minute % 5) + timedelta(
+                minutes=5 if entry.minute % 5 == 0 and entry.second == 0 and entry.microsecond == 0 else 10)
+            last_full = end.replace(second=0, microsecond=0)
+            last_full = last_full - timedelta(minutes=last_full.minute % 5)
+            observed = [(t, close, high) for t, close, high in observed if first_full <= t <= last_full]
+            complete = mature and first_full <= last_full and bool(observed) and all(
+                observed[i][0] - observed[i - 1][0] == timedelta(minutes=5)
+                for i in range(1, len(observed))
+            ) and observed[0][0] == first_full and observed[-1][0] == last_full
+            max_return = max((high / price - 1 for _, _, high in observed), default=None)
+            close_return = observed[-1][1] / price - 1 if complete else None
+            outcomes.append({
+                "prediction_id": key, "pair": prediction["pair"],
+                "entry_utc": prediction["entry_utc"],
+                "feature_asof_utc": prediction["feature_asof_utc"],
+                "horizon_hours": horizon, "label_mature_utc": end.isoformat(),
+                "entry_price": price, "close_return": close_return,
+                "max_favorable_return": max_return if complete else None,
+                "hit": max_return >= 0.30 if complete else None,
+                "coverage_complete": complete,
+                "source_sha256": prediction.get("source_sha256"),
+                "source_authenticated": False,
+                "liquidity_qualified": prediction.get("liquidity_qualified") is True,
+                "outcome_status": "MATURE" if complete else
+                    ("IMMATURE" if not mature else "MISSING_CANDLES"),
+            })
+    return outcomes
+
+
+def train_shadow_challenger(predictions, outcomes, *, training_end_utc,
+                            holdout_start_utc, feature_names):
+    """Learn from mature historical +30% labels without changing live scoring."""
+    training_end = utc_time(training_end_utc)
+    holdout_start = utc_time(holdout_start_utc)
+    if holdout_start < training_end + timedelta(hours=48):
+        raise ValueError("48h chronological purge required")
+    labels = {}
+    for outcome in outcomes:
+        if outcome.get("horizon_hours") != 48 or outcome.get("coverage_complete") is not True:
+            continue
+        if type(outcome.get("hit")) is not bool:
+            continue
+        if utc_time(outcome["label_mature_utc"]) > training_end:
+            continue
+        key = outcome["prediction_id"]
+        if key in labels:
+            raise ValueError("Duplicate training label")
+        labels[key] = outcome["hit"]
+    training = []
+    heldout = []
+    for prediction in predictions:
+        entry = utc_time(prediction["entry_utc"])
+        if utc_time(prediction["feature_asof_utc"]) > entry:
+            raise ValueError("Feature lookahead")
+        values = prediction.get("features", {})
+        if not all(isinstance(values.get(k), (int, float)) and isfinite(values[k]) for k in feature_names):
+            continue
+        if entry < training_end and prediction["prediction_id"] in labels:
+            training.append((prediction, labels[prediction["prediction_id"]]))
+        elif entry >= holdout_start:
+            heldout.append(prediction)
+    positives = [p for p, hit in training if hit]
+    negatives = [p for p, hit in training if not hit]
+    state = {"schema": "shadow_challenger_v1", "training_count": len(training),
+             "positive_count": len(positives), "negative_count": len(negatives),
+             "holdout_count": len(heldout), "training_end_utc": training_end_utc,
+             "holdout_start_utc": holdout_start_utc, "feature_names": list(feature_names),
+             "promotion_authorized": False, "production_applied": False}
+    if not positives or not negatives or not feature_names:
+        state["status"] = "INSUFFICIENT_LABEL_VARIETY"
+        state["shadow_decisions"] = {}
+    else:
+        centers = {key: sum(p["features"][key] for p, _ in training) / len(training)
+                   for key in feature_names}
+        scales = {key: max((sum((p["features"][key] - centers[key]) ** 2
+                                  for p, _ in training) / len(training)) ** 0.5, 1e-9)
+                  for key in feature_names}
+        weights = {key: (
+            sum((p["features"][key] - centers[key]) / scales[key] for p in positives) / len(positives)
+            - sum((p["features"][key] - centers[key]) / scales[key] for p in negatives) / len(negatives))
+            for key in feature_names}
+        state["feature_weights"] = weights
+        state["feature_centers"] = centers
+        state["feature_scales"] = scales
+        state["shadow_scores"] = {
+            p["prediction_id"]: sum((p["features"][key] - centers[key]) / scales[key] * weights[key]
+                                    for key in feature_names) for p in heldout}
+        state["status"] = "SHADOW_ONLY"
+    state["version"] = canonical_digest(state)
+    return state
+
+
+def evaluate_shadow_scores(challenger, outcomes, baseline_decisions, *, threshold=0.0):
+    """Compare baseline and challenger on the identical matured 48h cohort."""
+    if challenger.get("status") != "SHADOW_ONLY":
+        return {"status": "NO_QUALIFIED_RULE", "reason": "INSUFFICIENT_TRAINING",
+                "promotion_authorized": False}
+    labels = {row["prediction_id"]: row["hit"] for row in outcomes
+              if row.get("horizon_hours") == 48 and row.get("coverage_complete") is True
+              and type(row.get("hit")) is bool
+              and utc_time(row["label_mature_utc"]) <= utc_time(challenger["evaluation_asof_utc"])}
+    scores = challenger["shadow_scores"]
+    ids = sorted(set(scores) & set(labels))
+    if set(ids) != set(scores) or set(ids) != set(baseline_decisions):
+        return {"schema": "shadow_score_comparison_v1", "status": "INCOMPLETE_HELDOUT_COHORT",
+                "missing_labels": len(set(scores) - set(labels)),
+                "missing_baseline": len(set(scores) - set(baseline_decisions)),
+                "promotion_authorized": False, "production_applied": False}
+    def metrics(decisions):
+        watched = [key for key in ids if decisions[key]]
+        hits = sum(labels[key] for key in watched)
+        movers = sum(labels[key] for key in ids)
+        return {"cohort": len(ids), "watched": len(watched), "true_positives": hits,
+                "false_positives": len(watched) - hits,
+                "precision": hits / len(watched) if watched else None,
+                "recall": hits / movers if movers else None,
+                "coverage": len(watched) / len(ids) if ids else None,
+                "missed_movers": movers - hits}
+    base = metrics(baseline_decisions)
+    shadow = metrics({key: scores[key] >= threshold for key in ids})
+    return {"schema": "shadow_score_comparison_v1", "status": "SHADOW_EVALUATED",
+            "challenger_version": challenger["version"], "baseline": base,
+            "challenger": shadow, "cohort_ids_digest": canonical_digest(ids),
+            "measured_lift_verified": False, "promotion_authorized": False,
+            "production_applied": False}
+
+
+def build_shadow_learning_state(predictions, candles, baseline_decisions, *,
+                                training_end_utc, holdout_start_utc,
+                                evaluation_asof_utc, feature_names):
+    """Compose the outcome, learning, and evaluation stages into one paper-only state."""
+    outcomes = reconstruct_forward_outcomes(
+        predictions, candles, evaluation_asof_utc=evaluation_asof_utc)
+    challenger = train_shadow_challenger(
+        predictions, outcomes, training_end_utc=training_end_utc,
+        holdout_start_utc=holdout_start_utc, feature_names=feature_names)
+    challenger["evaluation_asof_utc"] = evaluation_asof_utc
+    challenger["version"] = canonical_digest({k: v for k, v in challenger.items() if k != "version"})
+    comparison = evaluate_shadow_scores(challenger, outcomes, baseline_decisions)
+    result = {"schema": "paper_learning_state_v1",
+              "evaluation_asof_utc": evaluation_asof_utc,
+              "outcome_count": len(outcomes),
+              "matured_count": sum(o["outcome_status"] == "MATURE" for o in outcomes),
+              "hit_counts": {str(h): sum(o["horizon_hours"] == h and o["hit"] is True
+                                         for o in outcomes) for h in HORIZONS},
+              "challenger": challenger, "comparison": comparison,
+              "source_authenticated": False, "promotion_authorized": False,
+              "production_applied": False}
+    result["state_digest"] = canonical_digest(result)
+    return result
+
+
+def save_shadow_learning_state(path, state):
+    """Persist non-promotable learning evidence for a later paper-only reader."""
+    if state.get("schema") != "paper_learning_state_v1" or state.get("promotion_authorized") is not False:
+        raise ValueError("Unsafe learning state")
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    data = json.dumps(state, sort_keys=True, indent=2, allow_nan=False) + "\n"
+    if target.exists():
+        previous = json.loads(target.read_text(encoding="utf-8"))
+        if utc_time(previous["evaluation_asof_utc"]) > utc_time(state["evaluation_asof_utc"]):
+            raise ValueError("Refusing to roll back learning generation")
+    temporary = target.with_name(target.name + ".tmp")
+    temporary.write_text(data, encoding="utf-8")
+    temporary.replace(target)
+    return state["state_digest"]
+
+
+def read_shadow_learning_state(path):
+    state = json.loads(Path(path).read_text(encoding="utf-8"))
+    digest = state.pop("state_digest")
+    if state.get("schema") != "paper_learning_state_v1":
+        raise ValueError("Unexpected learning state schema")
+    if digest != canonical_digest(state):
+        raise ValueError("Learning state checksum mismatch")
+    state["state_digest"] = digest
+    if state.get("promotion_authorized") is not False or state.get("production_applied") is not False:
+        raise ValueError("Learning state cannot change active scoring")
+    return state
 
 
 def build_heldout_evidence(outcomes, baseline_decisions, challenger_decisions, *,

@@ -1,0 +1,176 @@
+name: Paper Ledger Learning Read Only
+on:
+  push:
+    branches:
+      - learning-e-cohort-accounting-20261104
+    paths:
+      - '.github/workflows/paper-ledger-learning.yml'
+      - 'paper_pov/observed_shadow_handoff.py'
+      - 'paper_pov/observed_kraken_outcomes.py'
+      - 'paper_pov/kraken_observed_candles.py'
+      - 'paper_pov/heldout_outcome_adapter.py'
+  workflow_run:
+    workflows: ["Public Kraken Paper POV (scheduled, isolated ledger)"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      paper_run_id:
+        description: "Successful paper scan run ID containing public-paper-ledger artifact"
+        required: false
+        type: string
+  pull_request:
+    paths:
+      - 'paper_pov/public_ledger_learning.py'
+      - 'paper_pov/historical_paper_cohort.py'
+      - 'paper_pov/kraken_observed_candles.py'
+      - 'paper_pov/observed_kraken_outcomes.py'
+      - 'paper_pov/observed_shadow_handoff.py'
+      - 'paper_pov/heldout_outcome_adapter.py'
+      - 'paper_pov/test_historical_paper_cohort.py'
+      - 'paper_pov/test_public_ledger_learning.py'
+      - '.github/workflows/paper-ledger-learning.yml'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  paper-ledger-learning:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Focused ledger schema acceptance
+        run: python -m unittest paper_pov.test_public_ledger_learning paper_pov.test_historical_paper_cohort -v
+      - name: Select latest persisted public paper ledger
+        env:
+          REQUESTED_RUN: ${{ inputs.paper_run_id }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          RUN_ID="$REQUESTED_RUN"
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then RUN_ID="${{ github.event.workflow_run.id }}"; fi
+          if [ -n "$RUN_ID" ]; then
+            # Manual and event-linked runs must be the successful main
+            # scanner producer, never an arbitrary user-supplied run.
+            gh api -X GET "repos/$GH_REPO/actions/runs/$RUN_ID" --jq '
+              select(.name == "Public Kraken Paper POV (scheduled, isolated ledger)"
+                and .head_branch == "main" and .conclusion == "success"
+                and (.event == "schedule" or .event == "workflow_dispatch"))
+              | .id' | grep -Fx "$RUN_ID"
+          fi
+          if [ -z "$RUN_ID" ]; then
+            # Select a completed main-branch paper producer, not an artifact
+            # from an unmerged PR or a different workflow.
+            RUN_ID=$(gh api -X GET "repos/$GH_REPO/actions/runs?branch=main&status=success&per_page=100" --jq '[.workflow_runs[] | select(.name == "Public Kraken Paper POV (scheduled, isolated ledger)" and (.event == "schedule" or .event == "workflow_dispatch"))] | sort_by(.created_at) | reverse | .[0].id // empty')
+          fi
+          test -n "$RUN_ID"
+          echo "PAPER_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+      - name: Read existing paper ledger artifact
+        run: |
+          mkdir -p evidence
+          gh run download "$PAPER_RUN_ID" -n "public-paper-ledger-$PAPER_RUN_ID" -D evidence
+          cd evidence
+          sha256sum -c SHA256SUMS
+      - name: Reconstruct real persisted paper outcome accounting
+        run: python -m paper_pov.public_ledger_learning evidence/ledger.json --output evidence/learning-state.json --report evidence/learning-report.md
+      - name: Select persisted predictions inside Kraken 5m observation window
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from datetime import datetime, timedelta, timezone
+          ledger = json.loads(Path("evidence/ledger.json").read_text())
+          # Kraken 5m OHLC exposes roughly 60h of recent candles. A 48h
+          # outcome needs an entry older than 48h, so selecting only the
+          # last 48h systematically excluded the mature cohort.
+          cutoff = datetime.now(timezone.utc) - timedelta(hours=60)
+          latest_by_pair = {}
+          for p in ledger.get("predictions", []):
+              try:
+                  stamp = datetime.fromisoformat((p.get("entry_utc") or p.get("as_of")).replace("Z", "+00:00"))
+                  pair = p.get("pair")
+                  if stamp >= cutoff and pair:
+                      latest_by_pair[pair] = max(stamp, latest_by_pair.get(pair, stamp))
+              except (ValueError, TypeError, AttributeError):
+                  continue
+          # Select the most recently observed pairs, not the first 30
+          # alphabetically, which can silently omit active predictions.
+          pairs = sorted(latest_by_pair, key=lambda pair: (-latest_by_pair[pair].timestamp(), pair))[:30]
+          Path("evidence/recent-pairs.json").write_text(json.dumps(pairs))
+          PY
+      - name: Capture real recent Kraken candles and outcomes
+        run: |
+          python -m paper_pov.kraken_observed_candles evidence/recent-pairs.json --output evidence/kraken-candles.json
+          python -m paper_pov.observed_kraken_outcomes evidence/ledger.json evidence/kraken-candles.json --output evidence/observed-outcomes.json
+          python -m paper_pov.observed_shadow_handoff evidence/ledger.json evidence/observed-outcomes.json --candles-json evidence/kraken-candles.json --output evidence/shadow-handoff.json
+      - name: Publish shadow-learning decision alongside paper results
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          outcomes = json.loads(Path("evidence/observed-outcomes.json").read_text())
+          state = json.loads(Path("evidence/shadow-handoff.json").read_text())
+          print("## Kraken paper learning — paper scan", __import__("os").environ["PAPER_RUN_ID"])
+          print("Completed forward outcomes:", outcomes["complete_5m_outcomes"])
+          for horizon in (1, 6, 24, 48):
+              rows=[row for row in outcomes["outcomes"] if row["horizon_hours"]==horizon]
+              complete=[row for row in rows if row["coverage_complete"] is True]
+              print(f"{horizon}h: {len(complete)}/{len(rows)} complete; +30% hits: {sum(row['hit'] is True for row in complete)}")
+          print("Completed 48h outcomes:", state["observed_complete_48h"])
+          print("Predictions with point-in-time features:", state["feature_complete_predictions"])
+          print("Mature predictions excluded for missing pre-entry features:", state["excluded_without_point_in_time_features"])
+          print("Chronological training predictions:", state["training_predictions"])
+          print("Chronological held-out predictions:", state["heldout_predictions"])
+          print("Shadow learning:", state["status"])
+          print("Reason:", state["reason"])
+          if "shadow_state" in state:
+              print("Baseline versus challenger:", state["shadow_state"]["comparison"])
+          print("Paper-only; no production scoring promotion.")
+          PY
+      - name: Retain readable learning feedback with existing paper results
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          x = json.loads(Path("evidence/shadow-handoff.json").read_text())
+          o = json.loads(Path("evidence/observed-outcomes.json").read_text())
+          lines = [
+              "## Paper scan learning — run " + os.environ["PAPER_RUN_ID"],
+              "",
+              "Forward outcomes: " + str(o["complete_5m_outcomes"]),
+              *[f"{h}h qualified coverage: {sum(row['coverage_complete'] is True for row in o['outcomes'] if row['horizon_hours']==h)}/{sum(row['horizon_hours']==h for row in o['outcomes'])}; +30% observed hits: {sum(row['hit'] is True for row in o['outcomes'] if row['horizon_hours']==h and row['coverage_complete'] is True)}" for h in (1,6,24,48)],
+              "Mature 48h outcomes: " + str(x["observed_complete_48h"]),
+              "Predictions with point-in-time features: " + str(x["feature_complete_predictions"]),
+              "Mature predictions missing pre-entry features: " + str(x["excluded_without_point_in_time_features"]),
+              "Chronological training predictions: " + str(x["training_predictions"]),
+              "Chronological held-out predictions: " + str(x["heldout_predictions"]),
+              "Baseline vs challenger: " + x["status"],
+              "Reason: " + x["reason"],
+              "Production scoring unchanged."
+          ]
+          if "shadow_state" in x:
+              lines.append("Comparison: " + json.dumps(x["shadow_state"]["comparison"], sort_keys=True))
+          Path("evidence/paper-learning-results.md").write_text(chr(10).join(lines) + chr(10))
+          PY
+      - name: Publish learning summary in workflow results
+        run: cat evidence/learning-report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain read-only learning evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-paper-learning-${{ github.run_id }}
+          path: |
+            evidence/learning-state.json
+            evidence/learning-report.md
+            evidence/paper-learning-results.md
+            evidence/observed-outcomes.json
+            evidence/kraken-candles.json
+            evidence/shadow-handoff.json
+          retention-days: 30
