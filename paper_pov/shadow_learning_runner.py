@@ -1,6 +1,7 @@
 """Execute the paper-only historical outcome and challenger learning pipeline."""
 import argparse
 import json
+from math import isfinite
 from pathlib import Path
 
 from .heldout_outcome_adapter import (
@@ -12,12 +13,13 @@ def score_future_paper_predictions(state_path, predictions):
     state = read_shadow_learning_state(state_path)
     model = state["challenger"]
     if model["status"] != "SHADOW_ONLY":
-        return {"status": "NO_QUALIFIED_RULE", "scores": [], "promotion_authorized": False}
+        return {"status": "NO_QUALIFIED_RULE", "scores": [], "promotion_authorized": False,
+                "production_applied": False, "challenger_version": model["version"]}
     keys = model["feature_names"]
     results = []
     for candidate in predictions:
         features = candidate.get("features", {})
-        if any(k not in features for k in keys):
+        if any(type(features.get(k)) not in (int, float) or not isfinite(features[k]) for k in keys):
             continue
         score = sum((features[k] - model["feature_centers"][k])
                     / model["feature_scales"][k] * model["feature_weights"][k]
@@ -26,6 +28,8 @@ def score_future_paper_predictions(state_path, predictions):
                         "shadow_score": score, "challenger_version": model["version"],
                         "watch_authorized": False})
     return {"status": "SHADOW_ONLY", "scores": results,
+            "challenger_version": model["version"], "scored_count": len(results),
+            "unscored_count": len(predictions) - len(results),
             "promotion_authorized": False, "production_applied": False}
 
 
@@ -36,8 +40,19 @@ def main(argv=None):
     parser.add_argument("--predictions-jsonl", type=Path)
     parser.add_argument("--candles-jsonl", type=Path)
     parser.add_argument("--baseline-json", type=Path)
+    parser.add_argument("--score-state", type=Path, help="Existing frozen state for future paper candidates")
     args = parser.parse_args(argv)
     payload = json.loads(args.input_json.read_text(encoding="utf-8"))
+    if args.score_state:
+        predictions = payload["candidates"] if isinstance(payload, dict) else payload
+        if not isinstance(predictions, list):
+            raise ValueError("Future paper candidate input must be a list")
+        result = score_future_paper_predictions(args.score_state, predictions)
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(json.dumps(result, sort_keys=True, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+        print(json.dumps({"status": result["status"], "scored_count": len(result["scores"]),
+                          "promotion_authorized": False}, sort_keys=True))
+        return result
     if args.predictions_jsonl:
         payload["predictions"] = [json.loads(line) for line in
                                   args.predictions_jsonl.read_text(encoding="utf-8").splitlines()
