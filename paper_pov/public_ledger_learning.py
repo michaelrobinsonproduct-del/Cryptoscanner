@@ -74,12 +74,40 @@ def process_ledger_file(path, output):
     destination.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     return result
 
+def render_learning_report(result):
+    """Readable read-only learning section for the existing paper scan summary."""
+    counts = result["outcome_counts"]
+    lines = [
+        "## Paper scanner learning feedback",
+        "Ledger generation: " + str(result["ledger_generation"]),
+        "Retained predictions: " + str(result["retained_prediction_count"]),
+        "Archived predictions: " + str(result["archived_prediction_count"]),
+        "Previously matured labels (archived aggregate): " + str(result["archived_matured_labels"]),
+        "Previously observed +30% hits (archived aggregate): " + str(result["archived_observed_30pct_hits"]),
+        "Retained trainable labels: " + str(result["eligible_training_count"]),
+    ]
+    for horizon in HORIZONS:
+        row = counts[str(horizon)]
+        lines.append(str(horizon) + "h: " + str(row["hits"]) + " hits, " +
+                     str(row["misses"]) + " misses, " +
+                     str(row["abstentions"]) + " abstentions")
+    lines.extend([
+        "Learning decision: " + result["status"],
+        "No scoring promotion; production unchanged.",
+        "Ledger SHA256: " + result["input_sha256"],
+    ])
+    return "\n".join(lines) + "\n"
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Read-only real paper ledger learning")
     parser.add_argument("ledger_json", type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--report", type=Path)
     args = parser.parse_args(argv)
     result = process_ledger_file(args.ledger_json, args.output)
+    if args.report:
+        args.report.write_text(render_learning_report(result), encoding="utf-8")
     print(json.dumps({"status": result["status"],
                       "retained_prediction_count": result["retained_prediction_count"],
                       "eligible_training_count": result["eligible_training_count"],
