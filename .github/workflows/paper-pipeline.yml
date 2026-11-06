@@ -325,7 +325,7 @@ jobs:
           import json
           from pathlib import Path
           s=json.loads(Path("paper_pov/output/learning-overlay/frozen-state.json").read_text())
-          print("yes" if s.get("source_authenticated") is True else "no")
+          print("yes" if (s.get("source_authenticated") is True and s.get("challenger",{}).get("status")=="SHADOW_ONLY" and s.get("comparison",{}).get("status")=="SHADOW_EVALUATED") else "no")
           PY
           )
           else
@@ -334,7 +334,7 @@ jobs:
           if [ "$AUTHENTICATED" = yes ]; then
             python -m paper_pov.learned_score_overlay paper_pov/output/results/results.json --score-state paper_pov/output/learning-overlay/frozen-state.json --output paper_pov/output/learning-overlay/learned-scores.md
           else
-            printf '## Learned challenger — paper only\\n\\nNO QUALIFIED RULE: no authenticated frozen E learning state available. Existing baseline and WATCH ranking unchanged.\\n' > paper_pov/output/learning-overlay/learned-scores.md
+            printf '## Learned challenger — paper only\\n\\nNO QUALIFIED RULE: no authenticated held-out-evaluated frozen E learning state available. Existing baseline and WATCH ranking unchanged.\\n' > paper_pov/output/learning-overlay/learned-scores.md
           fi
           # Expose an explicit machine-readable learning outcome alongside the
           # human-readable report; no state or model means no learning claim.
