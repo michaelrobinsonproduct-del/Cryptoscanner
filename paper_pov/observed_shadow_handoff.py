@@ -38,6 +38,13 @@ def build_observed_shadow_handoff(ledger, observed, *, evaluation_asof_utc, cand
                  if utc_time(c["timestamp_utc"]) < entry]
         if len(prior) < 7 or p.get("baseline_score") is None:
             continue
+        # Seven consecutive completed 5m candles are required for the
+        # 15m momentum and adjacent volume windows. Missing buckets must
+        # not be interpreted as a longer-duration momentum signal.
+        recent = prior[-7:]
+        if any(utc_time(recent[i]["timestamp_utc"]) - utc_time(recent[i-1]["timestamp_utc"]) != timedelta(minutes=5)
+               for i in range(1, len(recent))):
+            continue
         last = prior[-1]
         before_15 = prior[-4]
         # Two adjacent, non-overlapping completed 15m windows ending
