@@ -1,4 +1,5 @@
 """Read-only adapter for the real public paper ledger artifact."""
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -68,3 +69,18 @@ def process_ledger_file(path, output):
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     return result
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Read-only real paper ledger learning")
+    parser.add_argument("ledger_json", type=Path)
+    parser.add_argument("--output", required=True, type=Path)
+    args = parser.parse_args(argv)
+    result = process_ledger_file(args.ledger_json, args.output)
+    print(json.dumps({"status": result["status"],
+                      "retained_prediction_count": result["retained_prediction_count"],
+                      "eligible_training_count": result["eligible_training_count"],
+                      "evidence_digest": result["evidence_digest"]}, sort_keys=True))
+    return result
+
+if __name__ == "__main__":
+    main()
