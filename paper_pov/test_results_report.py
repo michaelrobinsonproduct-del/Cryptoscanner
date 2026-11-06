@@ -76,7 +76,7 @@ class PaperResultsContracts(unittest.TestCase):
                 self.report(event=invalid)
 
     def test_both_exact_crons_and_missing_or_spoofed_attribution(self):
-        for cron, minute in (("24 * * * *", 9), ("54 * * * *", 39)):
+        for cron, minute in (("24 * * * *", 24), ("54 * * * *", 54)):
             with self.subTest(cron=cron):
                 payload, md = self.report(cron=cron)
                 self.assertTrue(payload["scheduled_slot_verified"])
