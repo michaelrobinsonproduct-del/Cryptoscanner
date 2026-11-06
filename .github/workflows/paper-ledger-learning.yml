@@ -93,6 +93,10 @@ jobs:
           state = json.loads(Path("evidence/shadow-handoff.json").read_text())
           print("## Kraken paper learning — paper scan", __import__("os").environ["PAPER_RUN_ID"])
           print("Completed forward outcomes:", outcomes["complete_5m_outcomes"])
+          for horizon in (1, 6, 24, 48):
+              rows=[row for row in outcomes["outcomes"] if row["horizon_hours"]==horizon]
+              complete=[row for row in rows if row["coverage_complete"] is True]
+              print(f"{horizon}h: {len(complete)}/{len(rows)} complete; +30% hits: {sum(row['hit'] is True for row in complete)}")
           print("Completed 48h outcomes:", state["observed_complete_48h"])
           print("Predictions with point-in-time features:", state["feature_complete_predictions"])
           print("Shadow learning:", state["status"])
@@ -112,6 +116,7 @@ jobs:
               "## Paper scan learning — run " + os.environ["PAPER_RUN_ID"],
               "",
               "Forward outcomes: " + str(o["complete_5m_outcomes"]),
+              *[f"{h}h qualified coverage: {sum(row['coverage_complete'] is True for row in o['outcomes'] if row['horizon_hours']==h)}/{sum(row['horizon_hours']==h for row in o['outcomes'])}; +30% observed hits: {sum(row['hit'] is True for row in o['outcomes'] if row['horizon_hours']==h and row['coverage_complete'] is True)}" for h in (1,6,24,48)],
               "Mature 48h outcomes: " + str(x["observed_complete_48h"]),
               "Predictions with point-in-time features: " + str(x["feature_complete_predictions"]),
               "Baseline vs challenger: " + x["status"],
