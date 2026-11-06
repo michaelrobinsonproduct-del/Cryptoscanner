@@ -35,7 +35,7 @@ def build_observed_shadow_handoff(ledger, observed, *, evaluation_asof_utc, cand
         entry_text = p.get("entry_utc") or p.get("as_of")
         entry = utc_time(entry_text)
         prior = [c for c in by_pair.get(p["pair"], [])
-                 if utc_time(c["timestamp_utc"]) <= entry]
+                 if utc_time(c["timestamp_utc"]) < entry]
         if len(prior) < 7 or p.get("baseline_score") is None:
             continue
         last = prior[-1]
