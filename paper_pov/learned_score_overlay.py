@@ -6,6 +6,8 @@ import argparse
 import json
 from pathlib import Path
 
+from .shadow_learning_runner import score_future_paper_predictions
+
 
 def render_shadow_overlay(published, shadow):
     if published.get("production_applied") is not False or published.get("buy_approved") is not False:
@@ -36,14 +38,26 @@ def render_shadow_overlay(published, shadow):
     return "\n".join(lines) + "\n"
 
 
+def candidate_features(published):
+    return [{"prediction_id": c["prediction_id"], "features": {
+        "baseline_score": c["baseline_score"],
+        "momentum_15m": c["move15_pct"] / 100.0,
+        "volume_acceleration": c["volume_accel"],
+    }} for c in published.get("candidates", [])]
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("published_json", type=Path)
-    parser.add_argument("shadow_scores_json", type=Path)
+    parser.add_argument("--shadow-scores-json", type=Path)
+    parser.add_argument("--score-state", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     published = json.loads(args.published_json.read_text())
-    shadow = json.loads(args.shadow_scores_json.read_text())
+    if bool(args.shadow_scores_json) == bool(args.score_state):
+        raise ValueError("Supply exactly one of --score-state or --shadow-scores-json")
+    shadow = (score_future_paper_predictions(args.score_state, candidate_features(published))
+              if args.score_state else json.loads(args.shadow_scores_json.read_text()))
     report = render_shadow_overlay(published, shadow)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(report)
