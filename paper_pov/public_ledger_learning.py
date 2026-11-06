@@ -47,6 +47,9 @@ def learn_from_public_ledger(ledger):
         "ledger_generation": ledger.get("generation"),
         "retained_prediction_count": len(predictions),
         "archived_prediction_count": ledger.get("archived", {}).get("predictions", 0),
+        "archived_matured_labels": ledger.get("archived", {}).get("matured_labels", 0),
+        "archived_observed_30pct_hits": ledger.get("archived", {}).get("observed_30pct_hits", 0),
+        "archived_gap_abstentions": ledger.get("archived", {}).get("gap_abstentions", 0),
         "outcome_counts": outcome_counts,
         "eligible_training_count": sum(v["hits"] + v["misses"] for v in outcome_counts.values()),
         "status": "NO_QUALIFIED_RULE",
@@ -65,6 +68,7 @@ def process_ledger_file(path, output):
     ledger = json.loads(raw)
     result = learn_from_public_ledger(ledger)
     result["input_sha256"] = hashlib.sha256(raw).hexdigest()
+    result["evidence_digest"] = canonical_digest({k: v for k, v in result.items() if k != "evidence_digest"})
     destination = Path(output)
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n", encoding="utf-8")
