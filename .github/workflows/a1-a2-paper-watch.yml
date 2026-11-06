@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'paper_pov/scanner.py'
+      - 'paper_pov/scanner_prediction_export.py'
+      - 'paper_pov/test_scanner_prediction_export.py'
       - 'paper_pov/tests/test_scan_failure_isolation.py'
       - 'paper_pov/tests/test_watch_contract.py'
       - 'paper_pov/tests/test_receipt_persistence.py'
