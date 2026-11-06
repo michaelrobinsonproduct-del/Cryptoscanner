@@ -12,7 +12,7 @@ from .shadow_learning_evidence import canonical_digest
 def reconstruct_history(ledgers):
     predictions, outcomes, conflicts = {}, {}, []
     generations = []
-    for source_name, ledger in ledgers:
+    for source_name, ledger in sorted(ledgers, key=lambda item: (item[1].get("generation", 0), item[0])):
         if ledger.get("schema") is None:
             raise ValueError("Missing ledger schema: " + source_name)
         generations.append({"source": source_name, "generation": ledger.get("generation")})
@@ -25,8 +25,14 @@ def reconstruct_history(ledgers):
         for outcome in ledger.get("outcomes", []):
             key = (outcome["prediction_id"], outcome["horizon_hours"])
             if key in outcomes and outcomes[key] != outcome:
-                conflicts.append({"source": source_name, "prediction_id": key[0],
-                                  "horizon_hours": key[1], "kind": "OUTCOME"})
+                prior = outcomes[key]
+                if prior.get("status") in ("MATURE_HIT", "MATURE_MISS") and prior != outcome:
+                    conflicts.append({"source": source_name, "prediction_id": key[0],
+                                      "horizon_hours": key[1], "kind": "MATURE_OUTCOME_CHANGED"})
+                elif outcome.get("status") in ("MATURE_HIT", "MATURE_MISS"):
+                    outcomes[key] = outcome
+                elif prior.get("status") not in ("MATURE_HIT", "MATURE_MISS"):
+                    outcomes[key] = outcome
             else:
                 outcomes[key] = outcome
     if conflicts:
