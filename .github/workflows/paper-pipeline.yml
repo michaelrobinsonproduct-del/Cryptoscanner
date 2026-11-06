@@ -377,6 +377,16 @@ jobs:
             "Readable UTC WATCH results: https://github.com/"+os.environ["GITHUB_REPOSITORY"]+"/actions/runs/"+os.environ["GITHUB_RUN_ID"]+" (job summary + checksummed artifact public-paper-results-"+os.environ["GITHUB_RUN_ID"]+").",
             "Configured GitHub schedule: :09 and :39 UTC in ONE workflow with ONE writer; unattended slot reliability NOT YET ACCEPTED. Gaps over 45m abstain; no model promotion."
           ]
+          learning_status=Path("paper_pov/output/learning-overlay/learning-status.json")
+          if learning_status.exists():
+            learning=json.loads(learning_status.read_text())
+            lines.extend([
+              "Learning pipeline: "+str(learning["challenger_status"]),
+              "Authenticated learning state: "+("YES" if learning["source_authenticated"] else "NO"),
+              "Matured learning outcomes: "+str(learning["matured_count"] if learning["matured_count"] is not None else "NOT AVAILABLE"),
+              "Held-out comparison: "+str(learning["comparison_status"]),
+              "Verified learning improvement: "+("YES" if learning["measured_lift_verified"] else "NOT DEMONSTRATED"),
+            ])
           overlay=Path("paper_pov/output/learning-overlay/learned-scores.md")
           if overlay.exists():
             lines.extend(["Learned challenger report (read-only; separate from sealed results):", overlay.read_text()])
