@@ -48,9 +48,9 @@ def fixture():
 
 
 class PaperResultsContracts(unittest.TestCase):
-    def report(self, scan=None, score=None, event="schedule", cron="9 * * * *"):
+    def report(self, scan=None, score=None, event="schedule", cron="54 * * * *"):
         s, b = fixture()
-        if event == "workflow_dispatch" and cron == "9 * * * *":
+        if event == "workflow_dispatch" and cron == "54 * * * *":
             cron = None
         return render(s if scan is None else scan, b if score is None else score,
                       run_id="41235442591", source_sha=SHA, ledger_commit=LEDGER,
@@ -60,7 +60,7 @@ class PaperResultsContracts(unittest.TestCase):
         scheduled, scheduled_md = self.report(event="schedule")
         self.assertEqual(scheduled["github_event"], "schedule")
         self.assertTrue(scheduled["scheduled_slot_verified"])
-        self.assertEqual(scheduled["originating_cron"], "9 * * * *")
+        self.assertEqual(scheduled["originating_cron"], "54 * * * *")
         self.assertEqual(scheduled["scheduled_slot_utc_minute"], 9)
         self.assertFalse(scheduled["scheduled_start_punctuality_verified"])
         self.assertIn("GitHub trigger:** scheduled", scheduled_md)
@@ -76,7 +76,7 @@ class PaperResultsContracts(unittest.TestCase):
                 self.report(event=invalid)
 
     def test_both_exact_crons_and_missing_or_spoofed_attribution(self):
-        for cron, minute in (("9 * * * *", 9), ("39 * * * *", 39)):
+        for cron, minute in (("54 * * * *", 9), ("354 * * * *", 39)):
             with self.subTest(cron=cron):
                 payload, md = self.report(cron=cron)
                 self.assertTrue(payload["scheduled_slot_verified"])
@@ -84,12 +84,12 @@ class PaperResultsContracts(unittest.TestCase):
                 self.assertEqual(payload["originating_cron"], cron)
                 self.assertIn(f"intended UTC minute=:{minute:02d}", md)
                 self.assertFalse(payload["scheduled_start_punctuality_verified"])
-        for bad in (None, "", "9,39 * * * *", "10 * * * *",
-                    "39 * * * *; echo spoof", "9 * * * *\\n39 * * * *", True):
+        for bad in (None, "", "9,354 * * * *", "10 * * * *",
+                    "354 * * * *; echo spoof", "54 * * * *\\n354 * * * *", True):
             with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "originating scheduled cron"):
                 self.report(cron=bad)
         with self.assertRaisesRegex(ValueError, "Manual dispatch cannot claim"):
-            self.report(event="workflow_dispatch", cron="39 * * * *")
+            self.report(event="workflow_dispatch", cron="354 * * * *")
 
     def test_single_writer_workflow_passes_github_schedule_as_data(self):
         from pathlib import Path
@@ -97,8 +97,8 @@ class PaperResultsContracts(unittest.TestCase):
                     / ".github/workflows/paper-pipeline.yml").read_text()
         self.assertIn("PAPER_ORIGINATING_CRON: ${{ github.event.schedule }}", workflow)
         self.assertIn('--originating-cron "$PAPER_ORIGINATING_CRON"', workflow)
-        self.assertIn("- cron: '9 * * * *'", workflow)
-        self.assertIn("- cron: '39 * * * *'", workflow)
+        self.assertIn("- cron: '54 * * * *'", workflow)
+        self.assertIn("- cron: '354 * * * *'", workflow)
         self.assertIn("group: public-paper-proof-ledger-single-writer", workflow)
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("git push origin HEAD:refs/heads/paper-proof-ledger", workflow)
@@ -120,7 +120,7 @@ class PaperResultsContracts(unittest.TestCase):
             argv = ["paper-results", "--scan", str(scan_path),
                     "--scoreboard", str(score_path), "--run-id", "41235442591",
                     "--source-sha", SHA, "--ledger-commit", LEDGER,
-                    "--event", "schedule", "--originating-cron", "39 * * * *",
+                    "--event", "schedule", "--originating-cron", "354 * * * *",
                     "--output-dir", str(output)]
             with patch("sys.argv", argv):
                 main()
