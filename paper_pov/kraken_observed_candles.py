@@ -6,7 +6,7 @@ This module never claims independently authenticated archive provenance.
 import argparse
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -30,7 +30,7 @@ def fetch_kraken_ohlc(pair, *, interval=5):
     for candle in result[key]:
         epoch = int(candle[0])
         rows.append({"pair": pair, "timestamp_utc": datetime.fromtimestamp(
-            epoch, tz=timezone.utc).isoformat(), "close": float(candle[4]),
+            epoch, tz=timezone.utc).__add__(timedelta(minutes=5)).isoformat(), "close": float(candle[4]),
             "high": float(candle[2]), "volume": float(candle[6])})
     # Kraken's last row is a live, uncommitted interval, not an outcome.
     rows = rows[:-1]
