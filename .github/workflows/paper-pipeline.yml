@@ -305,12 +305,38 @@ jobs:
           else
             printf '## Learned challenger — paper only\n\nNO QUALIFIED RULE: no frozen E learning state available. Existing baseline and WATCH ranking unchanged.\n' > paper_pov/output/learning-overlay/learned-scores.md
           fi
+          # Expose an explicit machine-readable learning outcome alongside the
+          # human-readable report; no state or model means no learning claim.
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          folder = Path("paper_pov/output/learning-overlay")
+          frozen = folder / "frozen-state.json"
+          state = json.loads(frozen.read_text()) if frozen.exists() else None
+          challenger = state.get("challenger", {}) if state else {}
+          status = {
+              "schema": "paper_learning_run_status_v1",
+              "state_available": state is not None,
+              "state_digest": state.get("state_digest") if state else None,
+              "outcome_count": state.get("outcome_count") if state else None,
+              "matured_count": state.get("matured_count") if state else None,
+              "source_authenticated": state.get("source_authenticated") is True if state else False,
+              "challenger_status": challenger.get("status", "NO_QUALIFIED_RULE"),
+              "comparison_status": state.get("comparison", {}).get("status", "NOT_EVALUATED") if state else "NOT_EVALUATED",
+              "measured_lift_verified": state.get("comparison", {}).get("measured_lift_verified") is True if state else False,
+              "production_applied": False,
+          }
+          (folder / "learning-status.json").write_text(json.dumps(status, sort_keys=True, indent=2) + "\\n")
+          print("PAPER_LEARNING_STATUS", json.dumps(status, sort_keys=True))
+          PY
           cat paper_pov/output/learning-overlay/learned-scores.md >> "$GITHUB_STEP_SUMMARY"
       - name: Retain separate read-only learned-score report
         uses: actions/upload-artifact@v4
         with:
           name: public-paper-learned-scores-${{ github.run_id }}
-          path: paper_pov/output/learning-overlay/learned-scores.md
+          path: |
+            paper_pov/output/learning-overlay/learned-scores.md
+            paper_pov/output/learning-overlay/learning-status.json
           retention-days: 30
       - name: Publish actual scoreboard to issue 34 and verify comment readback
         env:
