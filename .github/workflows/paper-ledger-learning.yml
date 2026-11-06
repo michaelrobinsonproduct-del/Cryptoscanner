@@ -11,6 +11,7 @@ on:
   pull_request:
     paths:
       - 'paper_pov/public_ledger_learning.py'
+      - 'paper_pov/historical_paper_cohort.py'
       - 'paper_pov/test_public_ledger_learning.py'
       - '.github/workflows/paper-ledger-learning.yml'
 permissions:
@@ -49,6 +50,30 @@ jobs:
           sha256sum -c SHA256SUMS
       - name: Reconstruct real persisted paper outcome accounting
         run: python -m paper_pov.public_ledger_learning evidence/ledger.json --output evidence/learning-state.json --report evidence/learning-report.md
+      - name: Recover archived per-prediction outcomes from earlier paper ledgers
+        env:
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mkdir -p history
+          gh api -X GET "repos/$GH_REPO/actions/artifacts?per_page=100" --jq '.artifacts[] | select(.expired == false and (.name | startswith("public-paper-ledger-"))) | .workflow_run.id' | head -n 12 > history/run_ids.txt
+          while IFS= read -r run_id; do
+            test -n "$run_id" || continue
+            mkdir -p "history/$run_id"
+            gh run download "$run_id" -n "public-paper-ledger-$run_id" -D "history/$run_id"
+            (cd "history/$run_id" && sha256sum -c SHA256SUMS)
+          done < history/run_ids.txt
+          python -m paper_pov.historical_paper_cohort history --output evidence/historical-cohort.json
+      - name: Append recovered historical outcome coverage
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          x = json.load(open("evidence/historical-cohort.json"))
+          print("## Recovered historical per-prediction outcomes")
+          print("Distinct predictions:", x["unique_predictions"])
+          print("Distinct outcome rows:", x["unique_outcomes"])
+          print("Recovered mature outcome rows:", x["recovered_mature_outcomes"])
+          print("Source authenticated: false; no scoring promotion.")
+          PY
       - name: Publish learning summary in workflow results
         run: cat evidence/learning-report.md >> "$GITHUB_STEP_SUMMARY"
       - name: Retain read-only learning evidence
@@ -58,4 +83,5 @@ jobs:
           path: |
             evidence/learning-state.json
             evidence/learning-report.md
+            evidence/historical-cohort.json
           retention-days: 30
