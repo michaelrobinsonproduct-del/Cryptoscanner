@@ -57,10 +57,16 @@ def reconstruct_forward_outcomes(predictions, candles, *, evaluation_asof_utc):
             observed = [(t, close, high) for t, close, high in observations if entry < t <= end]
             mature = end <= asof
             # A missing interval cannot be silently treated as a miss.
-            complete = mature and bool(observed) and all(
+            # Only completed full 5m candles strictly after the entry may
+            # contribute; never include a candle partly before prediction time.
+            first_full = entry.replace(second=0, microsecond=0)
+            first_full = first_full - timedelta(minutes=first_full.minute % 5) + timedelta(minutes=10)
+            last_full = end.replace(second=0, microsecond=0)
+            last_full = last_full - timedelta(minutes=last_full.minute % 5)
+            complete = mature and first_full <= last_full and bool(observed) and all(
                 observed[i][0] - observed[i - 1][0] == timedelta(minutes=5)
                 for i in range(1, len(observed))
-            ) and observed[0][0] == entry + timedelta(minutes=5) and observed[-1][0] == end
+            ) and observed[0][0] == first_full and observed[-1][0] == last_full
             max_return = max((high / price - 1 for _, _, high in observed), default=None)
             close_return = observed[-1][1] / price - 1 if complete else None
             outcomes.append({
