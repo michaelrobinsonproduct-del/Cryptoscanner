@@ -1,0 +1,448 @@
+name: Runtime remote readback integrity
+on:
+  pull_request:
+    paths:
+      - 'paper_pov/runtime_readback_integrity.py'
+      - 'paper_pov/test_runtime_readback_integrity.py'
+      - 'paper_pov/github_artifact_readback.py'
+      - 'paper_pov/test_github_artifact_readback.py'
+      - '.github/workflows/runtime-readback-integrity.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install pytest
+      - run: python -m pytest -q paper_pov/test_runtime_readback_integrity.py paper_pov/test_github_artifact_readback.py
+  real-writer-recovery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Discover newest successful single-writer artifact and bind immutable run identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, subprocess
+          repo = os.environ["REPOSITORY"]
+          selected = None
+          legacy_fallback = None
+          # Prefer a source run with both the immutable writer ledger and
+          # published results, so real B delivery is exercised when available.
+          # Retain the newest ledger-only source for explicit abstention.
+          # Bound the search; never fall back to an unverified historical run.
+          for page in range(1, 6):
+              raw = subprocess.check_output(["gh", "api", "-X", "GET",
+                  f"repos/{repo}/actions/workflows/paper-pipeline.yml/runs?branch=main&status=success&per_page=100&page={page}"], timeout=45)
+              runs = json.loads(raw).get("workflow_runs", [])
+              if not runs:
+                  break
+              for run in runs:
+                  if run.get("conclusion") != "success" or run.get("status") != "completed" or run.get("event") not in ("schedule", "workflow_dispatch"):
+                      continue
+                  rid, sha = run.get("id"), run.get("head_sha")
+                  if not isinstance(rid, int) or not isinstance(sha, str) or len(sha) != 40:
+                      continue
+                  listing = json.loads(subprocess.check_output(["gh", "api", "-X", "GET",
+                      f"repos/{repo}/actions/runs/{rid}/artifacts?per_page=100"], timeout=45))
+                  if listing.get("total_count") != len(listing.get("artifacts", [])):
+                      continue
+                  matching = [a for a in listing["artifacts"] if a.get("name") == f"public-paper-ledger-{rid}" and a.get("expired") is False]
+                  if len(matching) == 1:
+                      if legacy_fallback is None:
+                          legacy_fallback = (rid, sha)
+                      paired = [a for a in listing["artifacts"]
+                                if a.get("name") == f"public-paper-results-{rid}"
+                                and a.get("expired") is False]
+                      if len(paired) == 1:
+                          selected = (rid, sha)
+                          break
+              if selected:
+                  break
+          if selected is None:
+              selected = legacy_fallback
+          if selected is None:
+              raise SystemExit("NO_SOURCE_VERIFIED_SINGLE_WRITER_ARTIFACT")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as output:
+              output.write(f"WRITER_RUN_ID={selected[0]}\nWRITER_SOURCE_SHA={selected[1]}\n")
+          print("SELECTED_SOURCE_BOUND_WRITER", selected[0], selected[1])
+          PY
+      - name: Independently download existing manual paper writer artifact and restore locally
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # A historical immutable run may be behind the advancing single-writer
+          # branch. Preserve its verified receipt and project an explicit B
+          # abstention; the CLI correctly exits 2 when requested MATCH fails.
+          recovery_rc=0
+          python -m paper_pov.github_artifact_readback \
+            --repo "${{ github.repository }}" \
+            --run-id "$WRITER_RUN_ID" \
+            --artifact-name public-paper-ledger \
+            --source-sha "$WRITER_SOURCE_SHA" \
+            --output /tmp/real-writer-recovery.json \
+            --restore-dir /tmp/real-writer-recovered \
+            --ledger-ref paper-proof-ledger \
+            --ledger-path paper_pov/output/ledger.json || recovery_rc=$?
+          RECOVERY_EXIT_CODE="$recovery_rc" python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report=json.loads(Path("/tmp/real-writer-recovery.json").read_text())
+          status=report.get("remote_ledger_reconciliation",{}).get("status")
+          valid=(report.get("status")=="WRITER_CHECKSUM_ONLY"
+                 and report.get("remote_downloaded") is True
+                 and report.get("source_bound_receipt",{}).get("run_id")==os.environ["WRITER_RUN_ID"]
+                 and status in ("MATCH","DIVERGED","UNAVAILABLE"))
+          expected=0 if status=="MATCH" else 2
+          if not valid or int(os.environ["RECOVERY_EXIT_CODE"])!=expected:
+              raise SystemExit("D_RECOVERY_INVALID_OR_UNEXPECTED_EXIT")
+          print("D_RECOVERY_SOURCE_BOUND",status,"historical_only" if status!="MATCH" else "checkpoint_match")
+          PY
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("/tmp/real-writer-recovery.json").read_text())
+          assert report["status"] == "WRITER_CHECKSUM_ONLY", report
+          assert report["independently_authenticated"] is False, report
+          assert report["remote_downloaded"] is True, report
+          assert report["persisted_paper"]["ledger_generation"] >= 1, report
+          assert report["persisted_paper"]["live_replay_performed"] is False, report
+          assert isinstance(report["persisted_paper"]["quote_evidence_certified"], bool), report
+          # Historical restoration never certifies a live replay, even if a
+          # future writer includes quote evidence in its immutable receipt.
+          assert report["persisted_paper"]["outcome"] in ("ABSTAIN", "HISTORICAL_UNCLASSIFIED", "HISTORICAL_RESULT_ONLY"), report
+          assert report["remote_ledger_reconciliation"]["status"] in ("MATCH", "DIVERGED", "UNAVAILABLE"), report
+          if report["remote_ledger_reconciliation"]["status"] == "UNAVAILABLE":
+              assert report["remote_ledger_reconciliation"]["reason"] in ("REMOTE_LEDGER_QUERY_FAILED", "REMOTE_CHECKPOINT_UNAVAILABLE"), report
+          assert report["remote_ledger_reconciliation"]["independently_authenticated"] is False, report
+          root=Path("/tmp/real-writer-recovered")
+          for name in ("latest.json", "ledger.json", "scoreboard.json", "SHA256SUMS"):
+              assert ((root / name).is_file() or (root / "paper_pov/output" / name).is_file()), name
+          print("D2_REAL_WRITER_RESTORED_CHECKSUM_ONLY", json.dumps(report, sort_keys=True))
+          PY
+      - name: Bind existing B consumer to immutable reviewed branch head
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          B_SHA=$(gh api -X GET "repos/${{ github.repository }}/git/ref/heads/integration-a-b-c-d-20261103" --jq '.object.sha')
+          [[ "$B_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "B_CONSUMER_HEAD_UNAVAILABLE"; exit 1; }
+          echo "B_CONSUMER_SHA=$B_SHA" >> "$GITHUB_ENV"
+          echo "B_CONSUMER_BOUND_SHA=$B_SHA"
+      - name: Checkout existing B delivery consumer without changing D branch
+        if: ${{ success() }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.B_CONSUMER_SHA }}
+          path: b-delivery-consumer
+          persist-credentials: false
+      - name: Confirm B consumer exact checked-out source
+        run: |
+          set -euo pipefail
+          test "$(git -C b-delivery-consumer rev-parse HEAD)" = "$B_CONSUMER_SHA"
+          echo "B_CONSUMER_EXACT_HEAD_VERIFIED=$B_CONSUMER_SHA"
+      - name: Project recovered historical writer into B delivery consumer
+        if: ${{ success() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONPATH: ${{ github.workspace }}/b-delivery-consumer
+        run: |
+          set -euo pipefail
+          cd b-delivery-consumer
+          python -m paper_pov.github_delivery_projection \
+            --repo "${{ github.repository }}" \
+            --run-id "$WRITER_RUN_ID" \
+            --writer-readback /tmp/real-writer-recovery.json \
+            --output /tmp/d2-b-delivery.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          writer=json.loads(Path("/tmp/real-writer-recovery.json").read_text())
+          delivery=json.loads(Path("/tmp/d2-b-delivery.json").read_text())
+          assert delivery["writer_recovery"]["source_run_id"] == int(writer["run_id"])
+          assert delivery["writer_recovery"]["ledger_generation"] == writer["persisted_paper"]["ledger_generation"]
+          assert delivery["writer_reconciliation_status"] == writer["remote_ledger_reconciliation"]["status"]
+          assert delivery["writer_recovery"]["same_scan_as_delivery"] is False
+          assert delivery["live_watch_authorized"] is False
+          assert delivery["single_writer_read_only"] is True
+          print("D2_B_HISTORICAL_READBACK_PROJECTED",json.dumps(delivery,sort_keys=True))
+          PY
+      - name: Consume same-run checksummed published results through B read-only delivery
+        if: ${{ success() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONPATH: ${{ github.workspace }}/b-delivery-consumer
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, subprocess
+          repo=os.environ["GITHUB_REPOSITORY"]
+          rid=os.environ["WRITER_RUN_ID"]
+          listing=json.loads(subprocess.check_output(["gh","api","-X","GET",
+              f"repos/{repo}/actions/runs/{rid}/artifacts?per_page=100"], timeout=45))
+          if listing.get("total_count") != len(listing.get("artifacts",[])):
+              raise SystemExit("INCOMPLETE_PUBLISHED_ARTIFACT_LIST")
+          matches=[a for a in listing["artifacts"] if a.get("name")==f"public-paper-results-{rid}" and a.get("expired") is False]
+          if len(matches)!=1:
+              # Historical writer receipts remain useful, but do not fabricate a
+              # verified published result when the paired artifact is absent.
+              report = {
+                  "source_run_id": int(rid),
+                  "status": "HISTORICAL_PUBLISHED_ARTIFACT_UNAVAILABLE",
+                  "reason": "NO_PAIRED_PUBLISHED_RESULTS_ARTIFACT",
+                  "single_writer_read_only": True,
+                  "live_watch_authorized": False,
+                  "production_applied": False,
+                  "writer_reconciliation_status": json.load(open("/tmp/real-writer-recovery.json"))["remote_ledger_reconciliation"]["status"],
+              }
+              from pathlib import Path
+              Path("/tmp/d2-b-published-delivery.json").write_text(json.dumps(report, sort_keys=True) + "\n")
+              print("D2_B_PUBLISHED_RESULTS_ABSTAIN_NO_PAIRED_ARTIFACT", json.dumps(report, sort_keys=True))
+              from pathlib import Path
+              Path("/tmp/d2-published-available").write_text("false")
+          else:
+              from pathlib import Path
+              Path("/tmp/d2-published-available").write_text("true")
+          PY
+          if [ "$(cat /tmp/d2-published-available)" != "true" ]; then exit 0; fi
+          mkdir -p /tmp/d2-published
+          if ! gh run download "$WRITER_RUN_ID" --repo "${{ github.repository }}" --name "public-paper-results-$WRITER_RUN_ID" --dir /tmp/d2-published; then
+            # Keep the real failure visible in the retained artifact even if the
+            # artifact service returns 503 / egress quota errors.
+            python - <<'PY'
+          import json, os
+          from pathlib import Path
+          writer=json.loads(Path("/tmp/real-writer-recovery.json").read_text())
+          report={"source_run_id":int(os.environ["WRITER_RUN_ID"]),
+                  "source_sha":os.environ["WRITER_SOURCE_SHA"],
+                  "status":"PUBLISHED_RESULTS_DOWNLOAD_FAILED",
+                  "reason":"REMOTE_ARTIFACT_DOWNLOAD_FAILED",
+                  "writer_reconciliation_status":writer["remote_ledger_reconciliation"]["status"],
+                  "single_writer_read_only":True,
+                  "live_watch_authorized":False,"production_applied":False}
+          Path("/tmp/d2-b-published-delivery.json").write_text(json.dumps(report,sort_keys=True)+"\n")
+          PY
+            exit 1
+          fi
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          root=Path("/tmp/d2-published")
+          files=list(root.rglob("*"))
+          if any(p.is_symlink() for p in files):
+              raise SystemExit("UNTRUSTED_PUBLISHED_ARTIFACT_SYMLINK")
+          required={"results.json","results.md","SHA256SUMS"}
+          matched=[p for p in files if p.is_file()]
+          if {p.name for p in matched}!=required or len(matched)!=3:
+              raise SystemExit("INCOMPLETE_PUBLISHED_RESULT_ARTIFACT")
+          with ZipFile("/tmp/d2-published-results.zip","w",compression=ZIP_DEFLATED) as z:
+              for p in matched:
+                  z.write(p,p.name)
+          PY
+          cd b-delivery-consumer
+          # Older published results contain no quote_evidence. Keep their
+          # authenticated historical ledger recovery, but never authorize WATCH.
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          import subprocess
+          from paper_pov.manual_schedule_contract import load_verified_artifact
+          try:
+              published = load_verified_artifact(Path("/tmp/d2-published-results.zip"))
+              if str(published.get("run_id")) != os.environ["WRITER_RUN_ID"] or published.get("source_sha") != os.environ["WRITER_SOURCE_SHA"]:
+                  raise ValueError("published artifact source identity mismatch")
+          except Exception:
+              # Invalid present evidence must still fail the job.
+              raise
+          # An empty but present quote_evidence array is a legitimate
+          # ABSTAIN_NO_OBSERVATIONS cohort, not a missing legacy field.
+          # Bind the published trigger to GitHub's immutable source-run metadata,
+          # not just fields supplied inside a checksummed writer artifact.
+          run_meta=json.loads(subprocess.check_output([
+              "gh", "api", "-X", "GET",
+              f"repos/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['WRITER_RUN_ID']}"
+          ], timeout=45))
+          if (run_meta.get("id") != int(os.environ["WRITER_RUN_ID"]) or
+                  run_meta.get("head_sha") != os.environ["WRITER_SOURCE_SHA"] or
+                  run_meta.get("event") != published.get("github_event") or
+                  run_meta.get("event") not in ("schedule", "workflow_dispatch") or
+                  run_meta.get("status") != "completed" or
+                  run_meta.get("conclusion") != "success"):
+              raise ValueError("published result does not match successful GitHub source run")
+          if "quote_evidence" in published:
+              writer=json.loads(Path("/tmp/real-writer-recovery.json").read_text())
+              if published.get("ledger_generation") != writer["persisted_paper"]["ledger_generation"]:
+                  raise ValueError("published result ledger generation differs from recovered same-run writer")
+              # A historical writer receipt can remain valid after the remote
+              # single-writer branch advances. Divergence is not corruption:
+              # retain the source-qualified published result but abstain from
+              # live delivery instead of failing historical recovery.
+              if writer["remote_ledger_reconciliation"]["status"] != "MATCH":
+                  report = {
+                      "source_run_id": int(os.environ["WRITER_RUN_ID"]),
+                      "source_sha": os.environ["WRITER_SOURCE_SHA"],
+                      "github_event": published["github_event"],
+                      "published_artifact_verified": True,
+                      "quote_evidence_present": True,
+                      "status": "HISTORICAL_WRITER_RECONCILIATION_NOT_MATCHED",
+                      "reason": "REMOTE_LEDGER_" + writer["remote_ledger_reconciliation"]["status"],
+                      "single_writer_read_only": True,
+                      "live_watch_authorized": False,
+                      "production_applied": False,
+                      "writer_reconciliation_status": writer["remote_ledger_reconciliation"]["status"],
+                  }
+                  Path("/tmp/d2-b-published-delivery.json").write_text(json.dumps(report, sort_keys=True)+"\n")
+                  Path("/tmp/d2-published-legacy").write_text("true")
+                  print("D2_B_HISTORICAL_RECONCILIATION_ABSTAIN",json.dumps(report,sort_keys=True))
+          if "quote_evidence" not in published:
+              # A paired legacy result is NOT a quote-complete source.
+              # Preserve explicit absence and cohort identity for B and E,
+              # rather than reporting generic artifact availability.
+              report = {
+                  "source_run_id": int(os.environ["WRITER_RUN_ID"]),
+                  "source_sha": os.environ["WRITER_SOURCE_SHA"],
+                  "github_event": published["github_event"],
+                  "published_artifact_verified": True,
+                  "quote_evidence_present": False,
+                  "status": "HISTORICAL_PUBLISHED_QUOTE_EVIDENCE_UNAVAILABLE",
+                  "reason": "PUBLISHED_QUOTE_EVIDENCE_MISSING",
+                  "single_writer_read_only": True,
+                  "live_watch_authorized": False,
+                  "production_applied": False,
+                  "writer_reconciliation_status": json.loads(Path("/tmp/real-writer-recovery.json").read_text())["remote_ledger_reconciliation"]["status"],
+              }
+              Path("/tmp/d2-b-published-delivery.json").write_text(json.dumps(report,sort_keys=True)+"\n")
+              Path("/tmp/d2-published-legacy").write_text("true")
+              print("D2_B_HISTORICAL_PUBLISHED_ABSTAIN",json.dumps(report,sort_keys=True))
+          PY
+          if [ -f /tmp/d2-published-legacy ]; then
+            # Legacy abstentions must remain valid JSON for the shared B consumer.
+            python -m json.tool /tmp/d2-b-published-delivery.json >/dev/null
+            exit 0
+          fi
+          python -m paper_pov.github_delivery_projection \
+            --published-artifact /tmp/d2-published-results.zip \
+            --expected-run-id "$WRITER_RUN_ID" \
+            --expected-source-sha "$WRITER_SOURCE_SHA" \
+            --writer-readback /tmp/real-writer-recovery.json \
+            --output /tmp/d2-b-published-delivery.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path("/tmp/d2-b-published-delivery.json").read_text())
+          assert result["source_run_id"] == int(__import__("os").environ["WRITER_RUN_ID"])
+          assert result["single_writer_read_only"] is True
+          assert result["live_watch_authorized"] is False
+          assert result["production_applied"] is False
+          assert result["writer_reconciliation_status"] in ("MATCH", "DIVERGED", "UNAVAILABLE")
+          if result["writer_reconciliation_status"] != "MATCH":
+              assert result["live_watch_authorized"] is False
+          print("D2_B_VERIFIED_PUBLISHED_DELIVERY",json.dumps(result,sort_keys=True))
+          PY
+      - name: Project D historical published abstention through unified B consumer
+        if: ${{ success() }}
+        env:
+          PYTHONPATH: ${{ github.workspace }}/b-delivery-consumer
+        run: |
+          set -euo pipefail
+          if python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("/tmp/d2-b-published-delivery.json").read_text())
+          raise SystemExit(0 if report.get("status") in (
+              "HISTORICAL_PUBLISHED_ARTIFACT_UNAVAILABLE",
+              "HISTORICAL_PUBLISHED_QUOTE_EVIDENCE_UNAVAILABLE",
+              "HISTORICAL_WRITER_RECONCILIATION_NOT_MATCHED") else 1)
+          PY
+          then
+            python -m paper_pov.github_delivery_projection \
+              --d-historical-published-report /tmp/d2-b-published-delivery.json \
+              --writer-readback /tmp/real-writer-recovery.json \
+              --output /tmp/d2-b-unified-published-delivery.json
+          else
+            cp /tmp/d2-b-published-delivery.json /tmp/d2-b-unified-published-delivery.json
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("/tmp/d2-b-unified-published-delivery.json").read_text())
+          assert report["source_run_id"] == int(__import__("os").environ["WRITER_RUN_ID"])
+          writer=json.loads(Path("/tmp/real-writer-recovery.json").read_text())
+          actual=writer["remote_ledger_reconciliation"]["status"]
+          assert actual in ("MATCH", "DIVERGED", "UNAVAILABLE"), writer
+          assert report["writer_reconciliation_status"] == actual, report
+          # Historical abstention must survive a later ledger generation or
+          # unavailable remote branch; only exact-source live WATCH requires MATCH.
+          if actual != "MATCH":
+              assert report["live_watch_authorized"] is False, report
+          assert isinstance(report["live_watch"], list) and report["live_watch_authorized"] is False
+          assert report["single_writer_read_only"] is True and report["production_applied"] is False
+          print("D2_B_UNIFIED_PUBLISHED_DELIVERY",json.dumps(report,sort_keys=True))
+          PY
+      - name: Retain unified B published delivery
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2-b-unified-published-delivery-report
+          path: /tmp/d2-b-unified-published-delivery.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Retain verified published B delivery
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2-b-published-delivery-report
+          path: /tmp/d2-b-published-delivery.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Retain B read-only projection
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2-b-historical-delivery-report
+          path: /tmp/d2-b-delivery.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Preserve explicit recovery failure when source discovery or download aborted
+        if: ${{ always() }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          path = Path("/tmp/real-writer-recovery.json")
+          if not path.exists():
+              report = {
+                  "status": "REMOTE_READBACK_FAILED",
+                  "reason": "SOURCE_DISCOVERY_OR_DOWNLOAD_INCOMPLETE",
+                  "source_run_id": os.environ.get("WRITER_RUN_ID") or None,
+                  "source_sha": os.environ.get("WRITER_SOURCE_SHA") or None,
+                  "remote_downloaded": False,
+                  "ledger_writer_invoked": False,
+                  "independently_authenticated": False,
+                  "live_watch_authorized": False,
+                  "production_applied": False,
+              }
+              path.write_text(json.dumps(report, sort_keys=True) + "\n")
+              print("D_RECOVERY_FAILURE_RETAINED", report["reason"])
+          PY
+      - name: Retain read-only recovery result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2-real-writer-recovery-report
+          path: /tmp/real-writer-recovery.json
+          if-no-files-found: warn
+          retention-days: 7
