@@ -6,7 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .shadow_learning_runner import score_future_paper_predictions
+from math import isfinite
 
 
 def render_shadow_overlay(published, shadow):
@@ -36,6 +36,38 @@ def render_shadow_overlay(published, shadow):
         lines.append(f'| {candidate["symbol"]} | {candidate["baseline_score"]:.3f} | '
                      f'{candidate["challenger_score"]:.3f} | {value} |')
     return "\n".join(lines) + "\n"
+
+
+def score_future_paper_predictions(state_path, predictions):
+    """Consume frozen E model without importing an unmerged E branch."""
+    state = json.loads(Path(state_path).read_text())
+    if (state.get("schema") != "paper_learning_state_v1"
+            or state.get("promotion_authorized") is not False
+            or state.get("production_applied") is not False):
+        raise ValueError("Unsafe learned model")
+    model = state["challenger"]
+    version = model["version"]
+    if model["status"] != "SHADOW_ONLY":
+        return {"status": "NO_QUALIFIED_RULE", "scores": [],
+                "challenger_version": version, "promotion_authorized": False,
+                "production_applied": False}
+    keys = model["feature_names"]
+    scores = []
+    for candidate in predictions:
+        features = candidate["features"]
+        if any(type(features.get(k)) not in (int, float) or not isfinite(features[k])
+               for k in keys):
+            continue
+        value = sum((features[k] - model["feature_centers"][k]) /
+                    model["feature_scales"][k] * model["feature_weights"][k]
+                    for k in keys)
+        if not isfinite(value):
+            raise ValueError("Invalid learned score")
+        scores.append({"prediction_id": candidate["prediction_id"],
+                       "shadow_score": value, "challenger_version": version})
+    return {"status": "SHADOW_ONLY", "scores": scores,
+            "challenger_version": version, "promotion_authorized": False,
+            "production_applied": False}
 
 
 def candidate_features(published):
