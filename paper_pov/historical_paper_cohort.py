@@ -61,6 +61,28 @@ def reconstruct_history(ledgers):
                               "baseline_score": predictions[prediction_id].get("baseline_score"),
                               "challenger_score": predictions[prediction_id].get("challenger_score"),
                               "source_authenticated": False})
+    authenticated_rows = []
+    for row in qualified:
+        prediction = predictions[row["prediction_id"]]
+        outcome = outcomes[(row["prediction_id"], row["horizon_hours"])]
+        if (prediction.get("source_authenticated") is True
+                and outcome.get("source_authenticated") is True
+                and outcome.get("coverage_complete") is True
+                and outcome.get("liquidity_qualified") is True
+                and isinstance(prediction.get("features"), dict)
+                and outcome.get("source_sha256")):
+            authenticated_rows.append({
+                "prediction_id": row["prediction_id"],
+                "horizon_hours": row["horizon_hours"],
+                "hit": row["hit"],
+                "entry_utc": row["entry_utc"],
+                "feature_asof_utc": prediction.get("feature_asof_utc"),
+                "label_mature_utc": outcome.get("label_mature_utc"),
+                "features": prediction["features"],
+                "source_sha256": outcome["source_sha256"],
+                "source_authenticated": True,
+                "coverage_complete": True,
+                "liquidity_qualified": True})
     result = {"schema": "historical_paper_cohort_v1",
               "snapshots": generations,
               "unique_predictions": len(predictions),
@@ -68,6 +90,8 @@ def reconstruct_history(ledgers):
               "horizon_counts": counts,
               "recovered_mature_outcomes": len(qualified),
               "mature_outcome_rows": qualified,
+              "source_claimed_training_rows": authenticated_rows,
+              "source_claimed_training_count": len(authenticated_rows),
               "prediction_rows": [predictions[k] for k in sorted(predictions)],
               "outcome_rows": [outcomes[k] for k in sorted(outcomes)],
               "source_authenticated": False,
