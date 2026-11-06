@@ -12,6 +12,7 @@ on:
     paths:
       - 'paper_pov/public_ledger_learning.py'
       - 'paper_pov/historical_paper_cohort.py'
+      - 'paper_pov/test_historical_paper_cohort.py'
       - 'paper_pov/test_public_ledger_learning.py'
       - '.github/workflows/paper-ledger-learning.yml'
 permissions:
@@ -29,7 +30,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Focused ledger schema acceptance
-        run: python -m unittest paper_pov.test_public_ledger_learning -v
+        run: python -m unittest paper_pov.test_public_ledger_learning paper_pov.test_historical_paper_cohort -v
       - name: Select latest persisted public paper ledger
         env:
           REQUESTED_RUN: ${{ inputs.paper_run_id }}
