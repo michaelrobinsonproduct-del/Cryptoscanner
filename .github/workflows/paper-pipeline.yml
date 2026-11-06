@@ -326,7 +326,7 @@ jobs:
               "measured_lift_verified": state.get("comparison", {}).get("measured_lift_verified") is True if state else False,
               "production_applied": False,
           }
-          (folder / "learning-status.json").write_text(json.dumps(status, sort_keys=True, indent=2) + "\\n")
+          (folder / "learning-status.json").write_text(json.dumps(status, sort_keys=True, indent=2) + "\n")
           print("PAPER_LEARNING_STATUS", json.dumps(status, sort_keys=True))
           PY
           cat paper_pov/output/learning-overlay/learned-scores.md >> "$GITHUB_STEP_SUMMARY"
