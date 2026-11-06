@@ -1,7 +1,5 @@
 name: Paper Ledger Learning Read Only
 on:
-  schedule:
-    - cron: '54 * * * *'
   workflow_run:
     workflows: ["Public Kraken Paper POV (scheduled, isolated ledger)"]
     types: [completed]
