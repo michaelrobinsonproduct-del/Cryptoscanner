@@ -58,7 +58,9 @@ jobs:
           RUN_ID="$REQUESTED_RUN"
           if [ "${{ github.event_name }}" = "workflow_run" ]; then RUN_ID="${{ github.event.workflow_run.id }}"; fi
           if [ -z "$RUN_ID" ]; then
-            RUN_ID=$(gh api -X GET "repos/$GH_REPO/actions/artifacts?per_page=100" --jq '.artifacts[] | select(.expired == false and (.name | startswith("public-paper-ledger-"))) | .workflow_run.id' | head -n 1)
+            # Select a completed main-branch paper producer, not an artifact
+            # from an unmerged PR or a different workflow.
+            RUN_ID=$(gh api -X GET "repos/$GH_REPO/actions/runs?branch=main&status=success&per_page=100" --jq '[.workflow_runs[] | select(.name == "Public Kraken Paper POV (scheduled, isolated ledger)" and (.event == "schedule" or .event == "workflow_dispatch"))] | sort_by(.created_at) | reverse | .[0].id // empty')
           fi
           test -n "$RUN_ID"
           echo "PAPER_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
