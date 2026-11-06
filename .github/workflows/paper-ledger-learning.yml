@@ -50,11 +50,16 @@ jobs:
           sha256sum -c SHA256SUMS
       - name: Reconstruct real persisted paper outcome accounting
         if: github.event_name != 'pull_request'
-        run: python -m paper_pov.public_ledger_learning evidence/ledger.json --output evidence/learning-state.json
+        run: python -m paper_pov.public_ledger_learning evidence/ledger.json --output evidence/learning-state.json --report evidence/learning-report.md
+      - name: Publish learning summary in workflow results
+        if: github.event_name != 'pull_request'
+        run: cat evidence/learning-report.md >> "$GITHUB_STEP_SUMMARY"
       - name: Retain read-only learning evidence
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: public-paper-learning-${{ github.run_id }}
-          path: evidence/learning-state.json
+          path: |
+            evidence/learning-state.json
+            evidence/learning-report.md
           retention-days: 30
