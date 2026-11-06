@@ -29,7 +29,7 @@ def inspect(manual, scheduled):
     if manual.get("originating_cron") is not None or manual.get("scheduled_slot_verified") is not False:
         raise ValueError("Manual result spoofed a scheduled slot")
     cron = scheduled.get("originating_cron")
-    if cron not in ("9 * * * *", "39 * * * *") or scheduled.get("scheduled_slot_verified") is not True:
+    if cron not in ("24 * * * *", "54 * * * *") or scheduled.get("scheduled_slot_verified") is not True:
         raise ValueError("Unverified scheduled slot")
     if scheduled.get("scheduled_slot_utc_minute") != int(cron.split()[0]):
         raise ValueError("Scheduled cron minute mismatch")
