@@ -3,7 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from .public_ledger_learning import learn_from_public_ledger, process_ledger_file, render_learning_report
+from paper_pov.public_ledger_learning import learn_from_public_ledger, process_ledger_file, render_learning_report
 
 class PublicLedgerAcceptance(unittest.TestCase):
     def test_abstentions_are_not_learning_labels(self):
