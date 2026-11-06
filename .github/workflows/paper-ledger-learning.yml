@@ -61,14 +61,17 @@ jobs:
           sha256sum -c SHA256SUMS
       - name: Reconstruct real persisted paper outcome accounting
         run: python -m paper_pov.public_ledger_learning evidence/ledger.json --output evidence/learning-state.json --report evidence/learning-report.md
-      - name: Select pairs with recent persisted paper predictions
+      - name: Select persisted predictions inside Kraken 5m observation window
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
           from datetime import datetime, timedelta, timezone
           ledger = json.loads(Path("evidence/ledger.json").read_text())
-          cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
+          # Kraken 5m OHLC exposes roughly 60h of recent candles. A 48h
+          # outcome needs an entry older than 48h, so selecting only the
+          # last 48h systematically excluded the mature cohort.
+          cutoff = datetime.now(timezone.utc) - timedelta(hours=60)
           pairs = set()
           for p in ledger.get("predictions", []):
               try:
