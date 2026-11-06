@@ -64,7 +64,7 @@ class PaperResultsContracts(unittest.TestCase):
         self.assertEqual(scheduled["scheduled_slot_utc_minute"], 54)
         self.assertFalse(scheduled["scheduled_start_punctuality_verified"])
         self.assertIn("GitHub trigger:** scheduled", scheduled_md)
-        self.assertIn("intended UTC minute=:09", scheduled_md)
+        self.assertIn("intended UTC minute=:54", scheduled_md)
         self.assertIn("punctuality NOT verified", scheduled_md)
         manual, manual_md = self.report(event="workflow_dispatch")
         self.assertEqual(manual["github_event"], "workflow_dispatch")
