@@ -52,7 +52,6 @@ jobs:
       - name: Publish learning summary in workflow results
         run: cat evidence/learning-report.md >> "$GITHUB_STEP_SUMMARY"
       - name: Retain read-only learning evidence
-        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: public-paper-learning-${{ github.run_id }}
