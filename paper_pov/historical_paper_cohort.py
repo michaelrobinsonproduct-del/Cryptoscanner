@@ -68,6 +68,8 @@ def reconstruct_history(ledgers):
               "horizon_counts": counts,
               "recovered_mature_outcomes": len(qualified),
               "mature_outcome_rows": qualified,
+              "prediction_rows": [predictions[k] for k in sorted(predictions)],
+              "outcome_rows": [outcomes[k] for k in sorted(outcomes)],
               "source_authenticated": False,
               "measured_lift_verified": False,
               "promotion_authorized": False,
@@ -81,9 +83,21 @@ def main(argv=None):
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     paths = sorted(args.snapshot_directory.glob("*/ledger.json"))
+    paths += sorted(args.snapshot_directory.glob("*/historical-cohort.json"))
     if not paths:
         raise ValueError("No historical ledger snapshots found")
-    result = reconstruct_history([(str(p.parent.name), json.loads(p.read_text())) for p in paths])
+    snapshots = []
+    for p in paths:
+        data = json.loads(p.read_text())
+        if p.name == "historical-cohort.json":
+            if data.get("schema") != "historical_paper_cohort_v1":
+                raise ValueError("Unexpected retained cohort schema")
+            if data.get("evidence_digest") != canonical_digest({k: v for k, v in data.items() if k != "evidence_digest"}):
+                raise ValueError("Retained cohort digest mismatch")
+            data = {"schema": "recovered_cohort", "generation": -1,
+                    "predictions": data["prediction_rows"], "outcomes": data["outcome_rows"]}
+        snapshots.append((str(p.parent.name), data))
+    result = reconstruct_history(snapshots)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
     print(json.dumps({k: result[k] for k in ("unique_predictions", "unique_outcomes",
