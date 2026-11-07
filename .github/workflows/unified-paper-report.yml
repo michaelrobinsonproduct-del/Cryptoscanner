@@ -1,0 +1,47 @@
+name: Unified read-only paper scan report
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/unified-paper-report.yml'
+      - '.github/scripts/unified_paper_report.py'
+permissions:
+  actions: read
+  contents: read
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Read latest published writer and independent legacy artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONPATH: .
+        run: python .github/scripts/unified_paper_report.py
+      - name: Publish authenticated report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-paper-report-${{ github.run_id }}
+          path: verified-report.json
+          retention-days: 30
+          if-no-files-found: error
+      - name: Add source identity to run summary
+        run: |
+          python - <<'PY'
+          import json, os
+          r=json.load(open('verified-report.json'))
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('# Unified paper report\n\n')
+              f.write('Status: **'+r['status']+'**  \n')
+              f.write('Writer: '+r['paper_run_url']+'  \n')
+              f.write('Ledger generation: '+str(r['ledger_generation'])+'  \n')
+              f.write('Independent legacy: '+str(r['legacy_independent'])+'  \n')
+              f.write('Verified overlaps: '+', '.join(r['verified_independent_overlaps'])+'\n')
+          PY
