@@ -34,7 +34,7 @@ def learn_from_public_ledger(ledger):
             raise ValueError("Outcome references unknown retained prediction")
         status = outcome["status"]
         bucket = outcome_counts[str(horizon)]
-        if status.startswith("ABSTAIN") or status in ("IMMATURE", "MISSING_CANDLES"):
+        if status.startswith("ABSTAIN") or status in ("IMMATURE", "MISSING_CANDLES", "MATURED_OBSERVED"):
             bucket["abstentions"] += 1
         elif status == "MATURE_HIT":
             bucket["hits"] += 1
