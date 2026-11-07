@@ -22,7 +22,7 @@ from .segmented_storage import MAX_RAW_BYTES
 COMMAND = "/paper-cadence-heartbeat"
 WORKFLOW = "paper-pipeline.yml"
 MARKER = "PAPER_CADENCE_ATTEMPT:"
-MIN_SCAN_SPACING = dt.timedelta(minutes=25)
+MIN_SCAN_SPACING = dt.timedelta(minutes=15)
 CADENCE = dt.timedelta(minutes=30)
 MAX_SLOT_LATENESS = dt.timedelta(minutes=29)
 RETRY_INTERVAL = dt.timedelta(minutes=45)

@@ -82,13 +82,30 @@ class CadenceWakeTests(unittest.TestCase):
                       ref="refs/heads/evil", event_name="issue_comment",
                       now=dt.datetime(2026, 11, 1, 11, 0, tzinfo=UTC))
 
-    def test_durable_anchor_and_25_minute_spacing_allow_due_dispatch(self):
+    def test_durable_anchor_and_15_minute_spacing_allow_due_dispatch(self):
         d = decision()
         self.assertEqual((d["action"], d["reason"]),
                          ("DISPATCH_EXISTING_WORKFLOW", "INDEPENDENT_CADENCE_DUE"))
         self.assertEqual(d["attempt_marker"], MARKER + COMMIT)
         self.assertEqual(d["ledger_generation"], 1)
         self.assertEqual(d["target_slot"], "2026-10-31T23:00:00+00:00")
+
+    def test_delayed_previous_scan_18_minutes_ago_does_not_block_new_slot(self):
+        # A delayed :00 scan sealed at :12 must not suppress the :30 slot.
+        import hashlib
+        from paper_pov.ledger import seal
+        state = fixture()
+        asof = "2026-10-31T23:12:00+00:00"
+        state["runs"][0]["as_of"] = asof
+        state["predictions"][0]["as_of"] = asof
+        state["predictions"][0]["prediction_id"] = hashlib.sha256(
+            ("paper-v1|" + asof + "|" + state["predictions"][0]["pair"]).encode()).hexdigest()
+        state["observations"][0]["at"] = "2026-10-31T23:11:50+00:00"
+        d = decision(runs=[scan(123, "2026-10-31T23:11:00Z")],
+                     ledger=seal(state),
+                     now=dt.datetime(2026, 10, 31, 23, 30, tzinfo=UTC))
+        self.assertEqual((d["action"], d["reason"]),
+                         ("DISPATCH_EXISTING_WORKFLOW", "INDEPENDENT_CADENCE_DUE"))
 
     def test_30_minute_slot_mapping(self):
         self.assertEqual(slot_at(dt.datetime(2026, 11, 1, 11, 35, tzinfo=UTC)).minute, 30)
@@ -130,9 +147,9 @@ class CadenceWakeTests(unittest.TestCase):
         d = decision(ledger=seal(state))
         self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "CADENCE_SLOT_ALREADY_DURABLE"))
 
-    def test_recent_scan_and_recent_failed_attempt_block(self):
+    def test_next_slot_after_19_minutes_and_recent_failed_attempt_block(self):
         self.assertEqual(decision(now=dt.datetime(2026, 10, 31, 20, 30, tzinfo=UTC))["action"],
-                         "NO_DISPATCH")
+                         "DISPATCH_EXISTING_WORKFLOW")
         d = decision(runs=[scan(), scan(124, "2026-10-31T23:00:00Z", conclusion="failure")])
         self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "RECENT_SCAN_OR_ATTEMPT"))
 

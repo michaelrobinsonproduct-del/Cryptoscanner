@@ -46,7 +46,9 @@ jobs:
         run: |
           set -euo pipefail
           echo "PAPER_PIPELINE_SOURCE_SHA=$(git rev-parse HEAD)"
-          python -m unittest discover -s paper_pov -p 'test_*.py' -v
+          # Full repository suite runs on pull requests; do not repeat 660 tests
+          # before every market snapshot. Retain direct writer/ledger/cadence gates.
+          python -m unittest paper_pov.test_workflow_trigger_guard paper_pov.test_cadence_wake paper_pov.test_ledger paper_pov.test_segmented_live_writer paper_pov.test_scanner
       - name: Restore checksum-sealed existing ledger (never silently bootstrap)
         run: |
           set -euo pipefail
