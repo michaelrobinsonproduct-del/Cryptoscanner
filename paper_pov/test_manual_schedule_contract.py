@@ -21,7 +21,7 @@ class ManualScheduledContractTests(unittest.TestCase):
                            event="workflow_dispatch")
         scheduled, _ = render(copy.deepcopy(scan), copy.deepcopy(score), run_id="41235442592",
                               source_sha="a" * 40, ledger_commit="b" * 40,
-                              event="schedule", originating_cron="54 * * * *")
+                              event="schedule", originating_cron="40 * * * *")
         return manual, scheduled
 
     def test_real_renderer_both_entry_modes_contract(self):

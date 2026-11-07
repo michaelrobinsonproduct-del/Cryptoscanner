@@ -38,10 +38,18 @@ def _now(clock):
     return value.astimezone(UTC)
 
 
-def _closed_features(payload, pair, now):
-    if not isinstance(payload, dict) or set(payload) != {pair, "last"}:
+def _closed_features(payload, pair, now, *, aliases=()):
+    # Kraken may return an altname rather than the REST AssetPairs key.
+    # Accept only a single, explicitly advertised identity; never accept an
+    # arbitrary lone response key as proof of pair identity.
+    allowed = {pair, *aliases}
+    if (not isinstance(payload, dict) or "last" not in payload
+            or len(payload) != 2):
         raise ValueError("OHLC pair identity mismatch")
-    raw = payload[pair]
+    returned = next((key for key in payload if key != "last"), None)
+    if returned not in allowed:
+        raise ValueError("OHLC pair identity mismatch")
+    raw = payload[returned]
     if not isinstance(raw, list) or len(raw) < 14:
         raise ValueError("Insufficient completed OHLC")
     rows = raw[:-1][-13:]
@@ -54,8 +62,10 @@ def _closed_features(payload, pair, now):
             raise ValueError("Unaligned candle")
         opn, high, low, close, vwap, volume = (_number(candle[i]) for i in (1, 2, 3, 4, 5, 6))
         count = _number(candle[7])
-        if (min(opn, high, low, close, vwap, volume) <= 0 or not count.is_integer()
-                or count <= 0 or low > min(opn, close, vwap)
+        if (min(opn, high, low, close, vwap) <= 0 or volume < 0 or not count.is_integer()
+                or count < 0 or (count == 0 and volume != 0)
+                or (count > 0 and volume <= 0)
+                or low > min(opn, close, vwap)
                 or high < max(opn, close, vwap)):
             raise ValueError("Invalid or empty completed candle")
         starts.append(int(stamp))
@@ -71,14 +81,15 @@ def _closed_features(payload, pair, now):
     age = (now - closed_at).total_seconds()
     if not 0 <= age <= 600:
         raise ValueError("Stale or future completed candle")
-    prior = sum(volumes[-12:-6])
+    # Kraken may publish completed five-minute buckets with zero trades.\n    # Preserve their actual zero volume; never invent missing candles.\n    prior = sum(volumes[-12:-6])
     if prior <= 0:
         raise ValueError("Invalid previous volume")
     accel = sum(volumes[-6:]) / prior
     move15 = 100 * (closes[-1] / closes[-4] - 1)
-    if not all(math.isfinite(x) for x in (accel, move15)):
+    move60 = 100 * (closes[-1] / closes[-13] - 1)
+    if not all(math.isfinite(x) for x in (accel, move15, move60)):
         raise ValueError("Nonfinite candle features")
-    return move15, accel, closed_at
+    return move15, move60, accel, closed_at
 
 
 def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
@@ -108,7 +119,7 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
         if symbol in symbols:
             raise ValueError("Duplicate canonical Kraken identity")
         symbols.add(symbol)
-        eligible[pair] = symbol
+        eligible[pair] = (symbol, tuple(x for x in (meta.get("altname"), symbol.replace("/", "")) if isinstance(x, str) and x))
     if len(eligible) < 20:
         raise ValueError("Insufficient independently eligible USD markets")
     ticker = api("Ticker")
@@ -119,7 +130,7 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
     matched = 0
     valid = 0
     precursors = []
-    for pair, symbol in sorted(eligible.items()):
+    for pair, (symbol, aliases) in sorted(eligible.items()):
         row = ticker.get(pair)
         if not isinstance(row, dict):
             continue
@@ -143,7 +154,7 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
                 # trade count, dollar volume, and spread. No score reuse.
                 prelim = (min(48, max(0, move) * 12) + min(22, trades / 120)
                           + min(15, notional / 250000) + max(0, 15 - spread * 2))
-                precursors.append({"pair": pair, "symbol": symbol, "price": price,
+                precursors.append({"pair": pair, "symbol": symbol, "aliases": aliases, "price": price,
                                    "move_utc_open": move, "spread": spread,
                                    "notional": notional, "trades_24h": int(trades),
                                    "legacy_prelim": prelim})
@@ -156,13 +167,15 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
                                    -x["notional"], x["symbol"]))
     picks = []
     rejects = 0
+    rejection_reasons = {}
     cutoff = quote_at
     for item in precursors[:max_ohlc]:
         try:
             payload = api("OHLC?pair=" + urllib.parse.quote(item["pair"], safe="") + "&interval=5")
-            move15, accel, closed_at = _closed_features(payload, item["pair"], _now(clock))
+            move15, move60, accel, closed_at = _closed_features(payload, item["pair"], _now(clock), aliases=item["aliases"])
             if move15 < .05 or accel < 1:
                 rejects += 1
+                rejection_reasons["BELOW_SIGNAL_THRESHOLD"] = rejection_reasons.get("BELOW_SIGNAL_THRESHOLD", 0) + 1
                 continue
             cutoff = max(cutoff, closed_at)
             # Independent rebuild-v2-inspired precursor plus bounded fresh
@@ -174,12 +187,15 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
                           "legacy_score": round(score, 4),
                           "trades_24h": item["trades_24h"],
                           "move15_pct": round(move15, 4),
+                          "move1h_pct": round(move60, 4),
                           "volume_accel": round(accel, 4),
                           "quote_observed_at": quote_at.isoformat(),
                           "ohlc_last_closed_at": closed_at.isoformat(),
                           "status": "WATCH_PAPER_ONLY"})
-        except (ValueError, TypeError, KeyError, IndexError, ZeroDivisionError, OverflowError):
+        except (ValueError, TypeError, KeyError, IndexError, ZeroDivisionError, OverflowError) as exc:
             rejects += 1
+            reason = str(exc) if isinstance(exc, ValueError) else type(exc).__name__
+            rejection_reasons[reason] = rejection_reasons.get(reason, 0) + 1
         sleep(.15)
     completed = _now(clock)
     if not 0 <= (completed - quote_at).total_seconds() <= 180:
@@ -196,11 +212,15 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
             "source_sha": source_sha, "as_of": completed.isoformat(),
             "feature_cutoff_utc": cutoff.isoformat(),
             "ticker_reference": "Kraken today open UTC, not rolling 24h",
+            "momentum_1h_reference": "last_closed_5m_close_over_close_12_intervals_earlier",
+            "volume_acceleration_reference": "last_6_completed_5m_volume_over_previous_6_completed_5m_volume",
             "quote_timestamp_type": "client_observed_not_exchange_event",
-            "status": "WATCH_PAPER_ONLY" if picks else "NO_SIGNALS",
+            "status": ("WATCH_PAPER_ONLY" if picks else
+                       "DATA_UNAVAILABLE" if rejects and any(k != "BELOW_SIGNAL_THRESHOLD" for k in rejection_reasons) else "NO_SIGNALS"),
             "eligible_usd_pairs": len(eligible), "matched_tickers": matched,
             "valid_tickers": valid, "ohlc_attempts": min(max_ohlc, len(precursors)),
-            "ohlc_rejections": rejects, "candidates": picks,
+            "ohlc_rejections": rejects, "ohlc_rejection_reasons": rejection_reasons,
+            "candidates": picks,
             "held_out_lift": None, "trade_executed": False}
 
 

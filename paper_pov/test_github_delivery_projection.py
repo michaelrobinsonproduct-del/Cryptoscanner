@@ -128,7 +128,7 @@ class DeliveryProjectionTests(unittest.TestCase):
         scan['online_usd_pairs'] = (scan['eligible_pairs'] + scan['excluded_stablecoin_pairs']
                                     + scan['excluded_other_pairs'])
         results = []
-        for event, cron in (("workflow_dispatch", None), ("schedule", "54 * * * *")):
+        for event, cron in (("workflow_dispatch", None), ("schedule", "10 * * * *")):
             result, _ = render(scan, score, run_id="41235442591", source_sha=SHA,
                                ledger_commit="b"*40, event=event, originating_cron=cron)
             projected = project_published_result(result)
@@ -141,7 +141,7 @@ class DeliveryProjectionTests(unittest.TestCase):
         self.assertEqual(set(results[0]), set(results[1]))
         scan["watch"] = []
         abstain, _ = render(scan, score, run_id="41235442591", source_sha=SHA,
-                            ledger_commit="b"*40, event="schedule", originating_cron="24 * * * *")
+                            ledger_commit="b"*40, event="schedule", originating_cron="40 * * * *")
         self.assertEqual(project_published_result(abstain)["live_watch"], [])
         for field, value in (("remote_readback_verified", False),
                              ("production_applied", True),
@@ -177,7 +177,7 @@ class DeliveryProjectionTests(unittest.TestCase):
                  "reason": "REMOTE_LEDGER_QUERY_FAILED",
                  "independently_authenticated": False, "production_applied": False}}
         outputs = []
-        for event, cron in (("schedule", "54 * * * *"), ("workflow_dispatch", None)):
+        for event, cron in (("schedule", "10 * * * *"), ("workflow_dispatch", None)):
             published, _ = render(scan, score, run_id="41235442591", source_sha=SHA,
                                   ledger_commit="b"*40, event=event, originating_cron=cron)
             output = project_published_result(published, d, a2)
@@ -364,7 +364,7 @@ class DeliveryProjectionTests(unittest.TestCase):
                                     + scan['excluded_other_pairs'])
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            for event, cron in (("workflow_dispatch", None), ("schedule", "54 * * * *")):
+            for event, cron in (("workflow_dispatch", None), ("schedule", "10 * * * *")):
                 published, markdown = render(scan, score, run_id="41235442591", source_sha=SHA,
                                              ledger_commit="b"*40, event=event, originating_cron=cron)
                 payload = json.dumps(published).encode()
@@ -411,7 +411,7 @@ class DeliveryProjectionTests(unittest.TestCase):
                     "abstention_counts": {"INCOMPLETE_SOURCE_COVERAGE": 2},
                     "incomplete_prediction_horizons": {"p1": [48], "p2": [1, 6]}}
         outputs = []
-        for event, cron in (("workflow_dispatch", None), ("schedule", "54 * * * *")):
+        for event, cron in (("workflow_dispatch", None), ("schedule", "10 * * * *")):
             published, _ = render(scan, score, run_id="41235442591", source_sha=SHA,
                                   ledger_commit="b"*40, event=event, originating_cron=cron)
             output = project_published_result(published, learning_handoff=learning)
@@ -439,7 +439,7 @@ class DeliveryProjectionTests(unittest.TestCase):
         scan['online_usd_pairs'] = (scan['eligible_pairs'] + scan['excluded_stablecoin_pairs']
                                     + scan['excluded_other_pairs'])
         outputs = []
-        for event, cron in (("workflow_dispatch", None), ("schedule", "54 * * * *")):
+        for event, cron in (("workflow_dispatch", None), ("schedule", "10 * * * *")):
             published, _ = render(scan, score, run_id="41235442591",
                                   source_sha=SHA, ledger_commit="b"*40,
                                   event=event, originating_cron=cron)
@@ -468,7 +468,7 @@ class DeliveryProjectionTests(unittest.TestCase):
         scan['eligible_pairs'] = scan['observed_markets']
         scan['online_usd_pairs'] = (scan['eligible_pairs'] + scan['excluded_stablecoin_pairs']
                                     + scan['excluded_other_pairs'])
-        for event, cron in (("workflow_dispatch", None), ("schedule", "54 * * * *")):
+        for event, cron in (("workflow_dispatch", None), ("schedule", "10 * * * *")):
             with self.subTest(event=event):
                 published, _ = render(scan, score, run_id="41235442591",
                                       source_sha=SHA, ledger_commit="b"*40,
