@@ -20,7 +20,7 @@ class ArtifactRedirect(urllib.request.HTTPRedirectHandler):
         redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
         if redirected is not None and urlsplit(newurl).netloc != urlsplit(req.full_url).netloc:
             redirected.remove_header("Authorization")
-            redirected.remove_unredirected_header("Authorization")
+            redirected.unredirected_hdrs.pop("Authorization", None)
         return redirected
 
 REDIRECT_OPENER = urllib.request.build_opener(ArtifactRedirect())
