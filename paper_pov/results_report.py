@@ -44,7 +44,8 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
     if event == "schedule":
         if originating_cron not in ("10,40 * * * *", "40 * * * *", "10 * * * *"):
             raise ValueError("Missing or unverified originating scheduled cron")
-        scheduled_minute = (None if originating_cron == "10,40 * * * *"\n                            else int(originating_cron.split()[0]))
+        scheduled_minute = (None if originating_cron == "10,40 * * * *"
+                            else int(originating_cron.split()[0]))
     else:
         if originating_cron not in (None, ""):
             raise ValueError("Manual dispatch cannot claim a scheduled cron")
