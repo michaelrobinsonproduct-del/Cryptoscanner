@@ -19,7 +19,7 @@ def candle_rows(*, gap=False, future=False, empty=False):
         if empty and i == 8:
             volume = 0
         rows.append([start, close - .002, close + .003, close - .003,
-                     close, close, volume, 1])
+                     close, close, volume, 0 if empty and i == 8 else 1])
     rows.append([rows[-1][0] + 300, 2, 2.1, 1.9, 2, 2, 1, 1])
     return rows
 
@@ -117,6 +117,17 @@ class LegacyShadowTests(unittest.TestCase):
         self.assertEqual(report["status"], "WATCH_PAPER_ONLY")
         self.assertEqual(len(report["candidates"]), 12)
 
+    def test_closed_candle_accumulation_preserves_real_momentum_and_volume(self):
+        # Regression: escaped newlines in a comment previously swallowed
+        # starts.append(), leaving OHLC rejected instead of evaluated.
+        api = FakeKraken()
+        move15, move60, accel, closed_at = legacy_shadow._closed_features(
+            {"P00": api.rows, "last": 1}, "P00", NOW)
+        self.assertAlmostEqual(move15, 100 * (api.rows[12][4] / api.rows[9][4] - 1))
+        self.assertAlmostEqual(move60, 100 * (api.rows[12][4] / api.rows[0][4] - 1))
+        self.assertAlmostEqual(accel, 12 / 6)
+        self.assertEqual(closed_at, NOW)
+
     def test_gapped_ohlc_abstains(self):
         api = FakeKraken()
         api.rows = candle_rows(gap=True)
@@ -127,10 +138,36 @@ class LegacyShadowTests(unittest.TestCase):
         api.rows = candle_rows(future=True)
         self.assertEqual(run(api)["candidates"], [])
 
-    def test_no_trade_candle_abstains(self):
+    def test_genuine_zero_trade_candle_is_accepted_without_inventing_volume(self):
         api = FakeKraken()
         api.rows = candle_rows(empty=True)
-        self.assertEqual(run(api)["candidates"], [])
+        report = run(api)
+        self.assertEqual(report["status"], "WATCH_PAPER_ONLY")
+        self.assertEqual(len(report["candidates"]), 12)
+
+    def test_zero_trade_zero_vwap_kraken_bucket_is_accepted(self):
+        api = FakeKraken()
+        api.rows = candle_rows(empty=True)
+        api.rows[8][5] = 0
+        report = run(api)
+        self.assertEqual(report["status"], "WATCH_PAPER_ONLY")
+        self.assertEqual(len(report["candidates"]), 12)
+
+    def test_positive_trade_zero_vwap_is_rejected(self):
+        api = FakeKraken()
+        api.rows = candle_rows()
+        api.rows[8][5] = 0
+        report = run(api)
+        self.assertEqual(report["status"], "DATA_UNAVAILABLE")
+        self.assertEqual(report["ohlc_rejection_reasons"]["Invalid or empty completed candle"], 16)
+
+    def test_inconsistent_zero_trade_volume_abstains(self):
+        api = FakeKraken()
+        api.rows = candle_rows(empty=True)
+        api.rows[8][7] = 1
+        report = run(api)
+        self.assertEqual(report["status"], "DATA_UNAVAILABLE")
+        self.assertEqual(report["ohlc_rejection_reasons"]["Invalid or empty completed candle"], 16)
 
     def test_expired_ticker_fails_closed(self):
         calls = [0]
