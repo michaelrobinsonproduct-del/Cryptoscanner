@@ -206,6 +206,16 @@ class CadenceWakeTests(unittest.TestCase):
                 malformed["created_at"] = "invalid"
                 self.assertEqual(decision(comments=[malformed])["action"], "BLOCKED")
 
+    def test_previous_slot_attempt_marker_does_not_suppress_next_slot(self):
+        # A :05 controller attempt must not block the :30 recovery check.
+        for marker in (MARKER, "PAPER_RECOVERY_ATTEMPT:"):
+            comment = {"body": "<!-- " + marker + COMMIT + " -->",
+                       "created_at": "2026-10-31T23:05:00Z", "user": BOT}
+            d = decision(comments=[comment],
+                         now=dt.datetime(2026, 10, 31, 23, 30, tzinfo=UTC))
+            self.assertEqual((d["action"], d["reason"]),
+                             ("DISPATCH_EXISTING_WORKFLOW", "INDEPENDENT_CADENCE_DUE"))
+
     def test_old_legacy_push_is_ignored_only_when_unambiguous(self):
         legacy = dict(scan(122, "2026-10-31T18:00:00Z"), event="push")
         self.assertEqual(decision(runs=[legacy, scan()])["action"], "DISPATCH_EXISTING_WORKFLOW")
