@@ -15,6 +15,9 @@ jobs:
   repair:
     runs-on: ubuntu-latest
     timeout-minutes: 330
+    defaults:
+      run:
+        shell: bash
     env:
       GH_TOKEN: ${{ github.token }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -56,6 +59,7 @@ jobs:
           fi
           if [[ -n "$COPILOT_GITHUB_TOKEN" ]]; then
             npm install -g @github/copilot
+            copilot --help >/dev/null
           fi
           [[ -n "$OPENAI_API_KEY" || -n "$COPILOT_GITHUB_TOKEN" ]] || {
             echo "::error::Neither coding-agent credential is configured"; exit 1;
@@ -87,7 +91,9 @@ jobs:
           actual unattended scan, learning and ChatGPT delivery are evidenced.
           If an external integration cannot be verified, report it explicitly.
           OBJECTIVE
-          deadline=$((SECONDS + 17100))
+          deadline=$((SECONDS + 18000))
+          original_gh_token="$GH_TOKEN"
+          last_error=0
           iteration=0
           while (( SECONDS < deadline )); do
             iteration=$((iteration+1))
@@ -95,21 +101,27 @@ jobs:
             remaining=$((deadline-SECONDS))
             (( remaining > 180 )) || break
             window=$((remaining > 2400 ? 2400 : remaining-90))
+            agent_log="/tmp/agent-iteration-$iteration.log"
             agent_rc=1
             if [[ -n "$OPENAI_API_KEY" ]]; then
-              timeout --signal=INT --kill-after=30s "${window}s" codex exec --sandbox workspace-write --skip-git-repo-check - < /tmp/repair-objective.txt
+              timeout --signal=INT --kill-after=30s "${window}s" codex exec --sandbox workspace-write --skip-git-repo-check - < /tmp/repair-objective.txt > >(tee "$agent_log") 2>&1
               agent_rc=$?
             fi
             if (( agent_rc != 0 )) && [[ -n "$COPILOT_GITHUB_TOKEN" ]]; then
               echo "Primary agent unavailable (exit $agent_rc); trying independent Copilot credential" >> "$GITHUB_STEP_SUMMARY"
               export GITHUB_TOKEN="$COPILOT_GITHUB_TOKEN"
               export GH_TOKEN="$COPILOT_GITHUB_TOKEN"
-              timeout --signal=INT --kill-after=30s "${window}s" copilot -p "$(cat /tmp/repair-objective.txt)" -s --allow-tool='shell(python:*)' --allow-tool='shell(git:*)' --allow-tool='shell(gh:*)'
+              timeout --signal=INT --kill-after=30s "${window}s" copilot -p "$(cat /tmp/repair-objective.txt)" -s --allow-tool='shell(python:*)' --allow-tool='shell(git:*)' --allow-tool='shell(gh:*)' > >(tee -a "$agent_log") 2>&1
               agent_rc=$?
               unset GITHUB_TOKEN
-              export GH_TOKEN="${{ github.token }}"
+              export GH_TOKEN="$original_gh_token"
             fi
+            # Never commit credentials, generated archives, or unexpected binary files.
             git add -A
+            git reset -q -- .env .env.local .env.production 2>/dev/null || true
+            if git diff --cached --name-only | grep -E '(^|/)(\.env($|\.)|credentials\.json$|id_rsa$|\.pem$|\.key$)'; then
+              echo "::error::Agent staged a credential file"; exit 1
+            fi
             if ! git diff --cached --quiet; then
               git diff --cached --check || exit 1
               git commit -m "repair: autonomous functional checkpoint $GITHUB_RUN_ID iteration $iteration" || exit 1
@@ -117,12 +129,20 @@ jobs:
             gh auth setup-git
             git push origin HEAD:refs/heads/cryptoscanner-autonomous-repair || exit 1
             if [[ -f .autonomous/COMPLETE ]]; then
-              echo "Agent marked COMPLETE; requires independently verified end-to-end evidence." >> "$GITHUB_STEP_SUMMARY"
-              break
+              echo "Agent marked COMPLETE; independently verify required acceptance before treating as complete." >> "$GITHUB_STEP_SUMMARY"
+              # A marker alone is never proof of successful delivery or learning.
+              rm -f .autonomous/COMPLETE
             fi
             if (( agent_rc != 0 )); then
-              echo "::error::Coding agent exit $agent_rc. Checkpoint preserved; no false completion."
-              exit "$agent_rc"
+              echo "::warning::Agent exit $agent_rc; checkpoint preserved. Inspect failure before next retry." >> "$GITHUB_STEP_SUMMARY"
+              last_error=$agent_rc
+              if grep -Eiq "quota exceeded|insufficient_quota|billing details|rate limit" "$agent_log"; then
+                echo "::error::All available agents exhausted or unavailable; stopping rather than burning 5 hours of GitHub minutes."
+                break
+              fi
+              if (( iteration >= 3 )); then break; fi
+            else
+              last_error=0
             fi
             if ! git diff --quiet origin/main...HEAD; then
               gh pr list --head cryptoscanner-autonomous-repair --state open --json number --jq '.[0].number' | grep -q '[0-9]' ||
@@ -130,9 +150,8 @@ jobs:
             fi
             # Continue working on unfinished requirements, rather than stopping at a passing test.
           done
-          if [[ ! -f .autonomous/COMPLETE ]]; then
-            echo "UNFINISHED: checkpointed for next scheduled or manual continuation" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          echo "UNFINISHED: implementation checkpointed; do not claim completed integration or ChatGPT delivery" >> "$GITHUB_STEP_SUMMARY"
+          if (( last_error != 0 )); then exit "$last_error"; fi
       - name: Preserve progress and diagnostics on failure
         if: always()
         uses: actions/upload-artifact@v4
