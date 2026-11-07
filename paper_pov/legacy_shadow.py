@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import time
 import urllib.parse
+import urllib.error
 
 from .scanner import STABLE, atomic_json, fetch
 
@@ -173,6 +174,7 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
     picks = []
     rejects = 0
     rejection_reasons = {}
+    ohlc_diagnostics = []
     cutoff = quote_at
     for item in precursors[:max_ohlc]:
         try:
@@ -181,6 +183,7 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
             if move15 < .05 or accel < 1:
                 rejects += 1
                 rejection_reasons["BELOW_SIGNAL_THRESHOLD"] = rejection_reasons.get("BELOW_SIGNAL_THRESHOLD", 0) + 1
+                ohlc_diagnostics.append({"symbol": item["symbol"], "pair": item["pair"], "reason": "BELOW_SIGNAL_THRESHOLD"})
                 continue
             cutoff = max(cutoff, closed_at)
             # Independent rebuild-v2-inspired precursor plus bounded fresh
@@ -197,10 +200,14 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
                           "quote_observed_at": quote_at.isoformat(),
                           "ohlc_last_closed_at": closed_at.isoformat(),
                           "status": "WATCH_PAPER_ONLY"})
-        except (ValueError, TypeError, KeyError, IndexError, ZeroDivisionError, OverflowError) as exc:
+        except (ValueError, TypeError, KeyError, IndexError, ZeroDivisionError, OverflowError,
+                urllib.error.URLError, TimeoutError, OSError, RuntimeError) as exc:
+            # A single failed public Kraken request is unavailable market data,
+            # not a failed independent scan or evidence of no signals.
             rejects += 1
             reason = str(exc) if isinstance(exc, ValueError) else type(exc).__name__
             rejection_reasons[reason] = rejection_reasons.get(reason, 0) + 1
+            ohlc_diagnostics.append({"symbol": item["symbol"], "pair": item["pair"], "reason": reason})
         sleep(.15)
     completed = _now(clock)
     if not 0 <= (completed - quote_at).total_seconds() <= 180:
@@ -225,6 +232,7 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
             "eligible_usd_pairs": len(eligible), "matched_tickers": matched,
             "valid_tickers": valid, "ohlc_attempts": min(max_ohlc, len(precursors)),
             "ohlc_rejections": rejects, "ohlc_rejection_reasons": rejection_reasons,
+            "ohlc_diagnostics": ohlc_diagnostics,
             "candidates": picks,
             "held_out_lift": None, "trade_executed": False}
 
