@@ -117,6 +117,17 @@ class LegacyShadowTests(unittest.TestCase):
         self.assertEqual(report["status"], "WATCH_PAPER_ONLY")
         self.assertEqual(len(report["candidates"]), 12)
 
+    def test_closed_candle_accumulation_preserves_real_momentum_and_volume(self):
+        # Regression: escaped newlines in a comment previously swallowed
+        # starts.append(), leaving OHLC rejected instead of evaluated.
+        api = FakeKraken()
+        move15, move60, accel, closed_at = legacy_shadow._closed_features(
+            {"P00": api.rows, "last": 1}, "P00", NOW)
+        self.assertAlmostEqual(move15, 100 * (api.rows[12][4] / api.rows[9][4] - 1))
+        self.assertAlmostEqual(move60, 100 * (api.rows[12][4] / api.rows[0][4] - 1))
+        self.assertAlmostEqual(accel, 12 / 6)
+        self.assertEqual(closed_at, NOW)
+
     def test_gapped_ohlc_abstains(self):
         api = FakeKraken()
         api.rows = candle_rows(gap=True)
