@@ -24,6 +24,8 @@ jobs:
           persist-credentials: true
       - name: Verify repair engine compiles
         run: python3 -m py_compile .github/scripts/project_pulse_repair.py
+      - name: Reproduce and repair two observed defects in isolated fixture
+        run: python3 .github/scripts/test_project_pulse_repair.py
       - name: Inspect live project and produce evidence
         env:
           GH_TOKEN: ${{ github.token }}
@@ -39,7 +41,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if git diff --quiet -- .github/scripts/; then
+          if git diff --quiet -- .github/scripts/ .github/workflows/project-pulse.yml; then
             echo "No eligible repair found; no PR created." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
@@ -47,12 +49,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "$branch"
-          git add .github/scripts/
+          git add .github/scripts/ .github/workflows/project-pulse.yml
           git commit -m "Repair observed Project Pulse Python syntax defect"
           git push origin "$branch"
           gh pr create --base main --head "$branch" \
             --title "Project Pulse: validated targeted syntax repair" \
-            --body "Automated, narrowly scoped repair for observed literal-escaped-newline Python syntax defect. All .github/scripts Python files passed AST parsing. Review required; no auto-merge." \
+            --body "Automated, narrowly scoped repair for observed literal-escaped-newline Python syntax defect. Fixture reproduced both defects and verified idempotence; all .github/scripts Python files passed AST parsing. Review required; no auto-merge." \
             | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Preserve reports and diagnosis
         if: always()
