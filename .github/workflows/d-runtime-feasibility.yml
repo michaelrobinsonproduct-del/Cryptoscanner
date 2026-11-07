@@ -1,0 +1,119 @@
+name: D Runtime Feasibility - read-only artifact proof
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/d-runtime-feasibility.yml'
+      - 'paper_pov/replay_downloaded_artifacts.py'
+      - 'paper_pov/test_replay_downloaded_artifacts.py'
+      - 'paper_pov/missed_slot_recovery.py'
+      - 'paper_pov/test_missed_slot_recovery.py'
+      - 'paper_pov/scanner.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  feasibility:
+    if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Execute real scanner recovery and downloaded-artifact replay fixtures
+        run: |
+          set -euo pipefail
+          python -m unittest paper_pov.test_missed_slot_recovery paper_pov.test_replay_downloaded_artifacts -v 2>&1 | tee /tmp/feasibility-test.log
+          python - <<'PY'
+          import json, os, pathlib, subprocess
+          p = pathlib.Path('feasibility-proof.json')
+          p.write_text(json.dumps({
+              'schema': 1,
+              'source_sha': os.environ['GITHUB_SHA'],
+              'run_id': os.environ['GITHUB_RUN_ID'],
+              'mode': 'fixture_only_no_live_scan',
+              'suite': ['paper_pov.test_missed_slot_recovery','paper_pov.test_replay_downloaded_artifacts'],
+              'result': 'PASS'
+          }, sort_keys=True) + '\n')
+          print(p.read_text())
+          PY
+          cp /tmp/feasibility-test.log feasibility-test.log
+          sha256sum feasibility-proof.json feasibility-test.log > feasibility-SHA256SUMS
+          sha256sum -c feasibility-SHA256SUMS
+      - name: Read-only live Kraken paper scan with truthful failure receipt
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import datetime as dt
+          import json
+          import os
+          from pathlib import Path
+          from paper_pov.scanner import scan, atomic_json
+          out = Path("feasibility-live-scan.json")
+          try:
+              report = scan()
+              if report.get("mode") != "PAPER_ONLY" or report.get("buy_approved") is not False:
+                  raise ValueError("Unexpected non-paper scan mode")
+              if not report.get("watch"):
+                  raise ValueError("Live scan returned no WATCH candidates")
+              receipt = {
+                  "status": "LIVE_PAPER_WATCH",
+                  "run_id": os.environ["GITHUB_RUN_ID"],
+                  "source_sha": os.environ["GITHUB_SHA"],
+                  "as_of": report["as_of"],
+                  "watch_count": len(report["watch"]),
+                  "eligible_pairs": report["eligible_pairs"],
+                  "observed_markets": report["observed_markets"],
+                  "watch": report["watch"],
+                  "quote_provenance": "client_observed_not_exchange_timestamp",
+                  "ledger_persisted": False,
+                  "production_applied": False,
+              }
+          except Exception as exc:
+              receipt = {
+                  "status": "LIVE_SCAN_ABSTAINED",
+                  "run_id": os.environ["GITHUB_RUN_ID"],
+                  "source_sha": os.environ["GITHUB_SHA"],
+                  "error_type": type(exc).__name__,
+                  "reason": str(exc)[:300],
+                  "ledger_persisted": False,
+                  "production_applied": False,
+              }
+          atomic_json(out, receipt)
+          print("LIVE_SCAN_RECEIPT", json.dumps({
+              k: v for k, v in receipt.items() if k != "watch"}, sort_keys=True))
+          PY
+          sha256sum feasibility-proof.json feasibility-test.log feasibility-live-scan.json > feasibility-SHA256SUMS
+          sha256sum -c feasibility-SHA256SUMS
+      - name: Inspect actual missed scheduled slot without second writer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -m paper_pov.missed_slot_recovery > feasibility-recovery.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("feasibility-recovery.json").read_text())
+          assert report["schema"] == "paper_missed_slot_observer_v1"
+          assert report["writer_dispatched"] is False
+          assert report["ledger_persisted"] is False
+          assert report["production_applied"] is False
+          print("D_REAL_SLOT_OBSERVER",json.dumps(report,sort_keys=True))
+          PY
+          sha256sum feasibility-recovery.json >> feasibility-SHA256SUMS
+          sha256sum -c feasibility-SHA256SUMS
+      - name: Preserve downloadable evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: d-runtime-feasibility-${{ github.run_id }}
+          path: |
+            feasibility-proof.json
+            feasibility-test.log
+            feasibility-live-scan.json
+            feasibility-recovery.json
+            feasibility-SHA256SUMS
+          retention-days: 7
+          if-no-files-found: error

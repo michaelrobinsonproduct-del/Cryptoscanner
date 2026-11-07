@@ -20,8 +20,8 @@ def fixture():
         "excluded_other_pairs": 2,
         "ohlc_screened": 2, "abstentions": [{"pair": "XYZUSD", "reason": "gap"}],
         "observations": [
-            {"pair": "XBTUSD", "symbol": "XBT/USD", "price": 71000.0, "observed_at": QUOTE},
-            {"pair": "ETHUSD", "symbol": "ETH/USD", "price": 4000.0, "observed_at": QUOTE},
+            {"pair": "XBTUSD", "symbol": "XBT/USD", "price": 71000.0, "observed_at": QUOTE, "source": "kraken_public_ticker_client_observed"},
+            {"pair": "ETHUSD", "symbol": "ETH/USD", "price": 4000.0, "observed_at": QUOTE, "source": "kraken_public_ticker_client_observed"},
         ],
         "watch": [],
     }
@@ -160,6 +160,201 @@ class PaperResultsContracts(unittest.TestCase):
         self.assertEqual(payload["stablecoin_exclusion_count"], 10)
         self.assertIn("stablecoin-base exclusions: 10", md)
         self.assertIn("counted from this scan's online AssetPairs metadata", md)
+
+
+    def test_zero_qualifying_watch_is_successful_abstention(self):
+        scan, score = fixture()
+        scan["watch"] = []
+        payload, markdown = self.report(scan, score)
+        self.assertEqual(payload["status"], "ABSTAIN_NO_WATCH")
+        self.assertEqual(payload["candidates"], [])
+        self.assertTrue(payload["remote_readback_verified"])
+        self.assertIn("No qualifying WATCH candidates", markdown)
+        self.assertIn("ABSTAIN", markdown)
+        self.assertNotIn("FAILED run", markdown)
+
+
+    def test_zero_observations_disclose_unverified_freshness(self):
+        scan, score = fixture()
+        scan["watch"] = []
+        scan["observations"] = []
+        scan["observed_markets"] = 0
+        scan["ohlc_screened"] = 0
+        payload, markdown = self.report(scan, score)
+        self.assertEqual(payload["candidates"], [])
+        self.assertEqual(payload["status"], "ABSTAIN_NO_OBSERVATIONS")
+        self.assertIn("ABSTAIN_NO_OBSERVATIONS", markdown)
+        self.assertIn("NOT VERIFIED (zero observations)", markdown)
+        self.assertIn("No qualifying WATCH candidates", markdown)
+
+
+    def test_reject_inconsistent_market_evidence_before_reporting(self):
+        for mode in ("screened_without_quotes", "watch_exceeds_screened"):
+            with self.subTest(mode=mode):
+                scan, score = fixture()
+                if mode == "screened_without_quotes":
+                    scan["observations"] = []
+                    scan["observed_markets"] = 0
+                    scan["watch"] = []
+                    scan["ohlc_screened"] = 1
+                    error = "No quote observations"
+                else:
+                    scan["ohlc_screened"] = 1
+                    error = "WATCH count exceeds screened"
+                with self.assertRaisesRegex(ValueError, error):
+                    self.report(scan, score)
+
+    def test_zero_observation_cli_artifact_and_checksums(self):
+        import hashlib
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from paper_pov.results_report import main
+        scan, score = fixture()
+        scan.update(observations=[], observed_markets=0, ohlc_screened=0, watch=[])
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, board, output = root / "scan.json", root / "score.json", root / "results"
+            source.write_text(json.dumps(scan))
+            board.write_text(json.dumps(score))
+            args = ["results", "--scan", str(source), "--scoreboard", str(board),
+                    "--run-id", "41235442591", "--source-sha", SHA,
+                    "--ledger-commit", LEDGER, "--event", "workflow_dispatch",
+                    "--output-dir", str(output)]
+            with patch("sys.argv", args):
+                main()
+            payload = json.loads((output / "results.json").read_text())
+            self.assertEqual(payload["status"], "ABSTAIN_NO_OBSERVATIONS")
+            self.assertIsNone(payload["max_client_quote_age_seconds"])
+            self.assertEqual(payload["candidates"], [])
+            self.assertFalse(payload["buy_approved"])
+            for line in (output / "SHA256SUMS").read_text().splitlines():
+                digest, name = line.split("  ", 1)
+                self.assertEqual(hashlib.sha256((output / name).read_bytes()).hexdigest(), digest)
+
+
+    def test_atomic_result_publication_rejects_existing_and_cleans_failed_stage(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from paper_pov.results_report import main
+        scan, score = fixture()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, board, output = root / "scan.json", root / "score.json", root / "results"
+            source.write_text(json.dumps(scan))
+            board.write_text(json.dumps(score))
+            args = ["results", "--scan", str(source), "--scoreboard", str(board),
+                    "--run-id", "41235442591", "--source-sha", SHA,
+                    "--ledger-commit", LEDGER, "--event", "workflow_dispatch",
+                    "--output-dir", str(output)]
+            with patch("sys.argv", args):
+                main()
+            old = {p.name: p.read_bytes() for p in output.iterdir()}
+            with patch("sys.argv", args), self.assertRaises(FileExistsError):
+                main()
+            self.assertEqual({p.name: p.read_bytes() for p in output.iterdir()}, old)
+            self.assertFalse(list(root.glob(".paper-results-*")))
+            fresh = root / "fresh"
+            args[-1] = str(fresh)
+            with patch("sys.argv", args), patch(
+                "paper_pov.results_report.hashlib.sha256", side_effect=OSError("checksum failure")
+            ), self.assertRaisesRegex(OSError, "checksum failure"):
+                main()
+            self.assertFalse(fresh.exists())
+            self.assertFalse(list(root.glob(".paper-results-*")))
+
+
+    def test_published_result_readback_rejects_tamper_and_wrong_ledger(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from paper_pov.results_report import main, verify_published
+        scan, score = fixture()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, board, output = root / "scan.json", root / "score.json", root / "results"
+            source.write_text(json.dumps(scan))
+            board.write_text(json.dumps(score))
+            args = ["results", "--scan", str(source), "--scoreboard", str(board),
+                    "--run-id", "41235442591", "--source-sha", SHA,
+                    "--ledger-commit", LEDGER, "--event", "workflow_dispatch",
+                    "--output-dir", str(output)]
+            with patch("sys.argv", args):
+                main()
+            expected = dict(run_id="41235442591", source_sha=SHA,
+                            ledger_commit=LEDGER, ledger_sha256=score["ledger_sha256"])
+            self.assertEqual(verify_published(output, **expected)["status"], "SUCCESS_PAPER_ONLY")
+            verify_args = ["results", "--verify-only", "--run-id", expected["run_id"],
+                           "--source-sha", SHA, "--ledger-commit", LEDGER,
+                           "--ledger-sha256", score["ledger_sha256"],
+                           "--output-dir", str(output)]
+            with patch("sys.argv", verify_args):
+                main()
+            for field, bad in (("run_id", "1"), ("ledger_commit", SHA),
+                               ("ledger_sha256", "0" * 64)):
+                wrong = dict(expected)
+                wrong[field] = bad
+                with self.subTest(field=field), self.assertRaisesRegex(ValueError, "identity"):
+                    verify_published(output, **wrong)
+            original = (output / "results.md").read_bytes()
+            (output / "results.md").write_bytes(original + b"tampered")
+            with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                verify_published(output, **expected)
+            (output / "results.md").write_bytes(original)
+            (output / "unexpected.txt").write_text("extra")
+            with self.assertRaisesRegex(ValueError, "unexpected result"):
+                verify_published(output, **expected)
+
+    def test_independent_quote_freshness_and_candidate_provenance_readback(self):
+        import json
+        import hashlib
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from paper_pov.results_report import main, verify_published
+        scan, score = fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source, board, output = root / "scan.json", root / "score.json", root / "results"
+            source.write_text(json.dumps(scan))
+            board.write_text(json.dumps(score))
+            args = ["results", "--scan", str(source), "--scoreboard", str(board),
+                    "--run-id", "41235442591", "--source-sha", SHA,
+                    "--ledger-commit", LEDGER, "--event", "workflow_dispatch",
+                    "--output-dir", str(output)]
+            with patch("sys.argv", args):
+                main()
+            expected = dict(run_id="41235442591", source_sha=SHA,
+                            ledger_commit=LEDGER, ledger_sha256=score["ledger_sha256"])
+            original = json.loads((output / "results.json").read_text())
+            self.assertEqual(len(verify_published(output, **expected)["quote_evidence"]), 2)
+            for mode in ("stale", "future", "wrong_max", "wrong_price", "missing", "duplicate"):
+                with self.subTest(mode=mode):
+                    payload = json.loads(json.dumps(original))
+                    if mode == "stale":
+                        payload["quote_evidence"][0]["observed_at"] = "2026-10-31T20:00:00+00:00"
+                    elif mode == "future":
+                        payload["quote_evidence"][0]["observed_at"] = "2026-10-31T21:00:00+00:00"
+                    elif mode == "wrong_max":
+                        payload["max_client_quote_age_seconds"] = 0
+                    elif mode == "wrong_price":
+                        payload["quote_evidence"][0]["price"] += 1
+                    elif mode == "missing":
+                        payload["quote_evidence"].pop()
+                    else:
+                        payload["quote_evidence"][1]["pair"] = payload["quote_evidence"][0]["pair"]
+                    raw = json.dumps(payload).encode()
+                    (output / "results.json").write_bytes(raw)
+                    md = (output / "results.md").read_bytes()
+                    (output / "SHA256SUMS").write_text(
+                        hashlib.sha256(raw).hexdigest() + "  results.json\\n" +
+                        hashlib.sha256(md).hexdigest() + "  results.md\\n")
+                    with self.assertRaises(ValueError):
+                        verify_published(output, **expected)
 
     def test_reject_trading_authorization(self):
         s, b = fixture()
