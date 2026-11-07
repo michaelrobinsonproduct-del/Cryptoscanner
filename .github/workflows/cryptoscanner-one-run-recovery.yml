@@ -18,6 +18,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
       REPO: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
@@ -48,10 +49,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$OPENAI_API_KEY" || { echo "::error::Missing OPENAI_API_KEY; autonomous repair cannot operate"; exit 1; }
-          npm install -g @openai/codex
-          printf '%s' "$OPENAI_API_KEY" | codex login --with-api-key
-          codex login status
+          if [[ -n "$OPENAI_API_KEY" ]]; then
+            npm install -g @openai/codex
+            printf '%s' "$OPENAI_API_KEY" | codex login --with-api-key
+            codex login status
+          fi
+          if [[ -n "$COPILOT_GITHUB_TOKEN" ]]; then
+            npm install -g @github/copilot
+          fi
+          [[ -n "$OPENAI_API_KEY" || -n "$COPILOT_GITHUB_TOKEN" ]] || {
+            echo "::error::Neither coding-agent credential is configured"; exit 1;
+          }
       - name: Autonomous implement-diagnose-repair loop with checkpoints
         shell: bash
         run: |
@@ -87,8 +95,20 @@ jobs:
             remaining=$((deadline-SECONDS))
             (( remaining > 180 )) || break
             window=$((remaining > 2400 ? 2400 : remaining-90))
-            timeout --signal=INT --kill-after=30s "${window}s" codex exec --sandbox workspace-write --skip-git-repo-check - < /tmp/repair-objective.txt
-            agent_rc=$?
+            agent_rc=1
+            if [[ -n "$OPENAI_API_KEY" ]]; then
+              timeout --signal=INT --kill-after=30s "${window}s" codex exec --sandbox workspace-write --skip-git-repo-check - < /tmp/repair-objective.txt
+              agent_rc=$?
+            fi
+            if (( agent_rc != 0 )) && [[ -n "$COPILOT_GITHUB_TOKEN" ]]; then
+              echo "Primary agent unavailable (exit $agent_rc); trying independent Copilot credential" >> "$GITHUB_STEP_SUMMARY"
+              export GITHUB_TOKEN="$COPILOT_GITHUB_TOKEN"
+              export GH_TOKEN="$COPILOT_GITHUB_TOKEN"
+              timeout --signal=INT --kill-after=30s "${window}s" copilot -p "$(cat /tmp/repair-objective.txt)" -s --allow-tool='shell(python:*)' --allow-tool='shell(git:*)' --allow-tool='shell(gh:*)'
+              agent_rc=$?
+              unset GITHUB_TOKEN
+              export GH_TOKEN="${{ github.token }}"
+            fi
             git add -A
             if ! git diff --cached --quiet; then
               git diff --cached --check || exit 1
