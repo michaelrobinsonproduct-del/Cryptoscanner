@@ -76,7 +76,7 @@ class PaperResultsContracts(unittest.TestCase):
                 self.report(event=invalid)
 
     def test_both_exact_crons_and_missing_or_spoofed_attribution(self):
-        for cron, minute in (("10 * * * *", 24), ("40 * * * *", 54)):
+        for cron, minute in (("10 * * * *", 10), ("40 * * * *", 40)):
             with self.subTest(cron=cron):
                 payload, md = self.report(cron=cron)
                 self.assertTrue(payload["scheduled_slot_verified"])
@@ -84,7 +84,7 @@ class PaperResultsContracts(unittest.TestCase):
                 self.assertEqual(payload["originating_cron"], cron)
                 self.assertIn(f"intended UTC minute=:{minute:02d}", md)
                 self.assertFalse(payload["scheduled_start_punctuality_verified"])
-        for bad in (None, "", "9,39 * * * *", "10 * * * *",
+        for bad in (None, "", "9,39 * * * *", "24 * * * *", "54 * * * *",
                     "39 * * * *; echo spoof", "9 * * * *\\n39 * * * *", True):
             with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "originating scheduled cron"):
                 self.report(cron=bad)
