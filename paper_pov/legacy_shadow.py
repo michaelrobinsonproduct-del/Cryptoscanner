@@ -95,7 +95,7 @@ def _closed_features(payload, pair, now, *, aliases=()):
     move60 = 100 * (closes[-1] / closes[-13] - 1)
     if not all(math.isfinite(x) for x in (accel, move15, move60)):
         raise ValueError("Nonfinite candle features")
-    return move15, move60, accel, closed_at
+    return move15, move60, accel, closed_at, sum(volumes[-6:]), prior
 
 
 def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
@@ -210,7 +210,7 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
                     raise
                 request_pair = alternative
                 payload = api("OHLC?pair=" + urllib.parse.quote(request_pair, safe="") + "&interval=5")
-            move15, move60, accel, closed_at = _closed_features(
+            move15, move60, accel, closed_at, volume_current, volume_baseline = _closed_features(
                 payload, item["pair"], _now(clock), aliases=item["aliases"])
             evaluated += 1
             if move15 < .05 or accel < 1:
@@ -233,6 +233,8 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
                           "move15_pct": round(move15, 4),
                           "move1h_pct": round(move60, 4),
                           "volume_accel": round(accel, 4),
+                          "volume_current_30m": round(volume_current, 8),
+                          "volume_baseline_previous_30m": round(volume_baseline, 8),
                           "quote_observed_at": quote_at.isoformat(),
                           "ohlc_last_closed_at": closed_at.isoformat(),
                           "status": "WATCH_PAPER_ONLY"})
@@ -262,6 +264,8 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
             "ticker_reference": "Kraken today open UTC, not rolling 24h",
             "momentum_1h_reference": "last_closed_5m_close_over_close_12_intervals_earlier",
             "volume_acceleration_reference": "last_6_completed_5m_volume_over_previous_6_completed_5m_volume",
+            "volume_window_minutes": 30,
+            "volume_units": "Kraken OHLC base-asset units (not USD notional)",
             "quote_timestamp_type": "client_observed_not_exchange_event",
             "status": ("WATCH_PAPER_ONLY" if picks else
                        "DATA_UNAVAILABLE" if rejects and any(k != "BELOW_SIGNAL_THRESHOLD" for k in rejection_reasons) else "NO_SIGNALS"),
