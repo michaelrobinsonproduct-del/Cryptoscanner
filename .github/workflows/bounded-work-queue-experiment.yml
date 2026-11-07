@@ -8,12 +8,22 @@ on:
         default: "5"
 permissions:
   contents: read
+concurrency:
+  group: bounded-work-experiment-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   bounded-work:
     runs-on: ubuntu-latest
     timeout-minutes: 330
     steps:
       - uses: actions/checkout@v4
+      - name: Restore previous bounded-work checkpoint
+        uses: actions/cache/restore@v4
+        with:
+          path: .bounded-state/
+          key: bounded-state-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            bounded-state-${{ runner.os }}-${{ github.ref_name }}-
       - name: Execute distinct queued work and checkpoint
         env:
           REQUESTED_MINUTES: ${{ inputs.work_minutes }}
@@ -21,11 +31,19 @@ jobs:
       - name: Diagnose failures into a next-run plan
         if: always()
         run: python3 .github/scripts/bounded_failure_diagnosis.py
+      - name: Persist checkpoint for future runs
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .bounded-state/
+          key: bounded-state-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
       - name: Preserve evidence even after failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: bounded-work-evidence-${{ github.run_id }}
-          path: .work-evidence/
+          path: |
+            .work-evidence/
+            .bounded-state/
           include-hidden-files: true
           if-no-files-found: error
