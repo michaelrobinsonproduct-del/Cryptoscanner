@@ -205,7 +205,7 @@ def project_published_result(result, writer_readback=None, a2_delivery=None, lea
         raise ValueError("untrusted scan trigger")
     if event == "schedule":
         cron = result.get("originating_cron")
-        if cron not in ("9 * * * *", "39 * * * *") or result.get("scheduled_slot_verified") is not True or result.get("scheduled_slot_utc_minute") != int(cron.split()[0]):
+        if cron not in ("24 * * * *", "54 * * * *") or result.get("scheduled_slot_verified") is not True or result.get("scheduled_slot_utc_minute") != int(cron.split()[0]):
             raise ValueError("invalid scheduled provenance")
     elif result.get("originating_cron") is not None or result.get("scheduled_slot_verified") is not False or result.get("scheduled_slot_utc_minute") is not None:
         raise ValueError("manual result claims scheduled provenance")
@@ -435,7 +435,7 @@ def project_legacy_published_abstention(result, *, writer_readback=None, a2_deli
     # single-writer provenance checks used by quote-complete published output.
     if event == "schedule":
         cron = result.get("originating_cron")
-        if (cron not in ("9 * * * *", "39 * * * *") or
+        if (cron not in ("24 * * * *", "54 * * * *") or
                 result.get("scheduled_slot_verified") is not True or
                 result.get("scheduled_slot_utc_minute") != int(cron.split()[0])):
             raise ValueError("invalid legacy scheduled provenance")

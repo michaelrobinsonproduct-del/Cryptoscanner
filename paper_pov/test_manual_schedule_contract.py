@@ -63,7 +63,7 @@ class ManualScheduledContractTests(unittest.TestCase):
 
     def test_reject_spoofed_schedule_and_drifted_schema(self):
         for key, value in (("originating_cron", "10 * * * *"),
-                           ("scheduled_slot_utc_minute", 9),
+                           ("scheduled_slot_utc_minute", 24),
                            ("scheduled_slot_verified", False)):
             with self.subTest(key=key):
                 m, s = self.pair()
