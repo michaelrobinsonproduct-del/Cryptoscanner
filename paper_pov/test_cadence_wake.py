@@ -82,13 +82,19 @@ class CadenceWakeTests(unittest.TestCase):
                       ref="refs/heads/evil", event_name="issue_comment",
                       now=dt.datetime(2026, 11, 1, 11, 0, tzinfo=UTC))
 
-    def test_durable_anchor_and_25_minute_spacing_allow_due_dispatch(self):
+    def test_durable_anchor_and_15_minute_spacing_allow_due_dispatch(self):
         d = decision()
         self.assertEqual((d["action"], d["reason"]),
                          ("DISPATCH_EXISTING_WORKFLOW", "INDEPENDENT_CADENCE_DUE"))
         self.assertEqual(d["attempt_marker"], MARKER + COMMIT)
         self.assertEqual(d["ledger_generation"], 1)
         self.assertEqual(d["target_slot"], "2026-10-31T23:00:00+00:00")
+
+    def test_previous_scan_20_minutes_ago_does_not_block_next_slot(self):
+        from unittest.mock import patch
+        with patch("paper_pov.cadence_wake.MIN_SCAN_SPACING", dt.timedelta(minutes=15)):
+            d = decision(now=dt.datetime(2026, 10, 31, 23, 20, tzinfo=UTC))
+        self.assertEqual(d["action"], "DISPATCH_EXISTING_WORKFLOW")
 
     def test_30_minute_slot_mapping(self):
         self.assertEqual(slot_at(dt.datetime(2026, 11, 1, 11, 35, tzinfo=UTC)).minute, 30)
