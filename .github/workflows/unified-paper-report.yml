@@ -16,6 +16,7 @@ jobs:
       - name: Read latest published writer and independent legacy artifacts
         env:
           GH_TOKEN: ${{ github.token }}
+          PYTHONPATH: .
         run: python .github/scripts/unified_paper_report.py
       - name: Publish authenticated report artifact
         uses: actions/upload-artifact@v4
