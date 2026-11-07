@@ -147,9 +147,9 @@ class CadenceWakeTests(unittest.TestCase):
         d = decision(ledger=seal(state))
         self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "CADENCE_SLOT_ALREADY_DURABLE"))
 
-    def test_recent_scan_and_recent_failed_attempt_block(self):
+    def test_next_slot_after_19_minutes_and_recent_failed_attempt_block(self):
         self.assertEqual(decision(now=dt.datetime(2026, 10, 31, 20, 30, tzinfo=UTC))["action"],
-                         "NO_DISPATCH")
+                         "DISPATCH_EXISTING_WORKFLOW")
         d = decision(runs=[scan(), scan(124, "2026-10-31T23:00:00Z", conclusion="failure")])
         self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "RECENT_SCAN_OR_ATTEMPT"))
 
