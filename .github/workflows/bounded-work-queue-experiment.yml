@@ -18,10 +18,14 @@ jobs:
         env:
           REQUESTED_MINUTES: ${{ inputs.work_minutes }}
         run: python3 .github/scripts/bounded_work_queue.py
-      - name: Preserve results even after failure
+      - name: Diagnose failures into a next-run plan
+        if: always()
+        run: python3 .github/scripts/bounded_failure_diagnosis.py
+      - name: Preserve evidence even after failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: bounded-work-evidence-${{ github.run_id }}
           path: .work-evidence/
-          if-no-files-found: warn
+          include-hidden-files: true
+          if-no-files-found: error
