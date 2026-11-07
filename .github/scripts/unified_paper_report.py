@@ -107,7 +107,7 @@ def main():
     candidates = sorted(result["candidates"], key=lambda x: -x["challenger_score"])
     as_of = utc(result["as_of"])
     quote_ages = [(as_of - utc(x["quote_observed_at"])).total_seconds() for x in candidates]
-    fresh = bool(quote_ages) and min(quote_ages) >= 0 and max(quote_ages) <= 600
+    age_now = (dt.datetime.now(UTC) - as_of).total_seconds()\n    fresh = (bool(quote_ages) and min(quote_ages) >= 0 and max(quote_ages) <= 600\n             and 0 <= age_now <= 600)
     legacy, legacy_art, legacy_run = legacy_for(run["id"], run["head_sha"])
     independent = sorted(legacy["candidates"], key=lambda x: -x["legacy_score"]) if legacy else []
     overlaps = sorted({x["symbol"] for x in candidates} & {x["symbol"] for x in independent}) if legacy else []
@@ -118,7 +118,7 @@ def main():
         "source_sha": run["head_sha"], "as_of_utc": result["as_of"],
         "eligible_pairs": result["eligible_pairs"], "watch_count": len(candidates),
         "ledger_generation": result["ledger_generation"], "ledger_sha256": result["ledger_sha256"],
-        "max_quote_age_seconds": max(quote_ages) if quote_ages else None,
+        "max_quote_age_seconds": max(quote_ages) if quote_ages else None,\n        "report_age_seconds": round(age_now, 2),
         "challenger_top5": candidates[:5], "legacy_independent": legacy is not None,
         "legacy_run_id": legacy_run["id"] if legacy_run else None,
         "legacy_artifact_id": legacy_art["id"] if legacy_art else None,
