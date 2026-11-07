@@ -66,7 +66,7 @@ def legacy_for(paper_run, source_sha):
     for page in range(1, 4):
         runs = api("/actions/runs?per_page=100&page=" + str(page))["workflow_runs"]
         for run in runs:
-            if run["status"] != "completed" or run["conclusion"] != "success" or run["id"] == paper_run:
+            if (run["status"] != "completed" or run["conclusion"] != "success"\n                    or run["id"] == paper_run or "legacy" not in run.get("name", "").lower()):
                 continue
             artifacts = artifact_map(run["id"])
             for name, artifact in artifacts.items():
