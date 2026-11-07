@@ -134,6 +134,22 @@ class LegacyShadowTests(unittest.TestCase):
         self.assertEqual(report["status"], "WATCH_PAPER_ONLY")
         self.assertEqual(len(report["candidates"]), 12)
 
+    def test_zero_trade_zero_vwap_kraken_bucket_is_accepted(self):
+        api = FakeKraken()
+        api.rows = candle_rows(empty=True)
+        api.rows[8][5] = 0
+        report = run(api)
+        self.assertEqual(report["status"], "WATCH_PAPER_ONLY")
+        self.assertEqual(len(report["candidates"]), 12)
+
+    def test_positive_trade_zero_vwap_is_rejected(self):
+        api = FakeKraken()
+        api.rows = candle_rows()
+        api.rows[8][5] = 0
+        report = run(api)
+        self.assertEqual(report["status"], "DATA_UNAVAILABLE")
+        self.assertEqual(report["ohlc_rejection_reasons"]["Invalid or empty completed candle"], 16)
+
     def test_inconsistent_zero_trade_volume_abstains(self):
         api = FakeKraken()
         api.rows = candle_rows(empty=True)
