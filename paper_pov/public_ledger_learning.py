@@ -20,6 +20,7 @@ def learn_from_public_ledger(ledger):
         predictions[key] = prediction
     outcome_counts = {str(h): {"hits": 0, "misses": 0, "abstentions": 0}
                       for h in HORIZONS}
+    observed_only_count = 0
     seen = set()
     for outcome in ledger.get("outcomes", []):
         key = outcome["prediction_id"]
@@ -34,8 +35,10 @@ def learn_from_public_ledger(ledger):
             raise ValueError("Outcome references unknown retained prediction")
         status = outcome["status"]
         bucket = outcome_counts[str(horizon)]
-        if status.startswith("ABSTAIN") or status in ("IMMATURE", "MISSING_CANDLES", "MATURED_OBSERVED"):
+        if status.startswith("ABSTAIN") or status in ("IMMATURE", "MISSING_CANDLES"):
             bucket["abstentions"] += 1
+        elif status == "MATURED_OBSERVED":
+            observed_only_count += 1
         elif status == "MATURE_HIT":
             bucket["hits"] += 1
         elif status == "MATURE_MISS":
@@ -51,6 +54,7 @@ def learn_from_public_ledger(ledger):
         "archived_observed_30pct_hits": ledger.get("archived", {}).get("observed_30pct_hits", 0),
         "archived_gap_abstentions": ledger.get("archived", {}).get("gap_abstentions", 0),
         "outcome_counts": outcome_counts,
+        "observed_only_count": observed_only_count,
         "eligible_training_count": sum(v["hits"] + v["misses"] for v in outcome_counts.values()),
         "status": "NO_QUALIFIED_RULE",
         "source_authenticated": False,
@@ -85,6 +89,7 @@ def render_learning_report(result):
         "Previously matured labels (archived aggregate): " + str(result["archived_matured_labels"]),
         "Previously observed +30% hits (archived aggregate): " + str(result["archived_observed_30pct_hits"]),
         "Retained trainable labels: " + str(result["eligible_training_count"]),
+        "Matured observations without verified hit/miss labels: " + str(result["observed_only_count"]),
     ]
     for horizon in HORIZONS:
         row = counts[str(horizon)]
