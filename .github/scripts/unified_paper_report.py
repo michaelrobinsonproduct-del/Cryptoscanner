@@ -8,18 +8,29 @@ from pathlib import Path
 import urllib.error
 import urllib.request
 import zipfile
+from urllib.parse import urlsplit
 
 REPO = os.environ.get("GITHUB_REPOSITORY", "michaelrobinsonproduct-del/Cryptoscanner")
 TOKEN = os.environ["GH_TOKEN"]
 API = "https://api.github.com/repos/" + REPO
 UTC = dt.timezone.utc
 
+class ArtifactRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if redirected is not None and urlsplit(newurl).netloc != urlsplit(req.full_url).netloc:
+            redirected.remove_header("Authorization")
+            redirected.remove_unredirected_header("Authorization")
+        return redirected
+
+REDIRECT_OPENER = urllib.request.build_opener(ArtifactRedirect())
+
 def api(path, binary=False):
     request = urllib.request.Request(
         API + path, headers={"Authorization": "Bearer " + TOKEN,
                              "Accept": "application/vnd.github+json",
                              "X-GitHub-Api-Version": "2022-11-28"})
-    with urllib.request.urlopen(request, timeout=45) as response:
+    with REDIRECT_OPENER.open(request, timeout=45) as response:
         return response.read() if binary else json.load(response)
 
 def files_from_zip(artifact):
