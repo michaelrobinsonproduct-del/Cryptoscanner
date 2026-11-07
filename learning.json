@@ -2,19 +2,19 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 7725,
+      "matured_snapshots": 7737,
       "evaluated": 7038,
-      "coverage_pct": 91.1,
-      "unresolved": 687,
-      "no_observation_in_window": 687
+      "coverage_pct": 91.0,
+      "unresolved": 699,
+      "no_observation_in_window": 699
     },
     {
       "hours": 3,
-      "matured_snapshots": 7725,
+      "matured_snapshots": 7737,
       "evaluated": 6685,
-      "coverage_pct": 86.5,
-      "unresolved": 1040,
-      "no_observation_in_window": 1040
+      "coverage_pct": 86.4,
+      "unresolved": 1052,
+      "no_observation_in_window": 1052
     },
     {
       "hours": 6,
@@ -26,11 +26,11 @@
     },
     {
       "hours": 24,
-      "matured_snapshots": 7677,
+      "matured_snapshots": 7689,
       "evaluated": 6524,
-      "coverage_pct": 85.0,
-      "unresolved": 1153,
-      "no_observation_in_window": 1153
+      "coverage_pct": 84.8,
+      "unresolved": 1165,
+      "no_observation_in_window": 1165
     }
   ],
   "outcome_lag_hours_by_horizon": [
@@ -55,12 +55,12 @@
       "average_delay_hours": 0.356
     }
   ],
-  "unresolved_1h_snapshots": 687,
+  "unresolved_1h_snapshots": 699,
   "rank_comparison": {
-    "historical_ranked_samples": 7449,
+    "historical_ranked_samples": 7461,
     "mean_base_minus_early_rank": 1.77
   },
-  "newly_discovered_outside_base_top12": 1,
+  "newly_discovered_outside_base_top12": 3,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
@@ -98,16 +98,6 @@
   },
   "missed_breakout_examples": [
     {
-      "pair": "L3USD",
-      "observed_at": "2026-10-31T16:38:42.044897+00:00",
-      "next_scan_gain_pct": 41.71
-    },
-    {
-      "pair": "AMIUSD",
-      "observed_at": "2026-10-31T19:34:26.966777+00:00",
-      "next_scan_gain_pct": 28.55
-    },
-    {
       "pair": "ROLLUSD",
       "observed_at": "2026-11-01T01:56:41.136628+00:00",
       "next_scan_gain_pct": 26.91
@@ -116,16 +106,6 @@
       "pair": "DEBITUSD",
       "observed_at": "2026-10-31T23:29:56.792734+00:00",
       "next_scan_gain_pct": 23.56
-    },
-    {
-      "pair": "CMETHUSD",
-      "observed_at": "2026-10-31T18:39:15.523852+00:00",
-      "next_scan_gain_pct": 22.73
-    },
-    {
-      "pair": "PIPEUSD",
-      "observed_at": "2026-10-31T17:29:18.615829+00:00",
-      "next_scan_gain_pct": 20.72
     },
     {
       "pair": "ADXUSD",
@@ -146,13 +126,33 @@
       "pair": "AINUSD",
       "observed_at": "2026-11-01T02:43:17.963704+00:00",
       "next_scan_gain_pct": 19.31
+    },
+    {
+      "pair": "ZEXUSD",
+      "observed_at": "2026-10-31T23:29:56.792734+00:00",
+      "next_scan_gain_pct": 17.86
+    },
+    {
+      "pair": "UMXMUSD",
+      "observed_at": "2026-11-01T00:01:15.918137+00:00",
+      "next_scan_gain_pct": 17.04
+    },
+    {
+      "pair": "ESPORTSUSD",
+      "observed_at": "2026-11-01T03:46:10.429361+00:00",
+      "next_scan_gain_pct": 13.97
+    },
+    {
+      "pair": "ESPORTSUSD",
+      "observed_at": "2026-11-01T02:43:17.963704+00:00",
+      "next_scan_gain_pct": 13.48
     }
   ],
-  "unselected_gainers_5pct_observations": 68,
-  "market_observations": 410049,
+  "unselected_gainers_5pct_observations": 48,
+  "market_observations": 410667,
   "market_price_coverage": 618,
-  "feature_rows": 7617,
-  "snapshots": 7737,
+  "feature_rows": 7629,
+  "snapshots": 7749,
   "outcomes": 26920,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
