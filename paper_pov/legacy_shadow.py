@@ -196,8 +196,22 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
             break
         attempts += 1
         try:
-            payload = api("OHLC?pair=" + urllib.parse.quote(item["pair"], safe="") + "&interval=5")
-            move15, move60, accel, closed_at = _closed_features(payload, item["pair"], _now(clock), aliases=item["aliases"])
+            # Retry an unambiguous Kraken-advertised altname only when the
+            # original REST pair identifier fails acquisition. Do not retry
+            # malformed or stale candles under a different identity.
+            request_pair = item["pair"]
+            try:
+                payload = api("OHLC?pair=" + urllib.parse.quote(request_pair, safe="") + "&interval=5")
+            except (ValueError, urllib.error.URLError, TimeoutError, OSError, RuntimeError):
+                alternative = next((alias for alias in item["aliases"]
+                                    if alias != request_pair
+                                    and ticker_keys.get(alias) == {request_pair}), None)
+                if alternative is None:
+                    raise
+                request_pair = alternative
+                payload = api("OHLC?pair=" + urllib.parse.quote(request_pair, safe="") + "&interval=5")
+            move15, move60, accel, closed_at = _closed_features(
+                payload, item["pair"], _now(clock), aliases=item["aliases"])
             evaluated += 1
             if move15 < .05 or accel < 1:
                 rejects += 1
