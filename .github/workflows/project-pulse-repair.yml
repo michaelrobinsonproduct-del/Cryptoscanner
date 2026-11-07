@@ -1,0 +1,75 @@
+name: Project Pulse - bounded repair cycle
+on:
+  workflow_dispatch:
+    inputs:
+      analysis_minutes:
+        description: 'Maximum analysis time in minutes (1-10)'
+        default: '3'
+        required: false
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+  issues: read
+concurrency:
+  group: project-pulse-repair-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Verify repair engine compiles
+        run: python3 -m py_compile .github/scripts/project_pulse_repair.py
+      - name: Inspect live project and produce evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANALYSIS_MINUTES: ${{ inputs.analysis_minutes }}
+        run: |
+          python3 .github/scripts/project_pulse.py --out project-pulse-output
+          python3 .github/scripts/project_pulse_github.py
+          python3 .github/scripts/project_pulse_plan.py
+      - name: Apply strictly scoped syntax repair and validate
+        run: python3 .github/scripts/project_pulse_repair.py
+      - name: Create PR only when validated source changed
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- .github/scripts/; then
+            echo "No eligible repair found; no PR created." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          branch="project-pulse/repair-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add .github/scripts/
+          git commit -m "Repair observed Project Pulse Python syntax defect"
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "Project Pulse: validated targeted syntax repair" \
+            --body "Automated, narrowly scoped repair for observed literal-escaped-newline Python syntax defect. All .github/scripts Python files passed AST parsing. Review required; no auto-merge." \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Preserve reports and diagnosis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-pulse-repair-${{ github.run_id }}
+          path: |
+            project-pulse-output/
+            .project-pulse-repair/
+          include-hidden-files: true
+          if-no-files-found: warn
+      - name: Publish run summary
+        if: always()
+        run: |
+          for file in project-pulse-output/project-plan.md .project-pulse-repair/repair.md; do
+            if [ -f "$file" ]; then
+              cat "$file" >> "$GITHUB_STEP_SUMMARY"
+              printf '\n---\n' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
