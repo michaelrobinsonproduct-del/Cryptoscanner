@@ -133,13 +133,24 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
     if (not isinstance(ticker, dict)
             or not 0 <= (quote_at - started).total_seconds() <= 120):
         raise ValueError("Invalid or stale independent ticker response")
+    # Kraken ticker responses may use the REST key or an advertised altname.
+    # Resolve only unambiguous keys belonging to this eligible universe.
+    ticker_keys = {}
+    for pair, (_symbol, aliases) in eligible.items():
+        for key in (pair, *aliases):
+            ticker_keys.setdefault(key, set()).add(pair)
     matched = 0
     valid = 0
     precursors = []
     for pair, (symbol, aliases) in sorted(eligible.items()):
         row = ticker.get(pair)
         if not isinstance(row, dict):
-            continue
+            matches = [ticker[key] for key in (pair, *aliases)
+                       if key in ticker and ticker_keys.get(key) == {pair}
+                       and isinstance(ticker[key], dict)]
+            if len(matches) != 1:
+                continue
+            row = matches[0]
         matched += 1
         try:
             price, bid, ask, opening, volume, trades = (
