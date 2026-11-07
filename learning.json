@@ -2,33 +2,33 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 7737,
+      "matured_snapshots": 7749,
       "evaluated": 7038,
-      "coverage_pct": 91.0,
-      "unresolved": 699,
-      "no_observation_in_window": 699
+      "coverage_pct": 90.8,
+      "unresolved": 711,
+      "no_observation_in_window": 711
     },
     {
       "hours": 3,
-      "matured_snapshots": 7737,
-      "evaluated": 6685,
+      "matured_snapshots": 7749,
+      "evaluated": 6697,
       "coverage_pct": 86.4,
       "unresolved": 1052,
       "no_observation_in_window": 1052
     },
     {
       "hours": 6,
-      "matured_snapshots": 7725,
+      "matured_snapshots": 7737,
       "evaluated": 6673,
-      "coverage_pct": 86.4,
-      "unresolved": 1052,
-      "no_observation_in_window": 1052
+      "coverage_pct": 86.2,
+      "unresolved": 1064,
+      "no_observation_in_window": 1064
     },
     {
       "hours": 24,
-      "matured_snapshots": 7689,
-      "evaluated": 6524,
-      "coverage_pct": 84.8,
+      "matured_snapshots": 7701,
+      "evaluated": 6536,
+      "coverage_pct": 84.9,
       "unresolved": 1165,
       "no_observation_in_window": 1165
     }
@@ -41,7 +41,7 @@
     },
     {
       "hours": 3,
-      "samples": 6685,
+      "samples": 6697,
       "average_delay_hours": 0.382
     },
     {
@@ -51,13 +51,13 @@
     },
     {
       "hours": 24,
-      "samples": 6524,
-      "average_delay_hours": 0.356
+      "samples": 6536,
+      "average_delay_hours": 0.357
     }
   ],
-  "unresolved_1h_snapshots": 699,
+  "unresolved_1h_snapshots": 711,
   "rank_comparison": {
-    "historical_ranked_samples": 7461,
+    "historical_ranked_samples": 7473,
     "mean_base_minus_early_rank": 1.77
   },
   "newly_discovered_outside_base_top12": 3,
@@ -71,10 +71,10 @@
     },
     {
       "hours": 3,
-      "samples": 6685,
-      "early_scored_avg_return_pct": -0.234,
-      "all_selected_avg_return_pct": -0.234,
-      "early_score_above_base_avg_return_pct": -0.218
+      "samples": 6697,
+      "early_scored_avg_return_pct": -0.233,
+      "all_selected_avg_return_pct": -0.233,
+      "early_score_above_base_avg_return_pct": -0.216
     },
     {
       "hours": 6,
@@ -85,15 +85,15 @@
     },
     {
       "hours": 24,
-      "samples": 6524,
-      "early_scored_avg_return_pct": -1.058,
-      "all_selected_avg_return_pct": -1.058,
+      "samples": 6536,
+      "early_scored_avg_return_pct": -1.059,
+      "all_selected_avg_return_pct": -1.059,
       "early_score_above_base_avg_return_pct": -1.05
     }
   ],
   "outcome_evaluation_coverage": {
-    "evaluated": 26920,
-    "positive": 11144,
+    "evaluated": 26944,
+    "positive": 11153,
     "average_return_pct": -0.434
   },
   "missed_breakout_examples": [
@@ -101,16 +101,6 @@
       "pair": "ROLLUSD",
       "observed_at": "2026-11-01T01:56:41.136628+00:00",
       "next_scan_gain_pct": 26.91
-    },
-    {
-      "pair": "DEBITUSD",
-      "observed_at": "2026-10-31T23:29:56.792734+00:00",
-      "next_scan_gain_pct": 23.56
-    },
-    {
-      "pair": "ADXUSD",
-      "observed_at": "2026-10-31T21:04:57.336361+00:00",
-      "next_scan_gain_pct": 20.42
     },
     {
       "pair": "AMIUSD",
@@ -128,11 +118,6 @@
       "next_scan_gain_pct": 19.31
     },
     {
-      "pair": "ZEXUSD",
-      "observed_at": "2026-10-31T23:29:56.792734+00:00",
-      "next_scan_gain_pct": 17.86
-    },
-    {
       "pair": "UMXMUSD",
       "observed_at": "2026-11-01T00:01:15.918137+00:00",
       "next_scan_gain_pct": 17.04
@@ -146,14 +131,29 @@
       "pair": "ESPORTSUSD",
       "observed_at": "2026-11-01T02:43:17.963704+00:00",
       "next_scan_gain_pct": 13.48
+    },
+    {
+      "pair": "RUJIUSD",
+      "observed_at": "2026-11-01T00:01:15.918137+00:00",
+      "next_scan_gain_pct": 12.45
+    },
+    {
+      "pair": "TMXUSD",
+      "observed_at": "2026-11-01T00:01:15.918137+00:00",
+      "next_scan_gain_pct": 11.46
+    },
+    {
+      "pair": "POWRUSD",
+      "observed_at": "2026-11-01T00:01:15.918137+00:00",
+      "next_scan_gain_pct": 10.62
     }
   ],
-  "unselected_gainers_5pct_observations": 48,
-  "market_observations": 410667,
+  "unselected_gainers_5pct_observations": 31,
+  "market_observations": 411285,
   "market_price_coverage": 618,
-  "feature_rows": 7629,
-  "snapshots": 7749,
-  "outcomes": 26920,
+  "feature_rows": 7641,
+  "snapshots": 7761,
+  "outcomes": 26944,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
   "model_updates": "DISABLED_PENDING_UNBIASED_FORWARD_VALIDATION",
