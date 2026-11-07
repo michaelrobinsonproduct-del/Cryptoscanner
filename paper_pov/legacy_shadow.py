@@ -69,7 +69,9 @@ def _closed_features(payload, pair, now, *, aliases=()):
                 or high < max(opn, close)
                 or (count > 0 and not low <= vwap <= high)):
             raise ValueError("Invalid or empty completed candle")
-        # Zero-trade Kraken buckets can have VWAP=0; only positive-trade\n        # VWAP must lie within the traded price range.\n        starts.append(int(stamp))
+        # Zero-trade Kraken buckets can have VWAP=0; only positive-trade
+        # VWAP must lie within the traded price range.
+        starts.append(int(stamp))
         closes.append(close)
         volumes.append(volume)
     if any(b - a != 300 for a, b in zip(starts, starts[1:])):
