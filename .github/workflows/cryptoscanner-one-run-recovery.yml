@@ -1,137 +1,123 @@
-name: Cryptoscanner One-Run Recovery and Acceptance
+name: Cryptoscanner Autonomous Repair and Completion
 on:
   workflow_dispatch:
-    inputs:
-      scan_run_id:
-        description: "Optional existing successful paper scan run ID; blank dispatches the existing sole writer"
-        required: false
-        type: string
+  schedule:
+    - cron: '23 * * * *'
 permissions:
-  contents: read
+  contents: write
   actions: write
   issues: write
+  pull-requests: write
 concurrency:
-  group: cryptoscanner-one-run-recovery
+  group: cryptoscanner-autonomous-repair
   cancel-in-progress: false
 jobs:
-  recover-and-verify:
+  repair:
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 330
     env:
       GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
-      REQUESTED_RUN: ${{ inputs.scan_run_id }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      REPO: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Test the real downstream learning contract before touching the writer
-        run: |
-          set -euo pipefail
-          python -m unittest paper_pov.test_public_ledger_learning paper_pov.test_historical_paper_cohort paper_pov.test_stage1_schedule -v
-      - name: Dispatch existing single writer or select requested successful run
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Resume isolated durable implementation branch
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -n "$REQUESTED_RUN" ]]; then
-            [[ "$REQUESTED_RUN" =~ ^[0-9]+$ ]]
-            echo "PAPER_RUN_ID=$REQUESTED_RUN" >> "$GITHUB_ENV"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if gh api "repos/$REPO/git/ref/heads/cryptoscanner-autonomous-repair" --silent >/dev/null 2>&1; then
+            git fetch origin cryptoscanner-autonomous-repair
+            git checkout -B cryptoscanner-autonomous-repair FETCH_HEAD
           else
-            # Capture the pre-dispatch run list so the new run cannot be mistaken for an older one.
-            gh api "repos/$GH_REPO/actions/workflows/paper-pipeline.yml/runs?per_page=30" --jq '.workflow_runs[].id' > /tmp/before-runs
-            gh workflow run paper-pipeline.yml --ref main
-            found=""
-            for attempt in $(seq 1 30); do
-              while read -r id; do
-                if ! grep -qx "$id" /tmp/before-runs; then
-                  event="$(gh api "repos/$GH_REPO/actions/runs/$id" --jq .event)"
-                  if [[ "$event" == workflow_dispatch ]]; then found="$id"; break; fi
-                fi
-              done < <(gh api "repos/$GH_REPO/actions/workflows/paper-pipeline.yml/runs?per_page=30" --jq '.workflow_runs[].id')
-              [[ -n "$found" ]] && break
-              sleep 4
-            done
-            [[ -n "$found" ]] || { echo "::error::Dispatched writer run not found"; exit 1; }
-            echo "PAPER_RUN_ID=$found" >> "$GITHUB_ENV"
+            git checkout -B cryptoscanner-autonomous-repair
           fi
-      - name: Wait for verified writer completion and download exact-run artifacts
+          mkdir -p .autonomous
+          echo "BASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      - name: Install and authenticate autonomous coding agent
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 90); do
-            state="$(gh api "repos/$GH_REPO/actions/runs/$PAPER_RUN_ID" --jq .status)"
-            [[ "$state" == completed ]] && break
-            sleep 15
+          test -n "$OPENAI_API_KEY" || { echo "::error::Missing OPENAI_API_KEY; autonomous repair cannot operate"; exit 1; }
+          npm install -g @openai/codex
+          printf '%s' "$OPENAI_API_KEY" | codex login --with-api-key
+          codex login status
+      - name: Autonomous implement-diagnose-repair loop with checkpoints
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p .autonomous
+          cat > /tmp/repair-objective.txt <<'OBJECTIVE'
+          You are the Cryptoscanner autonomous implementation and repair engineer.
+          Read issue #34 and existing repository implementation before modifying code.
+          Finish the existing scanner, not another wrapper. Inspect actual latest failed
+          GitHub jobs and logs using gh CLI, and inspect actual exact-run artifacts.
+          Diagnose and FIX functional failures in code and workflows, including:
+          ledger MATURED_OBSERVED schema parity; sampled-outcome failures; learning
+          watchdog failures; real authenticated 1/6/24/48h outcomes; chronological
+          held-out shadow learning; same-run baseline and legacy-inspired ranked
+          candidates; overlap stars; price, 15m move, volume acceleration, scores,
+          risk and freshness; and real end-to-end ChatGPT result delivery.
+          GitHub issue publication is NOT ChatGPT delivery; never claim equivalence.
+          Keep existing single paper writer; never trade, force push, create second
+          writer, fabricate source data or performance, or promote unverified scoring.
+          Implement multiple substantive fixes per session, run focused tests for
+          changed behavior, inspect failures, iterate. No cosmetic-only changes,
+          no repetitive audit loops, no new architecture when existing code suffices.
+          Keep .autonomous/progress.md with actual code changes, test output,
+          unresolved defects and next concrete actions. Do not create COMPLETE until
+          actual unattended scan, learning and ChatGPT delivery are evidenced.
+          If an external integration cannot be verified, report it explicitly.
+          OBJECTIVE
+          deadline=$((SECONDS + 17100))
+          iteration=0
+          while (( SECONDS < deadline )); do
+            iteration=$((iteration+1))
+            echo "### Repair iteration $iteration" >> "$GITHUB_STEP_SUMMARY"
+            remaining=$((deadline-SECONDS))
+            (( remaining > 180 )) || break
+            window=$((remaining > 2400 ? 2400 : remaining-90))
+            timeout --signal=INT --kill-after=30s "${window}s" codex exec --sandbox workspace-write --skip-git-repo-check - < /tmp/repair-objective.txt
+            agent_rc=$?
+            git add -A
+            if ! git diff --cached --quiet; then
+              git diff --cached --check || exit 1
+              git commit -m "repair: autonomous functional checkpoint $GITHUB_RUN_ID iteration $iteration" || exit 1
+            fi
+            gh auth setup-git
+            git push origin HEAD:refs/heads/cryptoscanner-autonomous-repair || exit 1
+            if [[ -f .autonomous/COMPLETE ]]; then
+              echo "Agent marked COMPLETE; requires independently verified end-to-end evidence." >> "$GITHUB_STEP_SUMMARY"
+              break
+            fi
+            if (( agent_rc != 0 )); then
+              echo "::error::Coding agent exit $agent_rc. Checkpoint preserved; no false completion."
+              exit "$agent_rc"
+            fi
+            if ! git diff --quiet origin/main...HEAD; then
+              gh pr list --head cryptoscanner-autonomous-repair --state open --json number --jq '.[0].number' | grep -q '[0-9]' ||
+                gh pr create --base main --head cryptoscanner-autonomous-repair --title "Autonomous Cryptoscanner functional repair" --body "Checkpointed code repairs; require genuine end-to-end acceptance. No production trading."
+            fi
+            # Continue working on unfinished requirements, rather than stopping at a passing test.
           done
-          [[ "$(gh api "repos/$GH_REPO/actions/runs/$PAPER_RUN_ID" --jq .status)" == completed ]] || { echo "::error::Writer did not finish within bounded wait"; exit 1; }
-          [[ "$(gh api "repos/$GH_REPO/actions/runs/$PAPER_RUN_ID" --jq .conclusion)" == success ]] || { echo "::error::Writer failed; inspect the linked run"; exit 1; }
-          [[ "$(gh api "repos/$GH_REPO/actions/runs/$PAPER_RUN_ID" --jq .head_branch)" == main ]] || exit 1
-          mkdir -p evidence results
-          gh run download "$PAPER_RUN_ID" -n "public-paper-ledger-$PAPER_RUN_ID" -D evidence
-          gh run download "$PAPER_RUN_ID" -n "public-paper-results-$PAPER_RUN_ID" -D results
-          (cd evidence && sha256sum -c SHA256SUMS)
-          (cd results && sha256sum -c SHA256SUMS)
-          test -s evidence/ledger.json
-          test -s results/results.md
-          echo "EXACT_RUN_ARTIFACTS_VERIFIED=$PAPER_RUN_ID"
-      - name: Run real read-only learning and observed outcomes from the exact scan
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m paper_pov.public_ledger_learning evidence/ledger.json --output evidence/learning-state.json --report evidence/learning-report.md
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          from datetime import datetime,timedelta,timezone
-          ledger=json.loads(Path("evidence/ledger.json").read_text())
-          cutoff=datetime.now(timezone.utc)-timedelta(hours=48)
-          pairs=set()
-          for p in ledger.get("predictions",[]):
-              try:
-                  stamp=datetime.fromisoformat((p.get("entry_utc") or p.get("as_of")).replace("Z","+00:00"))
-                  if stamp>=cutoff and p.get("pair"): pairs.add(p["pair"])
-              except (ValueError,TypeError,AttributeError): continue
-          Path("evidence/recent-pairs.json").write_text(json.dumps(sorted(pairs)[:30]))
-          PY
-          python -m paper_pov.kraken_observed_candles evidence/recent-pairs.json --output evidence/kraken-candles.json
-          python -m paper_pov.observed_kraken_outcomes evidence/ledger.json evidence/kraken-candles.json --output evidence/observed-outcomes.json
-          python -m paper_pov.observed_shadow_handoff evidence/ledger.json evidence/observed-outcomes.json --candles-json evidence/kraken-candles.json --output evidence/shadow-handoff.json
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          state=json.loads(Path("evidence/shadow-handoff.json").read_text())
-          assert "status" in state and "reason" in state
-          assert json.loads(Path("evidence/learning-state.json").read_text())["production_applied"] is False
-          Path("evidence/acceptance.json").write_text(json.dumps({"writer_run":__import__("os").environ["PAPER_RUN_ID"],"writer_artifacts":"SHA256_VERIFIED","learning":"EXECUTED","shadow_status":state["status"],"shadow_reason":state["reason"],"production_scoring":"UNCHANGED","chatgpt_delivery":"NOT_VERIFIED"},indent=2)+"\n")
-          PY
-      - name: Publish combined scan and learning evidence with verified issue readback
-        shell: bash
-        run: |
-          set -euo pipefail
-          {
-            echo "## Exact-run Cryptoscanner acceptance — $PAPER_RUN_ID"
-            echo "GitHub writer: https://github.com/$GH_REPO/actions/runs/$PAPER_RUN_ID"
-            cat results/results.md
-            cat evidence/learning-report.md
-            cat evidence/acceptance.json
-            echo "ChatGPT delivery requires separate external confirmation; this workflow does not claim it."
-          } > evidence/combined-report.md
-          cat evidence/combined-report.md >> "$GITHUB_STEP_SUMMARY"
-          gh api -X POST "repos/$GH_REPO/issues/34/comments" -f body="$(cat evidence/combined-report.md)" > /tmp/posted.json
-          id="$(python -c 'import json;print(json.load(open("/tmp/posted.json"))["id"])')"
-          gh api "repos/$GH_REPO/issues/comments/$id" --jq .body > /tmp/readback.txt
-          diff -u evidence/combined-report.md /tmp/readback.txt
-      - name: Preserve independently readable evidence
+          if [[ ! -f .autonomous/COMPLETE ]]; then
+            echo "UNFINISHED: checkpointed for next scheduled or manual continuation" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Preserve progress and diagnostics on failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cryptoscanner-one-run-acceptance-${{ github.run_id }}
-          path: |
-            evidence/
-            results/
+          name: autonomous-repair-evidence-${{ github.run_id }}
+          path: .autonomous/
           retention-days: 30
           if-no-files-found: warn
