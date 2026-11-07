@@ -155,7 +155,7 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
         try:
             price, bid, ask, opening, volume, trades = (
                 _number(row["c"][0]), _number(row["b"][0]),
-                _number(row["a"][0]), _number(row["o"]), _number(row["v"][1]),
+                _number(row["a"][0]), _number(row["o"][0] if isinstance(row["o"], (list, tuple)) else row["o"]), _number(row["v"][1]),
                 _number(row["t"][1]))
             if (min(price, bid, ask, opening) <= 0 or ask < bid or volume < 0
                     or trades < 0 or not trades.is_integer()):
