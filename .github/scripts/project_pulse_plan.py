@@ -140,5 +140,7 @@ if ERRORS:
 lines += ["", report["limitations"], "",
           "**No changes were made to production, scoring, workflows, or repository source.**", ""]
 (OUT / "project-plan.md").write_text("\n".join(lines))
-if not runs and ERRORS:\n    raise SystemExit("INCOMPLETE_PROJECT_PULSE: GitHub run retrieval failed; inspect project-plan.json errors")\nprint(json.dumps({"runs": len(runs), "diagnosed_workflows": len(diagnoses),
+if not runs and ERRORS:
+    raise SystemExit("INCOMPLETE_PROJECT_PULSE: GitHub run retrieval failed; inspect project-plan.json errors")
+print(json.dumps({"runs": len(runs), "diagnosed_workflows": len(diagnoses),
                   "queue_items": len(queue), "api_errors": len(ERRORS)}))
