@@ -70,6 +70,10 @@ class LegacyShadowTests(unittest.TestCase):
         self.assertTrue(all(x["move1h_pct"] > x["move15_pct"] > 0 for x in out["candidates"]))
         self.assertEqual(out["momentum_1h_reference"], "last_closed_5m_close_over_close_12_intervals_earlier")
         self.assertEqual(out["volume_acceleration_reference"], "last_6_completed_5m_volume_over_previous_6_completed_5m_volume")
+        self.assertEqual(out["volume_window_minutes"], 30)
+        self.assertEqual(out["volume_units"], "Kraken OHLC base-asset units (not USD notional)")
+        self.assertTrue(all(x["volume_current_30m"] == 12 for x in out["candidates"]))
+        self.assertTrue(all(x["volume_baseline_previous_30m"] == 6 for x in out["candidates"]))
         self.assertTrue(all(x["trades_24h"] == 10000 for x in out["candidates"]))
         self.assertNotIn("USDT/USD", str(out["candidates"]))
         self.assertFalse(out["production_applied"])
@@ -121,12 +125,14 @@ class LegacyShadowTests(unittest.TestCase):
         # Regression: escaped newlines in a comment previously swallowed
         # starts.append(), leaving OHLC rejected instead of evaluated.
         api = FakeKraken()
-        move15, move60, accel, closed_at = legacy_shadow._closed_features(
+        move15, move60, accel, closed_at, current_volume, baseline_volume = legacy_shadow._closed_features(
             {"P00": api.rows, "last": 1}, "P00", NOW)
         self.assertAlmostEqual(move15, 100 * (api.rows[12][4] / api.rows[9][4] - 1))
         self.assertAlmostEqual(move60, 100 * (api.rows[12][4] / api.rows[0][4] - 1))
         self.assertAlmostEqual(accel, 12 / 6)
         self.assertEqual(closed_at, NOW)
+        self.assertEqual(current_volume, 12)
+        self.assertEqual(baseline_volume, 6)
 
     def test_gapped_ohlc_abstains(self):
         api = FakeKraken()
