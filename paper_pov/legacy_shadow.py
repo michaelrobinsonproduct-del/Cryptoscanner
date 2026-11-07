@@ -176,10 +176,18 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
     rejection_reasons = {}
     ohlc_diagnostics = []
     cutoff = quote_at
-    for item in precursors[:max_ohlc]:
+    # A failed OHLC acquisition must not consume a successful-evaluation slot.
+    # Bound requests to 24 and stop after max_ohlc evaluable markets.
+    attempts = 0
+    evaluated = 0
+    for item in precursors[:24]:
+        if evaluated >= max_ohlc:
+            break
+        attempts += 1
         try:
             payload = api("OHLC?pair=" + urllib.parse.quote(item["pair"], safe="") + "&interval=5")
             move15, move60, accel, closed_at = _closed_features(payload, item["pair"], _now(clock), aliases=item["aliases"])
+            evaluated += 1
             if move15 < .05 or accel < 1:
                 rejects += 1
                 rejection_reasons["BELOW_SIGNAL_THRESHOLD"] = rejection_reasons.get("BELOW_SIGNAL_THRESHOLD", 0) + 1
@@ -230,7 +238,7 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
             "status": ("WATCH_PAPER_ONLY" if picks else
                        "DATA_UNAVAILABLE" if rejects and any(k != "BELOW_SIGNAL_THRESHOLD" for k in rejection_reasons) else "NO_SIGNALS"),
             "eligible_usd_pairs": len(eligible), "matched_tickers": matched,
-            "valid_tickers": valid, "ohlc_attempts": min(max_ohlc, len(precursors)),
+            "valid_tickers": valid, "ohlc_attempts": attempts, "ohlc_evaluated": evaluated,
             "ohlc_rejections": rejects, "ohlc_rejection_reasons": rejection_reasons,
             "ohlc_diagnostics": ohlc_diagnostics,
             "candidates": picks,
