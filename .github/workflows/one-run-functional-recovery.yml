@@ -1,0 +1,79 @@
+name: One-run scanner functional recovery and acceptance
+on:
+  workflow_dispatch:
+permissions:
+  actions: write
+  contents: read
+  issues: read
+concurrency:
+  group: scanner-one-run-recovery
+  cancel-in-progress: false
+jobs:
+  recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Dispatch the EXISTING single writer and capture its run
+        id: start
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPO="$GITHUB_REPOSITORY"
+          # Never launch another writer when the existing one is active.
+          ACTIVE="$(gh api "repos/$REPO/actions/workflows/paper-pipeline.yml/runs?per_page=30" --jq '[.workflow_runs[] | select(.status != "completed")] | length')"
+          if [ "$ACTIVE" -gt 0 ]; then
+            echo "EXISTING_WRITER_ACTIVE: no duplicate dispatch"; exit 1
+          fi
+          BEFORE="$(gh api "repos/$REPO/actions/workflows/paper-pipeline.yml/runs?per_page=1" --jq '.workflow_runs[0].id // 0')"
+          gh workflow run paper-pipeline.yml --repo "$REPO" --ref main
+          for i in $(seq 1 30); do
+            ID="$(gh api "repos/$REPO/actions/workflows/paper-pipeline.yml/runs?event=workflow_dispatch&per_page=10" --jq "[.workflow_runs[] | select(.id > $BEFORE and .head_branch == \"main\")] | max_by(.id) | .id // 0")"
+            if [ "$ID" -gt "$BEFORE" ]; then
+              echo "run_id=$ID" >> "$GITHUB_OUTPUT"
+              echo "Existing writer dispatched: https://github.com/$REPO/actions/runs/$ID"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Writer dispatch not observed"; exit 1
+      - name: Wait for writer and fail on incomplete or unsuccessful scan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.start.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 120); do
+            STATUS="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" --jq '.status')"
+            if [ "$STATUS" = completed ]; then
+              RESULT="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" --jq '.conclusion')"
+              echo "Writer $RUN_ID: $RESULT"
+              test "$RESULT" = success
+              exit
+            fi
+            sleep 5
+          done
+          echo "Existing writer exceeded 10-minute acceptance window"; exit 1
+      - name: Verify downloadable results, checksum and durable generation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.start.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/paper-results /tmp/paper-ledger
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "public-paper-results-$RUN_ID" --dir /tmp/paper-results
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "public-paper-ledger-$RUN_ID" --dir /tmp/paper-ledger
+          (cd /tmp/paper-results && sha256sum -c SHA256SUMS)
+          (cd /tmp/paper-ledger && sha256sum -c SHA256SUMS)
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path('/tmp/paper-results/results.json').read_text())
+          ledger=json.loads(Path('/tmp/paper-ledger/ledger.json').read_text())
+          assert isinstance(result,dict) and isinstance(ledger,dict)
+          assert ledger.get('generation',0)>0
+          print('DURABLE_LEDGER_GENERATION',ledger['generation'])
+          print('RESULTS_FIELDS',sorted(result))
+          PY
+          cat /tmp/paper-results/results.md >> "$GITHUB_STEP_SUMMARY"
+          echo "PASS: existing writer completed, ledger and results artifacts verified" >> "$GITHUB_STEP_SUMMARY"
