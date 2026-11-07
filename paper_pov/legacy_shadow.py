@@ -84,9 +84,10 @@ def _closed_features(payload, pair, now, *, aliases=()):
         raise ValueError("Invalid previous volume")
     accel = sum(volumes[-6:]) / prior
     move15 = 100 * (closes[-1] / closes[-4] - 1)
-    if not all(math.isfinite(x) for x in (accel, move15)):
+    move60 = 100 * (closes[-1] / closes[-13] - 1)
+    if not all(math.isfinite(x) for x in (accel, move15, move60)):
         raise ValueError("Nonfinite candle features")
-    return move15, accel, closed_at
+    return move15, move60, accel, closed_at
 
 
 def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
@@ -169,7 +170,7 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
     for item in precursors[:max_ohlc]:
         try:
             payload = api("OHLC?pair=" + urllib.parse.quote(item["pair"], safe="") + "&interval=5")
-            move15, accel, closed_at = _closed_features(payload, item["pair"], _now(clock), aliases=item["aliases"])
+            move15, move60, accel, closed_at = _closed_features(payload, item["pair"], _now(clock), aliases=item["aliases"])
             if move15 < .05 or accel < 1:
                 rejects += 1
                 rejection_reasons["BELOW_SIGNAL_THRESHOLD"] = rejection_reasons.get("BELOW_SIGNAL_THRESHOLD", 0) + 1
@@ -184,6 +185,7 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
                           "legacy_score": round(score, 4),
                           "trades_24h": item["trades_24h"],
                           "move15_pct": round(move15, 4),
+                          "move1h_pct": round(move60, 4),
                           "volume_accel": round(accel, 4),
                           "quote_observed_at": quote_at.isoformat(),
                           "ohlc_last_closed_at": closed_at.isoformat(),
@@ -208,6 +210,8 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
             "source_sha": source_sha, "as_of": completed.isoformat(),
             "feature_cutoff_utc": cutoff.isoformat(),
             "ticker_reference": "Kraken today open UTC, not rolling 24h",
+            "momentum_1h_reference": "last_closed_5m_close_over_close_12_intervals_earlier",
+            "volume_acceleration_reference": "last_6_completed_5m_volume_over_previous_6_completed_5m_volume",
             "quote_timestamp_type": "client_observed_not_exchange_event",
             "status": ("WATCH_PAPER_ONLY" if picks else
                        "DATA_UNAVAILABLE" if rejects and any(k != "BELOW_SIGNAL_THRESHOLD" for k in rejection_reasons) else "NO_SIGNALS"),
