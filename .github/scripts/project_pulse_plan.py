@@ -36,7 +36,7 @@ def request(path, accept=None):
         headers={**HEADERS, **({"Accept": accept} if accept else {})})
     try:
         with urllib.request.urlopen(req, timeout=min(10, max(2, int(DEADLINE-time.monotonic()-8)))) as response:
-            raw = response.read(250_000)
+            raw = response.read(2_000_000)
             if accept == "application/vnd.github+json":
                 return json.loads(raw)
             return raw.decode("utf-8", errors="replace")
@@ -44,7 +44,7 @@ def request(path, accept=None):
         ERRORS.append({"path": path, "error": str(exc)[:180]})
         return None
 
-runs_data = request("/actions/runs?per_page=75", "application/vnd.github+json") or {}
+runs_data = request("/actions/runs?per_page=50", "application/vnd.github+json") or {}
 runs = runs_data.get("workflow_runs", []) if isinstance(runs_data, dict) else []
 # Latest failed run per workflow, excluding Project Pulse itself.
 latest = {}
@@ -89,9 +89,9 @@ for name, run in latest.items():
     diagnoses.append({"workflow": name, "run_id": run_id, "url": run.get("html_url"),
                       "sha": run.get("head_sha"), "jobs": entries})
 
-issues = request("/issues?state=open&per_page=100", "application/vnd.github+json") or []
+issues = request("/issues?state=open&per_page=50", "application/vnd.github+json") or []
 issues = [i for i in issues if "pull_request" not in i]
-prs = request("/pulls?state=open&per_page=100", "application/vnd.github+json") or []
+prs = request("/pulls?state=open&per_page=50", "application/vnd.github+json") or []
 queue = []
 for d in diagnoses:
     for j in d["jobs"]:
@@ -114,7 +114,7 @@ report = {"schema": 1, "run_sample": len(runs), "diagnosed_workflows": len(diagn
           "open_prs": [{"number": p.get("number"), "title": p.get("title"),
                         "url": p.get("html_url")} for p in prs],
           "proposed_work_queue": queue, "api_errors": ERRORS,
-          "limitations": "Recent 75 runs; up to 8 distinct failing workflows; 2 failed jobs each; first 100 issues/PRs. Keyword-based triage is advisory, not a verified root cause. No source changes."}
+          "limitations": "Recent 50 runs; up to 8 distinct failing workflows; 2 failed jobs each; first 50 issues/PRs. Keyword-based triage is advisory, not a verified root cause. No source changes."}
 (OUT / "project-plan.json").write_text(json.dumps(report, indent=2) + "\n")
 lines = ["# Project Pulse v3 — Investigation and Next Actions", "",
          f"**Recent runs sampled:** {len(runs)}",
@@ -140,5 +140,5 @@ if ERRORS:
 lines += ["", report["limitations"], "",
           "**No changes were made to production, scoring, workflows, or repository source.**", ""]
 (OUT / "project-plan.md").write_text("\n".join(lines))
-print(json.dumps({"runs": len(runs), "diagnosed_workflows": len(diagnoses),
+if not runs and ERRORS:\n    raise SystemExit("INCOMPLETE_PROJECT_PULSE: GitHub run retrieval failed; inspect project-plan.json errors")\nprint(json.dumps({"runs": len(runs), "diagnosed_workflows": len(diagnoses),
                   "queue_items": len(queue), "api_errors": len(ERRORS)}))
