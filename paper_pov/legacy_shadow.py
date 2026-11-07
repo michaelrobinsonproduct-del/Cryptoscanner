@@ -200,6 +200,9 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
                      + min(8, max(0, move15) * 3)
                      + min(8, max(0, accel - 1) * 4)))
             picks.append({"symbol": item["symbol"], "price_usd": item["price"],
+                          "move_utc_open_pct": round(item["move_utc_open"], 4),
+                          "spread_bps": round(item["spread"], 4),
+                          "notional_24h_usd": round(item["notional"], 2),
                           "legacy_score": round(score, 4),
                           "trades_24h": item["trades_24h"],
                           "move15_pct": round(move15, 4),
