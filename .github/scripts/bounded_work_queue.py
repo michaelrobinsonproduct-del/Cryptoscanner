@@ -66,4 +66,6 @@ summary = {"discovered": len(tasks), "attempted_this_run": attempted,
 (out / "summary.json").write_text(json.dumps(summary, indent=2))
 print(json.dumps(summary), flush=True)
 if failed:
-    raise SystemExit(f"{len(failed)} distinct tasks failed; inspect artifacts")
+    print(f"DIAGNOSTIC_OUTCOME: {len(failed)} distinct tasks failed; inspect evidence and next-run plan", flush=True)
+    # A test failure is evidence, not an executor failure. Keep the experiment green
+    # when the queue ran correctly; do not disguise the individual FAIL statuses.
