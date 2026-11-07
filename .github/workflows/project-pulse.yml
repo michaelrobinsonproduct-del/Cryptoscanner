@@ -24,6 +24,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ANALYSIS_MINUTES: ${{ inputs.analysis_minutes }}
         run: python3 .github/scripts/project_pulse_github.py
+      - name: Diagnose failed jobs and propose project work queue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANALYSIS_MINUTES: ${{ inputs.analysis_minutes }}
+        run: python3 .github/scripts/project_pulse_plan.py
       - name: Show briefing in run summary
         if: always()
         run: |
@@ -31,6 +36,8 @@ jobs:
             cat project-pulse-output/pulse.md >> "$GITHUB_STEP_SUMMARY"
             printf "\\n---\\n" >> "$GITHUB_STEP_SUMMARY"
             cat project-pulse-output/github-status.md >> "$GITHUB_STEP_SUMMARY"
+            printf "\\n---\\n" >> "$GITHUB_STEP_SUMMARY"
+            cat project-pulse-output/project-plan.md >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Upload reusable report
         if: always()
