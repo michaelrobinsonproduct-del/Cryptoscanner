@@ -64,9 +64,9 @@ def latest_published():
 def legacy_for(paper_run, source_sha):
     # Legacy is a separate workflow run; never interpret baseline score as independent discovery.
     for page in range(1, 4):
-        runs = api("/actions/runs?per_page=100&page=" + str(page))["workflow_runs"]
+        runs = api("/actions/workflows/paper-legacy-shadow.yml/runs?per_page=100&page=" + str(page))["workflow_runs"]
         for run in runs:
-            if (run["status"] != "completed" or run["conclusion"] != "success"\n                    or run["id"] == paper_run or "legacy" not in run.get("name", "").lower()):
+            if (run["status"] != "completed" or run["conclusion"] != "success"\n                    or run["id"] == paper_run or run.get("event") not in ("workflow_run", "issue_comment")):
                 continue
             artifacts = artifact_map(run["id"])
             for name, artifact in artifacts.items():
