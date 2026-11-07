@@ -94,7 +94,25 @@ class LegacyShadowTests(unittest.TestCase):
     def test_mismatched_ohlc_pair_never_generates_watch(self):
         api = FakeKraken()
         api.bad_ohlc = True
-        self.assertEqual(run(api)["candidates"], [])
+        report = run(api)
+        self.assertEqual(report["candidates"], [])
+        self.assertEqual(report["status"], "DATA_UNAVAILABLE")
+        self.assertEqual(report["ohlc_rejection_reasons"]["OHLC pair identity mismatch"], 16)
+
+    def test_advertised_kraken_altname_accepted(self):
+        api = FakeKraken()
+        for key, meta in api.pairs.items():
+            meta["altname"] = "ALT" + key
+        original = api.__call__
+        def aliased(path):
+            response = original(path)
+            if path.startswith("OHLC?pair="):
+                pair = path.split("pair=")[1].split("&")[0]
+                return {"ALT" + pair: response[pair], "last": 1}
+            return response
+        report = run(api=aliased)
+        self.assertEqual(report["status"], "WATCH_PAPER_ONLY")
+        self.assertEqual(len(report["candidates"]), 12)
 
     def test_gapped_ohlc_abstains(self):
         api = FakeKraken()
