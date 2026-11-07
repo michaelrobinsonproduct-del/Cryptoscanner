@@ -84,7 +84,12 @@ class PaperResultsContracts(unittest.TestCase):
                 self.assertEqual(payload["originating_cron"], cron)
                 self.assertIn(f"intended UTC minute=:{minute:02d}", md)
                 self.assertFalse(payload["scheduled_start_punctuality_verified"])
-        combined, combined_md = self.report(cron="10,40 * * * *")\n        self.assertEqual(combined["originating_cron"], "10,40 * * * *")\n        self.assertFalse(combined["scheduled_slot_verified"])\n        self.assertIsNone(combined["scheduled_slot_utc_minute"])\n        self.assertIn("exact slot NOT VERIFIED", combined_md)\n        for bad in (None, "", "9,10 * * * *", "24 * * * *",
+        combined, combined_md = self.report(cron="10,40 * * * *") 
+        self.assertEqual(combined["originating_cron"], "10,40 * * * *") 
+        self.assertFalse(combined["scheduled_slot_verified"]) 
+        self.assertIsNone(combined["scheduled_slot_utc_minute"]) 
+        self.assertIn("exact slot NOT VERIFIED", combined_md) 
+        for bad in (None, "", "9,10 * * * *", "24 * * * *",
                     "10 * * * *; echo spoof", "40 * * * *\\n10 * * * *", True):
             with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "originating scheduled cron"):
                 self.report(cron=bad)
@@ -97,8 +102,7 @@ class PaperResultsContracts(unittest.TestCase):
                     / ".github/workflows/paper-pipeline.yml").read_text()
         self.assertIn("PAPER_ORIGINATING_CRON: ${{ github.event.schedule }}", workflow)
         self.assertIn('--originating-cron "$PAPER_ORIGINATING_CRON"', workflow)
-        self.assertIn("- cron: '40 * * * *'", workflow)
-        self.assertIn("- cron: '10 * * * *'", workflow)
+        self.assertIn("- cron: '10,40 * * * *'", workflow)
         self.assertIn("group: public-paper-proof-ledger-single-writer", workflow)
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("git push origin HEAD:refs/heads/paper-proof-ledger", workflow)
