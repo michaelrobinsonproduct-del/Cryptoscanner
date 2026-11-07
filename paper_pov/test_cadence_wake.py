@@ -90,11 +90,22 @@ class CadenceWakeTests(unittest.TestCase):
         self.assertEqual(d["ledger_generation"], 1)
         self.assertEqual(d["target_slot"], "2026-10-31T23:00:00+00:00")
 
-    def test_previous_scan_20_minutes_ago_does_not_block_next_slot(self):
-        from unittest.mock import patch
-        with patch("paper_pov.cadence_wake.MIN_SCAN_SPACING", dt.timedelta(minutes=15)):
-            d = decision(now=dt.datetime(2026, 10, 31, 23, 20, tzinfo=UTC))
-        self.assertEqual(d["action"], "DISPATCH_EXISTING_WORKFLOW")
+    def test_delayed_previous_scan_18_minutes_ago_does_not_block_new_slot(self):
+        # A delayed :00 scan sealed at :12 must not suppress the :30 slot.
+        import hashlib
+        from paper_pov.ledger import seal
+        state = fixture()
+        asof = "2026-10-31T23:12:00+00:00"
+        state["runs"][0]["as_of"] = asof
+        state["predictions"][0]["as_of"] = asof
+        state["predictions"][0]["prediction_id"] = hashlib.sha256(
+            ("paper-v1|" + asof + "|" + state["predictions"][0]["pair"]).encode()).hexdigest()
+        state["observations"][0]["at"] = "2026-10-31T23:11:50+00:00"
+        d = decision(runs=[scan(123, "2026-10-31T23:11:00Z")],
+                     ledger=seal(state),
+                     now=dt.datetime(2026, 10, 31, 23, 30, tzinfo=UTC))
+        self.assertEqual((d["action"], d["reason"]),
+                         ("DISPATCH_EXISTING_WORKFLOW", "INDEPENDENT_CADENCE_DUE"))
 
     def test_30_minute_slot_mapping(self):
         self.assertEqual(slot_at(dt.datetime(2026, 11, 1, 11, 35, tzinfo=UTC)).minute, 30)
