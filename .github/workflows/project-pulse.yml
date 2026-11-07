@@ -35,9 +35,9 @@ jobs:
           if [ -f project-pulse-output/pulse.md ]; then
             cat project-pulse-output/pulse.md >> "$GITHUB_STEP_SUMMARY"
             printf "\\n---\\n" >> "$GITHUB_STEP_SUMMARY"
-            cat project-pulse-output/github-status.md >> "$GITHUB_STEP_SUMMARY"
+            if [ -f project-pulse-output/github-status.md ]; then cat project-pulse-output/github-status.md >> "$GITHUB_STEP_SUMMARY"; fi
             printf "\\n---\\n" >> "$GITHUB_STEP_SUMMARY"
-            cat project-pulse-output/project-plan.md >> "$GITHUB_STEP_SUMMARY"
+            if [ -f project-pulse-output/project-plan.md ]; then cat project-pulse-output/project-plan.md >> "$GITHUB_STEP_SUMMARY"; fi
           fi
       - name: Upload reusable report
         if: always()
