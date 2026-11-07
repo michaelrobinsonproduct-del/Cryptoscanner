@@ -62,13 +62,14 @@ def _closed_features(payload, pair, now, *, aliases=()):
             raise ValueError("Unaligned candle")
         opn, high, low, close, vwap, volume = (_number(candle[i]) for i in (1, 2, 3, 4, 5, 6))
         count = _number(candle[7])
-        if (min(opn, high, low, close, vwap) <= 0 or volume < 0 or not count.is_integer()
-                or count < 0 or (count == 0 and volume != 0)
-                or (count > 0 and volume <= 0)
-                or low > min(opn, close, vwap)
-                or high < max(opn, close, vwap)):
+        if (min(opn, high, low, close) <= 0 or volume < 0 or not count.is_integer()
+                or count < 0 or (count == 0 and (volume != 0 or vwap < 0))
+                or (count > 0 and (volume <= 0 or vwap <= 0))
+                or low > min(opn, close)
+                or high < max(opn, close)
+                or (count > 0 and not low <= vwap <= high)):
             raise ValueError("Invalid or empty completed candle")
-        starts.append(int(stamp))
+        # Zero-trade Kraken buckets can have VWAP=0; only positive-trade\n        # VWAP must lie within the traded price range.\n        starts.append(int(stamp))
         closes.append(close)
         volumes.append(volume)
     if any(b - a != 300 for a, b in zip(starts, starts[1:])):
