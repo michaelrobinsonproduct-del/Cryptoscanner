@@ -27,4 +27,5 @@ jobs:
         with:
           name: bounded-work-evidence-${{ github.run_id }}
           path: .work-evidence/
+          include-hidden-files: true
           if-no-files-found: error
