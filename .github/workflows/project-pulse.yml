@@ -1,0 +1,26 @@
+name: Project Pulse - one-run project briefing
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  project-pulse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate project briefing
+        run: python3 .github/scripts/project_pulse.py --out project-pulse-output
+      - name: Show briefing in run summary
+        if: always()
+        run: |
+          if [ -f project-pulse-output/pulse.md ]; then
+            cat project-pulse-output/pulse.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload reusable report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-pulse-${{ github.run_id }}
+          path: project-pulse-output/
+          if-no-files-found: error
