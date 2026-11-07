@@ -2,35 +2,35 @@
   "forward_horizon_coverage": [
     {
       "hours": 1,
-      "matured_snapshots": 7701,
+      "matured_snapshots": 7713,
       "evaluated": 7038,
-      "coverage_pct": 91.4,
-      "unresolved": 663,
-      "no_observation_in_window": 663
+      "coverage_pct": 91.2,
+      "unresolved": 675,
+      "no_observation_in_window": 675
     },
     {
       "hours": 3,
-      "matured_snapshots": 7701,
+      "matured_snapshots": 7713,
       "evaluated": 6685,
-      "coverage_pct": 86.8,
-      "unresolved": 1016,
-      "no_observation_in_window": 1016
-    },
-    {
-      "hours": 6,
-      "matured_snapshots": 7689,
-      "evaluated": 6661,
-      "coverage_pct": 86.6,
+      "coverage_pct": 86.7,
       "unresolved": 1028,
       "no_observation_in_window": 1028
     },
     {
+      "hours": 6,
+      "matured_snapshots": 7713,
+      "evaluated": 6661,
+      "coverage_pct": 86.4,
+      "unresolved": 1052,
+      "no_observation_in_window": 1052
+    },
+    {
       "hours": 24,
-      "matured_snapshots": 7653,
+      "matured_snapshots": 7665,
       "evaluated": 6524,
-      "coverage_pct": 85.2,
-      "unresolved": 1129,
-      "no_observation_in_window": 1129
+      "coverage_pct": 85.1,
+      "unresolved": 1141,
+      "no_observation_in_window": 1141
     }
   ],
   "outcome_lag_hours_by_horizon": [
@@ -55,12 +55,12 @@
       "average_delay_hours": 0.356
     }
   ],
-  "unresolved_1h_snapshots": 663,
+  "unresolved_1h_snapshots": 675,
   "rank_comparison": {
-    "historical_ranked_samples": 7425,
-    "mean_base_minus_early_rank": 1.77
+    "historical_ranked_samples": 7437,
+    "mean_base_minus_early_rank": 1.78
   },
-  "newly_discovered_outside_base_top12": 2,
+  "newly_discovered_outside_base_top12": 3,
   "signal_outcomes_by_horizon": [
     {
       "hours": 1,
@@ -108,11 +108,6 @@
       "next_scan_gain_pct": 33.33
     },
     {
-      "pair": "DENTUSD",
-      "observed_at": "2026-10-31T03:40:08.210489+00:00",
-      "next_scan_gain_pct": 31.09
-    },
-    {
       "pair": "AMIUSD",
       "observed_at": "2026-10-31T19:34:26.966777+00:00",
       "next_scan_gain_pct": 28.55
@@ -138,21 +133,26 @@
       "next_scan_gain_pct": 22.73
     },
     {
-      "pair": "MEZOUSD",
-      "observed_at": "2026-10-31T06:42:54.986459+00:00",
-      "next_scan_gain_pct": 21.46
-    },
-    {
       "pair": "PIPEUSD",
       "observed_at": "2026-10-31T17:29:18.615829+00:00",
       "next_scan_gain_pct": 20.72
+    },
+    {
+      "pair": "TMXUSD",
+      "observed_at": "2026-10-31T11:05:06.657964+00:00",
+      "next_scan_gain_pct": 20.54
+    },
+    {
+      "pair": "ADXUSD",
+      "observed_at": "2026-10-31T21:04:57.336361+00:00",
+      "next_scan_gain_pct": 20.42
     }
   ],
-  "unselected_gainers_5pct_observations": 141,
-  "market_observations": 408813,
+  "unselected_gainers_5pct_observations": 109,
+  "market_observations": 409431,
   "market_price_coverage": 618,
-  "feature_rows": 7593,
-  "snapshots": 7713,
+  "feature_rows": 7605,
+  "snapshots": 7725,
   "outcomes": 26908,
   "history_db_integrity": "ok",
   "evaluation": "FULL_MARKET_PRICE_FORWARD_PENDING_HORIZON_COVERAGE",
