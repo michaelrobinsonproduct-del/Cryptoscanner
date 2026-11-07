@@ -42,7 +42,7 @@ jobs:
           esac
           echo "PAPER_VERIFIED_GITHUB_EVENT=$PAPER_GITHUB_EVENT"
           echo "PAPER_VERIFIED_ORIGINATING_CRON=${PAPER_CRON_EXPRESSION:-MANUAL_DISPATCH}"
-      - name: Focused writer safety tests before any ledger mutation
+      - name: Exact commit tests before any ledger mutation
         run: |
           set -euo pipefail
           echo "PAPER_PIPELINE_SOURCE_SHA=$(git rev-parse HEAD)"
