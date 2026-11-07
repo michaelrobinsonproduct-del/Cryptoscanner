@@ -5,7 +5,7 @@ on:
       work_minutes:
         description: "Maximum useful-work window, capped at 320 minutes"
         required: false
-        default: "320"
+        default: "5"
 permissions:
   contents: read
 jobs:
