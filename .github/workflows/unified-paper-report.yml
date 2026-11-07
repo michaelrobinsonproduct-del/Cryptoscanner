@@ -1,6 +1,11 @@
 name: Unified read-only paper scan report
 on:
   workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/unified-paper-report.yml'
+      - '.github/scripts/unified_paper_report.py'
 permissions:
   actions: read
   contents: read
@@ -10,6 +15,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
