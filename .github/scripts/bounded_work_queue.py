@@ -37,6 +37,10 @@ def save_state():
     temp.replace(checkpoint)
 
 state = load_state()
+source_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+if state.get("source_sha") != source_sha:
+    # Do not reuse PASS verdicts from a different source revision.
+    state = {"schema": 2, "passed": [], "failures": {}, "attempts": {}, "source_sha": source_sha}
 # Enumerate only known test modules, not arbitrary commands.
 test_files = sorted(p for p in root.rglob("test_*.py")
                     if not any(part in {".git", ".venv", "site-packages", ".bounded-state"}
