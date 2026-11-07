@@ -81,7 +81,9 @@ def _closed_features(payload, pair, now, *, aliases=()):
     age = (now - closed_at).total_seconds()
     if not 0 <= age <= 600:
         raise ValueError("Stale or future completed candle")
-    # Kraken may publish completed five-minute buckets with zero trades.\n    # Preserve their actual zero volume; never invent missing candles.\n    prior = sum(volumes[-12:-6])
+    # Kraken may publish completed five-minute buckets with zero trades.
+    # Preserve their actual zero volume; never invent missing candles.
+    prior = sum(volumes[-12:-6])
     if prior <= 0:
         raise ValueError("Invalid previous volume")
     accel = sum(volumes[-6:]) / prior
