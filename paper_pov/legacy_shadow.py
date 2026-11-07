@@ -62,8 +62,10 @@ def _closed_features(payload, pair, now, *, aliases=()):
             raise ValueError("Unaligned candle")
         opn, high, low, close, vwap, volume = (_number(candle[i]) for i in (1, 2, 3, 4, 5, 6))
         count = _number(candle[7])
-        if (min(opn, high, low, close, vwap, volume) <= 0 or not count.is_integer()
-                or count <= 0 or low > min(opn, close, vwap)
+        if (min(opn, high, low, close, vwap) <= 0 or volume < 0 or not count.is_integer()
+                or count < 0 or (count == 0 and volume != 0)
+                or (count > 0 and volume <= 0)
+                or low > min(opn, close, vwap)
                 or high < max(opn, close, vwap)):
             raise ValueError("Invalid or empty completed candle")
         starts.append(int(stamp))
@@ -79,7 +81,7 @@ def _closed_features(payload, pair, now, *, aliases=()):
     age = (now - closed_at).total_seconds()
     if not 0 <= age <= 600:
         raise ValueError("Stale or future completed candle")
-    prior = sum(volumes[-12:-6])
+    # Kraken may publish completed five-minute buckets with zero trades.\n    # Preserve their actual zero volume; never invent missing candles.\n    prior = sum(volumes[-12:-6])
     if prior <= 0:
         raise ValueError("Invalid previous volume")
     accel = sum(volumes[-6:]) / prior
