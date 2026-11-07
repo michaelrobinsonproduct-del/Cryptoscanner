@@ -42,9 +42,9 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
     # GitHub's event.schedule identifies the originating cron expression even
     # when Actions queues or starts the job late. It does NOT prove punctuality.
     if event == "schedule":
-        if originating_cron not in ("40 * * * *", "10 * * * *"):
+        if originating_cron not in ("10,40 * * * *", "40 * * * *", "10 * * * *"):
             raise ValueError("Missing or unverified originating scheduled cron")
-        scheduled_minute = int(originating_cron.split()[0])
+        scheduled_minute = (None if originating_cron == "10,40 * * * *"\n                            else int(originating_cron.split()[0]))
     else:
         if originating_cron not in (None, ""):
             raise ValueError("Manual dispatch cannot claim a scheduled cron")
@@ -116,7 +116,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         f"**UTC as-of:** {as_of.isoformat()}  ",
         f"**GitHub trigger:** {'scheduled' if event == 'schedule' else 'manual dispatch'} (verified event={event}; "
         + (f"originating cron={originating_cron}, intended UTC minute=:{scheduled_minute:02d}; "
-           if scheduled_minute is not None else "no scheduled slot; ")
+           if scheduled_minute is not None else "originating combined :10/:40 cron; exact slot NOT VERIFIED; ")
         + "actual start punctuality NOT verified)  ",
         f"**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/{run_id}  ",
         f"**Source SHA:** {source_sha}  ",
