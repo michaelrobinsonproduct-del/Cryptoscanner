@@ -204,9 +204,20 @@ def main():
     output.unlink(missing_ok=True)
     now = dt.datetime.now(UTC)
     try:
-        intent = authorize(json.loads(Path(args.event).read_text()),
-                           repository=args.repository, actor=args.actor,
-                           ref=args.ref, event_name=args.event_name, now=now)
+        if args.event_name == "schedule":
+            event = json.loads(Path(args.event).read_text())
+            if (args.repository != REPOSITORY or args.ref != "refs/heads/main"
+                    or event.get("schedule") != "5,20,35,50 * * * *"
+                    or args.actor not in (OWNER, "github-actions[bot]")):
+                raise ValueError("Untrusted scheduled cadence event")
+            intent = {"schema": 1, "paper_only": True,
+                      "action": "REQUEST_EXISTING_PAPER_WRITER_ONLY",
+                      "workflow": WORKFLOW, "ref": REF, "issue": ISSUE_NUMBER,
+                      "comment_id": 1, "trigger": "schedule"}
+        else:
+            intent = authorize(json.loads(Path(args.event).read_text()),
+                               repository=args.repository, actor=args.actor,
+                               ref=args.ref, event_name=args.event_name, now=now)
         result = decide(json.loads(Path(args.runs).read_text()),
                         [json.loads(line) for line in Path(args.comments).read_text().splitlines() if line.strip()],
                         json.loads(Path(args.ledger).read_text()),
