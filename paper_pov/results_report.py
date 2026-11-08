@@ -221,7 +221,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
                "as_of": as_of.isoformat(), "source_sha": source_sha,
                "github_event": event, "originating_cron": originating_cron or None,
                "scheduled_slot_utc_minute": scheduled_minute,
-               "scheduled_slot_verified": scheduled_minute is not None,
+               "scheduled_slot_verified": event == "schedule",
                "scheduled_start_punctuality_verified": False,
                "ledger_commit": ledger_commit, "ledger_generation": score["generation"],
                "ledger_sha256": score["ledger_sha256"], "remote_readback_verified": True,
