@@ -186,6 +186,27 @@ jobs:
               open("/tmp/cadence-status.txt", "w").write("WRITER_RUNNING_NOT_YET_VERIFIED\n")
               print("PAPER_WRITER_STILL_RUNNING", run_id, url, flush=True)
           PY
+      - name: Publish correlated writer outcome to issue 34
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test -f /tmp/cadence-writer.json || exit 0
+          python - <<'PY' > /tmp/cadence-writer-outcome.md
+          import json, os
+          writer=json.load(open("/tmp/cadence-writer.json"))
+          status=open("/tmp/cadence-status.txt").read().strip() if os.path.isfile("/tmp/cadence-status.txt") else "UNKNOWN"
+          print("### Paper cadence writer execution — "+str(writer["run_id"]))
+          print()
+          print("<!-- PAPER_CADENCE_WRITER:"+str(writer["run_id"])+" -->")
+          print("Controller: https://github.com/"+os.environ["GITHUB_REPOSITORY"]+"/actions/runs/"+os.environ["GITHUB_RUN_ID"])
+          print("Writer: "+writer["url"])
+          print("Source SHA: "+writer["source_sha"])
+          print("Execution status: "+status)
+          print("Ledger persistence and ChatGPT delivery require separate verified evidence.")
+          PY
+          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/34/comments" -f body="$(cat /tmp/cadence-writer-outcome.md)"
       - name: Preserve checksummed decision artifact
         if: ${{ always() }}
         run: |
