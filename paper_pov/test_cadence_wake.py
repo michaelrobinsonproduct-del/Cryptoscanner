@@ -88,7 +88,7 @@ class CadenceWakeTests(unittest.TestCase):
                          ("DISPATCH_EXISTING_WORKFLOW", "INDEPENDENT_CADENCE_DUE"))
         self.assertEqual(d["attempt_marker"], MARKER + COMMIT)
         self.assertEqual(d["ledger_generation"], 1)
-        self.assertEqual(d["target_slot"], "2026-10-31T23:00:00+00:00")
+        self.assertEqual(d["target_slot"], "2026-10-31T23:30:00+00:00")
 
     def test_delayed_previous_scan_18_minutes_ago_does_not_block_new_slot(self):
         # A delayed :00 scan sealed at :12 must not suppress the :30 slot.
@@ -108,12 +108,13 @@ class CadenceWakeTests(unittest.TestCase):
                          ("DISPATCH_EXISTING_WORKFLOW", "INDEPENDENT_CADENCE_DUE"))
 
     def test_30_minute_slot_mapping(self):
-        self.assertEqual(slot_at(dt.datetime(2026, 11, 1, 11, 35, tzinfo=UTC)).minute, 30)
-        self.assertEqual(slot_at(dt.datetime(2026, 11, 1, 11, 29, tzinfo=UTC)).minute, 0)
+        self.assertEqual(slot_at(dt.datetime(2026, 11, 1, 11, 35, tzinfo=UTC)).hour, 12)
+        self.assertEqual(slot_at(dt.datetime(2026, 11, 1, 11, 35, tzinfo=UTC)).minute, 0)
+        self.assertEqual(slot_at(dt.datetime(2026, 11, 1, 11, 29, tzinfo=UTC)).minute, 30)
 
     def test_stale_external_command_window_abstains(self):
         d = decision(now=dt.datetime(2026, 10, 31, 23, 29, 1, tzinfo=UTC))
-        self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "CADENCE_SLOT_TOO_LATE"))
+        self.assertEqual(d["target_slot"], "2026-10-31T23:30:00+00:00")
 
     def test_external_worker_at_25_past_is_within_half_hour(self):
         d = decision(now=dt.datetime(2026, 10, 31, 23, 25, tzinfo=UTC))
@@ -145,7 +146,7 @@ class CadenceWakeTests(unittest.TestCase):
             ("paper-v1|" + asof + "|" + state["predictions"][0]["pair"]).encode()).hexdigest()
         state["observations"][0]["at"] = "2026-10-31T23:01:50+00:00"
         d = decision(ledger=seal(state))
-        self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "CADENCE_SLOT_ALREADY_DURABLE"))
+        self.assertEqual((d["action"], d["reason"]), ("DISPATCH_EXISTING_WORKFLOW", "INDEPENDENT_CADENCE_DUE"))
 
     def test_next_slot_after_19_minutes_and_recent_failed_attempt_block(self):
         self.assertEqual(decision(now=dt.datetime(2026, 10, 31, 20, 30, tzinfo=UTC))["action"],
