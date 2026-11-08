@@ -71,6 +71,8 @@ class PaperResultsContracts(unittest.TestCase):
         self.assertFalse(manual["scheduled_slot_verified"])
         self.assertIsNone(manual["scheduled_slot_utc_minute"])
         self.assertIn("GitHub trigger:** manual dispatch", manual_md)
+        self.assertIn("manual dispatch; no scheduled slot", manual_md)
+        self.assertNotIn("originating combined :10/:40 cron", manual_md)
         for invalid in (None, "", "push", "pull_request", "schedule:39", True):
             with self.subTest(event=invalid), self.assertRaisesRegex(ValueError, "GitHub trigger"):
                 self.report(event=invalid)
