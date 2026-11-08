@@ -75,6 +75,13 @@ class PaperResultsContracts(unittest.TestCase):
             with self.subTest(event=invalid), self.assertRaisesRegex(ValueError, "GitHub trigger"):
                 self.report(event=invalid)
 
+    def test_combined_cron_is_verified_without_inventing_a_single_minute(self):
+        payload, markdown = self.report(cron="18,48 * * * *")
+        self.assertTrue(payload["scheduled_slot_verified"])
+        self.assertIsNone(payload["scheduled_slot_utc_minute"])
+        self.assertEqual(payload["originating_cron"], "18,48 * * * *")
+        self.assertIn("intended UTC minute=18,48", markdown)
+
     def test_both_exact_crons_and_missing_or_spoofed_attribution(self):
         for cron, minute in (("40 * * * *", 40), ("10 * * * *", 10)):
             with self.subTest(cron=cron):
