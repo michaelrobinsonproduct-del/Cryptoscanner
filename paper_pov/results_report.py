@@ -119,7 +119,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         + (f"originating cron={originating_cron}, intended UTC minute="
            + (f":{scheduled_minute:02d}" if scheduled_minute is not None
               else originating_cron.split()[0]) + "; "
-           if scheduled_minute is not None else "no scheduled slot; ")
+           if event == "schedule" else "no scheduled slot; ")
         + "actual start punctuality NOT verified)  ",
         f"**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/{run_id}  ",
         f"**Source SHA:** {source_sha}  ",
