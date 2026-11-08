@@ -130,7 +130,9 @@ class CadenceWakeTests(unittest.TestCase):
         self.assertIn("paper_pov.cadence_wake", workflow)
         self.assertNotIn("python -m paper_pov.scanner", workflow)
         self.assertNotIn("git push", workflow)
-        self.assertNotIn("schedule:", workflow)
+        self.assertIn("schedule:", workflow)
+        self.assertIn("5,20,35,50 * * * *", workflow)
+        self.assertIn("github.event_name == 'schedule'", workflow)
         self.assertNotIn("paper-proof-ledger:refs/heads", workflow)
 
     def test_new_durable_scan_covers_slot(self):
