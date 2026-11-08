@@ -107,6 +107,24 @@ jobs:
           assert score["held_out_lift"] is None and score["production_applied"] is False
           print("PAPER_CROSS_RUN_VERIFIED",before["generation"],after["generation"],score["ledger_sha256"],retention)
           PY
+      - name: Preflight exact results renderer before irreversible ledger push
+        env:
+          PAPER_ORIGINATING_CRON: ${{ github.event.schedule }}
+        run: |
+          set -euo pipefail
+          # Validate the actual scan, scoreboard, event and cron BEFORE the remote
+          # ledger advances. The final report will replace this provisional
+          # commit identity with the verified remote ledger commit.
+          python -m paper_pov.results_report \
+            --scan paper_pov/output/latest.json \
+            --scoreboard paper_pov/output/scoreboard.json \
+            --run-id "$GITHUB_RUN_ID" \
+            --source-sha "$GITHUB_SHA" \
+            --ledger-commit "$(cat /tmp/paper-base.sha)" \
+            --event "$GITHUB_EVENT_NAME" \
+            --originating-cron "$PAPER_ORIGINATING_CRON" \
+            --output-dir /tmp/paper-results-preflight
+          (cd /tmp/paper-results-preflight && sha256sum -c SHA256SUMS)
       - name: Preserve independently downloadable checked artifact
         uses: actions/upload-artifact@v4
         with:
