@@ -76,11 +76,11 @@ class PaperResultsContracts(unittest.TestCase):
                 self.report(event=invalid)
 
     def test_combined_cron_is_verified_without_inventing_a_single_minute(self):
-        payload, markdown = self.report(cron="18,48 * * * *")
-        self.assertTrue(payload["scheduled_slot_verified"])
+        payload, markdown = self.report(cron="10,40 * * * *")
+        self.assertFalse(payload["scheduled_slot_verified"])
         self.assertIsNone(payload["scheduled_slot_utc_minute"])
-        self.assertEqual(payload["originating_cron"], "18,48 * * * *")
-        self.assertIn("intended UTC minute=18,48", markdown)
+        self.assertEqual(payload["originating_cron"], "10,40 * * * *")
+        self.assertIn("intended UTC minute=10,40", markdown)
 
     def test_both_exact_crons_and_missing_or_spoofed_attribution(self):
         for cron, minute in (("40 * * * *", 40), ("10 * * * *", 10)):
@@ -104,8 +104,7 @@ class PaperResultsContracts(unittest.TestCase):
                     / ".github/workflows/paper-pipeline.yml").read_text()
         self.assertIn("PAPER_ORIGINATING_CRON: ${{ github.event.schedule }}", workflow)
         self.assertIn('--originating-cron "$PAPER_ORIGINATING_CRON"', workflow)
-        self.assertIn("- cron: '40 * * * *'", workflow)
-        self.assertIn("- cron: '10 * * * *'", workflow)
+        self.assertIn("- cron: '10,40 * * * *'", workflow)
         self.assertIn("group: public-paper-proof-ledger-single-writer", workflow)
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("git push origin HEAD:refs/heads/paper-proof-ledger", workflow)
