@@ -63,10 +63,8 @@ def authorize(event, *, repository, actor, ref, event_name, now=None):
 
 
 def slot_at(now):
-    """Next UTC results delivery boundary, not the preceding one."""
     now = now.astimezone(UTC)
-    boundary = now.replace(minute=30 if now.minute < 30 else 0, second=0, microsecond=0)
-    return boundary if now.minute < 30 else boundary + dt.timedelta(hours=1)
+    return now.replace(minute=30 if now.minute >= 30 else 0, second=0, microsecond=0)
 
 
 def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, main_sha, intent, now):
@@ -163,8 +161,10 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, main_s
             return abstain("RUN_CONCLUSION_INVALID", True)
     slot = slot_at(now)
     result["target_slot"] = slot.isoformat()
-    if slot - last_at <= dt.timedelta(minutes=15) and last_at <= now:
-        return abstain("NEXT_SLOT_FRESH_LEDGER_ALREADY_DURABLE")
+    if now - slot > MAX_SLOT_LATENESS:
+        return abstain("CADENCE_SLOT_TOO_LATE")
+    if last_at >= slot:
+        return abstain("CADENCE_SLOT_ALREADY_DURABLE")
     if now - newest < MIN_SCAN_SPACING:
         return abstain("RECENT_SCAN_OR_ATTEMPT")
     for comment in comments:
