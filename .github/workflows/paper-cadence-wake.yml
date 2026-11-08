@@ -138,6 +138,54 @@ jobs:
           gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/paper-pipeline.yml/dispatches" -f ref=main
           echo DISPATCH_HTTP_ACCEPTED_EXECUTION_UNVERIFIED > /tmp/cadence-status.txt
           echo PAPER_CADENCE_EXISTING_WRITER_DISPATCH_HTTP_ACCEPTED_NOT_EXECUTION_PROOF
+          # Resolve the exact newly-created writer run; HTTP 204 is not execution proof.
+          # Bounded polling only: never dispatch a second writer on timeout/failure.
+          python - <<'PY'
+          import datetime, json, os, subprocess, time
+          def api(path):
+              return json.loads(subprocess.check_output(
+                  ["gh", "api", "repos/" + os.environ["GITHUB_REPOSITORY"] + path],
+                  text=True))
+          before = {r["id"] for r in json.load(open("/tmp/cadence-runs-final.json"))["workflow_runs"]}
+          source = open("/tmp/cadence-main.txt").read().strip()
+          deadline = time.monotonic() + 180
+          found = None
+          while time.monotonic() < deadline:
+              runs = api("/actions/workflows/paper-pipeline.yml/runs?per_page=100")["workflow_runs"]
+              matches = [r for r in runs if r["id"] not in before
+                         and r.get("event") == "workflow_dispatch"
+                         and r.get("head_sha") == source]
+              if matches:
+                  found = min(matches, key=lambda r: r["id"])
+                  break
+              time.sleep(8)
+          if found is None:
+              open("/tmp/cadence-status.txt", "w").write("DISPATCH_ACCEPTED_WRITER_NOT_OBSERVED\n")
+              raise SystemExit("PAPER_WRITER_NOT_OBSERVED_AFTER_DISPATCH")
+          run_id = found["id"]
+          url = found["html_url"]
+          print("PAPER_WRITER_RUN_IDENTIFIED", run_id, url, flush=True)
+          with open("/tmp/cadence-writer.json", "w") as out:
+              json.dump({"run_id": run_id, "url": url, "source_sha": source}, out)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as out:
+              out.write("\nWriter run: " + url + "\n")
+          deadline = time.monotonic() + 300
+          while time.monotonic() < deadline:
+              run = api("/actions/runs/" + str(run_id))
+              if run.get("status") == "completed":
+                  conclusion = run.get("conclusion")
+                  open("/tmp/cadence-status.txt", "w").write(
+                      "WRITER_COMPLETED_" + str(conclusion).upper() + "\n")
+                  print("PAPER_WRITER_COMPLETED", run_id, conclusion, flush=True)
+                  if conclusion != "success":
+                      raise SystemExit("PAPER_WRITER_FAILED: " + url)
+                  returncode = 0
+                  break
+              time.sleep(10)
+          else:
+              open("/tmp/cadence-status.txt", "w").write("WRITER_RUNNING_NOT_YET_VERIFIED\n")
+              print("PAPER_WRITER_STILL_RUNNING", run_id, url, flush=True)
+          PY
       - name: Preserve checksummed decision artifact
         if: ${{ always() }}
         run: |
@@ -146,6 +194,7 @@ jobs:
           if test -f /tmp/cadence-decision.json; then cp /tmp/cadence-decision.json /tmp/cadence-artifact/decision.json;
           else echo '{"action":"BLOCKED","reason":"NO_DECISION_ARTIFACT"}' > /tmp/cadence-artifact/decision.json; fi
           if test -f /tmp/cadence-recheck.json; then cp /tmp/cadence-recheck.json /tmp/cadence-artifact/recheck.json; fi
+          if test -f /tmp/cadence-writer.json; then cp /tmp/cadence-writer.json /tmp/cadence-artifact/writer.json; fi
           if test -f /tmp/cadence-status.txt; then cp /tmp/cadence-status.txt /tmp/cadence-artifact/execution_status.txt;
           else echo UNKNOWN_OR_FAILED > /tmp/cadence-artifact/execution_status.txt; fi
           (cd /tmp/cadence-artifact && sha256sum *.json execution_status.txt > SHA256SUMS)
