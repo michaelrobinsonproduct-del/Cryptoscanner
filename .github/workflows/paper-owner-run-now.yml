@@ -36,7 +36,8 @@ jobs:
           print('OWNER_COMMAND_AUTHENTICATED',comment['id'])
           PY
           SOURCE="$(gh api "$REPO/git/ref/heads/main" --jq '.object.sha')"
-          export SOURCE_SHA="$SOURCE"\n          gh api "$REPO/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/before.json
+          export SOURCE_SHA="$SOURCE"
+          gh api "$REPO/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/before.json
           python - <<'PY'
           import json
           runs=json.load(open('/tmp/before.json'))['workflow_runs']
