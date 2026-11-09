@@ -204,6 +204,13 @@ jobs:
           git show HEAD:verified-results/results.json > /tmp/paper-results-readback.json
           cmp /tmp/paper-results-readback.json /tmp/paper-canonical-results/results.json
           echo "PAPER_CANONICAL_RESULTS_REMOTE_READBACK_VERIFIED"
+          # Restore exact scanner source and rendered outputs for downstream artifact
+          # upload and issue publication; ledger branch remains published remotely.
+          git checkout --detach "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          mkdir -p paper_pov/output/results
+          cp /tmp/paper-canonical-results/* paper_pov/output/results/
+          (cd paper_pov/output/results && sha256sum -c SHA256SUMS)
       - name: Preserve public human-readable paper results
         uses: actions/upload-artifact@v4
         with:
