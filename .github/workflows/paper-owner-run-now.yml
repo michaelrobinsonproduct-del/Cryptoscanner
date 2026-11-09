@@ -11,16 +11,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   dispatch-and-observe:
-    if: >-
-      github.repository == 'michaelrobinsonproduct-del/Cryptoscanner' &&
-      github.event.issue.number == 34 &&
-      github.event.issue.pull_request == null &&
-      github.event.comment.body == '/paper-run-now' &&
-      github.event.comment.user.login == 'michaelrobinsonproduct-del' &&
-      github.event.comment.user.id == 336805669 &&
-      github.event.comment.author_association == 'OWNER' &&
-      github.event.sender.id == 336805669 &&
-      github.event.repository.default_branch == 'main'
+    if: github.event.issue.number == 34 && github.event.comment.body == '/paper-run-now'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -31,6 +22,19 @@ jobs:
         run: |
           set -euo pipefail
           REPO="repos/$GITHUB_REPOSITORY"
+          python - <<'PY'
+          import json,os
+          event=json.load(open(os.environ['GITHUB_EVENT_PATH']))
+          comment=event['comment']; sender=event['sender']
+          assert os.environ['GITHUB_REPOSITORY']=='michaelrobinsonproduct-del/Cryptoscanner'
+          assert event['repository']['default_branch']=='main'
+          assert event['issue']['number']==34 and not event['issue'].get('pull_request')
+          assert comment['body']=='/paper-run-now'
+          assert comment['user']['login']=='michaelrobinsonproduct-del' and comment['user']['id']==336805669
+          assert sender['id']==336805669
+          assert comment['author_association']=='OWNER'
+          print('OWNER_COMMAND_AUTHENTICATED',comment['id'])
+          PY
           SOURCE="$(gh api "$REPO/git/ref/heads/main" --jq '.object.sha')"
           gh api "$REPO/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/before.json
           python - <<'PY'
