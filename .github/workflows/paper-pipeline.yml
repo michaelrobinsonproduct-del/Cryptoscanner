@@ -166,6 +166,44 @@ jobs:
             --output-dir paper_pov/output/results
           (cd paper_pov/output/results && sha256sum -c SHA256SUMS)
           cat paper_pov/output/results/results.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Persist one canonical verified result on existing ledger branch
+        run: |
+          set -euo pipefail
+          # The sole writer has already pushed and read back the immutable ledger.
+          # Publish the exact checksummed render at a stable path, in that same branch.
+          LEDGER_COMMIT="$(python -c 'import json;print(json.load(open("paper_pov/output/results/results.json"))["ledger_commit"])')"
+          test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$LEDGER_COMMIT"
+          git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$LEDGER_COMMIT" || {
+            echo "CANONICAL_RESULTS_CONCURRENT_UPDATE_ABORT"; exit 1;
+          }
+          mkdir -p /tmp/paper-canonical-results
+          cp paper_pov/output/results/results.json /tmp/paper-canonical-results/results.json
+          cp paper_pov/output/results/results.md /tmp/paper-canonical-results/results.md
+          cp paper_pov/output/results/SHA256SUMS /tmp/paper-canonical-results/SHA256SUMS
+          git checkout -B paper-proof-ledger "$LEDGER_COMMIT"
+          mkdir -p verified-results
+          cp /tmp/paper-canonical-results/* verified-results/
+          (cd verified-results && sha256sum -c SHA256SUMS)
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=json.loads(Path("verified-results/results.json").read_text())
+          assert p["status"]=="SUCCESS_PAPER_ONLY"
+          assert p["run_id"]==os.environ["GITHUB_RUN_ID"]
+          assert p["source_sha"]==os.environ["GITHUB_SHA"]
+          assert p["remote_readback_verified"] is True
+          assert p["ledger_commit"]==os.popen("git rev-parse HEAD").read().strip()
+          PY
+          git add verified-results/results.json verified-results/results.md verified-results/SHA256SUMS
+          git diff --cached --check
+          git commit -m "paper: publish verified results for run ${GITHUB_RUN_ID}"
+          git push origin HEAD:refs/heads/paper-proof-ledger
+          git fetch --no-tags origin +refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+          git show HEAD:verified-results/results.json > /tmp/paper-results-readback.json
+          cmp /tmp/paper-results-readback.json /tmp/paper-canonical-results/results.json
+          echo "PAPER_CANONICAL_RESULTS_REMOTE_READBACK_VERIFIED"
       - name: Preserve public human-readable paper results
         uses: actions/upload-artifact@v4
         with:
