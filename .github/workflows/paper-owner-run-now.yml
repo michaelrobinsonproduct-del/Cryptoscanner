@@ -36,7 +36,7 @@ jobs:
           print('OWNER_COMMAND_AUTHENTICATED',comment['id'])
           PY
           SOURCE="$(gh api "$REPO/git/ref/heads/main" --jq '.object.sha')"
-          gh api "$REPO/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/before.json
+          export SOURCE_SHA="$SOURCE"\n          gh api "$REPO/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/before.json
           python - <<'PY'
           import json
           runs=json.load(open('/tmp/before.json'))['workflow_runs']
@@ -44,42 +44,66 @@ jobs:
           if active:
               raise SystemExit('Existing paper writer active: '+str([r['id'] for r in active]))
           PY
+          # Create one continuously updated command receipt; no second writer.
+          COMMENT_ID="$(gh api -X POST "$REPO/issues/34/comments" -f body="Paper scan command accepted. Dispatch pending. Controller: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq '.id')"
+          export COMMENT_ID
+          trap 'rc=$?; if [ "$rc" -ne 0 ]; then gh api -X PATCH "$REPO/issues/comments/$COMMENT_ID" -f body="Paper scan controller FAILED (exit $rc). Controller: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Inspect controller steps and linked writer if identified." >/dev/null || true; fi' EXIT
           gh api -X POST "$REPO/actions/workflows/paper-pipeline.yml/dispatches" -f ref=main
+          gh api -X PATCH "$REPO/issues/comments/$COMMENT_ID" -f body="Paper scan dispatched; awaiting writer run ID. Controller: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >/dev/null
           echo "Direct dispatch accepted; waiting for an identifiable writer."
           python - <<'PY'
-          import json,os,subprocess,time
+          import base64,json,os,subprocess,time
           repo='repos/'+os.environ['GITHUB_REPOSITORY']
+          comment_id=os.environ['COMMENT_ID']
           before={r['id'] for r in json.load(open('/tmp/before.json'))['workflow_runs']}
-          source=subprocess.check_output(['gh','api',repo+'/git/ref/heads/main','--jq','.object.sha'],text=True).strip()
+          source=os.environ['SOURCE_SHA']
+          def api(path,method='GET',body=None):
+              cmd=['gh','api']
+              if method!='GET':cmd+=['-X',method]
+              cmd+=[repo+'/'+path]
+              if body is not None:cmd+=['-f','body='+body]
+              return json.loads(subprocess.check_output(cmd,text=True))
+          def publish(state,rid=None,url=None,step=None,detail=None):
+              lines=['**Paper scan: '+state+'**','Controller: https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/actions/runs/'+os.environ['GITHUB_RUN_ID']]
+              if rid:lines.append('Writer run: '+str(rid)+' — '+url)
+              if step:lines.append('Current step: '+step)
+              if detail:lines.append(detail)
+              api('issues/comments/'+comment_id,'PATCH','\n\n'.join(lines))
+              print('PAPER_STATUS',state,rid or '',step or '',flush=True)
           run=None
           for _ in range(24):
-              data=json.loads(subprocess.check_output(['gh','api',repo+'/actions/workflows/paper-pipeline.yml/runs?per_page=100'],text=True))
+              data=api('actions/workflows/paper-pipeline.yml/runs?per_page=100')
               matches=[r for r in data['workflow_runs'] if r['id'] not in before and r['event']=='workflow_dispatch' and r['head_sha']==source]
               if matches:
                   run=min(matches,key=lambda r:r['id'])
                   break
               time.sleep(5)
-          if run is None:
-              raise SystemExit('Dispatch accepted but writer run not observed')
-          rid=run['id']
-          url=run['html_url']
-          print('WRITER_RUN',url,flush=True)
+          if run is None:raise SystemExit('Dispatch accepted but writer run not observed')
+          rid=run['id'];url=run['html_url']
           with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:f.write('Writer run: '+url+'\n')
+          last=None
           for _ in range(90):
-              item=json.loads(subprocess.check_output(['gh','api',repo+'/actions/runs/'+str(rid)],text=True))
-              if item['status']=='completed':
-                  print('WRITER_CONCLUSION',item['conclusion'],flush=True)
-                  if item['conclusion']!='success':raise SystemExit('Writer failed: '+url)
+              item=api('actions/runs/'+str(rid))
+              status=item['status']
+              jobs=api('actions/runs/'+str(rid)+'/jobs?per_page=100').get('jobs',[])
+              active=next((s['name'] for j in jobs for s in j.get('steps',[]) if s.get('status')=='in_progress'),None)
+              failed=next((s['name'] for j in jobs for s in j.get('steps',[]) if s.get('conclusion')=='failure'),None)
+              state='FAILED' if status=='completed' and item.get('conclusion')!='success' else ('COMPLETED' if status=='completed' else status.upper())
+              key=(state,active,failed)
+              if key!=last:
+                  publish(state,rid,url,failed or active,('Conclusion: '+str(item.get('conclusion'))) if status=='completed' else None)
+                  last=key
+              if status=='completed':
+                  if item.get('conclusion')!='success':raise SystemExit('Writer failed: '+url)
                   break
               time.sleep(10)
           else:raise SystemExit('Writer did not complete within observation window: '+url)
           for _ in range(12):
               p=subprocess.run(['gh','api',repo+'/contents/verified-results/results.json?ref=paper-proof-ledger','--jq','.content'],capture_output=True,text=True)
               if p.returncode==0:
-                  import base64
                   result=json.loads(base64.b64decode(p.stdout))
                   if str(result.get('run_id'))==str(rid) and result.get('status')=='SUCCESS_PAPER_ONLY' and result.get('remote_readback_verified') is True and result.get('source_sha')==source:
-                      print('CANONICAL_RESULTS_VERIFIED',rid,result.get('ledger_generation'),flush=True)
+                      publish('VERIFIED_RESULTS',rid,url,detail='Ledger generation: '+str(result.get('ledger_generation')))
                       with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:f.write('Canonical results verified for run '+str(rid)+'\n')
                       break
               time.sleep(5)
