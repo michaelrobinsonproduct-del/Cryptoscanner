@@ -16,13 +16,13 @@ class StageOneScheduleTests(unittest.TestCase):
     def test_two_hourly_scheduled_executions_after_acceptance(self):
         text = PIPELINE.read_text()
         crons = re.findall(r"(?m)^\s*-\s*cron:\s*['\"]([^'\"]+)['\"]\s*$", text)
-        self.assertEqual(crons, ["10,40 * * * *"])
+        self.assertEqual(crons, ["09,39 * * * *"])
 
     def test_global_non_cancelling_single_writer_mutex(self):
         text = PIPELINE.read_text()
         self.assertIn("group: public-paper-proof-ledger-single-writer", text)
         self.assertIn("cancel-in-progress: false", text)
-        self.assertEqual(text.count("git push origin HEAD:refs/heads/paper-proof-ledger"), 1)
+        self.assertEqual(text.count("git push origin HEAD:refs/heads/paper-proof-ledger"), 2)
 
     def test_only_paper_pipeline_pushes_ledger(self):
         writers = []

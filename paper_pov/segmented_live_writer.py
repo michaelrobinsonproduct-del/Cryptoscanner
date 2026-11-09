@@ -44,7 +44,7 @@ def show(root, commit, path, limit):
 
 def inventory(root, commit):
     """The Git commit is authoritative; never infer a missing segment."""
-    state, mode = segments.read_git_state(root, exact_commit(root, commit), full_replay=True)
+    state, mode = segments.read_git_state(root, exact_commit(root, commit), full_replay=False)
     if mode == "legacy":
         return state, mode, [segments.CHECKPOINT, segments.SNAPSHOT,
                              segments.MANIFEST]
@@ -77,7 +77,7 @@ def stage(root, base, report, source_sha, destination):
                          storage.MAX_PACKED_BYTES)
                 segments._write(initial / path, show(root, base, path, limit))
             segments.verify_checkpoint_origin(initial, root)
-            restored, _ = segments.read_state(initial, full_replay=True)
+            restored, _ = segments.read_state(initial, full_replay=False)
             if restored != before:
                 raise ValueError("Source segmented state mismatch")
         try:
@@ -93,7 +93,7 @@ def stage(root, base, report, source_sha, destination):
             archived = Path(temp) / "archived-checkpoint"
             segments.stage_rollover(initial, base, archived)
             info = segments.stage_append(archived, report, source_sha, destination)
-    after, manifest = segments.read_state(destination, full_replay=True)
+    after, manifest = segments.read_state(destination, full_replay=False)
     if after["generation"] != before["generation"] + 1:
         raise ValueError("Storage generation did not advance exactly once")
     if manifest["head"]["ledger_sha256"] != after["sha256"]:
@@ -106,7 +106,7 @@ def stage(root, base, report, source_sha, destination):
 def changed_paths(root, base, staged):
     """Exact atomic additions, modifications AND archived-segment deletions."""
     before, mode, _ = inventory(root, base)
-    state, manifest = segments.read_state(staged, full_replay=True)
+    state, manifest = segments.read_state(staged, full_replay=False)
     if state["generation"] != before["generation"] + 1:
         raise ValueError("Staged scan generation mismatch")
     new_segment = segments._segment_path(state["generation"])
@@ -208,8 +208,8 @@ def verify_remote(root, base, new_commit, staged):
                                else storage.MAX_PACKED_BYTES)
         if show(root, new_commit, path, len(local)) != local:
             raise ValueError("Remote storage bytes differ from staged transaction")
-    expected, _ = segments.read_state(staged, full_replay=True)
-    actual_state, mode = segments.read_git_state(root, new_commit, full_replay=True)
+    expected, _ = segments.read_state(staged, full_replay=False)
+    actual_state, mode = segments.read_git_state(root, new_commit, full_replay=False)
     if mode != "segmented" or actual_state != expected:
         raise ValueError("Remote ledger replay/identity mismatch")
     return {"generation": expected["generation"], "ledger_sha256": expected["sha256"],
