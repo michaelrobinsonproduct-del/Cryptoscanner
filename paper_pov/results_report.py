@@ -42,7 +42,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
     # GitHub's event.schedule identifies the originating cron expression even
     # when Actions queues or starts the job late. It does NOT prove punctuality.
     if event == "schedule":
-        if originating_cron not in ("20,50 * * * *"):
+        if originating_cron not in ("20,50 * * * *",):
             raise ValueError("Missing or unverified originating scheduled cron")
         scheduled_minute = (None if "," in originating_cron.split()[0]
                             else int(originating_cron.split()[0]))
