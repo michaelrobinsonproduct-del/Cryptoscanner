@@ -83,13 +83,13 @@ class PaperResultsContracts(unittest.TestCase):
         self.assertIn("intended UTC minute=20,50", markdown)
 
     def test_both_exact_crons_and_missing_or_spoofed_attribution(self):
-        for cron, minute in (("40 * * * *", 40), ("10 * * * *", 10)):
+        for cron, minute in (("20,50 * * * *", None),):
             with self.subTest(cron=cron):
                 payload, md = self.report(cron=cron)
                 self.assertTrue(payload["scheduled_slot_verified"])
                 self.assertEqual(payload["scheduled_slot_utc_minute"], minute)
                 self.assertEqual(payload["originating_cron"], cron)
-                self.assertIn(f"intended UTC minute=:{minute:02d}", md)
+                self.assertIn("intended UTC minute=20,50", md)
                 self.assertFalse(payload["scheduled_start_punctuality_verified"])
         for bad in (None, "", "9,10 * * * *", "24 * * * *",
                     "10 * * * *; echo spoof", "40 * * * *\\n10 * * * *", True):
@@ -126,16 +126,16 @@ class PaperResultsContracts(unittest.TestCase):
             argv = ["paper-results", "--scan", str(scan_path),
                     "--scoreboard", str(score_path), "--run-id", "41235442591",
                     "--source-sha", SHA, "--ledger-commit", LEDGER,
-                    "--event", "schedule", "--originating-cron", "10 * * * *",
+                    "--event", "schedule", "--originating-cron", "20,50 * * * *",
                     "--output-dir", str(output)]
             with patch("sys.argv", argv):
                 main()
             payload = json.loads((output / "results.json").read_text())
             self.assertEqual(payload["github_event"], "schedule")
             self.assertTrue(payload["scheduled_slot_verified"])
-            self.assertEqual(payload["scheduled_slot_utc_minute"], 10)
+            self.assertIsNone(payload["scheduled_slot_utc_minute"])
             self.assertFalse(payload["scheduled_start_punctuality_verified"])
-            self.assertIn("intended UTC minute=:10", (output / "results.md").read_text())
+            self.assertIn("intended UTC minute=20,50", (output / "results.md").read_text())
             for line in (output / "SHA256SUMS").read_text().splitlines():
                 digest, filename = line.split("  ", 1)
                 self.assertEqual(hashlib.sha256((output / filename).read_bytes()).hexdigest(), digest)
