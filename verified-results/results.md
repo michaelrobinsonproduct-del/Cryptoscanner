@@ -2,32 +2,32 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-09T17:18:25.322698+00:00
+**UTC as-of:** 2026-11-09T17:45:24.835296+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/42663138095
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/42667468910
 **Source SHA:** 69b32fce88f9296ad7d9292e14e64b61178763c7
-**Ledger commit:** 1316fef197f7da768442a77146c9ad35102767b5
-**Ledger generation:** 203 (remote push/readback verified)
+**Ledger commit:** 9642cb130fb2bdebc3ac82ddc642ec18fc0d3869
+**Ledger generation:** 204 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 8s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 624; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 606; valid market observations: 606; OHLC screened: 24.
 
 ## Top WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | Confidence / risk | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|
-| 1 | AAVE/USD | 133.53 | 104.680 | 89.943 | +6.02% | -0.05% | 4.00x | 6.7 | 2026-11-09T17:18:16.843955+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 2 | AVAX/USD | 8.727 | 99.715 | 97.708 | +10.06% | +0.05% | 1.18x | 4.6 | 2026-11-09T17:18:16.843955+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 3 | ENA/USD | 0.1545 | 94.719 | 80.042 | +4.04% | -0.06% | 3.57x | 6.5 | 2026-11-09T17:18:16.843955+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 4 | PEPE/USD | 5.245e-06 | 90.380 | 93.351 | +6.02% | -0.27% | 0.84x | 7.6 | 2026-11-09T17:18:16.843955+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 5 | USELESS/USD | 0.13423 | 89.722 | 76.782 | +9.01% | -0.19% | 2.39x | 16.4 | 2026-11-09T17:18:16.843955+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 6 | ONDO/USD | 0.37353 | 88.331 | 96.536 | +6.24% | -0.71% | 0.53x | 2.4 | 2026-11-09T17:18:16.843955+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 7 | VVV/USD | 21.282 | 87.940 | 74.603 | +6.09% | -0.33% | 2.50x | 7.1 | 2026-11-09T17:18:16.843955+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 8 | JUP/USD | 0.25 | 83.409 | 85.183 | +7.84% | -0.30% | 0.97x | 0.4 | 2026-11-09T17:18:16.843955+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 9 | ARB/USD | 0.1793 | 74.186 | 82.195 | +8.08% | -0.44% | 0.42x | 11.2 | 2026-11-09T17:18:16.843955+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 10 | SUI/USD | 0.8497 | 68.797 | 79.411 | +3.57% | -0.48% | 0.18x | 1.2 | 2026-11-09T17:18:16.843955+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 11 | BCH/USD | 243.22 | 63.584 | 47.118 | +1.79% | +0.29% | 4.42x | 0.4 | 2026-11-09T17:18:16.843955+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 12 | HYPE/USD | 75.34 | 59.816 | 62.514 | +1.17% | +0.16% | 0.65x | 1.3 | 2026-11-09T17:18:16.843955+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 1 | AVAX/USD | 8.64 | 94.919 | 96.529 | +8.97% | -0.48% | 1.08x | 6.9 | 2026-11-09T17:45:17.406828+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 2 | JUP/USD | 0.25124 | 92.215 | 78.594 | +8.38% | +0.00% | 2.36x | 19.9 | 2026-11-09T17:45:17.406828+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 3 | PEPE/USD | 5.24e-06 | 90.389 | 94.552 | +5.92% | +0.13% | 0.52x | 3.8 | 2026-11-09T17:45:17.406828+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 4 | ONDO/USD | 0.3741 | 89.730 | 96.530 | +6.41% | -0.30% | 0.47x | 5.6 | 2026-11-09T17:45:17.406828+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 5 | SUI/USD | 0.8453 | 79.344 | 75.655 | +3.04% | -0.34% | 1.54x | 1.2 | 2026-11-09T17:45:17.406828+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 6 | PYTH/USD | 0.06445 | 78.637 | 71.148 | +7.18% | +0.66% | 1.42x | 13.9 | 2026-11-09T17:45:17.406828+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 7 | AAVE/USD | 132.76 | 77.799 | 86.509 | +5.41% | -0.26% | 0.26x | 5.3 | 2026-11-09T17:45:17.406828+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 8 | XDG/USD | 0.0697216 | 77.753 | 63.582 | +1.23% | -0.17% | 2.82x | 0.0 | 2026-11-09T17:45:17.406828+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 9 | ARB/USD | 0.1779 | 77.556 | 84.899 | +7.23% | -0.78% | 0.66x | 5.6 | 2026-11-09T17:45:17.406828+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 10 | LIGHTER/USD | 3.269 | 74.246 | 72.471 | +6.90% | -0.94% | 1.65x | 18.4 | 2026-11-09T17:45:17.406828+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 11 | USELESS/USD | 0.13313 | 71.788 | 72.215 | +8.12% | -0.07% | 0.99x | 25.5 | 2026-11-09T17:45:17.406828+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 12 | GBP/USD | 1.34179 | 63.261 | 58.026 | +0.46% | -0.03% | 1.54x | 0.4 | 2026-11-09T17:45:17.406828+00:00 | NOT CALIBRATED / HIGH | WATCH |
 
 **Confidence:** uncalibrated research heuristics, NOT validated probabilities. **BUY:** none authorized. Numerical baseline/challenger scores are uncalibrated paper-only ranking values, not probabilities or validated improvement.
 
@@ -40,8 +40,8 @@
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 203; predictions: 1839; observations: 122725.
-- Matured sampled outcomes across 1/6/24/48h: 1045; gap abstentions: 4950. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 204; predictions: 1851; observations: 123331.
+- Matured sampled outcomes across 1/6/24/48h: 1057; gap abstentions: 4981. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
