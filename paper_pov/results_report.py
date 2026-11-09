@@ -37,7 +37,7 @@ def _utc(value):
 
 
 def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating_cron=None):
-    if event not in ("schedule", "workflow_dispatch"):
+    if event not in ("schedule", "workflow_dispatch", "issue_comment"):
         raise ValueError("Unverified GitHub trigger event")
     # GitHub's event.schedule identifies the originating cron expression even
     # when Actions queues or starts the job late. It does NOT prove punctuality.
@@ -48,7 +48,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
                             else int(originating_cron.split()[0]))
     else:
         if originating_cron not in (None, ""):
-            raise ValueError("Manual dispatch cannot claim a scheduled cron")
+            raise ValueError("Non-scheduled trigger cannot claim a scheduled cron")
         scheduled_minute = None
     if not RUN.fullmatch(str(run_id)) or not SHA.fullmatch(source_sha) or not SHA.fullmatch(ledger_commit):
         raise ValueError("Missing immutable GitHub run/source/ledger identity")
@@ -115,7 +115,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         "**Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders",
         "",
         f"**UTC as-of:** {as_of.isoformat()}  ",
-        f"**GitHub trigger:** {'scheduled' if event == 'schedule' else 'manual dispatch'} (verified event={event}; "
+        f"**GitHub trigger:** {'scheduled' if event == 'schedule' else ('authenticated issue heartbeat' if event == 'issue_comment' else 'manual dispatch')} (verified event={event}; "
         + (f"originating cron={originating_cron}, intended UTC minute="
            + (f":{scheduled_minute:02d}" if scheduled_minute is not None
               else originating_cron.split()[0]) + "; "
