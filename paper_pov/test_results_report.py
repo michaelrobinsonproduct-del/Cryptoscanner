@@ -48,9 +48,9 @@ def fixture():
 
 
 class PaperResultsContracts(unittest.TestCase):
-    def report(self, scan=None, score=None, event="schedule", cron="40 * * * *"):
+    def report(self, scan=None, score=None, event="schedule", cron="09,39 * * * *"):
         s, b = fixture()
-        if event == "workflow_dispatch" and cron == "40 * * * *":
+        if event == "workflow_dispatch" and cron == "09,39 * * * *":
             cron = None
         return render(s if scan is None else scan, b if score is None else score,
                       run_id="41235442591", source_sha=SHA, ledger_commit=LEDGER,
@@ -60,11 +60,11 @@ class PaperResultsContracts(unittest.TestCase):
         scheduled, scheduled_md = self.report(event="schedule")
         self.assertEqual(scheduled["github_event"], "schedule")
         self.assertTrue(scheduled["scheduled_slot_verified"])
-        self.assertEqual(scheduled["originating_cron"], "40 * * * *")
-        self.assertEqual(scheduled["scheduled_slot_utc_minute"], 40)
+        self.assertEqual(scheduled["originating_cron"], "09,39 * * * *")
+        self.assertIsNone(scheduled["scheduled_slot_utc_minute"])
         self.assertFalse(scheduled["scheduled_start_punctuality_verified"])
         self.assertIn("GitHub trigger:** scheduled", scheduled_md)
-        self.assertIn("intended UTC minute=:40", scheduled_md)
+        self.assertIn("intended UTC minute=09,39", scheduled_md)
         self.assertIn("punctuality NOT verified", scheduled_md)
         manual, manual_md = self.report(event="workflow_dispatch")
         self.assertEqual(manual["github_event"], "workflow_dispatch")
@@ -76,11 +76,11 @@ class PaperResultsContracts(unittest.TestCase):
                 self.report(event=invalid)
 
     def test_combined_cron_is_verified_without_inventing_a_single_minute(self):
-        payload, markdown = self.report(cron="18,48 * * * *")
+        payload, markdown = self.report(cron="09,39 * * * *")
         self.assertTrue(payload["scheduled_slot_verified"])
         self.assertIsNone(payload["scheduled_slot_utc_minute"])
-        self.assertEqual(payload["originating_cron"], "18,48 * * * *")
-        self.assertIn("intended UTC minute=18,48", markdown)
+        self.assertEqual(payload["originating_cron"], "09,39 * * * *")
+        self.assertIn("intended UTC minute=09,39", markdown)
 
     def test_both_exact_crons_and_missing_or_spoofed_attribution(self):
         for cron, minute in (("40 * * * *", 40), ("10 * * * *", 10)):
@@ -104,8 +104,7 @@ class PaperResultsContracts(unittest.TestCase):
                     / ".github/workflows/paper-pipeline.yml").read_text()
         self.assertIn("PAPER_ORIGINATING_CRON: ${{ github.event.schedule }}", workflow)
         self.assertIn('--originating-cron "$PAPER_ORIGINATING_CRON"', workflow)
-        self.assertIn("- cron: '40 * * * *'", workflow)
-        self.assertIn("- cron: '10 * * * *'", workflow)
+        self.assertIn("- cron: '09,39 * * * *'", workflow)
         self.assertIn("group: public-paper-proof-ledger-single-writer", workflow)
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("git push origin HEAD:refs/heads/paper-proof-ledger", workflow)
