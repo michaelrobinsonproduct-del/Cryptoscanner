@@ -2,7 +2,7 @@ name: Public Kraken Paper POV (scheduled, isolated ledger)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '09,39 * * * *'
+    - cron: '20,50 * * * *'
 permissions:
   contents: write
   issues: write
@@ -28,7 +28,7 @@ jobs:
           case "$PAPER_GITHUB_EVENT" in
             schedule)
               case "$PAPER_CRON_EXPRESSION" in
-                '09,39 * * * *') ;;
+                '20,50 * * * *') ;;
                 *) echo "PAPER_UNRECOGNIZED_ORIGINATING_CRON"; exit 1 ;;
               esac
               ;;
