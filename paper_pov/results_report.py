@@ -263,7 +263,7 @@ def main():
     fd, tmp = tempfile.mkstemp(dir=directory, prefix=".results-", suffix=".tmp")
     try:
         with os.fdopen(fd, "w") as f:
-            f.write(markdown + "\n")
+            f.write("\n".join(line.rstrip() for line in markdown.rstrip("\n").split("\n")).rstrip("\n") + "\n")
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp, directory / "results.md")
