@@ -1,0 +1,83 @@
+name: Owner direct paper scan and visible outcome
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+  actions: write
+  issues: write
+concurrency:
+  group: public-paper-owner-direct-control
+  cancel-in-progress: false
+jobs:
+  dispatch-and-observe:
+    if: >-
+      github.repository == 'michaelrobinsonproduct-del/Cryptoscanner' &&
+      github.event.issue.number == 34 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/paper-run-now' &&
+      github.event.comment.user.login == 'michaelrobinsonproduct-del' &&
+      github.event.comment.user.id == 336805669 &&
+      github.event.comment.author_association == 'OWNER' &&
+      github.event.sender.id == 336805669 &&
+      github.event.repository.default_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Dispatch existing writer and publish its observed result
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="repos/$GITHUB_REPOSITORY"
+          SOURCE="$(gh api "$REPO/git/ref/heads/main" --jq '.object.sha')"
+          gh api "$REPO/actions/workflows/paper-pipeline.yml/runs?per_page=100" > /tmp/before.json
+          python - <<'PY'
+          import json
+          runs=json.load(open('/tmp/before.json'))['workflow_runs']
+          active=[r for r in runs if r['status'] != 'completed']
+          if active:
+              raise SystemExit('Existing paper writer active: '+str([r['id'] for r in active]))
+          PY
+          gh api -X POST "$REPO/actions/workflows/paper-pipeline.yml/dispatches" -f ref=main
+          echo "Direct dispatch accepted; waiting for an identifiable writer."
+          python - <<'PY'
+          import json,os,subprocess,time
+          repo='repos/'+os.environ['GITHUB_REPOSITORY']
+          before={r['id'] for r in json.load(open('/tmp/before.json'))['workflow_runs']}
+          source=subprocess.check_output(['gh','api',repo+'/git/ref/heads/main','--jq','.object.sha'],text=True).strip()
+          run=None
+          for _ in range(24):
+              data=json.loads(subprocess.check_output(['gh','api',repo+'/actions/workflows/paper-pipeline.yml/runs?per_page=100'],text=True))
+              matches=[r for r in data['workflow_runs'] if r['id'] not in before and r['event']=='workflow_dispatch' and r['head_sha']==source]
+              if matches:
+                  run=min(matches,key=lambda r:r['id'])
+                  break
+              time.sleep(5)
+          if run is None:
+              raise SystemExit('Dispatch accepted but writer run not observed')
+          rid=run['id']
+          url=run['html_url']
+          print('WRITER_RUN',url,flush=True)
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:f.write('Writer run: '+url+'\n')
+          for _ in range(90):
+              item=json.loads(subprocess.check_output(['gh','api',repo+'/actions/runs/'+str(rid)],text=True))
+              if item['status']=='completed':
+                  print('WRITER_CONCLUSION',item['conclusion'],flush=True)
+                  if item['conclusion']!='success':raise SystemExit('Writer failed: '+url)
+                  break
+              time.sleep(10)
+          else:raise SystemExit('Writer did not complete within observation window: '+url)
+          for _ in range(12):
+              p=subprocess.run(['gh','api',repo+'/contents/verified-results/results.json?ref=paper-proof-ledger','--jq','.content'],capture_output=True,text=True)
+              if p.returncode==0:
+                  import base64
+                  result=json.loads(base64.b64decode(p.stdout))
+                  if str(result.get('run_id'))==str(rid) and result.get('status')=='SUCCESS_PAPER_ONLY' and result.get('remote_readback_verified') is True and result.get('source_sha')==source:
+                      print('CANONICAL_RESULTS_VERIFIED',rid,result.get('ledger_generation'),flush=True)
+                      with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:f.write('Canonical results verified for run '+str(rid)+'\n')
+                      break
+              time.sleep(5)
+          else:raise SystemExit('Writer completed but canonical results missing/inconsistent: '+url)
+          PY
