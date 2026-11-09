@@ -1,6 +1,8 @@
 name: Public Kraken Paper POV (scheduled, isolated ledger)
 on:
   workflow_dispatch:
+  issue_comment:
+    types: [created]
   schedule:
     - cron: '20,50 * * * *'
 permissions:
@@ -11,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   public-paper:
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'issue_comment' && github.event.issue.number == 34 && github.event.comment.body == '/paper-cadence-heartbeat' && github.event.comment.user.login == 'michaelrobinsonproduct-del' && github.event.issue.pull_request == null))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -22,6 +24,9 @@ jobs:
       - name: Fail-closed originating schedule provenance (no ledger writes)
         env:
           PAPER_GITHUB_EVENT: ${{ github.event_name }}
+          PAPER_COMMENT_BODY: ${{ github.event.comment.body }}
+          PAPER_COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+          PAPER_ISSUE_NUMBER: ${{ github.event.issue.number }}
           PAPER_CRON_EXPRESSION: ${{ github.event.schedule }}
         run: |
           set -euo pipefail
@@ -31,6 +36,13 @@ jobs:
                 '20,50 * * * *') ;;
                 *) echo "PAPER_UNRECOGNIZED_ORIGINATING_CRON"; exit 1 ;;
               esac
+              ;;
+            issue_comment)
+              test "$PAPER_ISSUE_NUMBER" = "34" &&
+              test "$PAPER_COMMENT_BODY" = "/paper-cadence-heartbeat" &&
+              test "$PAPER_COMMENT_AUTHOR" = "michaelrobinsonproduct-del" || {
+                echo "PAPER_UNAUTHORIZED_CADENCE_COMMENT"; exit 1;
+              }
               ;;
             workflow_dispatch)
               test -z "$PAPER_CRON_EXPRESSION" || {
