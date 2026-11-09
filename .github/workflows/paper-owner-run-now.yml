@@ -36,7 +36,8 @@ jobs:
           print('OWNER_COMMAND_AUTHENTICATED',comment['id'])
           PY
           SOURCE="$(gh api "$REPO/git/ref/heads/main" --jq '.object.sha')"
-          export SOURCE_SHA="$SOURCE"\n          # Create one continuously updated command receipt; no second writer.
+          export SOURCE_SHA="$SOURCE"
+          # Create one continuously updated command receipt; no second writer.
           COMMENT_ID="$(gh api -X POST "$REPO/issues/34/comments" -f body="Paper scan command accepted. Dispatch pending. Controller: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq '.id')"
           export COMMENT_ID
           trap 'rc=$?; if [ "$rc" -ne 0 ]; then gh api -X PATCH "$REPO/issues/comments/$COMMENT_ID" -f body="Paper scan controller FAILED (exit $rc). Controller: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Inspect controller steps and linked writer if identified." >/dev/null || true; fi' EXIT
@@ -46,6 +47,7 @@ jobs:
           runs=json.load(open('/tmp/before.json'))['workflow_runs']
           active=[r for r in runs if r['status'] != 'completed']
           if active:
+              print('EXISTING_WRITER_ACTIVE', [r['id'] for r in active], flush=True)
               raise SystemExit('Existing paper writer active: '+str([r['id'] for r in active]))
           PY
           gh api -X POST "$REPO/actions/workflows/paper-pipeline.yml/dispatches" -f ref=main
