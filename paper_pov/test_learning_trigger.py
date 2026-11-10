@@ -58,8 +58,16 @@ class LearningTriggerTests(unittest.TestCase):
         subject = "paper: atomic packed scan 41337237141 source " + "a" * 40
         lines = "c" * 40 + " " + subject + "\n" + "d" * 40 + " unrelated"
         self.assertEqual(select_commit(lines, p), "c" * 40)
-        with self.assertRaises(ValueError):
-            select_commit(lines + "\n" + "e" * 40 + " " + subject, p)
+        # Earlier writer commits a scan append and a subsequent results
+        # publication using identical subjects; the older adjacent match is
+        # the ledger-bearing append, not a second writer or duplicate scan.
+        historical = "e" * 40 + " " + subject + "\n" + lines
+        self.assertEqual(select_commit(historical, p), "c" * 40)
+        with self.assertRaisesRegex(ValueError, "Non-adjacent"):
+            select_commit("e" * 40 + " " + subject + "\n" +
+                          "f" * 40 + " unrelated\n" + lines, p)
+        with self.assertRaisesRegex(ValueError, "Duplicate"):
+            select_commit("f" * 40 + " " + subject + "\n" + historical, p)
         with self.assertRaises(ValueError):
             select_commit("c" * 40 + " paper: atomic packed scan 1 source " + "a" * 40, p)
 
