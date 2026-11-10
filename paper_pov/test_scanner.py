@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
+from io import BytesIO
 from paper_pov import scanner
 
 NOW = dt.datetime(2026, 10, 31, 15, 0, tzinfo=dt.timezone.utc)
@@ -40,6 +42,28 @@ def run(**kwargs):
     return scanner.scan(api=fixture(**kwargs), clock=lambda: NOW, sleep=lambda _: None)
 
 class PaperScanTests(unittest.TestCase):
+    def test_fetch_retries_explicit_kraken_throttle_without_discarding_success(self):
+        class Reply(BytesIO):
+            status = 200
+        replies = [Reply(b'{"error":["EAPI:Rate limit exceeded"],"result":{}}'),
+                   Reply(b'{"error":[],"result":{"PAIR":{}}}')]
+        with patch.object(scanner.urllib.request, "urlopen", side_effect=replies) as open_call, \
+             patch.object(scanner.time, "sleep") as pause:
+            self.assertEqual(scanner.fetch("Ticker"), {"PAIR": {}})
+            self.assertEqual(open_call.call_count, 2)
+            pause.assert_called_once_with(1)
+
+    def test_fetch_does_not_call_valid_kraken_error_invalid_schema(self):
+        class Reply(BytesIO):
+            status = 200
+        for body, error in (
+            (b'{"error":["EGeneral:Invalid arguments"],"result":{}}', "Invalid arguments"),
+            (b'{"error":[],"result":[]}', "schema invalid"),
+        ):
+            with self.subTest(body=body), patch.object(scanner.urllib.request, "urlopen", return_value=Reply(body)):
+                with self.assertRaisesRegex((RuntimeError if b'Invalid arguments' in body else ValueError), error):
+                    scanner.fetch("Ticker")
+
     def test_real_as_of_contract_and_immutable_ids(self):
         a, b = run(), run()
         self.assertEqual(a, b)
