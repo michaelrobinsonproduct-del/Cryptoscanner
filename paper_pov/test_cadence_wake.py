@@ -216,6 +216,12 @@ class CadenceWakeTests(unittest.TestCase):
             self.assertEqual((d["action"], d["reason"]),
                              ("DISPATCH_EXISTING_WORKFLOW", "INDEPENDENT_CADENCE_DUE"))
 
+    def test_previous_authenticated_issue_comment_writer_is_valid_anchor(self):
+        previous = dict(scan(), event="issue_comment")
+        self.assertEqual(decision(runs=[previous])["action"], "DISPATCH_EXISTING_WORKFLOW")
+        skipped = dict(scan(124, "2026-10-31T23:04:00Z"), event="issue_comment", conclusion="skipped")
+        self.assertEqual(decision(runs=[previous, skipped])["action"], "DISPATCH_EXISTING_WORKFLOW")
+
     def test_old_legacy_push_is_ignored_only_when_unambiguous(self):
         legacy = dict(scan(122, "2026-10-31T18:00:00Z"), event="push")
         self.assertEqual(decision(runs=[legacy, scan()])["action"], "DISPATCH_EXISTING_WORKFLOW")
