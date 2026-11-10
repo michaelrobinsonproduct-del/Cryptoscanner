@@ -1,8 +1,6 @@
 name: Cryptoscanner Autonomous Repair and Completion
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '23 * * * *'
 permissions:
   contents: write
   actions: write
