@@ -305,6 +305,19 @@ class PaperMonitorTests(unittest.TestCase):
         slots = scheduled_slots(now, 9)
         self.assertEqual(slots[0].hour, 20)
 
+    def test_results_publication_reads_writer_parent_and_prior_generation(self):
+        # Regression: reading tip^ as the prior ledger compares generation N
+        # with itself, and reading the tip subject falsely unlinks writer SHA.
+        workflow = Path(".github/workflows/paper-monitor.yml").read_text()
+        self.assertIn("SCAN_COMMIT=\"$TIP\"", workflow)
+        self.assertIn("'^paper: publish verified results '", workflow)
+        self.assertIn('SCAN_COMMIT="$(git rev-parse "$TIP^")"', workflow)
+        self.assertIn('git log -1 --format=%s "$SCAN_COMMIT" > /tmp/paper-ledger-message.txt', workflow)
+        self.assertIn('PREVIOUS_COMMIT="$(git rev-parse "$SCAN_COMMIT^")"', workflow)
+        self.assertIn('--commit "$PREVIOUS_COMMIT" --output /tmp/paper-monitor-previous.json', workflow)
+        self.assertIn('--commit "$TIP" --output /tmp/paper-monitor-ledger.json', workflow)
+        self.assertNotIn('--commit "$(git rev-parse refs/remotes/origin/paper-proof-ledger^)"', workflow)
+
     def test_workflow_is_readonly_and_alerts_only(self):
         workflow = Path(".github/workflows/paper-monitor.yml").read_text()
         self.assertIn("cron: '27,57 * * * *'", workflow)
