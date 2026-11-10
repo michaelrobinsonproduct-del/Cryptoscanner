@@ -56,8 +56,20 @@ def select_commit(lines, provenance):
             if not SHA40.fullmatch(sha):
                 raise ValueError("Malformed matching ledger commit")
             matches.append(sha)
-    if len(matches) != 1:
-        raise ValueError("Missing or duplicate immutable writer ledger commit")
+    if not matches:
+        raise ValueError("Missing immutable writer ledger commit")
+    if len(matches) > 2:
+        raise ValueError("Duplicate immutable writer ledger commit")
+    if len(matches) == 2:
+        # Historical writer versions reused the scan-append commit message
+        # for the subsequent results-only publication. The older of two
+        # adjacent matching commits is the genuine immutable scan append.
+        rows = lines.splitlines()
+        positions = [i for i, line in enumerate(rows)
+                     if line.partition(" ")[2] == subject]
+        if len(positions) != 2 or positions[1] != positions[0] + 1:
+            raise ValueError("Non-adjacent duplicate writer ledger commits")
+        return matches[1]
     return matches[0]
 
 
