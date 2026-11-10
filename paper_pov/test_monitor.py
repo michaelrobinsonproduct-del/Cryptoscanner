@@ -313,7 +313,8 @@ class PaperMonitorTests(unittest.TestCase):
         self.assertIn("'^paper: publish verified results '", workflow)
         self.assertIn('SCAN_COMMIT="$(git rev-parse "$TIP^")"', workflow)
         self.assertIn('git log -1 --format=%s "$SCAN_COMMIT" > /tmp/paper-ledger-message.txt', workflow)
-        self.assertIn('--commit "$SCAN_COMMIT^" --output /tmp/paper-monitor-previous.json', workflow)
+        self.assertIn('PREVIOUS_COMMIT="$(git rev-parse "$SCAN_COMMIT^")"', workflow)
+        self.assertIn('--commit "$PREVIOUS_COMMIT" --output /tmp/paper-monitor-previous.json', workflow)
         self.assertIn('--commit "$TIP" --output /tmp/paper-monitor-ledger.json', workflow)
         self.assertNotIn('--commit "$(git rev-parse refs/remotes/origin/paper-proof-ledger^)"', workflow)
 
