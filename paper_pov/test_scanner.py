@@ -69,6 +69,38 @@ class PaperScanTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "No fresh"):
             run(stale=True)
 
+    def test_illiquid_pairs_do_not_abort_other_valid_watch_candidates(self):
+        # One third of a fully delivered ticker universe can lack an executable
+        # quote. Those markets must abstain, not invalidate the remaining ones.
+        def api(path):
+            data = fixture()(path)
+            if path == "AssetPairs":
+                data.update({f"EX{i}USD": {"status": "online", "wsname": f"EX{i}/USD"}
+                             for i in range(15)})
+            elif path == "Ticker":
+                data.update({f"EX{i}USD": {"c": ["1"], "b": ["0"],
+                                            "a": ["1.1"], "o": "1",
+                                            "v": ["1", "1000"]}
+                             for i in range(15)})
+            return data
+        result = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(result["matched_tickers"], 40)
+        self.assertEqual(result["observed_markets"], 25)
+        self.assertEqual(result["rejected_invalid_ticker_values"], 15)
+        self.assertTrue(result["watch"])
+        self.assertFalse({f"EX{i}USD" for i in range(15)} &
+                         {w["pair"] for w in result["watch"]})
+
+    def test_universe_all_invalid_still_fails_closed(self):
+        def api(path):
+            data = fixture()(path)
+            if path == "Ticker":
+                for ticker in data.values():
+                    ticker["b"] = ["0"]
+            return data
+        with self.assertRaisesRegex(RuntimeError, "Insufficient valid ticker"):
+            scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+
     def test_insufficient_universe_coverage_fails_closed(self):
         with self.assertRaisesRegex(RuntimeError, "coverage"):
             run(coverage=True)
