@@ -21,7 +21,11 @@ RECOVERY_MARKER = "PAPER_RECOVERY_ATTEMPT:"
 # authenticated bot attempt must suppress recovery while GitHub is still
 # accepting/queuing that dispatch (before a writer run is visible).
 CADENCE_MARKER = "PAPER_CADENCE_ATTEMPT:"
-MIN_SUCCESS_AGE = dt.timedelta(minutes=45)
+MIN_SUCCESS_AGE = dt.timedelta(minutes=20)
+# The shared monitor uses a 35-minute alert grace. Recovery needs the
+# previous :20/:50 slot eligible after 15 minutes, not 35, because it is
+# scheduled at :12/:42 (22 minutes after the expected writer start).
+RECOVERY_GRACE_ADVANCE = dt.timedelta(minutes=20)
 RETRY_INTERVAL = dt.timedelta(minutes=90)
 CADENCE_RETRY_INTERVAL = dt.timedelta(minutes=45)
 
@@ -152,16 +156,16 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
     result["latest_completed_run_id"] = newest.get("id")
     result["latest_completed_conclusion"] = newest.get("conclusion")
     result["durable_anchor_conclusion"] = anchor.get("conclusion")
-    # Bounded retries: the latest failed attempt must also age >=45 minutes.
+    # Do not dispatch twice inside a still-active or recently finished scan window.
     if now - max(newest_at, latest_asof) < MIN_SUCCESS_AGE:
         return abstain("RECENT_ATTEMPT")
 
-    matured = scheduled_slots(now, 20, 30)
+    matured = scheduled_slots(now + RECOVERY_GRACE_ADVANCE, 20, 30)
     if not matured:
         return abstain("INSUFFICIENT_MATURED_SLOTS")
     scheduled_successes = [x for _, x in clean if x.get("event") == "schedule"
                            and x.get("status") == "completed" and x.get("conclusion") == "success"]
-    matched = matched_scheduled_slots(scheduled_successes, now, 20, 30)
+    matched = matched_scheduled_slots(scheduled_successes, now + RECOVERY_GRACE_ADVANCE, 20, 30)
     if matured[0] in matched:
         return abstain("MATURED_SLOT_COVERED")
     # A successful scheduled OR recovery-dispatched scan after the missing
