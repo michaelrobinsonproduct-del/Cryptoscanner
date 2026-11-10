@@ -69,11 +69,12 @@ jobs:
             if git log -1 --format=%s "$TIP" | grep -q '^paper: publish verified results '; then
               SCAN_COMMIT="$(git rev-parse "$TIP^")"
             fi
+            PREVIOUS_COMMIT="$(git rev-parse "$SCAN_COMMIT^")"
             git log -1 --format=%s "$SCAN_COMMIT" > /tmp/paper-ledger-message.txt
             if ! python -m paper_pov.segmented_repository export-git --repository . --commit "$TIP" --output /tmp/paper-monitor-ledger.json; then
               echo LEDGER_READ_UNAVAILABLE >> /tmp/paper-monitor-errors.txt
             fi
-            if ! python -m paper_pov.segmented_repository export-git --repository . --commit "$SCAN_COMMIT^" --output /tmp/paper-monitor-previous.json; then
+            if ! python -m paper_pov.segmented_repository export-git --repository . --commit "$PREVIOUS_COMMIT" --output /tmp/paper-monitor-previous.json; then
               echo PREVIOUS_READ_UNAVAILABLE >> /tmp/paper-monitor-errors.txt
             fi
           else
