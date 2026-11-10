@@ -60,16 +60,26 @@ jobs:
           from pathlib import Path
           from datetime import datetime, timedelta, timezone
           ledger = json.loads(Path("evidence/ledger.json").read_text())
-          cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
-          pairs = set()
+          now = datetime.now(timezone.utc)
+          # Kraken returns up to 720 five-minute OHLC rows (~60 hours).
+          # A 48h cutoff discards every already-mature 48h prediction.
+          cutoff = now - timedelta(hours=60)
+          matured = now - timedelta(hours=48)
+          coverage = {}
           for p in ledger.get("predictions", []):
               try:
                   stamp = datetime.fromisoformat((p.get("entry_utc") or p.get("as_of")).replace("Z", "+00:00"))
-                  if stamp >= cutoff and p.get("pair"):
-                      pairs.add(p["pair"])
+                  pair = p.get("pair")
+                  if cutoff <= stamp <= now and pair:
+                      values = coverage.setdefault(pair, [0, 0])
+                      values[0] += int(stamp <= matured)
+                      values[1] += 1
               except (ValueError, TypeError, AttributeError):
                   continue
-          Path("evidence/recent-pairs.json").write_text(json.dumps(sorted(pairs)[:30]))
+          # Prioritize source-backed 48h-mature rows under the existing 30-pair
+          # Kraken request cap, rather than selecting pairs alphabetically.
+          pairs = sorted(coverage, key=lambda pair: (-coverage[pair][0], -coverage[pair][1], pair))[:30]
+          Path("evidence/recent-pairs.json").write_text(json.dumps(pairs))
           PY
       - name: Capture real recent Kraken candles and outcomes
         run: |
