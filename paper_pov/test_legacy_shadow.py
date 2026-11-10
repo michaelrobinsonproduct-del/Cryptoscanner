@@ -85,6 +85,26 @@ class LegacyShadowTests(unittest.TestCase):
             legacy_shadow.scan(api=FakeKraken(), clock=lambda: NOW, sleep=lambda _: None,
                                run_id="123", source_sha="bad", trigger_paper_run_id="456")
 
+    def test_zero_bid_listings_do_not_abort_other_independent_signals(self):
+        api = FakeKraken()
+        for i in range(15):
+            key = "EX%02d" % i
+            api.pairs[key] = {"status": "online", "wsname": "EX%02d/USD" % i}
+            api.tickers[key] = {"c": ["2"], "b": ["0"], "a": ["2.1"],
+                                "o": "1.9", "v": ["10", "1000"], "t": ["1", "100"]}
+        report = run(api)
+        self.assertEqual(report["matched_tickers"], 40)
+        self.assertEqual(report["valid_tickers"], 25)
+        self.assertTrue(report["candidates"])
+        self.assertFalse(any(x["symbol"].startswith("EX") for x in report["candidates"]))
+
+    def test_all_invalid_independent_tickers_fail_closed(self):
+        api = FakeKraken()
+        for x in api.tickers.values():
+            x["b"] = ["0"]
+        with self.assertRaisesRegex(ValueError, "Insufficient executable"):
+            run(api)
+
     def test_incomplete_ticker_coverage_abstains(self):
         api = FakeKraken()
         api.tickers = dict(list(api.tickers.items())[:3])
