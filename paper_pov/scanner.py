@@ -40,8 +40,13 @@ def fetch(path):
         if response.status != 200:
             raise RuntimeError("Kraken HTTP status not 200")
         payload = json.load(response)
-    if not isinstance(payload, dict) or payload.get("error") or not isinstance(payload.get("result"), dict):
-        raise ValueError("Kraken response error or invalid schema")
+    if not isinstance(payload, dict):
+        raise ValueError("Kraken invalid response envelope at " + path.split("?")[0])
+    if payload.get("error"):
+        errors = payload["error"]
+        raise ValueError("Kraken API reported " + repr(errors)[:240] + " at " + path.split("?")[0])
+    if not isinstance(payload.get("result"), dict):
+        raise ValueError("Kraken invalid result schema at " + path.split("?")[0])
     return payload["result"]
 
 def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
@@ -77,15 +82,18 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     observations = []
     screened = []
     matched = 0
+    rejected = {"missing_ticker": 0, "invalid_ticker": 0, "invalid_values": 0, "parse_error": 0}
     for pair, name in sorted(eligible.items()):
         t = ticker.get(pair)
         if not isinstance(t, dict):
+            rejected["missing_ticker"] += 1
             continue
         matched += 1
         try:
             price, bid, ask, op, volume = (finite(t["c"][0]), finite(t["b"][0]),
                 finite(t["a"][0]), finite(t["o"]), finite(t["v"][1]))
             if min(price, bid, ask, op) <= 0 or ask < bid or volume < 0:
+                rejected["invalid_values"] += 1
                 continue
             # Kraken Ticker 'o' is today's UTC opening price, NOT the
             # rolling 24-hour opening price. Keep ranking arithmetic unchanged
@@ -96,6 +104,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             # Individually finite ticker inputs can overflow in arithmetic.
             # Never emit nonfinite market evidence or fail during JSON sealing.
             if not all(map(math.isfinite, (move_since_utc_open, spread, notional))):
+                rejected["invalid_values"] += 1
                 continue
             observations.append({"pair": pair, "symbol": name, "price": price,
                 "spread_bps": round(spread, 4), "notional_24h_usd": round(notional, 2),
@@ -110,11 +119,12 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                 "spread_bps": round(spread, 4),
                 "notional_24h_usd": round(notional, 2), "baseline_score": baseline})
         except (KeyError, ValueError, TypeError, IndexError, ZeroDivisionError):
+            rejected["parse_error"] += 1
             continue
     if matched < max(20, math.ceil(len(eligible) * 0.8)):
-        raise RuntimeError("Incomplete Kraken ticker universe coverage")
+        raise RuntimeError("Incomplete Kraken ticker universe coverage: " + json.dumps({"eligible": len(eligible), "matched": matched, "rejected": rejected}, sort_keys=True))
     if len(observations) < max(20, math.ceil(matched * 0.8)):
-        raise RuntimeError("Insufficient valid ticker observations")
+        raise RuntimeError("Insufficient valid ticker observations: " + json.dumps({"eligible": len(eligible), "matched": matched, "valid": len(observations), "rejected": rejected}, sort_keys=True))
     screened.sort(key=lambda x: (-x["baseline_score"], x["pair"]))
     selected = []
     seen = set()
