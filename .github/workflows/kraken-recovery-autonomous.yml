@@ -1,8 +1,6 @@
 name: Kraken Autonomous Recovery Gate
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '13,43 * * * *'
 permissions:
   contents: read
   issues: write
