@@ -39,8 +39,20 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(len(d["missed_matured_slots"]), 1)
         self.assertEqual(d["attempt_marker"], RECOVERY_MARKER + COMMIT)
 
-    def test_one_matured_missed_slot_recovers_after_35_minute_grace(self):
+    def test_one_matured_missed_slot_recovers_with_15_minute_grace(self):
         d = decision(now=dt.datetime(2026, 10, 31, 21, 27, tzinfo=UTC))
+        self.assertEqual((d["action"], d["reason"]),
+                         ("DISPATCH_EXISTING_WORKFLOW", "MATURED_SLOT_MISSED"))
+        self.assertEqual(d["missed_matured_slots"], ["2026-10-31T20:50:00+00:00"])
+
+    def test_recovery_at_42_detects_same_hour_20_missed_slot(self):
+        d = decision(now=dt.datetime(2026, 10, 31, 21, 42, tzinfo=UTC))
+        self.assertEqual((d["action"], d["reason"]),
+                         ("DISPATCH_EXISTING_WORKFLOW", "MATURED_SLOT_MISSED"))
+        self.assertEqual(d["missed_matured_slots"], ["2026-10-31T21:20:00+00:00"])
+
+    def test_recovery_at_12_detects_previous_hour_50_missed_slot(self):
+        d = decision(now=dt.datetime(2026, 10, 31, 21, 12, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]),
                          ("DISPATCH_EXISTING_WORKFLOW", "MATURED_SLOT_MISSED"))
         self.assertEqual(d["missed_matured_slots"], ["2026-10-31T20:50:00+00:00"])
@@ -57,7 +69,7 @@ class RecoveryTests(unittest.TestCase):
         state["observations"][0]["at"] = "2026-10-31T20:21:50+00:00"
         d = decision(runs=[scan(123, "2026-10-31T20:21:00Z", event="workflow_dispatch")],
                      ledger=seal(state),
-                     now=dt.datetime(2026, 10, 31, 21, 13, tzinfo=UTC))
+                     now=dt.datetime(2026, 10, 31, 20, 43, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]),
                          ("NO_DISPATCH", "DURABLE_SCAN_AFTER_MATURED_SLOT"))
 
@@ -70,17 +82,17 @@ class RecoveryTests(unittest.TestCase):
             ("paper-v1|" + asof + "|" + state["predictions"][0]["pair"]).encode()).hexdigest()
         state["observations"][0]["at"] = "2026-10-31T20:21:50+00:00"
         d = decision(runs=[scan(123, "2026-10-31T20:21:00Z")], ledger=seal(state),
-                     now=dt.datetime(2026, 10, 31, 21, 13, tzinfo=UTC))
+                     now=dt.datetime(2026, 10, 31, 20, 43, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]),
                          ("NO_DISPATCH", "MATURED_SLOT_COVERED"))
 
     def test_recent_success_does_not_dispatch(self):
-        d = decision(now=dt.datetime(2026, 10, 31, 20, 50, tzinfo=UTC))
+        d = decision(now=dt.datetime(2026, 10, 31, 20, 28, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "RECENT_ATTEMPT"))
 
     def test_delayed_scan_asof_prevents_premature_retry(self):
         # Run started 20:35, then produced immutable market data at 20:50.
-        # At 21:27, run creation is 52m old but market scan only 37m old.
+        # At 21:08, run creation is 33m old but market scan only 18m old.
         state = fixture()
         asof = "2026-10-31T20:50:00+00:00"
         state["runs"][0]["as_of"] = asof
@@ -91,7 +103,7 @@ class RecoveryTests(unittest.TestCase):
         state["observations"][0]["at"] = "2026-10-31T20:49:50+00:00"
         d = decision(runs=[scan(123, "2026-10-31T20:35:00Z")],
                      ledger=seal(state),
-                     now=dt.datetime(2026, 10, 31, 21, 27, tzinfo=UTC))
+                     now=dt.datetime(2026, 10, 31, 21, 8, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]),
                          ("NO_DISPATCH", "RECENT_ATTEMPT"))
 
@@ -110,7 +122,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(d["latest_completed_conclusion"], "failure")
 
     def test_recent_failed_attempt_must_cool_down(self):
-        d = decision(runs=[scan(), scan(124, "2026-10-31T23:00:00Z", conclusion="failure")])
+        d = decision(runs=[scan(), scan(124, "2026-10-31T23:12:00Z", conclusion="failure")])
         self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "RECENT_ATTEMPT"))
 
     def test_failed_after_ledger_push_is_durable_anchor(self):
@@ -122,7 +134,7 @@ class RecoveryTests(unittest.TestCase):
 
     def test_recent_durable_failed_run_suppresses_duplicate_scan(self):
         d = decision(runs=[scan(conclusion="failure")],
-                     now=dt.datetime(2026, 10, 31, 20, 50, tzinfo=UTC))
+                     now=dt.datetime(2026, 10, 31, 20, 28, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "RECENT_ATTEMPT"))
 
     def test_cancelled_or_ambiguous_newer_run_blocks(self):
