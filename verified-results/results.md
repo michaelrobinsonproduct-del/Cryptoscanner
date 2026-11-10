@@ -2,30 +2,30 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-10T06:33:15.247794+00:00
+**UTC as-of:** 2026-11-10T08:52:26.713828+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/42769087659
-**Source SHA:** 5485350d2a97636b4030746c73b926c2745740e1
-**Ledger commit:** 3a263e38d054621485309ce98858418283b63ff0
-**Ledger generation:** 228 (remote push/readback verified)
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/42785878140
+**Source SHA:** 47e99644e7d7ff00dca3e241f2bbbf508d9a3b56
+**Ledger commit:** b3d685d3871d6cbc3c064b16ed9c85ec21211d59
+**Ledger generation:** 229 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 624; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 606; valid market observations: 540; OHLC screened: 24.
+**Freshness:** Kraken public ticker client-observed, max quote age 8s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 624; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 606; valid market observations: 561; OHLC screened: 24.
 
 ## Top WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | Confidence / risk | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|
-| 1 | NIGHT/USD | 0.04294 | 76.206 | 79.832 | +6.08% | +0.78% | 0.25x | 4.7 | 2026-11-10T06:33:08.446201+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 2 | PEPE/USD | 5.295e-06 | 75.314 | 76.752 | +3.38% | +0.63% | 0.54x | 3.8 | 2026-11-10T06:33:08.446201+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 3 | TON/USD | 1.093 | 69.644 | 66.144 | +5.10% | +0.28% | 1.21x | 9.2 | 2026-11-10T06:33:08.446201+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 4 | XLM/USD | 0.14817 | 64.223 | 56.611 | +0.58% | +0.38% | 1.57x | 2.0 | 2026-11-10T06:33:08.446201+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 5 | XDC/USD | 0.03083 | 62.223 | 67.501 | +4.61% | -0.45% | 0.70x | 6.5 | 2026-11-10T06:33:08.446201+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 6 | TIA/USD | 0.4368 | 59.165 | 41.754 | +1.63% | +0.48% | 3.18x | 2.3 | 2026-11-10T06:33:08.446201+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 7 | ADA/USD | 0.178742 | 55.578 | 57.215 | +0.83% | +0.22% | 0.73x | 2.9 | 2026-11-10T06:33:08.446201+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 8 | ENA/USD | 0.1543 | 48.220 | 48.473 | +0.78% | +0.59% | 0.68x | 6.5 | 2026-11-10T06:33:08.446201+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 9 | PENGU/USD | 0.006348 | 39.995 | 32.918 | +0.54% | +0.27% | 1.57x | 4.7 | 2026-11-10T06:33:08.446201+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 10 | CAP/USD | 0.100663 | 33.671 | 42.250 | +1.83% | +0.16% | 0.06x | 6.1 | 2026-11-10T06:33:08.446201+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 1 | PEPE/USD | 5.329e-06 | 80.822 | 80.471 | +4.04% | -0.41% | 1.24x | 5.6 | 2026-11-10T08:52:18.604014+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 2 | NIGHT/USD | 0.04318 | 77.489 | 80.010 | +6.67% | -0.39% | 0.94x | 9.3 | 2026-11-10T08:52:18.604014+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 3 | XDC/USD | 0.03138 | 74.950 | 76.107 | +6.48% | -0.51% | 1.14x | 15.9 | 2026-11-10T08:52:18.604014+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 4 | ADA/USD | 0.178913 | 58.875 | 56.136 | +0.93% | +0.16% | 1.19x | 2.5 | 2026-11-10T08:52:18.604014+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 5 | CC/USD | 0.09245 | 52.936 | 40.254 | +1.07% | +0.03% | 2.25x | 4.3 | 2026-11-10T08:52:18.604014+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 6 | UNI/USD | 7.065 | 52.183 | 51.785 | +1.36% | +0.57% | 0.76x | 7.4 | 2026-11-10T08:52:18.604014+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 7 | XLM/USD | 0.147959 | 47.334 | 51.349 | +0.43% | +0.17% | 0.51x | 3.3 | 2026-11-10T08:52:18.604014+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 8 | TRX/USD | 0.318998 | 47.217 | 43.870 | +0.52% | -0.01% | 1.34x | 0.8 | 2026-11-10T08:52:18.604014+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 9 | HBAR/USD | 0.06704 | 41.126 | 37.201 | +0.46% | +0.15% | 1.32x | 6.0 | 2026-11-10T08:52:18.604014+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 10 | FET/USD | 0.1463 | 39.355 | 40.422 | +1.74% | +0.27% | 0.76x | 6.8 | 2026-11-10T08:52:18.604014+00:00 | NOT CALIBRATED / HIGH | WATCH |
 
 **Confidence:** uncalibrated research heuristics, NOT validated probabilities. **BUY:** none authorized. Numerical baseline/challenger scores are uncalibrated paper-only ranking values, not probabilities or validated improvement.
 
@@ -38,8 +38,8 @@
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 228; predictions: 2083; observations: 136954.
-- Matured sampled outcomes across 1/6/24/48h: 1189; gap abstentions: 5752. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 229; predictions: 2093; observations: 137515.
+- Matured sampled outcomes across 1/6/24/48h: 1189; gap abstentions: 5853. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
