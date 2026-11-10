@@ -278,7 +278,7 @@ jobs:
           # The canonical ledger and published results are already committed
           # and independently read back. Learning must never cause a healthy
           # paper scan to be reclassified as failed or trigger a second scan.
-          if gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/paper-ledger-learning.yml/dispatches" \\
+          if gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/paper-ledger-learning.yml/dispatches" \
               -f ref=main -f "inputs[paper_run_id]=${GITHUB_RUN_ID}"; then
             echo "PAPER_READ_ONLY_LEARNING_DISPATCH_ACCEPTED run=${GITHUB_RUN_ID}"
             echo "Read-only learning dispatched for verified writer ${GITHUB_RUN_ID}; its independent outcome remains to be verified." >> "${GITHUB_STEP_SUMMARY}"
@@ -288,7 +288,7 @@ jobs:
           fi
           # Existing independent legacy-inspired strategy (read only); the same
           # writer run ID binds its artifact to these canonical WATCH results.
-          if gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/paper-legacy-shadow.yml/dispatches" \\
+          if gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/paper-legacy-shadow.yml/dispatches" \
               -f ref=main -f "inputs[paper_run_id]=${GITHUB_RUN_ID}"; then
             echo "PAPER_READ_ONLY_LEGACY_DISPATCH_ACCEPTED run=${GITHUB_RUN_ID}"
             echo "Independent legacy shadow dispatched for verified writer ${GITHUB_RUN_ID}; independently verify its artifact before overlap stars." >> "${GITHUB_STEP_SUMMARY}"
