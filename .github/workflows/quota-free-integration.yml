@@ -1,8 +1,6 @@
 name: Cryptoscanner A-E completion integration gates
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '27 * * * *'
 permissions:
   actions: read
   contents: write
