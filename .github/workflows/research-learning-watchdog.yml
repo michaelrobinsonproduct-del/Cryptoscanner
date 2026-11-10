@@ -4,8 +4,6 @@ on:
   push:
     paths:
       - '.github/workflows/research-learning-watchdog.yml'
-  schedule:
-    - cron: '47 * * * *'
 permissions:
   contents: read
   actions: read
