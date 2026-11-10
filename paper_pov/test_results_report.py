@@ -95,7 +95,7 @@ class PaperResultsContracts(unittest.TestCase):
                     "10 * * * *; echo spoof", "40 * * * *\\n10 * * * *", True):
             with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "originating scheduled cron"):
                 self.report(cron=bad)
-        with self.assertRaisesRegex(ValueError, "Manual dispatch cannot claim"):
+        with self.assertRaisesRegex(ValueError, "Non-scheduled trigger cannot claim a scheduled cron"):
             self.report(event="workflow_dispatch", cron="10 * * * *")
 
     def test_single_writer_workflow_passes_github_schedule_as_data(self):

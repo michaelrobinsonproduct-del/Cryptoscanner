@@ -189,6 +189,12 @@ class RecoveryTests(unittest.TestCase):
         d = decision(runs=[dict(scan(), head_sha="f"*40)])
         self.assertEqual((d["action"], d["reason"]), ("BLOCKED", "LEDGER_NOT_LINKED_TO_RUN_SOURCE"))
 
+    def test_historical_issue_comment_writer_and_skipped_noop(self):
+        writer = dict(scan(), event="issue_comment")
+        skipped = dict(scan(124, "2026-10-31T22:00:00Z", conclusion="skipped"), event="issue_comment")
+        self.assertEqual(decision(runs=[writer])["action"], "DISPATCH_EXISTING_WORKFLOW")
+        self.assertEqual(decision(runs=[writer, skipped])["action"], "DISPATCH_EXISTING_WORKFLOW")
+
     def test_historical_completed_push_ci_is_not_a_scanner_run(self):
         # GitHub's real workflow history contains five old push-triggered CI
         # runs and later successful schedule runs. Legacy CI must not block

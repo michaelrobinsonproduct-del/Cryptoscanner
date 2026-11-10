@@ -77,7 +77,13 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
             if at > now + dt.timedelta(minutes=2):
                 return abstain("FUTURE_RUN_TIMESTAMP", True)
             event = item.get("event")
-            if event not in ("schedule", "workflow_dispatch"):
+            # Historical authenticated owner-heartbeat scans used issue_comment.
+            # Those successful/failed writer runs remain valid ledger anchors;
+            # no-op issue comments are not scanner attempts.
+            if (event == "issue_comment" and item.get("status") == "completed"
+                    and item.get("conclusion") == "skipped"):
+                continue
+            if event not in ("schedule", "workflow_dispatch", "issue_comment"):
                 # The public workflow previously ran on push. Those historical
                 # completed runs are NOT scanner writers, and must not disable
                 # missed-slot recovery forever. Ignore ONLY an unambiguously

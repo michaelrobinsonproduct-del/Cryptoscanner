@@ -7,13 +7,13 @@ PIPELINE = Path(__file__).resolve().parents[1] / ".github/workflows/paper-pipeli
 
 
 class MainOnlyPaperTriggerTests(unittest.TestCase):
-    def test_only_schedule_dispatch_and_authenticated_issue_heartbeat_can_trigger_writer(self):
+    def test_only_schedule_and_controller_dispatch_can_trigger_writer(self):
         text = PIPELINE.read_text()
         events = text.split("\npermissions:", 1)[0]
         self.assertIn("\n  workflow_dispatch:", events)
         self.assertIn("\n  schedule:", events)
-        self.assertIn("\n  issue_comment:", events)
-        self.assertIn("types: [created]", events)
+        self.assertNotIn("\n  issue_comment:", events)
+        self.assertNotIn("types: [created]", events)
         for forbidden in ("push:", "pull_request:", "repository_dispatch:"):
             self.assertNotIn(forbidden, events)
 
@@ -21,11 +21,7 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         text = PIPELINE.read_text()
         self.assertIn(
             "if: github.ref == 'refs/heads/main' && "
-            "(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || "
-            "(github.event_name == 'issue_comment' && github.event.issue.number == 34 && "
-            "github.event.comment.body == '/paper-cadence-heartbeat' && "
-            "github.event.comment.user.login == 'michaelrobinsonproduct-del' && "
-            "github.event.issue.pull_request == null))",
+            "(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')",
             text,
         )
         self.assertEqual(text.count("if: github.ref == 'refs/heads/main'"), 1)
