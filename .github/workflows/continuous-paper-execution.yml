@@ -1,8 +1,6 @@
 name: Continuous GitHub scanner execution (isolated research)
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '*/15 * * * *'
 permissions:
   contents: read
 concurrency:
