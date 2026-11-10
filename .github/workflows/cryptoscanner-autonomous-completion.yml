@@ -1,8 +1,6 @@
 name: Cryptoscanner autonomous completion (12-minute coding batches)
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '17 * * * *'
 permissions:
   contents: write
   pull-requests: write
