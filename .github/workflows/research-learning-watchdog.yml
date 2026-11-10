@@ -1,42 +1,41 @@
-name: Independent Kraken Learning Watchdog (research only)
+name: Independent Kraken Learning Watchdog (current paper learning, read only)
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '15,45 * * * *'
   push:
+    branches: [main]
     paths:
       - '.github/workflows/research-learning-watchdog.yml'
+      - 'paper_pov/learning_health.py'
+      - 'paper_pov/test_learning_health.py'
+  pull_request:
+    paths:
+      - '.github/workflows/research-learning-watchdog.yml'
+      - 'paper_pov/learning_health.py'
+      - 'paper_pov/test_learning_health.py'
 permissions:
   contents: read
   actions: read
-  issues: write
 concurrency:
-  group: independent-kraken-learning-watchdog
+  group: independent-kraken-paper-learning-health
   cancel-in-progress: false
 jobs:
   monitor:
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Checkout immutable research watchdog code
+      - name: Checkout exact learning-health code
         uses: actions/checkout@v4
         with:
-          ref: ddf6b7990b25720df8b21eeb69ec3062e1513f29
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify pinned code and watchdog failure-injection tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = 'ddf6b7990b25720df8b21eeb69ec3062e1513f29'
-          python -m compileall -q research/watchdog_learning.py research/test_watchdog_learning.py
-          python -m unittest discover -s research -p 'test_watchdog_learning.py' -v 2>&1 | tee /tmp/watchdog-tests.log
-          grep -q 'Ran 72 tests' /tmp/watchdog-tests.log
-          grep -q '^OK$' /tmp/watchdog-tests.log
-      - name: Check independent research health and verify issue delivery on alerts
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          python research/watchdog_learning.py
+      - name: Verify independent read-only learning health contracts
+        run: python -m unittest paper_pov.test_learning_health -v
+      - name: Inspect actual current paper learning and verified artifacts
+        run: python -m paper_pov.learning_health
