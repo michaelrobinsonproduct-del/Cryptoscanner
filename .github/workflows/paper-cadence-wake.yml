@@ -55,6 +55,11 @@ jobs:
           BASE="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
           echo "$BASE" > /tmp/cadence-ledger-commit.txt
           git log -1 --format=%s "$BASE" > /tmp/cadence-ledger-message.txt
+          # Canonical results publication is a results-only child of the immutable scan.
+          # Resolve the scan parent's subject while retaining the latest ledger tip for CAS.
+          if git log -1 --format=%s "$BASE" | grep -q '^paper: publish verified results '; then
+            git log -1 --format=%s "${BASE}^" > /tmp/cadence-ledger-message.txt
+          fi
           if git cat-file -e "$BASE:paper-segment-manifest.json" 2>/dev/null; then
             CHECKPOINT="$(git show "$BASE:paper-segment-manifest.json" | python -c 'import json,sys;print(json.load(sys.stdin)["checkpoint"]["git_commit"])')"
             git cat-file -e "$CHECKPOINT^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$CHECKPOINT"

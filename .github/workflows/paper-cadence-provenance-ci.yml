@@ -18,6 +18,8 @@ on:
       - 'paper_pov/test_slot_recovery_reconciliation.py'
       - 'paper_pov/SLOT_CLAIM_RECOVERY.md'
       - '.github/workflows/paper-cadence-provenance-ci.yml'
+      - '.github/workflows/paper-cadence-wake.yml'
+      - '.github/workflows/paper-recovery.yml'
 permissions:
   contents: read
   actions: read
