@@ -77,6 +77,8 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     observations = []
     screened = []
     matched = 0
+    rejected_invalid_values = 0
+    rejected_parse = 0
     for pair, name in sorted(eligible.items()):
         t = ticker.get(pair)
         if not isinstance(t, dict):
@@ -86,6 +88,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             price, bid, ask, op, volume = (finite(t["c"][0]), finite(t["b"][0]),
                 finite(t["a"][0]), finite(t["o"]), finite(t["v"][1]))
             if min(price, bid, ask, op) <= 0 or ask < bid or volume < 0:
+                rejected_invalid_values += 1
                 continue
             # Kraken Ticker 'o' is today's UTC opening price, NOT the
             # rolling 24-hour opening price. Keep ranking arithmetic unchanged
@@ -96,6 +99,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             # Individually finite ticker inputs can overflow in arithmetic.
             # Never emit nonfinite market evidence or fail during JSON sealing.
             if not all(map(math.isfinite, (move_since_utc_open, spread, notional))):
+                rejected_invalid_values += 1
                 continue
             observations.append({"pair": pair, "symbol": name, "price": price,
                 "spread_bps": round(spread, 4), "notional_24h_usd": round(notional, 2),
@@ -110,11 +114,18 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                 "spread_bps": round(spread, 4),
                 "notional_24h_usd": round(notional, 2), "baseline_score": baseline})
         except (KeyError, ValueError, TypeError, IndexError, ZeroDivisionError):
+            rejected_parse += 1
             continue
     if matched < max(20, math.ceil(len(eligible) * 0.8)):
         raise RuntimeError("Incomplete Kraken ticker universe coverage")
-    if len(observations) < max(20, math.ceil(matched * 0.8)):
-        raise RuntimeError("Insufficient valid ticker observations")
+    # AssetPairs "online" and Ticker presence do not guarantee an executable
+    # bid/ask or a usable UTC open. Keep invalid individual quotes excluded,
+    # but do not treat illiquid pairs as a failure of the entire market feed.
+    # The separate matched/eligible >=80% gate above still detects missing data.
+    if len(observations) < 20:
+        raise RuntimeError("Insufficient valid ticker observations: " +
+                           json.dumps({"eligible": len(eligible), "matched": matched,
+                                       "valid": len(observations)}, sort_keys=True))
     screened.sort(key=lambda x: (-x["baseline_score"], x["pair"]))
     selected = []
     seen = set()
@@ -208,7 +219,10 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
         "eligible_pairs": len(eligible), "online_usd_pairs": online_usd_pairs,
         "excluded_stablecoin_pairs": excluded_stablecoin_pairs,
         "excluded_other_pairs": excluded_other_pairs, "matched_tickers": matched,
-        "observed_markets": len(observations), "ohlc_screened": len(selected),
+        "observed_markets": len(observations),
+        "rejected_invalid_ticker_values": rejected_invalid_values,
+        "rejected_ticker_parse": rejected_parse,
+        "ohlc_screened": len(selected),
         "watch": watch, "observations": observations, "abstentions": abstentions,
         "forward_labels": 0, "held_out_lift": None, "production_applied": False}
 
