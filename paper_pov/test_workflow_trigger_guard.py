@@ -45,5 +45,24 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertNotIn("railway", text.lower())
 
 
+    def test_exact_writer_dispatches_existing_read_only_learning_after_publication(self):
+        text = PIPELINE.read_text()
+        learning = (PIPELINE.parent / "paper-ledger-learning.yml").read_text()
+        dispatch = "actions/workflows/paper-ledger-learning.yml/dispatches"
+        self.assertEqual(text.count(dispatch), 1)
+        self.assertIn("  actions: write", text)
+        self.assertLess(text.index("PAPER_CANONICAL_RESULTS_REMOTE_READBACK_VERIFIED"),
+                        text.index(dispatch))
+        self.assertLess(text.index("PAPER_ISSUE_READBACK_VERIFIED"),
+                        text.index(dispatch))
+        self.assertIn('inputs[paper_run_id]=${GITHUB_RUN_ID}', text)
+        self.assertIn("PAPER_READ_ONLY_LEARNING_DISPATCH_FAILED", text)
+        self.assertNotIn("  workflow_run:", learning)
+        self.assertIn("  workflow_dispatch:", learning)
+        self.assertIn("  contents: read", learning)
+        self.assertNotIn("  contents: write", learning)
+        self.assertNotIn("git push", learning)
+
+
 if __name__ == "__main__":
     unittest.main()
