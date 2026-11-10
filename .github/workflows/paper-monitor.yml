@@ -62,11 +62,18 @@ jobs:
           fi
           if python -m paper_pov.git_ledger_fetch; then
             git rev-parse refs/remotes/origin/paper-proof-ledger > /tmp/paper-ledger-commit.txt
-            git log -1 --format=%s refs/remotes/origin/paper-proof-ledger > /tmp/paper-ledger-message.txt
-            if ! python -m paper_pov.segmented_repository export-git --repository . --commit "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" --output /tmp/paper-monitor-ledger.json; then
+            TIP="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+            SCAN_COMMIT="$TIP"
+            # Published results are a read-only child of the immutable scan.
+            # Compare the last TWO writer generations, not publication vs writer.
+            if git log -1 --format=%s "$TIP" | grep -q '^paper: publish verified results '; then
+              SCAN_COMMIT="$(git rev-parse "$TIP^")"
+            fi
+            git log -1 --format=%s "$SCAN_COMMIT" > /tmp/paper-ledger-message.txt
+            if ! python -m paper_pov.segmented_repository export-git --repository . --commit "$TIP" --output /tmp/paper-monitor-ledger.json; then
               echo LEDGER_READ_UNAVAILABLE >> /tmp/paper-monitor-errors.txt
             fi
-            if ! python -m paper_pov.segmented_repository export-git --repository . --commit "$(git rev-parse refs/remotes/origin/paper-proof-ledger^)" --output /tmp/paper-monitor-previous.json; then
+            if ! python -m paper_pov.segmented_repository export-git --repository . --commit "$SCAN_COMMIT^" --output /tmp/paper-monitor-previous.json; then
               echo PREVIOUS_READ_UNAVAILABLE >> /tmp/paper-monitor-errors.txt
             fi
           else
