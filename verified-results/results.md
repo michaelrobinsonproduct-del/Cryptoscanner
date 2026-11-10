@@ -2,32 +2,32 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-10T15:37:48.720122+00:00
+**UTC as-of:** 2026-11-10T16:04:16.701132+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/42846066070
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/42850556701
 **Source SHA:** 3774b902ccb4e4fd5507499dc7c96ebbb4185329
-**Ledger commit:** acf5cb95641e8bee094702b72cfc4f5292ab2989
-**Ledger generation:** 238 (remote push/readback verified)
+**Ledger commit:** c1255f969af68293b463ede3d6e051101f0595a4
+**Ledger generation:** 239 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 6s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 624; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 606; valid market observations: 591; OHLC screened: 16.
+**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 624; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 606; valid market observations: 593; OHLC screened: 16.
 
 ## Top WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | Confidence / risk | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|
-| 1 | PLAY/USD | 0.008555 | 62.567 | 53.761 | +4.16% | -1.24% | 5.78x | 12.9 | 2026-11-10T15:37:42.256676+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 2 | XDC/USD | 0.03062 | 58.590 | 62.231 | +3.90% | -0.35% | 0.81x | 9.8 | 2026-11-10T15:37:42.256676+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 3 | PEPE/USD | 5.269e-06 | 52.311 | 68.448 | +2.87% | -1.90% | 0.34x | 13.3 | 2026-11-10T15:37:42.256676+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 4 | TON/USD | 1.092 | 48.621 | 60.085 | +5.00% | -1.44% | 0.57x | 18.3 | 2026-11-10T15:37:42.256676+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 5 | NIGHT/USD | 0.04181 | 44.936 | 60.295 | +3.29% | -2.28% | 0.60x | 7.2 | 2026-11-10T15:37:42.256676+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 6 | LIGHTER/USD | 3.326 | 43.261 | 48.494 | +2.88% | -1.79% | 1.37x | 12.0 | 2026-11-10T15:37:42.256676+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 7 | PLUME/USD | 0.01308 | 39.246 | 30.623 | +2.19% | -1.28% | 12.57x | 30.8 | 2026-11-10T15:37:42.256676+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 8 | TRX/USD | 0.318965 | 37.886 | 42.449 | +0.51% | -0.09% | 0.59x | 0.1 | 2026-11-10T15:37:42.256676+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 9 | XPL/USD | 0.0527 | 29.372 | 34.663 | +1.74% | -0.93% | 0.94x | 19.0 | 2026-11-10T15:37:42.256676+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 10 | ZRO/USD | 1.499 | 27.824 | 41.534 | +1.56% | -2.00% | 0.63x | 20.0 | 2026-11-10T15:37:42.256676+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 11 | KAS/USD | 0.02986 | 24.610 | 29.026 | +0.40% | -1.37% | 1.25x | 13.4 | 2026-11-10T15:37:42.256676+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 12 | UAI/USD | 0.03938 | 24.587 | 30.416 | +2.13% | -1.49% | 1.16x | 35.9 | 2026-11-10T15:37:42.256676+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 1 | UAI/USD | 0.04097 | 73.547 | 58.982 | +6.25% | +2.44% | 1.24x | 36.6 | 2026-11-10T16:04:12.015505+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 2 | PEPE/USD | 5.234e-06 | 71.759 | 68.394 | +2.19% | +0.46% | 1.11x | 3.8 | 2026-11-10T16:04:12.015505+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 3 | PLAY/USD | 0.008609 | 69.943 | 49.139 | +4.82% | +1.16% | 31.54x | 31.4 | 2026-11-10T16:04:12.015505+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 4 | NIGHT/USD | 0.04128 | 64.388 | 52.222 | +1.98% | +0.44% | 2.00x | 7.3 | 2026-11-10T16:04:12.015505+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 5 | TON/USD | 1.103 | 63.114 | 63.069 | +6.06% | +1.57% | 0.22x | 27.2 | 2026-11-10T16:04:12.015505+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 6 | CAP/USD | 0.101064 | 61.453 | 39.775 | +2.23% | +1.34% | 7.28x | 26.4 | 2026-11-10T16:04:12.015505+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 7 | XDC/USD | 0.03021 | 59.237 | 49.200 | +2.51% | -0.46% | 2.23x | 16.6 | 2026-11-10T16:04:12.015505+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 8 | XPL/USD | 0.0526 | 59.171 | 34.462 | +1.54% | +1.94% | 31.65x | 19.0 | 2026-11-10T16:04:12.015505+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 9 | ZRO/USD | 1.49 | 58.319 | 38.580 | +0.95% | +0.95% | 5.48x | 20.1 | 2026-11-10T16:04:12.015505+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 10 | JUP/USD | 0.25347 | 57.812 | 36.413 | +0.32% | +1.28% | 53.51x | 18.9 | 2026-11-10T16:04:12.015505+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 11 | LIGHTER/USD | 3.326 | 51.055 | 45.864 | +2.88% | +1.74% | 0.65x | 18.0 | 2026-11-10T16:04:12.015505+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 12 | ATOM/USD | 1.3812 | 44.896 | 30.535 | +0.76% | +1.14% | 1.87x | 12.3 | 2026-11-10T16:04:12.015505+00:00 | NOT CALIBRATED / HIGH | WATCH |
 
 **Confidence:** uncalibrated research heuristics, NOT validated probabilities. **BUY:** none authorized. Numerical baseline/challenger scores are uncalibrated paper-only ranking values, not probabilities or validated improvement.
 
@@ -40,14 +40,14 @@
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 238; predictions: 2183; observations: 142780.
-- Matured sampled outcomes across 1/6/24/48h: 1223; gap abstentions: 6135. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 239; predictions: 2195; observations: 143373.
+- Matured sampled outcomes across 1/6/24/48h: 1235; gap abstentions: 6145. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 2; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 1; details in immutable scan JSON artifact.
 - Storage: checksum-sealed ledger pushed non-force and read back before this report. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
