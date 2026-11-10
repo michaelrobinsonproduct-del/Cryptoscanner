@@ -300,9 +300,10 @@ class RecoveryTests(unittest.TestCase):
                         workflow.index("PAPER_RECOVERY_ATTEMPT_READBACK_VERIFIED"))
         self.assertLess(workflow.index("PAPER_RECOVERY_ATTEMPT_READBACK_VERIFIED"),
                         workflow.index("/tmp/paper-recovery-runs-final.json"))
-        self.assertIn("github.event.workflow_run.event == 'schedule'", workflow)
-        self.assertIn("github.event.workflow_run.head_branch == 'main'", workflow)
-        self.assertIn("github.event.workflow_run.conclusion == 'success'", workflow)
+        # Only the dedicated recovery schedule/manual path may request a retry;
+        # monitor/audit completion must not spawn another independent controller.
+        self.assertNotIn("workflow_run:", workflow)
+        self.assertIn("cron: '12,42 * * * *'", workflow)
         self.assertNotIn("git push", workflow)
         self.assertNotIn("railway", workflow.lower())
 
