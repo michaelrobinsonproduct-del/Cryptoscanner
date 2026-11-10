@@ -16,6 +16,8 @@ on:
       - 'paper_pov/heldout_outcome_adapter.py'
       - 'paper_pov/test_historical_paper_cohort.py'
       - 'paper_pov/test_public_ledger_learning.py'
+      - 'paper_pov/rolling_kraken_candles.py'
+      - 'paper_pov/test_rolling_kraken_candles.py'
       - '.github/workflows/paper-ledger-learning.yml'
 permissions:
   contents: read
@@ -33,7 +35,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Focused ledger schema acceptance
-        run: python -m unittest paper_pov.test_public_ledger_learning paper_pov.test_historical_paper_cohort -v
+        run: python -m unittest paper_pov.test_public_ledger_learning paper_pov.test_historical_paper_cohort paper_pov.test_rolling_kraken_candles -v
       - name: Select latest persisted public paper ledger
         env:
           REQUESTED_RUN: ${{ inputs.paper_run_id }}
@@ -81,9 +83,27 @@ jobs:
           pairs = sorted(coverage, key=lambda pair: (-coverage[pair][0], -coverage[pair][1], pair))[:30]
           Path("evidence/recent-pairs.json").write_text(json.dumps(pairs))
           PY
-      - name: Capture real recent Kraken candles and outcomes
+      - name: Carry forward observed Kraken candles from existing learning artifact
         run: |
-          python -m paper_pov.kraken_observed_candles evidence/recent-pairs.json --output evidence/kraken-candles.json
+          set -euo pipefail
+          python -m paper_pov.kraken_observed_candles evidence/recent-pairs.json --output evidence/kraken-candles-fresh.json
+          # Reuse existing read-only learning artifacts: this is not another writer.
+          mkdir -p evidence/prior
+          PRIOR_RUN="$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
+            --jq '[.artifacts[] | select(.expired == false and (.name | startswith("public-paper-learning-"))) | .workflow_run.id] | first // empty' || true)"
+          if [ -n "$PRIOR_RUN" ]; then
+            if ! gh run download "$PRIOR_RUN" -n "public-paper-learning-$PRIOR_RUN" -D evidence/prior; then
+              echo "::warning::ROLLING_HISTORY_PRIOR_ARTIFACT_UNAVAILABLE; proceeding with fresh observations only"
+            fi
+          else
+            echo "::notice::ROLLING_HISTORY_FIRST_RUN_NO_PRIOR_ARTIFACT"
+          fi
+          python -m paper_pov.rolling_kraken_candles \
+            --fresh evidence/kraken-candles-fresh.json \
+            --previous evidence/prior/kraken-candles.json \
+            --output evidence/kraken-candles.json
+      - name: Reconstruct only authentic completed Kraken outcomes and shadow evidence
+        run: |
           python -m paper_pov.observed_kraken_outcomes evidence/ledger.json evidence/kraken-candles.json --output evidence/observed-outcomes.json
           python -m paper_pov.observed_shadow_handoff evidence/ledger.json evidence/observed-outcomes.json --candles-json evidence/kraken-candles.json --output evidence/shadow-handoff.json
       - name: Publish shadow-learning decision alongside paper results
