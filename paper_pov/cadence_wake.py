@@ -117,6 +117,8 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, main_s
             created = instant(run["created_at"])
             if created > now + CLOCK_SKEW:
                 return abstain("FUTURE_RUN_TIMESTAMP", True)
+            if run.get("event") == "issue_comment" and run.get("status") == "completed" and run.get("conclusion") == "skipped":
+                continue
             if run.get("event") not in ("schedule", "workflow_dispatch", "issue_comment"):
                 if (run.get("event") == "push" and
                         isinstance(run.get("head_branch"), str) and run["head_branch"].strip() and
