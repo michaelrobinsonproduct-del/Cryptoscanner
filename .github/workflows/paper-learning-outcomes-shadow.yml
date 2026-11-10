@@ -169,6 +169,11 @@ jobs:
           BASE="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
           printf '%s\n' "$BASE" > /tmp/learning-fallback-ledger-commit.txt
           git log -1 --format=%s "$BASE" > /tmp/learning-fallback-ledger-message.txt
+          # Results-only publication is a child of the immutable writer commit.
+          # Keep the latest tip for manifest and CAS, but use the scan parent for provenance.
+          if git log -1 --format=%s "$BASE" | grep -q '^paper: publish verified results '; then
+            git log -1 --format=%s "${BASE}^" > /tmp/learning-fallback-ledger-message.txt
+          fi
           git show "$BASE:paper-segment-manifest.json" > /tmp/learning-fallback-manifest.json
           CHECKPOINT="$(python -c 'import json;print(json.load(open("/tmp/learning-fallback-manifest.json"))["checkpoint"]["git_commit"])')"
           git cat-file -e "$CHECKPOINT^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$CHECKPOINT"
