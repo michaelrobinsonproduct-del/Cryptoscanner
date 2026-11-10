@@ -43,11 +43,11 @@ def args():
 
 CANDIDATE = {"action": "DISPATCH_EXISTING_WORKFLOW",
              "reason": "INDEPENDENT_CADENCE_DUE",
-             "source_sha": SHA, "target_slot": "2026-11-02T19:00:00+00:00",
+             "source_sha": SHA, "target_slot": "2026-11-02T19:20:00+00:00",
              "attempt_marker": "PAPER_CADENCE_ATTEMPT:" + "a" * 40,
              "ledger_generation": 55, "anchor_run_id": 41473947157}
 CANDIDATE["decision_sha256"] = hashlib.sha256(
-    ("a" * 40 + "|41473947157|2026-11-02T19:00:00+00:00|" + SHA).encode()
+    ("a" * 40 + "|41473947157|2026-11-02T19:20:00+00:00|" + SHA).encode()
 ).hexdigest()
 
 
@@ -198,7 +198,7 @@ class IndependentWakeTests(unittest.TestCase):
 
     def test_candidate_outside_slot_grace_abstains(self):
         a = args()
-        a["now"] = NOW.replace(minute=29, second=1)
+        a["now"] = NOW.replace(minute=49, second=1)
         a["event"]["comment"]["created_at"] = a["now"].isoformat()
         with patch("paper_pov.independent_wake_rehearsal.decide", return_value=CANDIDATE):
             self.assertEqual(rehearse(**a)["reason"], "UNBOUND_CANDIDATE_SLOT_OR_DECISION")

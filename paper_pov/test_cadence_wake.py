@@ -88,7 +88,7 @@ class CadenceWakeTests(unittest.TestCase):
                          ("DISPATCH_EXISTING_WORKFLOW", "INDEPENDENT_CADENCE_DUE"))
         self.assertEqual(d["attempt_marker"], MARKER + COMMIT)
         self.assertEqual(d["ledger_generation"], 1)
-        self.assertEqual(d["target_slot"], "2026-10-31T23:00:00+00:00")
+        self.assertEqual(d["target_slot"], "2026-10-31T22:50:00+00:00")
 
     def test_delayed_previous_scan_18_minutes_ago_does_not_block_new_slot(self):
         # A delayed :00 scan sealed at :12 must not suppress the :30 slot.
@@ -108,11 +108,37 @@ class CadenceWakeTests(unittest.TestCase):
                          ("DISPATCH_EXISTING_WORKFLOW", "INDEPENDENT_CADENCE_DUE"))
 
     def test_30_minute_slot_mapping(self):
-        self.assertEqual(slot_at(dt.datetime(2026, 11, 1, 11, 35, tzinfo=UTC)).minute, 30)
-        self.assertEqual(slot_at(dt.datetime(2026, 11, 1, 11, 29, tzinfo=UTC)).minute, 0)
+        self.assertEqual(slot_at(dt.datetime(2026, 11, 1, 11, 35, tzinfo=UTC)).minute, 20)
+        self.assertEqual(slot_at(dt.datetime(2026, 11, 1, 11, 29, tzinfo=UTC)).minute, 20)
+
+    def test_heartbeat_25_past_recovers_missed_20_past_slot(self):
+        # Regression: at :25 the old :00/:30 alignment incorrectly said the
+        # :00 scan already covered the slot even though :20 had been missed.
+        import hashlib
+        from paper_pov.ledger import seal
+        state = fixture()
+        asof = "2026-10-31T23:06:00+00:00"
+        state["runs"][0]["as_of"] = asof
+        state["predictions"][0]["as_of"] = asof
+        state["predictions"][0]["prediction_id"] = hashlib.sha256(
+            ("paper-v1|" + asof + "|" + state["predictions"][0]["pair"]).encode()
+        ).hexdigest()
+        state["observations"][0]["at"] = "2026-10-31T23:05:50+00:00"
+        d = decision(runs=[scan(123, "2026-10-31T23:05:00Z")],
+                     ledger=seal(state),
+                     now=dt.datetime(2026, 10, 31, 23, 25, tzinfo=UTC))
+        self.assertEqual(d["target_slot"], "2026-10-31T23:20:00+00:00")
+        self.assertEqual((d["action"], d["reason"]),
+                         ("DISPATCH_EXISTING_WORKFLOW", "INDEPENDENT_CADENCE_DUE"))
+
+    def test_heartbeat_55_past_targets_50_past_slot(self):
+        self.assertEqual(slot_at(dt.datetime(2026, 11, 1, 11, 55, tzinfo=UTC)),
+                         dt.datetime(2026, 11, 1, 11, 50, tzinfo=UTC))
+        self.assertEqual(slot_at(dt.datetime(2026, 11, 1, 12, 4, tzinfo=UTC)),
+                         dt.datetime(2026, 11, 1, 11, 50, tzinfo=UTC))
 
     def test_stale_external_command_window_abstains(self):
-        d = decision(now=dt.datetime(2026, 10, 31, 23, 29, 1, tzinfo=UTC))
+        d = decision(now=dt.datetime(2026, 10, 31, 23, 49, 1, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]), ("NO_DISPATCH", "CADENCE_SLOT_TOO_LATE"))
 
     def test_external_worker_at_25_past_is_within_half_hour(self):
