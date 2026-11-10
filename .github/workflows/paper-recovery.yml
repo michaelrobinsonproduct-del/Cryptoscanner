@@ -1,13 +1,8 @@
 name: Paper missed-slot recovery controller (dispatch existing writer only)
 on:
-  workflow_run:
-    workflows:
-      - Independent Public Paper Scan Health Monitor (read-only)
-      - Independent Paper Forward Outcome Audit
-    types: [completed]
   workflow_dispatch:
   schedule:
-    - cron: '18,48 * * * *'
+    - cron: '12,42 * * * *'
 permissions:
   contents: read
   actions: write
@@ -19,11 +14,7 @@ jobs:
   decide-and-request:
     if: >-
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.head_branch == 'main' &&
-       github.event.workflow_run.event == 'schedule' &&
-       github.event.workflow_run.conclusion == 'success'))
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:

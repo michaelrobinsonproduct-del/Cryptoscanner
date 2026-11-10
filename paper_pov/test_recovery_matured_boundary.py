@@ -10,22 +10,22 @@ from paper_pov.test_monitor import fixture
 from paper_pov.test_recovery import COMMIT, BOT, decision, scan
 
 
-def durable_at_1012():
+def durable_at_1022():
     state = fixture()
-    asof = "2026-11-01T10:12:59+00:00"
+    asof = "2026-11-01T10:22:59+00:00"
     state["runs"][0]["as_of"] = asof
     state["predictions"][0]["as_of"] = asof
     state["predictions"][0]["prediction_id"] = hashlib.sha256(
         ("paper-v1|" + asof + "|" + state["predictions"][0]["pair"]).encode()
     ).hexdigest()
-    state["observations"][0]["at"] = "2026-11-01T10:12:50+00:00"
+    state["observations"][0]["at"] = "2026-11-01T10:22:50+00:00"
     return seal(state)
 
 
 class RecoveryLiveBoundaryTests(unittest.TestCase):
     def setUp(self):
-        self.ledger = durable_at_1012()
-        self.anchor = scan(123, "2026-11-01T10:11:01Z",
+        self.ledger = durable_at_1022()
+        self.anchor = scan(123, "2026-11-01T10:21:01Z",
                            event="workflow_dispatch")
 
     def at(self, hour, minute, second=0, runs=None, comments=None):
@@ -36,20 +36,20 @@ class RecoveryLiveBoundaryTests(unittest.TestCase):
             now=dt.datetime(2026, 11, 1, hour, minute, second, tzinfo=UTC),
         )
 
-    def test_real_1111_abstention_then_1039_slot_matures_at_1114(self):
-        # A 10:12 durable scan covers the last mature 10:09 slot at 11:11.
+    def test_real_1111_abstention_then_1050_slot_matures_at_1125(self):
+        # A 10:22 durable scan covers the last mature 10:20 slot at 11:11.
         before = self.at(11, 11, 53)
         self.assertEqual((before["action"], before["reason"]),
                          ("NO_DISPATCH", "DURABLE_SCAN_AFTER_MATURED_SLOT"))
         self.assertEqual(before["missed_matured_slots"], [])
-        # The 10:39 slot becomes mature exactly 35 minutes later, at 11:14.
-        still_early = self.at(11, 13, 59)
+        # The 10:50 slot becomes mature exactly 35 minutes later, at 11:25.
+        still_early = self.at(11, 24, 59)
         self.assertEqual(still_early["action"], "NO_DISPATCH")
-        due = self.at(11, 14)
+        due = self.at(11, 25)
         self.assertEqual((due["action"], due["reason"]),
                          ("DISPATCH_EXISTING_WORKFLOW", "MATURED_SLOT_MISSED"))
         self.assertEqual(due["missed_matured_slots"],
-                         ["2026-11-01T10:39:00+00:00"])
+                         ["2026-11-01T10:50:00+00:00"])
 
     def test_active_writer_blocks_newly_matured_slot(self):
         active = scan(124, "2026-11-01T11:35:00Z",

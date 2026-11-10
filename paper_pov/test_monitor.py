@@ -65,6 +65,8 @@ class PaperMonitorTests(unittest.TestCase):
 
     def test_one_missed_slot_not_two(self):
         result = self.check(now="2026-10-31T21:27:00+00:00",
+                            scans=payload(run(123, "2026-10-31T20:10:00Z"),
+                                          run(124, "2026-10-31T20:51:00Z")),
                             audits=payload(run(456, "2026-10-31T21:22:00Z")))
         self.assertNotIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])
 
@@ -93,9 +95,9 @@ class PaperMonitorTests(unittest.TestCase):
                             audits=payload(run(456, "2026-10-31T21:22:00Z")))
         self.assertIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])
 
-    def test_valid_39_slot_prevents_false_two_missed_alert(self):
+    def test_valid_50_slot_prevents_false_two_missed_alert(self):
         scans = payload(run(123, "2026-10-31T20:10:00Z"),
-                        run(124, "2026-10-31T20:40:00Z"))
+                        run(124, "2026-10-31T20:51:00Z"))
         result = self.check(now="2026-10-31T21:57:00+00:00", scans=scans,
                             audits=payload(run(456, "2026-10-31T21:22:00Z")))
         self.assertNotIn("PAPER_SCAN_TWO_MISSED_SLOTS", result["alerts"])

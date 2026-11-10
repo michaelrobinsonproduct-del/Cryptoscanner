@@ -156,12 +156,12 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
     if now - max(newest_at, latest_asof) < MIN_SUCCESS_AGE:
         return abstain("RECENT_ATTEMPT")
 
-    matured = scheduled_slots(now, 9, 30)
+    matured = scheduled_slots(now, 20, 30)
     if not matured:
         return abstain("INSUFFICIENT_MATURED_SLOTS")
     scheduled_successes = [x for _, x in clean if x.get("event") == "schedule"
                            and x.get("status") == "completed" and x.get("conclusion") == "success"]
-    matched = matched_scheduled_slots(scheduled_successes, now, 9, 30)
+    matched = matched_scheduled_slots(scheduled_successes, now, 20, 30)
     if matured[0] in matched:
         return abstain("MATURED_SLOT_COVERED")
     # A successful scheduled OR recovery-dispatched scan after the missing

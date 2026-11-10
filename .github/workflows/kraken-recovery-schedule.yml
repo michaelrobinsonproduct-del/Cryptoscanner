@@ -1,8 +1,6 @@
 name: Scheduled Kraken Recovery Research (isolated)
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '3,33 * * * *'
 permissions:
   contents: write
 concurrency:

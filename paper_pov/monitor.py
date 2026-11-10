@@ -31,7 +31,7 @@ def instant(value):
 
 
 def scheduled_slots(now, minute, cadence_minutes=60):
-    """Matured UTC slots, newest first. Scanner :09/:39; audit remains hourly."""
+    """Matured UTC slots, newest first. Scanner :20/:50; audit remains hourly."""
     if cadence_minutes not in (30, 60) or not 0 <= minute < 30:
         raise ValueError("Unsupported monitor cadence")
     clock = now.astimezone(UTC)
@@ -111,7 +111,7 @@ def evaluate(scan_payload, audit_payload, ledger, previous, ledger_commit,
         raise ValueError("Monitor clock must be timezone aware")
     now = now.astimezone(UTC)
     alerts = ["PAPER_EVIDENCE_" + str(x) for x in collection_errors]
-    scan_runs = assess_runs(scan_payload, now, 9, "PAPER_SCAN", alerts, cadence_minutes=30)
+    scan_runs = assess_runs(scan_payload, now, 20, "PAPER_SCAN", alerts, cadence_minutes=30)
     assess_runs(audit_payload, now, 21, "PAPER_AUDIT", alerts)
     active = [x for x in scan_runs if x.get("status") == "in_progress"]
     if len(active) > 1:

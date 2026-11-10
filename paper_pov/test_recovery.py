@@ -43,18 +43,34 @@ class RecoveryTests(unittest.TestCase):
         d = decision(now=dt.datetime(2026, 10, 31, 21, 27, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]),
                          ("DISPATCH_EXISTING_WORKFLOW", "MATURED_SLOT_MISSED"))
-        self.assertEqual(d["missed_matured_slots"], ["2026-10-31T20:39:00+00:00"])
+        self.assertEqual(d["missed_matured_slots"], ["2026-10-31T20:50:00+00:00"])
 
     def test_newer_durable_manual_success_prevents_redundant_recovery(self):
-        # At 21:13 the 20:39 slot is not mature; the latest matured slot
-        # is 20:09, already followed by a verified 20:10 recovery scan.
-        d = decision(runs=[scan(event="workflow_dispatch")],
+        # At 21:13, the 20:50 slot is not mature; the latest matured slot
+        # is 20:20, followed by this verified 20:21 recovery scan.
+        state = fixture()
+        asof = "2026-10-31T20:22:00+00:00"
+        state["runs"][0]["as_of"] = asof
+        state["predictions"][0]["as_of"] = asof
+        state["predictions"][0]["prediction_id"] = hashlib.sha256(
+            ("paper-v1|" + asof + "|" + state["predictions"][0]["pair"]).encode()).hexdigest()
+        state["observations"][0]["at"] = "2026-10-31T20:21:50+00:00"
+        d = decision(runs=[scan(123, "2026-10-31T20:21:00Z", event="workflow_dispatch")],
+                     ledger=seal(state),
                      now=dt.datetime(2026, 10, 31, 21, 13, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]),
                          ("NO_DISPATCH", "DURABLE_SCAN_AFTER_MATURED_SLOT"))
 
     def test_scheduled_success_covers_matured_slot(self):
-        d = decision(now=dt.datetime(2026, 10, 31, 21, 13, tzinfo=UTC))
+        state = fixture()
+        asof = "2026-10-31T20:22:00+00:00"
+        state["runs"][0]["as_of"] = asof
+        state["predictions"][0]["as_of"] = asof
+        state["predictions"][0]["prediction_id"] = hashlib.sha256(
+            ("paper-v1|" + asof + "|" + state["predictions"][0]["pair"]).encode()).hexdigest()
+        state["observations"][0]["at"] = "2026-10-31T20:21:50+00:00"
+        d = decision(runs=[scan(123, "2026-10-31T20:21:00Z")], ledger=seal(state),
+                     now=dt.datetime(2026, 10, 31, 21, 13, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]),
                          ("NO_DISPATCH", "MATURED_SLOT_COVERED"))
 
@@ -284,9 +300,10 @@ class RecoveryTests(unittest.TestCase):
                         workflow.index("PAPER_RECOVERY_ATTEMPT_READBACK_VERIFIED"))
         self.assertLess(workflow.index("PAPER_RECOVERY_ATTEMPT_READBACK_VERIFIED"),
                         workflow.index("/tmp/paper-recovery-runs-final.json"))
-        self.assertIn("github.event.workflow_run.event == 'schedule'", workflow)
-        self.assertIn("github.event.workflow_run.head_branch == 'main'", workflow)
-        self.assertIn("github.event.workflow_run.conclusion == 'success'", workflow)
+        # Only the dedicated recovery schedule/manual path may request a retry;
+        # monitor/audit completion must not spawn another independent controller.
+        self.assertNotIn("workflow_run:", workflow)
+        self.assertIn("cron: '12,42 * * * *'", workflow)
         self.assertNotIn("git push", workflow)
         self.assertNotIn("railway", workflow.lower())
 
