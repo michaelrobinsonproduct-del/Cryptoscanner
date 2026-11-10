@@ -36,13 +36,29 @@ def fetch(path):
     request = urllib.request.Request(API + path, headers={
         "User-Agent": "Cryptoscanner-Public-Paper-POV/1.0",
         "Cache-Control": "no-cache"})
-    with urllib.request.urlopen(request, timeout=20) as response:
-        if response.status != 200:
-            raise RuntimeError("Kraken HTTP status not 200")
-        payload = json.load(response)
-    if not isinstance(payload, dict) or payload.get("error") or not isinstance(payload.get("result"), dict):
-        raise ValueError("Kraken response error or invalid schema")
-    return payload["result"]
+    for attempt in range(2):
+        with urllib.request.urlopen(request, timeout=20) as response:
+            if response.status != 200:
+                raise RuntimeError("Kraken HTTP status not 200")
+            payload = json.load(response)
+        if not isinstance(payload, dict):
+            raise ValueError("Kraken payload is not an object: " + path.split("?")[0])
+        errors = payload.get("error")
+        if errors:
+            if not isinstance(errors, list):
+                raise ValueError("Kraken error field malformed: " + path.split("?")[0])
+            # Kraken can return HTTP 200 with a temporary rate/throttle error.
+            # Retry once on this explicit condition; do not mask other API errors.
+            if attempt == 0 and any("Rate limit exceeded" in str(e) or
+                                    "Throttled" in str(e) for e in errors):
+                time.sleep(1)
+                continue
+            raise RuntimeError("Kraken API " + path.split("?")[0] + ": " +
+                               ", ".join(str(e)[:100] for e in errors))
+        if not isinstance(payload.get("result"), dict):
+            raise ValueError("Kraken result schema invalid: " + path.split("?")[0])
+        return payload["result"]
+    raise RuntimeError("Kraken retry exhausted: " + path.split("?")[0])
 
 def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     """All timestamps are client-observed; no Kraken ticker exchange timestamp is asserted."""
@@ -77,6 +93,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     observations = []
     screened = []
     matched = 0
+    rejected_ticker_reasons = {}
     for pair, name in sorted(eligible.items()):
         t = ticker.get(pair)
         if not isinstance(t, dict):
@@ -86,6 +103,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             price, bid, ask, op, volume = (finite(t["c"][0]), finite(t["b"][0]),
                 finite(t["a"][0]), finite(t["o"]), finite(t["v"][1]))
             if min(price, bid, ask, op) <= 0 or ask < bid or volume < 0:
+                rejected_ticker_reasons["invalid_quote_values"] = rejected_ticker_reasons.get("invalid_quote_values", 0) + 1
                 continue
             # Kraken Ticker 'o' is today's UTC opening price, NOT the
             # rolling 24-hour opening price. Keep ranking arithmetic unchanged
@@ -96,6 +114,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             # Individually finite ticker inputs can overflow in arithmetic.
             # Never emit nonfinite market evidence or fail during JSON sealing.
             if not all(map(math.isfinite, (move_since_utc_open, spread, notional))):
+                rejected_ticker_reasons["nonfinite_derived_values"] = rejected_ticker_reasons.get("nonfinite_derived_values", 0) + 1
                 continue
             observations.append({"pair": pair, "symbol": name, "price": price,
                 "spread_bps": round(spread, 4), "notional_24h_usd": round(notional, 2),
@@ -109,12 +128,15 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                 "move_reference": "kraken_ticker_today_open_utc",
                 "spread_bps": round(spread, 4),
                 "notional_24h_usd": round(notional, 2), "baseline_score": baseline})
-        except (KeyError, ValueError, TypeError, IndexError, ZeroDivisionError):
+        except (KeyError, ValueError, TypeError, IndexError, ZeroDivisionError) as exc:
+            reason = type(exc).__name__
+            rejected_ticker_reasons[reason] = rejected_ticker_reasons.get(reason, 0) + 1
             continue
     if matched < max(20, math.ceil(len(eligible) * 0.8)):
         raise RuntimeError("Incomplete Kraken ticker universe coverage")
     if len(observations) < max(20, math.ceil(matched * 0.8)):
-        raise RuntimeError("Insufficient valid ticker observations")
+        raise RuntimeError("Insufficient valid ticker observations: matched=%d valid=%d eligible=%d rejected=%s" %
+                           (matched, len(observations), len(eligible), rejected_ticker_reasons))
     screened.sort(key=lambda x: (-x["baseline_score"], x["pair"]))
     selected = []
     seen = set()
