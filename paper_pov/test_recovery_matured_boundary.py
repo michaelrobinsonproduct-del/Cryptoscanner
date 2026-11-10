@@ -36,16 +36,16 @@ class RecoveryLiveBoundaryTests(unittest.TestCase):
             now=dt.datetime(2026, 11, 1, hour, minute, second, tzinfo=UTC),
         )
 
-    def test_real_1111_abstention_then_1050_slot_matures_at_1125(self):
-        # A 10:22 durable scan covers the last mature 10:20 slot at 11:11.
-        before = self.at(11, 11, 53)
+    def test_1050_slot_matures_at_1105_for_prompt_recovery(self):
+        # A 10:22 durable scan covers the last mature 10:20 slot at 11:04.
+        before = self.at(11, 4, 53)
         self.assertEqual((before["action"], before["reason"]),
                          ("NO_DISPATCH", "DURABLE_SCAN_AFTER_MATURED_SLOT"))
         self.assertEqual(before["missed_matured_slots"], [])
-        # The 10:50 slot becomes mature exactly 35 minutes later, at 11:25.
-        still_early = self.at(11, 24, 59)
+        # Recovery uses a 15-minute grace, independent of monitor's 35-minute alert gate.
+        still_early = self.at(11, 4, 59)
         self.assertEqual(still_early["action"], "NO_DISPATCH")
-        due = self.at(11, 25)
+        due = self.at(11, 5)
         self.assertEqual((due["action"], due["reason"]),
                          ("DISPATCH_EXISTING_WORKFLOW", "MATURED_SLOT_MISSED"))
         self.assertEqual(due["missed_matured_slots"],
