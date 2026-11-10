@@ -149,9 +149,13 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
                                    "legacy_prelim": prelim})
         except (KeyError, TypeError, ValueError, IndexError, ZeroDivisionError, OverflowError):
             continue
-    if (matched < max(20, math.ceil(len(eligible) * .8))
-            or valid < max(20, math.ceil(matched * .8))):
+    # Presence and executability are separate evidence: some online Kraken
+    # markets report zero bid/ask/UTC-open values. Exclude those individual
+    # markets without invalidating a complete, otherwise healthy ticker feed.
+    if matched < max(20, math.ceil(len(eligible) * .8)):
         raise ValueError("Incomplete independent ticker universe")
+    if valid < 20:
+        raise ValueError("Insufficient executable independent ticker observations")
     precursors.sort(key=lambda x: (-x["legacy_prelim"], x["spread"],
                                    -x["notional"], x["symbol"]))
     picks = []

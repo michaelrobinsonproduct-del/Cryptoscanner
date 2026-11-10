@@ -6,6 +6,7 @@ on:
 permissions:
   contents: write
   issues: write
+  actions: write
 concurrency:
   group: public-paper-proof-ledger-single-writer
   cancel-in-progress: false
@@ -270,6 +271,31 @@ jobs:
           assert actual==expected, "Issue scoreboard readback mismatch"
           print("PAPER_ISSUE_READBACK_VERIFIED")
           PY
+      - name: Request existing read-only learning job for exact verified writer run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The canonical ledger and published results are already committed
+          # and independently read back. Learning must never cause a healthy
+          # paper scan to be reclassified as failed or trigger a second scan.
+          if gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/paper-ledger-learning.yml/dispatches" \\
+              -f ref=main -f "inputs[paper_run_id]=${GITHUB_RUN_ID}"; then
+            echo "PAPER_READ_ONLY_LEARNING_DISPATCH_ACCEPTED run=${GITHUB_RUN_ID}"
+            echo "Read-only learning dispatched for verified writer ${GITHUB_RUN_ID}; its independent outcome remains to be verified." >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "::warning::PAPER_READ_ONLY_LEARNING_DISPATCH_FAILED run=${GITHUB_RUN_ID}; scan and ledger remain successful."
+            echo "Read-only learning dispatch FAILED for verified writer ${GITHUB_RUN_ID}; no learning claim." >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          # Existing independent legacy-inspired strategy (read only); the same
+          # writer run ID binds its artifact to these canonical WATCH results.
+          if gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/paper-legacy-shadow.yml/dispatches" \\
+              -f ref=main -f "inputs[paper_run_id]=${GITHUB_RUN_ID}"; then
+            echo "PAPER_READ_ONLY_LEGACY_DISPATCH_ACCEPTED run=${GITHUB_RUN_ID}"
+            echo "Independent legacy shadow dispatched for verified writer ${GITHUB_RUN_ID}; independently verify its artifact before overlap stars." >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "::warning::PAPER_READ_ONLY_LEGACY_DISPATCH_FAILED run=${GITHUB_RUN_ID}; canonical result remains valid."
+            echo "Independent legacy shadow dispatch FAILED for verified writer ${GITHUB_RUN_ID}; no overlap claim." >> "${GITHUB_STEP_SUMMARY}"
+          fi
       - name: Publish explicit failed-run paper results
         if: ${{ failure() }}
         run: |

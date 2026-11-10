@@ -1,12 +1,9 @@
 name: Paper Ledger Learning Read Only
 on:
-  workflow_run:
-    workflows: ["Public Kraken Paper POV (scheduled, isolated ledger)"]
-    types: [completed]
   workflow_dispatch:
     inputs:
       paper_run_id:
-        description: "Successful paper scan run ID containing public-paper-ledger artifact"
+        description: "Completed successful canonical writer run ID; automatically dispatched by same writer after verified publication"
         required: false
         type: string
   pull_request:
@@ -25,11 +22,7 @@ permissions:
   actions: read
 jobs:
   paper-ledger-learning:
-    if: >-
-      github.event_name != 'workflow_run' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'main' &&
-       github.event.workflow_run.repository.full_name == github.repository)
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -47,7 +40,6 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           RUN_ID="$REQUESTED_RUN"
-          if [ "${{ github.event_name }}" = "workflow_run" ]; then RUN_ID="${{ github.event.workflow_run.id }}"; fi
           if [ -z "$RUN_ID" ]; then
             RUN_ID=$(gh api -X GET "repos/$GH_REPO/actions/artifacts?per_page=100" --jq '.artifacts[] | select(.expired == false and (.name | startswith("public-paper-ledger-"))) | .workflow_run.id' | head -n 1)
           fi

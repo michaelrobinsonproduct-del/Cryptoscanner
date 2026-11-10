@@ -1,8 +1,11 @@
 name: Independent legacy-inspired PAPER shadow (read only)
 on:
-  workflow_run:
-    workflows: ["Public Kraken Paper POV (scheduled, isolated ledger)"]
-    types: [requested]
+  workflow_dispatch:
+    inputs:
+      paper_run_id:
+        description: "Completed verified paper writer run; supplied only by existing writer"
+        required: true
+        type: string
   issue_comment:
     types: [created]
 permissions:
@@ -15,9 +18,9 @@ jobs:
   independent-shadow:
     if: >-
       github.repository == 'michaelrobinsonproduct-del/Cryptoscanner' &&
-      github.event.workflow_run.repository.full_name == 'michaelrobinsonproduct-del/Cryptoscanner' &&
-      github.event.workflow_run.head_branch == 'main' &&
-      (github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch')
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.paper_run_id != ''
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -35,7 +38,7 @@ jobs:
       - name: Independently sample Kraken and score shadow WATCH
         env:
           PAPER_SHADOW_RUN_ID: ${{ github.run_id }}
-          PAPER_TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
+          PAPER_TRIGGER_RUN_ID: ${{ inputs.paper_run_id }}
         run: |
           set -euo pipefail
           export PAPER_SHADOW_SOURCE_SHA="$(git rev-parse HEAD)"
