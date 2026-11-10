@@ -59,9 +59,44 @@ jobs:
           python -m paper_pov.git_ledger_fetch
           LEDGER_COMMIT="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
           python -m paper_pov.segmented_repository export-git --repository . --commit "${LEDGER_COMMIT}" --output /tmp/public-paper-ledger.json
-          BEFORE_COMMIT="$(git rev-parse "${LEDGER_COMMIT}^")"
-          python -m paper_pov.segmented_repository export-git --repository . --commit "${BEFORE_COMMIT}" --output /tmp/public-paper-ledger-before.json
-          mkdir -p paper_eval/output
+          # Audit immutable first-parent *ledger generations*, not Git commits.
+          # Each successful writer publishes a scan commit and then a results-only
+          # commit; both carry the SAME verified ledger generation and SHA.
+          # Fail closed if a same-generation commit modifies the ledger.
+          mkdir -p /tmp/paper-chain paper_eval/output
+          : > /tmp/paper-chain/manifest.tsv
+          PREVIOUS_GEN=""
+          PREVIOUS_DIGEST=""
+          SELECTED=0
+          while IFS= read -r COMMIT; do
+            if ! git cat-file -e "${COMMIT}:paper-ledger.json" 2>/dev/null && ! git cat-file -e "${COMMIT}:paper-segment-manifest.json" 2>/dev/null; then
+              break
+            fi
+            python -m paper_pov.segmented_repository export-git \
+              --repository . --commit "${COMMIT}" --output "/tmp/paper-chain/${COMMIT}.json"
+            read -r GEN DIGEST < <(python -c 'import json,sys; s=json.load(open(sys.argv[1])); print(s["generation"],s["sha256"])' "/tmp/paper-chain/${COMMIT}.json")
+            if test -n "$PREVIOUS_GEN"; then
+              if test "$GEN" -eq "$PREVIOUS_GEN"; then
+                test "$DIGEST" = "$PREVIOUS_DIGEST" || {
+                  echo "AUDIT_SAME_GENERATION_LEDGER_REWRITTEN"; exit 1;
+                }
+                continue
+              fi
+              test "$GEN" -eq "$((PREVIOUS_GEN - 1))" || {
+                echo "AUDIT_SKIPPED_OR_REVERSED_LEDGER_GENERATION"; exit 1;
+              }
+            fi
+            printf '%s\t%s\n' "$COMMIT" "/tmp/paper-chain/${COMMIT}.json" >> /tmp/paper-chain/manifest.tsv
+            PREVIOUS_GEN="$GEN"
+            PREVIOUS_DIGEST="$DIGEST"
+            SELECTED=$((SELECTED + 1))
+            test "$SELECTED" -lt 17 || break
+          done < <(git rev-list --first-parent --max-count=40 "${LEDGER_COMMIT}")
+          test "$SELECTED" -ge 2 || {
+            echo "AUDIT_PREVIOUS_LEDGER_GENERATION_MISSING"; exit 1;
+          }
+          BEFORE_COMMIT="$(sed -n '2s/[[:space:]].*//p' /tmp/paper-chain/manifest.tsv)"
+          cp "/tmp/paper-chain/${BEFORE_COMMIT}.json" /tmp/public-paper-ledger-before.json
           python -m paper_eval.report \
             --ledger /tmp/public-paper-ledger.json \
             --ledger-commit "${LEDGER_COMMIT}" \
@@ -72,18 +107,6 @@ jobs:
             --before-commit "${BEFORE_COMMIT}" \
             --after-commit "${LEDGER_COMMIT}" \
             --output paper_eval/output/transition-audit.json
-          # Check up to 16 adjacent Git first-parent transitions, not merely
-          # the newest one. Missing ancestors fail closed unless the bound is hit.
-          mkdir -p /tmp/paper-chain
-          git rev-list --first-parent --max-count=17 "${LEDGER_COMMIT}" > /tmp/paper-chain/commits.txt
-          : > /tmp/paper-chain/manifest.tsv
-          while IFS= read -r COMMIT; do
-            if ! git cat-file -e "${COMMIT}:paper-ledger.json" 2>/dev/null && ! git cat-file -e "${COMMIT}:paper-segment-manifest.json" 2>/dev/null; then
-              break
-            fi
-            python -m paper_pov.segmented_repository export-git --repository . --commit "${COMMIT}" --output "/tmp/paper-chain/${COMMIT}.json"
-            printf '%s\t%s\n' "${COMMIT}" "/tmp/paper-chain/${COMMIT}.json" >> /tmp/paper-chain/manifest.tsv
-          done < /tmp/paper-chain/commits.txt
           python -m paper_eval.chain \
             --manifest /tmp/paper-chain/manifest.tsv \
             --tip "${LEDGER_COMMIT}" \
