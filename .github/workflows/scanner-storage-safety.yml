@@ -1,0 +1,170 @@
+name: Scanner Storage Safety CI
+on:
+  push:
+    branches:
+      - repair-batches-17a-20-20261021
+    paths:
+      - 'simple_scanner/storage_safety.py'
+      - 'simple_scanner/dex.py'
+      - 'simple_scanner/scan.py'
+      - 'tests/test_kraken_freshness.py'
+      - 'tests/test_shadow_learning_guards.py'
+      - 'simple_scanner/offline_replay.py'
+      - 'tests/test_offline_replay.py'
+      - 'simple_scanner/offline_scoring_comparison.py'
+      - 'tests/test_offline_scoring_comparison.py'
+      - 'tests/test_execution_contract.py'
+      - 'tests/test_execution_acceptance_fixtures.py'
+      - 'tests/test_rollback_rehearsal.py'
+      - 'tests/test_batch22_delivery_recovery.py'
+      - 'tests/test_batch22_source_recovery.py'
+      - 'tests/test_batch23_readiness.py'
+      - 'tests/test_batch23_reporting_reliability.py'
+      - 'tests/test_batch24_outbox.py'
+      - 'tests/test_batch24_crash_recovery.py'
+      - 'tests/test_batch25_reconciliation.py'
+      - 'tests/test_batch25_integrity.py'
+      - 'tests/test_batch26_isolated_readiness.py'
+      - 'tests/test_batch26_failure_matrix.py'
+      - 'tests/test_batch27_release_guards.py'
+      - 'tests/test_batch27_final_acceptance.py'
+      - 'tests/test_batch28_evidence_integrity.py'
+      - 'tests/test_batch29_release_audit.py'
+      - 'tests/test_batch30_manual_ack_recovery.py'
+      - 'tests/test_batch31_acknowledgement_policy.py'
+      - 'tests/test_batch32_github_evidence_contract.py'
+      - 'tests/test_batch34_inactive_delivery_transition.py'
+      - 'docs/batch34_inactive_manual_acknowledgement.md'
+      - 'simple_scanner/fixture_github_evidence_contract.py'
+      - 'docs/batch32_github_delivery_contract.md'
+      - 'simple_scanner/manual_acknowledgement_policy.py'
+      - 'docs/batch31_acknowledgement_policy.md'
+      - 'simple_scanner/fixture_manual_delivery_decision.py'
+      - 'docs/batch30_manual_delivery_recovery.md'
+      - 'docs/batch29_release_audit.md'
+      - 'docs/batch28_evidence_readiness.md'
+      - 'docs/batch27_integrity_acceptance.md'
+      - 'docs/batch26_offline_acceptance.md'
+      - 'docs/batch25_reconciliation_limitations.md'
+      - 'simple_scanner/fixture_receipt_reconciliation.py'
+      - 'docs/batch24_outbox_readiness.md'
+      - 'simple_scanner/fixture_delivery_outbox.py'
+      - 'docs/batch23_readiness_and_delivery.md'
+      - 'docs/batch22_release_acceptance.md'
+      - 'simple_scanner/manual_requests.py'
+      - 'docs/batch21_release_readiness.md'
+      - 'simple_scanner/execute_once.py'
+      - 'simple_scanner/dex_guard.py'
+      - 'tests/test_dex_reliability.py'
+      - 'simple_scanner/external_backup.py'
+      - 'tests/test_storage_safety.py'
+      - 'tests/test_storage_inventory_edge_cases.py'
+      - 'tests/test_storage_inventory_edge_cases.py'
+      - 'tests/test_external_backup.py'
+      - '.github/workflows/scanner-storage-safety.yml'
+  pull_request:
+    paths:
+      - 'simple_scanner/storage_safety.py'
+      - 'simple_scanner/external_backup.py'
+      - 'tests/test_storage_safety.py'
+      - 'tests/test_external_backup.py'
+      - '.github/workflows/scanner-storage-safety.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile backup modules
+        run: python -m py_compile simple_scanner/storage_safety.py simple_scanner/external_backup.py
+      - name: Run backup and restore regression tests
+        run: python -W error -m unittest discover -s tests -p 'test_*backup.py' -v
+      - name: Run storage safety regression tests
+        run: python -W error -m unittest discover -s tests -p 'test_storage_safety.py' -v
+
+      - name: Run SQLite inventory edge cases
+        run: python -W error -m unittest discover -s tests -p 'test_storage_inventory_edge_cases.py' -v
+
+      - name: Run DEX freshness and circuit tests
+        run: python -W error -m unittest discover -s tests -p 'test_dex_reliability.py' -v
+
+      - name: Run Kraken freshness regression tests
+        run: python -W error -m unittest discover -s tests -p 'test_kraken_freshness.py' -v
+
+      - name: Run shadow learning guard tests
+        run: python -W error -m unittest discover -s tests -p 'test_shadow_learning_guards.py' -v
+
+      - name: Run offline replay feasibility and holdout tests
+        run: python -W error -m unittest discover -s tests -p 'test_offline_replay.py' -v
+
+      - name: Run independent offline scoring comparison tests
+        run: python -W error -m unittest discover -s tests -p 'test_offline_scoring_comparison.py' -v
+
+      - name: Run shared execution contract tests
+        run: python -W error -m unittest discover -s tests -p 'test_execution_contract.py' -v
+
+      - name: Run fixture end-to-end execution acceptance tests
+        run: python -W error -m unittest discover -s tests -p 'test_execution_acceptance_fixtures.py' -v
+
+      - name: Run isolated rollback rehearsal tests
+        run: python -W error -m unittest discover -s tests -p 'test_rollback_rehearsal.py' -v
+
+      - name: Run offline manual delivery and recovery acceptance
+        run: python -W error -m unittest discover -s tests -p 'test_batch22_delivery_recovery.py' -v
+
+      - name: Run offline Kraken and DEX source recovery acceptance
+        run: python -W error -m unittest discover -s tests -p 'test_batch22_source_recovery.py' -v
+
+      - name: Run Batch 23 offline history and reporting readiness
+        run: python -W error -m unittest discover -s tests -p 'test_batch23_readiness.py' -v
+
+      - name: Run Batch 23 offline reporting and reliability acceptance
+        run: python -W error -m unittest discover -s tests -p 'test_batch23_reporting_reliability.py' -v
+
+      - name: Run Batch 24 isolated delivery outbox acceptance
+        run: python -W error -m unittest discover -s tests -p 'test_batch24_outbox.py' -v
+
+      - name: Run Batch 24 isolated crash and reconciliation acceptance
+        run: python -W error -m unittest discover -s tests -p 'test_batch24_crash_recovery.py' -v
+
+      - name: Run Batch 25 offline receipt reconciliation acceptance
+        run: python -W error -m unittest discover -s tests -p 'test_batch25_reconciliation.py' -v
+
+      - name: Run Batch 25 outbox integrity and scoring safety
+        run: python -W error -m unittest discover -s tests -p 'test_batch25_integrity.py' -v
+
+      - name: Run Batch 26 isolated cross-gate readiness
+        run: python -W error -m unittest discover -s tests -p 'test_batch26_isolated_readiness.py' -v
+
+      - name: Run Batch 26 isolated failure matrix
+        run: python -W error -m unittest discover -s tests -p 'test_batch26_failure_matrix.py' -v
+
+      - name: Run Batch 27 fixture integrity and rollback guards
+        run: python -W error -m unittest discover -s tests -p 'test_batch27_release_guards.py' -v
+
+      - name: Run Batch 27 final fixture integrity acceptance
+        run: python -W error -m unittest discover -s tests -p 'test_batch27_final_acceptance.py' -v
+
+      - name: Run Batch 28 isolated receipt evidence integrity
+        run: python -W error -m unittest discover -s tests -p 'test_batch28_evidence_integrity.py' -v
+
+      - name: Run Batch 29 consolidated offline release audit
+        run: python -W error -m unittest discover -s tests -p 'test_batch29_release_audit.py' -v
+
+      - name: Run Batch 30 offline manual acknowledgement recovery
+        run: python -W error -m unittest discover -s tests -p 'test_batch30_manual_ack_recovery.py' -v
+
+      - name: Run Batch 31 isolated acknowledgement policy acceptance
+        run: python -W error -m unittest discover -s tests -p 'test_batch31_acknowledgement_policy.py' -v
+
+      - name: Run Batch 32 offline GitHub evidence contract acceptance
+        run: python -W error -m unittest discover -s tests -p 'test_batch32_github_evidence_contract.py' -v
+
+      - name: Run Batch 34 inactive durable manual acknowledgement acceptance
+        run: python -W error -m unittest discover -s tests -p 'test_batch34_inactive_delivery_transition.py' -v
