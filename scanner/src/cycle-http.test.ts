@@ -1,0 +1,146 @@
+import {test,expect} from "bun:test";
+import {createCycleRunner} from "./cycle-runner";
+import {createCycleHttpHandler} from "./cycle-http";
+const at="2026-11-03T04:00:00Z";
+const row={pair:"TAOUSD",score:85,displacement_pct:1,discovered_at:"2026-11-03T03:59:00Z"};
+const quote={pair:"TAOUSD",success:true,twoSidedBook:true,executableBbo:true,recentTradeConfirmation:true,newestTradeAgeSeconds:5,bestAsk:100,bestBid:99,fetchedAt:"2026-11-03T03:59:30Z"};
+const deps=(overrides:any={})=>({scan:async()=>({candidates:[row]}),confirm:async()=>quote,pause:async()=>{},now:()=>new Date(at),...overrides});
+const req=(path:string)=>new Request("http://localhost"+path);
+test("real HTTP /cycle and native scheduled entry emit identical candidate payload",async()=>{
+ const runner=createCycleRunner(deps()),http=createCycleHttpHandler(runner);
+ const response=await http(req("/cycle"));expect(response.status).toBe(200);
+ const manual=await response.json(),scheduled=await runner.run("scheduled");
+ expect(scheduled.ok).toBe(true);expect(manual).toEqual(scheduled.result);
+ expect(manual.candidates).toHaveLength(1);expect(manual.candidates[0].discovered_at).toBe(row.discovered_at);
+ const dashboard=await (await http(req("/dashboard"))).json();
+ expect(dashboard.cycles).toBe(2);expect(dashboard.last_result).toEqual(manual);
+});
+test("HTTP concurrent /cycle returns 409 while scheduled scan owns lease",async()=>{
+ let release!:()=>void;let scans=0;const wait=new Promise<void>(r=>{release=r});
+ const runner=createCycleRunner(deps({scan:async()=>{scans++;await wait;return {candidates:[row]}}}));
+ const scheduled=runner.run("scheduled"),http=createCycleHttpHandler(runner);
+ const response=await http(req("/cycle"));
+ expect(response.status).toBe(409);expect((await response.json()).error).toBe("cycle_already_running");
+ expect(scans).toBe(1);release();expect((await scheduled).ok).toBe(true);
+});
+test("HTTP failure visible on health and dashboard, subsequent manual recovery clears it",async()=>{
+ let n=0;const runner=createCycleRunner(deps({scan:async()=>{if(++n===1)throw Error("upstream down");return {candidates:[row]}}}));
+ const http=createCycleHttpHandler(runner);
+ const first=await http(req("/cycle"));expect(first.status).toBe(502);
+ expect((await (await http(req("/health"))).json()).lastError).toContain("upstream down");
+ expect((await (await http(req("/dashboard"))).json()).cycles).toBe(0);
+ const recovered=await http(req("/cycle"));expect(recovered.status).toBe(200);
+ const state=await (await http(req("/dashboard"))).json();
+ expect(state.cycles).toBe(1);expect(state.last_error).toBeNull();
+});
+
+test("dashboard expires cached authenticated A2 paper WATCH without mutating stored scan",async()=>{
+ const snapshot={status:"VERIFIED_SNAPSHOT" as const,as_of:"2026-11-03T04:00:00Z",scan_status:"WATCH",receipt_sha256:"a".repeat(64),watch:[{pair:"TAOUSD",quote_observed_at:"2026-11-03T03:59:00Z"}],eligible_pairs:1,observed_markets:1,abstention_counts:{},source:"a2_verified_readonly" as const,buy_approved:false as const};
+ let clock=new Date("2026-11-03T04:01:00Z");
+ const runner=createCycleRunner(deps(),undefined,undefined,async()=>snapshot as any);
+ const http=createCycleHttpHandler(runner,()=>clock);
+ await runner.run("scheduled");
+ const fresh=await (await http(req("/dashboard"))).json();
+ expect(fresh.last_result.a2_snapshot.status).toBe("VERIFIED_SNAPSHOT");
+ expect(fresh.last_result.paper_watch).toHaveLength(1);
+ const watchFresh=await http(req("/watch"));expect(watchFresh.headers.get("cache-control")).toBe("no-store");expect(await watchFresh.json()).toMatchObject({mode:"paper_only",status:"PAPER_ONLY_VERIFIED",live_watch_certified:false,scan_status:"WATCH",eligible_pairs:1,observed_markets:1,abstention_counts:{},watch:[{pair:"TAOUSD"}]});expect(fresh.last_result.paper_watch_status).toBe("PAPER_ONLY_VERIFIED");expect(fresh.last_result.live_watch_certified).toBe(false);
+ clock=new Date("2026-11-03T04:10:01Z");
+ const expired=await (await http(req("/dashboard"))).json();
+ expect(expired.last_result.a2_snapshot).toMatchObject({status:"UNAVAILABLE",reason:"expired_at_dashboard_read",watch:[]});
+ expect(expired.last_result.candidates).toHaveLength(1);
+ expect(expired.last_result.paper_watch).toEqual([]);
+ expect(await (await http(req("/watch"))).json()).toMatchObject({mode:"paper_only",status:"ABSTAIN_A2_EXPIRED",live_watch_certified:false,scan_status:null,eligible_pairs:null,observed_markets:null,abstention_counts:null,watch:[]});expect(expired.last_result.paper_watch_status).toBe("ABSTAIN_A2_EXPIRED");expect(expired.last_result.live_watch_certified).toBe(false);
+ expect(runner.snapshot().last.a2_snapshot.status).toBe("VERIFIED_SNAPSHOT");
+});
+
+test("watch endpoint abstains after failed cycle and resumes only on successful recovery",async()=>{
+ let fail=false;
+ const snapshot={status:"VERIFIED_SNAPSHOT" as const,as_of:"2026-11-03T04:00:00Z",scan_status:"WATCH",receipt_sha256:"b".repeat(64),watch:[{pair:"TAOUSD",quote_observed_at:"2026-11-03T03:59:00Z"}],eligible_pairs:1,observed_markets:1,abstention_counts:{},source:"a2_verified_readonly" as const,buy_approved:false as const};
+ const runner=createCycleRunner(deps({scan:async()=>{if(fail)throw Error("collector unavailable");return {candidates:[row]}}}),undefined,undefined,async()=>{if(fail)throw Error("A2 unavailable");return snapshot as any});
+ const http=createCycleHttpHandler(runner,()=>new Date("2026-11-03T04:01:00Z"));
+ expect((await runner.run("scheduled")).ok).toBe(true);
+ expect(await (await http(req("/watch"))).json()).toMatchObject({status:"PAPER_ONLY_VERIFIED",watch:[{pair:"TAOUSD"}]});
+ fail=true;
+ expect((await runner.run("scheduled")).ok).toBe(false);
+ expect(await (await http(req("/watch"))).json()).toMatchObject({status:"ABSTAIN_LAST_SCAN_FAILED",watch:[],receipt_sha256:null,live_watch_certified:false});
+ expect(await (await http(req("/dashboard"))).json()).toMatchObject({last_result:{paper_watch_status:"ABSTAIN_LAST_SCAN_FAILED",paper_watch:[],a2_snapshot:{status:"UNAVAILABLE",reason:"last_scan_failed"},live_watch_certified:false}});
+ fail=false;
+ expect((await runner.run("manual")).ok).toBe(true);
+ expect(await (await http(req("/watch"))).json()).toMatchObject({status:"PAPER_ONLY_VERIFIED",watch:[{pair:"TAOUSD"}]});
+});
+
+test("watch endpoint abstains while a replacement scheduled scan is running",async()=>{
+ let release!:()=>void,block=false;
+ const wait=new Promise<void>(resolve=>{release=resolve});
+ const snapshot={status:"VERIFIED_SNAPSHOT" as const,as_of:"2026-11-03T04:00:00Z",scan_status:"WATCH",receipt_sha256:"c".repeat(64),watch:[{pair:"TAOUSD",quote_observed_at:"2026-11-03T03:59:00Z"}],eligible_pairs:1,observed_markets:1,abstention_counts:{},source:"a2_verified_readonly" as const,buy_approved:false as const};
+ const runner=createCycleRunner(deps({scan:async()=>{if(block)await wait;return {candidates:[row]}}}),undefined,undefined,async()=>snapshot as any);
+ const http=createCycleHttpHandler(runner,()=>new Date("2026-11-03T04:01:00Z"));
+ expect((await runner.run("manual")).ok).toBe(true);
+ expect(await (await http(req("/watch"))).json()).toMatchObject({status:"PAPER_ONLY_VERIFIED",watch:[{pair:"TAOUSD"}]});
+ block=true;
+ const scheduled=runner.run("scheduled");
+ expect(await (await http(req("/watch"))).json()).toMatchObject({running:true,status:"ABSTAIN_SCAN_IN_PROGRESS",watch:[],receipt_sha256:null,live_watch_certified:false});
+ expect(await (await http(req("/dashboard"))).json()).toMatchObject({running:true,last_result:{paper_watch_status:"ABSTAIN_SCAN_IN_PROGRESS",paper_watch:[],a2_snapshot:{status:"UNAVAILABLE",reason:"scan_in_progress"},live_watch_certified:false}});
+ release();
+ expect((await scheduled).ok).toBe(true);
+ expect(await (await http(req("/watch"))).json()).toMatchObject({running:false,status:"PAPER_ONLY_VERIFIED",watch:[{pair:"TAOUSD"}]});
+});
+
+test("authenticated A2 remains available when legacy collector fails; both sources unavailable return 502",async()=>{
+ const snapshot={status:"VERIFIED_SNAPSHOT" as const,as_of:"2026-11-03T04:00:00Z",scan_status:"WATCH",receipt_sha256:"d".repeat(64),watch:[{pair:"TAOUSD",quote_observed_at:"2026-11-03T03:59:00Z"}],eligible_pairs:1,observed_markets:1,abstention_counts:{},source:"a2_verified_readonly" as const,buy_approved:false as const};
+ const failing=deps({scan:async()=>{throw Error("legacy collector offline")}});
+ const runner=createCycleRunner(failing,undefined,undefined,async()=>snapshot as any);
+ const http=createCycleHttpHandler(runner,()=>new Date("2026-11-03T04:01:00Z"));
+ const manual=await http(req("/cycle"));expect(manual.status).toBe(200);
+ const result=await manual.json();
+ expect(result).toMatchObject({scan_status:"BASELINE_UNAVAILABLE",baseline_error:"Error: legacy collector offline",paper_watch_status:"PAPER_ONLY_VERIFIED",live_watch_certified:false,paper_watch:[{pair:"TAOUSD"}]});
+ const scheduled=await runner.run("scheduled");expect(scheduled.ok).toBe(true);expect(scheduled.result).toEqual(result);
+ expect(await (await http(req("/watch"))).json()).toMatchObject({status:"PAPER_ONLY_VERIFIED",watch:[{pair:"TAOUSD"}]});
+ const unavailable=createCycleRunner(failing,undefined,undefined,async()=>{throw Error("A2 unavailable")});
+ const bad=await unavailable.run("manual");expect(bad.ok).toBe(false);expect(bad.status).toBe(502);
+});
+
+test("baseline failure provenance survives shadow gate and A2 fallback",async()=>{
+ const snapshot={status:"VERIFIED_SNAPSHOT" as const,as_of:"2026-11-03T04:00:00Z",scan_status:"WATCH",receipt_sha256:"e".repeat(64),watch:[{pair:"TAOUSD",quote_observed_at:"2026-11-03T03:59:00Z"}],eligible_pairs:1,observed_markets:1,abstention_counts:{},source:"a2_verified_readonly" as const,buy_approved:false as const};
+ const runner=createCycleRunner(deps({scan:async()=>{throw Error("legacy source offline")}}),async()=>({evidence:null,outcomes:[],scores:[]}),undefined,async()=>snapshot as any,async()=>({decision:"KEEP_BASELINE",held_out_n:0,production_applied:false as const}));
+ const result=await runner.run("manual");
+ expect(result.ok).toBe(true);
+ expect(result.result).toMatchObject({scan_status:"BASELINE_UNAVAILABLE",baseline_error:"Error: legacy source offline",paper_watch_status:"PAPER_ONLY_VERIFIED",shadow_artifact_status:"REJECTED",learning_gate:{decision:"KEEP_BASELINE"},shadow_evaluation:{production_promoted:false}});
+});
+
+test("qualified shadow artifact failure cannot erase A2 fallback outage provenance",async()=>{
+ const snapshot={status:"VERIFIED_SNAPSHOT" as const,as_of:"2026-11-03T04:00:00Z",scan_status:"WATCH",receipt_sha256:"f".repeat(64),watch:[{pair:"TAOUSD",quote_observed_at:"2026-11-03T03:59:00Z"}],eligible_pairs:1,observed_markets:1,abstention_counts:{},source:"a2_verified_readonly" as const,buy_approved:false as const};
+ const runner=createCycleRunner(deps({scan:async()=>{throw Error("legacy source offline")}}),async()=>{throw Error("shadow artifact offline")},undefined,async()=>snapshot as any,async()=>({decision:"SHADOW_ELIGIBLE_REVIEW",held_out_n:1,production_applied:false as const}));
+ const manual=await runner.run("manual"),scheduled=await runner.run("scheduled");
+ expect(manual.ok).toBe(true);expect(scheduled.ok).toBe(true);expect(manual.result).toEqual(scheduled.result);
+ expect(manual.result).toMatchObject({scan_status:"BASELINE_UNAVAILABLE",baseline_error:"Error: legacy source offline",paper_watch_status:"PAPER_ONLY_VERIFIED",shadow_artifact_status:"REJECTED",learning_gate:{decision:"SHADOW_ELIGIBLE_REVIEW"},shadow_evaluation:{production_promoted:false}});
+});
+
+test("manual and scheduled reconcile independent receipt/A2 identity before publishing WATCH",async()=>{
+ const snapshot={status:"VERIFIED_SNAPSHOT" as const,as_of:"2026-11-03T04:00:00Z",scan_status:"WATCH",receipt_sha256:"a".repeat(64),watch:[{pair:"TAOUSD",quote_observed_at:"2026-11-03T03:59:00Z"}],eligible_pairs:5,observed_markets:3,abstention_counts:{},source:"a2_verified_readonly" as const,buy_approved:false as const};
+ const receipt={status:"VERIFIED_RECEIPT" as const,as_of:snapshot.as_of,scan_status:"WATCH",watch_count:1,observed_markets:3,eligible_pairs:5,ticker_rejections:{},ohlc_screened:1,abstention_count:0,source:"paper_pov" as const,buy_approved:false as const};
+ const runner=createCycleRunner(deps(),undefined,async()=>({...receipt,as_of:"2026-11-03T03:55:00Z"}),async()=>snapshot as any);
+ const http=createCycleHttpHandler(runner,()=>new Date("2026-11-03T04:01:00Z"));
+ const manual=await (await http(req("/cycle"))).json(),scheduled=await runner.run("scheduled");
+ expect(manual).toEqual(scheduled.result);
+ expect(manual.paper_receipt.status).toBe("VERIFIED_RECEIPT");
+ expect(manual.a2_snapshot).toMatchObject({status:"UNAVAILABLE",reason:"paper_receipt_a2_mismatch"});
+ expect(manual.paper_watch_status).toBe("ABSTAIN_SOURCE_MISMATCH");
+ expect(await (await http(req("/watch"))).json()).toMatchObject({watch:[],status:"ABSTAIN_SOURCE_MISMATCH",receipt_sha256:null,live_watch_certified:false});
+ const matched=createCycleRunner(deps(),undefined,async()=>receipt,async()=>snapshot as any);
+ const matchedHttp=createCycleHttpHandler(matched,()=>new Date("2026-11-03T04:01:00Z"));
+ const ok=await (await matchedHttp(req("/cycle"))).json();
+ expect(ok.paper_watch_status).toBe("PAPER_ONLY_VERIFIED");
+ expect(ok.paper_watch).toHaveLength(1);
+ expect((await matched.run("scheduled")).result).toEqual(ok);
+});
+test("baseline outage plus conflicting independent receipts is visible failure, never a recovered WATCH",async()=>{
+ const snapshot={status:"VERIFIED_SNAPSHOT" as const,as_of:"2026-11-03T04:00:00Z",scan_status:"WATCH",receipt_sha256:"a".repeat(64),watch:[{pair:"TAOUSD",quote_observed_at:"2026-11-03T03:59:00Z"}],eligible_pairs:2,observed_markets:1,abstention_counts:{},source:"a2_verified_readonly" as const,buy_approved:false as const};
+ const receipt={status:"VERIFIED_RECEIPT" as const,as_of:"2026-11-03T03:59:00Z",scan_status:"WATCH",watch_count:1,observed_markets:1,eligible_pairs:2,ticker_rejections:{},ohlc_screened:1,abstention_count:0,source:"paper_pov" as const,buy_approved:false as const};
+ const runner=createCycleRunner(deps({scan:async()=>{throw Error("collector offline")}}),undefined,async()=>receipt,async()=>snapshot as any);
+ const http=createCycleHttpHandler(runner,()=>new Date("2026-11-03T04:01:00Z"));
+ const response=await http(req("/cycle"));
+ expect(response.status).toBe(502);
+ expect(await (await http(req("/watch"))).json()).toMatchObject({watch:[],status:"ABSTAIN_LAST_SCAN_FAILED"});
+ expect((await (await http(req("/health"))).json()).lastError).toContain("both_baseline_and_a2_unavailable");
+});
