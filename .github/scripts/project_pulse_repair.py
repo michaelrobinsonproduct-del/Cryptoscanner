@@ -7,7 +7,6 @@ import argparse
 import ast
 import json
 from pathlib import Path
-import subprocess
 import sys
 
 def main():
@@ -47,6 +46,24 @@ def main():
         file.write_text(candidate)
         changed.append(relative)
         results.append({"file": relative, "status": "fixed", "reason": "literal escaped newlines"})
+    # Repair a second *observed* failure: unconditional summary reads of
+    # downstream files that are absent when an upstream step fails.
+    workflow_dir = root / ".github" / "workflows"
+    for file in sorted(workflow_dir.glob("*.yml")):
+        relative = str(file.relative_to(root))
+        original = file.read_text()
+        candidate = original
+        for report in ("github-status.md", "project-plan.md"):
+            line = 'cat project-pulse-output/' + report + ' >> "$GITHUB_STEP_SUMMARY"'
+            guard = 'if [ -f project-pulse-output/' + report + ' ]; then ' + line + '; fi'
+            # Only touch the original Project Pulse workflow and exact command.
+            if file.name == "project-pulse.yml" and line in candidate and guard not in candidate:
+                candidate = candidate.replace(line, guard)
+        if candidate != original:
+            file.write_text(candidate)
+            changed.append(relative)
+            results.append({"file": relative, "status": "fixed",
+                            "reason": "guard missing downstream report in run summary"})
     # Validate all Python scripts without importing or executing them.
     for file in sorted((root / ".github" / "scripts").glob("*.py")):
         try:
@@ -56,7 +73,7 @@ def main():
                             "reason": str(exc)})
     summary = {"schema": 1, "changed": changed, "findings": results,
                "validation": "PASS" if not any(r["status"] == "remaining-syntax-error" for r in results) else "FAIL",
-               "scope": "Known literal-newline Python defect only; all other errors abstain"}
+               "scope": "Two observed defects: escaped-newline Python syntax and missing downstream summary files"}
     (out / "repair.json").write_text(json.dumps(summary, indent=2) + "\n")
     (out / "repair.md").write_text("# Project Pulse targeted repair\n\n"
         + f"**Validation:** {summary['validation']}\n\n"
