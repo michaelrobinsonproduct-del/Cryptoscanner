@@ -79,11 +79,15 @@ class KrakenQ3ShadowTests(unittest.TestCase):
                  "means":{k:0 for k in f}, "scales":{k:1 for k in f},
                  "weights":{k:1 for k in f}}
         result = compare(rows,model,"test")
-        for strategy in result.values():
+        for key in ("baseline_abs_60m", "shadow_learned"):
+            strategy = result[key]
             self.assertEqual(strategy["timestamps"],2)
             self.assertEqual(strategy["48h_abstentions"],1)
             self.assertEqual(strategy["hits30"],1)
             self.assertEqual(strategy["complete_48h"],1)
+        paired = result["paired_complete_comparison"]
+        self.assertEqual(paired["same_frozen_timestamp_count"], 1)
+        self.assertEqual(paired["hit_time_difference"], 0)
 
     def test_forty_eight_hour_split_embargo(self):
         import datetime as dt
