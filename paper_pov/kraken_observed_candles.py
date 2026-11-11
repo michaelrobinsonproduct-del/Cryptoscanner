@@ -31,7 +31,8 @@ def fetch_kraken_ohlc(pair, *, interval=5):
         epoch = int(candle[0])
         rows.append({"pair": pair, "timestamp_utc": datetime.fromtimestamp(
             epoch, tz=timezone.utc).__add__(timedelta(minutes=5)).isoformat(), "close": float(candle[4]),
-            "high": float(candle[2]), "volume": float(candle[6])})
+            "high": float(candle[2]), "volume": float(candle[6]),
+                     "trades": int(candle[7])})
     # Kraken's last row is a live, uncommitted interval, not an outcome.
     rows = rows[:-1]
     return {"pair": pair, "kraken_pair_key": key,
