@@ -38,7 +38,7 @@ class KrakenQ3ShadowTests(unittest.TestCase):
         self.assertIsNone(first2["outcomes"]["48"])
 
     def test_future_prices_never_determine_asof_selection(self):
-        a = bars(price=10, volume=10000)
+        a = bars(price=10, volume=30000)
         b = bars(price=20, volume=9000)
         before = frozen_asof_universe([("AAAUSD", a), ("BBBUSD", b)], top_n=1)
         changed = a[:60] + [(ts, 1000, v, tr) for ts, _, v, tr in a[60:]]
