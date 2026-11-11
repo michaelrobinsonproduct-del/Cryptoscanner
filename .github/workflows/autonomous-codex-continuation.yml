@@ -1,8 +1,0 @@
-name: Legacy manual continuation (superseded)
-on:
-  workflow_call:
-jobs:
-  legacy:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Use autonomous-codex-builder.yml; it checkpoints and resumes automatically."
