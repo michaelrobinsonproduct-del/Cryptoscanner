@@ -1,0 +1,109 @@
+name: Paper scan recovery and unified delivery
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17,47 * * * *'
+permissions:
+  actions: write
+  contents: read
+concurrency:
+  group: paper-scan-recovery-orchestrator
+  cancel-in-progress: false
+jobs:
+  recover-and-report:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout report collector
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check writer, recover missed slot, and wait for result (maximum 7 minutes)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import datetime as dt, json, os, time, urllib.request
+          base = "https://api.github.com/repos/" + os.environ["GITHUB_REPOSITORY"]
+          headers = {"Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                     "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+          def api(path, method="GET", payload=None):
+              data = json.dumps(payload).encode() if payload is not None else None
+              request = urllib.request.Request(base + path, data=data, headers=headers, method=method)
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response) if response.status != 204 else None
+          def runs():
+              return api("/actions/workflows/paper-pipeline.yml/runs?per_page=40")["workflow_runs"]
+          def when(s):
+              return dt.datetime.fromisoformat(s.replace("Z", "+00:00"))
+          now = dt.datetime.now(dt.timezone.utc)
+          recent = [r for r in runs() if r.get("head_branch") == "main"]
+          active = [r for r in recent if r["status"] in ("queued", "in_progress", "waiting", "pending", "requested")]
+          last = max((when(r["created_at"]) for r in recent), default=None)
+          newest_run = max(recent, key=lambda r: r["created_at"]) if recent else None
+          overdue = (last is None or (now - last).total_seconds() >= 28 * 60
+                     or (newest_run["status"] == "completed" and newest_run["conclusion"] != "success"))
+          if overdue and not active:
+              api("/actions/workflows/paper-pipeline.yml/dispatches", "POST", {"ref": "main"})
+              print("RECOVERY_DISPATCHED: existing sole paper writer", flush=True)
+          elif active:
+              print("WRITER_ALREADY_ACTIVE: no duplicate dispatch", flush=True)
+          else:
+              print("WRITER_RECENT: no duplicate dispatch", flush=True)
+          # Allow enough time for a normal 5-6 minute writer run; do not manufacture a second writer.
+          deadline = time.monotonic() + 420
+          while True:
+              current = [r for r in runs() if r.get("head_branch") == "main"]
+              completed = [r for r in current if r["status"] == "completed" and r["conclusion"] == "success"]
+              newest = max(completed, key=lambda r: r["created_at"]) if completed else None
+              age = (dt.datetime.now(dt.timezone.utc) - when(newest["created_at"])).total_seconds() if newest else float("inf")
+              if newest and age <= 600:
+                  print("FRESH_WRITER_COMPLETED", newest["id"], "age_seconds", round(age), flush=True)
+                  break
+              if time.monotonic() >= deadline:
+                  raise SystemExit("NO_FRESH_SUCCESSFUL_WRITER: recovery failed or exceeded 7-minute wait")
+              time.sleep(20)
+          PY
+      - name: Verify ledger, independent legacy and fresh quote evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONPATH: .
+        run: |
+          python .github/scripts/unified_paper_report.py
+          python - <<'PY'
+          import json
+          r=json.load(open("verified-report.json"))
+          print("UNIFIED_REPORT",r["status"],"writer",r["paper_run_id"],"legacy",r["legacy_independent"])
+          if r["status"] != "PASS":
+              raise SystemExit("FRESHNESS_NOT_VERIFIED")
+          PY
+      - name: Publish unified report for ChatGPT Scan A/B readers
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-paper-report-${{ github.run_id }}
+          path: verified-report.json
+          retention-days: 30
+          if-no-files-found: error
+      - name: Publish human-readable delivery receipt
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import json,os
+          path=os.environ["GITHUB_STEP_SUMMARY"]
+          with open(path,"a") as f:
+              f.write("## Paper scan recovery and unified report\n\n")
+              f.write("Run: "+os.environ["GITHUB_SERVER_URL"]+"/"+os.environ["GITHUB_REPOSITORY"]+"/actions/runs/"+os.environ["GITHUB_RUN_ID"]+"\n\n")
+              if os.path.exists("verified-report.json"):
+                  r=json.load(open("verified-report.json"))
+                  f.write("Status: **"+r["status"]+"**; writer: "+str(r["paper_run_id"])+"; WATCH: "+str(r["watch_count"])+"; legacy independent: "+str(r["legacy_independent"])+"\n\n")
+                  f.write("Overlaps: "+(", ".join(r["verified_independent_overlaps"]) or "none")+"\n")
+              else:
+                  f.write("No verified report produced. See failure in steps above.\n")
+          PY
