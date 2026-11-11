@@ -36,6 +36,22 @@ class RollingKrakenCandlesTests(unittest.TestCase):
         self.assertFalse(combined["source_authenticated"])
         self.assertFalse(combined["results"][0]["source_authenticated"])
 
+    def test_existing_history_may_gain_source_observed_trade_count(self):
+        old = source(item("AAAUSD", 0, 5))
+        fresh = source(item("AAAUSD", 3, 7))
+        for row in fresh["results"][0]["candles"]:
+            row["trades"] = 20
+        merged = merge_observed_history(old, fresh)
+        bars = merged["results"][0]["candles"]
+        self.assertNotIn("trades", bars[0])
+        self.assertEqual(bars[3]["trades"], 20)
+        self.assertEqual(len(bars), 7)
+        rewritten = source(item("AAAUSD", 3, 7))
+        for row in rewritten["results"][0]["candles"]:
+            row["trades"] = 19
+        with self.assertRaisesRegex(ValueError, "trade count rewritten"):
+            merge_observed_history(merged, rewritten)
+
     def test_no_backfill_or_gap_interpolation(self):
         result = merge_observed_history(source(item("AAAUSD", 0, 2)),
                                          source(item("AAAUSD", 7, 9)))
