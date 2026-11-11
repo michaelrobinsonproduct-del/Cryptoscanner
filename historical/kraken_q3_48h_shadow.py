@@ -95,8 +95,14 @@ def outcomes_for_anchor(bars, i, gap_prefix):
 def candidate_rows(pair, bars):
     """Yield one as-of hourly candidate; lookback cannot use a future candle."""
     bars = sorted(bars)
-    bars = [bar for k, bar in enumerate(bars)
-            if k == 0 or bar[0] != bars[k-1][0]]
+    unique = []
+    for bar in bars:
+        if unique and bar[0] == unique[-1][0]:
+            if bar != unique[-1]:
+                raise ValueError("Conflicting historical candle at " + str(bar[0]))
+            continue
+        unique.append(bar)
+    bars = unique
     gaps = [0] * len(bars)
     for i in range(1, len(bars)):
         gaps[i] = gaps[i-1] + int(bars[i][0] - bars[i-1][0] != FIVE_MIN)
