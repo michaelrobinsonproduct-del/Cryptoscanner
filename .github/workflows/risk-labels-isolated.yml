@@ -1,0 +1,19 @@
+name: Isolated scanner risk regression
+on:
+  push:
+    branches:
+      - risk-labels-isolated-20261015
+  pull_request:
+    branches:
+      - simplified-scanner-recovery-20261011
+jobs:
+  offline-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Unit and offline integration checks
+        run: python -m unittest -v simple_scanner.test_risk_labels simple_scanner.test_risk_integration
