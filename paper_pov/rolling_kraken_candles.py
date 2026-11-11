@@ -33,11 +33,26 @@ def _rows(item):
         close, high, volume = (float(row[k]) for k in ("close", "high", "volume"))
         if not all(math.isfinite(x) for x in (close, high, volume)) or not (0 < close <= high and volume >= 0):
             raise ValueError("Invalid observed candle")
+        if "trades" in row and (type(row["trades"]) is not int or row["trades"] < 0):
+            raise ValueError("Invalid observed trade count")
         key = timestamp.isoformat()
         if key in result and result[key] != row:
             raise ValueError("Conflicting duplicate candle")
         result[key] = row
     return result
+
+
+def _merge_same_observation(prior, current, pair):
+    # Legacy candles predate the Kraken trade-count field. Accept only
+    # additive, source-observed enrichment; immutable historical OHLCV must
+    # still match. Never invent trades or rewrite an existing trade count.
+    keys = ("pair", "timestamp_utc", "close", "high", "volume")
+    if any(prior.get(key) != current.get(key) for key in keys):
+        raise ValueError("Kraken history overlap rewritten for " + pair)
+    if ("trades" in prior and "trades" in current
+            and prior["trades"] != current["trades"]):
+        raise ValueError("Kraken history trade count rewritten for " + pair)
+    return current if "trades" not in prior and "trades" in current else prior
 
 
 def merge_observed_history(previous, fresh, *, keep_days=MAX_DAYS):
@@ -60,9 +75,11 @@ def merge_observed_history(previous, fresh, *, keep_days=MAX_DAYS):
                 grouped[pair] = {"rows": {}, "sources": [], "key": item.get("kraken_pair_key")}
             group = grouped[pair]
             for stamp, candle in rows.items():
-                if stamp in group["rows"] and group["rows"][stamp] != candle:
-                    raise ValueError("Kraken history overlap rewritten for " + pair)
-                group["rows"][stamp] = candle
+                if stamp in group["rows"]:
+                    group["rows"][stamp] = _merge_same_observation(
+                        group["rows"][stamp], candle, pair)
+                else:
+                    group["rows"][stamp] = candle
             group["sources"].append(item["response_sha256"])
             if source == "current":
                 group["key"] = item.get("kraken_pair_key")
