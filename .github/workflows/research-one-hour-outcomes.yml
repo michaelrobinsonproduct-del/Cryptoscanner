@@ -1,0 +1,189 @@
+name: Research one-hour source-qualified outcome capture (manual only)
+on:
+  workflow_dispatch:
+    inputs:
+      previous_run_id:
+        description: 'Prior scored-series artifact to extend by thirteen actual five-minute depth rounds (blank starts fresh 13-round cohort)'
+        required: false
+        type: string
+      prior_cohort_run_ids:
+        description: 'Optional comma-separated successful independent research scored-series run IDs for authenticated held-out comparison'
+        required: false
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: research-one-hour-outcomes-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  observed-one-hour:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Assert exact source SHA
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          echo "ONE_HOUR_SOURCE_SHA=$EXPECTED_SHA"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Capture scoring-time Kraken receipts and 13 real five-minute depth rounds
+        if: inputs.previous_run_id == ''
+        run: |
+          set -euo pipefail
+          python -m research.live_scored_series \
+            --output-root /tmp/kraken-one-hour \
+            --rounds 13 --interval-seconds 300 | tee /tmp/kraken-one-hour-result.log
+      - name: Restore source artifact and acquire thirteen factual five-minute follow-up rounds with new source-linked scores
+        if: inputs.previous_run_id != ''
+        env:
+          PREVIOUS_RUN_ID: ${{ inputs.previous_run_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$PREVIOUS_RUN_ID" =~ ^[0-9]{8,20}$ ]] || { echo "INVALID_PREVIOUS_RUN_ID"; exit 1; }
+          gh run view "$PREVIOUS_RUN_ID" -R "$GITHUB_REPOSITORY" \
+            --json workflowName,conclusion --jq '.workflowName == "Research one-hour source-qualified outcome capture (manual only)" and .conclusion == "success"' | grep -qx true
+          mkdir -p /tmp/prior-series
+          gh run download "$PREVIOUS_RUN_ID" -R "$GITHUB_REPOSITORY" \
+            -n "research-scored-series-$PREVIOUS_RUN_ID" -D /tmp/prior-series
+          test -s /tmp/prior-series/entry/round-index.jsonl
+          test -d /tmp/prior-series/entry/scores
+          python -m research.restore_scored_series \
+            --previous /tmp/prior-series --output-root /tmp/kraken-one-hour \
+            --followup-rounds 13 --rescore | tee /tmp/kraken-one-hour-result.log
+      - name: Verify factual outcomes and score-depth binding without production claims
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research.prospective_round_store import evaluate_index
+          root=Path('/tmp/kraken-one-hour')
+          result=evaluate_index(root/'entry'/'round-index.jsonl',1)
+          expected=13 if not '${{ inputs.previous_run_id }}' else None
+          assert result['rounds_verified']>=2
+          if expected is not None:
+              assert result['rounds_verified']==expected
+          assert result['held_out_lift'] is None and not result['production_applied']
+          from research.acquisition_receipt_pipeline import load_captures
+          from research.depth_acquisition_associations import verified_associations
+          captures=load_captures(root/'entry'/'scores')
+          association_dir=root/'entry'/'associations'
+          if association_dir.is_dir():
+              associated, excluded, provenance=verified_associations(
+                  root/'entry'/'scores',association_dir,
+                  root/'entry'/'round-index.jsonl')
+          else:
+              # A real scan with no source-qualified depth is an abstention,
+              # not a fabricated match or a failed artifact-publication job.
+              associated=[]
+              excluded=[{'prediction_id':r['prediction_id'],
+                         'reason':'MISSING_DEPTH_ASSOCIATION'} for r in captures]
+              provenance={'source_abstentions':[]}
+          statuses={}
+          for o in result['outcomes']:
+              statuses[o['status']]=statuses.get(o['status'],0)+1
+          print('ONE_HOUR_OBSERVED_OUTCOMES',json.dumps({
+              'rounds':result['rounds_verified'],
+              'score_receipts':len(captures),
+              'source_bound_scores':len(associated),
+              'score_exclusions':len(excluded),
+              'snapshots':result['snapshots_verified'],
+              'qualified_episodes':result['qualified_first_entry_episodes'],
+              'status_counts':statuses,
+              'abstentions':len(result['abstentions']),
+              'positive_episodes':sum(o.get('ge30pct',False) for o in result['outcomes']
+                                      if o['status']=='QUALIFIED_OBSERVED_PATH'),
+              'held_out_lift':result['held_out_lift']
+          },sort_keys=True))
+          # Report actual identical-cohort chronological E1-E3 evidence, not
+          # merely raw source snapshots or a success flag.
+          report_path=root/'continuation-report.json'
+          if not report_path.is_file():
+              report_path=root/'series-report.json'
+          learning=json.loads(report_path.read_text())['learning']
+          comparison={}
+          for h in ('1','6','24','48'):
+              row=learning['horizons'][h]['comparison']
+              assert row['production_applied'] is False
+              assert row['held_out_n']<=row['qualified_n']<=row['captures_total']
+              comparison[h]={k:row[k] for k in (
+                  'captures_total','associations_verified',
+                  'source_snapshots_verified','qualified_n','train_n',
+                  'held_out_n','baseline','challenger','held_out_lift','rule')}
+          decision=learning['horizons']['48']['shadow_decision']
+          assert decision['production_applied'] is False
+          if comparison['48']['rule']=='NO QUALIFIED RULE':
+              assert decision['decision']=='KEEP_BASELINE'
+          print('E_SOURCE_QUALIFIED_CHRONOLOGICAL_LEARNING',
+                json.dumps({'horizons':comparison,'shadow_decision':decision['decision'],
+                            'production_applied':False},sort_keys=True))
+          PY
+      - name: Evaluate independent verified scored cohorts in one chronological held-out comparison
+        if: inputs.prior_cohort_run_ids != ''
+        env:
+          PRIOR_COHORT_RUN_IDS: ${{ inputs.prior_cohort_run_ids }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, pathlib, subprocess
+          ids=os.environ["PRIOR_COHORT_RUN_IDS"].split(",")
+          if not 1<=len(ids)<=20 or len(set(ids))!=len(ids):
+              raise ValueError("requires one to twenty unique prior cohort runs")
+          paths=["/tmp/kraken-one-hour"]
+          current_branch=os.environ["GITHUB_REF_NAME"]
+          for i,run_id in enumerate(ids):
+              run_id=run_id.strip()
+              if not run_id.isascii() or not run_id.isdigit() or not 8<=len(run_id)<=20:
+                  raise ValueError("invalid prior cohort run ID")
+              raw=subprocess.check_output(
+                  ["gh","run","view",run_id,"-R",os.environ["GITHUB_REPOSITORY"],
+                   "--json","workflowName,conclusion,headBranch",
+                   ],
+                  text=True).strip()
+              import json
+              info=json.loads(raw)
+              if not (info.get("workflowName")=="Research one-hour source-qualified outcome capture (manual only)" and info.get("conclusion")=="success" and info.get("headBranch")==current_branch):
+                  raise ValueError("not a successful same-branch research series")
+              folder=pathlib.Path("/tmp/independent-cohorts")/str(i)
+              folder.mkdir(parents=True)
+              subprocess.run(
+                  ["gh","run","download",run_id,"-R",os.environ["GITHUB_REPOSITORY"],
+                   "-n","research-scored-series-"+run_id,"-D",str(folder)],
+                  check=True,timeout=120)
+              if not (folder/"entry"/"round-index.jsonl").is_file():
+                  raise ValueError("prior scored cohort missing retained index")
+              paths.append(str(folder))
+          cmd=["python","-m","research.multi_cohort_learning"]
+          for path in paths:
+              cmd+=["--cohort",path]
+          cmd+=["--output","/tmp/kraken-one-hour/multi-cohort-learning.json",
+                "--shadow-ledger","/tmp/kraken-one-hour/multi-cohort-shadow.jsonl"]
+          subprocess.run(cmd,check=True)
+          PY
+      - name: Retain portable scored-series evidence for next independent job
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: research-scored-series-${{ github.run_id }}
+          path: /tmp/kraken-one-hour/
+          retention-days: 30
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kraken-one-hour-source-${{ github.run_id }}
+          path: |
+            /tmp/kraken-one-hour/
+            /tmp/kraken-one-hour-result.log
+          if-no-files-found: warn
+          retention-days: 30
