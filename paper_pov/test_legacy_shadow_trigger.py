@@ -1,6 +1,9 @@
 """Adversarial offline owner fallback tests; no GitHub calls or ledger writes."""
 import copy
 import datetime as dt
+import json
+import tempfile
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 
@@ -48,6 +51,44 @@ def decide(**changes):
 
 
 class OwnerFallbackTests(unittest.TestCase):
+    def test_cli_atomic_decision_and_stale_authorization_removal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            f = fixture()
+            names = {
+                "event": "event.json", "paper_runs": "paper.json",
+                "shadow_runs": "shadow.json", "state": "ledger.json",
+                "manifest": "manifest.json",
+            }
+            for key, filename in names.items():
+                (root / filename).write_text(json.dumps(f[key]))
+            (root / "message.txt").write_text(f["ledger_message"])
+            output = root / "decision.json"
+            argv = []
+            for flag, filename in (
+                ("event", names["event"]), ("paper-runs", names["paper_runs"]),
+                ("shadow-runs", names["shadow_runs"]), ("ledger", names["state"]),
+                ("manifest", names["manifest"]), ("ledger-message", "message.txt"),
+            ):
+                argv.extend(["--" + flag, str(root / filename)])
+            argv.extend(["--repository", gate.REPO, "--current-run-id", str(CURRENT_ID),
+                         "--checkout-sha", SHA, "--output", str(output)])
+            with patch.object(gate.ledger, "verify"):
+                gate.main(argv, now=NOW)
+            self.assertEqual(json.loads(output.read_text())["action"], "RUN_SHADOW")
+            # A failed second invocation must remove stale authorization.
+            (root / names["event"]).write_text("{broken json")
+            with self.assertRaises(json.JSONDecodeError):
+                gate.main(argv)
+            self.assertFalse(output.exists())
+            # An ambiguous run history must publish a complete ABSTAIN decision.
+            (root / names["event"]).write_text(json.dumps(f["event"]))
+            shadow = {"workflow_runs": [{"id": []}]}
+            (root / names["shadow_runs"]).write_text(json.dumps(shadow))
+            with patch.object(gate.ledger, "verify"):
+                gate.main(argv, now=NOW)
+            self.assertEqual(json.loads(output.read_text())["action"], "ABSTAIN")
+
     def test_valid_completed_sealed_dispatch_and_native(self):
         self.assertEqual(decide()["action"], "RUN_SHADOW")
         f = fixture()
@@ -65,6 +106,16 @@ class OwnerFallbackTests(unittest.TestCase):
         f["event"]["sender"]["id"] = 1
         with self.assertRaisesRegex(ValueError, "Unauthenticated"):
             decide(**f)
+
+    def test_shared_owner_identity_rejects_boolean_and_string_ids(self):
+        # Python bool compares equal to 1; GitHub identity must be an exact integer.
+        for role in ("sender", "comment"):
+            for bad in (True, str(gate.OWNER_ID), None):
+                f = fixture()
+                identity = f["event"]["sender"] if role == "sender" else f["event"]["comment"]["user"]
+                identity["id"] = bad
+                with self.assertRaisesRegex(ValueError, "Unauthenticated"):
+                    decide(**f)
 
     def test_wrong_issue_repository_and_pr_abstain(self):
         for change in ("number", "repository", "pull_request"):
@@ -172,6 +223,21 @@ class OwnerFallbackTests(unittest.TestCase):
         self.assertEqual(decide(**f)["reason"],
                          "SHADOW_ALREADY_TRIGGERED_OR_IN_PROGRESS")
 
+    def test_partial_shadow_page_duplicate_or_unsorted_fails_closed(self):
+        f = fixture()
+        row = {"id": CURRENT_ID + 1, "name": gate.SHADOW,
+               "path": gate.SHADOW_PATH,
+               "repository": {"full_name": gate.REPO},
+               "created_at": iso(-2), "event": "issue_comment",
+               "status": "completed", "conclusion": "skipped"}
+        f["shadow_runs"]["workflow_runs"] = [copy.deepcopy(row), copy.deepcopy(row)]
+        self.assertEqual(decide(**f)["reason"], "DUPLICATE_OR_INVALID_SHADOW_RUN_ID")
+        f["shadow_runs"]["workflow_runs"][1]["id"] += 1
+        f["shadow_runs"]["workflow_runs"][1]["created_at"] = iso(-1)
+        self.assertEqual(decide(**f)["reason"], "UNSORTED_SHADOW_HISTORY")
+        f["shadow_runs"]["workflow_runs"][1]["created_at"] = iso(-3)
+        self.assertEqual(decide(**f)["action"], "RUN_SHADOW")
+
     def test_unknown_shadow_event_fails_closed(self):
         f = fixture()
         f["shadow_runs"]["workflow_runs"] = [{
@@ -205,7 +271,7 @@ class OwnerFallbackTests(unittest.TestCase):
         f = fixture()
         f["shadow_runs"]["workflow_runs"] = [{
             "id": CURRENT_ID, "created_at": iso(0)}] * 100
-        self.assertEqual(decide(**f)["reason"], "SHADOW_PAGINATION_AMBIGUITY")
+        self.assertEqual(decide(**f)["reason"], "DUPLICATE_OR_INVALID_SHADOW_RUN_ID")
         f = fixture()
         f["paper_runs"]["workflow_runs"] *= 100
         self.assertEqual(decide(**f)["reason"], "DUPLICATE_OR_INVALID_WRITER_RUN_ID")
@@ -288,7 +354,7 @@ class OwnerFallbackTests(unittest.TestCase):
             old["created_at"] = iso(-2)
         self.assertEqual(decide(**f)["reason"], "SHADOW_PAGINATION_AMBIGUITY")
         history[1]["created_at"] = iso(-1)
-        self.assertEqual(decide(**f)["reason"], "SHADOW_PAGINATION_AMBIGUITY")
+        self.assertEqual(decide(**f)["reason"], "UNSORTED_SHADOW_HISTORY")
 
     def test_invalid_clock_and_utc_timestamp_rejected(self):
         f = fixture()
@@ -306,6 +372,33 @@ class OwnerFallbackTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "bad seal"):
                 gate.decide(**f)
 
+
+
+    def test_malformed_history_abstains_instead_of_crashing(self):
+        for kind in ("paper_runs", "shadow_runs"):
+            for malformed in ({"id": []}, {"id": True}, {"id": 0},
+                              {"id": 999, "created_at": "invalid"}, None):
+                f = fixture()
+                f[kind]["workflow_runs"].append(malformed)
+                result = decide(**f)
+                self.assertEqual(result["action"], "ABSTAIN")
+                self.assertIn(result["reason"], (
+                    "DUPLICATE_OR_INVALID_WRITER_RUN_ID",
+                    "DUPLICATE_OR_INVALID_SHADOW_RUN_ID",
+                    "UNSORTED_WRITER_HISTORY", "UNSORTED_SHADOW_HISTORY"))
+
+    def test_partial_history_valid_skipped_shadow_still_allows_fallback(self):
+        f = fixture()
+        f["shadow_runs"]["workflow_runs"] = [
+            {"id": CURRENT_ID + 3, "name": gate.SHADOW,
+             "path": gate.SHADOW_PATH, "repository": {"full_name": gate.REPO},
+             "created_at": iso(-2), "event": "issue_comment",
+             "status": "completed", "conclusion": "skipped"},
+            {"id": CURRENT_ID + 2, "name": gate.SHADOW,
+             "path": gate.SHADOW_PATH, "repository": {"full_name": gate.REPO},
+             "created_at": iso(-8), "event": "workflow_run",
+             "status": "completed", "conclusion": "success"}]
+        self.assertEqual(decide(**f)["action"], "RUN_SHADOW")
 
 if __name__ == "__main__":
     unittest.main()

@@ -6,15 +6,16 @@ the writer, modifies the ledger, trades, promotes scores, or claims predictive l
 import argparse
 import datetime as dt
 import json
+import os
 import re
+import tempfile
 from pathlib import Path
 
 from paper_pov import ledger
+from paper_pov.external_heartbeat_guard import _owner_identity, OWNER, OWNER_ID, REPOSITORY
 from paper_pov.segmented_storage import MAX_RAW_BYTES
 
-REPO = "michaelrobinsonproduct-del/Cryptoscanner"
-OWNER = "michaelrobinsonproduct-del"
-OWNER_ID = 336805669
+REPO = REPOSITORY
 PAPER = "Public Kraken Paper POV (scheduled, isolated ledger)"
 PAPER_PATH = ".github/workflows/paper-pipeline.yml"
 SHADOW = "Independent legacy-inspired PAPER shadow (read only)"
@@ -36,6 +37,22 @@ def _abstain(reason):
     return {"action": "ABSTAIN", "reason": reason}
 
 
+def _history_error(rows, identity_reason, order_reason):
+    """Validate every history identity before sorting or trusting a partial page."""
+    ids = [row.get("id") if isinstance(row, dict) else None for row in rows]
+    if any(type(run_id) is not int or run_id < 1 for run_id in ids):
+        return identity_reason
+    if len(set(ids)) != len(ids):
+        return identity_reason
+    try:
+        times = [stamp(row.get("created_at")) for row in rows]
+    except (ValueError, TypeError, AttributeError, OverflowError):
+        return order_reason
+    if any(times[i] < times[i + 1] for i in range(len(times) - 1)):
+        return order_reason
+    return None
+
+
 def decide(event, paper_runs, shadow_runs, state, manifest, ledger_message,
            *, repository, current_run_id, checkout_sha, now):
     if (repository != REPO or event.get("repository", {}).get("full_name") != REPO
@@ -44,11 +61,9 @@ def decide(event, paper_runs, shadow_runs, state, manifest, ledger_message,
             or event.get("issue", {}).get("number") != 34
             or event.get("issue", {}).get("pull_request") is not None
             or event.get("comment", {}).get("body") != COMMAND
-            or event.get("comment", {}).get("user", {}).get("login") != OWNER
-            or event.get("comment", {}).get("user", {}).get("id") != OWNER_ID
             or event.get("comment", {}).get("author_association") != "OWNER"
-            or event.get("sender", {}).get("login") != OWNER
-            or event.get("sender", {}).get("id") != OWNER_ID
+            or not _owner_identity(event.get("comment", {}).get("user"))
+            or not _owner_identity(event.get("sender"))
             or not isinstance(checkout_sha, str) or not SHA.fullmatch(checkout_sha)
             or type(current_run_id) is not int or current_run_id < 1):
         raise ValueError("Unauthenticated owner shadow fallback")
@@ -67,13 +82,10 @@ def decide(event, paper_runs, shadow_runs, state, manifest, ledger_message,
         return _abstain("EMPTY_OR_PAGINATION_AMBIGUITY")
     # GitHub's first page is newest-first. A full 100-run page is valid for
     # finding the latest writer if its ordering and identities are unambiguous.
-    if (len({r.get("id") for r in papers}) != len(papers)
-            or any(type(r.get("id")) is not int for r in papers)):
-        return _abstain("DUPLICATE_OR_INVALID_WRITER_RUN_ID")
-    if any(stamp(papers[i].get("created_at")) <
-           stamp(papers[i + 1].get("created_at"))
-           for i in range(len(papers) - 1)):
-        return _abstain("UNSORTED_WRITER_HISTORY")
+    issue = _history_error(papers, "DUPLICATE_OR_INVALID_WRITER_RUN_ID",
+                           "UNSORTED_WRITER_HISTORY")
+    if issue:
+        return _abstain(issue)
     if len(papers) > 1 and stamp(papers[0].get("created_at")) == stamp(papers[1].get("created_at")):
         return _abstain("AMBIGUOUS_LATEST_WRITER")
     # GitHub's workflow-specific history includes older successful push/PR
@@ -110,14 +122,16 @@ def decide(event, paper_runs, shadow_runs, state, manifest, ledger_message,
             or manifest.get("head", {}).get("ledger_sha256") != state.get("sha256")):
         return _abstain("SEALED_LEDGER_SOURCE_OR_SHA_MISMATCH")
     shadows = shadow_runs["workflow_runs"]
+    # Reject ambiguous identities/order on every page, not just a full page.
+    # An incomplete page can otherwise hide a duplicate shadow execution.
+    issue = _history_error(shadows, "DUPLICATE_OR_INVALID_SHADOW_RUN_ID",
+                           "UNSORTED_SHADOW_HISTORY")
+    if issue:
+        return _abstain(issue)
     if len(shadows) >= 100:
         # A full page is safe only if the oldest included run predates this
         # writer: all relevant post-writer runs must then be on page one.
-        if (any(stamp(shadows[i].get("created_at")) <
-                stamp(shadows[i + 1].get("created_at"))
-                for i in range(len(shadows) - 1))
-                or stamp(shadows[-1].get("created_at")) >=
-                stamp(writer["created_at"])):
+        if stamp(shadows[-1].get("created_at")) >= stamp(writer["created_at"]):
             return _abstain("SHADOW_PAGINATION_AMBIGUITY")
     for shadow in shadows:
         if shadow.get("id") == current_run_id:
@@ -145,20 +159,35 @@ def decide(event, paper_runs, shadow_runs, state, manifest, ledger_message,
             "ledger_sha256": state["sha256"], "mode": "READ_ONLY_OWNER_FALLBACK"}
 
 
-def main(argv=None):
+def main(argv=None, *, now=None):
     p = argparse.ArgumentParser()
     for arg in ("event", "paper-runs", "shadow-runs", "ledger", "manifest",
                 "ledger-message", "repository", "current-run-id", "checkout-sha",
                 "output"):
         p.add_argument("--" + arg, required=True)
     a = p.parse_args(argv)
+    # Never leave a previous RUN_SHADOW authorization available after a failed invocation.
+    output = Path(a.output)
+    output.unlink(missing_ok=True)
     read = lambda x: json.loads(Path(x).read_text())
     result = decide(read(a.event), read(a.paper_runs), read(a.shadow_runs),
                     read(a.ledger), read(a.manifest),
                     Path(a.ledger_message).read_text(),
                     repository=a.repository, current_run_id=int(a.current_run_id),
-                    checkout_sha=a.checkout_sha, now=dt.datetime.now(dt.timezone.utc))
-    Path(a.output).write_text(json.dumps(result, sort_keys=True) + "\n")
+                    checkout_sha=a.checkout_sha, now=(dt.datetime.now(dt.timezone.utc) if now is None else now))
+    # Publish a complete decision atomically; partial files must never authorize a run.
+    tmp = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=output.parent,
+                                         prefix=".shadow-decision-", delete=False) as handle:
+            tmp = Path(handle.name)
+            handle.write(json.dumps(result, sort_keys=True) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, output)
+    finally:
+        if tmp is not None:
+            tmp.unlink(missing_ok=True)
     print("LEGACY_OWNER_FALLBACK " + json.dumps(result, sort_keys=True))
 
 
