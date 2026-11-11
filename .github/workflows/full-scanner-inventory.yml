@@ -1,0 +1,93 @@
+name: Full scanner repository inventory (read only)
+on:
+  pull_request:
+    paths:
+      - 'audit_tools/full_scanner_inventory.py'
+      - 'audit_tools/test_full_scanner_inventory.py'
+      - 'audit_tools/bounded_audit_scope.py'
+      - 'audit_tools/test_bounded_audit_scope.py'
+      - 'audit_tools/freeze_scoped_audit.py'
+      - 'audit_tools/test_freeze_scoped_audit.py'
+      - 'audit_tools/external_runtime_20261102.json'
+      - 'audit_tools/pr_triage_20261102.json'
+      - 'audit_tools/pr_semantic_current_20261102.json'
+      - '.github/workflows/full-scanner-inventory.yml'
+  workflow_dispatch:
+concurrency:
+  group: scanner-audit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+jobs:
+  inventory:
+    if: github.repository == 'michaelrobinsonproduct-del/Cryptoscanner'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Record exact audit source
+        run: git rev-parse HEAD
+      - name: Compile check
+        run: python -m py_compile audit_tools/full_scanner_inventory.py audit_tools/test_full_scanner_inventory.py audit_tools/bounded_audit_scope.py audit_tools/test_bounded_audit_scope.py audit_tools/freeze_scoped_audit.py audit_tools/test_freeze_scoped_audit.py
+      - name: Fail-closed pagination regression tests
+        run: python -m unittest audit_tools.test_full_scanner_inventory audit_tools.test_bounded_audit_scope audit_tools.test_freeze_scoped_audit -v
+      - name: Validate evidence-qualified PR classification snapshot
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open("audit_tools/pr_triage_20261102.json"))
+          rows=d["prs"]
+          assert len(rows)==d["open_pr_count"] and len({r["number"] for r in rows})==len(rows)
+          assert all(len(r["head_sha"])==40 and r["classification"] in
+                     {"integrated","superseded","needed","conflicting","unknown"} for r in rows)
+          print("AUDIT_TRIAGE_SNAPSHOT_VALID",len(rows),d["main_sha"])
+          PY
+      - name: Inventory all workflows, PRs, branches and recent runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python audit_tools/full_scanner_inventory.py
+      - name: Record snapshot-only external runtime and audit gate
+        run: |
+          python - <<'PY'
+          import json,shutil
+          p="audit_tools/external_runtime_20261102.json"
+          x=json.load(open(p))
+          assert x["schema"]=="cryptoscanner-external-runtime-audit-v1"
+          a=json.load(open("audit-evidence/external-runtime-assessment.json"))
+          inventory=json.load(open("audit-evidence/scanner-inventory.json"))
+          assert a["evidence_class"]=="snapshot_only"
+          assert a["cleanup_authorized"] is False and a["runtime_coverage_certified"] is False
+          assert a["snapshot_main_sha"]==x["repo_main_sha"]
+          assert a["current_main_sha"]==inventory["main_sha"]
+          assert a["reason"]==inventory["external_runtime_evidence_reason"]
+          gate=json.load(open("audit-evidence/audit-certification-gate.json"))
+          assert gate["status"]=="NOT_CERTIFIED"
+          assert gate["main_sha"]==inventory["main_sha"]
+          assert gate["ledger_sha_read_only"]==inventory["ledger_sha"]
+          assert gate["cleanup_authorized"] is False and gate["production_mutation_authorized"] is False
+          print("AUDIT_GATE",gate["status"],len(gate["blockers"]))
+          print("EXTERNAL_RUNTIME_SNAPSHOT_ONLY",a["reason"],a["age_seconds"])
+          shutil.copy2(p,"audit-evidence/external-runtime.json")
+          PY
+      - name: Source-bound bounded audit scope (read only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python audit_tools/bounded_audit_scope.py
+      - name: Freeze exact-source finite scope decision
+        run: python audit_tools/freeze_scoped_audit.py
+      - name: SHA256 evidence
+        run: (cd audit-evidence && sha256sum scanner-inventory.json scanner-inventory.md consumer-graph.json semantic-pr-matrix.json declared-write-surfaces.json external-runtime.json external-runtime-assessment.json audit-certification-gate.json bounded-source-audit.json finite-scope-decision.json > SHA256SUMS && sha256sum -c SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scanner-full-inventory-${{ github.run_id }}
+          path: audit-evidence/
+          retention-days: 90
+          if-no-files-found: error
