@@ -137,9 +137,17 @@ def candidate_rows(pair, bars):
         }
         if not all(math.isfinite(x) for x in features.values()):
             continue
+        outcomes = outcomes_for_anchor(bars, i, gaps)
+        time_to_target = None
+        if outcomes["48"] is not None and outcomes["48"] >= .30:
+            first_cross = next((j for j in range(i+1, i+48*12+1)
+                                if bars[j][1] >= 1.30*price), None)
+            if first_cross is not None:
+                time_to_target = (bars[first_cross][0]-stamp)/3600
         yield {"pair": pair, "at": asof, "notional_60m": notional,
-               "features": features, "outcomes": outcomes_for_anchor(bars,i,gaps),
-               "split": split_for_stamp(stamp), "entry_price": price}
+               "features": features, "outcomes": outcomes,
+               "time_to_30pct_hours": time_to_target,
+               "split": split_for_stamp(asof), "entry_price": price}
 
 
 def frozen_asof_universe(market_rows, top_n=MAX_NOTIONAL_CANDIDATES):
@@ -200,9 +208,11 @@ def compare(rows, model, split):
         "baseline_abs_60m": lambda row: abs(row["features"]["momentum_60m"]),
     }
     output = {}
+    selections = {}
     for name, scorer in methods.items():
         selected = [sorted(candidate, key=lambda r: (-scorer(r), r["pair"]))[0]
                     for _, candidate in sorted(universe.items()) if candidate]
+        selections[name] = {row["at"]: row for row in selected}
         complete = [r for r in selected if r["outcomes"]["48"] is not None]
         hits = [r for r in complete if r["outcomes"]["48"] >= .30]
         early = [r for r in hits if abs(r["features"]["momentum_60m"]) <= .03]
@@ -213,6 +223,8 @@ def compare(rows, model, split):
             for h in HORIZONS}
         # Deduplicate repeated same-market positive hourly windows into pair-days.
         pairdays = sorted({(r["pair"], r["at"]//86400) for r in hits})
+        hit_delays = [r.get("time_to_30pct_hours") for r in hits
+                      if r.get("time_to_30pct_hours") is not None]
         output[name] = {
             "timestamps": len(selected), "complete_48h": len(complete),
             "48h_abstentions": len(selected)-len(complete),
@@ -221,7 +233,29 @@ def compare(rows, model, split):
             "early_hits30": len(early),
             "positive_pairdays": len(pairdays),
             "unique_positive_pairs": len({r["pair"] for r in hits}),
+            "median_hours_to_30pct_target": statistics.median(hit_delays) if hit_delays else None,
+            "mean_max_forward_48h_pct": 100*sum(r["outcomes"]["48"] for r in complete)/len(complete) if complete else None,
             "outcomes_by_horizon": outcome_by_horizon,
+        }
+    if "shadow_learned" in selections:
+        left, right = selections["baseline_abs_60m"], selections["shadow_learned"]
+        shared = [stamp for stamp in sorted(set(left) & set(right))
+                  if left[stamp]["outcomes"]["48"] is not None
+                  and right[stamp]["outcomes"]["48"] is not None]
+        b = [left[t] for t in shared]
+        s = [right[t] for t in shared]
+        b_hit = {t for t in shared if left[t]["outcomes"]["48"] >= .30}
+        s_hit = {t for t in shared if right[t]["outcomes"]["48"] >= .30}
+        output["paired_complete_comparison"] = {
+            "same_frozen_timestamp_count": len(shared),
+            "baseline_hits30": len(b_hit), "challenger_hits30": len(s_hit),
+            "challenger_only_hit_times": len(s_hit - b_hit),
+            "baseline_only_hit_times": len(b_hit - s_hit),
+            "hit_time_difference": len(s_hit)-len(b_hit),
+            "baseline_positive_pairdays": len({(r["pair"],r["at"]//86400)
+                                                 for r in b if r["outcomes"]["48"] >= .30}),
+            "challenger_positive_pairdays": len({(r["pair"],r["at"]//86400)
+                                                   for r in s if r["outcomes"]["48"] >= .30}),
         }
     return output
 
