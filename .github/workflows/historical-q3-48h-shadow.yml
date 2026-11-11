@@ -42,6 +42,9 @@ jobs:
               print('OFFICIAL_KRAKEN_Q3_CSV_FILES',len(names))
           PY
           sha256sum /tmp/kraken-archive/q3.zip | tee historical/output/source-archive-SHA256SUMS
+          # Freeze the exact official-download bytes observed on the first
+          # successful archive replay; never silently train on changed source.
+          echo '96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226  /tmp/kraken-archive/q3.zip' | sha256sum -c -
       - name: Frozen chronological 48h plus 1 6 24h labels, training and blind holdout
         run: |
           python -m historical.kraken_q3_48h_shadow \
