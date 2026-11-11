@@ -102,7 +102,10 @@ def candidate_rows(pair, bars):
         gaps[i] = gaps[i-1] + int(bars[i][0] - bars[i-1][0] != FIVE_MIN)
     for i in range(12, len(bars)):
         stamp, price, _, _ = bars[i]
-        if stamp % 3600 or not START <= stamp < TEST_END:
+        # Kraken rows are OPEN-timestamped. The observed close is not known
+        # until the bar has finished five minutes later.
+        asof = stamp + FIVE_MIN
+        if asof % 3600 or not START <= asof < TEST_END:
             continue
         if bars[i-12][0] != stamp-3600 or gaps[i] != gaps[i-12]:
             continue
@@ -128,7 +131,7 @@ def candidate_rows(pair, bars):
         }
         if not all(math.isfinite(x) for x in features.values()):
             continue
-        yield {"pair": pair, "at": stamp, "notional_60m": notional,
+        yield {"pair": pair, "at": asof, "notional_60m": notional,
                "features": features, "outcomes": outcomes_for_anchor(bars,i,gaps),
                "split": split_for_stamp(stamp), "entry_price": price}
 
