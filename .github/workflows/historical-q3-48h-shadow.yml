@@ -1,0 +1,72 @@
+name: Kraken Q3 Historical +30% 48h Shadow (read only)
+on:
+  pull_request:
+    paths:
+      - 'historical/kraken_q3_48h_shadow.py'
+      - 'historical/test_kraken_q3_48h_shadow.py'
+      - '.github/workflows/historical-q3-48h-shadow.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: historical-q3-shadow-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  independent-48h-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 85
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact-source leak, gap, eligibility and 48-hour embargo contracts
+        run: python -m unittest historical.test_kraken_q3_48h_shadow -v
+      - name: Download official Kraken Q3 incremental OHLCVT archive
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/kraken-archive historical/output
+          curl --fail --location --silent --show-error --retry 2 \
+            --connect-timeout 30 --max-time 2400 \
+            'https://assets.kraken.com/marketing/institutions/Kraken_OHLCVT_2026Q3.zip' \
+            -o /tmp/kraken-archive/q3.zip
+          test "$(stat -c %s /tmp/kraken-archive/q3.zip)" -gt 1000000
+          python - <<'PY'
+          import zipfile
+          path='/tmp/kraken-archive/q3.zip'
+          with zipfile.ZipFile(path) as z:
+              names=z.namelist()
+              assert any(name.endswith('_5.csv') for name in names)
+              print('OFFICIAL_KRAKEN_Q3_CSV_FILES',len(names))
+          PY
+          sha256sum /tmp/kraken-archive/q3.zip | tee historical/output/source-archive-SHA256SUMS
+          # Freeze the exact official-download bytes observed on the first
+          # successful archive replay; never silently train on changed source.
+          echo '96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226  /tmp/kraken-archive/q3.zip' | sha256sum -c -
+      - name: Frozen chronological 48h plus 1 6 24h labels, training and blind holdout
+        run: |
+          python -m historical.kraken_q3_48h_shadow \
+            /tmp/kraken-archive/q3.zip \
+            --output historical/output/q3-shadow-48h.json
+          python - <<'PY'
+          import json
+          d=json.load(open('historical/output/q3-shadow-48h.json'))
+          assert d['source_authenticated'] is False
+          assert d['promotion_authorized'] is False
+          assert d['production_applied'] is False
+          assert d['rows_in_asof_universe'] > 0
+          assert d['training']['train_complete'] > 0
+          print('SHADOW_HISTORICAL_48H_REPLAY', d['training']['status'])
+          print('TEST_SAME_UNIVERSE_RESULTS',json.dumps(d['evaluation']['test'],sort_keys=True))
+          PY
+      - name: Retain small read-only source and comparison evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kraken-q3-frozen-48h-shadow-${{ github.run_id }}
+          path: |
+            historical/output/q3-shadow-48h.json
+            historical/output/source-archive-SHA256SUMS
+          retention-days: 30
