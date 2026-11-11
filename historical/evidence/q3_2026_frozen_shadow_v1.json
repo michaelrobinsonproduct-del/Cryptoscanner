@@ -1,0 +1,62 @@
+{
+  "schema": "kraken_q3_frozen_shadow_v1",
+  "source_zip_sha256": "96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226",
+  "training_window_end": "2026-08-14T00:00:00Z",
+  "reference_workflow_run": 42952766811,
+  "reference_artifact": 13824649888,
+  "label": "complete 48h +30% max 5-minute close",
+  "training": {
+    "feature_names": [
+      "momentum_5m",
+      "momentum_15m",
+      "momentum_60m",
+      "volume_accel",
+      "trade_accel",
+      "volatility_60m"
+    ],
+    "means": {
+      "momentum_15m": 0.00013413592257012277,
+      "momentum_5m": -0.000019795394587154827,
+      "momentum_60m": 0.00043025899346834685,
+      "trade_accel": 1.0734009847987098,
+      "volatility_60m": 0.001468638017296926,
+      "volume_accel": 1.9203154002994849
+    },
+    "scales": {
+      "momentum_15m": 0.007865947962825413,
+      "momentum_5m": 0.003811158959490067,
+      "momentum_60m": 0.016017262334438117,
+      "trade_accel": 0.6756645016768431,
+      "volatility_60m": 0.004137421075405775,
+      "volume_accel": 3.8890523304093425
+    },
+    "weights": {
+      "momentum_15m": 0.7131273697066671,
+      "momentum_5m": -0.923787541004035,
+      "momentum_60m": 1.0758287084655456,
+      "trade_accel": 0.46151927869419135,
+      "volatility_60m": 6.829431330192918,
+      "volume_accel": -0.09909378686595759
+    },
+    "train_complete": 5273,
+    "train_positive": 67,
+    "train_negative": 5206,
+    "status": "SHADOW_ONLY",
+    "promotion_authorized": false,
+    "production_applied": false
+  },
+  "heldout_paired": {
+    "baseline_hits30": 45,
+    "baseline_only_hit_times": 4,
+    "baseline_positive_pairdays": 12,
+    "challenger_hits30": 58,
+    "challenger_only_hit_times": 17,
+    "challenger_positive_pairdays": 12,
+    "hit_time_difference": 13,
+    "same_frozen_timestamp_count": 289
+  },
+  "source_authenticated": false,
+  "promotion_authorized": false,
+  "production_applied": false,
+  "version": "545861ca419c1a8836ebc1dbe58bdace6e35ea0d2741ef70770850b4d8e00370"
+}
