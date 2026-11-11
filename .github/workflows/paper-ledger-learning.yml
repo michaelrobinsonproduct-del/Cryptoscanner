@@ -89,12 +89,15 @@ jobs:
           python -m paper_pov.kraken_observed_candles evidence/recent-pairs.json --output evidence/kraken-candles-fresh.json
           # Reuse existing read-only learning artifacts: this is not another writer.
           mkdir -p evidence/prior
+          # Only durable main-branch learning may extend the production
+          # history; PR/test artifacts are never authoritative ancestors.
           PRIOR_RUN="$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
-            --jq '[.artifacts[] | select(.expired == false and (.name | startswith("public-paper-learning-"))) | .workflow_run.id] | first // empty' || true)"
+            --jq '[.artifacts[] | select(.expired == false and (.name | startswith("public-paper-learning-")) and .workflow_run.head_branch == "main") | .workflow_run.id] | first // empty')"
           if [ -n "$PRIOR_RUN" ]; then
-            if ! gh run download "$PRIOR_RUN" -n "public-paper-learning-$PRIOR_RUN" -D evidence/prior; then
-              echo "::warning::ROLLING_HISTORY_PRIOR_ARTIFACT_UNAVAILABLE; proceeding with fresh observations only"
-            fi
+            # Once continuity exists, a missing ancestor is an error: silently
+            # replacing it with fresh 60h candles would erase mature cohorts.
+            gh run download "$PRIOR_RUN" -n "public-paper-learning-$PRIOR_RUN" -D evidence/prior
+            test -s evidence/prior/kraken-candles.json
           else
             echo "::notice::ROLLING_HISTORY_FIRST_RUN_NO_PRIOR_ARTIFACT"
           fi

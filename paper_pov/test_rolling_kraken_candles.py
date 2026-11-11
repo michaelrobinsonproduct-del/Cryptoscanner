@@ -50,6 +50,14 @@ class RollingKrakenCandlesTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "overlap rewritten"):
             merge_observed_history(old, fresh)
 
+    def test_production_history_cannot_select_pr_or_reset_on_download_error(self):
+        from pathlib import Path
+        workflow = Path(".github/workflows/paper-ledger-learning.yml").read_text()
+        self.assertIn('.workflow_run.head_branch == "main"', workflow)
+        self.assertIn('gh run download "$PRIOR_RUN"', workflow)
+        self.assertIn('test -s evidence/prior/kraken-candles.json', workflow)
+        self.assertNotIn("ROLLING_HISTORY_PRIOR_ARTIFACT_UNAVAILABLE; proceeding with fresh observations only", workflow)
+
     def test_no_previous_first_run(self):
         result = merge_observed_history(None, source(item("AAAUSD", 0, 4)))
         self.assertEqual(result["retained_candles"], 4)
