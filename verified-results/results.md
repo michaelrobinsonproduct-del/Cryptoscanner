@@ -2,26 +2,25 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-12T07:03:57.189487+00:00
+**UTC as-of:** 2026-11-12T07:40:36.522428+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43172169068
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43176718430
 **Source SHA:** 21b4cf643df9f7a7adfddc959660920dd467c70b
-**Ledger commit:** 7d324ffd05392226a79fa904517809fdc394ccdb
-**Ledger generation:** 318 (remote push/readback verified)
+**Ledger commit:** b4c1f2710d81d00bf7a84eefacd8e6d8bf1c2de6
+**Ledger generation:** 319 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 624; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 606; valid market observations: 606; OHLC screened: 16.
+**Freshness:** Kraken public ticker client-observed, max quote age 6s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 624; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 606; valid market observations: 606; OHLC screened: 15.
 
 ## Top WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | Confidence / risk | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|
-| 1 | ZEC/USD | 987.46 | 65.620 | 71.384 | +2.64% | +0.05% | 0.40x | 4.3 | 2026-11-12T07:03:52.801141+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 2 | AVAX/USD | 8.617 | 61.415 | 61.895 | +1.23% | -0.16% | 1.03x | 3.5 | 2026-11-12T07:03:52.801141+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 3 | TON/USD | 1.182 | 57.631 | 41.356 | +0.77% | +0.25% | 2.72x | 16.9 | 2026-11-12T07:03:52.801141+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 4 | HBAR/USD | 0.06565 | 52.055 | 36.979 | +0.43% | +0.02% | 12.28x | 3.0 | 2026-11-12T07:03:52.801141+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 5 | DOT/USD | 0.8423 | 46.298 | 37.690 | +0.44% | +0.29% | 1.72x | 2.4 | 2026-11-12T07:03:52.801141+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 6 | BAT/USD | 0.11857 | 32.880 | 32.605 | +0.71% | -0.88% | 1.47x | 10.1 | 2026-11-12T07:03:52.801141+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 1 | ZEC/USD | 986.44 | 76.107 | 71.350 | +2.54% | -0.12% | 1.54x | 2.8 | 2026-11-12T07:40:30.829038+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 2 | TON/USD | 1.202 | 67.017 | 53.669 | +2.47% | -0.33% | 3.86x | 16.6 | 2026-11-12T07:40:30.829038+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 3 | AVAX/USD | 8.65 | 63.328 | 64.613 | +1.62% | +0.06% | 0.84x | 3.5 | 2026-11-12T07:40:30.829038+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 4 | BAT/USD | 0.12069 | 55.007 | 40.090 | +2.51% | -0.02% | 10.29x | 20.7 | 2026-11-12T07:40:30.829038+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 5 | HBAR/USD | 0.06565 | 46.658 | 36.274 | +0.43% | -0.18% | 2.13x | 4.6 | 2026-11-12T07:40:30.829038+00:00 | NOT CALIBRATED / HIGH | WATCH |
 
 **Confidence:** uncalibrated research heuristics, NOT validated probabilities. **BUY:** none authorized. Numerical baseline/challenger scores are uncalibrated paper-only ranking values, not probabilities or validated improvement.
 
@@ -34,8 +33,8 @@
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 318; predictions: 3022; observations: 191025.
-- Matured sampled outcomes across 1/6/24/48h: 2498; gap abstentions: 7951. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 319; predictions: 3027; observations: 191631.
+- Matured sampled outcomes across 1/6/24/48h: 2517; gap abstentions: 7969. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
