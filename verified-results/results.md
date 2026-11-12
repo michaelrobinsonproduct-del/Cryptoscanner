@@ -2,25 +2,27 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-12T15:41:04.544156+00:00
+**UTC as-of:** 2026-11-12T16:05:15.113302+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43249896519
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43254219005
 **Source SHA:** 21b4cf643df9f7a7adfddc959660920dd467c70b
-**Ledger commit:** 8525b59064e878f2eb39609fea84cc2b7dbec450
-**Ledger generation:** 335 (remote push/readback verified)
+**Ledger commit:** e67435399d3a064bb3ad659ac785ba57922b23b0
+**Ledger generation:** 336 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 624; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 606; valid market observations: 606; OHLC screened: 8.
+**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 624; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 606; valid market observations: 606; OHLC screened: 10.
 
 ## Top WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | Confidence / risk | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|
-| 1 | TON/USD | 1.255 | 80.920 | 85.390 | +6.99% | +0.80% | 0.15x | 7.9 | 2026-11-12T15:41:01.777393+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 2 | XDC/USD | 0.0294 | 58.256 | 43.596 | +1.17% | -0.07% | 2.74x | 10.2 | 2026-11-12T15:41:01.777393+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 3 | MON/USD | 0.01689 | 52.670 | 39.761 | +1.38% | -0.24% | 2.41x | 5.9 | 2026-11-12T15:41:01.777393+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 4 | BAT/USD | 0.1193 | 33.733 | 36.437 | +1.33% | +0.20% | 0.63x | 11.8 | 2026-11-12T15:41:01.777393+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 5 | CAP/USD | 0.101995 | 31.856 | 38.860 | +1.51% | +0.22% | 0.19x | 6.1 | 2026-11-12T15:41:01.777393+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 1 | TON/USD | 1.282 | 109.658 | 85.928 | +9.29% | +1.75% | 3.34x | 7.8 | 2026-11-12T16:05:11.480851+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 2 | TIA/USD | 0.4202 | 54.467 | 42.548 | +1.40% | +1.67% | 1.36x | 7.1 | 2026-11-12T16:05:11.480851+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 3 | XDC/USD | 0.02937 | 52.403 | 39.606 | +1.07% | -0.44% | 5.91x | 17.0 | 2026-11-12T16:05:11.480851+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 4 | CAP/USD | 0.102199 | 49.079 | 34.660 | +1.72% | -0.12% | 2.70x | 17.2 | 2026-11-12T16:05:11.480851+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 5 | ATOM/USD | 1.413 | 46.966 | 35.551 | +1.40% | +1.24% | 1.52x | 12.7 | 2026-11-12T16:05:11.480851+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 6 | MON/USD | 0.01699 | 45.745 | 41.181 | +1.98% | +1.07% | 0.92x | 11.8 | 2026-11-12T16:05:11.480851+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 7 | MEGA/USD | 0.04589 | 34.253 | 40.175 | +2.43% | +0.46% | 0.18x | 17.4 | 2026-11-12T16:05:11.480851+00:00 | NOT CALIBRATED / HIGH | WATCH |
 
 **Confidence:** uncalibrated research heuristics, NOT validated probabilities. **BUY:** none authorized. Numerical baseline/challenger scores are uncalibrated paper-only ranking values, not probabilities or validated improvement.
 
@@ -33,8 +35,8 @@
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 335; predictions: 3124; observations: 201326.
-- Matured sampled outcomes across 1/6/24/48h: 2744; gap abstentions: 8232. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 336; predictions: 3131; observations: 201932.
+- Matured sampled outcomes across 1/6/24/48h: 2754; gap abstentions: 8256. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
