@@ -2,32 +2,32 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-12T00:08:31.246057+00:00
+**UTC as-of:** 2026-11-12T00:37:10.670688+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43124718472
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43128349629
 **Source SHA:** 21b4cf643df9f7a7adfddc959660920dd467c70b
-**Ledger commit:** 48123cf50702603d3233fc85ab894d22330b35d8
-**Ledger generation:** 303 (remote push/readback verified)
+**Ledger commit:** 6b4f1b536c2a0c03f7ca4f6f2ae8f1d9c4079d15
+**Ledger generation:** 304 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 624; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 606; valid market observations: 606; OHLC screened: 20.
+**Freshness:** Kraken public ticker client-observed, max quote age 8s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 624; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 606; valid market observations: 606; OHLC screened: 24.
 
 ## Top WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | Confidence / risk | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|
-| 1 | ZEC/USD | 974.54 | 63.071 | 60.863 | +1.30% | +1.25% | 0.60x | 6.5 | 2026-11-12T00:08:24.261773+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 2 | PEPE/USD | 4.539e-06 | 54.463 | 57.607 | +0.69% | +0.22% | 0.58x | 4.4 | 2026-11-12T00:08:24.261773+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 3 | QNT/USD | 171.28 | 49.718 | 50.767 | +0.35% | +0.92% | 0.43x | 7.6 | 2026-11-12T00:08:24.261773+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 4 | TON/USD | 1.177 | 48.085 | 43.025 | +0.34% | +0.34% | 1.34x | 8.5 | 2026-11-12T00:08:24.261773+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 5 | NIGHT/USD | 0.04768 | 44.407 | 47.235 | +0.59% | +0.61% | 0.41x | 8.4 | 2026-11-12T00:08:24.261773+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 6 | PUMP/USD | 0.003498 | 42.988 | 46.465 | +1.07% | +0.90% | 0.20x | 8.6 | 2026-11-12T00:08:24.261773+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 7 | ARB/USD | 0.1524 | 37.810 | 43.278 | +0.66% | +0.46% | 0.22x | 6.6 | 2026-11-12T00:08:24.261773+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 8 | USELESS/USD | 0.12853 | 36.583 | 35.376 | +0.97% | +1.84% | 0.20x | 14.8 | 2026-11-12T00:08:24.261773+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 9 | ENA/USD | 0.1462 | 35.417 | 40.100 | +0.34% | +0.76% | 0.15x | 6.9 | 2026-11-12T00:08:24.261773+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 10 | DOT/USD | 0.841 | 27.729 | 36.222 | +0.29% | +0.18% | 0.06x | 3.6 | 2026-11-12T00:08:24.261773+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 11 | STRK/USD | 0.03684 | 22.276 | 31.314 | +0.60% | +0.03% | 0.08x | 8.2 | 2026-11-12T00:08:24.261773+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 12 | SYRUP/USD | 0.13193 | 18.378 | 24.143 | +0.28% | +0.24% | 0.31x | 17.4 | 2026-11-12T00:08:24.261773+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 1 | AVAX/USD | 8.563 | 69.063 | 56.277 | +0.60% | +0.29% | 2.13x | 5.8 | 2026-11-12T00:37:02.361282+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 2 | ADA/USD | 0.174808 | 66.348 | 55.764 | +0.38% | +0.06% | 2.03x | 3.8 | 2026-11-12T00:37:02.361282+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 3 | ZEC/USD | 991.22 | 66.187 | 73.523 | +3.04% | +0.43% | 0.05x | 5.4 | 2026-11-12T00:37:02.361282+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 4 | TAO/USD | 216.6436 | 64.638 | 54.316 | +0.39% | -0.13% | 2.10x | 6.9 | 2026-11-12T00:37:02.361282+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 5 | NEAR/USD | 3.5972 | 54.501 | 55.871 | +0.38% | -0.10% | 0.91x | 3.6 | 2026-11-12T00:37:02.361282+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 6 | PEPE/USD | 4.545e-06 | 53.184 | 57.444 | +0.82% | -0.90% | 1.02x | 6.6 | 2026-11-12T00:37:02.361282+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 7 | XRP/USD | 1.05372 | 52.587 | 56.642 | +0.26% | -0.15% | 0.67x | 0.3 | 2026-11-12T00:37:02.361282+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 8 | NIGHT/USD | 0.04775 | 52.191 | 47.256 | +0.74% | +0.44% | 1.27x | 10.5 | 2026-11-12T00:37:02.361282+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 9 | DOT/USD | 0.8437 | 51.415 | 37.658 | +0.61% | -0.25% | 7.01x | 5.9 | 2026-11-12T00:37:02.361282+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 10 | SOL/USD | 83.51 | 50.344 | 56.579 | +0.40% | -0.20% | 0.48x | 2.4 | 2026-11-12T00:37:02.361282+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 11 | ETH/USD | 2059.33 | 50.324 | 56.891 | +0.27% | +0.12% | 0.28x | 0.0 | 2026-11-12T00:37:02.361282+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 12 | STX/USD | 0.3114 | 48.760 | 38.111 | +1.40% | +0.97% | 1.58x | 6.4 | 2026-11-12T00:37:02.361282+00:00 | NOT CALIBRATED / HIGH | WATCH |
 
 **Confidence:** uncalibrated research heuristics, NOT validated probabilities. **BUY:** none authorized. Numerical baseline/challenger scores are uncalibrated paper-only ranking values, not probabilities or validated improvement.
 
@@ -40,8 +40,8 @@
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 303; predictions: 2898; observations: 181935.
-- Matured sampled outcomes across 1/6/24/48h: 2291; gap abstentions: 7648. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 304; predictions: 2910; observations: 182541.
+- Matured sampled outcomes across 1/6/24/48h: 2291; gap abstentions: 7703. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
