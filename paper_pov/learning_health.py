@@ -12,7 +12,8 @@ import urllib.request
 UTC = dt.timezone.utc
 WORKFLOW = "paper-ledger-learning.yml"
 REQUIRED = ("Read existing paper ledger artifact",
-            "Capture real recent Kraken candles and outcomes",
+            "Carry forward observed Kraken candles from existing learning artifact",
+            "Reconstruct only authentic completed Kraken outcomes and shadow evidence",
             "Retain read-only learning evidence")
 
 
