@@ -72,7 +72,7 @@ class StageOneScheduleTests(unittest.TestCase):
         for forbidden in ("api.kraken.com/0/private/", "addorder", "railway", "supabase", "secrets."):
             self.assertNotIn(forbidden, text)
         self.assertIn("public kraken", text)
-        self.assertIn("production applied: no", text)
+        self.assertIn('assert score["held_out_lift"] is None and score["production_applied"] is False', PIPELINE.read_text())
 
 
 if __name__ == "__main__":
