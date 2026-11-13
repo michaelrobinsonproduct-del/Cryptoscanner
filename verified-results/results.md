@@ -2,32 +2,31 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-13T16:06:48.011524+00:00
+**UTC as-of:** 2026-11-13T17:31:08.436388+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43459260937
-**Source SHA:** e4445ea3884f16a9bdd348d7cfaf75278dcc7858
-**Previous ledger commit:** a0fd86f370cd2ea17e7b8a962d86ac5d486643c4 (atomic ledger/results publication)
-**Ledger generation:** 362 (remote push/readback verified)
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43473490990
+**Source SHA:** 9df68d00c09d9e96abd2a328b39d1b6b7c76a7bb
+**Previous ledger commit:** 21d7c432749ae547923248a6c305249ee70ff5bf (atomic ledger/results publication)
+**Ledger generation:** 363 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 9s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 625; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 607; valid market observations: 606; OHLC screened: 24.
+**Freshness:** Kraken public ticker client-observed, max quote age 8s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 625; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 607; valid market observations: 607; OHLC screened: 21.
 
 ## Top WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | Confidence / risk | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|
-| 1 | INJ/USD | 8.177 | 103.324 | 96.329 | +9.61% | +1.33% | 1.04x | 7.3 | 2026-11-13T16:06:38.979651+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 2 | ZRO/USD | 1.597 | 78.148 | 57.128 | +2.83% | +1.20% | 2.64x | 6.3 | 2026-11-13T16:06:38.979651+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 3 | UAI/USD | 0.03769 | 74.432 | 51.145 | +4.49% | +1.66% | 3.80x | 24.0 | 2026-11-13T16:06:38.979651+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 4 | NEAR/USD | 3.4996 | 65.808 | 69.313 | +2.33% | +0.13% | 0.59x | 4.0 | 2026-11-13T16:06:38.979651+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 5 | HYPE/USD | 73.16 | 62.675 | 58.353 | +0.67% | +0.47% | 1.20x | 2.7 | 2026-11-13T16:06:38.979651+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 6 | CAP/USD | 0.106615 | 58.910 | 42.425 | +2.94% | +0.30% | 5.43x | 30.1 | 2026-11-13T16:06:38.979651+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 7 | ZBCN/USD | 0.001828 | 52.269 | 54.719 | +7.03% | -0.27% | 0.89x | 43.9 | 2026-11-13T16:06:38.979651+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 8 | TAO/USD | 212.5177 | 50.205 | 54.984 | +0.28% | -0.08% | 0.56x | 4.0 | 2026-11-13T16:06:38.979651+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 9 | ICP/USD | 2.611 | 42.003 | 42.821 | +1.44% | -0.53% | 1.19x | 7.7 | 2026-11-13T16:06:38.979651+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 10 | ICNT/USD | 0.2816 | 39.964 | 42.564 | +2.14% | +0.29% | 0.60x | 7.1 | 2026-11-13T16:06:38.979651+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 11 | STX/USD | 0.2908 | 37.060 | 44.680 | +2.07% | -0.07% | 0.27x | 6.9 | 2026-11-13T16:06:38.979651+00:00 | NOT CALIBRATED / HIGH | WATCH |
-| 12 | CT/USD | 0.1107 | 31.693 | 38.917 | +2.41% | -0.72% | 0.64x | 18.0 | 2026-11-13T16:06:38.979651+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 1 | INJ/USD | 8.129 | 91.115 | 94.452 | +8.97% | -0.09% | 0.71x | 11.1 | 2026-11-13T17:31:00.832634+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 2 | ZBCN/USD | 0.001849 | 89.862 | 73.961 | +8.26% | +0.87% | 2.15x | 5.4 | 2026-11-13T17:31:00.832634+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 3 | NEAR/USD | 3.5096 | 71.257 | 71.367 | +2.62% | -0.05% | 1.01x | 4.0 | 2026-11-13T17:31:00.832634+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 4 | GRT/USD | 0.01798 | 56.301 | 32.826 | +2.22% | +1.69% | 2.76x | 27.9 | 2026-11-13T17:31:00.832634+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 5 | TAO/USD | 214.8712 | 55.655 | 61.223 | +1.40% | -0.19% | 0.54x | 7.1 | 2026-11-13T17:31:00.832634+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 6 | UAI/USD | 0.03814 | 52.541 | 64.047 | +5.74% | -2.49% | 1.10x | 15.8 | 2026-11-13T17:31:00.832634+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 7 | ZEUS/USD | 0.00603 | 50.777 | 60.446 | +8.65% | -1.47% | 0.77x | 33.3 | 2026-11-13T17:31:00.832634+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 8 | Q/USD | 0.029903 | 49.933 | 41.892 | +3.85% | -0.33% | 1.97x | 37.0 | 2026-11-13T17:31:00.832634+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 9 | UP/USD | 0.05567 | 49.150 | 31.309 | +1.03% | +0.61% | 2.48x | 14.4 | 2026-11-13T17:31:00.832634+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 10 | PEARL/USD | 1.4706 | 44.762 | 46.579 | +3.03% | -0.41% | 1.02x | 10.9 | 2026-11-13T17:31:00.832634+00:00 | NOT CALIBRATED / HIGH | WATCH |
+| 11 | CT/USD | 0.1104 | 27.072 | 32.259 | +2.13% | -0.63% | 0.80x | 27.3 | 2026-11-13T17:31:00.832634+00:00 | NOT CALIBRATED / HIGH | WATCH |
 
 **Confidence:** uncalibrated research heuristics, NOT validated probabilities. **BUY:** none authorized. Numerical baseline/challenger scores are uncalibrated paper-only ranking values, not probabilities or validated improvement.
 
@@ -40,8 +39,8 @@
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 362; predictions: 3347; observations: 217690.
-- Matured sampled outcomes across 1/6/24/48h: 2926; gap abstentions: 9466. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 363; predictions: 3358; observations: 218297.
+- Matured sampled outcomes across 1/6/24/48h: 2938; gap abstentions: 9550. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
