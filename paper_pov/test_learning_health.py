@@ -14,7 +14,9 @@ def run(id, minute, conclusion="success", status="completed"):
 def jobs(id, *, acquisition=True):
     return {id: [{"conclusion": "success", "steps": [
         {"name": "Read existing paper ledger artifact", "conclusion": "success"},
-        {"name": "Capture real recent Kraken candles and outcomes",
+        {"name": "Carry forward observed Kraken candles from existing learning artifact",
+         "conclusion": "success" if acquisition else "skipped"},
+        {"name": "Reconstruct only authentic completed Kraken outcomes and shadow evidence",
          "conclusion": "success" if acquisition else "skipped"},
         {"name": "Retain read-only learning evidence", "conclusion": "success"},
     ]}]}
