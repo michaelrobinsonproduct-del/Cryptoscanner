@@ -17,6 +17,7 @@ import tempfile
 from . import ledger, segmented_repository as segments, segmented_storage as storage
 
 REMOTE_REF = "refs/remotes/origin/paper-proof-ledger"
+MAX_PUBLICATION_FILE_BYTES = 1024 * 1024
 
 
 def git(root, *args):
@@ -216,7 +217,9 @@ def verify_remote(root, base, new_commit, staged, publication_dir=None):
         publication = Path(publication_dir)
         for name in publication_files:
             data = (publication / name).read_bytes()
-            if show(root, new_commit, "verified-results/" + name, len(data)) != data:
+            if len(data) > MAX_PUBLICATION_FILE_BYTES:
+                raise ValueError("Atomic publication exceeds storage bound")
+            if show(root, new_commit, "verified-results/" + name, MAX_PUBLICATION_FILE_BYTES) != data:
                 raise ValueError("Atomic published result bytes differ from staging")
         digests = (publication / "SHA256SUMS").read_text().splitlines()
         expected_digests = [hashlib.sha256((publication / name).read_bytes()).hexdigest()
