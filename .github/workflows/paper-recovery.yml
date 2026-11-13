@@ -22,6 +22,8 @@ jobs:
       (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'push')
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    env:
+      PAPER_RECOVERY_REQUEST_KIND: ${{ github.event_name == 'push' && 'on-demand' || 'scheduled' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -85,6 +87,7 @@ jobs:
             --ledger /tmp/paper-recovery-ledger.json \
             --ledger-commit /tmp/paper-recovery-ledger-commit.txt \
             --ledger-message /tmp/paper-recovery-ledger-message.txt \
+            --request-kind "$PAPER_RECOVERY_REQUEST_KIND" \
             --output /tmp/paper-recovery-decision.json
           cat /tmp/paper-recovery-decision.json >> "$GITHUB_STEP_SUMMARY"
       - name: Deduplicate attempt and request EXISTING single-writer workflow
@@ -115,6 +118,7 @@ jobs:
             --ledger /tmp/paper-recovery-ledger.json \
             --ledger-commit /tmp/paper-recovery-ledger-commit.txt \
             --ledger-message /tmp/paper-recovery-ledger-message.txt \
+            --request-kind "$PAPER_RECOVERY_REQUEST_KIND" \
             --output /tmp/paper-recovery-recheck.json
           test "$(python -c 'import json;print(json.load(open("/tmp/paper-recovery-recheck.json"))["action"])')" = DISPATCH_EXISTING_WORKFLOW || {
             echo RECHECK_ABORT > /tmp/paper-recovery-status.txt
