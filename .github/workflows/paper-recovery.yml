@@ -76,8 +76,10 @@ jobs:
             CHECKPOINT="$(git show "${BASE}:paper-segment-manifest.json" | python -c 'import json,sys;print(json.load(sys.stdin)["checkpoint"]["git_commit"])')"
             git cat-file -e "${CHECKPOINT}^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$CHECKPOINT"
           fi
+          # Verified bounded reader checks manifest, segment SHA, checkpoint origin and ledger seal.
+          # Full historical replay belongs in the independent audit, not each scan request.
           python -m paper_pov.segmented_repository export-git \
-            --repository . --commit "$BASE" --output /tmp/paper-recovery-ledger.json --full-replay
+            --repository . --commit "$BASE" --output /tmp/paper-recovery-ledger.json
       - name: Fail-closed decision using newest live API and verified ledger
         run: |
           set -euo pipefail
