@@ -118,17 +118,6 @@ jobs:
           assert score["held_out_lift"] is None and score["production_applied"] is False
           print("PAPER_CROSS_RUN_VERIFIED",before["generation"],after["generation"],score["ledger_sha256"],retention)
           PY
-      - name: Preserve independently downloadable checked artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: public-paper-ledger-${{ github.run_id }}
-          path: |
-            paper_pov/output/latest.json
-            paper_pov/output/ledger.json
-            paper_pov/output/scoreboard.json
-            paper_pov/output/SHA256SUMS
-          retention-days: 90
-          if-no-files-found: error
       - name: Render sealed results BEFORE the single atomic publication
         env:
           PAPER_ORIGINATING_CRON: ${{ github.event.schedule }}
@@ -183,10 +172,21 @@ jobs:
           echo "PAPER_CANONICAL_RESULTS_REMOTE_READBACK_VERIFIED $(git rev-parse HEAD)"
           git checkout --detach "$GITHUB_SHA"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          mkdir -p paper_pov/output/results
-          cp /tmp/paper-output/results/* paper_pov/output/results/
+          mkdir -p paper_pov/output
+          cp -a /tmp/paper-output/. paper_pov/output/
           (cd paper_pov/output/results && sha256sum -c SHA256SUMS)
           cat paper_pov/output/results/results.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve independently downloadable checked artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-paper-ledger-${{ github.run_id }}
+          path: |
+            paper_pov/output/latest.json
+            paper_pov/output/ledger.json
+            paper_pov/output/scoreboard.json
+            paper_pov/output/SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
       - name: Preserve public human-readable paper results
         uses: actions/upload-artifact@v4
         with:
