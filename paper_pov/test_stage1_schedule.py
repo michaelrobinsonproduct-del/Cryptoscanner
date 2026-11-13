@@ -45,8 +45,8 @@ class StageOneScheduleTests(unittest.TestCase):
 
     def test_nonforce_cas_remote_readback_and_artifact(self):
         text = PIPELINE.read_text()
-        self.assertLess(text.index("Preserve independently downloadable checked artifact"),
-                        text.index("Atomically publish ledger AND results"))
+        self.assertLess(text.index("Atomically publish ledger AND results"),
+                        text.index("Preserve independently downloadable checked artifact"))
         self.assertIn('test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/paper-base.sha)"', text)
         self.assertIn("git push origin HEAD:refs/heads/paper-proof-ledger", text)
         self.assertNotIn("git push --force", text)
