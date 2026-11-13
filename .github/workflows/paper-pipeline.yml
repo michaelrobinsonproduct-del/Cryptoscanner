@@ -215,8 +215,8 @@ jobs:
           git show HEAD:verified-results/results.json > /tmp/paper-results-readback.json
           cmp /tmp/paper-results-readback.json /tmp/paper-canonical-results/results.json
           echo "PAPER_CANONICAL_RESULTS_REMOTE_READBACK_VERIFIED"
-          # Restore exact scanner source and rendered outputs for downstream artifact
-          # upload and issue publication; ledger branch remains published remotely.
+          # Restore exact scanner source and rendered outputs for artifact upload;
+          # verified results remain published on the ledger branch.
           git checkout --detach "$GITHUB_SHA"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           mkdir -p paper_pov/output/results
@@ -232,45 +232,6 @@ jobs:
             paper_pov/output/results/SHA256SUMS
           retention-days: 90
           if-no-files-found: error
-      - name: Publish actual scoreboard to issue 34 and verify comment readback
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json,os
-          from pathlib import Path
-          s=json.loads(Path("/tmp/paper-scoreboard.json").read_text())
-          lines=[
-            "### Public paper POV — verified ledger run "+os.environ["GITHUB_RUN_ID"],
-            "UTC GitHub run: https://github.com/"+os.environ["GITHUB_REPOSITORY"]+"/actions/runs/"+os.environ["GITHUB_RUN_ID"],
-            "Exact source SHA: "+os.environ["GITHUB_SHA"],
-            "Actual scans persisted: "+str(s["actual_scans"])+"; generation: "+str(s["generation"]),
-            "Immutable predictions: "+str(s["immutable_predictions"])+"; market observations: "+str(s["market_observations"]),
-            "Matured observed labels: "+str(s["matured_labels"])+"; gap abstentions: "+str(s["gap_abstentions"]),
-            "Observed +30% hits: "+str(s["observed_30pct_hits"])+"; held-out lift: NOT MEASURED",
-            "Baseline/challenger: ranking recorded, unbiased evaluation PENDING; production applied: NO",
-            "Ledger SHA256: "+s["ledger_sha256"],
-            "Persistence: non-force push and exact remote readback VERIFIED; downloadable 90-day SHA256 artifact in run.",
-            "Readable UTC WATCH results: https://github.com/"+os.environ["GITHUB_REPOSITORY"]+"/actions/runs/"+os.environ["GITHUB_RUN_ID"]+" (job summary + checksummed artifact public-paper-results-"+os.environ["GITHUB_RUN_ID"]+").",
-            "Configured GitHub schedule: :20 and :50 UTC in ONE workflow with ONE writer; unattended slot reliability NOT YET ACCEPTED. Gaps over 45m abstain; no model promotion."
-          ]
-          Path("/tmp/paper-issue-comment.txt").write_text("\n\n".join(lines))
-          PY
-          gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/34/comments" -f body="$(cat /tmp/paper-issue-comment.txt)" > /tmp/paper-comment-response.json
-          python - <<'PY' > /tmp/paper-comment-id.txt
-          import json
-          print(json.load(open("/tmp/paper-comment-response.json"))["id"])
-          PY
-          gh api "repos/${GITHUB_REPOSITORY}/issues/comments/$(cat /tmp/paper-comment-id.txt)" > /tmp/paper-comment-readback.json
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          expected=Path("/tmp/paper-issue-comment.txt").read_text()
-          actual=json.loads(Path("/tmp/paper-comment-readback.json").read_text())["body"]
-          assert actual==expected, "Issue scoreboard readback mismatch"
-          print("PAPER_ISSUE_READBACK_VERIFIED")
-          PY
       - name: Request existing read-only learning job for exact verified writer run
         env:
           GH_TOKEN: ${{ github.token }}
@@ -320,44 +281,3 @@ jobs:
             /tmp/paper-failure-results/SHA256SUMS
           retention-days: 90
           if-no-files-found: warn
-      - name: Index failed-run results in issue 34 with readback
-        if: ${{ failure() }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          # The independent paper monitor remains the fallback if this issue API call fails.
-          test -f /tmp/paper-failure-results/results.json
-          python - <<'PY'
-          import json,os
-          from pathlib import Path
-          p=json.loads(Path("/tmp/paper-failure-results/results.json").read_text())
-          assert p["status"]=="FAILED_PAPER_ONLY"
-          lines=[
-            "### Public paper POV — FAILED run "+p["run_id"],
-            "UTC failure report: "+p["as_of"],
-            "GitHub run and failure logs: "+p["run_url"],
-            "Exact source SHA: "+p["source_sha"],
-            "No successful scan, freshness, eligible universe, WATCH results, ledger generation, "
-            "outcomes or recovery is claimed by this failure report.",
-            "The ledger MAY have been committed before a downstream step failed; "
-            "inspect remote history before retry. No automatic retry or second writer.",
-            "Checksummed failure report artifact: public-paper-failure-"+p["run_id"]+
-            " (90-day GitHub artifact, if upload succeeded).",
-            "Independent paper monitor remains responsible for missed-run alerts."
-          ]
-          Path("/tmp/paper-failure-issue.txt").write_text("\n\n".join(lines))
-          PY
-          gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/34/comments" \
-            -f body="$(cat /tmp/paper-failure-issue.txt)" > /tmp/paper-failure-comment.json
-          python - <<'PY' > /tmp/paper-failure-comment-id.txt
-          import json
-          print(json.load(open("/tmp/paper-failure-comment.json"))["id"])
-          PY
-          gh api "repos/${GITHUB_REPOSITORY}/issues/comments/$(cat /tmp/paper-failure-comment-id.txt)" > /tmp/paper-failure-readback.json
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          assert json.loads(Path("/tmp/paper-failure-readback.json").read_text())["body"]==Path("/tmp/paper-failure-issue.txt").read_text()
-          print("PAPER_FAILURE_ISSUE_READBACK_VERIFIED")
-          PY
