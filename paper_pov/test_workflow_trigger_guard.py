@@ -53,8 +53,7 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertIn("  actions: write", text)
         self.assertLess(text.index("PAPER_CANONICAL_RESULTS_REMOTE_READBACK_VERIFIED"),
                         text.index(dispatch))
-        self.assertLess(text.index("PAPER_ISSUE_READBACK_VERIFIED"),
-                        text.index(dispatch))
+        self.assertNotIn('-X POST "repos/${GITHUB_REPOSITORY}/issues/34/comments"', text)
         self.assertIn('inputs[paper_run_id]=${GITHUB_RUN_ID}', text)
         self.assertIn("PAPER_READ_ONLY_LEARNING_DISPATCH_FAILED", text)
         self.assertNotIn("  workflow_run:", learning)
