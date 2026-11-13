@@ -68,10 +68,10 @@ class LiveWriterTests(unittest.TestCase):
                    "ledger_sha256": after["sha256"], "ledger_generation": after["generation"],
                    "remote_readback_verified": True, "production_applied": False}
         (published / "results.json").write_bytes(ledger.canonical(payload))
-        (published / "results.md").write_text("Verified paper results\\n")
+        (published / "results.md").write_text("Verified paper results\n")
         digests = [hashlib.sha256((published / name).read_bytes()).hexdigest() + "  " + name
                    for name in ("results.json", "results.md")]
-        (published / "SHA256SUMS").write_text("\\n".join(digests) + "\\n")
+        (published / "SHA256SUMS").write_text("\n".join(digests) + "\n")
         destination = self.gitdir / "verified-results"
         destination.mkdir()
         for name in ("results.json", "results.md", "SHA256SUMS"):
@@ -84,7 +84,7 @@ class LiveWriterTests(unittest.TestCase):
         self.assertEqual(proof["generation"], 1)
         self.assertIn("verified-results/results.json", proof["verified_files"])
         self.assertEqual(proof["ledger_sha256"], after["sha256"])
-        (published / "results.md").write_text("corrupted\\n")
+        (published / "results.md").write_text("corrupted\n")
         with self.assertRaisesRegex(ValueError, "Atomic published result bytes"):
             live.verify_remote(self.gitdir, self.base, commit, staged, published)
 
