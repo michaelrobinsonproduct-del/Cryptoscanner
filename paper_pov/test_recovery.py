@@ -299,18 +299,15 @@ class RecoveryTests(unittest.TestCase):
         self.assertIn("PAPER_RECOVERY_LEDGER_MOVED_ABORT", workflow)
         self.assertIn("PAPER_RECOVERY_RECHECK_ABORT", workflow)
         self.assertIn("PAPER_RECOVERY_MAIN_CHANGED_ABORT", workflow)
-        self.assertIn("PAPER_RECOVERY_ATTEMPT_READBACK_VERIFIED", workflow)
+        self.assertNotIn('-X POST "repos/$GITHUB_REPOSITORY/issues/34/comments"', workflow)
         self.assertEqual(workflow.count("--jq '.[] | {body,created_at,user:{login:.user.login,id:.user.id}} | @json'"), 2)
         self.assertIn("PAPER_RECOVERY_RUNS_CHANGED_ABORT", workflow)
         # A stale run/ledger/main state must abort BEFORE writing a 90-minute
-        # recovery attempt marker. Keep the post-marker CAS as well so a
-        # scheduled writer starting during comment publication is detected.
+        # recheck the runs and ledger before dispatch, without issue writes.
         self.assertIn("PAPER_RECOVERY_PREMARKER_RUNS_CHANGED_ABORT", workflow)
         self.assertIn("PAPER_RECOVERY_PREMARKER_LEDGER_MOVED_ABORT", workflow)
         self.assertIn("PAPER_RECOVERY_PREMARKER_MAIN_CHANGED_ABORT", workflow)
         self.assertLess(workflow.index("/tmp/paper-recovery-runs-premarker.json"),
-                        workflow.index("PAPER_RECOVERY_ATTEMPT_READBACK_VERIFIED"))
-        self.assertLess(workflow.index("PAPER_RECOVERY_ATTEMPT_READBACK_VERIFIED"),
                         workflow.index("/tmp/paper-recovery-runs-final.json"))
         # Only the dedicated recovery schedule/manual path may request a retry;
         # monitor/audit completion must not spawn another independent controller.
