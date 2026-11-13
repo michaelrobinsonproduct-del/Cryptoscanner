@@ -315,6 +315,14 @@ class RecoveryTests(unittest.TestCase):
         # monitor/audit completion must not spawn another independent controller.
         self.assertNotIn("workflow_run:", workflow)
         self.assertIn("cron: '12,42 * * * *'", workflow)
+        self.assertIn("push:", workflow)
+        self.assertIn("branches: [main]", workflow)
+        self.assertIn("'.github/paper-scan-request.txt'", workflow)
+        self.assertIn("CHANGED=", workflow)
+        self.assertIn('test "$CHANGED" = \'.github/paper-scan-request.txt\'', workflow)
+        self.assertIn("PAPER_REQUEST_UNAUTHORIZED_CHANGE", workflow)
+        self.assertIn("PAPER_RECOVERY_AUTHENTICATED_REQUEST", workflow)
+        self.assertEqual(workflow.count("actions/workflows/paper-pipeline.yml/dispatches"), 1)
         self.assertNotIn("git push", workflow)
         self.assertNotIn("railway", workflow.lower())
 
