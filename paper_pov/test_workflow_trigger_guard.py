@@ -31,11 +31,13 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertEqual(re.findall(r"(?m)^\s*-\s*cron:\s*['\"]([^'\"]+)['\"]", text), ["20,50 * * * *"])
         self.assertIn("group: public-paper-proof-ledger-single-writer", text)
         self.assertIn("cancel-in-progress: false", text)
-        self.assertEqual(text.count("git push origin HEAD:refs/heads/paper-proof-ledger"), 2)
+        self.assertEqual(text.count("git push origin HEAD:refs/heads/paper-proof-ledger"), 1)
         self.assertIn("PAPER_CANONICAL_RESULTS_REMOTE_READBACK_VERIFIED", text)
-        self.assertIn("CANONICAL_RESULTS_CONCURRENT_UPDATE_ABORT", text)
+        self.assertIn("LEDGER_CONCURRENT_UPDATE_ABORT", text)
+        self.assertIn("--publication-dir /tmp/paper-output/results", text)
+        self.assertIn("--atomic-publication", text)
         self.assertIn("PAPER_LEDGER_REMOTE_READBACK_VERIFIED", text)
-        self.assertIn("Render verified UTC results after ledger remote readback", text)
+        self.assertIn("Render sealed results BEFORE the single atomic publication", text)
 
     def test_dispatch_is_paper_only_and_has_no_second_writer(self):
         text = PIPELINE.read_text()

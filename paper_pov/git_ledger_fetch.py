@@ -13,7 +13,7 @@ REMOTE_REF = "refs/remotes/origin/paper-proof-ledger"
 SOURCE_REF = "refs/heads/paper-proof-ledger"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 MAX_MANIFEST_BYTES = 8_000_000
-MAX_ANCESTRY_DEPTH = 512
+MAX_ANCESTRY_DEPTH = 4096
 
 
 def _git(*args):

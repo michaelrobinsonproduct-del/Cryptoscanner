@@ -14,12 +14,12 @@ CHECKPOINT = "b" * 40
 class BoundedFetchTests(unittest.TestCase):
     @patch.object(f, "_git")
     @patch.object(f.subprocess, "run")
-    def test_legacy_uses_bounded_depth512_without_checkpoint(self, run, git):
+    def test_legacy_uses_bounded_depth4096_without_checkpoint(self, run, git):
         git.side_effect = [b"", (HEAD + "\n").encode(), b"legacy"]
         run.side_effect = [subprocess.CompletedProcess([], 1, b"", b"missing"),
                            subprocess.CompletedProcess([], 1, b"", b"missing")]
         self.assertEqual(f.fetch_bounded(), HEAD)
-        self.assertIn("--depth=512", git.call_args_list[0].args)
+        self.assertIn("--depth=4096", git.call_args_list[0].args)
         self.assertNotIn("--unshallow", str(git.call_args_list))
 
     @patch.object(f, "_checkpoint_needs_fetch", return_value=False)
@@ -42,7 +42,7 @@ class BoundedFetchTests(unittest.TestCase):
         manifest = ('{"checkpoint":{"git_commit":"' + CHECKPOINT + '"}}').encode()
         run.return_value = subprocess.CompletedProcess([], 0, manifest, b"")
         self.assertEqual(f.fetch_bounded(), HEAD)
-        self.assertIn(("fetch", "--no-tags", "--depth=512", "origin", CHECKPOINT),
+        self.assertIn(("fetch", "--no-tags", "--depth=4096", "origin", CHECKPOINT),
                       [c.args for c in git.call_args_list])
         self.assertNotIn(("fetch", "--no-tags", "--depth=1", "origin", CHECKPOINT),
                          [c.args for c in git.call_args_list])

@@ -22,7 +22,7 @@ class StageOneScheduleTests(unittest.TestCase):
         text = PIPELINE.read_text()
         self.assertIn("group: public-paper-proof-ledger-single-writer", text)
         self.assertIn("cancel-in-progress: false", text)
-        self.assertEqual(text.count("git push origin HEAD:refs/heads/paper-proof-ledger"), 2)
+        self.assertEqual(text.count("git push origin HEAD:refs/heads/paper-proof-ledger"), 1)
 
     def test_only_paper_pipeline_pushes_ledger(self):
         writers = []
@@ -38,15 +38,15 @@ class StageOneScheduleTests(unittest.TestCase):
         self.assertLess(text.index("Restore checksum-sealed existing ledger"),
                         text.index("Real bounded public Kraken scan"))
         self.assertIn("paper_pov.segmented_repository export-git", text)
-        self.assertIn("--full-replay", text)
+        self.assertNotIn("--full-replay", text)
         self.assertRegex(text, r"git fetch --no-tags --depth=(?:512|4096) origin refs/heads/paper-proof-ledger")
         self.assertIn("paper_pov.segmented_live_writer stage", text)
         self.assertIn("PAPER_RESTORED", text)
 
     def test_nonforce_cas_remote_readback_and_artifact(self):
         text = PIPELINE.read_text()
-        self.assertLess(text.index("Preserve independently downloadable checked artifact"),
-                        text.index("Non-force, single-writer ledger push"))
+        self.assertLess(text.index("Atomically publish ledger AND results"),
+                        text.index("Preserve independently downloadable checked artifact"))
         self.assertIn('test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$(cat /tmp/paper-base.sha)"', text)
         self.assertIn("git push origin HEAD:refs/heads/paper-proof-ledger", text)
         self.assertNotIn("git push --force", text)

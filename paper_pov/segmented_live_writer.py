@@ -7,6 +7,7 @@ verify-remote only AFTER fetching the remote branch again.
 """
 import argparse
 import json
+import hashlib
 import os
 from pathlib import Path
 import shutil
@@ -16,6 +17,7 @@ import tempfile
 from . import ledger, segmented_repository as segments, segmented_storage as storage
 
 REMOTE_REF = "refs/remotes/origin/paper-proof-ledger"
+MAX_PUBLICATION_FILE_BYTES = 1024 * 1024
 
 
 def git(root, *args):
@@ -182,7 +184,7 @@ def apply(root, base, staged):
     return paths
 
 
-def verify_remote(root, base, new_commit, staged):
+def verify_remote(root, base, new_commit, staged, publication_dir=None):
     """Verify remote ref, exact parent, changed-file inventory and ALL bytes."""
     root, staged = Path(root), Path(staged)
     exact_commit(root, base)
@@ -194,8 +196,10 @@ def verify_remote(root, base, new_commit, staged):
     if parents != [new_commit, base]:
         raise ValueError("Ledger commit does not extend exact expected base")
     paths = changed_paths(root, base, staged)
+    publication_files = ("results.json", "results.md", "SHA256SUMS") if publication_dir else ()
+    expected_paths = sorted(paths + ["verified-results/" + name for name in publication_files])
     actual = sorted(git(root, "diff", "--name-only", base, new_commit).decode().splitlines())
-    if actual != paths:
+    if actual != expected_paths:
         raise ValueError("Remote Git commit changed unexpected paths")
     for path in paths:
         if not (staged / path).exists():
@@ -209,11 +213,33 @@ def verify_remote(root, base, new_commit, staged):
         if show(root, new_commit, path, len(local)) != local:
             raise ValueError("Remote storage bytes differ from staged transaction")
     expected, _ = segments.read_state(staged, full_replay=False)
+    if publication_dir:
+        publication = Path(publication_dir)
+        for name in publication_files:
+            data = (publication / name).read_bytes()
+            if len(data) > MAX_PUBLICATION_FILE_BYTES:
+                raise ValueError("Atomic publication exceeds storage bound")
+            if show(root, new_commit, "verified-results/" + name, MAX_PUBLICATION_FILE_BYTES) != data:
+                raise ValueError("Atomic published result bytes differ from staging")
+        digests = (publication / "SHA256SUMS").read_text().splitlines()
+        expected_digests = [hashlib.sha256((publication / name).read_bytes()).hexdigest()
+                            + "  " + name for name in ("results.json", "results.md")]
+        if digests != expected_digests:
+            raise ValueError("Atomic publication checksum mismatch")
+        report = json.loads((publication / "results.json").read_text())
+        if (report.get("schema") != 2 or report.get("publication_mode") != "ATOMIC_LEDGER_RESULTS"
+                or report.get("status") != "SUCCESS_PAPER_ONLY"
+                or report.get("ledger_parent_commit") != base
+                or report.get("ledger_sha256") != expected["sha256"]
+                or report.get("ledger_generation") != expected["generation"]
+                or report.get("remote_readback_verified") is not True
+                or report.get("production_applied") is not False):
+            raise ValueError("Atomic publication not linked to verified ledger")
     actual_state, mode = segments.read_git_state(root, new_commit, full_replay=False)
     if mode != "segmented" or actual_state != expected:
         raise ValueError("Remote ledger replay/identity mismatch")
     return {"generation": expected["generation"], "ledger_sha256": expected["sha256"],
-            "remote_commit": new_commit, "verified_files": paths}
+            "remote_commit": new_commit, "verified_files": expected_paths}
 
 
 def main(argv=None):
@@ -231,6 +257,7 @@ def main(argv=None):
             s.add_argument("--scoreboard", required=True)
         if name == "verify-remote":
             s.add_argument("--commit", required=True)
+            s.add_argument("--publication-dir", default=None)
     a = p.parse_args(argv)
     if a.command == "stage":
         report = json.loads(Path(a.report).read_bytes())
@@ -247,7 +274,7 @@ def main(argv=None):
     elif a.command == "apply":
         result = {"staged_files": apply(a.repository, a.base, a.staged)}
     else:
-        result = verify_remote(a.repository, a.base, a.commit, a.staged)
+        result = verify_remote(a.repository, a.base, a.commit, a.staged, a.publication_dir)
     print(json.dumps(result, sort_keys=True))
 
 

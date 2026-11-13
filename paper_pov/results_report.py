@@ -36,7 +36,7 @@ def _utc(value):
     return utc(value)
 
 
-def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating_cron=None):
+def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating_cron=None, atomic_publication=False):
     if event not in ("schedule", "workflow_dispatch", "issue_comment"):
         raise ValueError("Unverified GitHub trigger event")
     # GitHub's event.schedule identifies the originating cron expression even
@@ -123,7 +123,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         + "actual start punctuality NOT verified)  ",
         f"**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/{run_id}  ",
         f"**Source SHA:** {source_sha}  ",
-        f"**Ledger commit:** {ledger_commit}  ",
+        (f"**Previous ledger commit:** {ledger_commit} (atomic ledger/results publication)  " if atomic_publication else f"**Ledger commit:** {ledger_commit}  "),
         f"**Ledger generation:** {score['generation']} (remote push/readback verified)",
         "",
         f"**Freshness:** Kraken public ticker client-observed, max quote age {max(ages):.0f}s (limit 600s). "
@@ -215,18 +215,20 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         "- DEX: NOT USED; no DEX freshness gate.",
         f"- OHLC screening abstentions: {len(abstentions)}; "
         "details in immutable scan JSON artifact.",
-        "- Storage: checksum-sealed ledger pushed non-force and read back before this report. "
-        "Independent artifact recovery is NOT VERIFIED by this scan alone.",
+        ("- Storage: ledger and results published in one non-force Git commit and read back. "
+         if atomic_publication else "- Storage: checksum-sealed ledger pushed non-force and read back before this report. ")
+        + "Independent artifact recovery is NOT VERIFIED by this scan alone.",
         "- Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.",
         "",
     ])
-    payload = {"schema": 1, "status": "SUCCESS_PAPER_ONLY", "run_id": str(run_id),
+    payload = {"schema": 2 if atomic_publication else 1, "status": "SUCCESS_PAPER_ONLY", "run_id": str(run_id),
                "as_of": as_of.isoformat(), "source_sha": source_sha,
                "github_event": event, "originating_cron": originating_cron or None,
                "scheduled_slot_utc_minute": scheduled_minute,
                "scheduled_slot_verified": event == "schedule",
                "scheduled_start_punctuality_verified": False,
-               "ledger_commit": ledger_commit, "ledger_generation": score["generation"],
+               **({"ledger_parent_commit": ledger_commit, "publication_mode": "ATOMIC_LEDGER_RESULTS"} if atomic_publication else {"ledger_commit": ledger_commit}),
+               "ledger_generation": score["generation"],
                "ledger_sha256": score["ledger_sha256"], "remote_readback_verified": True,
                "eligible_pairs": scan["eligible_pairs"],
                "online_usd_pairs": scan["online_usd_pairs"],
@@ -249,6 +251,7 @@ def main():
     p = argparse.ArgumentParser()
     for arg in ("scan", "scoreboard", "run-id", "source-sha", "ledger-commit", "output-dir", "event"):
         p.add_argument("--" + arg, required=True)
+    p.add_argument("--atomic-publication", action="store_true", help="Results and ledger committed and read back together")
     p.add_argument("--originating-cron", default=None,
                    help="Exact github.event.schedule, empty for manual dispatch")
     a = p.parse_args()
@@ -256,7 +259,8 @@ def main():
     score = json.loads(Path(a.scoreboard).read_text())
     payload, markdown = render(scan, score, run_id=a.run_id,
                                source_sha=a.source_sha, ledger_commit=a.ledger_commit,
-                               event=a.event, originating_cron=a.originating_cron)
+                               event=a.event, originating_cron=a.originating_cron,
+                               atomic_publication=a.atomic_publication)
     directory = Path(a.output_dir)
     directory.mkdir(parents=True, exist_ok=True)
     atomic_json(directory / "results.json", payload)
