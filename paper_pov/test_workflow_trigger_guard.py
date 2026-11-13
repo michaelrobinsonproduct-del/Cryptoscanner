@@ -7,24 +7,38 @@ PIPELINE = Path(__file__).resolve().parents[1] / ".github/workflows/paper-pipeli
 
 
 class MainOnlyPaperTriggerTests(unittest.TestCase):
-    def test_only_schedule_and_controller_dispatch_can_trigger_writer(self):
+    def test_schedule_dispatch_and_authenticated_request_trigger_same_writer(self):
         text = PIPELINE.read_text()
         events = text.split("\npermissions:", 1)[0]
         self.assertIn("\n  workflow_dispatch:", events)
         self.assertIn("\n  schedule:", events)
+        self.assertIn("\n  push:", events)
+        self.assertIn("branches: [main]", events)
+        self.assertIn("\'.github/paper-scan-request.txt\'", events)
         self.assertNotIn("\n  issue_comment:", events)
         self.assertNotIn("types: [created]", events)
-        for forbidden in ("push:", "pull_request:", "repository_dispatch:"):
+        for forbidden in ("pull_request:", "repository_dispatch:"):
             self.assertNotIn(forbidden, events)
 
     def test_job_runs_only_from_default_main_ref(self):
         text = PIPELINE.read_text()
         self.assertIn(
             "if: github.ref == 'refs/heads/main' && "
-            "(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')",
+            "(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'push')",
             text,
         )
         self.assertEqual(text.count("if: github.ref == 'refs/heads/main'"), 1)
+
+    def test_path_scoped_push_is_verified_before_any_ledger_mutation(self):
+        text = PIPELINE.read_text()
+        self.assertIn("fetch-depth: 2", text)
+        self.assertIn("CHANGED=", text)
+        self.assertIn("git diff-tree --no-commit-id --name-only -r", text)
+        self.assertIn("PAPER_PUSH_REQUEST_UNAUTHORIZED_FILES", text)
+        self.assertIn("PAPER_PUSH_REQUEST_VERIFIED", text)
+        self.assertIn("PAPER_PUSH_REQUEST_EMPTY", text)
+        self.assertLess(text.index("PAPER_PUSH_REQUEST_VERIFIED"),
+                        text.index("Restore checksum-sealed existing ledger"))
 
     def test_twice_hourly_schedule_and_single_writer_unchanged(self):
         text = PIPELINE.read_text()
