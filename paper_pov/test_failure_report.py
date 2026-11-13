@@ -60,7 +60,7 @@ class FailureReportTests(unittest.TestCase):
         self.assertIn("public-paper-failure-", text)
         self.assertIn("paper_pov/failure_report.py", text)
         self.assertIn("sha256sum -c SHA256SUMS", text)
-        self.assertIn("PAPER_FAILURE_ISSUE_READBACK_VERIFIED", text)
+        self.assertNotIn('-X POST "repos/${GITHUB_REPOSITORY}/issues/34/comments"', text)
         self.assertEqual(text.count("git push origin HEAD:refs/heads/paper-proof-ledger"), 2)
         self.assertIn("group: public-paper-proof-ledger-single-writer", text)
         self.assertEqual(text.count("cron: '20,50 * * * *'"), 1)
@@ -100,7 +100,7 @@ class FailureReportTests(unittest.TestCase):
 
     def test_failure_steps_are_conditional_and_use_exact_source(self):
         text = WORKFLOW.read_text()
-        self.assertEqual(text.count("if: ${{ failure() }}"), 3)
+        self.assertEqual(text.count("if: ${{ failure() }}"), 2)
         self.assertIn('git show "${GITHUB_SHA}:paper_pov/failure_report.py"', text)
         self.assertEqual(text.count("git push origin HEAD:refs/heads/paper-proof-ledger"), 2)
 
