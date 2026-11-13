@@ -300,7 +300,9 @@ class RecoveryTests(unittest.TestCase):
         self.assertIn("PAPER_RECOVERY_RECHECK_ABORT", workflow)
         self.assertIn("PAPER_RECOVERY_MAIN_CHANGED_ABORT", workflow)
         self.assertNotIn('-X POST "repos/$GITHUB_REPOSITORY/issues/34/comments"', workflow)
-        self.assertEqual(workflow.count("--jq '.[] | {body,created_at,user:{login:.user.login,id:.user.id}} | @json'"), 2)
+        self.assertNotIn("issues/34/comments", workflow)
+        self.assertIn(": > /tmp/paper-recovery-comments.ndjson", workflow)
+        self.assertIn(": > /tmp/paper-recovery-comments-recheck.ndjson", workflow)
         self.assertIn("PAPER_RECOVERY_RUNS_CHANGED_ABORT", workflow)
         # A stale run/ledger/main state must abort BEFORE writing a 90-minute
         # recheck the runs and ledger before dispatch, without issue writes.
