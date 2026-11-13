@@ -30,8 +30,9 @@ RETRY_INTERVAL = dt.timedelta(minutes=90)
 CADENCE_RETRY_INTERVAL = dt.timedelta(minutes=45)
 
 
-def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
-    """Only verified missed-slot and durable-ledger evidence authorize a request."""
+def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now,
+           request_kind="scheduled"):
+    """Dispatch the existing writer for a missing schedule OR an explicit due request."""
     result = {"schema": 1, "paper_only": True, "action": "BLOCKED",
               "reason": "UNVALIDATED", "checked_at": now.astimezone(UTC).isoformat(),
               "ledger_commit": ledger_commit, "latest_run_id": None,
@@ -41,6 +42,8 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
         result.update(action="BLOCKED" if blocked else "NO_DISPATCH", reason=reason)
         return result
 
+    if request_kind not in ("scheduled", "on-demand"):
+        return abstain("UNRECOGNIZED_REQUEST_KIND", True)
     if now.tzinfo is None:
         return abstain("NAIVE_CLOCK", True)
     now = now.astimezone(UTC)
@@ -160,19 +163,21 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
     if now - max(newest_at, latest_asof) < MIN_SUCCESS_AGE:
         return abstain("RECENT_ATTEMPT")
 
-    matured = scheduled_slots(now + RECOVERY_GRACE_ADVANCE, 20, 30)
-    if not matured:
-        return abstain("INSUFFICIENT_MATURED_SLOTS")
-    scheduled_successes = [x for _, x in clean if x.get("event") == "schedule"
-                           and x.get("status") == "completed" and x.get("conclusion") == "success"]
-    matched = matched_scheduled_slots(scheduled_successes, now + RECOVERY_GRACE_ADVANCE, 20, 30)
-    if matured[0] in matched:
-        return abstain("MATURED_SLOT_COVERED")
-    # A successful scheduled OR recovery-dispatched scan after the missing
-    # slot means we already have a newer durable scan; never double-dispatch.
-    if max(anchor_at, latest_asof) >= matured[0]:
-        return abstain("DURABLE_SCAN_AFTER_MATURED_SLOT")
-    result["missed_matured_slots"] = [matured[0].isoformat()]
+    # An authenticated scan-request push is an explicit demand for a new
+    # publication, NOT a missed-cron alarm. Its 20-minute cooldown and all
+    # preceding active-run, provenance and remote-ledger checks still apply.
+    if request_kind == "scheduled":
+        matured = scheduled_slots(now + RECOVERY_GRACE_ADVANCE, 20, 30)
+        if not matured:
+            return abstain("INSUFFICIENT_MATURED_SLOTS")
+        scheduled_successes = [x for _, x in clean if x.get("event") == "schedule"
+                               and x.get("status") == "completed" and x.get("conclusion") == "success"]
+        matched = matched_scheduled_slots(scheduled_successes, now + RECOVERY_GRACE_ADVANCE, 20, 30)
+        if matured[0] in matched:
+            return abstain("MATURED_SLOT_COVERED")
+        if max(anchor_at, latest_asof) >= matured[0]:
+            return abstain("DURABLE_SCAN_AFTER_MATURED_SLOT")
+        result["missed_matured_slots"] = [matured[0].isoformat()]
 
     # Both controllers share one GitHub concurrency mutex, but a successful
     # workflow_dispatch API response can precede creation of its writer run.
@@ -201,10 +206,13 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now):
                 return abstain(label + "_MARKER_IN_FUTURE", True)
             if now - at < interval:
                 return abstain(label + "_ALREADY_ATTEMPTED")
-    result.update(action="DISPATCH_EXISTING_WORKFLOW", reason="MATURED_SLOT_MISSED",
+    result.update(action="DISPATCH_EXISTING_WORKFLOW",
+                  reason=("ON_DEMAND_SCAN_DUE" if request_kind == "on-demand"
+                          else "MATURED_SLOT_MISSED"),
                   attempt_marker=RECOVERY_MARKER + ledger_commit,
                   decision_sha256=hashlib.sha256((ledger_commit + "|" + str(latest_id) + "|" +
-                  "|".join(result["missed_matured_slots"])).encode()).hexdigest())
+                  request_kind + "|" + "|".join(result["missed_matured_slots"])
+                  ).encode()).hexdigest())
     return result
 
 
@@ -212,13 +220,15 @@ def main():
     p = argparse.ArgumentParser()
     for name in ("runs", "comments", "ledger", "ledger-commit", "ledger-message", "output"):
         p.add_argument("--" + name, required=True)
+    p.add_argument("--request-kind", choices=("scheduled", "on-demand"), default="scheduled")
     args = p.parse_args()
     try:
         data = decide(json.loads(Path(args.runs).read_text()),
                       [json.loads(line) for line in Path(args.comments).read_text().splitlines() if line.strip()],
                       json.loads(Path(args.ledger).read_text()),
                       Path(args.ledger_commit).read_text().strip(),
-                      Path(args.ledger_message).read_text().strip(), dt.datetime.now(UTC))
+                      Path(args.ledger_message).read_text().strip(), dt.datetime.now(UTC),
+                      request_kind=args.request_kind)
     except (OSError, ValueError, TypeError) as exc:
         data = {"schema": 1, "paper_only": True, "action": "BLOCKED",
                 "reason": "EVIDENCE_READ_FAILURE", "error": str(exc)[:180],
