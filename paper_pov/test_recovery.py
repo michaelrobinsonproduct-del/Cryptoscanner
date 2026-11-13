@@ -19,14 +19,16 @@ def scan(run_id=123, when="2026-10-31T20:10:00Z", **kwargs):
     return dict(run(run_id, when, **kwargs), head_branch="main")
 
 
-def decision(runs=None, comments=None, ledger=None, now=NOW, commit=COMMIT, message=MESSAGE):
+def decision(runs=None, comments=None, ledger=None, now=NOW, commit=COMMIT, message=MESSAGE,
+             request_kind="scheduled"):
     if runs is None:
         runs = [scan()]
     if comments is None:
         comments = []
     if ledger is None:
         ledger = fixture()
-    return decide({"workflow_runs": runs}, comments, ledger, commit, message, now)
+    return decide({"workflow_runs": runs}, comments, ledger, commit, message, now,
+                  request_kind=request_kind)
 
 
 class RecoveryTests(unittest.TestCase):
@@ -72,6 +74,45 @@ class RecoveryTests(unittest.TestCase):
                      now=dt.datetime(2026, 10, 31, 20, 43, tzinfo=UTC))
         self.assertEqual((d["action"], d["reason"]),
                          ("NO_DISPATCH", "DURABLE_SCAN_AFTER_MATURED_SLOT"))
+
+    def test_on_demand_request_bypasses_false_missed_cron_veto(self):
+        # Actual failure pattern: durable scan after the last matured cron
+        # but now 21 minutes old, due for the next half-hour report.
+        state = fixture()
+        asof = "2026-10-31T20:22:00+00:00"
+        state["runs"][0]["as_of"] = asof
+        state["predictions"][0]["as_of"] = asof
+        state["predictions"][0]["prediction_id"] = hashlib.sha256(
+            ("paper-v1|" + asof + "|" + state["predictions"][0]["pair"]).encode()).hexdigest()
+        state["observations"][0]["at"] = "2026-10-31T20:21:50+00:00"
+        runs = [scan(123, "2026-10-31T20:21:00Z", event="workflow_dispatch")]
+        now = dt.datetime(2026, 10, 31, 20, 43, tzinfo=UTC)
+        self.assertEqual(decision(runs=runs, ledger=seal(state), now=now)["reason"],
+                         "DURABLE_SCAN_AFTER_MATURED_SLOT")
+        requested = decision(runs=runs, ledger=seal(state), now=now,
+                             request_kind="on-demand")
+        self.assertEqual((requested["action"], requested["reason"]),
+                         ("DISPATCH_EXISTING_WORKFLOW", "ON_DEMAND_SCAN_DUE"))
+        self.assertEqual(requested["missed_matured_slots"], [])
+
+    def test_on_demand_reuses_existing_safety_and_cooldown(self):
+        recent = decision(now=dt.datetime(2026, 10, 31, 20, 28, tzinfo=UTC),
+                          request_kind="on-demand")
+        self.assertEqual((recent["action"], recent["reason"]),
+                         ("NO_DISPATCH", "RECENT_ATTEMPT"))
+        due = decision(now=dt.datetime(2026, 10, 31, 20, 35, tzinfo=UTC),
+                       request_kind="on-demand")
+        self.assertEqual((due["action"], due["reason"]),
+                         ("DISPATCH_EXISTING_WORKFLOW", "ON_DEMAND_SCAN_DUE"))
+        active = decision(runs=[scan(status="in_progress", conclusion=None)],
+                          request_kind="on-demand")
+        self.assertEqual((active["action"], active["reason"]),
+                         ("NO_DISPATCH", "SCANNER_ACTIVE_OR_QUEUED"))
+        unlinked = decision(runs=[scan(), scan(124, "2026-10-31T22:10:00Z")],
+                            request_kind="on-demand")
+        self.assertEqual((unlinked["action"], unlinked["reason"]),
+                         ("BLOCKED", "NEWER_RUN_NOT_DURABLY_RECONCILED"))
+        self.assertEqual(decision(request_kind="not-authorized")["action"], "BLOCKED")
 
     def test_scheduled_success_covers_matured_slot(self):
         state = fixture()
@@ -322,6 +363,8 @@ class RecoveryTests(unittest.TestCase):
         self.assertIn('test "$CHANGED" = \'.github/paper-scan-request.txt\'', workflow)
         self.assertIn("PAPER_REQUEST_UNAUTHORIZED_CHANGE", workflow)
         self.assertIn("PAPER_RECOVERY_AUTHENTICATED_REQUEST", workflow)
+        self.assertIn("PAPER_RECOVERY_REQUEST_KIND: ${{ github.event_name == 'push' && 'on-demand' || 'scheduled' }}", workflow)
+        self.assertEqual(workflow.count('--request-kind "$PAPER_RECOVERY_REQUEST_KIND"'), 2)
         self.assertEqual(workflow.count("actions/workflows/paper-pipeline.yml/dispatches"), 1)
         self.assertNotIn("git push", workflow)
         self.assertNotIn("railway", workflow.lower())
