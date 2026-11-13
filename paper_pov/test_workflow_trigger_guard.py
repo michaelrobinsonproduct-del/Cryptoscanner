@@ -33,7 +33,9 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertIn("cancel-in-progress: false", text)
         self.assertEqual(text.count("git push origin HEAD:refs/heads/paper-proof-ledger"), 1)
         self.assertIn("PAPER_CANONICAL_RESULTS_REMOTE_READBACK_VERIFIED", text)
-        self.assertIn("CANONICAL_RESULTS_CONCURRENT_UPDATE_ABORT", text)
+        self.assertIn("LEDGER_CONCURRENT_UPDATE_ABORT", text)
+        self.assertIn("--publication-dir /tmp/paper-output/results", text)
+        self.assertIn("--atomic-publication", text)
         self.assertIn("PAPER_LEDGER_REMOTE_READBACK_VERIFIED", text)
         self.assertIn("Render sealed results BEFORE the single atomic publication", text)
 
