@@ -56,6 +56,21 @@ class PaperResultsContracts(unittest.TestCase):
                       run_id="41235442591", source_sha=SHA, ledger_commit=LEDGER,
                       event=event, originating_cron=cron)
 
+    def test_atomic_publication_is_sealed_without_self_referential_commit(self):
+        scan, score = fixture()
+        payload, markdown = render(scan, score, run_id="41235442591",
+                                   source_sha=SHA, ledger_commit=LEDGER,
+                                   event="schedule", originating_cron="20,50 * * * *",
+                                   atomic_publication=True)
+        self.assertEqual(payload["schema"], 2)
+        self.assertEqual(payload["publication_mode"], "ATOMIC_LEDGER_RESULTS")
+        self.assertEqual(payload["ledger_parent_commit"], LEDGER)
+        self.assertNotIn("ledger_commit", payload)
+        self.assertTrue(payload["remote_readback_verified"])
+        self.assertEqual(payload["ledger_sha256"], score["ledger_sha256"])
+        self.assertIn("atomic ledger/results publication", markdown)
+        self.assertFalse(payload["production_applied"])
+
     def test_github_event_provenance_is_explicit_and_fail_closed(self):
         scheduled, scheduled_md = self.report(event="schedule")
         self.assertEqual(scheduled["github_event"], "schedule")
