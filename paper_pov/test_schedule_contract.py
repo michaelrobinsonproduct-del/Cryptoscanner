@@ -36,7 +36,7 @@ class PaperCronAttributionContracts(unittest.TestCase):
         self.assertLess(self.text.index(marker),
                         self.text.index("name: Exact commit tests before any ledger mutation"))
         self.assertLess(self.text.index(marker),
-                        self.text.index("name: Non-force, single-writer ledger push"))
+                        self.text.index("name: Atomically publish ledger AND results"))
         self.assertIn("PAPER_GITHUB_EVENT: ${{ github.event_name }}", self.text)
         self.assertIn("PAPER_CRON_EXPRESSION: ${{ github.event.schedule }}", self.text)
         self.assertIn("'20,50 * * * *'", self.text)
@@ -49,7 +49,7 @@ class PaperCronAttributionContracts(unittest.TestCase):
             "Restore checksum-sealed existing ledger",
             "Real bounded public Kraken scan (paper only)",
             "Cross-run nonregression and provenance acceptance",
-            "Non-force, single-writer ledger push and remote readback",
+            "Atomically publish ledger AND results in ONE single-writer Git commit",
             "Preserve public human-readable paper results",
             "Publish explicit failed-run paper results",
         ):
