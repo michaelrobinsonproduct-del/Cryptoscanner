@@ -55,12 +55,15 @@ class StageOneScheduleTests(unittest.TestCase):
         self.assertIn("paper_pov.segmented_live_writer apply", text)
         self.assertIn("retention-days: 90", text)
 
-    def test_only_main_schedule_or_manual_dispatch_can_write(self):
+    def test_only_main_schedule_manual_or_authenticated_request_can_write(self):
         text = PIPELINE.read_text()
-        self.assertNotIn("  push:", text)
+        self.assertIn("\n  push:", text)
+        self.assertIn("\'.github/paper-scan-request.txt\'", text)
+        self.assertIn("PAPER_PUSH_REQUEST_VERIFIED", text)
         self.assertIn("github.ref == 'refs/heads/main'", text)
         self.assertIn("github.event_name == 'schedule'", text)
         self.assertIn("github.event_name == 'workflow_dispatch'", text)
+        self.assertIn("github.event_name == 'push'", text)
 
     def test_do_not_weaken_forty_five_minute_gap_abstention(self):
         text = LEDGER.read_text()

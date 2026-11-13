@@ -1,12 +1,7 @@
 name: Paper missed-slot recovery controller (dispatch existing writer only)
 on:
   workflow_dispatch:
-  # Authenticated GitHub App request for the same existing recovery controller.
-  # No new scanner, writer or scheduled controller is created.
-  push:
-    branches: [main]
-    paths:
-      - '.github/paper-scan-request.txt'
+  # Scheduled recovery only; request-file pushes start paper-pipeline directly.
   schedule:
     - cron: '12,42 * * * *'
 permissions:
@@ -19,29 +14,17 @@ jobs:
   decide-and-request:
     if: >-
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'push')
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
-      PAPER_RECOVERY_REQUEST_KIND: ${{ github.event_name == 'push' && 'on-demand' || 'scheduled' }}
+      PAPER_RECOVERY_REQUEST_KIND: scheduled
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           persist-credentials: false
           fetch-depth: 2
-      - name: Verify exact on-demand recovery request on main
-        if: github.event_name == 'push'
-        run: |
-          set -euo pipefail
-          CHANGED="$(git diff-tree --no-commit-id --name-only -r "${GITHUB_SHA}")"
-          test "$CHANGED" = '.github/paper-scan-request.txt' || {
-            echo PAPER_REQUEST_UNAUTHORIZED_CHANGE; exit 1;
-          }
-          test -s .github/paper-scan-request.txt || {
-            echo PAPER_REQUEST_EMPTY; exit 1;
-          }
-          echo PAPER_RECOVERY_AUTHENTICATED_REQUEST
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'

@@ -1,6 +1,12 @@
 name: Public Kraken Paper POV (scheduled, isolated ledger)
 on:
   workflow_dispatch:
+  # GitHub App request-file push starts this SAME single writer directly.
+  # Scheduled recovery remains a separate backup for missed cron slots.
+  push:
+    branches: [main]
+    paths:
+      - '.github/paper-scan-request.txt'
   schedule:
     - cron: '20,50 * * * *'
 permissions:
@@ -12,11 +18,13 @@ concurrency:
   cancel-in-progress: false
 jobs:
   public-paper:
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'push')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -43,6 +51,19 @@ jobs:
                 echo "PAPER_UNAUTHORIZED_CADENCE_COMMENT"; exit 1;
               }
               ;;
+            push)
+              # Ref/path filters alone are insufficient: reject multi-file pushes
+              # before touching Kraken or the immutable paper ledger.
+              test -z "$PAPER_CRON_EXPRESSION"
+              CHANGED="$(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA")"
+              test "$CHANGED" = '.github/paper-scan-request.txt' || {
+                echo "PAPER_PUSH_REQUEST_UNAUTHORIZED_FILES"; exit 1;
+              }
+              test -s .github/paper-scan-request.txt || {
+                echo "PAPER_PUSH_REQUEST_EMPTY"; exit 1;
+              }
+              echo "PAPER_PUSH_REQUEST_VERIFIED"
+              ;;
             workflow_dispatch)
               test -z "$PAPER_CRON_EXPRESSION" || {
                 echo "PAPER_MANUAL_WITH_SCHEDULE_PAYLOAD"; exit 1;
@@ -51,7 +72,7 @@ jobs:
             *) echo "PAPER_UNRECOGNIZED_GITHUB_EVENT"; exit 1 ;;
           esac
           echo "PAPER_VERIFIED_GITHUB_EVENT=$PAPER_GITHUB_EVENT"
-          echo "PAPER_VERIFIED_ORIGINATING_CRON=${PAPER_CRON_EXPRESSION:-MANUAL_DISPATCH}"
+          echo "PAPER_VERIFIED_ORIGINATING_CRON=${PAPER_CRON_EXPRESSION:-NOT_SCHEDULED}"
       - name: Exact commit tests before any ledger mutation
         run: |
           set -euo pipefail
