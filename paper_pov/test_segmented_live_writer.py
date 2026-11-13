@@ -57,6 +57,37 @@ class LiveWriterTests(unittest.TestCase):
                          self.git("show", sha + ":paper-ledger.json").encode())
         self.assertEqual(segments.read_git_state(self.gitdir, sha, True)[0], after)
 
+    def test_one_commit_seals_ledger_and_results_without_changing_learning_input(self):
+        import hashlib
+        staged, after, _ = self.prepare()
+        live.apply(self.gitdir, self.base, staged)
+        published = self.root / "published"
+        published.mkdir()
+        payload = {"schema": 2, "publication_mode": "ATOMIC_LEDGER_RESULTS",
+                   "status": "SUCCESS_PAPER_ONLY", "ledger_parent_commit": self.base,
+                   "ledger_sha256": after["sha256"], "ledger_generation": after["generation"],
+                   "remote_readback_verified": True, "production_applied": False}
+        (published / "results.json").write_bytes(ledger.canonical(payload))
+        (published / "results.md").write_text("Verified paper results\\n")
+        digests = [hashlib.sha256((published / name).read_bytes()).hexdigest() + "  " + name
+                   for name in ("results.json", "results.md")]
+        (published / "SHA256SUMS").write_text("\\n".join(digests) + "\\n")
+        destination = self.gitdir / "verified-results"
+        destination.mkdir()
+        for name in ("results.json", "results.md", "SHA256SUMS"):
+            (destination / name).write_bytes((published / name).read_bytes())
+        self.git("add", "--", "verified-results")
+        self.git("commit", "-m", "paper: atomic packed scan 123 source " + SHA)
+        commit = self.git("rev-parse", "HEAD")
+        self.git("update-ref", live.REMOTE_REF, commit)
+        proof = live.verify_remote(self.gitdir, self.base, commit, staged, published)
+        self.assertEqual(proof["generation"], 1)
+        self.assertIn("verified-results/results.json", proof["verified_files"])
+        self.assertEqual(proof["ledger_sha256"], after["sha256"])
+        (published / "results.md").write_text("corrupted\\n")
+        with self.assertRaisesRegex(ValueError, "Atomic published result bytes"):
+            live.verify_remote(self.gitdir, self.base, commit, staged, published)
+
     def test_second_append_preserves_checkpoint_and_old_segments(self):
         first, _, _ = self.prepare()
         first_commit, _ = self.commit(self.base, first)
