@@ -63,19 +63,10 @@ def authorize(event, *, repository, actor, ref, event_name, now=None):
 
 
 def slot_at(now):
-    """Most recent scheduled writer trigger (:20/:50), not results time (:00/:30).
-
-    External heartbeats at :24/:54 must evaluate the slot that just opened.
-    Otherwise :24 checks :00 and silently skips the missed :20 writer.
-    """
+    """Current :00/:30 heartbeat slot; never credit a previous slot's scan."""
     now = now.astimezone(UTC)
     hour = now.replace(minute=0, second=0, microsecond=0)
-    if now.minute >= 50:
-        return hour + dt.timedelta(minutes=50)
-    if now.minute >= 20:
-        return hour + dt.timedelta(minutes=20)
-    return hour - dt.timedelta(minutes=10)
-
+    return hour + (dt.timedelta(minutes=30) if now.minute >= 30 else dt.timedelta())
 
 def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, main_sha, intent, now):
     """Fail closed on uncertain run/ledger identity, writer, timing or duplicate."""
