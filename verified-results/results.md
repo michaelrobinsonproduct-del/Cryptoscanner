@@ -2,33 +2,29 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-14T05:23:14.124123+00:00
+**UTC as-of:** 2026-11-14T05:49:42.103586+00:00
 **GitHub trigger:** authenticated on-demand scan request (verified event=push; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43561251820
-**Source SHA:** 22d700ffdd5cf951d00938d39bb83942c82176e3
-**Previous ledger commit:** b84ecc82818e1e233d2092a56ab55101d8322046 (atomic ledger/results publication)
-**Ledger generation:** 384 (remote push/readback verified)
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43563353021
+**Source SHA:** 8c2795438d6905e8ca88e4be06c72abdecc0a6ae
+**Previous ledger commit:** 883171e0c4e664fbc824fafcf141abff9c88f604 (atomic ledger/results publication)
+**Ledger generation:** 385 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 625; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 607; valid market observations: 607; OHLC screened: 8.
+**Freshness:** Kraken public ticker client-observed, max quote age 2s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 625; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 607; valid market observations: 607; OHLC screened: 6.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | UAI/USD | 0.04186 | 78.741 | 68.651 | +7.91% | +2.82% | 0.60x | 19.1 | 2026-11-14T05:23:11.594080+00:00 | Not calibrated | MODERATE 64/100 | VERY_HIGH 81/100 | Watch | WATCH |
-| 2 | BMT/USD | 0.0242 | 56.020 | 59.345 | +7.60% | +1.00% | 0.17x | 33.2 | 2026-11-14T05:23:11.594080+00:00 | Not calibrated | MODERATE 48/100 | EXTREME 94/100 | Do nothing | WATCH |
-| 3 | INJ/USD | 8.092 | 52.081 | 54.514 | +0.37% | +0.76% | 0.38x | 6.2 | 2026-11-14T05:23:11.594080+00:00 | Not calibrated | MODERATE 56/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 4 | PIEVERSE/USD | 1.7208 | 43.760 | 46.510 | +5.04% | +0.15% | 0.65x | 39.9 | 2026-11-14T05:23:11.594080+00:00 | Not calibrated | WEAK 27/100 | EXTREME 94/100 | Do nothing | WATCH |
+| 1 | UAI/USD | 0.04183 | 89.129 | 72.339 | +7.84% | +0.36% | 2.72x | 12.0 | 2026-11-14T05:49:39.811093+00:00 | Not calibrated | STRONG 95/100 | HIGH 66/100 | Consider small entry | WATCH |
+| 2 | ICNT/USD | 0.2585 | 50.527 | 33.397 | +0.90% | +0.43% | 4.31x | 7.7 | 2026-11-14T05:49:39.811093+00:00 | Not calibrated | STRONG 80/100 | HIGH 67/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | UAI/USD | 68.651 | 0.04186 | +2.82% | 0.60x |
-| 2 | BMT/USD | 59.345 | 0.0242 | +1.00% | 0.17x |
-| 3 | INJ/USD | 54.514 | 8.092 | +0.76% | 0.38x |
-| 4 | PIEVERSE/USD | 46.510 | 1.7208 | +0.15% | 0.65x |
+| 1 | UAI/USD | 72.339 | 0.04183 | +0.36% | 2.72x |
+| 2 | ICNT/USD | 33.397 | 0.2585 | +0.43% | 4.31x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -44,8 +40,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 384; predictions: 3481; observations: 231043.
-- Matured sampled outcomes across 1/6/24/48h: 3003; gap abstentions: 10088. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 385; predictions: 3483; observations: 231650.
+- Matured sampled outcomes across 1/6/24/48h: 3011; gap abstentions: 10094. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
