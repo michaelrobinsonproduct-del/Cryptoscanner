@@ -77,6 +77,30 @@ class LegacyShadowTests(unittest.TestCase):
         self.assertNotIn("challenger_score", str(out))
         self.assertEqual(len([x for x in api.calls if x.startswith("OHLC?")]), 16)
 
+    def test_machine_readable_log_contains_sealed_same_run_legacy_watch(self):
+        import hashlib
+        import io
+        import json
+        from contextlib import redirect_stdout
+        report = run()
+        encoded = json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        digest = hashlib.sha256(encoded.encode()).hexdigest()
+        out = io.StringIO()
+        with redirect_stdout(out):
+            legacy_shadow.emit_report_for_delivery(report, digest)
+        lines = out.getvalue().splitlines()
+        self.assertEqual(len(lines), 1)
+        prefix = "LEGACY_SHADOW_RESULTS_JSON "
+        self.assertTrue(lines[0].startswith(prefix))
+        payload = json.loads(lines[0][len(prefix):])
+        self.assertEqual(payload["artifact_sha256"], digest)
+        self.assertEqual(payload["report"]["trigger_paper_run_id"], "67890")
+        self.assertEqual(payload["report"]["run_id"], "12345")
+        self.assertEqual(payload["report"]["candidates"], report["candidates"])
+        self.assertFalse(payload["report"]["production_applied"])
+        with self.assertRaisesRegex(ValueError, "differs from sealed artifact"):
+            legacy_shadow.emit_report_for_delivery(report, "0" * 64)
+
     def test_distinct_github_provenance_required(self):
         with self.assertRaisesRegex(ValueError, "distinct"):
             legacy_shadow.scan(api=FakeKraken(), clock=lambda: NOW, sleep=lambda _: None,
