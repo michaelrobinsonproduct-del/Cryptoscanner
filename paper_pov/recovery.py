@@ -90,22 +90,30 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now,
             if (event == "issue_comment" and item.get("status") == "completed"
                     and item.get("conclusion") == "skipped"):
                 continue
-            if event not in ("schedule", "workflow_dispatch", "issue_comment"):
-                # The public workflow previously ran on push. Those historical
-                # completed runs are NOT scanner writers, and must not disable
-                # missed-slot recovery forever. Ignore ONLY an unambiguously
-                # old, completed, identified-branch push predating the sealed ledger.
-                # Unknown, active, newer or missing-branch events fail closed.
-                if (event == "push" and isinstance(item.get("head_branch"), str)
-                        and bool(item["head_branch"].strip())
-                        and type(item.get("id")) is int and item["id"] > 0
-                        and isinstance(item.get("head_sha"), str)
-                        and SHA.fullmatch(item["head_sha"])
-                        and item.get("status") == "completed"
-                        and item.get("conclusion") in ("success", "failure", "cancelled")
+            if event == "push":
+                # The current canonical writer is path-restricted to an
+                # authenticated request-file push on main. Its active runs
+                # suppress recovery, and its completed runs must reconcile
+                # against the sealed ledger exactly like manual dispatches.
+                valid_identity = (isinstance(item.get("head_branch"), str)
+                                  and bool(item["head_branch"].strip())
+                                  and type(item.get("id")) is int and item["id"] > 0
+                                  and isinstance(item.get("head_sha"), str)
+                                  and SHA.fullmatch(item["head_sha"]))
+                completed_attempt = (item.get("status") == "completed"
+                                     and item.get("conclusion") in
+                                     ("success", "failure", "cancelled"))
+                if (valid_identity and completed_attempt
+                        and item["id"] != latest_id
                         and at < latest_asof - dt.timedelta(minutes=2)):
-                    ignored_legacy_push.append(item.get("id"))
+                    ignored_legacy_push.append(item["id"])
                     continue
+                if not (valid_identity and item["head_branch"] == "main"
+                        and (completed_attempt or item.get("status") in ACTIVE)):
+                    result["invalid_run_id"] = item.get("id")
+                    result["invalid_run_event"] = event
+                    return abstain("RUN_EVENT_INVALID", True)
+            elif event not in ("schedule", "workflow_dispatch", "issue_comment"):
                 result["invalid_run_id"] = item.get("id")
                 result["invalid_run_event"] = event
                 return abstain("RUN_EVENT_INVALID", True)
