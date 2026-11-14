@@ -96,6 +96,24 @@ class PaperResultsContracts(unittest.TestCase):
         self.assertNotIn("legacy_score", str(payload))
         self.assertFalse(payload["production_applied"])
 
+    def test_each_watch_has_gain_confidence_risk_and_action_without_trading(self):
+        report, md = self.report()
+        self.assertIn("30% / 48h odds", md)
+        self.assertIn("Signal confidence", md)
+        self.assertIn("Guidance", md)
+        for c in report["candidates"]:
+            g = c["guidance"]
+            self.assertEqual(g["target_gain_pct"], 30)
+            self.assertEqual(g["horizon_hours"], 48)
+            self.assertIsNone(g["gain_probability_pct"])
+            self.assertIn(g["signal_confidence"], ("WEAK", "MODERATE", "STRONG"))
+            self.assertIn(g["risk"], ("HIGH", "VERY_HIGH", "EXTREME"))
+            self.assertIn(g["recommendation"],
+                          ("DO_NOTHING", "WATCH", "CONSIDER_SMALL_ENTRY",
+                           "CONSIDER_MORE_SUBSTANTIAL_ENTRY"))
+            self.assertFalse(g["recommendation_is_trade_authorization"])
+        self.assertFalse(report["production_applied"])
+
     def test_github_event_provenance_is_explicit_and_fail_closed(self):
         scheduled, scheduled_md = self.report(event="schedule")
         self.assertEqual(scheduled["github_event"], "schedule")
@@ -201,7 +219,7 @@ class PaperResultsContracts(unittest.TestCase):
         self.assertEqual(payload["candidates"][0]["baseline_score"], 30.0)
         self.assertEqual(payload["candidates"][0]["quote_observed_at"], QUOTE)
         self.assertEqual(payload["candidates"][0]["ohlc_age_seconds"], 200)
-        self.assertIn("not probabilities or validated improvement", md)
+        self.assertIn("NOT odds of a gain", md)
         self.assertIn("NOT MATURED", md)
         self.assertIn("WATCH", md)
         self.assertIn("NOT CALIBRATED", md)
