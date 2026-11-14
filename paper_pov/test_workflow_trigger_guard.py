@@ -79,11 +79,15 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertNotIn("git push", learning)
         legacy = (PIPELINE.parent / "paper-legacy-shadow.yml").read_text()
         legacy_dispatch = "actions/workflows/paper-legacy-shadow.yml/dispatches"
-        self.assertEqual(text.count(legacy_dispatch), 1)
-        self.assertLess(text.index("PAPER_CANONICAL_RESULTS_REMOTE_READBACK_VERIFIED"),
-                        text.index(legacy_dispatch))
-        self.assertIn('inputs[paper_run_id]=${GITHUB_RUN_ID}', text)
-        self.assertIn("PAPER_READ_ONLY_LEGACY_DISPATCH_FAILED", text)
+        self.assertNotIn(legacy_dispatch, text)
+        self.assertIn("python -m paper_pov.legacy_shadow", text)
+        self.assertIn("python -m paper_pov.dual_report --inline", text)
+        self.assertIn('paper["dual_scanner_report"]=dual', text)
+        self.assertLess(text.index("python -m paper_pov.legacy_shadow"),
+                        text.index("python -m paper_pov.dual_report --inline"))
+        self.assertLess(text.index("python -m paper_pov.dual_report --inline"),
+                        text.index("git push origin HEAD:refs/heads/paper-proof-ledger"))
+        self.assertIn("sha256sum -c DUAL_SHA256SUMS", text)
         self.assertNotIn("  workflow_run:", legacy)
         self.assertIn("  workflow_dispatch:", legacy)
         self.assertIn("  contents: read", legacy)

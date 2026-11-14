@@ -13,7 +13,7 @@ concurrency:
 jobs:
   read-only-dryrun:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -77,6 +77,39 @@ jobs:
           # read-only job is normal and does not invalidate its pinned evidence.
           test "$(cat /tmp/paper-base.sha)" = "$(git rev-parse "$(cat /tmp/paper-base.sha)")"
           echo "DRYRUN_PINNED_BASE_VERIFIED $(cat /tmp/paper-base.sha)"
+      - name: Exercise exact consolidated dual publication on real staged ledger (no remote writes)
+        env:
+          PAPER_SHADOW_RUN_ID: ${{ github.run_id }}
+          PAPER_TRIGGER_RUN_ID: ${{ github.run_id }}
+          PAPER_SHADOW_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+          PAPER_SHADOW_INLINE: '1'
+        run: |
+          set -euo pipefail
+          python -m paper_pov.results_report \
+            --scan paper_pov/output/latest.json --scoreboard /tmp/paper-dryrun-score.json \
+            --run-id "$GITHUB_RUN_ID" --source-sha "$(git rev-parse HEAD)" \
+            --ledger-commit "$(cat /tmp/paper-base.sha)" --event workflow_dispatch \
+            --atomic-publication --output-dir paper_pov/output/results
+          python -m paper_pov.legacy_shadow
+          python -m paper_pov.dual_report --inline \
+            --paper-dir paper_pov/output/results --legacy-dir paper_pov/output \
+            --paper-run-id "$GITHUB_RUN_ID" --shadow-run-id "$GITHUB_RUN_ID" \
+            --output-dir paper_pov/output
+          (cd paper_pov/output && sha256sum -c DUAL_SHA256SUMS)
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("paper_pov/output")
+          p=json.loads((root/"results/results.json").read_bytes())
+          d=json.loads((root/"dual-scanner.json").read_bytes())
+          assert d["writer_run_id"] == d["legacy_run_id"] == p["run_id"]
+          assert d["ledger_generation"] == p["ledger_generation"]
+          assert d["ledger_sha256"] == p["ledger_sha256"]
+          assert d["source_sha"] == p["source_sha"]
+          assert d["legacy_execution_location"] == "SAME_WRITER_JOB"
+          assert d["status"] == "TWO_INDEPENDENT_SOURCES_VERIFIED"
+          print("CONSOLIDATED_REAL_DUAL_PUBLICATION_OK",d["writer_run_id"],d["ledger_generation"])
+          PY
       - name: Rehearse REAL Git ledger archival rollover in disposable local commit ONLY
         run: |
           set -euo pipefail

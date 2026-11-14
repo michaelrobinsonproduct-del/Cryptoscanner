@@ -58,7 +58,7 @@ def _ranked(items, score_key, with_trades=False):
     return out
 
 
-def combine(paper, legacy):
+def combine(paper, legacy, *, inline=False):
     """Tie the independent lists to the exact SAME writer run without relabeling."""
     if (paper.get("schema") != 2 or paper.get("publication_mode") != "ATOMIC_LEDGER_RESULTS"
             or paper.get("status") != "SUCCESS_PAPER_ONLY"
@@ -70,7 +70,8 @@ def combine(paper, legacy):
     writer_id = str(paper.get("run_id", ""))
     shadow_id = str(legacy.get("run_id", ""))
     sha = paper.get("source_sha", "")
-    if (not writer_id.isdigit() or not shadow_id.isdigit() or writer_id == shadow_id
+    if (not writer_id.isdigit() or not shadow_id.isdigit() or (writer_id == shadow_id and not inline)
+            or (inline and (writer_id != shadow_id or legacy.get("execution_location") != "SAME_WRITER_JOB"))
             or not SHA40.fullmatch(sha) or legacy.get("source_sha") != sha
             or str(legacy.get("trigger_paper_run_id")) != writer_id
             or legacy.get("mode") != "LEGACY_INSPIRED_SHADOW"
@@ -107,6 +108,7 @@ def combine(paper, legacy):
         "schema": 1, "mode": "SAME_WRITER_DUAL_SCANNER_REPORT",
         "status": "TWO_INDEPENDENT_SOURCES_VERIFIED", "paper_only": True,
         "writer_run_id": writer_id, "legacy_run_id": shadow_id,
+        "legacy_execution_location": "SAME_WRITER_JOB" if inline else "SEPARATE_WORKFLOW",
         "source_sha": sha, "ledger_generation": paper["ledger_generation"],
         "ledger_sha256": paper["ledger_sha256"],
         "paper_as_of": paper["as_of"], "legacy_as_of": legacy["as_of"],
@@ -179,10 +181,11 @@ def main():
     parser.add_argument("--paper-run-id", required=True)
     parser.add_argument("--shadow-run-id", required=True)
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--inline", action="store_true")
     args = parser.parse_args()
     paper = _read_verified(args.paper_dir, ["results.json", "results.md"], "SHA256SUMS")
     legacy = _read_verified(args.legacy_dir, ["legacy-shadow.json"], "LEGACY_SHA256SUMS")
-    report = combine(paper, legacy)
+    report = combine(paper, legacy, inline=args.inline)
     if (report["writer_run_id"] != args.paper_run_id
             or report["legacy_run_id"] != args.shadow_run_id):
         raise ValueError("Wrong writer/shadow workflow binding")
