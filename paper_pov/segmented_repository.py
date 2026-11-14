@@ -253,8 +253,12 @@ def stage_append(previous, report, source_sha, destination):
     entry = storage.manifest_entry(segment)
     if entry["generation"] != before["generation"] + 1:
         raise ValueError("Noncontiguous new generation")
-    if storage.replay_segments([segment], old_snapshot) != after:
-        raise ValueError("New transition failed replay")
+    # advance_segmented already independently re-executes this exact
+    # transition inside make_segment and compares the canonical after-state.
+    # Verify the freshly packed segment identity without a third advance.
+    if (entry["before_sha256"] != before["sha256"]
+            or entry["after_sha256"] != after["sha256"]):
+        raise ValueError("New transition digest mismatch")
     new = {"schema": SCHEMA, "checkpoint": dict(old["checkpoint"]),
            "head": {"generation": after["generation"],
                     "ledger_sha256": after["sha256"],
@@ -280,7 +284,7 @@ def stage_append(previous, report, source_sha, destination):
             shutil.rmtree(temporary)
 
 
-def stage_rollover(previous, checkpoint_git_sha, destination):
+def stage_rollover(previous, checkpoint_git_sha, destination, *, full_replay=True):
     """Losslessly rebase the active segment inventory onto an immutable Git head.
 
     The previous Git commit remains the archived segment inventory. This
@@ -289,7 +293,9 @@ def stage_rollover(previous, checkpoint_git_sha, destination):
     """
     if not _hex(checkpoint_git_sha, 40):
         raise ValueError("Invalid rollover Git provenance")
-    before, old = read_state(previous, full_replay=True)
+    # Full historical replay is an audit operation. The runtime caller has
+    # already validated the exact immutable base commit and its manifest.
+    before, old = read_state(previous, full_replay=full_replay)
     if not old["segments"]:
         raise ValueError("Refuse rollover without archived segment evidence")
     # A raw checkpoint can exceed the entire 10MB active-tree budget once

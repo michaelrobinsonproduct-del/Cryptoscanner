@@ -93,7 +93,9 @@ def stage(root, base, report, source_sha, destination):
                     "Segment archive count limit reached" in str(exc)):
                 raise
             archived = Path(temp) / "archived-checkpoint"
-            segments.stage_rollover(initial, base, archived)
+            # Inventory already checked the exact immutable predecessor.
+            # Never replay retiring history within the latency-critical writer.
+            segments.stage_rollover(initial, base, archived, full_replay=False)
             info = segments.stage_append(archived, report, source_sha, destination)
     after, manifest = segments.read_state(destination, full_replay=False)
     if after["generation"] != before["generation"] + 1:

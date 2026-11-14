@@ -279,8 +279,7 @@ class RecoveryTests(unittest.TestCase):
 
     def test_untrusted_push_events_never_enable_recovery(self):
         variants = [
-            dict(scan(124, "2026-10-31T22:00:00Z"), event="push"),
-            dict(scan(122, "2026-10-31T18:00:00Z"), event="push", status="in_progress", conclusion=None),
+            dict(scan(122, "2026-10-31T18:00:00Z"), event="push", head_branch="dev", status="in_progress", conclusion=None),
             dict(scan(124, "2026-10-31T22:00:00Z"), event="push", head_branch="dev"),
             dict(scan(122, "2026-10-31T18:00:00Z"), event="push", head_branch=None),
             dict(scan(122, "2026-10-31T18:00:00Z"), event="pull_request"),
@@ -292,6 +291,21 @@ class RecoveryTests(unittest.TestCase):
             with self.subTest(item=item):
                 d = decision(runs=[scan(), item])
                 self.assertEqual((d["action"], d["reason"]), ("BLOCKED", "RUN_EVENT_INVALID"))
+
+    def test_direct_request_writer_is_recognized_without_duplicate_dispatch(self):
+        active = dict(scan(124, "2026-10-31T23:20:00Z"),
+                      event="push", status="in_progress", conclusion=None)
+        d = decision(runs=[scan(), active])
+        self.assertEqual((d["action"], d["reason"]),
+                         ("NO_DISPATCH", "SCANNER_ACTIVE_OR_QUEUED"))
+        anchor = dict(scan(), event="push")
+        d = decision(runs=[anchor])
+        self.assertEqual(d["action"], "DISPATCH_EXISTING_WORKFLOW")
+        # A valid writer identity is not proof of a durable publication.
+        newer = dict(scan(124, "2026-10-31T22:00:00Z"), event="push")
+        d = decision(runs=[anchor, newer])
+        self.assertEqual((d["action"], d["reason"]),
+                         ("BLOCKED", "NEWER_RUN_NOT_DURABLY_RECONCILED"))
 
     def test_historical_push_malformed_or_future_timestamp_fails_closed(self):
         for when in ("not-a-date", "2026-11-02T23:00:00Z"):

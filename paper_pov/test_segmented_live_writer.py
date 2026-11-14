@@ -102,6 +102,36 @@ class LiveWriterTests(unittest.TestCase):
                              self.git("show", second_commit + ":" + path))
         self.assertEqual(segments.read_git_state(self.gitdir, second_commit, True)[0], after)
 
+    def test_runtime_rollover_never_replays_archived_transitions(self):
+        from unittest.mock import patch
+        from paper_pov import segmented_storage as storage
+
+        previous = self.base
+        for n in range(3):
+            staged, _, _ = self.prepare(previous, n * 30, "history-" + str(n))
+            previous, _ = self.commit(previous, staged)
+        # Force the next append to cross the active storage boundary. The
+        # writer must archive the exact old Git commit and compute only the
+        # new scan and its independent transition replay.
+        with patch.object(segments, "MAX_SEGMENTS", 3), patch.object(
+                ledger, "advance", wraps=ledger.advance) as advances:
+            staged, after, _ = self.prepare(previous, 90, "rollover")
+            self.assertEqual(advances.call_count, 2)
+            manifest = json.loads((staged / segments.MANIFEST).read_bytes())
+            self.assertEqual(manifest["checkpoint"]["git_commit"], previous)
+            self.assertEqual(manifest["checkpoint"]["generation"], 3)
+            self.assertEqual(len(manifest["segments"]), 1)
+            new, _ = self.commit(previous, staged)
+            proof = live.verify_remote(self.gitdir, previous, new, staged)
+            self.assertEqual(advances.call_count, 2)
+            self.assertEqual(proof["generation"], 4)
+        # The same independent full-history audit remains available,
+        # and the archived segments are still in the immutable old commit.
+        self.assertEqual(segments.read_git_state(self.gitdir, new, True)[0], after)
+        for n in range(1, 4):
+            self.assertTrue(segments._git_has(self.gitdir, previous,
+                                              segments._segment_path(n)))
+
     def test_wrong_base_or_dirty_checkout_refused(self):
         staged, _, _ = self.prepare()
         with self.assertRaises(ValueError):
