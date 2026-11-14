@@ -78,7 +78,7 @@ def stage(root, base, report, source_sha, destination):
                          storage.MAX_RAW_BYTES if path == segments.CHECKPOINT else
                          storage.MAX_PACKED_BYTES)
                 segments._write(initial / path, show(root, base, path, limit))
-            segments.verify_checkpoint_origin(initial, root)
+            segments.verify_checkpoint_origin(initial, root, full_replay=False)
             restored, _ = segments.read_state(initial, full_replay=False)
             if restored != before:
                 raise ValueError("Source segmented state mismatch")
