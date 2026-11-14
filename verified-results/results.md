@@ -2,29 +2,31 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-14T16:07:09.615872+00:00
-**GitHub trigger:** scheduled (verified event=schedule; originating cron=20,50 * * * *, intended UTC minute=20,50; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43612558125
-**Source SHA:** 36c0409ea72f3e76429e8e5b76fa2b43315f4918
-**Previous ledger commit:** 2dcc377ea54dffef627d612789b9489d74e86813 (atomic ledger/results publication)
-**Ledger generation:** 405 (remote push/readback verified)
+**UTC as-of:** 2026-11-14T17:19:06.962826+00:00
+**GitHub trigger:** authenticated on-demand scan request (verified event=push; no scheduled slot; actual start punctuality NOT verified)
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43620129515
+**Source SHA:** a3c6f354b868e38577230972d67f1e114c30c980
+**Previous ledger commit:** 2305541c041863ae330d617ce137d943b3a6513b (atomic ledger/results publication)
+**Ledger generation:** 406 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 2s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 625; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 607; valid market observations: 606; OHLC screened: 6.
+**Freshness:** Kraken public ticker client-observed, max quote age 1s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 625; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 607; valid market observations: 606; OHLC screened: 5.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | NIGHT/USD | 0.04988 | 80.296 | 87.725 | +6.40% | -0.26% | 0.39x | 24.1 | 2026-11-14T16:07:07.508129+00:00 | Not calibrated | WEAK 35/100 | EXTREME 88/100 | Do nothing | WATCH |
-| 2 | MEGA/USD | 0.04509 | 24.362 | 20.185 | +0.56% | +0.76% | 1.04x | 29.0 | 2026-11-14T16:07:07.508129+00:00 | Not calibrated | WEAK 37/100 | EXTREME 86/100 | Do nothing | WATCH |
+| 1 | NIGHT/USD | 0.04776 | 51.060 | 55.577 | +1.88% | +0.38% | 0.36x | 25.1 | 2026-11-14T17:19:05.510063+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 82/100 | Watch | WATCH |
+| 2 | CAP/USD | 0.108925 | 43.014 | 38.571 | +1.77% | -1.26% | 2.07x | 21.1 | 2026-11-14T17:19:05.510063+00:00 | Not calibrated | WEAK 42/100 | VERY_HIGH 77/100 | Do nothing | WATCH |
+| 3 | AKE/USD | 0.01264205 | 37.775 | 54.811 | +2.37% | -2.53% | 0.56x | 33.5 | 2026-11-14T17:19:05.510063+00:00 | Not calibrated | WEAK 14/100 | EXTREME 92/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | NIGHT/USD | 87.725 | 0.04988 | -0.26% | 0.39x |
-| 2 | MEGA/USD | 20.185 | 0.04509 | +0.76% | 1.04x |
+| 1 | NIGHT/USD | 55.577 | 0.04776 | +0.38% | 0.36x |
+| 2 | AKE/USD | 54.811 | 0.01264205 | -2.53% | 0.56x |
+| 3 | CAP/USD | 38.571 | 0.108925 | -1.26% | 2.07x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -40,14 +42,14 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 405; predictions: 3556; observations: 243772.
-- Matured sampled outcomes across 1/6/24/48h: 3133; gap abstentions: 10372. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 406; predictions: 3559; observations: 244378.
+- Matured sampled outcomes across 1/6/24/48h: 3135; gap abstentions: 10417. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 4; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 2; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
