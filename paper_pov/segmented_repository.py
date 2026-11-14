@@ -322,12 +322,13 @@ def stage_rollover(previous, checkpoint_git_sha, destination):
             shutil.rmtree(temporary)
 
 
-def verify_checkpoint_origin(directory, git_repository):
-    """Verify checkpoint bytes against the exact immutable ancestor Git commit.
+def verify_checkpoint_origin(directory, git_repository, full_replay=True):
+    """Verify checkpoint identity against its immutable Git origin.
 
-    Initial migration references a legacy JSON commit. A rollover references
-    the previous packed commit, whose complete historical chain is recursively
-    verified before its canonical ledger state can serve as a checkpoint.
+    Runtime bounded reads compare the sealed checkpoint with the exact
+    ancestor's manifest-bound packed snapshot. A rollover already fully
+    replays the retiring segments before committing that checkpoint.
+    Independent full-replay audits still recursively verify archived history.
     """
     _, manifest = read_state(directory)
     commit = manifest["checkpoint"]["git_commit"]
@@ -338,9 +339,38 @@ def verify_checkpoint_origin(directory, git_repository):
         if has_packed != has_snapshot:
             raise ValueError("Partially archived checkpoint commit")
         if has_packed:
-            state, mode = read_git_state(git_repository, commit, full_replay=True)
-            if mode != "segmented" or storage.unpack_snapshot(checkpoint) != state:
-                raise ValueError("Archived packed checkpoint differs from Git history")
+            if full_replay:
+                state, mode = read_git_state(git_repository, commit, full_replay=True)
+                if mode != "segmented" or storage.unpack_snapshot(checkpoint) != state:
+                    raise ValueError("Archived packed checkpoint differs from Git history")
+            else:
+                # The exact ancestor commit is content-addressed. Verify its
+                # canonical manifest, origin ancestry, sealed head identity
+                # and snapshot bytes, not all prior historical transitions.
+                raw_manifest = _git(git_repository, "show", commit + ":" + MANIFEST)
+                if len(raw_manifest) > MAX_MANIFEST_BYTES:
+                    raise ValueError("Archived Git manifest exceeds bound")
+                origin_manifest = json.loads(raw_manifest)
+                if ledger.canonical(origin_manifest) != raw_manifest:
+                    raise ValueError("Noncanonical archived Git manifest")
+                prior, head, _ = _check_manifest(origin_manifest)
+                meta = manifest["checkpoint"]
+                if (head["generation"] != meta["generation"]
+                        or head["ledger_sha256"] != meta["ledger_sha256"]):
+                    raise ValueError("Archived checkpoint head identity mismatch")
+                prior_commit = prior["git_commit"]
+                if prior_commit == commit:
+                    raise ValueError("Archived checkpoint cannot reference itself")
+                _git(git_repository, "merge-base", "--is-ancestor", prior_commit, commit)
+                archived = _git(git_repository, "show", commit + ":" + SNAPSHOT)
+                if (len(archived) > storage.MAX_PACKED_BYTES
+                        or sha(archived) != head["snapshot_sha256"]):
+                    raise ValueError("Archived Git snapshot checksum mismatch")
+                # Rollover can repack the same canonical state. When bytes
+                # differ, compare decoded, verified snapshot identities.
+                if archived != checkpoint and (
+                        storage.unpack_snapshot(checkpoint) != storage.unpack_snapshot(archived)):
+                    raise ValueError("Archived packed checkpoint differs from Git history")
         else:
             historical = _git(git_repository, "show", commit + ":paper-ledger.json")
             if len(historical) > storage.MAX_RAW_BYTES or historical != checkpoint:
@@ -456,7 +486,7 @@ def read_git_state(repository, commit, full_replay=False):
                 raise ValueError("Git segment exceeds bound")
             _write(root / path, data)
         state, _ = read_state(root, full_replay)
-        verify_checkpoint_origin(root, repository)
+        verify_checkpoint_origin(root, repository, full_replay=full_replay)
         return state, "segmented"
 
 
