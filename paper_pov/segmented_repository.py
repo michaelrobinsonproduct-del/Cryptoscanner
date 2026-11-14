@@ -280,7 +280,7 @@ def stage_append(previous, report, source_sha, destination):
             shutil.rmtree(temporary)
 
 
-def stage_rollover(previous, checkpoint_git_sha, destination):
+def stage_rollover(previous, checkpoint_git_sha, destination, *, full_replay=True):
     """Losslessly rebase the active segment inventory onto an immutable Git head.
 
     The previous Git commit remains the archived segment inventory. This
@@ -289,7 +289,9 @@ def stage_rollover(previous, checkpoint_git_sha, destination):
     """
     if not _hex(checkpoint_git_sha, 40):
         raise ValueError("Invalid rollover Git provenance")
-    before, old = read_state(previous, full_replay=True)
+    # Full historical replay is an audit operation. The runtime caller has
+    # already validated the exact immutable base commit and its manifest.
+    before, old = read_state(previous, full_replay=full_replay)
     if not old["segments"]:
         raise ValueError("Refuse rollover without archived segment evidence")
     # A raw checkpoint can exceed the entire 10MB active-tree budget once
