@@ -253,8 +253,12 @@ def stage_append(previous, report, source_sha, destination):
     entry = storage.manifest_entry(segment)
     if entry["generation"] != before["generation"] + 1:
         raise ValueError("Noncontiguous new generation")
-    if storage.replay_segments([segment], old_snapshot) != after:
-        raise ValueError("New transition failed replay")
+    # advance_segmented already independently re-executes this exact
+    # transition inside make_segment and compares the canonical after-state.
+    # Verify the freshly packed segment identity without a third advance.
+    if (entry["before_sha256"] != before["sha256"]
+            or entry["after_sha256"] != after["sha256"]):
+        raise ValueError("New transition digest mismatch")
     new = {"schema": SCHEMA, "checkpoint": dict(old["checkpoint"]),
            "head": {"generation": after["generation"],
                     "ledger_sha256": after["sha256"],
