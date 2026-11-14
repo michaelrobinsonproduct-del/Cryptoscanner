@@ -82,6 +82,29 @@ class DualScannerReportTests(unittest.TestCase):
         self.assertFalse(r["production_applied"])
         self.assertEqual(r["read_only_learning"], "SEPARATE_WORKFLOW")
 
+    def test_dual_lists_preserve_distinct_risk_and_advisory_action(self):
+        paper, legacy = fixtures()
+        result = combine(paper, legacy)
+        self.assertIn("Confidence", markdown(result))
+        self.assertIn("Risk", markdown(result))
+        self.assertIn("Action", markdown(result))
+        for key in ("challenger_watch", "legacy_watch"):
+            self.assertTrue(result[key])
+            for row in result[key]:
+                g = row["guidance"]
+                self.assertIsNone(g["gain_probability_pct"])
+                self.assertEqual(g["target_gain_pct"], 30)
+                self.assertEqual(g["horizon_hours"], 48)
+                self.assertIn(g["risk"], ("HIGH", "VERY_HIGH", "EXTREME"))
+                self.assertFalse(g["recommendation_is_trade_authorization"])
+        self.assertTrue(result["challenger_watch"][0]["guidance"]
+                        ["independent_legacy_overlap_verified"])
+        self.assertTrue(result["legacy_watch"][1]["guidance"]
+                        ["independent_legacy_overlap_verified"])
+        self.assertFalse(result["legacy_watch"][0]["guidance"]
+                         ["independent_legacy_overlap_verified"])
+        self.assertFalse(result["production_applied"])
+
     def test_nonmatching_independent_run_or_source_never_gets_overlap(self):
         paper, legacy = fixtures()
         legacy["trigger_paper_run_id"] = "778"
