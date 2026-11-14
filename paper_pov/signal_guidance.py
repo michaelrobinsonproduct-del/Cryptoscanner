@@ -49,7 +49,7 @@ def assess(candidate, *, score_field="challenger_score", overlap=False,
     risk = 55  # Every early-stage crypto entry has at least HIGH risk.
     reasons = ["Speculative crypto price volatility and uncertain 30% outcome"]
     if spread is None:
-        risk += 12
+        risk += 15
         reasons.append("Bid-ask spread unavailable for this independent signal")
     elif spread > 40:
         risk += 22
