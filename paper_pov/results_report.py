@@ -134,7 +134,7 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
         f"eligible pairs: {scan['eligible_pairs']}; "
         f"valid market observations: {len(observations)}; OHLC screened: {scan['ohlc_screened']}.",
         "",
-        "## Top WATCH candidates — paper only",
+        "## Challenger-ranked WATCH candidates — paper only",
         "",
         "| # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | Confidence / risk | Status |",
         "|---:|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|",
@@ -180,6 +180,34 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
                      f"{p['volume_accel']:.2f}x | {p['spread_bps']:.1f} | "
                      f"{_utc(quote['observed_at']).isoformat()} | "
                      "NOT CALIBRATED / HIGH | WATCH |")
+    # Baseline and challenger have different ranks even when both are
+    # evaluated against the same OHLC-validated candidate pool. The independent
+    # legacy-inspired scanner runs later and is NOT included in this payload.
+    challenger_ranking = [
+        {"rank": n, "symbol": x["symbol"], "score": x["challenger_score"]}
+        for n, x in enumerate(records, 1)
+    ]
+    baseline_records = sorted(records, key=lambda x: (-x["baseline_score"], x["symbol"]))
+    baseline_ranking = [
+        {"rank": n, "symbol": x["symbol"], "score": x["baseline_score"]}
+        for n, x in enumerate(baseline_records, 1)
+    ]
+    lines.extend([
+        "",
+        "## Baseline ranking (same verified WATCH pool)",
+        "",
+        "| # | Symbol | Baseline score | Price USD | 15m move | Volume accel |",
+        "|---:|---|---:|---:|---:|---:|",
+    ])
+    for index, x in enumerate(baseline_records, 1):
+        lines.append(f"| {index} | {x['symbol']} | {x['baseline_score']:.3f} | "
+                     f"{x['price_usd']:.8g} | {x['move15_pct']:+.2f}% | "
+                     f"{x['volume_accel']:.2f}x |")
+    lines.extend([
+        "",
+        "The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.",
+        "The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.",
+    ])
     # The aggregate ledger count cannot be allocated to individual horizons
     # without independent evidence. Never manufacture a per-horizon success.
     horizon_status = ("NOT_MATURED_OR_INELIGIBLE" if score["matured_labels"] == 0
@@ -237,6 +265,10 @@ def render(scan, score, *, run_id, source_sha, ledger_commit, event, originating
                "observed_markets": len(observations),
                "max_client_quote_age_seconds": max(ages),
                "exchange_event_freshness_verified": False, "candidates": records,
+               "rankings": {"challenger": challenger_ranking, "baseline": baseline_ranking,
+                            "population": "SAME_OHLC_VERIFIED_WATCH_POOL"},
+               "legacy_shadow": {"status": "PENDING_INDEPENDENT_WORKFLOW",
+                                 "trigger_paper_run_id": str(run_id)},
                "stablecoin_exclusion_count": scan["excluded_stablecoin_pairs"],
                "abstentions": len(abstentions),
                "matured_labels": score["matured_labels"], "gap_abstentions": score["gap_abstentions"],

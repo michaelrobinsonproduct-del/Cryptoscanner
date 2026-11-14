@@ -44,6 +44,24 @@ jobs:
           export PAPER_SHADOW_SOURCE_SHA="$(git rev-parse HEAD)"
           python -m paper_pov.legacy_shadow
           (cd paper_pov/output && sha256sum -c LEGACY_SHA256SUMS)
+      - name: Join exact-writer challenger and independent legacy WATCH
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PAPER_TRIGGER_RUN_ID: ${{ inputs.paper_run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/canonical-results
+          # Download this writer's immutable results, not the mutable latest tip.
+          gh run download "$PAPER_TRIGGER_RUN_ID" \
+            -n "public-paper-results-$PAPER_TRIGGER_RUN_ID" -D evidence/canonical-results
+          python -m paper_pov.dual_report \
+            --paper-dir evidence/canonical-results \
+            --legacy-dir paper_pov/output \
+            --paper-run-id "$PAPER_TRIGGER_RUN_ID" \
+            --shadow-run-id "$GITHUB_RUN_ID" \
+            --output-dir paper_pov/output
+          (cd paper_pov/output && sha256sum -c DUAL_SHA256SUMS)
+          cat paper_pov/output/dual-scanner.md >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve immutable read-only shadow artifact
         uses: actions/upload-artifact@v4
         with:
@@ -51,6 +69,9 @@ jobs:
           path: |
             paper_pov/output/legacy-shadow.json
             paper_pov/output/LEGACY_SHA256SUMS
+            paper_pov/output/dual-scanner.json
+            paper_pov/output/dual-scanner.md
+            paper_pov/output/DUAL_SHA256SUMS
           retention-days: 90
           if-no-files-found: error
   owner-shadow-fallback:
