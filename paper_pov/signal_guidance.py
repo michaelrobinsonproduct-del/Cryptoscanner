@@ -25,7 +25,7 @@ def assess(candidate, *, score_field="challenger_score", overlap=False,
     """Classify current setup; never infer profit odds from a model ranking."""
     if score_field not in ("challenger_score", "legacy_score"):
         raise ValueError("Unknown scanner score field")
-    score = _finite_number(candidate[score_field], score_field)
+    score = _finite_number(candidate.get(score_field), score_field)
     movement = _finite_number(candidate["move15_pct"], "move15_pct")
     volume = _finite_number(candidate["volume_accel"], "volume_accel")
     price = _finite_number(candidate["price_usd"], "price_usd")
