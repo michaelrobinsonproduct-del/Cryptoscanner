@@ -60,6 +60,20 @@ def assess(candidate, *, score_field="challenger_score", overlap=False,
     elif spread > 10:
         risk += 6
         reasons.append("Moderate bid-ask spread (>10 bps)")
+    traded_notional = candidate.get("notional_24h_usd")
+    if traded_notional is None:
+        risk += 5
+        reasons.append("24h traded notional unavailable")
+    else:
+        traded_notional = _finite_number(traded_notional, "notional_24h_usd")
+        if traded_notional < 0:
+            raise ValueError("Negative traded notional")
+        if traded_notional < 250000:
+            risk += 12
+            reasons.append("Thin reported 24h USD turnover (<$250k)")
+        elif traded_notional < 1000000:
+            risk += 5
+            reasons.append("Limited reported 24h USD turnover (<$1m)")
     if volume < 0.75:
         risk += 15
         reasons.append("Volume acceleration below 0.75x")
