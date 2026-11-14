@@ -221,6 +221,13 @@ def main():
           "as_of": report["as_of"], "status": report["status"],
           "candidate_count": len(report["candidates"]),
           "sha256": digest}, sort_keys=True))
+    # A complete, immutable, machine-readable same-run result in Actions logs.
+    # The existing ZIP remains the independently checksummed original. This
+    # exposes independent WATCH picks to report consumers that can read logs
+    # but cannot unpack GitHub Actions ZIP artifacts.
+    print("LEGACY_SHADOW_RESULTS_JSON " + json.dumps({
+        "artifact_sha256": digest, "report": report,
+    }, sort_keys=True, separators=(",", ":"), allow_nan=False))
     return report
 
 
