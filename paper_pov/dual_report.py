@@ -8,6 +8,8 @@ import json
 import re
 from pathlib import Path
 
+from .signal_guidance import assess, action_text
+
 SHA40 = re.compile(r"[0-9a-f]{40}\Z")
 SHA64 = re.compile(r"[0-9a-f]{64}\Z")
 SYMBOL = re.compile(r"[A-Z0-9._-]+/USD\Z")
@@ -92,7 +94,15 @@ def combine(paper, legacy):
                [x["symbol"] for x in challenger]):
         raise ValueError("Missing independent challenger ranking identity")
     legacy_set = {x["symbol"] for x in legacy_watch}
+    challenger_set = {x["symbol"] for x in challenger}
     overlap = [x["symbol"] for x in challenger if x["symbol"] in legacy_set]
+    # Confidence/risk/action are annotations on the original scanner signals,
+    # NOT ranking changes or probabilistic predictions.
+    for raw, row in zip(paper["candidates"], challenger):
+        row["guidance"] = assess(raw, overlap=row["symbol"] in legacy_set)
+    for raw, row in zip(legacy["candidates"], legacy_watch):
+        row["guidance"] = assess(raw, score_field="legacy_score",
+                                  overlap=row["symbol"] in challenger_set)
     return {
         "schema": 1, "mode": "SAME_WRITER_DUAL_SCANNER_REPORT",
         "status": "TWO_INDEPENDENT_SOURCES_VERIFIED", "paper_only": True,
@@ -115,38 +125,47 @@ def markdown(report):
     out = [
         "# Cryptoscanner — challenger and independent legacy-inspired WATCH",
         "",
-        "Paper only · high risk · scores are NOT calibrated probabilities · no BUY authorization",
+        "Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED",
+        "Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.",
         "",
         f"**Writer:** {report['writer_run_id']} · **Generation:** {report['ledger_generation']} · "
         f"**Legacy run:** {report['legacy_run_id']}",
         f"**Main quote time:** {report['paper_as_of']} · **Legacy report time:** {report['legacy_as_of']}",
         "",
         "## Challenger-scored WATCH (original canonical scanner)",
-        "| # | Symbol | USD | Challenger score | 15m move | Volume x |",
-        "|---:|---|---:|---:|---:|---:|",
+        "| # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |",
+        "|---:|---|---:|---:|---:|---:|---|---|---|",
     ]
     for x in report["challenger_watch"]:
         mark = " ⭐" if x["symbol"] in report["overlap_symbols"] else ""
+        g = x["guidance"]
         out.append(f"| {x['rank']} | {x['symbol']}{mark} | {x['price_usd']:.8g} | "
-                   f"{x['score']:.2f} | {x['move15_pct']:+.2f}% | {x['volume_accel']:.2f}x |")
+                   f"{x['score']:.2f} | {x['move15_pct']:+.2f}% | {x['volume_accel']:.2f}x | "
+                   f"{g['signal_confidence']} {g['signal_confidence_score']}/100 | "
+                   f"{g['risk']} {g['risk_score']}/100 | {action_text(g['recommendation'])} |")
     out.extend([
         "",
         "## Independent legacy-inspired WATCH (separate Kraken sampling)",
-        "| # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h |",
-        "|---:|---|---:|---:|---:|---:|---:|",
+        "| # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |",
+        "|---:|---|---:|---:|---:|---:|---:|---|---|---|",
     ])
     if not report["legacy_watch"]:
-        out.append("| — | No confirmed WATCH signals | — | — | — | — | — |")
+        out.append("| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |")
     for x in report["legacy_watch"]:
         mark = " ⭐" if x["symbol"] in report["overlap_symbols"] else ""
+        g = x["guidance"]
         out.append(f"| {x['rank']} | {x['symbol']}{mark} | {x['price_usd']:.8g} | "
                    f"{x['score']:.2f} | {x['move15_pct']:+.2f}% | "
-                   f"{x['volume_accel']:.2f}x | {x['trades_24h']} |")
+                   f"{x['volume_accel']:.2f}x | {x['trades_24h']} | "
+                   f"{g['signal_confidence']} {g['signal_confidence_score']}/100 | "
+                   f"{g['risk']} {g['risk_score']}/100 | {action_text(g['recommendation'])} |")
     out.extend([
         "", "**Same-run overlap:** " +
         (", ".join(report["overlap_symbols"]) if report["overlap_symbols"] else "None"),
         "A ⭐ means both independently executed scanners identified the exact same /USD market.",
         "Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.",
+        "More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.",
+        "Risk drivers and 30% target caveat are in each candidate guidance object.",
         "Freshness must be checked using each candidate's quote_observed_at at delivery.",
         "Read-only learning is separate; no production-scoring promotion or trading.",
     ])
