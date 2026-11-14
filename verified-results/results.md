@@ -2,12 +2,12 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-14T19:29:19.929612+00:00
+**UTC as-of:** 2026-11-14T19:53:27.966139+00:00
 **GitHub trigger:** authenticated on-demand scan request (verified event=push; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43632316562
-**Source SHA:** 34f1efc423f85850a591dca3c014c456437fe20e
-**Previous ledger commit:** e9f068e9f47bab58e3d13ec137a514ebb3af6387 (atomic ledger/results publication)
-**Ledger generation:** 411 (remote push/readback verified)
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43634495454
+**Source SHA:** 966c6b4f3bb315f71d89ced1e6bfba329e2f0520
+**Previous ledger commit:** 09c676d5397f24598d2a7023b127d04055a0ef21 (atomic ledger/results publication)
+**Ledger generation:** 412 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 1s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 625; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 607; valid market observations: 606; OHLC screened: 4.
@@ -16,17 +16,17 @@
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | NIGHT/USD | 0.04804 | 71.056 | 65.034 | +2.47% | -0.35% | 1.78x | 14.6 | 2026-11-14T19:29:18.776978+00:00 | Not calibrated | MODERATE 51/100 | HIGH 67/100 | Watch | WATCH |
-| 2 | AKE/USD | 0.01240031 | 63.154 | 50.763 | +0.41% | +1.13% | 1.68x | 14.2 | 2026-11-14T19:29:18.776978+00:00 | Not calibrated | STRONG 72/100 | HIGH 61/100 | Watch | WATCH |
-| 3 | CAP/USD | 0.109791 | 45.314 | 51.875 | +2.58% | -0.31% | 0.50x | 5.6 | 2026-11-14T19:29:18.776978+00:00 | Not calibrated | WEAK 28/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
+| 1 | AKE/USD | 0.01264438 | 77.110 | 68.367 | +2.39% | +1.44% | 1.15x | 6.7 | 2026-11-14T19:53:26.637092+00:00 | Not calibrated | STRONG 74/100 | HIGH 62/100 | Watch | WATCH |
+| 2 | NIGHT/USD | 0.0477 | 57.088 | 66.196 | +1.75% | -0.85% | 0.52x | 2.1 | 2026-11-14T19:53:26.637092+00:00 | Not calibrated | WEAK 34/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
+| 3 | CAP/USD | 0.108875 | 36.904 | 36.580 | +1.72% | -0.43% | 1.25x | 24.1 | 2026-11-14T19:53:26.637092+00:00 | Not calibrated | WEAK 18/100 | EXTREME 85/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | NIGHT/USD | 65.034 | 0.04804 | -0.35% | 1.78x |
-| 2 | CAP/USD | 51.875 | 0.109791 | -0.31% | 0.50x |
-| 3 | AKE/USD | 50.763 | 0.01240031 | +1.13% | 1.68x |
+| 1 | AKE/USD | 68.367 | 0.01264438 | +1.44% | 1.15x |
+| 2 | NIGHT/USD | 66.196 | 0.0477 | -0.85% | 0.52x |
+| 3 | CAP/USD | 36.580 | 0.108875 | -0.43% | 1.25x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,8 +42,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 411; predictions: 3575; observations: 247408.
-- Matured sampled outcomes across 1/6/24/48h: 3138; gap abstentions: 10496. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 412; predictions: 3578; observations: 248014.
+- Matured sampled outcomes across 1/6/24/48h: 3140; gap abstentions: 10506. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
