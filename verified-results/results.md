@@ -2,12 +2,12 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-14T22:50:24.341878+00:00
+**UTC as-of:** 2026-11-14T23:24:04.615443+00:00
 **GitHub trigger:** authenticated on-demand scan request (verified event=push; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43650141305
-**Source SHA:** ff91cd592c62c0a7978210b8507896a076592b61
-**Previous ledger commit:** a89a40b35d2592d5e9ef0df7bf5fe052bfdb9f61 (atomic ledger/results publication)
-**Ledger generation:** 420 (remote push/readback verified)
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43653021701
+**Source SHA:** 3ebfc8efb9655c184f737b6020859001b97376bd
+**Previous ledger commit:** 7bdb1bd7a52c4eb1512217710859f43d76c1a9bf (atomic ledger/results publication)
+**Ledger generation:** 421 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 1s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 625; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 607; valid market observations: 606; OHLC screened: 2.
@@ -16,15 +16,15 @@
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | PIEVERSE/USD | 1.775 | 59.525 | 68.830 | +8.35% | -0.34% | 0.24x | 19.2 | 2026-11-14T22:50:23.689538+00:00 | Not calibrated | WEAK 30/100 | EXTREME 87/100 | Do nothing | WATCH |
-| 2 | CAP/USD | 0.109692 | 47.647 | 38.073 | +2.49% | +0.18% | 1.87x | 31.9 | 2026-11-14T22:50:23.689538+00:00 | Not calibrated | MODERATE 49/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 1 | PIEVERSE/USD | 1.7882 | 70.763 | 62.807 | +9.16% | +1.01% | 1.29x | 31.3 | 2026-11-14T23:24:03.876096+00:00 | Not calibrated | MODERATE 60/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 2 | CAP/USD | 0.108744 | 38.353 | 33.817 | +1.60% | -0.30% | 1.60x | 28.0 | 2026-11-14T23:24:03.876096+00:00 | Not calibrated | WEAK 29/100 | VERY_HIGH 78/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | PIEVERSE/USD | 68.830 | 1.775 | -0.34% | 0.24x |
-| 2 | CAP/USD | 38.073 | 0.109692 | +0.18% | 1.87x |
+| 1 | PIEVERSE/USD | 62.807 | 1.7882 | +1.01% | 1.29x |
+| 2 | CAP/USD | 33.817 | 0.108744 | -0.30% | 1.60x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -40,8 +40,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 420; predictions: 3602; observations: 252863.
-- Matured sampled outcomes across 1/6/24/48h: 3168; gap abstentions: 10602. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 421; predictions: 3604; observations: 253469.
+- Matured sampled outcomes across 1/6/24/48h: 3171; gap abstentions: 10604. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -57,21 +57,21 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 43650141305 · **Generation:** 420 · **Legacy run:** 43650141305
-**Main quote time:** 2026-11-14T22:50:24.341878+00:00 · **Legacy report time:** 2026-11-14T22:50:32.766055+00:00
+**Writer:** 43653021701 · **Generation:** 421 · **Legacy run:** 43653021701
+**Main quote time:** 2026-11-14T23:24:04.615443+00:00 · **Legacy report time:** 2026-11-14T23:24:16.158715+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | PIEVERSE/USD | 1.775 | 59.53 | -0.34% | 0.24x | WEAK 30/100 | EXTREME 87/100 | Do nothing |
-| 2 | CAP/USD | 0.109692 | 47.65 | +0.18% | 1.87x | MODERATE 49/100 | VERY_HIGH 72/100 | Watch |
+| 1 | PIEVERSE/USD ⭐ | 1.7882 | 70.76 | +1.01% | 1.29x | STRONG 70/100 | VERY_HIGH 72/100 | Watch |
+| 2 | CAP/USD | 0.108744 | 38.35 | -0.30% | 1.60x | WEAK 29/100 | VERY_HIGH 78/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
+| 1 | PIEVERSE/USD ⭐ | 1.7882 | 76.27 | +1.01% | 1.29x | 2653 | STRONG 73/100 | VERY_HIGH 72/100 | Watch |
 
-**Same-run overlap:** None
+**Same-run overlap:** PIEVERSE/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
