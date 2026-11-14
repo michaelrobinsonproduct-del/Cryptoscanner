@@ -2,12 +2,12 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-14T13:51:48.174082+00:00
+**UTC as-of:** 2026-11-14T14:49:10.484111+00:00
 **GitHub trigger:** authenticated on-demand scan request (verified event=push; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43601673315
-**Source SHA:** 95636e007b75768c25154a1352692ea9f9e8cd09
-**Previous ledger commit:** cdc92300233dbadaaf8d7e592e3b12058cd9fe21 (atomic ledger/results publication)
-**Ledger generation:** 401 (remote push/readback verified)
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43606600524
+**Source SHA:** 75d79feac6b32171e69cbeced4220e4e037a8bee
+**Previous ledger commit:** 2ce16e6208ef7f7f4e161fd2fb0d7804da77ece4 (atomic ledger/results publication)
+**Ledger generation:** 402 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 2s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 625; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 607; valid market observations: 606; OHLC screened: 7.
@@ -16,13 +16,15 @@
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | NIGHT/USD | 0.05035 | 110.598 | 83.244 | +7.40% | +2.47% | 5.04x | 25.9 | 2026-11-14T13:51:45.937426+00:00 | Not calibrated | STRONG 95/100 | HIGH 67/100 | Consider small entry | WATCH |
+| 1 | NIGHT/USD | 0.04915 | 81.663 | 80.785 | +4.84% | -0.59% | 1.38x | 10.2 | 2026-11-14T14:49:08.710422+00:00 | Not calibrated | MODERATE 56/100 | HIGH 67/100 | Watch | WATCH |
+| 2 | CAP/USD | 0.110592 | 38.065 | 57.996 | +3.33% | -2.28% | 0.15x | 6.1 | 2026-11-14T14:49:08.710422+00:00 | Not calibrated | WEAK 24/100 | VERY_HIGH 80/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | NIGHT/USD | 83.244 | 0.05035 | +2.47% | 5.04x |
+| 1 | NIGHT/USD | 80.785 | 0.04915 | -0.59% | 1.38x |
+| 2 | CAP/USD | 57.996 | 0.110592 | -2.28% | 0.15x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -38,14 +40,14 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 401; predictions: 3546; observations: 241348.
-- Matured sampled outcomes across 1/6/24/48h: 3129; gap abstentions: 10292. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 402; predictions: 3548; observations: 241954.
+- Matured sampled outcomes across 1/6/24/48h: 3133; gap abstentions: 10325. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 6; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 5; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
