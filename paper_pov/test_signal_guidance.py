@@ -57,6 +57,14 @@ class SignalGuidanceTests(unittest.TestCase):
         self.assertEqual(proven["gain_probability_pct"], 99.0)
         self.assertEqual(proven["recommendation"], "CONSIDER_MORE_SUBSTANTIAL_ENTRY")
 
+    def test_thin_liquidity_increases_risk_without_changing_signal_rank(self):
+        liquid = assess({**self.strong, "notional_24h_usd": 6000000})
+        thin = assess({**self.strong, "notional_24h_usd": 120000})
+        self.assertGreater(thin["risk_score"], liquid["risk_score"])
+        self.assertEqual(liquid["signal_confidence_score"],
+                         thin["signal_confidence_score"])
+        self.assertIn("Thin reported 24h USD turnover", " ".join(thin["risk_reasons"]))
+
     def test_reject_nonfinite_and_malformed_features(self):
         for field, value in (("volume_accel", -1), ("price_usd", 0),
                              ("move15_pct", math.nan),
