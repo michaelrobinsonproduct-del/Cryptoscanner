@@ -265,6 +265,67 @@ class GitRepositoryStorageTests(unittest.TestCase):
         # Historical pre-migration commits must still remain readable.
         self.assertEqual(repo.read_git_state(gitdir, legacy_sha)[1], "legacy")
 
+    def test_rollover_bounded_read_checks_origin_without_replaying_archive(self):
+        from unittest.mock import patch
+
+        gitdir = self.root / "rollover-git"
+        gitdir.mkdir()
+
+        def git(*args):
+            return subprocess.run(["git", "-C", str(gitdir), *args],
+                                  capture_output=True, check=True).stdout.decode().strip()
+
+        def commit_storage(directory, message):
+            if (gitdir / repo.SEGMENTS).exists():
+                shutil.rmtree(gitdir / repo.SEGMENTS)
+            for path in directory.rglob("*"):
+                if path.is_file():
+                    target = gitdir / path.relative_to(directory)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(path, target)
+            git("add", "-A")
+            git("commit", "-m", message)
+            return git("rev-parse", "HEAD")
+
+        git("init")
+        git("config", "user.email", "paper@example.invalid")
+        git("config", "user.name", "Paper Test")
+        raw = ledger.canonical(ledger.empty())
+        (gitdir / "paper-ledger.json").write_bytes(raw)
+        git("add", "-A")
+        git("commit", "-m", "legacy")
+        legacy = git("rev-parse", "HEAD")
+        migrated = self.root / "migrated-origin"
+        repo.stage_migration(raw, legacy, migrated)
+        commit_storage(migrated, "migration")
+        appended = self.root / "appended-origin"
+        repo.stage_append(migrated, synthetic(0), SHA, appended)
+        archived_sha = commit_storage(appended, "archived scan")
+        rolled = self.root / "rolled-origin"
+        repo.stage_rollover(appended, archived_sha, rolled)
+        rolled_sha = commit_storage(rolled, "rollover")
+        expected, _ = repo.read_state(rolled)
+        with patch.object(storage, "replay_segments",
+                          side_effect=AssertionError("runtime replayed archived history")):
+            bounded, mode = repo.read_git_state(gitdir, rolled_sha, full_replay=False)
+            self.assertEqual((bounded, mode), (expected, "segmented"))
+        with patch.object(storage, "replay_segments", wraps=storage.replay_segments) as replay:
+            self.assertEqual(repo.read_git_state(gitdir, rolled_sha, full_replay=True)[0],
+                             expected)
+            self.assertGreaterEqual(replay.call_count, 2)
+
+        # The lightweight proof must fail for a corrupted archived snapshot,
+        # even when the current checkpoint and manifest are otherwise intact.
+        (gitdir / repo.SNAPSHOT).write_bytes(b"corrupt archived snapshot")
+        git("add", "-A")
+        git("commit", "-m", "corrupt snapshot")
+        bad_origin = git("rev-parse", "HEAD")
+        bad = self.root / "bad-origin"
+        repo.stage_rollover(appended, bad_origin, bad)
+        bad_sha = commit_storage(bad, "invalid rollover reference")
+        with self.assertRaisesRegex(ValueError, "Archived Git snapshot checksum mismatch"):
+            repo.read_git_state(gitdir, bad_sha, full_replay=False)
+
     def test_cli_migrate_verify_and_append(self):
         legacy = self.root / "legacy.json"
         legacy.write_bytes(ledger.canonical(ledger.empty()))
