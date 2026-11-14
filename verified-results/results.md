@@ -2,37 +2,31 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-14T08:17:32.461943+00:00
+**UTC as-of:** 2026-11-14T08:46:55.352226+00:00
 **GitHub trigger:** authenticated on-demand scan request (verified event=push; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43575082302
-**Source SHA:** a869ae2831eb808975ef5f3e0ab65ea24cedd2ce
-**Previous ledger commit:** 7557f42c7aa59cccc95a3e58298f317d06d4f401 (atomic ledger/results publication)
-**Ledger generation:** 390 (remote push/readback verified)
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43577400496
+**Source SHA:** 027a43351b83c46e19002859f0be6f1070a5a753
+**Previous ledger commit:** c4aaab268bd54e51122b72c31c23606d20188613 (atomic ledger/results publication)
+**Ledger generation:** 391 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 625; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 607; valid market observations: 606; OHLC screened: 11.
+**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 625; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 607; valid market observations: 607; OHLC screened: 8.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | PIEVERSE/USD | 1.7819 | 85.775 | 69.278 | +8.77% | +3.39% | 0.95x | 14.0 | 2026-11-14T08:17:28.744181+00:00 | Not calibrated | MODERATE 68/100 | EXTREME 90/100 | Do nothing | WATCH |
-| 2 | UAI/USD | 0.04042 | 57.166 | 55.101 | +4.20% | +1.13% | 0.64x | 17.3 | 2026-11-14T08:17:28.744181+00:00 | Not calibrated | MODERATE 54/100 | VERY_HIGH 81/100 | Watch | WATCH |
-| 3 | AKE/USD | 0.01259544 | 44.433 | 50.036 | +1.99% | +0.50% | 0.19x | 37.8 | 2026-11-14T08:17:28.744181+00:00 | Not calibrated | WEAK 37/100 | VERY_HIGH 82/100 | Watch | WATCH |
-| 4 | TRX/USD | 0.312953 | 36.503 | 39.981 | +0.38% | +0.12% | 0.59x | 0.0 | 2026-11-14T08:17:28.744181+00:00 | Not calibrated | WEAK 38/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 5 | CAP/USD | 0.107446 | 27.677 | 31.283 | +0.39% | +0.38% | 0.45x | 19.7 | 2026-11-14T08:17:28.744181+00:00 | Not calibrated | WEAK 39/100 | VERY_HIGH 76/100 | Watch | WATCH |
-| 6 | ZAMA/USD | 0.05806 | 23.442 | 29.492 | +0.29% | +0.48% | 0.15x | 8.6 | 2026-11-14T08:17:28.744181+00:00 | Not calibrated | WEAK 42/100 | VERY_HIGH 75/100 | Watch | WATCH |
+| 1 | PIEVERSE/USD | 1.7851 | 78.856 | 71.819 | +8.97% | +1.34% | 1.03x | 9.0 | 2026-11-14T08:46:52.345454+00:00 | Not calibrated | STRONG 74/100 | VERY_HIGH 74/100 | Watch | WATCH |
+| 2 | TRX/USD | 0.312787 | 32.825 | 39.072 | +0.33% | -0.05% | 0.40x | 1.1 | 2026-11-14T08:46:52.345454+00:00 | Not calibrated | WEAK 21/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
+| 3 | UAI/USD | 0.03932 | 16.258 | 29.797 | +1.37% | -1.56% | 0.43x | 27.9 | 2026-11-14T08:46:52.345454+00:00 | Not calibrated | WEAK 3/100 | EXTREME 97/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | PIEVERSE/USD | 69.278 | 1.7819 | +3.39% | 0.95x |
-| 2 | UAI/USD | 55.101 | 0.04042 | +1.13% | 0.64x |
-| 3 | AKE/USD | 50.036 | 0.01259544 | +0.50% | 0.19x |
-| 4 | TRX/USD | 39.981 | 0.312953 | +0.12% | 0.59x |
-| 5 | CAP/USD | 31.283 | 0.107446 | +0.38% | 0.45x |
-| 6 | ZAMA/USD | 29.492 | 0.05806 | +0.48% | 0.15x |
+| 1 | PIEVERSE/USD | 71.819 | 1.7851 | +1.34% | 1.03x |
+| 2 | TRX/USD | 39.072 | 0.312787 | -0.05% | 0.40x |
+| 3 | UAI/USD | 29.797 | 0.03932 | -1.56% | 0.43x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -48,8 +42,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 390; predictions: 3508; observations: 234681.
-- Matured sampled outcomes across 1/6/24/48h: 3074; gap abstentions: 10145. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 391; predictions: 3511; observations: 235288.
+- Matured sampled outcomes across 1/6/24/48h: 3080; gap abstentions: 10150. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
