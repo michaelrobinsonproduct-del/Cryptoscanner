@@ -90,6 +90,21 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertNotIn("  contents: write", legacy)
         self.assertNotIn("git push", legacy)
 
+    def test_legacy_workflow_publishes_same_run_challenger_and_shadow(self):
+        text = (PIPELINE.parent / "paper-legacy-shadow.yml").read_text()
+        self.assertIn('gh run download "$PAPER_TRIGGER_RUN_ID"', text)
+        self.assertIn('public-paper-results-$PAPER_TRIGGER_RUN_ID', text)
+        self.assertIn("python -m paper_pov.dual_report", text)
+        self.assertIn("--paper-run-id \"$PAPER_TRIGGER_RUN_ID\"", text)
+        self.assertIn("--shadow-run-id \"$GITHUB_RUN_ID\"", text)
+        self.assertIn("sha256sum -c DUAL_SHA256SUMS", text)
+        self.assertIn("paper_pov/output/dual-scanner.json", text)
+        self.assertIn("paper_pov/output/dual-scanner.md", text)
+        self.assertIn("paper_pov/output/LEGACY_SHA256SUMS", text)
+        self.assertNotIn("git push", text)
+        self.assertNotIn("  contents: write", text)
+        self.assertIn("  actions: read", text)
+
 
 if __name__ == "__main__":
     unittest.main()
