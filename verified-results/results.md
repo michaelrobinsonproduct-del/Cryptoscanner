@@ -2,12 +2,12 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-14T21:55:25.355668+00:00
+**UTC as-of:** 2026-11-14T22:20:35.586117+00:00
 **GitHub trigger:** authenticated on-demand scan request (verified event=push; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43645317402
-**Source SHA:** 8840e08661f263d95023082e1f03243120115b28
-**Previous ledger commit:** 546b7eb5efb542d28bf92abdd7bb88199123c2bb (atomic ledger/results publication)
-**Ledger generation:** 417 (remote push/readback verified)
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43647546724
+**Source SHA:** c6603707ee355c2daa635bf980fa24c4f0c9ced3
+**Previous ledger commit:** 076abdbb39be0169ad25fe66949e87f06edcbac1 (atomic ledger/results publication)
+**Ledger generation:** 418 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 1s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 625; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 607; valid market observations: 606; OHLC screened: 3.
@@ -16,17 +16,17 @@
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | PIEVERSE/USD | 1.8132 | 52.822 | 64.013 | +10.68% | -0.35% | 0.06x | 28.7 | 2026-11-14T21:55:24.497964+00:00 | Not calibrated | WEAK 21/100 | EXTREME 93/100 | Do nothing | WATCH |
-| 2 | CAP/USD | 0.110285 | 51.365 | 53.996 | +3.04% | +0.47% | 0.50x | 7.8 | 2026-11-14T21:55:24.497964+00:00 | Not calibrated | MODERATE 56/100 | VERY_HIGH 75/100 | Watch | WATCH |
-| 3 | MEGA/USD | 0.04501 | 15.323 | 19.578 | +0.38% | -0.46% | 0.81x | 28.9 | 2026-11-14T21:55:24.497964+00:00 | Not calibrated | WEAK 3/100 | EXTREME 92/100 | Do nothing | WATCH |
+| 1 | PIEVERSE/USD | 1.7809 | 81.389 | 64.953 | +8.71% | +0.29% | 3.51x | 26.9 | 2026-11-14T22:20:34.454118+00:00 | Not calibrated | STRONG 86/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 2 | PROMPT/USD | 0.01481 | 57.265 | 69.487 | +10.36% | -3.89% | 1.72x | 13.5 | 2026-11-14T22:20:34.454118+00:00 | Not calibrated | WEAK 44/100 | VERY_HIGH 83/100 | Do nothing | WATCH |
+| 3 | CAP/USD | 0.110095 | 42.377 | 46.206 | +2.86% | +0.45% | 0.39x | 20.9 | 2026-11-14T22:20:34.454118+00:00 | Not calibrated | WEAK 41/100 | EXTREME 87/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | PIEVERSE/USD | 64.013 | 1.8132 | -0.35% | 0.06x |
-| 2 | CAP/USD | 53.996 | 0.110285 | +0.47% | 0.50x |
-| 3 | MEGA/USD | 19.578 | 0.04501 | -0.46% | 0.81x |
+| 1 | PROMPT/USD | 69.487 | 0.01481 | -3.89% | 1.72x |
+| 2 | PIEVERSE/USD | 64.953 | 1.7809 | +0.29% | 3.51x |
+| 3 | CAP/USD | 46.206 | 0.110095 | +0.45% | 0.39x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,8 +42,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 417; predictions: 3595; observations: 251045.
-- Matured sampled outcomes across 1/6/24/48h: 3157; gap abstentions: 10574. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 418; predictions: 3598; observations: 251651.
+- Matured sampled outcomes across 1/6/24/48h: 3162; gap abstentions: 10588. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
