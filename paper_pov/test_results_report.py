@@ -34,6 +34,7 @@ def fixture():
             "quote_observed_at": QUOTE, "ohlc_age_seconds": 200,
             "move_since_utc_open_pct": 2.0, "move15_pct": 0.7,
             "volume_accel": 1.4, "spread_bps": 5.0,
+            "notional_24h_usd": 3000000.0,
             "baseline_score": 30.0, "challenger_score": 34.0,
             "prediction_id": str(i) * 64,
         })
