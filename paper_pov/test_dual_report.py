@@ -115,6 +115,19 @@ class DualScannerReportTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "independently linked"):
             combine(paper, legacy)
 
+    def test_inline_independent_acquisition_requires_explicit_same_writer_binding(self):
+        paper, legacy = fixtures()
+        legacy["run_id"] = paper["run_id"]
+        with self.assertRaises(ValueError):
+            combine(paper, legacy)
+        with self.assertRaises(ValueError):
+            combine(paper, legacy, inline=True)
+        legacy["execution_location"] = "SAME_WRITER_JOB"
+        result = combine(paper, legacy, inline=True)
+        self.assertEqual(result["writer_run_id"], result["legacy_run_id"])
+        self.assertEqual(result["legacy_execution_location"], "SAME_WRITER_JOB")
+        self.assertEqual(result["overlap_symbols"], ["INJ/USD"])
+
     def test_no_independent_signals_is_explicit_not_a_missing_scanner(self):
         paper, legacy = fixtures()
         legacy["status"] = "NO_SIGNALS"

@@ -82,11 +82,11 @@ def _closed_features(payload, pair, now):
 
 
 def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
-         run_id, source_sha, trigger_paper_run_id):
+         run_id, source_sha, trigger_paper_run_id, inline=False):
     """Separate public Kraken acquisition, strategy and GitHub run identity."""
     if (not isinstance(run_id, str) or not RUN.fullmatch(run_id)
             or not isinstance(trigger_paper_run_id, str)
-            or not RUN.fullmatch(trigger_paper_run_id) or run_id == trigger_paper_run_id
+            or not RUN.fullmatch(trigger_paper_run_id) or (run_id == trigger_paper_run_id and not inline)
             or not isinstance(source_sha, str) or not SOURCE.fullmatch(source_sha)):
         raise ValueError("Missing distinct immutable GitHub provenance")
     if type(max_ohlc) is not int or not 1 <= max_ohlc <= 24:
@@ -196,7 +196,7 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
         item["rank"] = rank
     return {"schema": 1, "mode": "LEGACY_INSPIRED_SHADOW",
             "strategy_name": "rebuild-v2-inspired-ticker-trades-ohlc-v1-not-original",
-            "independent_execution": True, "production_applied": False,
+            "independent_execution": True, "execution_location": "SAME_WRITER_JOB" if inline else "SEPARATE_WORKFLOW", "production_applied": False,
             "buy_approved": False, "run_id": run_id,
             "trigger_paper_run_id": trigger_paper_run_id,
             "source_sha": source_sha, "as_of": completed.isoformat(),
@@ -223,7 +223,8 @@ def emit_report_for_delivery(report, digest):
 def main():
     report = scan(run_id=os.environ["PAPER_SHADOW_RUN_ID"],
                   source_sha=os.environ["PAPER_SHADOW_SOURCE_SHA"],
-                  trigger_paper_run_id=os.environ["PAPER_TRIGGER_RUN_ID"])
+                  trigger_paper_run_id=os.environ["PAPER_TRIGGER_RUN_ID"],
+                  inline=os.environ.get("PAPER_SHADOW_INLINE") == "1")
     path = Path("paper_pov/output/legacy-shadow.json")
     atomic_json(path, report)
     digest = hashlib.sha256(path.read_bytes()).hexdigest()

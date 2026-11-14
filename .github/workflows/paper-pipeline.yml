@@ -157,6 +157,41 @@ jobs:
             --originating-cron "$PAPER_ORIGINATING_CRON" \
             --output-dir paper_pov/output/results
           (cd paper_pov/output/results && sha256sum -c SHA256SUMS)
+      - name: Independently acquire legacy WATCH and seal both strategies before publication
+        env:
+          PAPER_SHADOW_RUN_ID: ${{ github.run_id }}
+          PAPER_TRIGGER_RUN_ID: ${{ github.run_id }}
+          PAPER_SHADOW_SOURCE_SHA: ${{ github.sha }}
+          PAPER_SHADOW_INLINE: '1'
+        run: |
+          set -euo pipefail
+          python -m paper_pov.legacy_shadow
+          (cd paper_pov/output && sha256sum -c LEGACY_SHA256SUMS)
+          python -m paper_pov.dual_report --inline \
+            --paper-dir paper_pov/output/results --legacy-dir paper_pov/output \
+            --paper-run-id "$GITHUB_RUN_ID" --shadow-run-id "$GITHUB_RUN_ID" \
+            --output-dir paper_pov/output
+          (cd paper_pov/output && sha256sum -c DUAL_SHA256SUMS)
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          from paper_pov.dual_report import combine
+          root=Path("paper_pov/output")
+          target=root/"results"
+          paper=json.loads((target/"results.json").read_text())
+          legacy=json.loads((root/"legacy-shadow.json").read_text())
+          dual=json.loads((root/"dual-scanner.json").read_text())
+          assert dual == combine(paper, legacy, inline=True)
+          paper["dual_scanner_report"]=dual
+          paper["legacy_shadow"]={"status":legacy["status"], "trigger_paper_run_id":paper["run_id"],
+                                  "execution_location":"SAME_WRITER_JOB"}
+          paper["independent_legacy_evidence"]=legacy
+          (target/"results.json").write_text(json.dumps(paper,sort_keys=True,separators=(",",":"),allow_nan=False)+"\n")
+          with (target/"results.md").open("a") as f:
+              f.write("\n"+(root/"dual-scanner.md").read_text())
+          (target/"SHA256SUMS").write_text("".join(hashlib.sha256((target/n).read_bytes()).hexdigest()+"  "+n+"\n" for n in ("results.json","results.md")))
+          PY
+          (cd paper_pov/output/results && sha256sum -c SHA256SUMS)
       - name: Atomically publish ledger AND results in ONE single-writer Git commit
         run: |
           set -euo pipefail
@@ -218,6 +253,18 @@ jobs:
             paper_pov/output/results/SHA256SUMS
           retention-days: 90
           if-no-files-found: error
+      - name: Preserve independent legacy evidence with the same writer
+        uses: actions/upload-artifact@v4
+        with:
+          name: independent-legacy-shadow-${{ github.run_id }}
+          path: |
+            paper_pov/output/legacy-shadow.json
+            paper_pov/output/LEGACY_SHA256SUMS
+            paper_pov/output/dual-scanner.json
+            paper_pov/output/dual-scanner.md
+            paper_pov/output/DUAL_SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
       - name: Request existing read-only learning job for exact verified writer run
         env:
           GH_TOKEN: ${{ github.token }}
@@ -232,16 +279,6 @@ jobs:
           else
             echo "::warning::PAPER_READ_ONLY_LEARNING_DISPATCH_FAILED run=${GITHUB_RUN_ID}; scan and ledger remain successful."
             echo "Read-only learning dispatch FAILED for verified writer ${GITHUB_RUN_ID}; no learning claim." >> "${GITHUB_STEP_SUMMARY}"
-          fi
-          # Existing independent legacy-inspired strategy (read only); the same
-          # writer run ID binds its artifact to these canonical WATCH results.
-          if gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/paper-legacy-shadow.yml/dispatches" \
-              -f ref=main -f "inputs[paper_run_id]=${GITHUB_RUN_ID}"; then
-            echo "PAPER_READ_ONLY_LEGACY_DISPATCH_ACCEPTED run=${GITHUB_RUN_ID}"
-            echo "Independent legacy shadow dispatched for verified writer ${GITHUB_RUN_ID}; independently verify its artifact before overlap stars." >> "${GITHUB_STEP_SUMMARY}"
-          else
-            echo "::warning::PAPER_READ_ONLY_LEGACY_DISPATCH_FAILED run=${GITHUB_RUN_ID}; canonical result remains valid."
-            echo "Independent legacy shadow dispatch FAILED for verified writer ${GITHUB_RUN_ID}; no overlap claim." >> "${GITHUB_STEP_SUMMARY}"
           fi
       - name: Publish explicit failed-run paper results
         if: ${{ failure() }}
