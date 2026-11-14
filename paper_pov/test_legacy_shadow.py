@@ -68,6 +68,8 @@ class LegacyShadowTests(unittest.TestCase):
         self.assertEqual([x["rank"] for x in out["candidates"]], list(range(1, 13)))
         self.assertTrue(all(x["legacy_score"] > 0 for x in out["candidates"]))
         self.assertTrue(all(x["trades_24h"] == 10000 for x in out["candidates"]))
+        self.assertTrue(all(x["spread_bps"] > 0 for x in out["candidates"]))
+        self.assertTrue(all(x["notional_24h_usd"] > 100000 for x in out["candidates"]))
         self.assertNotIn("USDT/USD", str(out["candidates"]))
         self.assertFalse(out["production_applied"])
         self.assertFalse(out["buy_approved"])
