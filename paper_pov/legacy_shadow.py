@@ -208,6 +208,16 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
             "held_out_lift": None, "trade_executed": False}
 
 
+def emit_report_for_delivery(report, digest):
+    """Expose the exact existing ZIP result via read-only GitHub Actions logs."""
+    encoded = json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    if hashlib.sha256(encoded.encode()).hexdigest() != digest:
+        raise ValueError("Legacy log payload differs from sealed artifact")
+    print("LEGACY_SHADOW_RESULTS_JSON " + json.dumps({
+        "artifact_sha256": digest, "report": report,
+    }, sort_keys=True, separators=(",", ":"), allow_nan=False))
+
+
 def main():
     report = scan(run_id=os.environ["PAPER_SHADOW_RUN_ID"],
                   source_sha=os.environ["PAPER_SHADOW_SOURCE_SHA"],
@@ -225,9 +235,7 @@ def main():
     # The existing ZIP remains the independently checksummed original. This
     # exposes independent WATCH picks to report consumers that can read logs
     # but cannot unpack GitHub Actions ZIP artifacts.
-    print("LEGACY_SHADOW_RESULTS_JSON " + json.dumps({
-        "artifact_sha256": digest, "report": report,
-    }, sort_keys=True, separators=(",", ":"), allow_nan=False))
+    emit_report_for_delivery(report, digest)
     return report
 
 
