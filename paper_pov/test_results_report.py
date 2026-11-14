@@ -71,6 +71,31 @@ class PaperResultsContracts(unittest.TestCase):
         self.assertIn("atomic ledger/results publication", markdown)
         self.assertFalse(payload["production_applied"])
 
+    def test_explicit_challenger_and_baseline_rankings_do_not_relabel_legacy(self):
+        scan, score = fixture()
+        scan["watch"][0]["baseline_score"] = 15
+        scan["watch"][0]["challenger_score"] = 90
+        scan["watch"][1]["baseline_score"] = 88
+        scan["watch"][1]["challenger_score"] = 45
+        payload, md = render(scan, score, run_id="41235442591", source_sha=SHA,
+                             ledger_commit=LEDGER, event="schedule",
+                             originating_cron="20,50 * * * *",
+                             atomic_publication=True)
+        rankings = payload["rankings"]
+        self.assertEqual(rankings["population"], "SAME_OHLC_VERIFIED_WATCH_POOL")
+        self.assertEqual([x["symbol"] for x in rankings["challenger"]],
+                         ["XBT/USD", "ETH/USD"])
+        self.assertEqual([x["symbol"] for x in rankings["baseline"]],
+                         ["ETH/USD", "XBT/USD"])
+        self.assertEqual(payload["candidates"][0]["challenger_score"], 90)
+        self.assertIn("## Challenger-ranked WATCH", md)
+        self.assertIn("## Baseline ranking (same verified WATCH pool)", md)
+        self.assertEqual(payload["legacy_shadow"],
+                         {"status": "PENDING_INDEPENDENT_WORKFLOW",
+                          "trigger_paper_run_id": "41235442591"})
+        self.assertNotIn("legacy_score", str(payload))
+        self.assertFalse(payload["production_applied"])
+
     def test_github_event_provenance_is_explicit_and_fail_closed(self):
         scheduled, scheduled_md = self.report(event="schedule")
         self.assertEqual(scheduled["github_event"], "schedule")
