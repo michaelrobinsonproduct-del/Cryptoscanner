@@ -44,6 +44,14 @@ class StorageForecastTests(unittest.TestCase):
         self.assertEqual(r["cadences"]["2"]["modeled_active_runs"], 104)
         self.assertEqual(r["cadences"]["2"]["modeled_30d_index_runs"], 1444)
 
+    def test_five_minute_capacity_keeps_fifty_hours_and_thirty_day_index(self):
+        r = capacity_report(fixture())
+        c = r["cadences"]["12"]
+        self.assertEqual(c["modeled_active_runs"], 604)
+        self.assertEqual(c["modeled_30d_index_runs"], 8644)
+        self.assertEqual(c["max_ledger_bytes"], ledger.MAX_LOGICAL_BYTES)
+        self.assertGreater(c["forecast_ledger_bytes"], r["cadences"]["2"]["forecast_ledger_bytes"])
+
     def test_20pct_headroom_required(self):
         r = capacity_report(fixture(), max_bytes=100)
         self.assertFalse(r["stage2_storage_gate_pass"])

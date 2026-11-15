@@ -12,6 +12,9 @@ from .scanner import utc, atomic_json
 
 HORIZONS = (1, 6, 24, 48)
 MAX_BYTES = 12_000_000
+# 600 scans per retained 50 hours at five-minute cadence, approximately 606 markets.
+# Keep bounded decoding and validation; do not shorten outcome retention.
+MAX_LOGICAL_BYTES = 96_000_000
 RETENTION = dt.timedelta(hours=50)
 ARCHIVE_INDEX_RETENTION = dt.timedelta(days=30)
 MAX_DELAY = dt.timedelta(minutes=45)
@@ -143,7 +146,7 @@ def verify(state, capacity_bytes=MAX_BYTES):
         raise ValueError("Invalid archive index")
     if state["generation"] != summary.get("scans", 0) + len(runs):
         raise ValueError("Nonregressing generation/scan count mismatch")
-    if type(capacity_bytes) is not int or not 0 < capacity_bytes <= 32_000_000:
+    if type(capacity_bytes) is not int or not 0 < capacity_bytes <= MAX_LOGICAL_BYTES:
         raise ValueError("Invalid logical ledger capacity")
     if len(canonical(state)) > capacity_bytes:
         raise ValueError("Ledger capacity reached: archive/partition before proceeding")

@@ -40,9 +40,9 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertLess(text.index("PAPER_PUSH_REQUEST_VERIFIED"),
                         text.index("Restore checksum-sealed existing ledger"))
 
-    def test_twice_hourly_schedule_and_single_writer_unchanged(self):
+    def test_five_minute_schedule_and_single_writer_unchanged(self):
         text = PIPELINE.read_text()
-        self.assertEqual(re.findall(r"(?m)^\s*-\s*cron:\s*['\"]([^'\"]+)['\"]", text), ["20,50 * * * *"])
+        self.assertEqual(re.findall(r"(?m)^\s*-\s*cron:\s*['\"]([^'\"]+)['\"]", text), ["2,7,12,17,22,27,32,37,42,47,52,57 * * * *"])
         self.assertIn("group: public-paper-proof-ledger-single-writer", text)
         self.assertIn("cancel-in-progress: false", text)
         self.assertEqual(text.count("git push origin HEAD:refs/heads/paper-proof-ledger"), 1)
