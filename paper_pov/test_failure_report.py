@@ -63,7 +63,7 @@ class FailureReportTests(unittest.TestCase):
         self.assertNotIn('-X POST "repos/${GITHUB_REPOSITORY}/issues/34/comments"', text)
         self.assertEqual(text.count("git push origin HEAD:refs/heads/paper-proof-ledger"), 1)
         self.assertIn("group: public-paper-proof-ledger-single-writer", text)
-        self.assertEqual(text.count("cron: '20,50 * * * *'"), 1)
+        self.assertEqual(text.count("cron: '2,7,12,17,22,27,32,37,42,47,52,57 * * * *'"), 1)
         self.assertEqual(text.count("  schedule:\n"), 1)
         self.assertNotIn("git push --force", text)
 

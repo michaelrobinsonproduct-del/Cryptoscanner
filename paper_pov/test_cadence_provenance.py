@@ -26,6 +26,14 @@ class CadenceProvenanceTests(unittest.TestCase):
     def check(self, rows=None, logs=None, jobs=None):
         return audit(rows if rows is not None else [run()], logs if logs is not None else {"1": log()}, NOW, jobs=jobs)
 
+    def test_current_combined_cron_is_recognized(self):
+        created = "2026-11-15T06:28:00Z"
+        executed = log(cron="2,7,12,17,22,27,32,37,42,47,52,57 * * * *").replace("2026-11-01T19:10:06Z", "2026-11-15T06:28:06Z")
+        report = audit([run(1, created)], {"1": executed}, "2026-11-15T06:29:00Z")
+        self.assertEqual(report["verified_native_count"], 1)
+        self.assertEqual(report["runs"][0]["minimum_lateness_seconds"], 60)
+        self.assertEqual(report["runs"][0]["latest_possible_nominal_slot"], "2026-11-15T06:27:00+00:00")
+
     def test_actual_late_39_slot_is_not_misattributed_to_09_slot(self):
         result = self.check()
         self.assertEqual(result["verified_native_count"], 1)
