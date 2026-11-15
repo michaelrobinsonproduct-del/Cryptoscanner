@@ -19,7 +19,7 @@ import zlib
 from . import ledger
 
 MAX_PACKED_BYTES = 12_000_000
-MAX_RAW_BYTES = 32_000_000
+MAX_RAW_BYTES = ledger.MAX_LOGICAL_BYTES
 FORMAT = "paper-zlib-sha256-v1"
 SEGMENT_KIND = "paper-run-transition-v1"
 SNAPSHOT_KIND = "paper-ledger-snapshot-v1"

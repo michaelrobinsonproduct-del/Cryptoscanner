@@ -26,7 +26,7 @@ MAX_SEGMENTS = 30_000
 # Aggregate active Git-tree budget, including immutable checkpoint and segments.
 # The per-object 12 MB packed bound is NOT an aggregate ledger limit.
 # Reserve 2 MB of headroom; fail closed before any new ledger commit.
-MAX_ACTIVE_TREE_BYTES = 10_000_000
+MAX_ACTIVE_TREE_BYTES = 24_000_000
 
 
 def sha(data):
