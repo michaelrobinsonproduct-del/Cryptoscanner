@@ -28,8 +28,8 @@ def verify_transition(before, after, report, source_sha):
     This function proves known pre-transition IDs are either unchanged active
     or associated with an indexed archived run and exactly counted.
     """
-    ledger.verify(before)
-    ledger.verify(after)
+    ledger.verify(before, ledger.MAX_LOGICAL_BYTES)
+    ledger.verify(after, ledger.MAX_LOGICAL_BYTES)
     _require(after["generation"] == before["generation"] + 1, "GENERATION")
     _require(isinstance(report, dict) and isinstance(report.get("watch"), list)
              and isinstance(report.get("observations"), list), "REPORT")

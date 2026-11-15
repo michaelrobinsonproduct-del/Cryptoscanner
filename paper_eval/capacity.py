@@ -28,8 +28,8 @@ def _upper(items, fallback=0):
 
 
 def _forecast(state, cadence, counts, sizes, limit):
-    if cadence not in (1, 2):
-        raise ValueError("Only one or two scans per hour are modeled")
+    if cadence not in (1, 2, 12):
+        raise ValueError("Only one, two, or twelve scans per hour are modeled")
     active = math.ceil(ledger.RETENTION.total_seconds() / 3600 * cadence) + 4
     indexed = math.ceil(ledger.ARCHIVE_INDEX_RETENTION.total_seconds() / 3600 * cadence) + 4
     # Two conservative margins: +10% on record widths and quote population,
@@ -96,6 +96,8 @@ def capacity_report(state, *, max_bytes=ledger.MAX_BYTES):
         str(c): _forecast(state, c, counts, sizes, max_bytes)
         for c in (1, 2)
     }
+    continuous = _forecast(state, 12, counts, sizes, ledger.MAX_LOGICAL_BYTES)
+    scenarios["12"] = continuous
     return {
         "schema": 1,
         "mode": "READ_ONLY_PAPER_STORAGE_FORECAST",
@@ -114,6 +116,7 @@ def capacity_report(state, *, max_bytes=ledger.MAX_BYTES):
         "serialized_max_record_bytes": sizes,
         "cadences": scenarios,
         "stage2_storage_gate_pass": sufficient and scenarios["2"]["storage_capacity_pass"],
+        "continuous_storage_gate_pass": sufficient and continuous["storage_capacity_pass"],
         "stage2_authorized": False,
         "independent_held_out_lift": None,
         "production_applied": False,
@@ -150,6 +153,8 @@ def main():
         "hourly_forecast_bytes": result["cadences"]["1"]["forecast_ledger_bytes"],
         "twice_hourly_forecast_bytes": result["cadences"]["2"]["forecast_ledger_bytes"],
         "twice_hourly_storage_pass": result["stage2_storage_gate_pass"],
+        "five_minute_forecast_bytes": result["cadences"]["12"]["forecast_ledger_bytes"],
+        "five_minute_storage_pass": result["continuous_storage_gate_pass"],
         "stage2_authorized": False,
     }, sort_keys=True))
 
