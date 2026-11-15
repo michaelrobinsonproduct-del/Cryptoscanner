@@ -20,7 +20,7 @@ def scan(run_id=123, when="2026-10-31T20:10:00Z", **kwargs):
 
 
 def decision(runs=None, comments=None, ledger=None, now=NOW, commit=COMMIT, message=MESSAGE,
-             request_kind="scheduled"):
+             request_kind="scheduled", scan_cadence=30):
     if runs is None:
         runs = [scan()]
     if comments is None:
@@ -28,10 +28,17 @@ def decision(runs=None, comments=None, ledger=None, now=NOW, commit=COMMIT, mess
     if ledger is None:
         ledger = fixture()
     return decide({"workflow_runs": runs}, comments, ledger, commit, message, now,
-                  request_kind=request_kind)
+                  request_kind=request_kind, scan_cadence=scan_cadence)
 
 
 class RecoveryTests(unittest.TestCase):
+    def test_five_minute_production_recovers_stale_publication(self):
+        d = decision(now=dt.datetime(2026, 10, 31, 20, 19, tzinfo=UTC), scan_cadence=5)
+        self.assertEqual((d["action"], d["reason"]), ("DISPATCH_EXISTING_WORKFLOW", "MATURED_SLOT_MISSED"))
+        self.assertEqual(d["missed_matured_slots"], ["2026-10-31T20:12:00+00:00"])
+        d = decision(now=dt.datetime(2026, 10, 31, 20, 16, tzinfo=UTC), scan_cadence=5)
+        self.assertEqual(d["reason"], "RECENT_ATTEMPT")
+
     def test_one_matured_slot_and_verified_ledger_permit_same_workflow_request(self):
         d = decision()
         self.assertEqual(d["action"], "DISPATCH_EXISTING_WORKFLOW")
@@ -372,7 +379,7 @@ class RecoveryTests(unittest.TestCase):
         # Only the dedicated recovery schedule/manual path may request a retry;
         # monitor/audit completion must not spawn another independent controller.
         self.assertNotIn("workflow_run:", workflow)
-        self.assertIn("cron: '12,42 * * * *'", workflow)
+        self.assertIn("cron: '4,9,14,19,24,29,34,39,44,49,54,59 * * * *'", workflow)
         self.assertNotIn("\n  push:", workflow)
         self.assertIn("PAPER_RECOVERY_REQUEST_KIND: scheduled", workflow)
         self.assertEqual(workflow.count('--request-kind "$PAPER_RECOVERY_REQUEST_KIND"'), 2)

@@ -55,6 +55,13 @@ class PaperMonitorTests(unittest.TestCase):
         return evaluate(scans, audits, ledger, previous, "d" * 40, message,
                         dt.datetime.fromisoformat(now), errors)
 
+    def test_five_minute_slots_roll_over_hour(self):
+        now = dt.datetime(2026, 10, 31, 21, 4, tzinfo=UTC)
+        slots = scheduled_slots(now, 2, 5, dt.timedelta(minutes=5))
+        self.assertEqual([(x.hour, x.minute) for x in slots[:3]], [(20, 57), (20, 52), (20, 47)])
+        matched = matched_scheduled_slots([run(1, "2026-10-31T20:57:30Z")], now, 2, 5, dt.timedelta(minutes=5))
+        self.assertEqual(matched, {slots[0]})
+
     def test_healthy_realistic_schedule_and_sealed_ledger(self):
         result = self.check()
         self.assertEqual(result["status"], "HEALTHY")
