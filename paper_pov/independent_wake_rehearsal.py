@@ -33,7 +33,7 @@ def validate_workflows(sources):
              "MISSING_WORKFLOW_SOURCE")
     writer, cadence, recovery, external = (sources[n] for n in required)
     _require("on:\n  workflow_dispatch:" in writer and
-             "- cron: '20,50 * * * *'" in writer, "WRITER_TRIGGER_DRIFT")
+             "- cron: '2,7,12,17,22,27,32,37,42,47,52,57 * * * *'" in writer, "WRITER_TRIGGER_DRIFT")
     _require("jobs:\n  public-paper:" in writer and
              writer.count("python -m paper_pov.scanner") == 1,
              "WRITER_ENTRYPOINT_DRIFT")
