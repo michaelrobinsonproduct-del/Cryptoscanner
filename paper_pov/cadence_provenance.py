@@ -13,6 +13,12 @@ from pathlib import Path
 
 UTC = dt.timezone.utc
 CRONS = {"9 * * * *": 9, "39 * * * *": 39}
+CURRENT_CRON = "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
+KNOWN_COMBINED_CRONS = {
+    "20,50 * * * *": (20, 50),
+    "0,5,10,15,20,25,30,35,40,45,50,55 * * * *": tuple(range(0, 60, 5)),
+    CURRENT_CRON: tuple(range(2, 60, 5)),
+}
 WRITER_WORKFLOW = ".github/workflows/paper-pipeline.yml"
 WRITER_BRANCH = "main"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
@@ -100,7 +106,7 @@ def writer_job_queue_seconds(jobs, run_id, created, checked_at):
         return None
 
 
-def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
+def audit(runs, logs, checked_at, lookback_hours=24, jobs=None, reference_minutes=KNOWN_COMBINED_CRONS[CURRENT_CRON]):
     """Report provable per-run minimum lateness; never assume cron hour.
 
     logs maps run ID (as string) to raw GitHub job log. Optional jobs maps
@@ -230,11 +236,12 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
                                              if successful else "VERIFIED_WORKFLOW_DISPATCH_UNSUCCESSFUL")
                 evidence.append(row)
                 continue
-            if cron not in CRONS:
+            if cron not in CRONS and cron not in KNOWN_COMBINED_CRONS:
                 evidence.append(row)
                 continue
-            nominal = last_nominal_slot(created, CRONS[cron])
-            next_nominal = nominal + dt.timedelta(hours=1)
+            minutes = KNOWN_COMBINED_CRONS[cron] if cron in KNOWN_COMBINED_CRONS else (CRONS[cron],)
+            nominal = max(last_nominal_slot(created, minute) for minute in minutes)
+            next_nominal = min(last_nominal_slot(created, minute) + dt.timedelta(hours=1) for minute in minutes)
             seconds_before_next = (next_nominal - created).total_seconds()
             # GitHub sometimes creates a :39 schedule at 11:38:58. Treating
             # that as 59m58s late is a false precision claim: the upcoming
@@ -323,7 +330,7 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
     scheduled_opportunities = 0
     hour = cutoff.replace(minute=0, second=0, microsecond=0)
     while hour <= now:
-        for minute in CRONS.values():
+        for minute in reference_minutes:
             slot = hour.replace(minute=minute)
             scheduled_opportunities += int(cutoff <= slot <= now)
         hour += dt.timedelta(hours=1)
@@ -340,6 +347,8 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
             "latest_time_comparable_same_source_pair": latest_pair,
             "time_comparable_same_source_pair_count": len(candidate_pairs),
             "scheduled_slot_opportunities_in_window": scheduled_opportunities,
+            "slot_opportunities_are_reference_cadence_not_historical_schedule_replay": True,
+            "reference_cadence_minutes": list(reference_minutes),
             "verified_successful_writer_run_creation_count": len(successful),
             "last_verified_successful_run_created_at": successful[-1]["created_at"] if successful else None,
             "seconds_since_last_verified_successful_run_creation": latest_age,
