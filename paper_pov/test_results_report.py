@@ -168,7 +168,7 @@ class PaperResultsContracts(unittest.TestCase):
                     / ".github/workflows/paper-pipeline.yml").read_text()
         self.assertIn("PAPER_ORIGINATING_CRON: ${{ github.event.schedule }}", workflow)
         self.assertIn('--originating-cron "$PAPER_ORIGINATING_CRON"', workflow)
-        self.assertIn("- cron: '20,50 * * * *'", workflow)
+        self.assertIn("- cron: '2,7,12,17,22,27,32,37,42,47,52,57 * * * *'", workflow)
         self.assertIn("group: public-paper-proof-ledger-single-writer", workflow)
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("git push origin HEAD:refs/heads/paper-proof-ledger", workflow)

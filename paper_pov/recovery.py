@@ -31,7 +31,7 @@ CADENCE_RETRY_INTERVAL = dt.timedelta(minutes=45)
 
 
 def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now,
-           request_kind="scheduled"):
+           request_kind="scheduled", scan_cadence=30):
     """Dispatch the existing writer for a missing schedule OR an explicit due request."""
     result = {"schema": 1, "paper_only": True, "action": "BLOCKED",
               "reason": "UNVALIDATED", "checked_at": now.astimezone(UTC).isoformat(),
@@ -168,19 +168,23 @@ def decide(runs_payload, comments, ledger, ledger_commit, ledger_message, now,
     result["latest_completed_conclusion"] = newest.get("conclusion")
     result["durable_anchor_conclusion"] = anchor.get("conclusion")
     # Do not dispatch twice inside a still-active or recently finished scan window.
-    if now - max(newest_at, latest_asof) < MIN_SUCCESS_AGE:
+    cooldown = dt.timedelta(minutes=7) if scan_cadence == 5 else MIN_SUCCESS_AGE
+    if now - max(newest_at, latest_asof) < cooldown:
         return abstain("RECENT_ATTEMPT")
 
     # An authenticated scan-request push is an explicit demand for a new
     # publication, NOT a missed-cron alarm. Its 20-minute cooldown and all
     # preceding active-run, provenance and remote-ledger checks still apply.
     if request_kind == "scheduled":
-        matured = scheduled_slots(now + RECOVERY_GRACE_ADVANCE, 20, 30)
+        slot_clock = now if scan_cadence == 5 else now + RECOVERY_GRACE_ADVANCE
+        minute = 2 if scan_cadence == 5 else 20
+        grace = dt.timedelta(minutes=5) if scan_cadence == 5 else dt.timedelta(minutes=35)
+        matured = scheduled_slots(slot_clock, minute, scan_cadence, grace)
         if not matured:
             return abstain("INSUFFICIENT_MATURED_SLOTS")
         scheduled_successes = [x for _, x in clean if x.get("event") == "schedule"
                                and x.get("status") == "completed" and x.get("conclusion") == "success"]
-        matched = matched_scheduled_slots(scheduled_successes, now + RECOVERY_GRACE_ADVANCE, 20, 30)
+        matched = matched_scheduled_slots(scheduled_successes, slot_clock, minute, scan_cadence, grace)
         if matured[0] in matched:
             return abstain("MATURED_SLOT_COVERED")
         if max(anchor_at, latest_asof) >= matured[0]:
@@ -236,7 +240,7 @@ def main():
                       json.loads(Path(args.ledger).read_text()),
                       Path(args.ledger_commit).read_text().strip(),
                       Path(args.ledger_message).read_text().strip(), dt.datetime.now(UTC),
-                      request_kind=args.request_kind)
+                      request_kind=args.request_kind, scan_cadence=5)
     except (OSError, ValueError, TypeError) as exc:
         data = {"schema": 1, "paper_only": True, "action": "BLOCKED",
                 "reason": "EVIDENCE_READ_FAILURE", "error": str(exc)[:180],

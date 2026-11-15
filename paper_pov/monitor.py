@@ -30,34 +30,34 @@ def instant(value):
     return parsed.astimezone(UTC)
 
 
-def scheduled_slots(now, minute, cadence_minutes=60):
+def scheduled_slots(now, minute, cadence_minutes=60, grace=GRACE):
     """Matured UTC slots, newest first. Scanner :20/:50; audit remains hourly."""
-    if cadence_minutes not in (30, 60) or not 0 <= minute < 30:
+    if cadence_minutes not in (5, 30, 60) or not 0 <= minute < min(cadence_minutes, 30):
         raise ValueError("Unsupported monitor cadence")
     clock = now.astimezone(UTC)
     current = clock.replace(minute=minute, second=0, microsecond=0)
     if current > clock:
         current -= dt.timedelta(hours=1)
-    if cadence_minutes == 30 and clock - current >= dt.timedelta(minutes=30):
-        current += dt.timedelta(minutes=30)
+    if cadence_minutes in (5, 30):
+        current += ((clock - current) // dt.timedelta(minutes=cadence_minutes)) * dt.timedelta(minutes=cadence_minutes)
     interval = dt.timedelta(minutes=cadence_minutes)
-    return [slot for i in range(12 if cadence_minutes == 30 else 6)
-            if (slot := current - i * interval) + GRACE <= clock]
+    return [slot for i in range(360 // cadence_minutes)
+            if (slot := current - i * interval) + grace <= clock]
 
 
-def matched_scheduled_slots(successes, now, minute, cadence_minutes):
+def matched_scheduled_slots(successes, now, minute, cadence_minutes, grace=GRACE):
     """Assign each successful scheduled run to at most ONE nearby expected slot.
 
     GitHub's run API has created_at but not the originating cron slot; closest
     compatible slot is a conservative approximation, not proof of punctuality.
     """
-    candidates = scheduled_slots(now + GRACE, minute, cadence_minutes)
+    candidates = scheduled_slots(now + grace, minute, cadence_minutes, grace)
     matched = set()
     for run in successes:
         started = instant(run["created_at"])
         eligible = [slot for slot in candidates
                     if (slot <= started <= slot + RUN_WINDOW
-                        if cadence_minutes == 30 else
+                        if cadence_minutes in (5, 30) else
                         slot - dt.timedelta(minutes=5) <= started <= slot + RUN_WINDOW)]
         if eligible:
             nearest = min(eligible, key=lambda slot: (abs((started - slot).total_seconds()), -slot.timestamp()))
@@ -65,7 +65,7 @@ def matched_scheduled_slots(successes, now, minute, cadence_minutes):
     return matched
 
 
-def assess_runs(payload, now, minute, prefix, alerts, cadence_minutes=60):
+def assess_runs(payload, now, minute, prefix, alerts, cadence_minutes=60, grace=GRACE):
     if not isinstance(payload, dict) or not isinstance(payload.get("workflow_runs"), list):
         alerts.append(prefix + "_RUNS_UNAVAILABLE")
         return []
@@ -90,9 +90,9 @@ def assess_runs(payload, now, minute, prefix, alerts, cadence_minutes=60):
         if run.get("status") in ("queued", "in_progress", "waiting") and now - instant(run["created_at"]) > STUCK:
             alerts.append(prefix + "_SCHEDULED_STUCK")
             break
-    mature_slots = scheduled_slots(now, minute, cadence_minutes)
+    mature_slots = scheduled_slots(now, minute, cadence_minutes, grace)
     if len(mature_slots) >= 2:
-        matched = matched_scheduled_slots(successes, now, minute, cadence_minutes)
+        matched = matched_scheduled_slots(successes, now, minute, cadence_minutes, grace)
         # Two distinct matured consecutive slots must not be satisfied by one
         # delayed run, a manual dispatch, or a queued/failed execution.
         if all(slot not in matched for slot in mature_slots[:2]) and (
@@ -106,12 +106,14 @@ def assess_runs(payload, now, minute, prefix, alerts, cadence_minutes=60):
 
 
 def evaluate(scan_payload, audit_payload, ledger, previous, ledger_commit,
-             ledger_message, now, collection_errors=()):
+             ledger_message, now, collection_errors=(), scan_cadence=30):
     if now.tzinfo is None:
         raise ValueError("Monitor clock must be timezone aware")
     now = now.astimezone(UTC)
     alerts = ["PAPER_EVIDENCE_" + str(x) for x in collection_errors]
-    scan_runs = assess_runs(scan_payload, now, 20, "PAPER_SCAN", alerts, cadence_minutes=30)
+    scan_runs = assess_runs(scan_payload, now, 2 if scan_cadence == 5 else 20,
+                            "PAPER_SCAN", alerts, cadence_minutes=scan_cadence,
+                            grace=dt.timedelta(minutes=5) if scan_cadence == 5 else GRACE)
     assess_runs(audit_payload, now, 21, "PAPER_AUDIT", alerts)
     active = [x for x in scan_runs if x.get("status") == "in_progress"]
     if len(active) > 1:
@@ -213,7 +215,7 @@ def main():
                       safe_load(args.previous, "PREVIOUS") if args.previous else None,
                       Path(args.ledger_commit).read_text().strip() if Path(args.ledger_commit).exists() else "",
                       Path(args.ledger_message).read_text().strip() if Path(args.ledger_message).exists() else "",
-                      dt.datetime.now(UTC), errors)
+                      dt.datetime.now(UTC), errors, scan_cadence=5)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(result, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n")

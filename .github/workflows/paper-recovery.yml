@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   # Scheduled recovery only; request-file pushes start paper-pipeline directly.
   schedule:
-    - cron: '12,42 * * * *'
+    - cron: '4,9,14,19,24,29,34,39,44,49,54,59 * * * *'
 permissions:
   contents: read
   actions: write
