@@ -1,0 +1,72 @@
+name: Bounded paper relay pilot (existing single writer)
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/paper-relay-pilot.yml'
+      - 'paper_pov/relay_pilot.py'
+      - 'paper_pov/test_relay_pilot.py'
+  push:
+    branches: [main]
+    paths: ['.github/paper-relay-pilot-request.txt']
+  workflow_dispatch:
+    inputs:
+      hop:
+        type: choice
+        options: ['1', '2']
+        default: '1'
+      parent:
+        type: string
+        default: ''
+      target:
+        type: string
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: paper-relay-pilot-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: false
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - run: python -m unittest paper_pov.test_relay_pilot -v
+  slot:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 32
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Wait only for the bounded successor slot
+        if: inputs.hop == '2'
+        env:
+          TARGET: ${{ inputs.target }}
+        run: python -c 'import os; from paper_pov.relay_pilot import wait_slot; wait_slot(os.environ["TARGET"])'
+  dispatch:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: slot
+    permissions:
+      contents: read
+      actions: write
+    concurrency:
+      group: public-paper-recovery-controller
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify exact writer or fresh existing result, then hand off once
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELAY_HOP: ${{ inputs.hop || '1' }}
+          RELAY_PARENT: ${{ inputs.parent || '' }}
+        run: python -m paper_pov.relay_pilot
