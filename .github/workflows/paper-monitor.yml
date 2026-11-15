@@ -134,17 +134,22 @@ jobs:
             echo "Scanner status, ledger integrity, freshness, outcomes and delivery are UNKNOWN from this monitor run."
             echo "No scanner dispatch, second writer, trading, production infrastructure or scoring action was taken."
           } > /tmp/paper-monitor-upstream-alert.txt
-          COUNT="$(gh api "repos/$GITHUB_REPOSITORY/issues/34" --jq '.comments')"
+          cat /tmp/paper-monitor-upstream-alert.txt >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          COUNT="$(gh api "repos/$GITHUB_REPOSITORY/issues/262" --jq '.comments')"
+          if [ "$COUNT" -ge 2500 ]; then
+            echo "::error::PAPER_MONITOR_PIPELINE_FAILED; dedicated issue full; evidence in job summary"
+            exit 1
+          fi
           PAGE=$(( (COUNT + 99) / 100 ))
           if [ "$PAGE" -lt 1 ]; then PAGE=1; fi
-          gh api "repos/$GITHUB_REPOSITORY/issues/34/comments?per_page=100&page=$PAGE" > /tmp/paper-monitor-upstream-recent.json
+          gh api "repos/$GITHUB_REPOSITORY/issues/262/comments?per_page=100&page=$PAGE" > /tmp/paper-monitor-upstream-recent.json
           if ! python - "$MARKER" <<'PY'
           import json,sys
           comments=json.load(open("/tmp/paper-monitor-upstream-recent.json"))
           sys.exit(0 if any(sys.argv[1] in x.get("body","") for x in comments) else 1)
           PY
           then
-            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/34/comments" \
+            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/262/comments" \
               -f body="$(cat /tmp/paper-monitor-upstream-alert.txt)" > /tmp/paper-monitor-upstream-post.json
             ID="$(python -c 'import json;print(json.load(open("/tmp/paper-monitor-upstream-post.json"))["id"])')"
             gh api "repos/$GITHUB_REPOSITORY/issues/comments/$ID" > /tmp/paper-monitor-upstream-readback.json
@@ -171,7 +176,7 @@ jobs:
         run: |
           set -euo pipefail
           (cd paper_pov/monitor_output && sha256sum -c SHA256SUMS)
-      - name: Deduplicate, post and verify issue 34 alerts
+      - name: Deduplicate, post and verify dedicated health alerts
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -196,10 +201,15 @@ jobs:
           print("Paper only; no trades, production infrastructure operations or DEX freshness gate.")
           print("Issue comment readback verifies GitHub delivery only, not email/push receipt.")
           PY
-          COMMENT_COUNT="$(gh api "repos/$GITHUB_REPOSITORY/issues/34" --jq '.comments')"
+          cat /tmp/paper-monitor-comment.txt >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          COMMENT_COUNT="$(gh api "repos/$GITHUB_REPOSITORY/issues/262" --jq '.comments')"
+          if [ "$COMMENT_COUNT" -ge 2500 ]; then
+            echo "::warning::PAPER_MONITOR_ALERT_DESTINATION_FULL; verified health alerts in job summary and artifact"
+            exit 0
+          fi
           PAGE=$(( (COMMENT_COUNT + 99) / 100 ))
           if [ "$PAGE" -lt 1 ]; then PAGE=1; fi
-          gh api "repos/$GITHUB_REPOSITORY/issues/34/comments?per_page=100&page=$PAGE" > /tmp/paper-monitor-recent.json
+          gh api "repos/$GITHUB_REPOSITORY/issues/262/comments?per_page=100&page=$PAGE" > /tmp/paper-monitor-recent.json
           python - <<'PY' > /tmp/paper-monitor-duplicate.txt
           import json,re
           body=open("/tmp/paper-monitor-comment.txt").read()
@@ -211,7 +221,7 @@ jobs:
             echo PAPER_MONITOR_ALERT_ALREADY_RECORDED
             exit 0
           fi
-          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/34/comments" -f body="$(cat /tmp/paper-monitor-comment.txt)" > /tmp/paper-monitor-post.json
+          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/262/comments" -f body="$(cat /tmp/paper-monitor-comment.txt)" > /tmp/paper-monitor-post.json
           COMMENT_ID="$(python -c 'import json;print(json.load(open("/tmp/paper-monitor-post.json"))["id"])')"
           gh api "repos/$GITHUB_REPOSITORY/issues/comments/$COMMENT_ID" > /tmp/paper-monitor-readback.json
           python - <<'PY'
