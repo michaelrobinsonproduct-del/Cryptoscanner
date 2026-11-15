@@ -203,9 +203,9 @@ class PaperMonitorTests(unittest.TestCase):
                 args=sys.argv[1:]
                 posted=pathlib.Path(os.environ["PAPER_TEST_GH_DIR"]) / "posted.txt"
                 path=next((x for x in args if x.startswith("repos/")), "")
-                if path.endswith("/issues/34") and "--jq" in args:
-                    print("1" if posted.exists() else "0")
-                elif "/issues/34/comments?" in path:
+                if path.endswith("/issues/262") and "--jq" in args:
+                    print(os.environ.get("PAPER_TEST_COMMENT_COUNT", "1" if posted.exists() else "0"))
+                elif "/issues/262/comments?" in path:
                     print(json.dumps([{"body":posted.read_text()}] if posted.exists() else []))
                 elif "-X" in args and "POST" in args:
                     body=next(x[5:] for x in args if x.startswith("body="))
@@ -237,6 +237,14 @@ class PaperMonitorTests(unittest.TestCase):
                                     capture_output=True, text=True, timeout=15)
             self.assertEqual(second.returncode, 1, second.stderr)
             self.assertIn("PAPER_MONITOR_PIPELINE_FAILURE_ALREADY_RECORDED", second.stdout)
+            self.assertEqual((Path(td) / "posted.txt").read_text(), posted)
+            env["PAPER_TEST_COMMENT_COUNT"] = "2500"
+            env["GITHUB_STEP_SUMMARY"] = str(Path(td) / "summary.txt")
+            full = subprocess.run(["bash", "-c", script], env=env,
+                                  capture_output=True, text=True, timeout=15)
+            self.assertEqual(full.returncode, 1)
+            self.assertIn("dedicated issue full", full.stdout)
+            self.assertIn("PAPER_MONITOR_PIPELINE_FAILED", (Path(td) / "summary.txt").read_text())
             self.assertEqual((Path(td) / "posted.txt").read_text(), posted)
 
     def test_corrupted_resealed_ledger_fails_closed(self):
