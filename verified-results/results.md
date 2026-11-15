@@ -2,49 +2,49 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-15T14:08:48.558144+00:00
-**GitHub trigger:** scheduled (verified event=schedule; originating cron=2,7,12,17,22,27,32,37,42,47,52,57 * * * *, intended UTC minute=2,7,12,17,22,27,32,37,42,47,52,57; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43722700598
-**Source SHA:** 2f30269316c847a4ba711151fcbb5ed3ab468275
-**Previous ledger commit:** c8e4531cbaf78e39a4f5fb7ed42614e0e633056f (atomic ledger/results publication)
-**Ledger generation:** 432 (remote push/readback verified)
+**UTC as-of:** 2026-11-15T19:16:48.374276+00:00
+**GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/43751470378
+**Source SHA:** 885b4a0465f5c74a8a87db5ca921c3c0a00021af
+**Previous ledger commit:** 897eb66eca51d7c6dbae5c6d9fdf4c3bee1f30ef (atomic ledger/results publication)
+**Ledger generation:** 433 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 8s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 625; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 607; valid market observations: 607; OHLC screened: 24.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | XMR/USD | 501.78 | 108.676 | 95.213 | +6.72% | -0.31% | 10.93x | 9.6 | 2026-11-15T14:08:41.844962+00:00 | Not calibrated | STRONG 80/100 | HIGH 61/100 | Watch | WATCH |
-| 2 | XRP/USD | 0.96516 | 99.595 | 94.308 | +5.62% | -0.60% | 1.83x | 0.1 | 2026-11-15T14:08:41.844962+00:00 | Not calibrated | STRONG 70/100 | HIGH 61/100 | Watch | WATCH |
-| 3 | AAVE/USD | 106.91 | 97.560 | 87.136 | +6.33% | -0.92% | 3.20x | 5.6 | 2026-11-15T14:08:41.844962+00:00 | Not calibrated | STRONG 79/100 | HIGH 61/100 | Watch | WATCH |
-| 4 | UNI/USD | 5.1396 | 90.867 | 90.462 | +5.27% | -0.80% | 1.44x | 2.9 | 2026-11-15T14:08:41.844962+00:00 | Not calibrated | MODERATE 65/100 | HIGH 61/100 | Watch | WATCH |
-| 5 | ADA/USD | 0.154174 | 90.192 | 83.112 | +4.41% | -0.75% | 2.09x | 5.6 | 2026-11-15T14:08:41.844962+00:00 | Not calibrated | STRONG 75/100 | HIGH 61/100 | Watch | WATCH |
-| 6 | QNT/USD | 154.78 | 89.658 | 96.445 | +8.00% | -0.88% | 0.76x | 7.1 | 2026-11-15T14:08:41.844962+00:00 | Not calibrated | MODERATE 50/100 | HIGH 68/100 | Watch | WATCH |
-| 7 | ZEC/USD | 896.66 | 87.421 | 80.344 | +3.80% | -1.58% | 3.13x | 2.5 | 2026-11-15T14:08:41.844962+00:00 | Not calibrated | STRONG 74/100 | HIGH 65/100 | Do nothing | WATCH |
-| 8 | HYPE/USD | 67.42 | 83.027 | 88.110 | +4.84% | -0.75% | 0.87x | 1.5 | 2026-11-15T14:08:41.844962+00:00 | Not calibrated | MODERATE 47/100 | HIGH 68/100 | Watch | WATCH |
-| 9 | LINK/USD | 9.27772 | 80.258 | 83.015 | +4.38% | -0.74% | 1.09x | 5.3 | 2026-11-15T14:08:41.844962+00:00 | Not calibrated | MODERATE 50/100 | HIGH 68/100 | Watch | WATCH |
-| 10 | TAO/USD | 191.4534 | 78.680 | 79.181 | +4.12% | -0.85% | 1.37x | 9.3 | 2026-11-15T14:08:41.844962+00:00 | Not calibrated | MODERATE 59/100 | HIGH 61/100 | Watch | WATCH |
-| 11 | SUI/USD | 0.7247 | 73.326 | 78.390 | +3.44% | -0.93% | 0.96x | 1.4 | 2026-11-15T14:08:41.844962+00:00 | Not calibrated | WEAK 42/100 | HIGH 68/100 | Watch | WATCH |
-| 12 | PAXG/USD | 3820.72 | 70.565 | 55.616 | +0.58% | -0.01% | 12.04x | 0.4 | 2026-11-15T14:08:41.844962+00:00 | Not calibrated | MODERATE 65/100 | HIGH 61/100 | Watch | WATCH |
+| 1 | ADA/USD | 0.154284 | 102.934 | 84.476 | +4.49% | +0.69% | 4.12x | 3.9 | 2026-11-15T19:16:40.178268+00:00 | Not calibrated | STRONG 100/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 2 | XMR/USD | 499.4 | 102.293 | 93.811 | +6.22% | +0.69% | 1.50x | 9.4 | 2026-11-15T19:16:40.178268+00:00 | Not calibrated | STRONG 95/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 3 | ZEC/USD | 901.58 | 101.431 | 82.173 | +4.37% | +0.85% | 4.45x | 6.8 | 2026-11-15T19:16:40.178268+00:00 | Not calibrated | STRONG 100/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 4 | QNT/USD | 155.03 | 100.532 | 96.124 | +8.18% | +1.41% | 0.73x | 7.8 | 2026-11-15T19:16:40.178268+00:00 | Not calibrated | STRONG 80/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 5 | UNI/USD | 5.1708 | 98.451 | 93.686 | +5.91% | +0.57% | 1.19x | 5.4 | 2026-11-15T19:16:40.178268+00:00 | Not calibrated | STRONG 84/100 | HIGH 62/100 | Watch | WATCH |
+| 6 | CC/USD | 0.08305 | 98.327 | 85.661 | +7.01% | -0.47% | 3.99x | 8.4 | 2026-11-15T19:16:40.178268+00:00 | Not calibrated | STRONG 79/100 | HIGH 61/100 | Watch | WATCH |
+| 7 | AAVE/USD | 108.18 | 97.924 | 86.369 | +7.59% | +1.04% | 1.64x | 7.4 | 2026-11-15T19:16:40.178268+00:00 | Not calibrated | STRONG 94/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 8 | XRP/USD | 0.95608 | 94.373 | 86.881 | +4.63% | +0.46% | 1.52x | 1.0 | 2026-11-15T19:16:40.178268+00:00 | Not calibrated | STRONG 92/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 9 | ETH/USD | 1821.52 | 93.590 | 76.093 | +3.02% | +0.50% | 2.57x | 0.1 | 2026-11-15T19:16:40.178268+00:00 | Not calibrated | STRONG 100/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 10 | NEAR/USD | 3.1592 | 91.382 | 82.579 | +4.30% | +0.64% | 1.56x | 5.1 | 2026-11-15T19:16:40.178268+00:00 | Not calibrated | STRONG 91/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 11 | HYPE/USD | 66.99 | 83.468 | 83.425 | +4.17% | +0.89% | 0.56x | 1.5 | 2026-11-15T19:16:40.178268+00:00 | Not calibrated | STRONG 72/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 12 | NIGHT/USD | 0.04992 | 83.380 | 85.413 | +5.21% | +0.00% | 0.80x | 12.1 | 2026-11-15T19:16:40.178268+00:00 | Not calibrated | MODERATE 57/100 | HIGH 68/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | QNT/USD | 96.445 | 154.78 | -0.88% | 0.76x |
-| 2 | XMR/USD | 95.213 | 501.78 | -0.31% | 10.93x |
-| 3 | XRP/USD | 94.308 | 0.96516 | -0.60% | 1.83x |
-| 4 | UNI/USD | 90.462 | 5.1396 | -0.80% | 1.44x |
-| 5 | HYPE/USD | 88.110 | 67.42 | -0.75% | 0.87x |
-| 6 | AAVE/USD | 87.136 | 106.91 | -0.92% | 3.20x |
-| 7 | ADA/USD | 83.112 | 0.154174 | -0.75% | 2.09x |
-| 8 | LINK/USD | 83.015 | 9.27772 | -0.74% | 1.09x |
-| 9 | ZEC/USD | 80.344 | 896.66 | -1.58% | 3.13x |
-| 10 | TAO/USD | 79.181 | 191.4534 | -0.85% | 1.37x |
-| 11 | SUI/USD | 78.390 | 0.7247 | -0.93% | 0.96x |
-| 12 | PAXG/USD | 55.616 | 3820.72 | -0.01% | 12.04x |
+| 1 | QNT/USD | 96.124 | 155.03 | +1.41% | 0.73x |
+| 2 | XMR/USD | 93.811 | 499.4 | +0.69% | 1.50x |
+| 3 | UNI/USD | 93.686 | 5.1708 | +0.57% | 1.19x |
+| 4 | XRP/USD | 86.881 | 0.95608 | +0.46% | 1.52x |
+| 5 | AAVE/USD | 86.369 | 108.18 | +1.04% | 1.64x |
+| 6 | CC/USD | 85.661 | 0.08305 | -0.47% | 3.99x |
+| 7 | NIGHT/USD | 85.413 | 0.04992 | +0.00% | 0.80x |
+| 8 | ADA/USD | 84.476 | 0.154284 | +0.69% | 4.12x |
+| 9 | HYPE/USD | 83.425 | 66.99 | +0.89% | 0.56x |
+| 10 | NEAR/USD | 82.579 | 3.1592 | +0.64% | 1.56x |
+| 11 | ZEC/USD | 82.173 | 901.58 | +0.85% | 4.45x |
+| 12 | ETH/USD | 76.093 | 1821.52 | +0.50% | 2.57x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -60,8 +60,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 432; predictions: 3700; observations: 260139.
-- Matured sampled outcomes across 1/6/24/48h: 3195; gap abstentions: 11014. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 433; predictions: 3712; observations: 260746.
+- Matured sampled outcomes across 1/6/24/48h: 3195; gap abstentions: 11129. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -77,31 +77,41 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 43722700598 · **Generation:** 432 · **Legacy run:** 43722700598
-**Main quote time:** 2026-11-15T14:08:48.558144+00:00 · **Legacy report time:** 2026-11-15T14:09:00.699594+00:00
+**Writer:** 43751470378 · **Generation:** 433 · **Legacy run:** 43751470378
+**Main quote time:** 2026-11-15T19:16:48.374276+00:00 · **Legacy report time:** 2026-11-15T19:17:05.473602+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | XMR/USD | 501.78 | 108.68 | -0.31% | 10.93x | STRONG 80/100 | HIGH 61/100 | Watch |
-| 2 | XRP/USD | 0.96516 | 99.59 | -0.60% | 1.83x | STRONG 70/100 | HIGH 61/100 | Watch |
-| 3 | AAVE/USD | 106.91 | 97.56 | -0.92% | 3.20x | STRONG 79/100 | HIGH 61/100 | Watch |
-| 4 | UNI/USD | 5.1396 | 90.87 | -0.80% | 1.44x | MODERATE 65/100 | HIGH 61/100 | Watch |
-| 5 | ADA/USD | 0.154174 | 90.19 | -0.75% | 2.09x | STRONG 75/100 | HIGH 61/100 | Watch |
-| 6 | QNT/USD | 154.78 | 89.66 | -0.88% | 0.76x | MODERATE 50/100 | HIGH 68/100 | Watch |
-| 7 | ZEC/USD | 896.66 | 87.42 | -1.58% | 3.13x | STRONG 74/100 | HIGH 65/100 | Do nothing |
-| 8 | HYPE/USD | 67.42 | 83.03 | -0.75% | 0.87x | MODERATE 47/100 | HIGH 68/100 | Watch |
-| 9 | LINK/USD | 9.27772 | 80.26 | -0.74% | 1.09x | MODERATE 50/100 | HIGH 68/100 | Watch |
-| 10 | TAO/USD | 191.4534 | 78.68 | -0.85% | 1.37x | MODERATE 59/100 | HIGH 61/100 | Watch |
-| 11 | SUI/USD | 0.7247 | 73.33 | -0.93% | 0.96x | WEAK 42/100 | HIGH 68/100 | Watch |
-| 12 | PAXG/USD | 3820.72 | 70.57 | -0.01% | 12.04x | MODERATE 65/100 | HIGH 61/100 | Watch |
+| 1 | ADA/USD ⭐ | 0.154284 | 102.93 | +0.69% | 4.12x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 2 | XMR/USD ⭐ | 499.4 | 102.29 | +0.69% | 1.50x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 3 | ZEC/USD ⭐ | 901.58 | 101.43 | +0.85% | 4.45x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 4 | QNT/USD | 155.03 | 100.53 | +1.41% | 0.73x | STRONG 80/100 | VERY_HIGH 70/100 | Watch |
+| 5 | UNI/USD ⭐ | 5.1708 | 98.45 | +0.57% | 1.19x | STRONG 94/100 | HIGH 62/100 | Watch |
+| 6 | CC/USD | 0.08305 | 98.33 | -0.47% | 3.99x | STRONG 79/100 | HIGH 61/100 | Watch |
+| 7 | AAVE/USD | 108.18 | 97.92 | +1.04% | 1.64x | STRONG 94/100 | HIGH 55/100 | Consider small entry |
+| 8 | XRP/USD ⭐ | 0.95608 | 94.37 | +0.46% | 1.52x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 9 | ETH/USD ⭐ | 1821.52 | 93.59 | +0.50% | 2.57x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 10 | NEAR/USD ⭐ | 3.1592 | 91.38 | +0.64% | 1.56x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 11 | HYPE/USD | 66.99 | 83.47 | +0.89% | 0.56x | STRONG 72/100 | VERY_HIGH 70/100 | Watch |
+| 12 | NIGHT/USD | 0.04992 | 83.38 | +0.00% | 0.80x | MODERATE 57/100 | HIGH 68/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
+| 1 | XRP/USD ⭐ | 0.95591 | 100.00 | +0.46% | 1.52x | 56450 | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 2 | ZEC/USD ⭐ | 901.68 | 100.00 | +0.85% | 4.45x | 33298 | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 3 | ADA/USD ⭐ | 0.15419 | 98.91 | +0.69% | 4.12x | 24698 | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 4 | ETH/USD ⭐ | 1821.44 | 95.81 | +0.50% | 2.57x | 85077 | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 5 | NEAR/USD ⭐ | 3.1585 | 94.65 | +0.64% | 1.56x | 16369 | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 6 | UNI/USD ⭐ | 5.1708 | 93.20 | +0.57% | 1.19x | 13011 | STRONG 92/100 | HIGH 62/100 | Watch |
+| 7 | SUI/USD | 0.7238 | 91.96 | +0.61% | 1.29x | 21805 | STRONG 81/100 | HIGH 55/100 | Watch |
+| 8 | TAO/USD | 191.9855 | 91.51 | +0.72% | 2.09x | 14825 | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 9 | HBAR/USD | 0.05876 | 89.97 | +0.65% | 1.78x | 10737 | STRONG 90/100 | HIGH 55/100 | Consider small entry |
+| 10 | XMR/USD ⭐ | 499 | 89.08 | +0.69% | 1.50x | 12239 | STRONG 95/100 | HIGH 61/100 | Consider small entry |
+| 11 | XDG/USD | 0.0589063 | 88.97 | +0.54% | 1.52x | 21685 | STRONG 89/100 | HIGH 55/100 | Consider small entry |
 
-**Same-run overlap:** None
+**Same-run overlap:** ADA/USD, XMR/USD, ZEC/USD, UNI/USD, XRP/USD, ETH/USD, NEAR/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
