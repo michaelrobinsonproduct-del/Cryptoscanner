@@ -24,7 +24,7 @@ NOW = "2026-11-02T03:20:00Z"
 
 class CadenceProvenanceTests(unittest.TestCase):
     def check(self, rows=None, logs=None, jobs=None):
-        return audit(rows if rows is not None else [run()], logs if logs is not None else {"1": log()}, NOW, jobs=jobs)
+        return audit(rows if rows is not None else [run()], logs if logs is not None else {"1": log()}, NOW, jobs=jobs, reference_minutes=(9, 39))
 
     def test_current_combined_cron_is_recognized(self):
         created = "2026-11-15T06:28:00Z"

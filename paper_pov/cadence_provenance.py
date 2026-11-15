@@ -106,7 +106,7 @@ def writer_job_queue_seconds(jobs, run_id, created, checked_at):
         return None
 
 
-def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
+def audit(runs, logs, checked_at, lookback_hours=24, jobs=None, reference_minutes=KNOWN_COMBINED_CRONS[CURRENT_CRON]):
     """Report provable per-run minimum lateness; never assume cron hour.
 
     logs maps run ID (as string) to raw GitHub job log. Optional jobs maps
@@ -330,7 +330,7 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
     scheduled_opportunities = 0
     hour = cutoff.replace(minute=0, second=0, microsecond=0)
     while hour <= now:
-        for minute in (KNOWN_COMBINED_CRONS[CURRENT_CRON] if now >= dt.datetime(2026, 11, 15, 6, 25, tzinfo=UTC) else CRONS.values()):
+        for minute in reference_minutes:
             slot = hour.replace(minute=minute)
             scheduled_opportunities += int(cutoff <= slot <= now)
         hour += dt.timedelta(hours=1)
@@ -348,6 +348,7 @@ def audit(runs, logs, checked_at, lookback_hours=24, jobs=None):
             "time_comparable_same_source_pair_count": len(candidate_pairs),
             "scheduled_slot_opportunities_in_window": scheduled_opportunities,
             "slot_opportunities_are_reference_cadence_not_historical_schedule_replay": True,
+            "reference_cadence_minutes": list(reference_minutes),
             "verified_successful_writer_run_creation_count": len(successful),
             "last_verified_successful_run_created_at": successful[-1]["created_at"] if successful else None,
             "seconds_since_last_verified_successful_run_creation": latest_age,
