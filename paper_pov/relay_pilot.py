@@ -1,4 +1,4 @@
-"""Bounded two-run relay pilot. No market data or ledger writes."""
+"""Bounded multi-hop production relay commissioning. No market data or ledger writes."""
 import base64
 import datetime as dt
 import json
@@ -10,6 +10,9 @@ REPO = "michaelrobinsonproduct-del/Cryptoscanner"
 WRITER = "paper-pipeline.yml"
 RELAY = "paper-relay-pilot.yml"
 UTC = dt.timezone.utc
+MAX_HOPS = 12
+TRIAL_MINUTES = 60
+REFRESH_SECONDS = 240
 
 def now():
     return dt.datetime.now(UTC)
@@ -19,7 +22,7 @@ def parse(value):
 
 def next_slot(t):
     t = t.replace(second=0, microsecond=0) + dt.timedelta(minutes=1)
-    while t.minute not in (24, 54):
+    while t.minute % 5 != 4:
         t += dt.timedelta(minutes=1)
     return t
 
@@ -32,10 +35,20 @@ def valid_result(r, run_id, source, at):
             and r["production_applied"] is False and r["buy_approved"] is False
             and 0 <= age <= 600 and 0 <= r["max_client_quote_age_seconds"] <= 600)
 
+
+def fresh_for_slot(report, source, at):
+    return (valid_result(report, report["run_id"], source, at)
+            and (at - parse(report["as_of"])).total_seconds() < REFRESH_SECONDS)
+
+
+def next_handoff(hop, at, expires):
+    target = next_slot(at)
+    return target if hop < MAX_HOPS and target < expires else None
+
 def action(runs, report, source, at):
     if any(r["status"] != "completed" for r in runs):
         return "ACTIVE"
-    if report and valid_result(report, report["run_id"], source, at):
+    if report and fresh_for_slot(report, source, at):
         return "FRESH"
     return "DISPATCH"
 
@@ -67,8 +80,8 @@ def emit(message):
 
 def wait_slot(target):
     delta = (parse(target) - now()).total_seconds()
-    if not -180 <= delta <= 1800:
-        raise RuntimeError("Target expired or exceeds bounded pilot wait")
+    if delta > 300:
+        raise RuntimeError("Target exceeds five-minute relay wait")
     if delta > 0:
         time.sleep(delta)
 
@@ -77,10 +90,16 @@ def run():
     assert os.environ["GITHUB_REF"] == "refs/heads/main"
     assert os.environ["GITHUB_RUN_ATTEMPT"] == "1", "No pilot reruns"
     hop = int(os.environ["RELAY_HOP"])
-    assert hop in (1, 2)
+    assert 1 <= hop <= MAX_HOPS
+    expires = (now() + dt.timedelta(minutes=TRIAL_MINUTES) if hop == 1
+               else parse(os.environ["RELAY_EXPIRES"]))
+    assert expires <= now() + dt.timedelta(minutes=TRIAL_MINUTES)
+    if now() >= expires:
+        emit("RELAY_WINDOW_EXPIRED; no dispatch")
+        return
     source = os.environ["GITHUB_SHA"]
     assert api("git/ref/heads/main")["object"]["sha"] == source
-    if hop == 2:
+    if hop > 1:
         parent = int(os.environ["RELAY_PARENT"])
         p = api("actions/runs/" + str(parent))
         assert p["path"].split("@")[0] == ".github/workflows/" + RELAY
@@ -90,16 +109,18 @@ def run():
     runs = api("actions/workflows/" + WRITER + "/runs?branch=main&per_page=100")["workflow_runs"]
     decision = action(runs, report, source, now())
     if decision == "ACTIVE":
-        emit("ACTIVE_WRITER; no dispatch; pilot stops without claiming verification")
-        raise RuntimeError("Existing writer active; avoid duplicate")
-    if decision == "FRESH":
+        emit("ACTIVE_WRITER; no duplicate dispatch; advance to next slot")
+    elif decision == "FRESH":
+        item = api("actions/runs/" + str(report["run_id"]))
+        assert item["head_sha"] == source and item["head_branch"] == "main"
+        assert item["status"] == "completed" and item["conclusion"] == "success"
         emit("FRESH_EXISTING_CANONICAL " + str(report["run_id"]) + "; no duplicate dispatch")
     else:
         rid = dispatch(WRITER)
         deadline = time.monotonic() + 15 * 60
         while time.monotonic() < deadline:
             item = api("actions/runs/" + str(rid))
-            assert item["head_sha"] == source and item["event"] == "workflow_dispatch"
+            assert item["head_sha"] == source and item["head_branch"] == "main" and item["event"] == "workflow_dispatch"
             if item["status"] == "completed":
                 assert item["conclusion"] == "success", "Writer failed"
                 r = canonical()
@@ -109,13 +130,13 @@ def run():
             time.sleep(10)
         else:
             raise RuntimeError("Writer observation expired; no retry")
-    if hop == 1:
-        target = next_slot(now())
-        successor = dispatch(RELAY, {"hop": "2", "parent": os.environ["GITHUB_RUN_ID"],
-                                    "target": target.isoformat()})
+    target = next_handoff(hop, now(), expires)
+    if target is not None:
+        successor = dispatch(RELAY, {"hop": str(hop + 1), "parent": os.environ["GITHUB_RUN_ID"],
+                                    "target": target.isoformat(), "expires": expires.isoformat()})
         emit("SUCCESSOR_ACCEPTED " + str(successor) + " TARGET " + target.isoformat())
     else:
-        emit("BOUNDED_RELAY_COMPLETE; no additional successor")
+        emit("BOUNDED_CONTINUITY_WINDOW_COMPLETE; no additional successor")
 
 if __name__ == "__main__":
     run()

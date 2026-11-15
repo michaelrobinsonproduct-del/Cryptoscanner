@@ -1,4 +1,4 @@
-name: Bounded paper relay pilot (existing single writer)
+name: Bounded paper relay continuity (existing single writer)
 on:
   pull_request:
     paths:
@@ -11,13 +11,15 @@ on:
   workflow_dispatch:
     inputs:
       hop:
-        type: choice
-        options: ['1', '2']
+        type: string
         default: '1'
       parent:
         type: string
         default: ''
       target:
+        type: string
+        default: ''
+      expires:
         type: string
         default: ''
 permissions:
@@ -39,13 +41,13 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: contracts
     runs-on: ubuntu-latest
-    timeout-minutes: 32
+    timeout-minutes: 7
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Wait only for the bounded successor slot
-        if: inputs.hop == '2'
+      - name: Wait for the next five-minute slot
+        if: inputs.hop != '' && inputs.hop != '1'
         env:
           TARGET: ${{ inputs.target }}
         run: python -c 'import os; from paper_pov.relay_pilot import wait_slot; wait_slot(os.environ["TARGET"])'
@@ -64,9 +66,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Verify exact writer or fresh existing result, then hand off once
+      - name: Verify exact writer or existing result and hand off within commissioning window
         env:
           GH_TOKEN: ${{ github.token }}
           RELAY_HOP: ${{ inputs.hop || '1' }}
           RELAY_PARENT: ${{ inputs.parent || '' }}
+          RELAY_EXPIRES: ${{ inputs.expires || '' }}
         run: python -m paper_pov.relay_pilot
