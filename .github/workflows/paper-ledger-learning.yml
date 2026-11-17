@@ -19,6 +19,9 @@ on:
       - 'historical/evidence/q3_2026_frozen_shadow_v1.json'
       - 'paper_pov/test_historical_paper_cohort.py'
       - 'paper_pov/test_public_ledger_learning.py'
+      - 'paper_pov/rolling_learning_predictions.py'
+      - 'paper_pov/test_rolling_learning_predictions.py'
+      - 'paper_pov/observed_shadow_handoff.py'
       - 'paper_pov/rolling_kraken_candles.py'
       - 'paper_pov/test_rolling_kraken_candles.py'
       - '.github/workflows/paper-ledger-learning.yml'
@@ -38,7 +41,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Focused ledger schema acceptance
-        run: python -m unittest paper_pov.test_public_ledger_learning paper_pov.test_historical_paper_cohort paper_pov.test_rolling_kraken_candles paper_pov.test_frozen_historical_shadow -v
+        run: python -m unittest paper_pov.test_public_ledger_learning paper_pov.test_historical_paper_cohort paper_pov.test_rolling_kraken_candles paper_pov.test_frozen_historical_shadow paper_pov.test_rolling_learning_predictions -v
       - name: Select latest persisted public paper ledger
         env:
           REQUESTED_RUN: ${{ inputs.paper_run_id }}
@@ -108,10 +111,15 @@ jobs:
             --fresh evidence/kraken-candles-fresh.json \
             --previous evidence/prior/kraken-candles.json \
             --output evidence/kraken-candles.json
+      - name: Retain immutable prediction cohort alongside existing candle history
+        run: |
+          set -euo pipefail
+          python -m paper_pov.rolling_learning_predictions --ledger evidence/ledger.json \
+            --previous evidence/prior/learning-predictions.json --output evidence/learning-predictions.json
       - name: Reconstruct only authentic completed Kraken outcomes and shadow evidence
         run: |
-          python -m paper_pov.observed_kraken_outcomes evidence/ledger.json evidence/kraken-candles.json --output evidence/observed-outcomes.json
-          python -m paper_pov.observed_shadow_handoff evidence/ledger.json evidence/observed-outcomes.json --candles-json evidence/kraken-candles.json --output evidence/shadow-handoff.json
+          python -m paper_pov.observed_kraken_outcomes evidence/learning-predictions.json evidence/kraken-candles.json --output evidence/observed-outcomes.json
+          python -m paper_pov.observed_shadow_handoff evidence/learning-predictions.json evidence/observed-outcomes.json --candles-json evidence/kraken-candles.json --output evidence/shadow-handoff.json
       - name: Evaluate frozen historical Q3 model on genuinely later WATCHs (read only)
         run: |
           python -m paper_pov.frozen_historical_shadow \
@@ -169,6 +177,7 @@ jobs:
         with:
           name: public-paper-learning-${{ github.run_id }}
           path: |
+            evidence/learning-predictions.json
             evidence/learning-state.json
             evidence/learning-report.md
             evidence/paper-learning-results.md
