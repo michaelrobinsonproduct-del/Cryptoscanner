@@ -19,7 +19,7 @@ def call(label,path,body=None):
     except urllib.error.HTTPError as e:
         try: codes=[x.get("code") for x in json.load(e).get("errors",[]) if isinstance(x.get("code"),int)]
         except Exception: codes=[]
-        emit(label,http=e.code,error_codes=codes)
+        emit(label,http=e.code,error_codes=codes,content_type=("json" if "json" in e.headers.get("Content-Type","") else "other"))
     except Exception as e:
         emit(label,error_type=type(e).__name__)
     return None
@@ -30,6 +30,10 @@ if not TOKEN:
     raise SystemExit(1)
 emit("TOKEN",present=True)
 # Only inspect this Worker; never print secret values, raw response or unrelated account data.
+for label,path in [("USER_TOKEN_VERIFY","/user/tokens/verify"),("ACCOUNT_TOKEN_VERIFY",f"/accounts/{ACCOUNT}/tokens/verify"),("SCRIPT_SETTINGS",ROOT+"/script-settings"),("LIST_WORKERS",f"/accounts/{ACCOUNT}/workers/scripts")]:
+    reply=call(label,path)
+    if label.endswith("VERIFY") and isinstance(reply,dict):emit(label+"_STATE",active=reply.get("status")=="active")
+    if label=="LIST_WORKERS" and isinstance(reply,list):emit("WORKER_FOUND",present=any(x.get("id")==NAME for x in reply))
 s=call("SETTINGS",ROOT+"/settings")
 if isinstance(s,dict):
     bindings=s.get("bindings",[])
@@ -46,13 +50,15 @@ if isinstance(s,dict):
     emit("DEPLOYMENT",versions=[{"id":safeid(v.get("version_id")),"percentage":v.get("percentage")} for d in s.get("deployments",[])[:1] for v in d.get("versions",[])])
 now=int(time.time()*1000)
 # Query stored logs. Only structured scheduler statuses and invocation metadata are emitted.
-q={"queryId":"cryptoscanner-runtime-diagnostic","dry":True,"timeframe":{"from":now-12*3600000,"to":now},"limit":500,
-   "parameters":{"datasets":["cloudflare-workers"],"filters":[{"key":"$metadata.service","operation":"eq","type":"string","value":NAME}],"filterCombination":"and","view":"events"}}
+q={"queryId":"cryptoscanner-runtime-diagnostic","timeframe":{"from":now-12*3600000,"to":now},"limit":500,
+   "parameters":{"datasets":[],"filters":[{"key":"$metadata.service","operation":"eq","type":"string","value":NAME}],"filterCombination":"and","view":"events"}}
 s=call("TELEMETRY","/accounts/"+ACCOUNT+"/workers/observability/telemetry/query",q)
 if isinstance(s,dict):
     ev=s.get("events") or {}
     events=ev.get("events") or []
-    emit("EVENT_COUNT",count=ev.get("count"),returned=len(events))
+    emit("EVENT_COUNT",count=ev.get("count"),returned=len(events),has_events="events" in s,has_run="run" in s)
+    run=s.get("run") or {}
+    if isinstance(run,dict):emit("QUERY_STATE",status=run.get("status") if run.get("status") in ("completed","success","failed","error","running","pending") else None)
     for e in sorted(events,key=lambda e:e.get("timestamp",0)):
         source=e.get("source")
         meta=e.get("$metadata") or {}
