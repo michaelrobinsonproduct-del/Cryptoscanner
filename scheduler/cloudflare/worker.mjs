@@ -1,19 +1,6 @@
 import {DurableObject} from "cloudflare:workers";
-import {REPO,tick} from "./core.mjs";
-function github(env) {
-  if(!env.GITHUB_TOKEN) throw Error("MISSING_GITHUB_TOKEN");
-  return async(path,body)=>{
-    const headers={Authorization:"Bearer "+env.GITHUB_TOKEN,
-      Accept:path.startsWith("contents/")?"application/vnd.github.raw+json":"application/vnd.github+json",
-      "X-GitHub-Api-Version":"2026-03-10","User-Agent":"cryptoscanner-independent-scheduler"};
-    if(body) headers["Content-Type"]="application/json";
-    const res=await fetch("https://api.github.com/repos/"+REPO+"/"+path,
-      {method:body?"POST":"GET",headers,body:body?JSON.stringify(body):undefined,
-       signal:AbortSignal.timeout(8000),redirect:"error"});
-    if(!res.ok) throw Error("GITHUB_HTTP_"+res.status);
-    return res.json();
-  };
-}
+import {tick} from "./core.mjs";
+import {github} from "./github.mjs";
 export class Scheduler extends DurableObject {
   busy=false;
   async run(scheduled) {
@@ -34,7 +21,7 @@ export default {
     console.log(JSON.stringify({status:"TICK_STARTED",scheduled:event.scheduledTime}));
     ctx.waitUntil(env.SCHEDULER.get(env.SCHEDULER.idFromName("single-writer-scheduler")).run(event.scheduledTime).catch(error=>{
       // Only log known status codes; never log credentials or response bodies.
-      const code=/^(GITHUB_HTTP_\d{3}|MISSING_GITHUB_TOKEN|INCOMPLETE_ACTIVE_HISTORY|NO_MAIN_SHA|AMBIGUOUS_DISPATCH)$/.test(error?.message)?error.message:"SCHEDULER_RUNTIME_ERROR";
+      const code=/^(GITHUB_HTTP_\d{3}|GITHUB_REQUEST_TIMEOUT|GITHUB_RESPONSE_INVALID|GITHUB_TRANSPORT_ERROR|MISSING_GITHUB_TOKEN|INCOMPLETE_ACTIVE_HISTORY|NO_MAIN_SHA|AMBIGUOUS_DISPATCH)$/.test(error?.message)?error.message:"SCHEDULER_RUNTIME_ERROR";
       console.error(JSON.stringify({status:code,scheduled:event.scheduledTime}));
       throw Error(code);
     }));

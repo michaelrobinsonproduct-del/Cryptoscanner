@@ -72,3 +72,31 @@ test("server error stays ambiguous and never blindly redispatches",async()=>{
  assert.equal((await r.go()).status,"AMBIGUOUS_STOP");
  assert.equal(r.calls.filter(x=>x[1]).length,1);
 });
+
+import {github,REQUEST_TIMEOUT_MS} from "./github.mjs";
+test("GitHub transport allows slow responses within 25 seconds and logs safe stage",async()=>{
+ const logs=[];let timeout;let elapsed=0;
+ const api=github({GITHUB_TOKEN:"test-secret"},{log:x=>logs.push(JSON.parse(x)),clock:()=>elapsed,
+ timeoutSignal:ms=>{timeout=ms;return {aborted:false}},fetcher:async(url,options)=>{
+  elapsed=8034;assert.equal(options.method,"GET");
+  return {ok:true,status:200,json:async()=>({total_count:0,workflow_runs:[]})};
+ }});
+ await api("actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=100");
+ assert.equal(timeout,25000);assert.equal(REQUEST_TIMEOUT_MS,25000);
+ assert.deepEqual(logs.map(x=>x.status),["GITHUB_REQUEST_STARTED","GITHUB_REQUEST_OK"]);
+ assert.equal(logs[1].stage,"WRITER_ACTIVE_QUEUED");assert.equal(logs[1].elapsed_ms,8034);
+ assert.equal(JSON.stringify(logs).includes("test-secret"),false);
+});
+test("GitHub timeout is identified, POST is never replayed, secrets omitted",async()=>{
+ const logs=[];let n=0;
+ const api=github({GITHUB_TOKEN:"test-secret"},{log:x=>logs.push(JSON.parse(x)),
+ timeoutSignal:()=>({aborted:true}),fetcher:async()=>{n++;throw Error("test-secret")}});
+ await assert.rejects(api("actions/workflows/"+WRITER+"/dispatches",{ref:"main"}),/GITHUB_REQUEST_TIMEOUT/);
+ assert.equal(n,1);assert.equal(logs.at(-1).stage,"DISPATCH");
+ assert.equal(JSON.stringify(logs).includes("test-secret"),false);
+});
+test("explicit HTTP status is preserved for core rejection handling",async()=>{
+ const api=github({GITHUB_TOKEN:"test-secret"},{log:()=>{},timeoutSignal:()=>({aborted:false}),
+ fetcher:async()=>({ok:false,status:422})});
+ await assert.rejects(api("actions/workflows/"+WRITER+"/dispatches",{ref:"main"}),/GITHUB_HTTP_422/);
+});
