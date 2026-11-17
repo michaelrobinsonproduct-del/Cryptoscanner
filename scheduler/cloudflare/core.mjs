@@ -32,6 +32,44 @@ export function verified(report, run, now) {
   return ranks.every(a=>Array.isArray(a) && a.every(c=>bySymbol.has(c.symbol) &&
     (c.quote_observed_at===undefined || fresh(c.quote_observed_at,now))));
 }
+// Reconcile an exact unresolved intent, never replay its POST. GitHub's
+// native writer mutex is still authoritative if a late run appears.
+// Require complete, fixed-window history; incomplete or inconsistent
+// responses cannot retire an intent. Wait 30 minutes for delayed indexing.
+const RECONCILE_GRACE_MS=30*60*1000;
+async function reconcileAttempt(api,previous,now) {
+  const at=Number(previous.slot);
+  if(!Number.isSafeInteger(at) || at<=0 || String(at)!==previous.slot || at%300000!==0 || at>now)
+    return {status:"AMBIGUOUS_STOP"};
+  const range=encodeURIComponent(new Date(at).toISOString()+".."+new Date(now).toISOString());
+  const path="actions/workflows/"+WRITER+"/runs?branch=main&created="+range+"&per_page=100";
+  let count=null;
+  const items=[];
+  for(let page=1;page<=10;page++){
+    const h=await api(path+"&page="+page);
+    if(!Number.isSafeInteger(h?.total_count)||h.total_count<0||h.total_count>=1000||
+       !Array.isArray(h.workflow_runs)||h.workflow_runs.length>100||
+       (count!==null&&h.total_count!==count)) return {status:"AMBIGUOUS_HISTORY_INCOMPLETE"};
+    count=h.total_count;
+    const expected=Math.min(100,Math.max(0,count-items.length));
+    if(h.workflow_runs.length!==expected)return {status:"AMBIGUOUS_HISTORY_INCOMPLETE"};
+    items.push(...h.workflow_runs);
+    if(items.length===count)break;
+  }
+  if(items.length!==count || new Set(items.map(r=>r?.id)).size!==count ||
+     items.some(r=>!Number.isSafeInteger(r?.id)||r.id<=0||r.head_branch!=="main"||
+       typeof r.display_title!=="string"||typeof r.event!=="string"||
+       !Number.isFinite(Date.parse(r.created_at))||Date.parse(r.created_at)<at||Date.parse(r.created_at)>now))
+    return {status:"AMBIGUOUS_HISTORY_INCOMPLETE"};
+  const matches=items.filter(r=>r.display_title==="paper-api-"+previous.slot);
+  if(matches.length===1 && matches[0].event==="workflow_dispatch")
+    return {status:"MATCH",runId:matches[0].id};
+  if(matches.length!==0)return {status:"AMBIGUOUS_STOP"};
+  if(now-at<RECONCILE_GRACE_MS || items.some(r=>r.status!=="completed"))
+    return {status:"AMBIGUOUS_STOP"};
+  return {status:"NO_MATCH_AFTER_GRACE",count,checkedAt:new Date(now).toISOString()};
+}
+
 export async function tick({api,store,now,scheduled,enabled}) {
   if (!enabled) return {status:"STOPPED"};
   if (!Number.isFinite(scheduled) || now-scheduled<0 || now-scheduled>180000)
@@ -41,10 +79,19 @@ export async function tick({api,store,now,scheduled,enabled}) {
   if (previous && !previous.terminal) {
     let runId=previous.runId;
     if (!runId) {
-      const h=await api("actions/workflows/"+WRITER+"/runs?branch=main&event=workflow_dispatch&per_page=100");
-      const matches=h.workflow_runs.filter(r=>r.display_title==="paper-api-"+previous.slot);
-      if(matches.length!==1) return {status:"AMBIGUOUS_STOP",slot:previous.slot};
-      runId=matches[0].id;
+      const evidence=await reconcileAttempt(api,previous,now);
+      if(evidence.status==="NO_MATCH_AFTER_GRACE") {
+        // Archive the exact original attempt and evidence before releasing it.
+        // Absence is not proof GitHub rejected it; never claim that or replay it.
+        const retired={...previous,terminal:true,outcome:"NO_CORRELATED_RUN_AFTER_GRACE",
+          reconciledAt:evidence.checkedAt,historyCount:evidence.count};
+        await store.put("retired:"+previous.slot,retired);
+        await store.put("attempt",retired);
+        // Resume only on a later scheduled slot, never on the ambiguous one.
+        return {status:"AMBIGUOUS_RETIRED",slot:previous.slot,historyCount:evidence.count};
+      }
+      if(evidence.status!=="MATCH")return {status:evidence.status,slot:previous.slot};
+      runId=evidence.runId;
       await store.put("attempt",{...previous,runId});
     }
     const run=await api("actions/runs/"+runId);
