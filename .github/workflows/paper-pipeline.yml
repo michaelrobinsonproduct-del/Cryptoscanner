@@ -1,6 +1,13 @@
 name: Public Kraken Paper POV (scheduled, isolated ledger)
+run-name: ${{ inputs.scheduler_request_id && format('paper-api-{0}', inputs.scheduler_request_id) || 'Public Kraken Paper POV (scheduled, isolated ledger)' }}
 on:
   workflow_dispatch:
+    inputs:
+      scheduler_request_id:
+        description: 'Optional independent scheduler correlation ID; no scanner settings'
+        type: string
+        required: false
+        default: ''
   # GitHub App request-file push starts this SAME single writer directly.
   # Scheduled recovery remains a separate backup for missed cron slots.
   push:
