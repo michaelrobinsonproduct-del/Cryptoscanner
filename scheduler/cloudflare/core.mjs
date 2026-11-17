@@ -25,9 +25,14 @@ export function verified(report, run, now) {
       l.source_sha!==run.head_sha || !fresh(l.as_of,now) ||
       id(d.writer_run_id)!==id(run.id) || id(d.legacy_run_id)!==id(run.id) ||
       d.ledger_sha256!==report.ledger_sha256) return false;
-  const arrays=[report.candidates,l.candidates,report.rankings?.baseline,report.rankings?.challenger,
-                d.baseline_rankings,d.challenger_watch,d.legacy_watch];
-  return arrays.every(a=>Array.isArray(a) && a.every(c=>fresh(c.quote_observed_at,now)));
+  const arrays=[report.candidates,l.candidates,d.challenger_watch,d.legacy_watch];
+  if(!arrays.every(a=>Array.isArray(a) && a.every(c=>fresh(c.quote_observed_at,now)))) return false;
+  // Compact score-only rank rows have no quote field by design; bind their
+  // symbol to a timestamped candidate instead of treating them as quotes.
+  const bySymbol=new Map(report.candidates.map(c=>[c.symbol,c]));
+  const ranks=[report.rankings?.baseline,report.rankings?.challenger,d.baseline_rankings];
+  return ranks.every(a=>Array.isArray(a) && a.every(c=>bySymbol.has(c.symbol) &&
+    (c.quote_observed_at===undefined || fresh(c.quote_observed_at,now))));
 }
 export async function tick({api,store,now,scheduled,enabled}) {
   if (!enabled) return {status:"STOPPED"};
@@ -72,6 +77,11 @@ export async function tick({api,store,now,scheduled,enabled}) {
          history.total_count>history.workflow_runs.length) throw Error("INCOMPLETE_ACTIVE_HISTORY");
       if(history.total_count) return {status:"EXISTING_WRITER_OR_RELAY",workflow};
     }
+  }
+  const current=await api("contents/verified-results/results.json?ref=paper-proof-ledger");
+  if(fresh(current.as_of,now,240)) {
+    const run=await api("actions/runs/"+current.run_id);
+    if(verified(current,run,now)) return {status:"FRESH_EXISTING",runId:run.id,generation:current.ledger_generation};
   }
   const main=await api("git/ref/heads/main");
   const source=main.object?.sha;
