@@ -160,6 +160,8 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
                                    -x["notional"], x["symbol"]))
     picks = []
     rejects = 0
+    filter_rejections = 0
+    data_rejections = {}
     cutoff = quote_at
     for item in precursors[:max_ohlc]:
         try:
@@ -167,6 +169,7 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
             move15, accel, closed_at = _closed_features(payload, item["pair"], _now(clock))
             if move15 < .05 or accel < 1:
                 rejects += 1
+                filter_rejections += 1
                 continue
             cutoff = max(cutoff, closed_at)
             # Independent rebuild-v2-inspired precursor plus bounded fresh
@@ -184,8 +187,15 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
                           "quote_observed_at": quote_at.isoformat(),
                           "ohlc_last_closed_at": closed_at.isoformat(),
                           "status": "WATCH_PAPER_ONLY"})
-        except (ValueError, TypeError, KeyError, IndexError, ZeroDivisionError, OverflowError):
+        except (ValueError, TypeError, KeyError, IndexError, ZeroDivisionError, OverflowError) as exc:
             rejects += 1
+            reason = str(exc) if isinstance(exc, ValueError) and str(exc) in {
+                "OHLC pair identity mismatch", "Insufficient completed OHLC", "Invalid candle schema",
+                "Unaligned candle", "Invalid or empty completed candle", "OHLC gap or duplicate",
+                "Missing uncommitted candle tail", "Stale or future completed candle", "Invalid previous volume",
+                "Nonfinite candle features", "Boolean market evidence", "Nonfinite market evidence"
+            } else "OTHER_INVALID_OHLC"
+            data_rejections[reason] = data_rejections.get(reason, 0) + 1
         sleep(.15)
     completed = _now(clock)
     if not 0 <= (completed - quote_at).total_seconds() <= 180:
@@ -206,7 +216,9 @@ def scan(*, api=fetch, clock=None, sleep=time.sleep, max_ohlc=16,
             "status": "WATCH_PAPER_ONLY" if picks else "NO_SIGNALS",
             "eligible_usd_pairs": len(eligible), "matched_tickers": matched,
             "valid_tickers": valid, "ohlc_attempts": min(max_ohlc, len(precursors)),
-            "ohlc_rejections": rejects, "candidates": picks,
+            "ohlc_rejections": rejects, "ohlc_filter_rejections": filter_rejections,
+            "ohlc_data_rejections": sum(data_rejections.values()),
+            "ohlc_data_rejection_reasons": data_rejections, "candidates": picks,
             "held_out_lift": None, "trade_executed": False}
 
 
