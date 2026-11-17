@@ -149,6 +149,7 @@ test("actual HTTP Request matches the documented GitHub dispatch wire contract",
   const request=new Request(url,options);
   assert.equal(request.url,"https://api.github.com/repos/michaelrobinsonproduct-del/Cryptoscanner/actions/workflows/paper-pipeline.yml/dispatches");
   assert.equal(request.method,"POST");
+  assert.equal(request.redirect,"manual");
   assert.equal(request.headers.get("authorization"),"Bearer test-secret");
   assert.equal(request.headers.get("accept"),"application/vnd.github+json");
   assert.equal(request.headers.get("content-type"),"application/json");
@@ -197,4 +198,17 @@ test("old intent with a correlated run is tracked, not retired",async()=>{
  assert.equal((await r.go()).status,"WRITER_ACTIVE");
  assert.equal(r.data.get("attempt").runId,222);
  assert.equal(r.calls.filter(x=>x[1]).length,0);
+});
+
+test("Cloudflare-compatible redirect mode allows history GET and never follows authenticated redirect",async()=>{
+ let calls=0;
+ const api=github({GITHUB_TOKEN:"test-secret"},{log:()=>{},fetcher:async(url,options)=>{
+  calls++;
+  assert.equal(options.redirect,"manual");
+  assert.equal(options.method,"GET");
+  assert.equal(options.body,undefined);
+  return new Response(null,{status:302,headers:{Location:"https://example.invalid/never-follow"}});
+ }});
+ await assert.rejects(api("actions/workflows/"+WRITER+"/runs?branch=main"),/GITHUB_HTTP_302/);
+ assert.equal(calls,1);
 });

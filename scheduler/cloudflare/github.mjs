@@ -26,7 +26,9 @@ export function github(env,{fetcher=fetch,log=console.log,clock=Date.now,timeout
     try {
       const res=await fetcher("https://api.github.com/repos/"+REPO+"/"+path,
         {method:body?"POST":"GET",headers,body:body?JSON.stringify(body):undefined,
-         signal,redirect:"error"});
+         // Workers rejects redirect:"error" before sending a request.
+         // Never follow redirects with credentials; reject non-2xx below.
+         signal,redirect:"manual"});
       if(!res.ok) throw Error("GITHUB_HTTP_"+res.status);
       const result=await res.json();
       log(JSON.stringify({status:"GITHUB_REQUEST_OK",stage,http_status:res.status,elapsed_ms:clock()-start}));
@@ -35,7 +37,8 @@ export function github(env,{fetcher=fetch,log=console.log,clock=Date.now,timeout
       const status=/^GITHUB_HTTP_\d{3}$/.test(error?.message)?error.message:
         signal.aborted||error?.name==="TimeoutError"?"GITHUB_REQUEST_TIMEOUT":
         error?.name==="SyntaxError"?"GITHUB_RESPONSE_INVALID":"GITHUB_TRANSPORT_ERROR";
-      log(JSON.stringify({status,stage,elapsed_ms:clock()-start}));
+      log(JSON.stringify({status,stage,elapsed_ms:clock()-start,
+        error_type:["TypeError","SyntaxError","TimeoutError","AbortError","Error"].includes(error?.name)?error.name:"OTHER"}));
       throw Error(status);
     }
   };
