@@ -119,3 +119,44 @@ test("legacy unresolved durable intent is preserved, never erased during migrati
  assert.equal((await r.go()).status,"AMBIGUOUS_STOP");
  assert.equal(r.calls.filter(x=>x[1]).length,0);
 });
+
+import {scheduled as scheduledHandler} from "./scheduled.mjs";
+test("scheduled handler awaits a Cloudflare-style thenable with no native catch method",async()=>{
+ let resolve,called=0,finished=false;
+ const pending=new Promise(r=>{resolve=r});
+ const env={ENABLED:"true",GITHUB_TOKEN:"test-secret",SCHEDULER:{
+  idFromName:name=>{assert.equal(name,"single-writer-scheduler");return name},
+  get:()=>({run:at=>{called++;assert.equal(at,now);return {then:(ok,no)=>pending.then(ok,no)}}})
+ }};
+ const task=scheduledHandler({scheduledTime:now},env).then(result=>{finished=true;return result});
+ await Promise.resolve();
+ assert.equal(called,1);assert.equal(finished,false);
+ resolve({status:"DISPATCH_ACCEPTED",runId:123});
+ assert.deepEqual(await task,{status:"DISPATCH_ACCEPTED",runId:123});
+ assert.equal(finished,true);
+});
+test("scheduled handler observes errors from RPC thenable without making another request",async()=>{
+ let called=0;
+ const env={ENABLED:"true",GITHUB_TOKEN:"test-secret",SCHEDULER:{
+  idFromName:name=>name,get:()=>({run:()=>{called++;return {then:(ok,no)=>no(Error("GITHUB_REQUEST_TIMEOUT"))}}})
+ }};
+ await assert.rejects(scheduledHandler({scheduledTime:now},env),/GITHUB_REQUEST_TIMEOUT/);
+ assert.equal(called,1);
+});
+test("actual HTTP Request matches the documented GitHub dispatch wire contract",async()=>{
+ const slot=String(Math.floor(now/300000)*300000);
+ const api=github({GITHUB_TOKEN:"test-secret"},{log:()=>{},fetcher:async(url,options)=>{
+  const request=new Request(url,options);
+  assert.equal(request.url,"https://api.github.com/repos/michaelrobinsonproduct-del/Cryptoscanner/actions/workflows/paper-pipeline.yml/dispatches");
+  assert.equal(request.method,"POST");
+  assert.equal(request.headers.get("authorization"),"Bearer test-secret");
+  assert.equal(request.headers.get("accept"),"application/vnd.github+json");
+  assert.equal(request.headers.get("content-type"),"application/json");
+  assert.equal(request.headers.get("x-github-api-version"),"2026-03-10");
+  assert.equal(request.headers.get("user-agent"),"cryptoscanner-independent-scheduler");
+  assert.deepEqual(await request.json(),{ref:"main",inputs:{scheduler_request_id:slot}});
+  return new Response(JSON.stringify({workflow_run_id:123,run_url:"https://api.github.com/repos/example/example/actions/runs/123",html_url:"https://github.com/example/example/actions/runs/123"}),{status:200,headers:{"content-type":"application/json"}});
+ }});
+ const result=await api("actions/workflows/"+WRITER+"/dispatches",{ref:"main",inputs:{scheduler_request_id:slot}});
+ assert.equal(result.workflow_run_id,123);
+});
