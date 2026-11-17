@@ -28,7 +28,7 @@ test("exact single dispatch and durable ID",async()=>{
  assert.equal(r.calls.at(-1)[1].inputs.scheduler_request_id,String(Math.floor(now/300000)*300000));
 });
 test("existing active writer blocks dispatch",async()=>{
- const r=rig({"actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=100":()=>({total_count:1,workflow_runs:[{}]})});
+ const r=rig({["actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=100"]:()=>({total_count:1,workflow_runs:[{}]})});
  assert.equal((await r.go()).status,"EXISTING_WRITER_OR_RELAY");assert.equal(r.calls.filter(x=>x[1]).length,0);
 });
 test("lost response remains durable; no second dispatch",async()=>{
@@ -39,7 +39,7 @@ test("lost response remains durable; no second dispatch",async()=>{
  assert.equal(r.calls.filter(x=>x[1]).length,1);
 });
 test("incomplete history fails before dispatch",async()=>{
- const r=rig({"actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=100":()=>({total_count:2,workflow_runs:[{}]})});
+ const r=rig({["actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=100"]:()=>({total_count:2,workflow_runs:[{}]})});
  await assert.rejects(r.go(),/INCOMPLETE/);assert.equal(r.calls.filter(x=>x[1]).length,0);
 });
 test("exact published receipt with both scanners and quote times",()=>{
