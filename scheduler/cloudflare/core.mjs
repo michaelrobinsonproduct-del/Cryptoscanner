@@ -1,8 +1,6 @@
 // Existing paper writer only. No Kraken requests, waits, or ledger mutations.
 export const REPO = "michaelrobinsonproduct-del/Cryptoscanner";
 export const WRITER = "paper-pipeline.yml";
-const RELAY = "paper-relay-pilot.yml";
-const ACTIVE = ["queued","in_progress","waiting","pending","requested"];
 const age = (value, now) => (now - Date.parse(value)) / 1000;
 const fresh = (value, now, max=600) => Number.isFinite(age(value,now)) && age(value,now)>=0 && age(value,now)<=max;
 const sha = value => typeof value==="string" && /^[a-f0-9]{40}$/.test(value);
@@ -51,49 +49,34 @@ export async function tick({api,store,now,scheduled,enabled}) {
     }
     const run=await api("actions/runs/"+runId);
     if(run.status!=="completed") return {status:"WRITER_ACTIVE",runId};
-    if(run.conclusion!=="success" || run.head_sha!==previous.source ||
+    if(run.conclusion!=="success" || id(run.id)!==id(runId) || !sha(run.head_sha) ||
+       (previous.source!=null && run.head_sha!==previous.source) || run.head_branch!=="main" ||
+       run.path?.split("@")[0]!==".github/workflows/"+WRITER ||
        run.display_title!=="paper-api-"+previous.slot || run.event!=="workflow_dispatch") {
       await store.put("attempt",{...previous,runId,terminal:true,outcome:"FAILED"});
       return {status:"WRITER_FAILED",runId};
     }
+    // A completed, exact writer can no longer overlap. Persist terminal state
+    // before the optional receipt read: verification failure cannot lock the clock.
+    await store.put("attempt",{...previous,source:run.head_sha,runId,terminal:true,outcome:"RECEIPT_PENDING"});
     const r=await api("contents/verified-results/results.json?ref=paper-proof-ledger");
     if(!verified(r,run,now)) {
       // Never pretend an overwritten/stale receipt confirms the exact writer.
       // If the writer is terminal, release ownership for a different slot only.
-      await store.put("attempt",{...previous,runId,terminal:true,outcome:"UNVERIFIED"});
+      await store.put("attempt",{...previous,source:run.head_sha,runId,terminal:true,outcome:"UNVERIFIED"});
       return {status:"UNVERIFIED_WRITER",runId};
     }
-    await store.put("attempt",{...previous,runId,terminal:true,outcome:"VERIFIED",
+    await store.put("attempt",{...previous,source:run.head_sha,runId,terminal:true,outcome:"VERIFIED",
       generation:r.ledger_generation,checksum:r.ledger_sha256,asOf:r.as_of});
     if(previous.slot===slot || fresh(r.as_of,now,240)) return {status:"VERIFIED",runId,generation:r.ledger_generation};
   }
   if(previous?.slot===slot) return {status:"SLOT_ALREADY_ATTEMPTED"};
-  // Query every nonterminal state for the two real production paths;
-  // stale unrelated issue-comment runs do not block the existing writer.
-  for (const workflow of [WRITER,RELAY]) {
-    // Existence queries need only one row, not 100. Five parallel reads
-    // stay within the Workers six-connection limit and eliminate ten
-    // sequential timeout budgets without weakening the active-run guard.
-    const histories=await Promise.all(ACTIVE.map(status=>
-      api("actions/workflows/"+workflow+"/runs?branch=main&status="+status+"&per_page=1")));
-    for(const history of histories) {
-      if(!Number.isInteger(history?.total_count) || history.total_count<0 ||
-         !Array.isArray(history.workflow_runs) ||
-         (history.total_count===0)!==(history.workflow_runs.length===0))
-        throw Error("INCOMPLETE_ACTIVE_HISTORY");
-    }
-    if(histories.some(history=>history.total_count>0))
-      return {status:"EXISTING_WRITER_OR_RELAY",workflow};
-  }
-  const current=await api("contents/verified-results/results.json?ref=paper-proof-ledger");
-  if(fresh(current.as_of,now,240)) {
-    const run=await api("actions/runs/"+current.run_id);
-    if(verified(current,run,now)) return {status:"FRESH_EXISTING",runId:run.id,generation:current.ledger_generation};
-  }
-  const main=await api("git/ref/heads/main");
-  const source=main.object?.sha;
-  if(!sha(source)) throw Error("NO_MAIN_SHA");
-  // Durable intent BEFORE the POST: an interrupted request cannot be repeated blindly.
+  // Commission the exact same POST that works in GitHub recovery. Cloudflare
+  // owns one durable intent per slot; GitHub already serializes every entry
+  // path with its workflow-level single-writer concurrency group.
+  // Do not depend on unrelated history, ledger or main-ref reads before POST.
+  // The resulting run supplies the actual source SHA for receipt verification.
+  const source=null;
   await store.put("attempt",{slot,source,terminal:false,runId:null});
   let accepted;
   try {
