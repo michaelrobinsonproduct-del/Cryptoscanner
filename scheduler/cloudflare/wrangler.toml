@@ -1,0 +1,22 @@
+name = "cryptoscanner-independent-scheduler"
+main = "worker.mjs"
+compatibility_date = "2026-11-16"
+workers_dev = false
+preview_urls = false
+
+[vars]
+ENABLED = "false"
+
+[triggers]
+crons = ["4-59/5 * * * *"]
+
+[[durable_objects.bindings]]
+name = "SCHEDULER"
+class_name = "Scheduler"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Scheduler"]
+
+[observability]
+enabled = true

@@ -1,0 +1,23 @@
+name: Independent scheduler contracts (offline)
+on:
+  pull_request:
+    paths:
+      - 'scheduler/cloudflare/**'
+      - '.github/workflows/independent-scheduler-ci.yml'
+      - '.github/workflows/paper-pipeline.yml'
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scheduler/cloudflare/core.test.mjs
+      - run: node --check scheduler/cloudflare/worker.mjs
