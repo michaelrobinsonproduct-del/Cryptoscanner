@@ -160,3 +160,41 @@ test("actual HTTP Request matches the documented GitHub dispatch wire contract",
  const result=await api("actions/workflows/"+WRITER+"/dispatches",{ref:"main",inputs:{scheduler_request_id:slot}});
  assert.equal(result.workflow_run_id,123);
 });
+
+test("old uncertain dispatch is retired only after complete exact-slot history; next slot resumes",async()=>{
+ const r=rig();
+ const old=String(Math.floor((now-3600000)/300000)*300000);
+ r.data.set("attempt",{slot:old,source,terminal:false,runId:null});
+ const result=await r.go();
+ assert.equal(result.status,"AMBIGUOUS_RETIRED");
+ assert.equal(result.slot,old);
+ assert.equal(r.calls.filter(x=>x[1]).length,0);
+ assert.ok(r.calls[0][0].includes("created="+encodeURIComponent(new Date(Number(old)).toISOString()+".."+new Date(now).toISOString())));
+ assert.equal(r.data.get("retired:"+old).outcome,"NO_CORRELATED_RUN_AFTER_GRACE");
+ assert.equal(r.data.get("attempt").terminal,true);
+ assert.equal((await r.go({now:now+300000,scheduled:now+300000})).status,"DISPATCH_ACCEPTED");
+ assert.equal(r.calls.filter(x=>x[1]).length,1);
+ assert.notEqual(r.calls.at(-1)[1].inputs.scheduler_request_id,old);
+});
+test("incomplete history, active writer, or duplicate exact correlation never releases intent",async()=>{
+ const old=String(Math.floor((now-3600000)/300000)*300000);
+ const path="actions/workflows/"+WRITER+"/runs?branch=main&created="+encodeURIComponent(new Date(Number(old)).toISOString()+".."+new Date(now).toISOString())+"&per_page=100&page=1";
+ const row={id:1,head_branch:"main",display_title:"other",event:"schedule",created_at:new Date(now-1000).toISOString(),status:"in_progress"};
+ for(const payload of [{total_count:1,workflow_runs:[]},{total_count:1000,workflow_runs:[]},{total_count:1,workflow_runs:[row]},{total_count:2,workflow_runs:[{...row,display_title:"paper-api-"+old,event:"workflow_dispatch"},{...row,id:2,display_title:"paper-api-"+old,event:"workflow_dispatch"}]}]){
+  const r=rig({[path]:()=>payload});
+  r.data.set("attempt",{slot:old,source,terminal:false,runId:null});
+  assert.match((await r.go()).status,/^AMBIGUOUS_(STOP|HISTORY_INCOMPLETE)$/);
+  assert.equal(r.data.get("attempt").terminal,false);
+  assert.equal(r.calls.filter(x=>x[1]).length,0);
+ }
+});
+test("old intent with a correlated run is tracked, not retired",async()=>{
+ const old=String(Math.floor((now-3600000)/300000)*300000);
+ const path="actions/workflows/"+WRITER+"/runs?branch=main&created="+encodeURIComponent(new Date(Number(old)).toISOString()+".."+new Date(now).toISOString())+"&per_page=100&page=1";
+ const row={id:222,head_branch:"main",display_title:"paper-api-"+old,event:"workflow_dispatch",created_at:new Date(now-1000).toISOString(),status:"queued"};
+ const r=rig({[path]:()=>({total_count:1,workflow_runs:[row]}),"actions/runs/222":()=>row});
+ r.data.set("attempt",{slot:old,source,terminal:false,runId:null});
+ assert.equal((await r.go()).status,"WRITER_ACTIVE");
+ assert.equal(r.data.get("attempt").runId,222);
+ assert.equal(r.calls.filter(x=>x[1]).length,0);
+});
