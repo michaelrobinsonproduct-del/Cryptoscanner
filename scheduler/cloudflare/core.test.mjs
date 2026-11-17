@@ -24,13 +24,10 @@ test("stopped and expired do not call GitHub",async()=>{
 test("exact single dispatch and durable ID",async()=>{
  const r=rig();const v=await r.go();assert.equal(v.runId,123);
  assert.equal(r.data.get("attempt").runId,123);
- assert.equal(r.calls.filter(x=>x[1]).length,1);
+ assert.equal(r.calls.length,1); // POST is the first and only network request on a new slot
  assert.deepEqual(r.calls.at(-1)[1],{ref:"main",inputs:{scheduler_request_id:String(Math.floor(now/300000)*300000)}});
 });
-test("existing active writer blocks dispatch",async()=>{
- const r=rig({["actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=1"]:()=>({total_count:1,workflow_runs:[{}]})});
- assert.equal((await r.go()).status,"EXISTING_WRITER_OR_RELAY");assert.equal(r.calls.filter(x=>x[1]).length,0);
-});
+
 test("lost response remains durable; no second dispatch",async()=>{
  const path="actions/workflows/"+WRITER+"/dispatches";
  const r=rig({[path]:()=>{throw Error("lost response")}});
@@ -38,10 +35,7 @@ test("lost response remains durable; no second dispatch",async()=>{
  assert.equal((await r.go()).status,"AMBIGUOUS_STOP");
  assert.equal(r.calls.filter(x=>x[1]).length,1);
 });
-test("incomplete history fails before dispatch",async()=>{
- const r=rig({["actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=1"]:()=>({total_count:2,workflow_runs:[]})});
- await assert.rejects(r.go(),/INCOMPLETE/);assert.equal(r.calls.filter(x=>x[1]).length,0);
-});
+
 test("exact published receipt with both scanners and quote times",()=>{
  const t=new Date(now-1000).toISOString(), c={symbol:"ABC/USD",quote_observed_at:t}, ranking={symbol:"ABC/USD",rank:1,score:40};
  const run={id:123,head_sha:source,head_branch:"main",path:".github/workflows/"+WRITER,status:"completed",conclusion:"success"};
@@ -101,34 +95,27 @@ test("explicit HTTP status is preserved for core rejection handling",async()=>{
  await assert.rejects(api("actions/workflows/"+WRITER+"/dispatches",{ref:"main"}),/GITHUB_HTTP_422/);
 });
 
-test("active guard uses one-row existence checks and parallel batches",async()=>{
- const r=rig();
+
+
+test("accepted Cloudflare writer prevents duplicate request while active",async()=>{
+ const r=rig({"actions/runs/123":()=>({status:"in_progress"})});
  await r.go();
- const reads=r.calls.filter(([path])=>path.includes("&status="));
- assert.equal(reads.length,10);
- assert.ok(reads.every(([path])=>path.endsWith("&per_page=1")));
- const path="actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=1";
- const active=rig({[path]:()=>({total_count:42,workflow_runs:[{id:1}]})});
- assert.equal((await active.go()).status,"EXISTING_WRITER_OR_RELAY");
- assert.equal(active.calls.filter(x=>x[1]).length,0);
- const started=[];
- let release;
- const gate=new Promise(resolve=>{release=resolve});
- const api=async(path,body)=>{
-   if(path.includes(WRITER+"/runs?")&&path.includes("&status=")) {
-     started.push(path);
-     if(started.length===5)release();
-     await gate;
-     return {total_count:0,workflow_runs:[]};
-   }
-   if(path.includes("/runs?"))return {total_count:0,workflow_runs:[]};
-   if(path.startsWith("contents/"))return {as_of:new Date(now-601000).toISOString()};
-   if(path==="git/ref/heads/main")return {object:{sha:source}};
-   if(body)return {workflow_run_id:123};
-   throw Error(path);
- };
- const data=new Map();
- const result=await tick({api,store:{get:async k=>data.get(k),put:async(k,v)=>data.set(k,v)},now,scheduled:now,enabled:true});
- assert.equal(started.length,5);
- assert.equal(result.runId,123);
+ assert.equal((await r.go({now:now+300000,scheduled:now+300000})).status,"WRITER_ACTIVE");
+ assert.equal(r.calls.filter(x=>x[1]).length,1);
+});
+test("exact terminal run derives source from GitHub; receipt read failure cannot lock later slots",async()=>{
+ const slot=String(Math.floor(now/300000)*300000);
+ const r=rig({"actions/runs/123":()=>({id:123,head_sha:source,head_branch:"main",path:".github/workflows/"+WRITER,status:"completed",conclusion:"success",event:"workflow_dispatch",display_title:"paper-api-"+slot}),
+ "contents/verified-results/results.json?ref=paper-proof-ledger":()=>{throw Error("GITHUB_REQUEST_TIMEOUT")}});
+ await r.go();
+ await assert.rejects(r.go({now:now+300000,scheduled:now+300000}),/GITHUB_REQUEST_TIMEOUT/);
+ assert.equal(r.data.get("attempt").terminal,true);
+ assert.equal(r.data.get("attempt").source,source);
+ assert.equal((await r.go({now:now+600000,scheduled:now+600000})).status,"DISPATCH_ACCEPTED");
+});
+test("legacy unresolved durable intent is preserved, never erased during migration",async()=>{
+ const r=rig();
+ r.data.set("attempt",{slot:"old",source,terminal:false,runId:null});
+ assert.equal((await r.go()).status,"AMBIGUOUS_STOP");
+ assert.equal(r.calls.filter(x=>x[1]).length,0);
 });
