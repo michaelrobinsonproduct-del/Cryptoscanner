@@ -59,8 +59,8 @@ if isinstance(s,dict):
     emit("DEPLOYMENT",versions=[{"id":safeid(v.get("version_id")),"percentage":v.get("percentage")} for d in s.get("deployments",[])[:1] for v in d.get("versions",[])])
 now=int(time.time()*1000)
 # Query stored logs. Only structured scheduler statuses and invocation metadata are emitted.
-q={"queryId":"cryptoscanner-runtime-diagnostic","timeframe":{"from":now-12*3600000,"to":now},"limit":500,
-   "parameters":{"datasets":[],"filters":[{"key":"$metadata.service","operation":"eq","type":"string","value":NAME}],"filterCombination":"and","view":"events"}}
+q={"queryId":"cryptoscanner-runtime-events","view":"events","timeframe":{"from":now-12*3600000,"to":now},"limit":500,
+   "parameters":{"datasets":["cloudflare-workers"],"filters":[{"key":"$workers.scriptName","operation":"eq","type":"string","value":NAME}],"filterCombination":"and"}}
 s=call("TELEMETRY","/accounts/"+ACCOUNT+"/workers/observability/telemetry/query",q)
 if isinstance(s,dict):
     ev=s.get("events") or {}
