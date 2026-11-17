@@ -2,49 +2,49 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-17T22:55:14.100103+00:00
+**UTC as-of:** 2026-11-17T23:00:05.705914+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44194541728
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44195294365
 **Source SHA:** e9b1b6ee47d56a43a454042547735fcd1cdc45a9
-**Previous ledger commit:** df7969e1fec8bef1302ee5638be5ddb9a107c736 (atomic ledger/results publication)
-**Ledger generation:** 464 (remote push/readback verified)
+**Previous ledger commit:** 20ff6628e052fbf57bcddedfee58a3a176294b57 (atomic ledger/results publication)
+**Ledger generation:** 465 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 9s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 8s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 24.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | INJ/USD | 7.282 | 108.797 | 91.798 | +5.55% | +0.40% | 4.81x | 4.1 | 2026-11-17T22:55:05.306041+00:00 | Not calibrated | STRONG 100/100 | HIGH 55/100 | Consider small entry | WATCH |
-| 2 | NEAR/USD | 3.333 | 99.308 | 92.487 | +5.55% | +0.42% | 1.47x | 2.7 | 2026-11-17T22:55:05.306041+00:00 | Not calibrated | STRONG 95/100 | HIGH 55/100 | Watch | WATCH |
-| 3 | ZEC/USD | 951.86 | 95.919 | 92.162 | +5.32% | +0.38% | 1.18x | 0.1 | 2026-11-17T22:55:05.306041+00:00 | Not calibrated | STRONG 83/100 | HIGH 62/100 | Watch | WATCH |
-| 4 | SOL/USD | 74.12 | 78.665 | 79.772 | +3.64% | +0.27% | 0.75x | 1.3 | 2026-11-17T22:55:05.306041+00:00 | Not calibrated | MODERATE 69/100 | HIGH 62/100 | Watch | WATCH |
-| 5 | VVV/USD | 20.814 | 78.653 | 66.899 | +3.31% | -0.65% | 8.54x | 6.7 | 2026-11-17T22:55:05.306041+00:00 | Not calibrated | MODERATE 69/100 | HIGH 61/100 | Watch | WATCH |
-| 6 | XMR/USD | 509.22 | 70.811 | 71.488 | +3.17% | +0.68% | 0.59x | 11.4 | 2026-11-17T22:55:05.306041+00:00 | Not calibrated | MODERATE 60/100 | VERY_HIGH 76/100 | Watch | WATCH |
-| 7 | AKT/USD | 0.5046 | 66.409 | 67.423 | +5.48% | +0.44% | 0.68x | 5.9 | 2026-11-17T22:55:05.306041+00:00 | Not calibrated | MODERATE 63/100 | VERY_HIGH 75/100 | Watch | WATCH |
-| 8 | SUI/USD | 0.7332 | 63.297 | 67.746 | +1.92% | +0.30% | 0.40x | 1.4 | 2026-11-17T22:55:05.306041+00:00 | Not calibrated | MODERATE 62/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 9 | TRUST/USD | 0.04736 | 62.507 | 66.363 | +10.11% | +0.00% | 0.61x | 23.2 | 2026-11-17T22:55:05.306041+00:00 | Not calibrated | WEAK 41/100 | EXTREME 87/100 | Do nothing | WATCH |
-| 10 | XRP/USD | 0.97334 | 61.445 | 68.211 | +1.95% | +0.25% | 0.20x | 0.8 | 2026-11-17T22:55:05.306041+00:00 | Not calibrated | MODERATE 61/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 11 | XDG/USD | 0.0596838 | 56.505 | 63.516 | +1.36% | +0.22% | 0.19x | 0.0 | 2026-11-17T22:55:05.306041+00:00 | Not calibrated | MODERATE 58/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 12 | LTC/USD | 45.04 | 54.452 | 52.528 | +1.28% | +0.31% | 1.04x | 2.2 | 2026-11-17T22:55:05.306041+00:00 | Not calibrated | MODERATE 62/100 | HIGH 62/100 | Watch | WATCH |
+| 1 | INJ/USD | 7.244 | 104.240 | 87.241 | +5.00% | +0.40% | 4.81x | 5.5 | 2026-11-17T22:59:57.265674+00:00 | Not calibrated | STRONG 100/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 2 | NEAR/USD | 3.3207 | 96.727 | 89.906 | +5.16% | +0.42% | 1.47x | 2.4 | 2026-11-17T22:59:57.265674+00:00 | Not calibrated | STRONG 93/100 | HIGH 55/100 | Watch | WATCH |
+| 3 | ZEC/USD | 945.58 | 91.055 | 87.298 | +4.62% | +0.38% | 1.18x | 0.1 | 2026-11-17T22:59:57.265674+00:00 | Not calibrated | STRONG 81/100 | HIGH 62/100 | Watch | WATCH |
+| 4 | STX/USD | 0.2776 | 83.349 | 67.881 | +5.63% | +0.98% | 2.06x | 7.2 | 2026-11-17T22:59:57.265674+00:00 | Not calibrated | STRONG 97/100 | HIGH 60/100 | Consider small entry | WATCH |
+| 5 | SOL/USD | 73.99 | 77.392 | 78.499 | +3.45% | +0.27% | 0.75x | 1.4 | 2026-11-17T22:59:57.265674+00:00 | Not calibrated | MODERATE 69/100 | HIGH 62/100 | Watch | WATCH |
+| 6 | TAO/USD | 195.1212 | 74.505 | 65.179 | +2.05% | +0.29% | 1.79x | 8.3 | 2026-11-17T22:59:57.265674+00:00 | Not calibrated | STRONG 82/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 7 | XMR/USD | 509.36 | 71.883 | 72.560 | +3.20% | +0.68% | 0.59x | 9.6 | 2026-11-17T22:59:57.265674+00:00 | Not calibrated | MODERATE 66/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 8 | TRUST/USD | 0.04728 | 67.799 | 71.655 | +9.93% | +0.00% | 0.61x | 12.7 | 2026-11-17T22:59:57.265674+00:00 | Not calibrated | MODERATE 49/100 | VERY_HIGH 81/100 | Watch | WATCH |
+| 9 | SUI/USD | 0.7321 | 62.226 | 66.674 | +1.77% | +0.30% | 0.40x | 1.4 | 2026-11-17T22:59:57.265674+00:00 | Not calibrated | MODERATE 61/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 10 | XRP/USD | 0.97273 | 61.357 | 68.124 | +1.88% | +0.25% | 0.20x | 0.1 | 2026-11-17T22:59:57.265674+00:00 | Not calibrated | MODERATE 61/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 11 | AAVE/USD | 111.74 | 59.853 | 63.019 | +3.01% | +0.01% | 0.68x | 0.9 | 2026-11-17T22:59:57.265674+00:00 | Not calibrated | MODERATE 50/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 12 | AKT/USD | 0.5037 | 59.736 | 64.098 | +5.29% | +0.08% | 0.52x | 10.0 | 2026-11-17T22:59:57.265674+00:00 | Not calibrated | MODERATE 50/100 | VERY_HIGH 75/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | NEAR/USD | 92.487 | 3.333 | +0.42% | 1.47x |
-| 2 | ZEC/USD | 92.162 | 951.86 | +0.38% | 1.18x |
-| 3 | INJ/USD | 91.798 | 7.282 | +0.40% | 4.81x |
-| 4 | SOL/USD | 79.772 | 74.12 | +0.27% | 0.75x |
-| 5 | XMR/USD | 71.488 | 509.22 | +0.68% | 0.59x |
-| 6 | XRP/USD | 68.211 | 0.97334 | +0.25% | 0.20x |
-| 7 | SUI/USD | 67.746 | 0.7332 | +0.30% | 0.40x |
-| 8 | AKT/USD | 67.423 | 0.5046 | +0.44% | 0.68x |
-| 9 | VVV/USD | 66.899 | 20.814 | -0.65% | 8.54x |
-| 10 | TRUST/USD | 66.363 | 0.04736 | +0.00% | 0.61x |
-| 11 | XDG/USD | 63.516 | 0.0596838 | +0.22% | 0.19x |
-| 12 | LTC/USD | 52.528 | 45.04 | +0.31% | 1.04x |
+| 1 | NEAR/USD | 89.906 | 3.3207 | +0.42% | 1.47x |
+| 2 | ZEC/USD | 87.298 | 945.58 | +0.38% | 1.18x |
+| 3 | INJ/USD | 87.241 | 7.244 | +0.40% | 4.81x |
+| 4 | SOL/USD | 78.499 | 73.99 | +0.27% | 0.75x |
+| 5 | XMR/USD | 72.560 | 509.36 | +0.68% | 0.59x |
+| 6 | TRUST/USD | 71.655 | 0.04728 | +0.00% | 0.61x |
+| 7 | XRP/USD | 68.124 | 0.97273 | +0.25% | 0.20x |
+| 8 | STX/USD | 67.881 | 0.2776 | +0.98% | 2.06x |
+| 9 | SUI/USD | 66.674 | 0.7321 | +0.30% | 0.40x |
+| 10 | TAO/USD | 65.179 | 195.1212 | +0.29% | 1.79x |
+| 11 | AKT/USD | 64.098 | 0.5037 | +0.08% | 0.52x |
+| 12 | AAVE/USD | 63.019 | 111.74 | +0.01% | 0.68x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -60,8 +60,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 464; predictions: 4049; observations: 279583.
-- Matured sampled outcomes across 1/6/24/48h: 3195; gap abstentions: 12386. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 465; predictions: 4061; observations: 280192.
+- Matured sampled outcomes across 1/6/24/48h: 3195; gap abstentions: 12398. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -77,33 +77,31 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44194541728 · **Generation:** 464 · **Legacy run:** 44194541728
-**Main quote time:** 2026-11-17T22:55:14.100103+00:00 · **Legacy report time:** 2026-11-17T22:55:23.215740+00:00
+**Writer:** 44195294365 · **Generation:** 465 · **Legacy run:** 44195294365
+**Main quote time:** 2026-11-17T23:00:05.705914+00:00 · **Legacy report time:** 2026-11-17T23:00:16.886766+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | INJ/USD ⭐ | 7.282 | 108.80 | +0.40% | 4.81x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
-| 2 | NEAR/USD ⭐ | 3.333 | 99.31 | +0.42% | 1.47x | STRONG 100/100 | HIGH 55/100 | Watch |
-| 3 | ZEC/USD ⭐ | 951.86 | 95.92 | +0.38% | 1.18x | STRONG 93/100 | HIGH 62/100 | Watch |
-| 4 | SOL/USD | 74.12 | 78.67 | +0.27% | 0.75x | MODERATE 69/100 | HIGH 62/100 | Watch |
-| 5 | VVV/USD | 20.814 | 78.65 | -0.65% | 8.54x | MODERATE 69/100 | HIGH 61/100 | Watch |
-| 6 | XMR/USD | 509.22 | 70.81 | +0.68% | 0.59x | MODERATE 60/100 | VERY_HIGH 76/100 | Watch |
-| 7 | AKT/USD | 0.5046 | 66.41 | +0.44% | 0.68x | MODERATE 63/100 | VERY_HIGH 75/100 | Watch |
-| 8 | SUI/USD | 0.7332 | 63.30 | +0.30% | 0.40x | MODERATE 62/100 | VERY_HIGH 70/100 | Watch |
-| 9 | TRUST/USD | 0.04736 | 62.51 | +0.00% | 0.61x | WEAK 41/100 | EXTREME 87/100 | Do nothing |
-| 10 | XRP/USD | 0.97334 | 61.44 | +0.25% | 0.20x | MODERATE 61/100 | VERY_HIGH 70/100 | Watch |
-| 11 | XDG/USD | 0.0596838 | 56.51 | +0.22% | 0.19x | MODERATE 58/100 | VERY_HIGH 70/100 | Watch |
-| 12 | LTC/USD | 45.04 | 54.45 | +0.31% | 1.04x | MODERATE 62/100 | HIGH 62/100 | Watch |
+| 1 | INJ/USD | 7.244 | 104.24 | +0.40% | 4.81x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 2 | NEAR/USD | 3.3207 | 96.73 | +0.42% | 1.47x | STRONG 93/100 | HIGH 55/100 | Watch |
+| 3 | ZEC/USD | 945.58 | 91.05 | +0.38% | 1.18x | STRONG 81/100 | HIGH 62/100 | Watch |
+| 4 | STX/USD ⭐ | 0.2776 | 83.35 | +0.98% | 2.06x | STRONG 100/100 | HIGH 60/100 | Consider small entry |
+| 5 | SOL/USD | 73.99 | 77.39 | +0.27% | 0.75x | MODERATE 69/100 | HIGH 62/100 | Watch |
+| 6 | TAO/USD | 195.1212 | 74.51 | +0.29% | 1.79x | STRONG 82/100 | HIGH 55/100 | Consider small entry |
+| 7 | XMR/USD | 509.36 | 71.88 | +0.68% | 0.59x | MODERATE 66/100 | VERY_HIGH 70/100 | Watch |
+| 8 | TRUST/USD | 0.04728 | 67.80 | +0.00% | 0.61x | MODERATE 49/100 | VERY_HIGH 81/100 | Watch |
+| 9 | SUI/USD | 0.7321 | 62.23 | +0.30% | 0.40x | MODERATE 61/100 | VERY_HIGH 70/100 | Watch |
+| 10 | XRP/USD | 0.97273 | 61.36 | +0.25% | 0.20x | MODERATE 61/100 | VERY_HIGH 70/100 | Watch |
+| 11 | AAVE/USD | 111.74 | 59.85 | +0.01% | 0.68x | MODERATE 50/100 | VERY_HIGH 70/100 | Watch |
+| 12 | AKT/USD | 0.5037 | 59.74 | +0.08% | 0.52x | MODERATE 50/100 | VERY_HIGH 75/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | INJ/USD ⭐ | 7.282 | 100.00 | +0.40% | 4.81x | 9755 | STRONG 100/100 | HIGH 55/100 | Consider small entry |
-| 2 | NEAR/USD ⭐ | 3.3331 | 98.35 | +0.42% | 1.47x | 14998 | STRONG 100/100 | HIGH 55/100 | Watch |
-| 3 | ZEC/USD ⭐ | 951 | 91.36 | +0.38% | 1.18x | 25954 | STRONG 91/100 | HIGH 62/100 | Watch |
+| 1 | STX/USD ⭐ | 0.2776 | 77.44 | +0.80% | 2.60x | 1397 | STRONG 100/100 | HIGH 60/100 | Consider small entry |
 
-**Same-run overlap:** INJ/USD, NEAR/USD, ZEC/USD
+**Same-run overlap:** STX/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
