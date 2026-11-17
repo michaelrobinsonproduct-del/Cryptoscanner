@@ -140,7 +140,21 @@ class LegacyShadowTests(unittest.TestCase):
     def test_mismatched_ohlc_pair_never_generates_watch(self):
         api = FakeKraken()
         api.bad_ohlc = True
-        self.assertEqual(run(api)["candidates"], [])
+        report = run(api)
+        self.assertEqual(report["candidates"], [])
+        self.assertEqual(report["ohlc_data_rejections"], 16)
+        self.assertEqual(report["ohlc_data_rejection_reasons"], {"OHLC pair identity mismatch": 16})
+        self.assertEqual(report["ohlc_filter_rejections"], 0)
+
+    def test_valid_candles_failing_strategy_are_not_data_errors(self):
+        api = FakeKraken()
+        for row in api.rows:
+            row[6] = 1 if row[0] < api.rows[7][0] else .5
+        report = run(api)
+        self.assertEqual(report["ohlc_rejections"], 16)
+        self.assertEqual(report["ohlc_filter_rejections"], 16)
+        self.assertEqual(report["ohlc_data_rejections"], 0)
+        self.assertEqual(report["ohlc_data_rejection_reasons"], {})
 
     def test_gapped_ohlc_abstains(self):
         api = FakeKraken()

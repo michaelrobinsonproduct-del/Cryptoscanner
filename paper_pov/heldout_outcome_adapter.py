@@ -5,6 +5,7 @@ separately verified receipt and source-qualified outcome records. Unverified
 rows abstain; neither predictions nor missing candles create synthetic labels.
 """
 import argparse
+from bisect import bisect_left, bisect_right
 import json
 from pathlib import Path
 from datetime import timedelta
@@ -37,6 +38,7 @@ def reconstruct_forward_outcomes(predictions, candles, *, evaluation_asof_utc):
         observations.sort(key=lambda item: item[0])
         if len({item[0] for item in observations}) != len(observations):
             raise ValueError("Duplicate candle timestamp")
+    times = {pair: [item[0] for item in rows] for pair, rows in by_pair.items()}
     outcomes = []
     seen = set()
     for prediction in predictions:
@@ -52,9 +54,9 @@ def reconstruct_forward_outcomes(predictions, candles, *, evaluation_asof_utc):
         if not isfinite(price) or price <= 0:
             raise ValueError("Invalid entry price")
         observations = by_pair.get(prediction["pair"], [])
+        timestamps = times.get(prediction["pair"], [])
         for horizon in HORIZONS:
             end = entry + timedelta(hours=horizon)
-            observed = [(t, close, high) for t, close, high in observations if entry < t <= end]
             mature = end <= asof
             # A missing interval cannot be silently treated as a miss.
             # Only completed full 5m candles strictly after the entry may
@@ -64,7 +66,7 @@ def reconstruct_forward_outcomes(predictions, candles, *, evaluation_asof_utc):
                 minutes=5 if entry.minute % 5 == 0 and entry.second == 0 and entry.microsecond == 0 else 10)
             last_full = end.replace(second=0, microsecond=0)
             last_full = last_full - timedelta(minutes=last_full.minute % 5)
-            observed = [(t, close, high) for t, close, high in observed if first_full <= t <= last_full]
+            observed = observations[bisect_left(timestamps, first_full):bisect_right(timestamps, last_full)]
             complete = mature and first_full <= last_full and bool(observed) and all(
                 observed[i][0] - observed[i - 1][0] == timedelta(minutes=5)
                 for i in range(1, len(observed))

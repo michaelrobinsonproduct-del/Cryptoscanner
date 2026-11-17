@@ -27,6 +27,11 @@ def process_observed_outcomes(ledger, observations, *, evaluation_asof_utc):
               "predictions_covered": len(predictions),
               "outcomes": outcomes,
               "complete_5m_outcomes": sum(x["coverage_complete"] for x in outcomes),
+              "per_horizon": {str(h): {"complete": sum(x["coverage_complete"] for x in outcomes if x["horizon_hours"] == h),
+                  "hits": sum(x["hit"] is True for x in outcomes if x["horizon_hours"] == h),
+                  "missing_candles": sum(x["outcome_status"] == "MISSING_CANDLES" for x in outcomes if x["horizon_hours"] == h),
+                  "immature": sum(x["outcome_status"] == "IMMATURE" for x in outcomes if x["horizon_hours"] == h)}
+                  for h in (1,6,24,48)},
               "source_authenticated": False,
               "promotion_authorized": False, "production_applied": False}
     result["evidence_digest"] = canonical_digest(result)
@@ -43,7 +48,8 @@ def main(argv=None):
                                        evaluation_asof_utc=datetime.now(timezone.utc).isoformat())
     args.output.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
     print(json.dumps({"predictions_covered": result["predictions_covered"],
-                      "complete_5m_outcomes": result["complete_5m_outcomes"]}))
+                      "complete_5m_outcomes": result["complete_5m_outcomes"],
+                      "per_horizon": result["per_horizon"]}))
     return result
 
 if __name__ == "__main__":

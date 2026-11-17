@@ -1,5 +1,6 @@
 """Read-only Kraken outcome to existing chronological shadow-learning adapter."""
 import argparse
+from bisect import bisect_right
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -26,7 +27,8 @@ def build_observed_shadow_handoff(ledger, observed, *, evaluation_asof_utc, cand
     for candle in candles or []:
         by_pair.setdefault(candle["pair"], []).append(candle)
     for rows in by_pair.values():
-        rows.sort(key=lambda c: c["timestamp_utc"])
+        rows.sort(key=lambda c: utc_time(c["timestamp_utc"]))
+    times = {pair: [utc_time(c["timestamp_utc"]) for c in rows] for pair, rows in by_pair.items()}
     predictions = []
     for key, outcome in mature.items():
         p = by_id.get(key)
@@ -34,9 +36,15 @@ def build_observed_shadow_handoff(ledger, observed, *, evaluation_asof_utc, cand
             continue
         entry_text = p.get("entry_utc") or p.get("as_of")
         entry = utc_time(entry_text)
-        prior = [c for c in by_pair.get(p["pair"], [])
-                 if utc_time(c["timestamp_utc"]) <= entry]
+        rows = by_pair.get(p["pair"], [])
+        stamps = times.get(p["pair"], [])
+        end = bisect_right(stamps, entry)
+        prior = rows[max(0, end-7):end]
         if len(prior) < 7 or p.get("baseline_score") is None:
+            continue
+        recent_times = stamps[end-7:end]
+        if entry - recent_times[-1] > timedelta(minutes=10) or any(
+                b-a != timedelta(minutes=5) for a,b in zip(recent_times,recent_times[1:])):
             continue
         last = prior[-1]
         before_15 = prior[-4]
