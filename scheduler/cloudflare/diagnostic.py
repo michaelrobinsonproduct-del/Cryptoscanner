@@ -33,7 +33,16 @@ emit("TOKEN",present=True)
 for label,path in [("USER_TOKEN_VERIFY","/user/tokens/verify"),("ACCOUNT_TOKEN_VERIFY",f"/accounts/{ACCOUNT}/tokens/verify"),("SCRIPT_SETTINGS",ROOT+"/script-settings"),("LIST_WORKERS",f"/accounts/{ACCOUNT}/workers/scripts")]:
     reply=call(label,path)
     if label.endswith("VERIFY") and isinstance(reply,dict):emit(label+"_STATE",active=reply.get("status")=="active")
-    if label=="LIST_WORKERS" and isinstance(reply,list):emit("WORKER_FOUND",present=any(x.get("id")==NAME for x in reply))
+    if label=="LIST_WORKERS" and isinstance(reply,list):
+        emit("WORKER_FOUND",count=len(reply),present=any(x.get("id")==NAME for x in reply),scanner_names=[x.get("id") for x in reply if isinstance(x.get("id"),str) and re.fullmatch(r"cryptoscanner[-a-zA-Z0-9]*",x["id"])])
+        for x in reply:
+            n=x.get("id")
+            if isinstance(n,str) and n!=NAME and re.fullmatch(r"cryptoscanner[-a-zA-Z0-9]*",n):
+                alt=f"/accounts/{ACCOUNT}/workers/scripts/{n}"
+                call("ALTERNATE_SETTINGS",alt+"/settings")
+                call("ALTERNATE_SCHEDULES",alt+"/schedules")
+a=call("ACCOUNT_LIST","/accounts")
+if isinstance(a,list):emit("ACCOUNT_SCOPE",count=len(a),expected_account_visible=any(x.get("id")==ACCOUNT for x in a))
 s=call("SETTINGS",ROOT+"/settings")
 if isinstance(s,dict):
     bindings=s.get("bindings",[])
@@ -56,9 +65,9 @@ s=call("TELEMETRY","/accounts/"+ACCOUNT+"/workers/observability/telemetry/query"
 if isinstance(s,dict):
     ev=s.get("events") or {}
     events=ev.get("events") or []
-    emit("EVENT_COUNT",count=ev.get("count"),returned=len(events),has_events="events" in s,has_run="run" in s)
+    emit("EVENT_COUNT",count=ev.get("count"),returned=len(events),has_events="events" in s,has_run="run" in s,known_sections=[k for k in ("run","statistics","events","invocations","calculations","traces","series") if k in s])
     run=s.get("run") or {}
-    if isinstance(run,dict):emit("QUERY_STATE",status=run.get("status") if run.get("status") in ("completed","success","failed","error","running","pending") else None)
+    if isinstance(run,dict):emit("QUERY_STATE",status=run.get("status") if run.get("status") in ("completed","success","failed","error","running","pending","COMPLETED","SUCCESS","FAILED","ERROR","RUNNING","PENDING") else None)
     for e in sorted(events,key=lambda e:e.get("timestamp",0)):
         source=e.get("source")
         meta=e.get("$metadata") or {}
@@ -90,3 +99,7 @@ if isinstance(s,dict):
         found=[k for k,v in signatures.items() if re.search(v,err,re.I)]
         if found:out["error_categories"]=found
         if len(out)>1:emit("EVENT",**out)
+
+# No-filter key discovery: only report whether the known worker fields exist.
+k=call("TELEMETRY_KEYS","/accounts/"+ACCOUNT+"/workers/observability/telemetry/keys",{"timeframe":{"from":now-12*3600000,"to":now},"datasets":[]})
+if isinstance(k,list):emit("KEYS",count=len(k),service_key=any(x.get("key")=="$metadata.service" for x in k),script_key=any(x.get("key")=="$workers.scriptName" for x in k))
