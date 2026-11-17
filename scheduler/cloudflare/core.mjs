@@ -88,8 +88,21 @@ export async function tick({api,store,now,scheduled,enabled}) {
   if(!sha(source)) throw Error("NO_MAIN_SHA");
   // Durable intent BEFORE the POST: an interrupted request cannot be repeated blindly.
   await store.put("attempt",{slot,source,terminal:false,runId:null});
-  const accepted=await api("actions/workflows/"+WRITER+"/dispatches",
-    {ref:"main",inputs:{scheduler_request_id:slot},return_run_details:true});
+  let accepted;
+  try {
+    // REST 2026-03-10 always returns run details; the old opt-in was removed.
+    accepted=await api("actions/workflows/"+WRITER+"/dispatches",
+      {ref:"main",inputs:{scheduler_request_id:slot}});
+  } catch(error) {
+    // Explicit GitHub rejection means no accepted dispatch. Keep this slot
+    // terminal, allowing a later slot after the existing active-writer guards.
+    // Network failures, timeouts and 5xx remain ambiguous and are not retried.
+    if(/^GITHUB_HTTP_(400|401|403|404|422|429)$/.test(error?.message)) {
+      await store.put("attempt",{slot,source,terminal:true,runId:null,outcome:"REJECTED",error:error.message});
+      return {status:"DISPATCH_REJECTED",slot,error:error.message};
+    }
+    throw error;
+  }
   if(!Number.isSafeInteger(accepted?.workflow_run_id) || accepted.workflow_run_id<1)
     throw Error("AMBIGUOUS_DISPATCH");
   await store.put("attempt",{slot,source,terminal:false,runId:accepted.workflow_run_id});

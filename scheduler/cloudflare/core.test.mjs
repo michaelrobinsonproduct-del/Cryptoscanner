@@ -25,7 +25,7 @@ test("exact single dispatch and durable ID",async()=>{
  const r=rig();const v=await r.go();assert.equal(v.runId,123);
  assert.equal(r.data.get("attempt").runId,123);
  assert.equal(r.calls.filter(x=>x[1]).length,1);
- assert.equal(r.calls.at(-1)[1].inputs.scheduler_request_id,String(Math.floor(now/300000)*300000));
+ assert.deepEqual(r.calls.at(-1)[1],{ref:"main",inputs:{scheduler_request_id:String(Math.floor(now/300000)*300000)}});
 });
 test("existing active writer blocks dispatch",async()=>{
  const r=rig({["actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=100"]:()=>({total_count:1,workflow_runs:[{}]})});
@@ -51,4 +51,24 @@ test("exact published receipt with both scanners and quote times",()=>{
  assert.equal(verified(report,run,now+601000),false);
  assert.equal(verified({...report,candidates:[{quote_observed_at:"bad"}]},run,now),false);
  assert.equal(verified({...report,rankings:{baseline:[{symbol:"OTHER/USD"}],challenger:[ranking]}},run,now),false);
+});
+
+test("explicit rejection releases only the later slot, never retries current slot",async()=>{
+ const path="actions/workflows/"+WRITER+"/dispatches";
+ let n=0;
+ const r=rig({[path]:()=>{if(++n===1)throw Error("GITHUB_HTTP_422");return {workflow_run_id:124}}});
+ const first=await r.go();
+ assert.equal(first.status,"DISPATCH_REJECTED");
+ assert.equal(first.error,"GITHUB_HTTP_422");
+ assert.equal(r.data.get("attempt").terminal,true);
+ assert.equal((await r.go()).status,"SLOT_ALREADY_ATTEMPTED");
+ assert.equal((await r.go({now:now+300000,scheduled:now+300000})).runId,124);
+ assert.equal(n,2);
+});
+test("server error stays ambiguous and never blindly redispatches",async()=>{
+ const path="actions/workflows/"+WRITER+"/dispatches";
+ const r=rig({[path]:()=>{throw Error("GITHUB_HTTP_502")}});
+ await assert.rejects(r.go(),/GITHUB_HTTP_502/);
+ assert.equal((await r.go()).status,"AMBIGUOUS_STOP");
+ assert.equal(r.calls.filter(x=>x[1]).length,1);
 });
