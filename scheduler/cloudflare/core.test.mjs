@@ -28,7 +28,7 @@ test("exact single dispatch and durable ID",async()=>{
  assert.deepEqual(r.calls.at(-1)[1],{ref:"main",inputs:{scheduler_request_id:String(Math.floor(now/300000)*300000)}});
 });
 test("existing active writer blocks dispatch",async()=>{
- const r=rig({["actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=100"]:()=>({total_count:1,workflow_runs:[{}]})});
+ const r=rig({["actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=1"]:()=>({total_count:1,workflow_runs:[{}]})});
  assert.equal((await r.go()).status,"EXISTING_WRITER_OR_RELAY");assert.equal(r.calls.filter(x=>x[1]).length,0);
 });
 test("lost response remains durable; no second dispatch",async()=>{
@@ -39,7 +39,7 @@ test("lost response remains durable; no second dispatch",async()=>{
  assert.equal(r.calls.filter(x=>x[1]).length,1);
 });
 test("incomplete history fails before dispatch",async()=>{
- const r=rig({["actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=100"]:()=>({total_count:2,workflow_runs:[{}]})});
+ const r=rig({["actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=1"]:()=>({total_count:2,workflow_runs:[]})});
  await assert.rejects(r.go(),/INCOMPLETE/);assert.equal(r.calls.filter(x=>x[1]).length,0);
 });
 test("exact published receipt with both scanners and quote times",()=>{
@@ -81,7 +81,7 @@ test("GitHub transport allows slow responses within 25 seconds and logs safe sta
   elapsed=8034;assert.equal(options.method,"GET");
   return {ok:true,status:200,json:async()=>({total_count:0,workflow_runs:[]})};
  }});
- await api("actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=100");
+ await api("actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=1");
  assert.equal(timeout,25000);assert.equal(REQUEST_TIMEOUT_MS,25000);
  assert.deepEqual(logs.map(x=>x.status),["GITHUB_REQUEST_STARTED","GITHUB_REQUEST_OK"]);
  assert.equal(logs[1].stage,"WRITER_ACTIVE_QUEUED");assert.equal(logs[1].elapsed_ms,8034);
@@ -99,4 +99,36 @@ test("explicit HTTP status is preserved for core rejection handling",async()=>{
  const api=github({GITHUB_TOKEN:"test-secret"},{log:()=>{},timeoutSignal:()=>({aborted:false}),
  fetcher:async()=>({ok:false,status:422})});
  await assert.rejects(api("actions/workflows/"+WRITER+"/dispatches",{ref:"main"}),/GITHUB_HTTP_422/);
+});
+
+test("active guard uses one-row existence checks and parallel batches",async()=>{
+ const r=rig();
+ await r.go();
+ const reads=r.calls.filter(([path])=>path.includes("&status="));
+ assert.equal(reads.length,10);
+ assert.ok(reads.every(([path])=>path.endsWith("&per_page=1")));
+ const path="actions/workflows/"+WRITER+"/runs?branch=main&status=queued&per_page=1";
+ const active=rig({[path]:()=>({total_count:42,workflow_runs:[{id:1}]})});
+ assert.equal((await active.go()).status,"EXISTING_WRITER_OR_RELAY");
+ assert.equal(active.calls.filter(x=>x[1]).length,0);
+ const started=[];
+ let release;
+ const gate=new Promise(resolve=>{release=resolve});
+ const api=async(path,body)=>{
+   if(path.includes(WRITER+"/runs?")&&path.includes("&status=")) {
+     started.push(path);
+     if(started.length===5)release();
+     await gate;
+     return {total_count:0,workflow_runs:[]};
+   }
+   if(path.includes("/runs?"))return {total_count:0,workflow_runs:[]};
+   if(path.startsWith("contents/"))return {as_of:new Date(now-601000).toISOString()};
+   if(path==="git/ref/heads/main")return {object:{sha:source}};
+   if(body)return {workflow_run_id:123};
+   throw Error(path);
+ };
+ const data=new Map();
+ const result=await tick({api,store:{get:async k=>data.get(k),put:async(k,v)=>data.set(k,v)},now,scheduled:now,enabled:true});
+ assert.equal(started.length,5);
+ assert.equal(result.runId,123);
 });

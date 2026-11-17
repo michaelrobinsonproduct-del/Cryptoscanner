@@ -71,12 +71,19 @@ export async function tick({api,store,now,scheduled,enabled}) {
   // Query every nonterminal state for the two real production paths;
   // stale unrelated issue-comment runs do not block the existing writer.
   for (const workflow of [WRITER,RELAY]) {
-    for (const status of ACTIVE) {
-      const history=await api("actions/workflows/"+workflow+"/runs?branch=main&status="+status+"&per_page=100");
-      if(!Number.isInteger(history.total_count) || !Array.isArray(history.workflow_runs) ||
-         history.total_count>history.workflow_runs.length) throw Error("INCOMPLETE_ACTIVE_HISTORY");
-      if(history.total_count) return {status:"EXISTING_WRITER_OR_RELAY",workflow};
+    // Existence queries need only one row, not 100. Five parallel reads
+    // stay within the Workers six-connection limit and eliminate ten
+    // sequential timeout budgets without weakening the active-run guard.
+    const histories=await Promise.all(ACTIVE.map(status=>
+      api("actions/workflows/"+workflow+"/runs?branch=main&status="+status+"&per_page=1")));
+    for(const history of histories) {
+      if(!Number.isInteger(history?.total_count) || history.total_count<0 ||
+         !Array.isArray(history.workflow_runs) ||
+         (history.total_count===0)!==(history.workflow_runs.length===0))
+        throw Error("INCOMPLETE_ACTIVE_HISTORY");
     }
+    if(histories.some(history=>history.total_count>0))
+      return {status:"EXISTING_WRITER_OR_RELAY",workflow};
   }
   const current=await api("contents/verified-results/results.json?ref=paper-proof-ledger");
   if(fresh(current.as_of,now,240)) {
