@@ -15,6 +15,16 @@ REPO = "michaelrobinsonproduct-del/Cryptoscanner"
 NAME = "Public Kraken Paper POV (scheduled, isolated ledger)"
 PATH = ".github/workflows/paper-pipeline.yml"
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
+API_NAME = re.compile(r"paper-api-([0-9]{13})\Z")
+
+
+def trusted_writer_name(run):
+    name = run.get("name")
+    if name == NAME:
+        return True
+    match = API_NAME.fullmatch(name) if isinstance(name, str) else None
+    return bool(match and run.get("event") == "workflow_dispatch"
+                and int(match.group(1)) % 300000 == 0)
 
 
 def verify_run(event, api, repository, checkout_sha):
@@ -31,7 +41,7 @@ def verify_run(event, api, repository, checkout_sha):
         raise ValueError("GitHub API and event provenance mismatch")
     if (type(api.get("id")) is not int or api["id"] <= 0 or
             type(api.get("run_attempt")) is not int or api["run_attempt"] < 1 or
-            api.get("name") != NAME or api.get("path") != PATH or
+            not trusted_writer_name(api) or api.get("path") != PATH or
             api.get("status") != "completed" or api.get("conclusion") != "success" or
             api.get("event") not in ("schedule", "workflow_dispatch") or
             api.get("head_branch") != "main" or
