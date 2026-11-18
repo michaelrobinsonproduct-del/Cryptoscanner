@@ -65,9 +65,15 @@ jobs:
         run: |
           python -m paper_pov.market_wide_learning /tmp/kraken-archive/q3.zip \
             --archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
-            --archive-start 2026-09-01T00:00:00Z --archive-end 2026-09-08T00:00:00Z \
+            --archive-start 2026-09-01T00:00:00Z --archive-end 2026-09-15T00:00:00Z \
             --archive-cohort-output historical/output/market-wide-cohorts.jsonl.gz \
             --output historical/output/market-wide-summary.json
+      - name: Fit market-wide shadow model and compare on purged blind holdout
+        run: |
+          python -m paper_pov.market_wide_learning historical/output/market-wide-cohorts.jsonl.gz \
+            --train-cohorts --training-end 2026-09-07T00:00:00Z \
+            --holdout-start 2026-09-09T00:00:00Z --evaluation-asof 2026-09-15T00:00:00Z \
+            --output historical/output/market-wide-shadow.json
       - name: Retain small read-only source and comparison evidence
         if: success()
         uses: actions/upload-artifact@v4
@@ -78,4 +84,5 @@ jobs:
             historical/output/source-archive-SHA256SUMS
             historical/output/market-wide-summary.json
             historical/output/market-wide-cohorts.jsonl.gz
+            historical/output/market-wide-shadow.json
           retention-days: 30
