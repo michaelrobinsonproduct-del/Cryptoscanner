@@ -2,45 +2,41 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T17:40:14.361363+00:00
+**UTC as-of:** 2026-11-18T17:45:15.880412+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44361104320
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44362017173
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** 4d57062c7a5d9b15fbe36fecb7f350a368e27cef (atomic ledger/results publication)
-**Ledger generation:** 626 (remote push/readback verified)
+**Previous ledger commit:** 3e7f375dba1564cfe9b87a5d330cb0cc14b5f9ba (atomic ledger/results publication)
+**Ledger generation:** 627 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 15.
+**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 16.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | SENT/USD | 0.020006 | 73.193 | 59.289 | +7.16% | +0.68% | 2.05x | 33.6 | 2026-11-18T17:40:10.258550+00:00 | Not calibrated | STRONG 82/100 | VERY_HIGH 79/100 | Watch | WATCH |
-| 2 | NIGHT/USD | 0.04516 | 68.665 | 50.717 | +0.60% | +1.90% | 1.85x | 4.4 | 2026-11-18T17:40:10.258550+00:00 | Not calibrated | STRONG 79/100 | HIGH 55/100 | Watch | WATCH |
-| 3 | TRUST/USD | 0.04988 | 61.816 | 64.803 | +5.79% | +0.54% | 0.43x | 16.0 | 2026-11-18T17:40:10.258550+00:00 | Not calibrated | MODERATE 56/100 | VERY_HIGH 81/100 | Watch | WATCH |
-| 4 | MNT/USD | 0.3847 | 52.040 | 47.998 | +3.05% | -0.31% | 1.56x | 10.4 | 2026-11-18T17:40:10.258550+00:00 | Not calibrated | WEAK 41/100 | VERY_HIGH 72/100 | Watch | WATCH |
-| 5 | MEGA/USD | 0.05365 | 50.819 | 47.217 | +3.89% | +0.32% | 1.20x | 22.3 | 2026-11-18T17:40:10.258550+00:00 | Not calibrated | MODERATE 50/100 | EXTREME 86/100 | Do nothing | WATCH |
-| 6 | XPL/USD | 0.0467 | 29.533 | 27.177 | +0.65% | +0.00% | 1.24x | 21.5 | 2026-11-18T17:40:10.258550+00:00 | Not calibrated | WEAK 30/100 | VERY_HIGH 79/100 | Do nothing | WATCH |
-| 7 | ZAMA/USD | 0.0606 | 27.170 | 33.572 | +1.12% | +0.38% | 0.17x | 11.6 | 2026-11-18T17:40:10.258550+00:00 | Not calibrated | WEAK 39/100 | EXTREME 88/100 | Do nothing | WATCH |
-| 8 | FLR/USD | 0.00516 | 27.014 | 28.242 | +0.98% | -0.19% | 0.97x | 19.4 | 2026-11-18T17:40:10.258550+00:00 | Not calibrated | WEAK 14/100 | EXTREME 86/100 | Do nothing | WATCH |
-| 9 | AKE/USD | 0.01003651 | 22.341 | 26.193 | +0.52% | -0.50% | 0.87x | 22.2 | 2026-11-18T17:40:10.258550+00:00 | Not calibrated | WEAK 6/100 | EXTREME 85/100 | Do nothing | WATCH |
-| 10 | AKT/USD | 0.5108 | 21.237 | 28.199 | +0.29% | +0.22% | 0.20x | 11.8 | 2026-11-18T17:40:10.258550+00:00 | Not calibrated | WEAK 36/100 | VERY_HIGH 81/100 | Watch | WATCH |
+| 1 | SENT/USD | 0.019885 | 82.466 | 73.298 | +6.51% | -0.19% | 2.01x | 5.5 | 2026-11-18T17:45:10.557087+00:00 | Not calibrated | STRONG 71/100 | VERY_HIGH 73/100 | Watch | WATCH |
+| 2 | TRUST/USD | 0.04989 | 69.043 | 70.942 | +5.81% | +0.20% | 0.71x | 4.0 | 2026-11-18T17:45:10.557087+00:00 | Not calibrated | MODERATE 65/100 | VERY_HIGH 75/100 | Watch | WATCH |
+| 3 | MNT/USD | 0.3838 | 60.408 | 47.613 | +2.81% | -0.44% | 3.30x | 7.8 | 2026-11-18T17:45:10.557087+00:00 | Not calibrated | MODERATE 60/100 | HIGH 66/100 | Watch | WATCH |
+| 4 | NIGHT/USD | 0.04513 | 55.317 | 49.133 | +0.53% | -0.15% | 1.70x | 6.7 | 2026-11-18T17:45:10.557087+00:00 | Not calibrated | MODERATE 48/100 | HIGH 61/100 | Watch | WATCH |
+| 5 | MEGA/USD | 0.05362 | 51.861 | 47.739 | +3.83% | -0.07% | 1.45x | 20.5 | 2026-11-18T17:45:10.557087+00:00 | Not calibrated | WEAK 36/100 | EXTREME 85/100 | Do nothing | WATCH |
+| 6 | CC/USD | 0.08244 | 34.962 | 34.558 | +0.38% | -1.33% | 1.70x | 7.3 | 2026-11-18T17:45:10.557087+00:00 | Not calibrated | WEAK 37/100 | VERY_HIGH 70/100 | Do nothing | WATCH |
+| 7 | AKT/USD | 0.5112 | 26.974 | 33.651 | +0.37% | +0.22% | 0.22x | 2.0 | 2026-11-18T17:45:10.557087+00:00 | Not calibrated | WEAK 43/100 | VERY_HIGH 75/100 | Watch | WATCH |
+| 8 | ZAMA/USD | 0.06074 | 25.609 | 34.393 | +1.35% | -0.12% | 0.18x | 13.2 | 2026-11-18T17:45:10.557087+00:00 | Not calibrated | WEAK 13/100 | EXTREME 94/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | TRUST/USD | 64.803 | 0.04988 | +0.54% | 0.43x |
-| 2 | SENT/USD | 59.289 | 0.020006 | +0.68% | 2.05x |
-| 3 | NIGHT/USD | 50.717 | 0.04516 | +1.90% | 1.85x |
-| 4 | MNT/USD | 47.998 | 0.3847 | -0.31% | 1.56x |
-| 5 | MEGA/USD | 47.217 | 0.05365 | +0.32% | 1.20x |
-| 6 | ZAMA/USD | 33.572 | 0.0606 | +0.38% | 0.17x |
-| 7 | FLR/USD | 28.242 | 0.00516 | -0.19% | 0.97x |
-| 8 | AKT/USD | 28.199 | 0.5108 | +0.22% | 0.20x |
-| 9 | XPL/USD | 27.177 | 0.0467 | +0.00% | 1.24x |
-| 10 | AKE/USD | 26.193 | 0.01003651 | -0.50% | 0.87x |
+| 1 | SENT/USD | 73.298 | 0.019885 | -0.19% | 2.01x |
+| 2 | TRUST/USD | 70.942 | 0.04989 | +0.20% | 0.71x |
+| 3 | NIGHT/USD | 49.133 | 0.04513 | -0.15% | 1.70x |
+| 4 | MEGA/USD | 47.739 | 0.05362 | -0.07% | 1.45x |
+| 5 | MNT/USD | 47.613 | 0.3838 | -0.44% | 3.30x |
+| 6 | CC/USD | 34.558 | 0.08244 | -1.33% | 1.70x |
+| 7 | ZAMA/USD | 34.393 | 0.06074 | -0.12% | 0.18x |
+| 8 | AKT/USD | 33.651 | 0.5112 | +0.22% | 0.22x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -56,15 +52,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 626; predictions: 5346; observations: 378241.
-- Matured sampled outcomes across 1/6/24/48h: 4634; gap abstentions: 13125. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 627; predictions: 5354; observations: 378850.
+- Matured sampled outcomes across 1/6/24/48h: 4653; gap abstentions: 13125. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 5; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 8; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -73,31 +69,27 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44361104320 · **Generation:** 626 · **Legacy run:** 44361104320
-**Main quote time:** 2026-11-18T17:40:14.361363+00:00 · **Legacy report time:** 2026-11-18T17:40:46.002702+00:00
+**Writer:** 44362017173 · **Generation:** 627 · **Legacy run:** 44362017173
+**Main quote time:** 2026-11-18T17:45:15.880412+00:00 · **Legacy report time:** 2026-11-18T17:45:43.170255+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD ⭐ | 0.020006 | 73.19 | +0.68% | 2.05x | STRONG 92/100 | VERY_HIGH 79/100 | Watch |
-| 2 | NIGHT/USD ⭐ | 0.04516 | 68.67 | +1.90% | 1.85x | STRONG 89/100 | HIGH 55/100 | Consider small entry |
-| 3 | TRUST/USD | 0.04988 | 61.82 | +0.54% | 0.43x | MODERATE 56/100 | VERY_HIGH 81/100 | Watch |
-| 4 | MNT/USD | 0.3847 | 52.04 | -0.31% | 1.56x | WEAK 41/100 | VERY_HIGH 72/100 | Watch |
-| 5 | MEGA/USD ⭐ | 0.05365 | 50.82 | +0.32% | 1.20x | MODERATE 60/100 | EXTREME 86/100 | Do nothing |
-| 6 | XPL/USD | 0.0467 | 29.53 | +0.00% | 1.24x | WEAK 30/100 | VERY_HIGH 79/100 | Do nothing |
-| 7 | ZAMA/USD | 0.0606 | 27.17 | +0.38% | 0.17x | WEAK 39/100 | EXTREME 88/100 | Do nothing |
-| 8 | FLR/USD | 0.00516 | 27.01 | -0.19% | 0.97x | WEAK 14/100 | EXTREME 86/100 | Do nothing |
-| 9 | AKE/USD | 0.01003651 | 22.34 | -0.50% | 0.87x | WEAK 6/100 | EXTREME 85/100 | Do nothing |
-| 10 | AKT/USD | 0.5108 | 21.24 | +0.22% | 0.20x | WEAK 36/100 | VERY_HIGH 81/100 | Watch |
+| 1 | SENT/USD | 0.019885 | 82.47 | -0.19% | 2.01x | STRONG 71/100 | VERY_HIGH 73/100 | Watch |
+| 2 | TRUST/USD | 0.04989 | 69.04 | +0.20% | 0.71x | MODERATE 65/100 | VERY_HIGH 75/100 | Watch |
+| 3 | MNT/USD | 0.3838 | 60.41 | -0.44% | 3.30x | MODERATE 60/100 | HIGH 66/100 | Watch |
+| 4 | NIGHT/USD | 0.04513 | 55.32 | -0.15% | 1.70x | MODERATE 48/100 | HIGH 61/100 | Watch |
+| 5 | MEGA/USD | 0.05362 | 51.86 | -0.07% | 1.45x | WEAK 36/100 | EXTREME 85/100 | Do nothing |
+| 6 | CC/USD | 0.08244 | 34.96 | -1.33% | 1.70x | WEAK 37/100 | VERY_HIGH 70/100 | Do nothing |
+| 7 | AKT/USD | 0.5112 | 26.97 | +0.22% | 0.22x | WEAK 43/100 | VERY_HIGH 75/100 | Watch |
+| 8 | ZAMA/USD | 0.06074 | 25.61 | -0.12% | 0.18x | WEAK 13/100 | EXTREME 94/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD ⭐ | 0.020006 | 76.89 | +0.68% | 2.05x | 5991 | STRONG 100/100 | HIGH 67/100 | Consider small entry |
-| 2 | MEGA/USD ⭐ | 0.05365 | 59.12 | +0.32% | 1.20x | 1196 | STRONG 70/100 | VERY_HIGH 80/100 | Watch |
-| 3 | NIGHT/USD ⭐ | 0.04516 | 51.22 | +1.90% | 1.85x | 16170 | STRONG 81/100 | HIGH 55/100 | Consider small entry |
+| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
 
-**Same-run overlap:** SENT/USD, NIGHT/USD, MEGA/USD
+**Same-run overlap:** None
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
