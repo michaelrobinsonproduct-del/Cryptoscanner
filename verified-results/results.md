@@ -2,33 +2,37 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T00:25:06.774059+00:00
+**UTC as-of:** 2026-11-18T00:30:09.957293+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44207570703
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44208242204
 **Source SHA:** 394c17eeb7071fba40e02dbbb1ea97cedb3a0a8a
-**Previous ledger commit:** 0e8c22dc88433312cf1ff59d3b1dc4f73e8cd3aa (atomic ledger/results publication)
-**Ledger generation:** 482 (remote push/readback verified)
+**Previous ledger commit:** 2244ccf2bb3928acc69e700d65dc8d091b97f6aa (atomic ledger/results publication)
+**Ledger generation:** 483 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 18.
+**Freshness:** Kraken public ticker client-observed, max quote age 8s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 20.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | TAO/USD | 198.5967 | 49.325 | 56.032 | +0.53% | +0.13% | 0.26x | 5.4 | 2026-11-18T00:24:59.810461+00:00 | Not calibrated | MODERATE 45/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 2 | VVV/USD | 21.186 | 48.023 | 48.209 | +0.76% | +0.24% | 0.86x | 11.3 | 2026-11-18T00:24:59.810461+00:00 | Not calibrated | MODERATE 49/100 | HIGH 68/100 | Watch | WATCH |
-| 3 | SENT/USD | 0.018761 | 46.929 | 31.396 | +0.49% | +0.11% | 4.70x | 5.9 | 2026-11-18T00:24:59.810461+00:00 | Not calibrated | MODERATE 68/100 | HIGH 67/100 | Watch | WATCH |
-| 4 | KAS/USD | 0.02757 | 21.972 | 29.544 | +0.29% | +0.18% | 0.15x | 10.9 | 2026-11-18T00:24:59.810461+00:00 | Not calibrated | WEAK 26/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
+| 1 | VVV/USD | 21.095 | 64.413 | 47.031 | +0.33% | +0.48% | 14.51x | 7.6 | 2026-11-18T00:30:02.250321+00:00 | Not calibrated | STRONG 87/100 | HIGH 55/100 | Watch | WATCH |
+| 2 | TAO/USD | 198.2081 | 56.541 | 54.321 | +0.34% | +0.10% | 1.17x | 6.1 | 2026-11-18T00:30:02.250321+00:00 | Not calibrated | MODERATE 53/100 | HIGH 62/100 | Watch | WATCH |
+| 3 | SENT/USD | 0.018771 | 49.602 | 32.838 | +0.55% | +0.35% | 5.33x | 3.7 | 2026-11-18T00:30:02.250321+00:00 | Not calibrated | STRONG 80/100 | HIGH 67/100 | Watch | WATCH |
+| 4 | XLM/USD | 0.141707 | 43.225 | 43.798 | +0.26% | +0.23% | 0.83x | 3.6 | 2026-11-18T00:30:02.250321+00:00 | Not calibrated | MODERATE 52/100 | HIGH 62/100 | Watch | WATCH |
+| 5 | KAS/USD | 0.02763 | 30.510 | 29.294 | +0.51% | +0.29% | 0.98x | 14.5 | 2026-11-18T00:30:02.250321+00:00 | Not calibrated | WEAK 40/100 | VERY_HIGH 73/100 | Watch | WATCH |
+| 6 | CAP/USD | 0.101413 | 22.145 | 28.806 | +0.43% | +0.50% | 0.08x | 13.6 | 2026-11-18T00:30:02.250321+00:00 | Not calibrated | WEAK 36/100 | VERY_HIGH 81/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | TAO/USD | 56.032 | 198.5967 | +0.13% | 0.26x |
-| 2 | VVV/USD | 48.209 | 21.186 | +0.24% | 0.86x |
-| 3 | SENT/USD | 31.396 | 0.018761 | +0.11% | 4.70x |
-| 4 | KAS/USD | 29.544 | 0.02757 | +0.18% | 0.15x |
+| 1 | TAO/USD | 54.321 | 198.2081 | +0.10% | 1.17x |
+| 2 | VVV/USD | 47.031 | 21.095 | +0.48% | 14.51x |
+| 3 | XLM/USD | 43.798 | 0.141707 | +0.23% | 0.83x |
+| 4 | SENT/USD | 32.838 | 0.018771 | +0.35% | 5.33x |
+| 5 | KAS/USD | 29.294 | 0.02763 | +0.29% | 0.98x |
+| 6 | CAP/USD | 28.806 | 0.101413 | +0.50% | 0.08x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -44,8 +48,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 482; predictions: 4215; observations: 290545.
-- Matured sampled outcomes across 1/6/24/48h: 3255; gap abstentions: 12410. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 483; predictions: 4221; observations: 291154.
+- Matured sampled outcomes across 1/6/24/48h: 3267; gap abstentions: 12410. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -61,24 +65,27 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44207570703 · **Generation:** 482 · **Legacy run:** 44207570703
-**Main quote time:** 2026-11-18T00:25:06.774059+00:00 · **Legacy report time:** 2026-11-18T00:25:19.437681+00:00
+**Writer:** 44208242204 · **Generation:** 483 · **Legacy run:** 44208242204
+**Main quote time:** 2026-11-18T00:30:09.957293+00:00 · **Legacy report time:** 2026-11-18T00:30:23.176527+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | TAO/USD | 198.5967 | 49.32 | +0.13% | 0.26x | MODERATE 45/100 | VERY_HIGH 70/100 | Watch |
-| 2 | VVV/USD ⭐ | 21.186 | 48.02 | +0.24% | 0.86x | MODERATE 59/100 | HIGH 68/100 | Watch |
-| 3 | SENT/USD ⭐ | 0.018761 | 46.93 | +0.11% | 4.70x | STRONG 78/100 | HIGH 67/100 | Watch |
-| 4 | KAS/USD | 0.02757 | 21.97 | +0.18% | 0.15x | WEAK 26/100 | VERY_HIGH 81/100 | Do nothing |
+| 1 | VVV/USD ⭐ | 21.095 | 64.41 | +0.48% | 14.51x | STRONG 97/100 | HIGH 55/100 | Consider small entry |
+| 2 | TAO/USD ⭐ | 198.2081 | 56.54 | +0.10% | 1.17x | MODERATE 63/100 | HIGH 62/100 | Watch |
+| 3 | SENT/USD ⭐ | 0.018771 | 49.60 | +0.35% | 5.33x | STRONG 90/100 | HIGH 67/100 | Consider small entry |
+| 4 | XLM/USD | 0.141707 | 43.22 | +0.23% | 0.83x | MODERATE 52/100 | HIGH 62/100 | Watch |
+| 5 | KAS/USD | 0.02763 | 30.51 | +0.29% | 0.98x | WEAK 40/100 | VERY_HIGH 73/100 | Watch |
+| 6 | CAP/USD | 0.101413 | 22.15 | +0.50% | 0.08x | WEAK 36/100 | VERY_HIGH 81/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | VVV/USD ⭐ | 21.17 | 65.42 | +0.68% | 8.91x | 7506 | STRONG 98/100 | HIGH 55/100 | Consider small entry |
-| 2 | SENT/USD ⭐ | 0.018761 | 40.04 | +0.11% | 4.70x | 3791 | STRONG 75/100 | HIGH 67/100 | Watch |
+| 1 | TAO/USD ⭐ | 198.2081 | 48.21 | +0.10% | 1.17x | 5728 | MODERATE 59/100 | HIGH 62/100 | Watch |
+| 2 | VVV/USD ⭐ | 21.095 | 46.48 | +0.48% | 14.51x | 7533 | STRONG 78/100 | HIGH 67/100 | Consider small entry |
+| 3 | SENT/USD ⭐ | 0.018771 | 43.57 | +0.35% | 5.33x | 3799 | STRONG 87/100 | HIGH 67/100 | Consider small entry |
 
-**Same-run overlap:** VVV/USD, SENT/USD
+**Same-run overlap:** VVV/USD, TAO/USD, SENT/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
