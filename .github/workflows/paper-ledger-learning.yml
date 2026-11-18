@@ -169,7 +169,18 @@ jobs:
           gh run download 44227877790 -n post-q3-observed-recovery-44227877790 -D evidence/historical-recovered
           (cd evidence/historical-recovered && sha256sum -c POST-Q3-SHA256SUMS)
           python -c 'import json; d=json.load(open("evidence/historical-recovered/post-q3-summary.json")); assert d["snapshot_set_sha256"]=="b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef" and d["coverage_scope"]=="PARTIAL_PREDICTION_SELECTED_NOT_MARKET_WIDE"'
+          mkdir -p evidence/historical-trades
+          trade_run=""
+          while read -r candidate; do
+            if [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate" --jq '.status + ":" + (.conclusion // "")')" = "completed:success" ]; then
+              trade_run="$candidate"
+              break
+            fi
+          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.expired==false and (.name|startswith("historical-trade-batch-"))) | [.workflow_run.head_branch,.workflow_run.id] | @tsv' | awk -v branch="$GITHUB_HEAD_REF" '$1 == branch {print $2}' | sort -unr)
+          test -n "$trade_run"
+          gh run download "$trade_run" -n "historical-trade-batch-$trade_run" -D evidence/historical-trades
           python -m paper_pov.market_wide_learning evidence/historical-seed/market-wide-cohorts.jsonl.gz \
+            --historical-trade-directory evidence/historical-trades \
             --cumulative-state evidence/market-wide-state.json \
             --cumulative-archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
             --additional-archive evidence/historical-q2/q2-market-wide-cohorts.jsonl.gz fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 \

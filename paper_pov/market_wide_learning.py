@@ -898,7 +898,7 @@ def train_archive_shadow(cohort_path, *, training_end_utc, holdout_start_utc,
 
 
 
-def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256, additional_archives=(), retained_observed=()):
+def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256, additional_archives=(), retained_observed=(), historical_trade_directory=None):
     """Refit on archived and newly matured independent labels, then freeze.
 
     This is a new prospective model, not a repeat of the historical holdout.
@@ -989,6 +989,23 @@ def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256
                     raise ValueError("Retained observation provenance mismatch")
                 ingest(c["anchors"],c["outcomes"],"retained_observed")
         observed_receipts.append({"snapshot_set_sha256":expected,"cohort_sha256":file_hash.hexdigest()})
+    trade_receipts=[]
+    # Event-prioritized samples are potentially outcome-enriched. Retain
+    # their counts in a distinct sensitivity dataset, not the strict fit.
+    # Admit only randomly/outcome-independently sampled windows to the main
+    # fit once that sampling provenance is recorded and verified.
+    trade_examples=trade_positives=0
+    if historical_trade_directory is not None:
+        from .historical_trade_batch import verified_trade_cohorts
+        for c, receipt in verified_trade_cohorts(historical_trade_directory):
+            anchors={a["prediction_id"]:a for a in c["anchors"] if a.get("feature_complete")}
+            for o in c["outcomes"]:
+                if (o["horizon_hours"]==48 and o["prediction_id"] in anchors and
+                    o["coverage_complete"] and type(o["hit"]) is bool and
+                    utc_time(o["label_mature_utc"])<=cutoff):
+                    trade_examples+=1
+                    trade_positives+=int(o["hit"])
+            trade_receipts.append(receipt)
     ingest(state["anchors"],state["outcomes"],"recent_observed")
     keys=sorted(eligible)
     model=train_shadow_challenger([eligible[k] for k in keys],[labels[k] for k in keys],
@@ -1008,6 +1025,9 @@ def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256
             "archive_cohort_sha256":source_receipts[0]["cohort_sha256"],
             "archive_cohort_receipts":source_receipts,"retained_observed_cohort_receipts":observed_receipts,"state_digest":state["digest"],
             "source_counts":counts,"training_data_cutoff_utc":cutoff.isoformat(),
+            "historical_trade_research":{"complete_window_receipts":trade_receipts,
+                "feature_complete_mature_48h_examples":trade_examples,"positive_examples":trade_positives,
+                "included_in_strict_fit":False,"reason":"OUTCOME_ENRICHED_SAMPLING_NOT_YET_QUALIFIED"},
             "state_asof_utc":observed_asof.isoformat(),"purge_hours":48,
             "comparison_status":"FUTURE_HOLDOUT_NOT_YET_MATURE",
             "source_authenticated":False,"production_applied":False,
@@ -1032,6 +1052,7 @@ def main(argv=None):
     parser.add_argument("--cumulative-archive-sha256")
     parser.add_argument("--additional-archive",action="append",nargs=2,metavar=("COHORT_PATH","SHA256"),default=[])
     parser.add_argument("--retained-observed",action="append",nargs=2,metavar=("COHORT_PATH","SNAPSHOT_SET_SHA256"),default=[])
+    parser.add_argument("--historical-trade-directory",type=Path)
     parser.add_argument("--training-end")
     parser.add_argument("--holdout-start")
     parser.add_argument("--evaluation-asof")
@@ -1045,7 +1066,7 @@ def main(argv=None):
             parser.error("Cumulative training requires pinned archive digest")
         report=train_cumulative_market_model(args.ledger,json.loads(args.cumulative_state.read_text()),
                                              expected_archive_sha256=args.cumulative_archive_sha256,
-                                             additional_archives=args.additional_archive,retained_observed=args.retained_observed)
+                                             additional_archives=args.additional_archive,retained_observed=args.retained_observed,historical_trade_directory=args.historical_trade_directory)
         args.output.parent.mkdir(parents=True,exist_ok=True)
         args.output.write_text(json.dumps(report,sort_keys=True)+"\n")
         print(json.dumps(report,sort_keys=True))

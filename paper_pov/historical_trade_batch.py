@@ -135,6 +135,29 @@ def run_batch(pairs,directory,*,prior=None,seed=None,batch_size=3,page_budget=10
         failed_windows=len(failures),attempted=attempted),sort_keys=True))
     return result
 
+
+def verified_trade_cohorts(directory):
+    """Reconstruct complete windows from retained raw pages, not asserted labels."""
+    directory=Path(directory)
+    manifest=json.loads((directory/"manifest.json").read_text())
+    if (manifest.get("schema")!=SCHEMA or manifest.get("digest")!=canonical_digest(
+            {k:v for k,v in manifest.items() if k!="digest"}) or manifest.get("production_applied") is not False):
+        raise ValueError("Invalid historical trade training manifest")
+    seen=set()
+    for rec in manifest["records"]:
+        if rec["key"] in seen or rec["key"]!=key_name(rec["window"]):
+            raise ValueError("Duplicate historical trade window")
+        seen.add(rec["key"])
+        state=checked_state(directory,rec)
+        if not rec["completed"]:
+            continue
+        def reject_fetch(*args):
+            raise ValueError("Completed window must not refetch")
+        _,cohort,_=recover(*rec["window"],previous=state,max_pages=1,fetch_page=reject_fetch)
+        yield cohort,{"window":rec["window"],"cursor_state_sha256":state["digest"],
+                      "sampling_scope":"EVENT_PRIORITIZED_AND_BACKGROUND_NOT_UNBIASED"}
+
+
 def main():
     p=argparse.ArgumentParser()
     p.add_argument("--ledger",type=Path,required=True)
