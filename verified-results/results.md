@@ -2,31 +2,33 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T16:55:15.804649+00:00
+**UTC as-of:** 2026-11-18T17:00:11.222697+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44352644195
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44353569584
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** e8d832a8aeca0c9dcbd13759d85f34a0c06f6286 (atomic ledger/results publication)
-**Ledger generation:** 617 (remote push/readback verified)
+**Previous ledger commit:** fc5c2a57c32f24dfaa914e1f69285e469eee4500 (atomic ledger/results publication)
+**Ledger generation:** 618 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 11.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 12.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | TRUST/USD | 0.04933 | 73.309 | 53.501 | +4.62% | +0.96% | 3.02x | 22.3 | 2026-11-18T16:55:11.911674+00:00 | Not calibrated | STRONG 82/100 | VERY_HIGH 72/100 | Watch | WATCH |
-| 2 | SENT/USD | 0.019614 | 62.330 | 62.404 | +5.06% | +0.77% | 0.61x | 8.2 | 2026-11-18T16:55:11.911674+00:00 | Not calibrated | MODERATE 61/100 | VERY_HIGH 82/100 | Watch | WATCH |
-| 3 | MEGA/USD | 0.05296 | 36.721 | 39.566 | +2.56% | -0.09% | 0.76x | 18.9 | 2026-11-18T16:55:11.911674+00:00 | Not calibrated | WEAK 18/100 | EXTREME 86/100 | Do nothing | WATCH |
+| 1 | SENT/USD | 0.019744 | 71.227 | 69.594 | +5.76% | +1.19% | 0.57x | 3.5 | 2026-11-18T17:00:07.556499+00:00 | Not calibrated | MODERATE 66/100 | VERY_HIGH 82/100 | Watch | WATCH |
+| 2 | TRUST/USD | 0.04929 | 66.977 | 51.875 | +4.54% | +0.02% | 2.77x | 24.4 | 2026-11-18T17:00:07.556499+00:00 | Not calibrated | MODERATE 68/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 3 | ZAMA/USD | 0.06011 | 46.646 | 31.146 | +0.30% | +0.10% | 2.66x | 5.0 | 2026-11-18T17:00:07.556499+00:00 | Not calibrated | MODERATE 68/100 | HIGH 67/100 | Watch | WATCH |
+| 4 | MEGA/USD | 0.05296 | 38.868 | 41.478 | +2.56% | -0.09% | 0.79x | 15.1 | 2026-11-18T17:00:07.556499+00:00 | Not calibrated | WEAK 19/100 | EXTREME 86/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SENT/USD | 62.404 | 0.019614 | +0.77% | 0.61x |
-| 2 | TRUST/USD | 53.501 | 0.04933 | +0.96% | 3.02x |
-| 3 | MEGA/USD | 39.566 | 0.05296 | -0.09% | 0.76x |
+| 1 | SENT/USD | 69.594 | 0.019744 | +1.19% | 0.57x |
+| 2 | TRUST/USD | 51.875 | 0.04929 | +0.02% | 2.77x |
+| 3 | MEGA/USD | 41.478 | 0.05296 | -0.09% | 0.79x |
+| 4 | ZAMA/USD | 31.146 | 0.06011 | +0.10% | 2.66x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,7 +44,7 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 617; predictions: 5277; observations: 372760.
+- Persisted scans: 618; predictions: 5281; observations: 373369.
 - Matured sampled outcomes across 1/6/24/48h: 4544; gap abstentions: 13125. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
@@ -59,22 +61,24 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44352644195 · **Generation:** 617 · **Legacy run:** 44352644195
-**Main quote time:** 2026-11-18T16:55:15.804649+00:00 · **Legacy report time:** 2026-11-18T16:55:40.537875+00:00
+**Writer:** 44353569584 · **Generation:** 618 · **Legacy run:** 44353569584
+**Main quote time:** 2026-11-18T17:00:11.222697+00:00 · **Legacy report time:** 2026-11-18T17:00:32.706939+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | TRUST/USD ⭐ | 0.04933 | 73.31 | +0.96% | 3.02x | STRONG 92/100 | VERY_HIGH 72/100 | Watch |
-| 2 | SENT/USD | 0.019614 | 62.33 | +0.77% | 0.61x | MODERATE 61/100 | VERY_HIGH 82/100 | Watch |
-| 3 | MEGA/USD | 0.05296 | 36.72 | -0.09% | 0.76x | WEAK 18/100 | EXTREME 86/100 | Do nothing |
+| 1 | SENT/USD | 0.019744 | 71.23 | +1.19% | 0.57x | MODERATE 66/100 | VERY_HIGH 82/100 | Watch |
+| 2 | TRUST/USD | 0.04929 | 66.98 | +0.02% | 2.77x | MODERATE 68/100 | VERY_HIGH 72/100 | Watch |
+| 3 | ZAMA/USD ⭐ | 0.06011 | 46.65 | +0.10% | 2.66x | STRONG 78/100 | HIGH 67/100 | Watch |
+| 4 | MEGA/USD | 0.05296 | 38.87 | -0.09% | 0.79x | WEAK 19/100 | EXTREME 86/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | TRUST/USD ⭐ | 0.04933 | 82.26 | +0.96% | 3.02x | 3283 | STRONG 96/100 | VERY_HIGH 72/100 | Watch |
+| 1 | ZAMA/USD ⭐ | 0.06011 | 45.13 | +0.10% | 2.66x | 2933 | STRONG 78/100 | HIGH 67/100 | Watch |
+| 2 | CC/USD | 0.08229 | 30.73 | +0.46% | 1.32x | 4902 | MODERATE 60/100 | HIGH 60/100 | Watch |
 
-**Same-run overlap:** TRUST/USD
+**Same-run overlap:** ZAMA/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
