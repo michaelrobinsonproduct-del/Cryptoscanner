@@ -2,45 +2,43 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T14:45:12.455789+00:00
+**UTC as-of:** 2026-11-18T14:50:11.307776+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44327600628
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44328540433
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** a40e3a8fe533f7524dec768c0a0cbda9d55097bf (atomic ledger/results publication)
-**Ledger generation:** 592 (remote push/readback verified)
+**Previous ledger commit:** 6626c6024aa5c7eb855019298ab9ba50046d48f2 (atomic ledger/results publication)
+**Ledger generation:** 593 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 6s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 22.
+**Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 21.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | NIGHT/USD | 0.04661 | 75.395 | 67.703 | +3.83% | -0.75% | 2.14x | 15.0 | 2026-11-18T14:45:06.503679+00:00 | Not calibrated | MODERATE 63/100 | HIGH 67/100 | Watch | WATCH |
-| 2 | CT/USD | 0.1206 | 68.331 | 67.680 | +6.73% | -1.07% | 1.60x | 16.6 | 2026-11-18T14:45:06.503679+00:00 | Not calibrated | MODERATE 49/100 | VERY_HIGH 83/100 | Watch | WATCH |
-| 3 | SENT/USD | 0.019644 | 62.357 | 65.089 | +5.22% | +0.30% | 0.58x | 5.1 | 2026-11-18T14:45:06.503679+00:00 | Not calibrated | MODERATE 61/100 | VERY_HIGH 82/100 | Watch | WATCH |
-| 4 | STABLE/USD | 0.02311 | 53.997 | 63.012 | +9.79% | -0.30% | 0.25x | 26.0 | 2026-11-18T14:45:06.503679+00:00 | Not calibrated | WEAK 22/100 | EXTREME 100/100 | Do nothing | WATCH |
-| 5 | VVV/USD | 21.109 | 51.949 | 41.315 | +0.39% | -0.41% | 2.27x | 19.9 | 2026-11-18T14:45:06.503679+00:00 | Not calibrated | MODERATE 51/100 | HIGH 67/100 | Watch | WATCH |
-| 6 | CC/USD | 0.08273 | 49.772 | 37.596 | +0.73% | -0.56% | 10.91x | 6.0 | 2026-11-18T14:45:06.503679+00:00 | Not calibrated | MODERATE 55/100 | HIGH 66/100 | Watch | WATCH |
-| 7 | TRX/USD | 0.309244 | 35.880 | 43.193 | +0.44% | -0.25% | 0.39x | 1.5 | 2026-11-18T14:45:06.503679+00:00 | Not calibrated | WEAK 23/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
-| 8 | W/USD | 0.00897 | 29.699 | 29.269 | +0.45% | -0.55% | 1.32x | 11.2 | 2026-11-18T14:45:06.503679+00:00 | Not calibrated | WEAK 30/100 | VERY_HIGH 72/100 | Do nothing | WATCH |
-| 9 | AKT/USD | 0.5165 | 26.295 | 33.597 | +1.41% | -1.28% | 0.91x | 17.4 | 2026-11-18T14:45:06.503679+00:00 | Not calibrated | WEAK 13/100 | VERY_HIGH 83/100 | Do nothing | WATCH |
-| 10 | ME/USD | 0.0392 | 26.216 | 29.575 | +1.55% | -0.51% | 0.92x | 25.5 | 2026-11-18T14:45:06.503679+00:00 | Not calibrated | WEAK 8/100 | EXTREME 92/100 | Do nothing | WATCH |
+| 1 | CT/USD | 0.1212 | 79.447 | 67.731 | +7.26% | +0.17% | 2.09x | 16.5 | 2026-11-18T14:50:04.299774+00:00 | Not calibrated | STRONG 80/100 | VERY_HIGH 73/100 | Watch | WATCH |
+| 2 | SENT/USD | 0.019716 | 67.672 | 67.551 | +5.61% | +0.71% | 0.66x | 5.6 | 2026-11-18T14:50:04.299774+00:00 | Not calibrated | MODERATE 64/100 | VERY_HIGH 82/100 | Watch | WATCH |
+| 3 | NIGHT/USD | 0.04585 | 62.135 | 56.341 | +2.14% | -1.84% | 3.83x | 13.1 | 2026-11-18T14:50:04.299774+00:00 | Not calibrated | MODERATE 56/100 | VERY_HIGH 71/100 | Do nothing | WATCH |
+| 4 | STABLE/USD | 0.02303 | 56.038 | 65.121 | +9.41% | -0.43% | 0.31x | 21.7 | 2026-11-18T14:50:04.299774+00:00 | Not calibrated | WEAK 23/100 | EXTREME 100/100 | Do nothing | WATCH |
+| 5 | VVV/USD | 21.151 | 55.862 | 48.211 | +0.59% | -0.60% | 2.06x | 9.0 | 2026-11-18T14:50:04.299774+00:00 | Not calibrated | MODERATE 58/100 | HIGH 61/100 | Watch | WATCH |
+| 6 | CC/USD | 0.08295 | 50.562 | 36.524 | +1.00% | -0.19% | 14.27x | 12.0 | 2026-11-18T14:50:04.299774+00:00 | Not calibrated | MODERATE 50/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 7 | TRX/USD | 0.309367 | 41.135 | 44.170 | +0.48% | -0.04% | 0.72x | 0.1 | 2026-11-18T14:50:04.299774+00:00 | Not calibrated | WEAK 26/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
+| 8 | AKT/USD | 0.5188 | 36.851 | 36.777 | +1.87% | -0.54% | 1.28x | 17.3 | 2026-11-18T14:50:04.299774+00:00 | Not calibrated | WEAK 23/100 | VERY_HIGH 72/100 | Do nothing | WATCH |
+| 9 | ZAMA/USD | 0.0608 | 35.685 | 36.841 | +1.45% | -0.07% | 0.92x | 9.9 | 2026-11-18T14:50:04.299774+00:00 | Not calibrated | WEAK 23/100 | VERY_HIGH 80/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | NIGHT/USD | 67.703 | 0.04661 | -0.75% | 2.14x |
-| 2 | CT/USD | 67.680 | 0.1206 | -1.07% | 1.60x |
-| 3 | SENT/USD | 65.089 | 0.019644 | +0.30% | 0.58x |
-| 4 | STABLE/USD | 63.012 | 0.02311 | -0.30% | 0.25x |
-| 5 | TRX/USD | 43.193 | 0.309244 | -0.25% | 0.39x |
-| 6 | VVV/USD | 41.315 | 21.109 | -0.41% | 2.27x |
-| 7 | CC/USD | 37.596 | 0.08273 | -0.56% | 10.91x |
-| 8 | AKT/USD | 33.597 | 0.5165 | -1.28% | 0.91x |
-| 9 | ME/USD | 29.575 | 0.0392 | -0.51% | 0.92x |
-| 10 | W/USD | 29.269 | 0.00897 | -0.55% | 1.32x |
+| 1 | CT/USD | 67.731 | 0.1212 | +0.17% | 2.09x |
+| 2 | SENT/USD | 67.551 | 0.019716 | +0.71% | 0.66x |
+| 3 | STABLE/USD | 65.121 | 0.02303 | -0.43% | 0.31x |
+| 4 | NIGHT/USD | 56.341 | 0.04585 | -1.84% | 3.83x |
+| 5 | VVV/USD | 48.211 | 21.151 | -0.60% | 2.06x |
+| 6 | TRX/USD | 44.170 | 0.309367 | -0.04% | 0.72x |
+| 7 | ZAMA/USD | 36.841 | 0.0608 | -0.07% | 0.92x |
+| 8 | AKT/USD | 36.777 | 0.5188 | -0.54% | 1.28x |
+| 9 | CC/USD | 36.524 | 0.08295 | -0.19% | 14.27x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -56,7 +54,7 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 592; predictions: 5046; observations: 357535.
+- Persisted scans: 593; predictions: 5055; observations: 358144.
 - Matured sampled outcomes across 1/6/24/48h: 4268; gap abstentions: 13125. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
@@ -73,29 +71,28 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44327600628 · **Generation:** 592 · **Legacy run:** 44327600628
-**Main quote time:** 2026-11-18T14:45:12.455789+00:00 · **Legacy report time:** 2026-11-18T14:45:38.795285+00:00
+**Writer:** 44328540433 · **Generation:** 593 · **Legacy run:** 44328540433
+**Main quote time:** 2026-11-18T14:50:11.307776+00:00 · **Legacy report time:** 2026-11-18T14:50:31.541664+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | NIGHT/USD | 0.04661 | 75.39 | -0.75% | 2.14x | MODERATE 63/100 | HIGH 67/100 | Watch |
-| 2 | CT/USD | 0.1206 | 68.33 | -1.07% | 1.60x | MODERATE 49/100 | VERY_HIGH 83/100 | Watch |
-| 3 | SENT/USD | 0.019644 | 62.36 | +0.30% | 0.58x | MODERATE 61/100 | VERY_HIGH 82/100 | Watch |
-| 4 | STABLE/USD | 0.02311 | 54.00 | -0.30% | 0.25x | WEAK 22/100 | EXTREME 100/100 | Do nothing |
-| 5 | VVV/USD | 21.109 | 51.95 | -0.41% | 2.27x | MODERATE 51/100 | HIGH 67/100 | Watch |
-| 6 | CC/USD | 0.08273 | 49.77 | -0.56% | 10.91x | MODERATE 55/100 | HIGH 66/100 | Watch |
-| 7 | TRX/USD | 0.309244 | 35.88 | -0.25% | 0.39x | WEAK 23/100 | VERY_HIGH 76/100 | Do nothing |
-| 8 | W/USD | 0.00897 | 29.70 | -0.55% | 1.32x | WEAK 30/100 | VERY_HIGH 72/100 | Do nothing |
-| 9 | AKT/USD | 0.5165 | 26.30 | -1.28% | 0.91x | WEAK 13/100 | VERY_HIGH 83/100 | Do nothing |
-| 10 | ME/USD | 0.0392 | 26.22 | -0.51% | 0.92x | WEAK 8/100 | EXTREME 92/100 | Do nothing |
+| 1 | CT/USD ⭐ | 0.1212 | 79.45 | +0.17% | 2.09x | STRONG 90/100 | VERY_HIGH 73/100 | Watch |
+| 2 | SENT/USD | 0.019716 | 67.67 | +0.71% | 0.66x | MODERATE 64/100 | VERY_HIGH 82/100 | Watch |
+| 3 | NIGHT/USD | 0.04585 | 62.14 | -1.84% | 3.83x | MODERATE 56/100 | VERY_HIGH 71/100 | Do nothing |
+| 4 | STABLE/USD | 0.02303 | 56.04 | -0.43% | 0.31x | WEAK 23/100 | EXTREME 100/100 | Do nothing |
+| 5 | VVV/USD | 21.151 | 55.86 | -0.60% | 2.06x | MODERATE 58/100 | HIGH 61/100 | Watch |
+| 6 | CC/USD | 0.08295 | 50.56 | -0.19% | 14.27x | MODERATE 50/100 | VERY_HIGH 72/100 | Watch |
+| 7 | TRX/USD | 0.309367 | 41.13 | -0.04% | 0.72x | WEAK 26/100 | VERY_HIGH 76/100 | Do nothing |
+| 8 | AKT/USD | 0.5188 | 36.85 | -0.54% | 1.28x | WEAK 23/100 | VERY_HIGH 72/100 | Do nothing |
+| 9 | ZAMA/USD | 0.0608 | 35.69 | -0.07% | 0.92x | WEAK 23/100 | VERY_HIGH 80/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
+| 1 | CT/USD ⭐ | 0.1212 | 63.57 | +0.17% | 2.09x | 1216 | STRONG 77/100 | VERY_HIGH 79/100 | Watch |
 
-**Same-run overlap:** None
+**Same-run overlap:** CT/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
