@@ -1067,6 +1067,45 @@ def choose_fitted_candidate(current, previous=None):
     return current,False
 
 
+
+def build_learning_receipt(observed, training, candidate, *, writer, learning_scope):
+    """Compact read-only delivery evidence; never modify the production result."""
+    if learning_scope not in ("pr","main"):
+        raise ValueError("Invalid learning scope")
+    if observed.get("evidence_digest")!=canonical_digest({k:v for k,v in observed.items() if k!="evidence_digest"}):
+        raise ValueError("Observed report checksum mismatch")
+    state=observed["continuity_state"]
+    if state.get("digest")!=canonical_digest({k:v for k,v in state.items() if k!="digest"}):
+        raise ValueError("Continuity state checksum mismatch")
+    choose_fitted_candidate(training,candidate)
+    if training["state_digest"]!=state["digest"] or observed["ledger_generation"]!=writer["ledger_generation"]:
+        raise ValueError("Learning state/writer provenance mismatch")
+    if state["ledger_generation"]!=writer["ledger_generation"] or observed["evaluation_asof_utc"]!=state["evaluation_asof_utc"]:
+        raise ValueError("Learning state generation/asof mismatch")
+    shadow=observed["prospective_shadow"]
+    snapshot=shadow.get("prospective_snapshot") or {}
+    model=training["model"]
+    eligible=set(observed["eligible_pairs"])
+    receipt={"schema":"market_wide_learning_receipt_v1","learning_scope":learning_scope,
+        "writer_run_id":str(writer["run_id"]),"source_sha":writer["source_sha"],
+        "ledger_generation":writer["ledger_generation"],"ledger_sha256":writer["ledger_sha256"],
+        "evaluation_asof_utc":observed["evaluation_asof_utc"],"state_digest":state["digest"],
+        "active_model_version":snapshot.get("model_version"),"candidate_model_version":candidate["model"]["version"],
+        "training_count":model["training_count"],"positive_count":model["positive_count"],
+        "negative_count":model["negative_count"],"source_counts":training["source_counts"],
+        "training_dataset_digest":model["training_dataset_digest"],
+        "eligible_markets":len(eligible),"cumulative_observed_current_markets":len(eligible&set(state["last_success_generation"])),
+        "retained_anchors":len(state["anchors"]),"timely_shadow_predictions":shadow["timely_recorded_predictions"],
+        "per_horizon_current_shard":observed["per_horizon"],
+        "prospective_by_version_and_horizon":shadow["by_model_and_horizon"],
+        "historical_trade_research":training.get("historical_trade_research",{}),
+        "coverage_scope":observed["coverage_scope"],"fetch_errors":observed["fetch_errors"],
+        "source_authenticated":False,"production_applied":False,"promotion_authorized":False,
+        "measured_lift_verified":False}
+    receipt["digest"]=canonical_digest(receipt)
+    return receipt
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Prediction-independent read-only Kraken outcome smoke")
     parser.add_argument("ledger", type=Path)

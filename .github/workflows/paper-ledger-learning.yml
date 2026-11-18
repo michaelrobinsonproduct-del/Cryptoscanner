@@ -255,10 +255,8 @@ jobs:
           REQUESTED_RUN: ${{ inputs.paper_run_id }}
           GH_REPO: ${{ github.repository }}
         run: |
-          RUN_ID="$REQUESTED_RUN"
           # Resolve the latest completed publication independently of the trigger.
-          if true; then
-            RUN_ID=$(python - <<'PY'
+          RUN_ID=$(python - <<'PY'
           import base64,json,os,subprocess,sys
           from pathlib import Path
           from paper_pov.market_wide_learning import select_completed_learning_publication
@@ -273,23 +271,15 @@ jobs:
           print(mode,file=sys.stderr)
           print(selected["run_id"])
           PY
-            )
-            test -n "$RUN_ID"
-          fi
-          if [ -z "$RUN_ID" ]; then
-            RUN_ID=$(gh api -X GET "repos/$GH_REPO/actions/artifacts?per_page=100" --jq '.artifacts[] | select(.expired == false and (.name | startswith("public-paper-ledger-"))) | .workflow_run.id' | head -n 1)
-          fi
+          )
           test -n "$RUN_ID"
           echo "PAPER_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
       - name: Read existing paper ledger artifact
         run: |
           mkdir -p evidence
           gh run download "$PAPER_RUN_ID" -n "public-paper-ledger-$PAPER_RUN_ID" -D evidence
-          cd evidence
-          sha256sum -c SHA256SUMS
-          if [ -f /tmp/market-canonical.json ]; then
-            python -c 'import json; a=json.load(open("/tmp/market-canonical.json")); b=json.load(open("ledger.json")); assert a["ledger_generation"]==b["generation"], "Canonical artifact generation mismatch"'
-          fi
+          (cd evidence && sha256sum -c SHA256SUMS)
+          python -c 'import json; from paper_pov.ledger import verify; a=json.load(open("/tmp/market-canonical.json")); b=json.load(open("evidence/ledger.json")); verify(b); assert a["ledger_generation"]==b["generation"] and a["ledger_sha256"]==b["sha256"] and a["source_sha"]==b["runs"][-1]["source_sha"], "Canonical artifact provenance mismatch"'
       - name: Score and retain independent market-wide shadow shard
         env:
           LEARNING_BRANCH: ${{ github.head_ref || github.ref_name }}
@@ -431,6 +421,25 @@ jobs:
           print("FROZEN_CANDIDATE",chosen["model"]["version"],"REUSED",reused,"ORIGIN",origin)
           PY
           python -c 'import json; d=json.load(open("evidence/market-wide-model.json")); assert d["model"]["status"]=="SHADOW_ONLY"; assert d["purge_hours"]==48 and len(d["archive_cohort_receipts"])==2'
+      - name: Publish compact checksummed learning receipt independently of production results
+        env:
+          LEARNING_SCOPE: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from paper_pov.market_wide_learning import build_learning_receipt
+          def load(name):
+              return json.loads(Path("evidence",name).read_text())
+          d=build_learning_receipt(load("market-wide-observed.json"),load("market-wide-training-report.json"),
+               load("market-wide-model.json"),writer=json.loads(Path("/tmp/market-canonical.json").read_text()),
+               learning_scope=os.environ["LEARNING_SCOPE"])
+          Path("evidence/market-wide-learning-receipt.json").write_text(json.dumps(d,sort_keys=True)+chr(10))
+          print("MARKET_WIDE_LEARNING_RECEIPT",json.dumps(d,sort_keys=True))
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a") as summary:
+              summary.write("## Independent market-wide shadow learning"+chr(10))
+              summary.write(f"Writer {d['writer_run_id']}, generation {d['ledger_generation']}; training {d['training_count']} examples / {d['positive_count']} positives; observed current markets {d['cumulative_observed_current_markets']}/{d['eligible_markets']}. Shadow only; verified lift unavailable."+chr(10))
+          PY
       - name: Retain independent market learning state for the next successful run
         uses: actions/upload-artifact@v4
         with:
@@ -440,6 +449,7 @@ jobs:
             evidence/market-wide-model.json
             evidence/market-wide-model-origin-run.txt
             evidence/market-wide-training-report.json
+            evidence/market-wide-learning-receipt.json
             evidence/market-wide-scoring-model.json
             evidence/market-wide-scoring-model-available.txt
           if-no-files-found: error

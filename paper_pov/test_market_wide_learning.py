@@ -431,5 +431,31 @@ class MarketWideLearningTest(unittest.TestCase):
         changed=report("2026-01-02T00:00:00Z","b"*64)
         self.assertEqual(choose_fitted_candidate(changed,old),(changed,False))
 
+
+    def test_learning_receipt_binds_writer_and_state_and_rejects_tamper(self):
+        from paper_pov.market_wide_learning import build_learning_receipt
+        from paper_pov.shadow_learning_evidence import canonical_digest
+        state=dict(ledger_generation=5,evaluation_asof_utc="2026-11-01T00:00:00Z",
+                   last_success_generation={"A":5,"OLD":4},anchors=[])
+        state["digest"]=canonical_digest(state)
+        model=dict(status="SHADOW_ONLY",training_count=2,positive_count=1,negative_count=1,
+                   training_dataset_digest="a"*64,training_end_utc="2026-10-01T00:00:00Z")
+        model["version"]=canonical_digest(model)
+        report=dict(schema="market_wide_cumulative_shadow_v1",model=model,state_digest=state["digest"],
+                    source_counts={},production_applied=False,promotion_authorized=False)
+        report["digest"]=canonical_digest(report)
+        observed=dict(continuity_state=state,ledger_generation=5,evaluation_asof_utc=state["evaluation_asof_utc"],
+                      prospective_shadow=dict(prospective_snapshot={"model_version":"b"*64},
+                        timely_recorded_predictions=3,by_model_and_horizon={}),
+                      eligible_pairs=["A","B"],per_horizon={},coverage_scope="PARTIAL",fetch_errors={})
+        observed["evidence_digest"]=canonical_digest(observed)
+        writer=dict(run_id="123",source_sha="c"*40,ledger_generation=5,ledger_sha256="d"*64)
+        receipt=build_learning_receipt(observed,report,report,writer=writer,learning_scope="pr")
+        self.assertEqual(receipt["cumulative_observed_current_markets"],1)
+        self.assertEqual(receipt["writer_run_id"],"123")
+        self.assertFalse(receipt["measured_lift_verified"])
+        with self.assertRaisesRegex(ValueError,"provenance"):
+            build_learning_receipt(observed,report,report,writer=dict(writer,ledger_generation=6),learning_scope="pr")
+
 if __name__ == "__main__":
     unittest.main()
