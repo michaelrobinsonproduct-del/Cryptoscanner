@@ -2,41 +2,35 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T19:00:14.641847+00:00
+**UTC as-of:** 2026-11-18T19:05:14.652276+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44375662036
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44376591073
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** 55c1fa212fec201e6d5bc85af5fc05334d6d5caf (atomic ledger/results publication)
-**Ledger generation:** 642 (remote push/readback verified)
+**Previous ledger commit:** a2e1d93e38f314530fefb427c0b0f928eed00cb4 (atomic ledger/results publication)
+**Ledger generation:** 643 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 6s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 18.
+**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 13.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | INFI/USD | 0.1336 | 103.777 | 63.777 | +5.20% | +8.27% | 3.32x | 7.5 | 2026-11-18T19:00:09.034404+00:00 | Not calibrated | STRONG 100/100 | VERY_HIGH 77/100 | Watch | WATCH |
-| 2 | SENT/USD | 0.019865 | 87.601 | 74.455 | +6.41% | -0.37% | 2.83x | 3.0 | 2026-11-18T19:00:09.034404+00:00 | Not calibrated | STRONG 74/100 | VERY_HIGH 73/100 | Watch | WATCH |
-| 3 | AKE/USD | 0.01054067 | 52.039 | 56.444 | +5.57% | +0.58% | 0.27x | 34.4 | 2026-11-18T19:00:09.034404+00:00 | Not calibrated | MODERATE 46/100 | EXTREME 87/100 | Do nothing | WATCH |
-| 4 | AKT/USD | 0.5114 | 43.145 | 28.047 | +0.41% | +0.02% | 2.92x | 13.7 | 2026-11-18T19:00:09.034404+00:00 | Not calibrated | MODERATE 62/100 | HIGH 66/100 | Watch | WATCH |
-| 5 | MNT/USD | 0.3856 | 36.970 | 44.545 | +3.29% | +0.16% | 0.16x | 20.8 | 2026-11-18T19:00:09.034404+00:00 | Not calibrated | WEAK 28/100 | EXTREME 87/100 | Do nothing | WATCH |
-| 6 | CC/USD | 0.08243 | 36.333 | 32.838 | +0.37% | -0.04% | 1.37x | 9.7 | 2026-11-18T19:00:09.034404+00:00 | Not calibrated | WEAK 38/100 | HIGH 66/100 | Watch | WATCH |
-| 7 | UAI/USD | 0.03352 | 25.700 | 24.856 | +0.42% | +0.06% | 1.05x | 17.9 | 2026-11-18T19:00:09.034404+00:00 | Not calibrated | WEAK 33/100 | VERY_HIGH 80/100 | Do nothing | WATCH |
-| 8 | W/USD | 0.009 | 20.437 | 20.122 | +0.78% | +0.22% | 0.92x | 33.3 | 2026-11-18T19:00:09.034404+00:00 | Not calibrated | WEAK 30/100 | EXTREME 86/100 | Do nothing | WATCH |
+| 1 | SENT/USD | 0.019751 | 80.866 | 67.632 | +5.80% | -0.35% | 3.56x | 8.1 | 2026-11-18T19:05:10.786015+00:00 | Not calibrated | STRONG 70/100 | VERY_HIGH 73/100 | Watch | WATCH |
+| 2 | INFI/USD | 0.1334 | 70.168 | 55.168 | +5.04% | +0.00% | 4.16x | 22.5 | 2026-11-18T19:05:10.786015+00:00 | Not calibrated | STRONG 70/100 | VERY_HIGH 79/100 | Watch | WATCH |
+| 3 | MNT/USD | 0.3846 | 45.953 | 50.470 | +3.03% | -0.16% | 0.63x | 5.2 | 2026-11-18T19:05:10.786015+00:00 | Not calibrated | WEAK 28/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
+| 4 | AKE/USD | 0.01042578 | 38.213 | 50.980 | +4.42% | -1.26% | 0.35x | 29.1 | 2026-11-18T19:05:10.786015+00:00 | Not calibrated | WEAK 14/100 | EXTREME 97/100 | Do nothing | WATCH |
+| 5 | W/USD | 0.00899 | 32.280 | 30.440 | +0.67% | +0.11% | 1.13x | 11.1 | 2026-11-18T19:05:10.786015+00:00 | Not calibrated | WEAK 36/100 | VERY_HIGH 80/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SENT/USD | 74.455 | 0.019865 | -0.37% | 2.83x |
-| 2 | INFI/USD | 63.777 | 0.1336 | +8.27% | 3.32x |
-| 3 | AKE/USD | 56.444 | 0.01054067 | +0.58% | 0.27x |
-| 4 | MNT/USD | 44.545 | 0.3856 | +0.16% | 0.16x |
-| 5 | CC/USD | 32.838 | 0.08243 | -0.04% | 1.37x |
-| 6 | AKT/USD | 28.047 | 0.5114 | +0.02% | 2.92x |
-| 7 | UAI/USD | 24.856 | 0.03352 | +0.06% | 1.05x |
-| 8 | W/USD | 20.122 | 0.009 | +0.22% | 0.92x |
+| 1 | SENT/USD | 67.632 | 0.019751 | -0.35% | 3.56x |
+| 2 | INFI/USD | 55.168 | 0.1334 | +0.00% | 4.16x |
+| 3 | AKE/USD | 50.980 | 0.01042578 | -1.26% | 0.35x |
+| 4 | MNT/USD | 50.470 | 0.3846 | -0.16% | 0.63x |
+| 5 | W/USD | 30.440 | 0.00899 | +0.11% | 1.13x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -52,7 +46,7 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 642; predictions: 5450; observations: 387985.
+- Persisted scans: 643; predictions: 5455; observations: 388594.
 - Matured sampled outcomes across 1/6/24/48h: 4742; gap abstentions: 13125. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
@@ -60,7 +54,7 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 10; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 8; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -69,28 +63,24 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44375662036 · **Generation:** 642 · **Legacy run:** 44375662036
-**Main quote time:** 2026-11-18T19:00:14.641847+00:00 · **Legacy report time:** 2026-11-18T19:00:48.538460+00:00
+**Writer:** 44376591073 · **Generation:** 643 · **Legacy run:** 44376591073
+**Main quote time:** 2026-11-18T19:05:14.652276+00:00 · **Legacy report time:** 2026-11-18T19:05:48.415521+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | INFI/USD ⭐ | 0.1336 | 103.78 | +8.27% | 3.32x | STRONG 100/100 | VERY_HIGH 77/100 | Watch |
-| 2 | SENT/USD | 0.019865 | 87.60 | -0.37% | 2.83x | STRONG 74/100 | VERY_HIGH 73/100 | Watch |
-| 3 | AKE/USD | 0.01054067 | 52.04 | +0.58% | 0.27x | MODERATE 46/100 | EXTREME 87/100 | Do nothing |
-| 4 | AKT/USD | 0.5114 | 43.14 | +0.02% | 2.92x | MODERATE 62/100 | HIGH 66/100 | Watch |
-| 5 | MNT/USD | 0.3856 | 36.97 | +0.16% | 0.16x | WEAK 28/100 | EXTREME 87/100 | Do nothing |
-| 6 | CC/USD | 0.08243 | 36.33 | -0.04% | 1.37x | WEAK 38/100 | HIGH 66/100 | Watch |
-| 7 | UAI/USD | 0.03352 | 25.70 | +0.06% | 1.05x | WEAK 33/100 | VERY_HIGH 80/100 | Do nothing |
-| 8 | W/USD | 0.009 | 20.44 | +0.22% | 0.92x | WEAK 30/100 | EXTREME 86/100 | Do nothing |
+| 1 | SENT/USD | 0.019751 | 80.87 | -0.35% | 3.56x | STRONG 70/100 | VERY_HIGH 73/100 | Watch |
+| 2 | INFI/USD | 0.1334 | 70.17 | +0.00% | 4.16x | STRONG 70/100 | VERY_HIGH 79/100 | Watch |
+| 3 | MNT/USD | 0.3846 | 45.95 | -0.16% | 0.63x | WEAK 28/100 | VERY_HIGH 81/100 | Do nothing |
+| 4 | AKE/USD | 0.01042578 | 38.21 | -1.26% | 0.35x | WEAK 14/100 | EXTREME 97/100 | Do nothing |
+| 5 | W/USD ⭐ | 0.00899 | 32.28 | +0.11% | 1.13x | MODERATE 46/100 | VERY_HIGH 80/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | INFI/USD ⭐ | 0.1336 | 86.71 | +8.27% | 3.32x | 3689 | STRONG 100/100 | VERY_HIGH 77/100 | Watch |
-| 2 | TRX/USD | 0.308538 | 43.96 | +0.09% | 1.09x | 4151 | MODERATE 47/100 | HIGH 62/100 | Watch |
+| 1 | W/USD ⭐ | 0.00899 | 18.01 | +0.11% | 1.13x | 999 | WEAK 34/100 | EXTREME 86/100 | Do nothing |
 
-**Same-run overlap:** INFI/USD
+**Same-run overlap:** W/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
