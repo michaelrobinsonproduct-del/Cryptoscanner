@@ -2,12 +2,12 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T01:09:59.256786+00:00
+**UTC as-of:** 2026-11-18T01:15:00.820656+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44213615134
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44214267868
 **Source SHA:** 394c17eeb7071fba40e02dbbb1ea97cedb3a0a8a
-**Previous ledger commit:** 511aed41427d437925c11bfaf18f53c0e2aec271 (atomic ledger/results publication)
-**Ledger generation:** 491 (remote push/readback verified)
+**Previous ledger commit:** b8ebc6e1e94a831901e19aec6665d1aac130b9fe (atomic ledger/results publication)
+**Ledger generation:** 492 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 10.
@@ -16,17 +16,17 @@
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | CAP/USD | 0.101706 | 50.701 | 36.729 | +0.72% | -0.07% | 2.43x | 1.9 | 2026-11-18T01:09:56.365597+00:00 | Not calibrated | MODERATE 55/100 | HIGH 66/100 | Watch | WATCH |
-| 2 | AKT/USD | 0.5131 | 48.036 | 35.467 | +0.75% | -0.49% | 7.99x | 3.9 | 2026-11-18T01:09:56.365597+00:00 | Not calibrated | MODERATE 54/100 | HIGH 66/100 | Watch | WATCH |
-| 3 | LUNA/USD | 4.211e-05 | 26.694 | 32.482 | +1.10% | +0.26% | 0.29x | 16.7 | 2026-11-18T01:09:56.365597+00:00 | Not calibrated | WEAK 38/100 | VERY_HIGH 81/100 | Watch | WATCH |
+| 1 | CAP/USD | 0.101586 | 40.800 | 29.538 | +0.61% | -0.75% | 2.62x | 14.6 | 2026-11-18T01:14:58.140772+00:00 | Not calibrated | MODERATE 45/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 2 | AKT/USD | 0.5136 | 32.700 | 33.250 | +0.84% | -0.23% | 1.06x | 9.7 | 2026-11-18T01:14:58.140772+00:00 | Not calibrated | WEAK 26/100 | VERY_HIGH 73/100 | Do nothing | WATCH |
+| 3 | PROS/USD | 0.5275 | 30.969 | 33.776 | +2.05% | -0.17% | 0.80x | 22.8 | 2026-11-18T01:14:58.140772+00:00 | Not calibrated | WEAK 10/100 | EXTREME 92/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | CAP/USD | 36.729 | 0.101706 | -0.07% | 2.43x |
-| 2 | AKT/USD | 35.467 | 0.5131 | -0.49% | 7.99x |
-| 3 | LUNA/USD | 32.482 | 4.211e-05 | +0.26% | 0.29x |
+| 1 | PROS/USD | 33.776 | 0.5275 | -0.17% | 0.80x |
+| 2 | AKT/USD | 33.250 | 0.5136 | -0.23% | 1.06x |
+| 3 | CAP/USD | 29.538 | 0.101586 | -0.75% | 2.62x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,8 +42,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 491; predictions: 4249; observations: 296026.
-- Matured sampled outcomes across 1/6/24/48h: 3351; gap abstentions: 12410. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 492; predictions: 4252; observations: 296635.
+- Matured sampled outcomes across 1/6/24/48h: 3363; gap abstentions: 12410. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -59,15 +59,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44213615134 · **Generation:** 491 · **Legacy run:** 44213615134
-**Main quote time:** 2026-11-18T01:09:59.256786+00:00 · **Legacy report time:** 2026-11-18T01:10:10.458036+00:00
+**Writer:** 44214267868 · **Generation:** 492 · **Legacy run:** 44214267868
+**Main quote time:** 2026-11-18T01:15:00.820656+00:00 · **Legacy report time:** 2026-11-18T01:15:11.879807+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | CAP/USD | 0.101706 | 50.70 | -0.07% | 2.43x | MODERATE 55/100 | HIGH 66/100 | Watch |
-| 2 | AKT/USD | 0.5131 | 48.04 | -0.49% | 7.99x | MODERATE 54/100 | HIGH 66/100 | Watch |
-| 3 | LUNA/USD | 4.211e-05 | 26.69 | +0.26% | 0.29x | WEAK 38/100 | VERY_HIGH 81/100 | Watch |
+| 1 | CAP/USD | 0.101586 | 40.80 | -0.75% | 2.62x | MODERATE 45/100 | VERY_HIGH 72/100 | Watch |
+| 2 | AKT/USD | 0.5136 | 32.70 | -0.23% | 1.06x | WEAK 26/100 | VERY_HIGH 73/100 | Do nothing |
+| 3 | PROS/USD | 0.5275 | 30.97 | -0.17% | 0.80x | WEAK 10/100 | EXTREME 92/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
