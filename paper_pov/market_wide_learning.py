@@ -31,7 +31,7 @@ def build_market_cohort(candles, *, eligible_pairs, evaluation_asof_utc):
         observed.extend(c for _, c in rows)
         for i in range(3, len(rows)):
             t, c = rows[i]
-            if t + timedelta(hours=48) > asof:
+            if t + timedelta(hours=1) > asof:
                 break
             if t.minute or t.second or t.microsecond:
                 continue
@@ -45,7 +45,18 @@ def build_market_cohort(candles, *, eligible_pairs, evaluation_asof_utc):
                             "features": {"return_15m": p/float(window[0][1]["close"])-1},
                             "liquidity_qualified": False})
     outcomes = reconstruct_forward_outcomes(anchors, observed, evaluation_asof_utc=evaluation_asof_utc)
+    per_horizon = {}
+    for h in (1, 6, 24, 48):
+        rows = [o for o in outcomes if o["horizon_hours"] == h]
+        per_horizon[str(h)] = {
+            "hits": sum(o["hit"] is True for o in rows),
+            "misses": sum(o["hit"] is False for o in rows),
+            "immature": sum(o["outcome_status"] == "IMMATURE" for o in rows),
+            "missing_candles": sum(o["outcome_status"] == "MISSING_CANDLES" for o in rows),
+        }
     return {"anchors": anchors, "outcomes": outcomes,
+            "per_horizon": per_horizon,
+            "missing_eligible_pairs": sorted(eligible - set(grouped)),
             "eligible_pairs": sorted(eligible), "observed_pairs": sorted(grouped),
             "source_authenticated": False, "production_applied": False,
             "promotion_authorized": False}
