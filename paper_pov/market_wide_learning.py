@@ -410,6 +410,114 @@ def run_archive_market_cohorts(zip_path, *, expected_sha256, start_utc, end_utc,
             "measured_lift_verified": False}
 
 
+
+def train_archive_shadow(cohort_path, *, training_end_utc, holdout_start_utc,
+                         evaluation_asof_utc, top_k=5):
+    """Fit the existing shadow trainer on saved archive cohorts, then rank.
+
+    Historical baseline is the existing absolute 60m momentum proxy, NOT
+    the production ranker. All feature-complete candidates enter each
+    ranking before outcome coverage is inspected. Compare only timestamps
+    at which both selected sets have complete 48h labels.
+    """
+    import gzip
+    from .frozen_historical_shadow import NAMES
+    from .heldout_outcome_adapter import train_shadow_challenger
+    if not 1 <= top_k <= 12:
+        raise ValueError("Invalid evaluation selection budget")
+    training_end = utc_time(training_end_utc)
+    holdout_start = utc_time(holdout_start_utc)
+    asof = utc_time(evaluation_asof_utc)
+    if asof <= holdout_start + timedelta(hours=48):
+        raise ValueError("No mature blind holdout interval")
+    predictions, outcomes, seen = [], [], set()
+    archive_digests = set()
+    with gzip.open(cohort_path, "rt", encoding="utf-8") as source:
+        for line in source:
+            cohort = json.loads(line)
+            digest = cohort["source_archive_sha256"]
+            if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+                raise ValueError("Invalid cohort archive digest")
+            if cohort.get("production_applied") is not False or cohort.get("source_authenticated") is not False:
+                raise ValueError("Unexpected archive cohort qualification")
+            archive_digests.add(digest)
+            qualified = set()
+            for a in cohort["anchors"]:
+                key = a["prediction_id"]
+                if key in seen:
+                    raise ValueError("Duplicate archive anchor")
+                seen.add(key)
+                if a["source_sha256"] != digest:
+                    raise ValueError("Anchor archive provenance mismatch")
+                entry = utc_time(a["entry_utc"])
+                if (not a["feature_complete"] or entry+timedelta(hours=48)>asof or
+                        training_end <= entry < holdout_start):
+                    continue
+                predictions.append(a)
+                qualified.add(key)
+            for o in cohort["outcomes"]:
+                if o["horizon_hours"] == 48 and o["prediction_id"] in qualified:
+                    if o["source_sha256"] != digest:
+                        raise ValueError("Outcome archive provenance mismatch")
+                    outcomes.append(o)
+    if len(archive_digests) != 1:
+        raise ValueError("Expected one pinned archive for initial shadow replay")
+    model = train_shadow_challenger(predictions, outcomes, training_end_utc=training_end_utc,
+                                    holdout_start_utc=holdout_start_utc, feature_names=NAMES)
+    by_id = {a["prediction_id"]: a for a in predictions}
+    labels = {o["prediction_id"]: o for o in outcomes
+              if o["coverage_complete"] and type(o["hit"]) is bool}
+    scores = model.get("shadow_scores", {})
+    groups = {}
+    for key in scores:
+        groups.setdefault(by_id[key]["entry_utc"], []).append(key)
+    metrics = {n: {"selected": 0, "hits": 0, "false_positives": 0, "early_hits": 0,
+                   "lead_hours_sum": 0., "lead_count": 0} for n in ("baseline_proxy", "challenger")}
+    comparable, unavailable, covered_positive_anchors = 0, 0, 0
+    for stamp, keys in sorted(groups.items()):
+        base = sorted(keys, key=lambda k: (-abs(by_id[k]["features"]["momentum_60m"]), k))[:top_k]
+        challenger = sorted(keys, key=lambda k: (-scores[k], k))[:top_k]
+        if len(base) != top_k or any(k not in labels for k in base+challenger):
+            unavailable += 1
+            continue
+        comparable += 1
+        covered_positive_anchors += sum(labels[k]["hit"] for k in keys if k in labels)
+        for name, selected in (("baseline_proxy", base), ("challenger", challenger)):
+            m = metrics[name]
+            m["selected"] += len(selected)
+            for key in selected:
+                o = labels[key]
+                if not o["hit"]:
+                    m["false_positives"] += 1
+                    continue
+                m["hits"] += 1
+                m["early_hits"] += int(abs(by_id[key]["features"]["momentum_60m"]) <= .03)
+                lead = o.get("observed_lead_hours_upper_bound")
+                if lead is not None:
+                    m["lead_hours_sum"] += lead
+                    m["lead_count"] += 1
+    for m in metrics.values():
+        m["precision"] = m["hits"]/m["selected"] if m["selected"] else None
+        m["covered_anchor_recall"] = m["hits"]/covered_positive_anchors if covered_positive_anchors else None
+        m["mean_lead_hours_upper_bound"] = m.pop("lead_hours_sum")/m["lead_count"] if m["lead_count"] else None
+        m.pop("lead_hours_sum", None)
+    # Retain the actual fitted model, not the potentially large temporary
+    # vector of holdout predictions. The model version is recomputed here.
+    model.pop("shadow_scores", None)
+    model["source_archive_sha256"] = next(iter(archive_digests))
+    model["version"] = canonical_digest({k:v for k,v in model.items() if k!="version"})
+    result = {"schema": "market_wide_archive_shadow_v1", "model": model,
+              "evaluation_asof_utc": evaluation_asof_utc, "top_k": top_k,
+              "baseline": "HISTORICAL_ABS_MOMENTUM_60M_PROXY_NOT_PRODUCTION",
+              "comparison_status": "SHADOW_EVALUATED" if comparable else "NO_PAIRED_COMPLETE_TIMESTAMPS",
+              "comparable_timestamps": comparable, "unavailable_timestamps": unavailable,
+              "covered_positive_anchors": covered_positive_anchors, "metrics": metrics,
+              "source_authenticated": False, "measured_lift_verified": False,
+              "production_applied": False, "promotion_authorized": False}
+    result["digest"] = canonical_digest(result)
+    return result
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Prediction-independent read-only Kraken outcome smoke")
     parser.add_argument("ledger", type=Path)
@@ -417,11 +525,24 @@ def main(argv=None):
     parser.add_argument("--batch-size", type=int, default=12)
     parser.add_argument("--prior-state", type=Path)
     parser.add_argument("--state-output", type=Path)
+    parser.add_argument("--train-cohorts", action="store_true")
+    parser.add_argument("--training-end")
+    parser.add_argument("--holdout-start")
+    parser.add_argument("--evaluation-asof")
     parser.add_argument("--archive-sha256")
     parser.add_argument("--archive-start")
     parser.add_argument("--archive-end")
     parser.add_argument("--archive-cohort-output", type=Path)
     args = parser.parse_args(argv)
+    if args.train_cohorts:
+        if not (args.training_end and args.holdout_start and args.evaluation_asof):
+            parser.error("Training requires chronological split and evaluation date")
+        report = train_archive_shadow(args.ledger, training_end_utc=args.training_end,
+                                      holdout_start_utc=args.holdout_start, evaluation_asof_utc=args.evaluation_asof)
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(json.dumps(report, sort_keys=True) + "\n")
+        print(json.dumps(report, sort_keys=True))
+        return report
     if args.archive_sha256:
         if not (args.archive_start and args.archive_end and args.archive_cohort_output):
             parser.error("Archive mode requires start, end and cohort output")
