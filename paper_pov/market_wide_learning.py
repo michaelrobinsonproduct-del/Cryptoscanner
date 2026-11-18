@@ -558,14 +558,57 @@ def eligible_scoring_model(model, available, scan_at):
     return training_end<=ready<at and at>=training_end+timedelta(hours=48)
 
 
-def retain_prospective_shadow(state, prior, cohort, results, ledger, model_source=None, model_available_utc=None):
+
+def due_outcome_followups(prior, eligible_pairs, scored_pairs, *, asof, budget):
+    """Reserve spare requests for genuinely matured paired comparison windows.
+
+    Revisit older selected pairs before their five-minute REST history expires.
+    Missing observed rows remain abstentions; a completed missing-candle label
+    does not cause repeated requests for that same horizon.
+    """
+    if not prior or budget<=0:
+        return []
+    now=utc_time(asof)
+    eligible=set(eligible_pairs)-set(scored_pairs)
+    outcomes={(o["prediction_id"],o["horizon_hours"]):o for o in prior.get("shadow_outcomes",[])}
+    groups={}
+    for p in prior.get("shadow_predictions",[]):
+        if p.get("recording_scope")=="TIMELY_RECORDED_QUOTE_REFERENCE":
+            groups.setdefault((p["model_version"],p["batch_id"]),[]).append(p)
+    due={}
+    for group in groups.values():
+        base=[p for p in group if p["baseline_watch"]]
+        shadow=[p for p in group if p["shadow_equal_budget_watch"]]
+        if not base or len(base)!=len(shadow):
+            continue
+        selected={p["prediction_id"]:p for p in base+shadow}
+        for hours in (1,6,24,48):
+            # Do not spend extra requests on a cohort already known incomplete.
+            rows=[outcomes.get((p["prediction_id"],hours)) for p in selected.values()]
+            if any(o and o["outcome_status"]=="MISSING_CANDLES" for o in rows):
+                continue
+            for p in selected.values():
+                entry=utc_time(p["entry_utc"])
+                if not entry+timedelta(hours=hours)<=now<=entry+timedelta(hours=59):
+                    continue
+                o=outcomes.get((p["prediction_id"],hours))
+                if p["pair"] not in eligible or (o and o["outcome_status"]!="IMMATURE"):
+                    continue
+                priority=(entry,-hours,p["pair"])
+                if p["pair"] not in due or priority<due[p["pair"]]:
+                    due[p["pair"]]=priority
+    return sorted(due,key=due.get)[:budget]
+
+
+def retain_prospective_shadow(state, prior, cohort, results, ledger, model_source=None, model_available_utc=None, scored_pairs=None):
     """Retain immutable prospective predictions and re-evaluate revisited markets."""
     prior = prior or {}
     predictions = {p["prediction_id"]:p for p in prior.get("shadow_predictions",[])}
     outcomes = {(o["prediction_id"],o["horizon_hours"]):o for o in prior.get("shadow_outcomes",[])}
     snapshot = None
     if model_source is not None:
-        snapshot = score_prospective_market_shard(ledger,results,model_source,
+        score_results=results if scored_pairs is None else [r for r in results if r['pair'] in scored_pairs]
+        snapshot = score_prospective_market_shard(ledger,score_results,model_source,
                                                 model_available_utc=model_available_utc)
         for p in snapshot["predictions"]:
             old = predictions.get(p["prediction_id"])
@@ -637,6 +680,9 @@ def run_observed_market_batch(ledger, *, fetch=None, batch_size=12, prior=None,
         selected = sorted(set(independent) | set(controls))
         if len(selected)>30:
             raise ValueError('Independent market and WATCH controls exceed bounded request budget')
+    scored_pairs=list(selected)
+    followups=due_outcome_followups(prior,pairs,scored_pairs,asof=ledger['runs'][-1]['as_of'],budget=30-len(scored_pairs))
+    selected=scored_pairs+followups
     results, errors = [], {}
     for pair in selected:
         try:
@@ -665,12 +711,13 @@ def run_observed_market_batch(ledger, *, fetch=None, batch_size=12, prior=None,
                   ledger_generation=ledger["generation"], ledger_run_id=latest["id"],
                   evaluation_asof_utc=latest["as_of"], selected_pairs=selected,
                   independent_selected_pairs=independent, watch_control_pairs=controls,
+                  outcome_followup_pairs=followups,
                   shard_index=shard, shard_count=shard_count, fetch_errors=errors,
                   source_digests=digests, coverage_scope="PARTIAL_ROTATING_SHARD_PLUS_WATCH_CONTROLS" if include_watch_controls else "PARTIAL_ROTATING_SHARD",
                   measured_lift_verified=False)
     cohort["continuity_state"] = merge_market_state(cohort, eligibility, prior)
     cohort["prospective_shadow"] = retain_prospective_shadow(cohort["continuity_state"], prior, cohort,
-        results, ledger, model_source, model_available_utc)
+        results, ledger, model_source, model_available_utc,scored_pairs=set(scored_pairs))
     cohort["evidence_digest"] = canonical_digest(cohort)
     return cohort
 
@@ -1178,7 +1225,8 @@ def main(argv=None):
                    cumulative_anchors=len(report["continuity_state"]["anchors"]),
                    cumulative_observed_markets=len(report["continuity_state"]["last_success_generation"]),
                    independent_selected_count=len(report["independent_selected_pairs"]),
-                   watch_control_count=len(report["watch_control_pairs"]))
+                   watch_control_count=len(report["watch_control_pairs"]),
+                   outcome_followup_count=len(report["outcome_followup_pairs"]))
     shadow = report["prospective_shadow"]
     snapshot = shadow["prospective_snapshot"]
     summary["prospective_shadow"] = {k:v for k,v in shadow.items() if k!="prospective_snapshot"}
