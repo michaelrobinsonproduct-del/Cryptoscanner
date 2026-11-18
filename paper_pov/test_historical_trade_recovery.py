@@ -33,5 +33,27 @@ class HistoricalTradeRecoveryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"checksum"):
             recover("TESTUSD",start,end,previous=state2)
 
+
+    def test_identical_cursor_overlap_deduplicated_conflict_rejected(self):
+        start="2026-10-01T00:00:00Z"
+        end="2026-10-01T01:00:00Z"
+        base=ns(start)//10**9
+        def payload(rows,last):
+            return json.dumps({"error":[],"result":{"TESTUSD":rows,"last":str(last*10**9)}}).encode()
+        a=["1","2",base+1,"b","m","",1]
+        b=["2","3",base+1801,"b","m","",2]
+        c=["2","1",base+3601,"b","m","",3]
+        p1=payload([a,b],base+1801)
+        p2=payload([b,c],base+3601)
+        pages=iter([p1,p2])
+        _,_,summary=recover("TESTUSD",start,end,max_pages=2,fetch_page=lambda *_:next(pages),pause=lambda _:None)
+        self.assertEqual(summary["observed_trades"],2)
+        self.assertTrue(summary["cursor_window_reached"])
+        changed=list(b)
+        changed[1]="4"
+        pages=iter([p1,payload([changed,c],base+3601)])
+        with self.assertRaisesRegex(ValueError,"Conflicting historical trade ID"):
+            recover("TESTUSD",start,end,max_pages=2,fetch_page=lambda *_:next(pages),pause=lambda _:None)
+
 if __name__=="__main__":
     unittest.main()

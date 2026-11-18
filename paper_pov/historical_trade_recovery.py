@@ -74,7 +74,7 @@ def replay(state):
     cursor=start-1
     last_trade=None
     key=None
-    ids=set()
+    ids={}
     bars={}
     count=0
     for page in state["pages"]:
@@ -86,13 +86,18 @@ def replay(state):
             raise ValueError("Historical pair/cursor mismatch")
         key=alias
         for at,price,volume,ident in trades:
+            if ident is not None:
+                value=(at,price,volume)
+                if ident in ids:
+                    if ids[ident]!=value:
+                        raise ValueError("Conflicting historical trade ID")
+                    # Identical exchange trade repeated at pagination boundary.
+                    # Raw pages remain in the receipt; count the trade only once.
+                    continue
+                ids[ident]=value
             if last_trade is not None and at<last_trade:
                 raise ValueError("Historical page overlap out of order")
             last_trade=at
-            if ident is not None:
-                if ident in ids:
-                    raise ValueError("Duplicate historical trade ID")
-                ids.add(ident)
             if not start<=at<end:
                 continue
             close_at=(at//BAR+1)*BAR
