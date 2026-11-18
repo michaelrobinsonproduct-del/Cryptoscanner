@@ -71,5 +71,40 @@ class MarketWideLearningTest(unittest.TestCase):
         self.assertEqual(report["eligibility_abstentions"], 1)
         self.assertEqual(report["per_horizon"]["1"]["hits"], 0)
 
+    def test_archive_stream_pinned_digest_completed_high_and_exclusions(self):
+        import gzip
+        import hashlib
+        import json
+        import tempfile
+        import zipfile
+        from pathlib import Path
+        from .market_wide_learning import run_archive_market_cohorts
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as temp:
+            archive, output = Path(temp)/"source.zip", Path(temp)/"rows.jsonl.gz"
+            with zipfile.ZipFile(archive, "w") as z:
+                for pair in ("GAINUSD", "FLATUSD", "GAIN EUR".replace(" ", "")):
+                    lines = []
+                    for i in range(24):
+                        stamp = int((start+timedelta(minutes=5*i)).timestamp())
+                        high = 135 if pair == "GAINUSD" and i == 23 else 100
+                        lines.append(f"{stamp},100,{high},100,100,10,5")
+                    z.writestr(pair+"_5.csv", "\n".join(lines))
+            digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+            args = dict(start_utc=start.isoformat(), end_utc=(start+timedelta(hours=2)).isoformat(), cohort_output=output)
+            result = run_archive_market_cohorts(archive, expected_sha256=digest, **args)
+            self.assertEqual(result["archive_usd_members"], 2)
+            self.assertEqual(result["per_horizon"]["1"]["hits"], 1)
+            self.assertEqual(result["per_horizon"]["1"]["misses"], 1)
+            self.assertEqual(result["markets_with_hits"], ["GAINUSD"])
+            self.assertTrue(result["pinned_archive_verified"])
+            self.assertFalse(result["source_authenticated"])
+            with gzip.open(output, "rt") as source:
+                rows = [json.loads(line) for line in source]
+            self.assertEqual(len(rows), 2)
+            self.assertTrue(all(r["anchors"][0]["entry_utc"] == (start+timedelta(hours=1)).isoformat() for r in rows))
+            with self.assertRaisesRegex(ValueError, "SHA256 mismatch"):
+                run_archive_market_cohorts(archive, expected_sha256="0"*64, **args)
+
 if __name__ == "__main__":
     unittest.main()
