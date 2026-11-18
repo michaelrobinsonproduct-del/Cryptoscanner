@@ -12,6 +12,8 @@ on:
       - 'paper_pov/market_wide_learning.py'
       - 'paper_pov/test_market_wide_learning.py'
       - 'paper_pov/post_q3_observed_recovery.py'
+      - 'paper_pov/historical_trade_recovery.py'
+      - 'paper_pov/test_historical_trade_recovery.py'
       - 'paper_pov/test_post_q3_observed_recovery.py'
       - 'paper_pov/historical_paper_cohort.py'
       - 'paper_pov/kraken_observed_candles.py'
@@ -122,7 +124,7 @@ jobs:
             prior_args=(--prior-state evidence/market-prior/market-wide-state.json)
             # Preserve the prior active model when scanning the same writer generation.
             if [ -s evidence/market-prior/market-wide-scoring-model.json ] && [ -s evidence/market-prior/market-wide-scoring-model-available.txt ]; then
-              ready=$(cat evidence/market-prior/market-wide-scoring-model-available.txt)
+              ready=$(python -c 'from pathlib import Path; print(Path("evidence/market-prior/market-wide-scoring-model-available.txt").read_text().strip().removesuffix(chr(92)+"n"))')
               if python -c 'import json,sys; from paper_pov.market_wide_learning import eligible_scoring_model; a=json.load(open("evidence/ledger.json")); m=json.load(open(sys.argv[1])); sys.exit(not eligible_scoring_model(m,sys.argv[2],a["runs"][-1]["as_of"]))' evidence/market-prior/market-wide-scoring-model.json "$ready"; then
                 model_path=evidence/market-prior/market-wide-scoring-model.json
                 model_ready="$ready"
@@ -139,7 +141,7 @@ jobs:
             echo "MARKET_LEARNING_PR_BOOTSTRAP_NO_COMPLETED_PRIOR"
           fi
           cp "$model_path" evidence/market-wide-scoring-model.json
-          printf '%s\\n' "$model_ready" > evidence/market-wide-scoring-model-available.txt
+          printf '%s\n' "$model_ready" > evidence/market-wide-scoring-model-available.txt
           model_args=(--shadow-model evidence/market-wide-scoring-model.json --shadow-model-available "$model_ready")
           python -m paper_pov.market_wide_learning evidence/ledger.json --batch-size 12 \
             "${prior_args[@]}" --state-output evidence/market-wide-state.json \
@@ -376,3 +378,30 @@ jobs:
             evidence/POST-Q3-SHA256SUMS
           retention-days: 90
           if-no-files-found: ignore
+
+  historical-trade-recovery-pilot:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test bounded cursor replay and real-bar contract
+        run: python -m unittest paper_pov.test_historical_trade_recovery -v
+      - name: Recover actual October trades on a bounded historical market
+        run: |
+          python -m paper_pov.historical_trade_recovery --pair ACTUSD \
+            --start 2026-10-01T00:00:00Z --end 2026-10-04T00:00:00Z \
+            --max-pages 20 --output-dir evidence/october-trades
+          (cd evidence/october-trades && sha256sum cursor-state.json.gz cohort.jsonl.gz summary.json > SHA256SUMS)
+      - name: Retain source cursor checkpoint and partial coverage evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: historical-trade-recovery-pilot-${{ github.run_id }}
+          path: evidence/october-trades/
+          if-no-files-found: error
+          retention-days: 90
