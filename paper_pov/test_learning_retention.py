@@ -37,6 +37,10 @@ class LearningRetentionTests(unittest.TestCase):
             m=build_seed([("archive",path,sha,expected)],root/"seed")
             loaded=load_seed(root/"seed",[("archive",sha,expected)])
             self.assertEqual(loaded,m)
+            from paper_pov.learning_retention import pack_seed_release,unpack_seed_release
+            pack_seed_release(root/"seed",root/"release.tar.gz")
+            self.assertEqual(unpack_seed_release(root/"release.tar.gz",root/"restored"),m)
+            self.assertEqual(file_sha(root/"restored"/"source-00.jsonl.gz"),file_sha(root/"seed"/"source-00.jsonl.gz"))
             from paper_pov.learning_retention import read_rows
             row=list(read_rows(root/"seed"/"source-00.jsonl.gz"))[0]
             self.assertEqual(row["anchors"],[a])

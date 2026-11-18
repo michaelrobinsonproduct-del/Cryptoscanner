@@ -1069,7 +1069,9 @@ def build_learning_receipt(observed, training, candidate, *, writer, learning_sc
     state=observed["continuity_state"]
     if state.get("digest")!=canonical_digest({k:v for k,v in state.items() if k!="digest"}):
         raise ValueError("Continuity state checksum mismatch")
-    choose_fitted_candidate(training,candidate)
+    chosen,_=choose_fitted_candidate(training,candidate)
+    if chosen!=candidate:
+        raise ValueError("Candidate fit does not match current training data")
     if training["state_digest"]!=state["digest"] or observed["ledger_generation"]!=writer["ledger_generation"]:
         raise ValueError("Learning state/writer provenance mismatch")
     if state["ledger_generation"]!=writer["ledger_generation"] or observed["evaluation_asof_utc"]!=state["evaluation_asof_utc"]:

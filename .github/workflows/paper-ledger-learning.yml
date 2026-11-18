@@ -323,10 +323,10 @@ jobs:
             test "$ALLOW_MAIN_BOOTSTRAP" = "true" || { echo "::error::MAIN_LEARNING_CHECKPOINT_UNAVAILABLE; explicit first bootstrap or approved restore required"; exit 1; }
             existing=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.workflow_run.head_branch=="main" and (.name|startswith("market-wide-learning-continuity-main-"))) | .id' | sed -n '1p')
             test -z "$existing" || { echo "::error::Main checkpoint history exists; bootstrap cannot replace it"; exit 1; }
-            prior_run=44243954157
+            prior_run=44244545891
             prior_prefix=market-wide-learning-continuity-pr-
             prior_branch=learning-market-wide-20261117
-            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run" --jq '.status + ":" + (.conclusion // "") + ":" + .head_sha')" = "completed:success:9be6945665688978fe22a5ee1c87b9189abbd005"
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run" --jq '.status + ":" + (.conclusion // "") + ":" + .head_sha')" = "completed:success:822ef8f0205cf4f88d42aaa813eb5f24d883e8e0"
             echo "MAIN_RESEARCH_BOOTSTRAP_PINNED=$prior_run"
           fi
           prior_args=()
@@ -393,22 +393,22 @@ jobs:
             "${model_args[@]}" \
             --output evidence/market-wide-observed.json
       - name: Train cumulative shadow on retained historical and recent mature labels
+        env:
+          DURABLE_SEED_RELEASE: ${{ vars.MARKET_WIDE_SEED_RELEASE_TAG }}
         run: |
           set -euo pipefail
-          mkdir -p evidence/historical-seed
-          gh run download 44220694272 -n kraken-q3-frozen-48h-shadow-44220694272 -D evidence/historical-seed
-          (cd evidence/historical-seed && sha256sum -c MARKET-WIDE-SHA256SUMS)
-          python -c 'import json; d=json.load(open("evidence/historical-seed/market-wide-summary.json")); assert d["pinned_archive_verified"] is True and d["start_utc"]=="2026-07-01T00:00:00+00:00" and d["end_utc"]=="2026-10-01T00:00:00+00:00"'
-          mkdir -p evidence/historical-q2
-          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/44220694310" --jq '.status + ":" + (.conclusion // "") + ":" + .head_sha')" = "completed:success:8b701967fed44336df210fb971642ffff209e241"
-          gh run download 44220694310 -n market-wide-q2-9caa513fe54a2e31559b1b8dc4eb61be771c04c7eb944c8cd02237ee9291224c -D evidence/historical-q2
-          (cd evidence/historical-q2 && sha256sum -c Q2-MARKET-WIDE-SHA256SUMS)
-          python -c 'import json; d=json.load(open("evidence/historical-q2/q2-market-wide-summary.json")); assert d["pinned_archive_verified"] is True and d["archive_sha256"]=="fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4" and d["start_utc"]=="2025-11-17T00:00:00+00:00" and d["end_utc"]=="2026-07-01T00:00:00+00:00"'
-          mkdir -p evidence/historical-recovered
-          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/134545420953" --jq '.status + ":" + (.conclusion // "") + ":" + (.run_id|tostring) + ":" + .head_sha')" = "completed:success:44227877790:cbe95bcd007cf46ec9b73168c193838d477d89a9"
-          gh run download 44227877790 -n post-q3-observed-recovery-44227877790 -D evidence/historical-recovered
-          (cd evidence/historical-recovered && sha256sum -c POST-Q3-SHA256SUMS)
-          python -c 'import json; d=json.load(open("evidence/historical-recovered/post-q3-summary.json")); assert d["snapshot_set_sha256"]=="b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef" and d["coverage_scope"]=="PARTIAL_PREDICTION_SELECTED_NOT_MARKET_WIDE"'
+          # Reuse the exact compact seed verified against the full originals.
+          # It contains all complete strict 48h examples (including those
+          # not yet admitted by a given chronological cutoff).
+          mkdir -p evidence/historical-compact
+          if [ -n "$DURABLE_SEED_RELEASE" ]; then
+            gh release download "$DURABLE_SEED_RELEASE" --pattern market-wide-strict-seed.tar.gz --dir evidence/historical-compact
+            python -m paper_pov.learning_retention unpack-seed --archive evidence/historical-compact/market-wide-strict-seed.tar.gz --directory evidence/historical-compact/strict-training-seed
+          else
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/134600230522" --jq '.status + ":" + (.conclusion // "") + ":" + (.run_id|tostring) + ":" + .head_sha')" = "completed:success:44244545891:822ef8f0205cf4f88d42aaa813eb5f24d883e8e0"
+            gh run download 44244545891 -n market-wide-strict-seed-44244545891 -D evidence/historical-compact
+          fi
+          python -c 'import json; d=json.load(open("evidence/historical-compact/strict-training-seed/manifest.json")); assert d["digest"]=="98059c9e5019a125202ccbe71dcc23cfeed60f88587a3bb4332d9c1a0e67b6e5"'
           mkdir -p evidence/historical-trades
           trade_run=""
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
@@ -430,22 +430,11 @@ jobs:
             --cumulative-archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
             --additional-archive evidence/historical-q2/q2-market-wide-cohorts.jsonl.gz fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 \
             --retained-observed evidence/historical-recovered/post-q3-cohorts.jsonl.gz b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef \
+            --compact-seed evidence/historical-compact/strict-training-seed \
+            --original-cohort-hash 5d883b8252b7a0a3186296801c3293060198481a13c67d0a384e9a41818241e5 \
+            --original-cohort-hash 8c4d7e86d170b17a7a6a3d4ebf9fae1d5cd5f4844f5b1c33a1605f0650823d63 \
+            --original-cohort-hash 287a405ba7f99c61df3075737e24e3f24e30137a9c45fbcee1671f257b35474c \
             --output evidence/market-wide-training-report.json
-          # Validate compact storage against the actual full-cohort model once.
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            python -m paper_pov.learning_retention seed --directory evidence/strict-training-seed \
-              --source archive evidence/historical-seed/market-wide-cohorts.jsonl.gz 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 5d883b8252b7a0a3186296801c3293060198481a13c67d0a384e9a41818241e5 \
-              --source archive evidence/historical-q2/q2-market-wide-cohorts.jsonl.gz fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 8c4d7e86d170b17a7a6a3d4ebf9fae1d5cd5f4844f5b1c33a1605f0650823d63 \
-              --source retained_observed evidence/historical-recovered/post-q3-cohorts.jsonl.gz b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef 287a405ba7f99c61df3075737e24e3f24e30137a9c45fbcee1671f257b35474c
-            python -m paper_pov.market_wide_learning evidence/historical-seed/market-wide-cohorts.jsonl.gz \
-              --cumulative-state evidence/market-wide-state.json \
-              --cumulative-archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
-              --additional-archive evidence/historical-q2/q2-market-wide-cohorts.jsonl.gz fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 \
-              --retained-observed evidence/historical-recovered/post-q3-cohorts.jsonl.gz b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef \
-              --compact-seed evidence/strict-training-seed --original-cohort-hash 5d883b8252b7a0a3186296801c3293060198481a13c67d0a384e9a41818241e5 --original-cohort-hash 8c4d7e86d170b17a7a6a3d4ebf9fae1d5cd5f4844f5b1c33a1605f0650823d63 --original-cohort-hash 287a405ba7f99c61df3075737e24e3f24e30137a9c45fbcee1671f257b35474c \
-              --output evidence/compact-training-report.json
-            python -c 'import json; a=json.load(open("evidence/market-wide-training-report.json")); b=json.load(open("evidence/compact-training-report.json")); assert a["model"]==b["model"] and a["source_counts"]==b["source_counts"]; print("COMPACT_STRICT_FIT_IDENTICAL",a["model"]["training_count"],a["model"]["positive_count"],a["model"]["training_dataset_digest"])'
-          fi
           export PRIOR_MARKET_RUN=""
           if [ -s evidence/market-prior/market-wide-model-origin-run.txt ]; then
             PRIOR_MARKET_RUN=$(cat evidence/market-prior/market-wide-model-origin-run.txt)
@@ -488,23 +477,11 @@ jobs:
           PY
       - name: Verify partitioned learning checkpoint round trip
         run: python -m paper_pov.learning_retention pack --state evidence/market-wide-state.json --directory evidence/market-state-checkpoint
-      - name: Retain compact strict training seed for controlled reuse
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: market-wide-strict-seed-${{ github.run_id }}
-          path: |
-            evidence/strict-training-seed/
-            evidence/compact-training-report.json
-          if-no-files-found: error
-          retention-days: 90
-          compression-level: 0
       - name: Retain independent market learning state for the next successful run
         uses: actions/upload-artifact@v4
         with:
           name: market-wide-learning-continuity-${{ github.event_name == 'pull_request' && 'pr' || 'main' }}-${{ github.run_id }}
           path: |
-            evidence/market-wide-state.json
             evidence/market-wide-model.json
             evidence/market-wide-model-origin-run.txt
             evidence/market-wide-training-report.json

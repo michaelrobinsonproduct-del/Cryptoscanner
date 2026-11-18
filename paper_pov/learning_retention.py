@@ -208,6 +208,53 @@ def restore_state(directory):
     return result
 
 
+
+def pack_seed_release(directory,archive):
+    """Package only explicitly allowed compact seed files; never publish here."""
+    import tarfile
+    directory=Path(directory)
+    manifest=json.loads((directory/"manifest.json").read_text())
+    expected=[(x["kind"],x[source_key(x["kind"])[1]],x["cohort_sha256"]) for x in manifest["sources"]]
+    load_seed(directory,expected)
+    with Path(archive).open("wb") as raw, gzip.GzipFile(filename="",fileobj=raw,mode="wb",mtime=0) as compressed:
+        with tarfile.open(fileobj=compressed,mode="w") as tar:
+            for name in ["manifest.json"]+[x["seed_file"] for x in manifest["sources"]]:
+                path=directory/name
+                if not path.is_file() or path.is_symlink():
+                    raise ValueError("Unexpected seed file")
+                info=tarfile.TarInfo(name)
+                info.size=path.stat().st_size
+                info.mode=0o644
+                info.mtime=0
+                with path.open("rb") as payload:
+                    tar.addfile(info,payload)
+    return file_sha(archive)
+
+
+def unpack_seed_release(archive,directory):
+    """Do not extract arbitrary paths or links from an archive."""
+    import re
+    import tarfile
+    directory=Path(directory)
+    directory.mkdir(parents=True,exist_ok=True)
+    names=set()
+    with tarfile.open(archive,"r:gz") as tar:
+        for member in tar:
+            name=member.name
+            if (not member.isfile() or name in names or member.size>512*1024*1024 or
+                    not (name=="manifest.json" or re.fullmatch(r"source-[0-9]{2}\.jsonl\.gz",name))):
+                raise ValueError("Unexpected training seed release member")
+            names.add(name)
+            with tar.extractfile(member) as raw, (directory/name).open("wb") as out:
+                import shutil
+                shutil.copyfileobj(raw,out)
+    manifest=json.loads((directory/"manifest.json").read_text())
+    if names!={"manifest.json"}|{r["seed_file"] for r in manifest["sources"]}:
+        raise ValueError("Incomplete training seed release")
+    expected=[(x["kind"],x[source_key(x["kind"])[1]],x["cohort_sha256"]) for x in manifest["sources"]]
+    return load_seed(directory,expected)
+
+
 def main():
     p=argparse.ArgumentParser()
     sub=p.add_subparsers(dest="command",required=True)
@@ -220,8 +267,18 @@ def main():
     q=sub.add_parser("restore")
     q.add_argument("--directory",type=Path,required=True)
     q.add_argument("--state",type=Path,required=True)
+    q=sub.add_parser("pack-seed")
+    q.add_argument("--directory",type=Path,required=True)
+    q.add_argument("--archive",type=Path,required=True)
+    q=sub.add_parser("unpack-seed")
+    q.add_argument("--directory",type=Path,required=True)
+    q.add_argument("--archive",type=Path,required=True)
     a=p.parse_args()
-    if a.command=="seed":
+    if a.command=="pack-seed":
+        print(pack_seed_release(a.directory,a.archive))
+    elif a.command=="unpack-seed":
+        print(json.dumps(unpack_seed_release(a.archive,a.directory),sort_keys=True))
+    elif a.command=="seed":
         m=build_seed(a.source,a.directory)
         print(json.dumps(m,sort_keys=True))
     elif a.command=="pack":
