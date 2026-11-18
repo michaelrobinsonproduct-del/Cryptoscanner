@@ -2,37 +2,35 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T23:40:15.804840+00:00
+**UTC as-of:** 2026-11-18T23:45:13.472885+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44422620794
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44423310273
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** 7e7a8d68109a8db16f6d924e3778cae6252e5717 (atomic ledger/results publication)
-**Ledger generation:** 697 (remote push/readback verified)
+**Previous ledger commit:** ccb814237f10ee72f65dcb655cf2a95720eb62a3 (atomic ledger/results publication)
+**Ledger generation:** 698 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 14.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 15.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | LUNA/USD | 4.353e-05 | 81.541 | 62.488 | +4.51% | +0.81% | 4.96x | 2.3 | 2026-11-18T23:40:11.127154+00:00 | Not calibrated | STRONG 96/100 | HIGH 60/100 | Consider small entry | WATCH |
-| 2 | TRX/USD | 0.30929 | 58.729 | 43.062 | +0.45% | +0.13% | 3.12x | 0.0 | 2026-11-18T23:40:11.127154+00:00 | Not calibrated | STRONG 74/100 | HIGH 55/100 | Watch | WATCH |
-| 3 | MEGA/USD | 0.05543 | 56.965 | 65.393 | +7.34% | -0.14% | 0.23x | 21.6 | 2026-11-18T23:40:11.127154+00:00 | Not calibrated | WEAK 23/100 | EXTREME 100/100 | Do nothing | WATCH |
-| 4 | AKE/USD | 0.01023319 | 47.646 | 44.562 | +2.49% | +1.27% | 0.67x | 14.8 | 2026-11-18T23:40:11.127154+00:00 | Not calibrated | MODERATE 49/100 | VERY_HIGH 81/100 | Watch | WATCH |
-| 5 | NIGHT/USD | 0.0454 | 45.817 | 46.522 | +1.14% | +0.75% | 0.55x | 11.0 | 2026-11-18T23:40:11.127154+00:00 | Not calibrated | MODERATE 48/100 | VERY_HIGH 76/100 | Watch | WATCH |
-| 6 | AKT/USD | 0.5183 | 36.860 | 40.242 | +1.77% | +1.05% | 0.14x | 7.7 | 2026-11-18T23:40:11.127154+00:00 | Not calibrated | MODERATE 48/100 | VERY_HIGH 75/100 | Watch | WATCH |
+| 1 | TRX/USD | 0.309571 | 59.341 | 43.639 | +0.54% | +0.14% | 4.11x | 0.0 | 2026-11-18T23:45:08.555684+00:00 | Not calibrated | STRONG 75/100 | HIGH 55/100 | Watch | WATCH |
+| 2 | MEGA/USD | 0.05563 | 56.002 | 63.636 | +7.73% | +0.07% | 0.20x | 25.2 | 2026-11-18T23:45:08.555684+00:00 | Not calibrated | WEAK 38/100 | EXTREME 94/100 | Do nothing | WATCH |
+| 3 | AKE/USD | 0.01031642 | 51.120 | 43.761 | +3.33% | +1.82% | 0.82x | 28.1 | 2026-11-18T23:45:08.555684+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 79/100 | Watch | WATCH |
+| 4 | NIGHT/USD | 0.04536 | 42.831 | 44.658 | +1.05% | +0.73% | 0.45x | 13.2 | 2026-11-18T23:45:08.555684+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 76/100 | Watch | WATCH |
+| 5 | AKT/USD | 0.5194 | 41.452 | 44.660 | +1.98% | +1.11% | 0.12x | 1.9 | 2026-11-18T23:45:08.555684+00:00 | Not calibrated | MODERATE 51/100 | VERY_HIGH 75/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | MEGA/USD | 65.393 | 0.05543 | -0.14% | 0.23x |
-| 2 | LUNA/USD | 62.488 | 4.353e-05 | +0.81% | 4.96x |
-| 3 | NIGHT/USD | 46.522 | 0.0454 | +0.75% | 0.55x |
-| 4 | AKE/USD | 44.562 | 0.01023319 | +1.27% | 0.67x |
-| 5 | TRX/USD | 43.062 | 0.30929 | +0.13% | 3.12x |
-| 6 | AKT/USD | 40.242 | 0.5183 | +1.05% | 0.14x |
+| 1 | MEGA/USD | 63.636 | 0.05563 | +0.07% | 0.20x |
+| 2 | AKT/USD | 44.660 | 0.5194 | +1.11% | 0.12x |
+| 3 | NIGHT/USD | 44.658 | 0.04536 | +0.73% | 0.45x |
+| 4 | AKE/USD | 43.761 | 0.01031642 | +1.82% | 0.82x |
+| 5 | TRX/USD | 43.639 | 0.309571 | +0.14% | 4.11x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -48,15 +46,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 697; predictions: 5639; observations: 421480.
-- Matured sampled outcomes across 1/6/24/48h: 5499; gap abstentions: 13266. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 698; predictions: 5644; observations: 422089.
+- Matured sampled outcomes across 1/6/24/48h: 5503; gap abstentions: 13278. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 8; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 10; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -65,26 +63,24 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44422620794 · **Generation:** 697 · **Legacy run:** 44422620794
-**Main quote time:** 2026-11-18T23:40:15.804840+00:00 · **Legacy report time:** 2026-11-18T23:40:50.569500+00:00
+**Writer:** 44423310273 · **Generation:** 698 · **Legacy run:** 44423310273
+**Main quote time:** 2026-11-18T23:45:13.472885+00:00 · **Legacy report time:** 2026-11-18T23:45:41.177154+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | LUNA/USD ⭐ | 4.353e-05 | 81.54 | +0.81% | 4.96x | STRONG 100/100 | HIGH 60/100 | Consider small entry |
-| 2 | TRX/USD ⭐ | 0.30929 | 58.73 | +0.13% | 3.12x | STRONG 84/100 | HIGH 55/100 | Watch |
-| 3 | MEGA/USD | 0.05543 | 56.97 | -0.14% | 0.23x | WEAK 23/100 | EXTREME 100/100 | Do nothing |
-| 4 | AKE/USD | 0.01023319 | 47.65 | +1.27% | 0.67x | MODERATE 49/100 | VERY_HIGH 81/100 | Watch |
-| 5 | NIGHT/USD | 0.0454 | 45.82 | +0.75% | 0.55x | MODERATE 48/100 | VERY_HIGH 76/100 | Watch |
-| 6 | AKT/USD | 0.5183 | 36.86 | +1.05% | 0.14x | MODERATE 48/100 | VERY_HIGH 75/100 | Watch |
+| 1 | TRX/USD ⭐ | 0.309571 | 59.34 | +0.14% | 4.11x | STRONG 85/100 | HIGH 55/100 | Watch |
+| 2 | MEGA/USD | 0.05563 | 56.00 | +0.07% | 0.20x | WEAK 38/100 | EXTREME 94/100 | Do nothing |
+| 3 | AKE/USD | 0.01031642 | 51.12 | +1.82% | 0.82x | MODERATE 46/100 | VERY_HIGH 79/100 | Watch |
+| 4 | NIGHT/USD | 0.04536 | 42.83 | +0.73% | 0.45x | MODERATE 46/100 | VERY_HIGH 76/100 | Watch |
+| 5 | AKT/USD | 0.5194 | 41.45 | +1.11% | 0.12x | MODERATE 51/100 | VERY_HIGH 75/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | LUNA/USD ⭐ | 4.345e-05 | 85.31 | +0.81% | 4.96x | 1831 | STRONG 100/100 | HIGH 60/100 | Consider small entry |
-| 2 | TRX/USD ⭐ | 0.309373 | 57.02 | +0.13% | 3.12x | 4060 | STRONG 84/100 | HIGH 55/100 | Watch |
+| 1 | TRX/USD ⭐ | 0.309571 | 57.78 | +0.14% | 4.11x | 4048 | STRONG 84/100 | HIGH 55/100 | Watch |
 
-**Same-run overlap:** LUNA/USD, TRX/USD
+**Same-run overlap:** TRX/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
