@@ -4,6 +4,8 @@ on:
     paths:
       - 'historical/kraken_q3_48h_shadow.py'
       - 'historical/test_kraken_q3_48h_shadow.py'
+      - 'historical/market_wide_sparse_research.py'
+      - 'historical/test_market_wide_sparse_research.py'
       - '.github/workflows/historical-q3-48h-shadow.yml'
   workflow_dispatch:
 permissions:
@@ -23,7 +25,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Exact-source leak, gap, eligibility and 48-hour embargo contracts
-        run: python -m unittest historical.test_kraken_q3_48h_shadow -v
+        run: python -m unittest historical.test_kraken_q3_48h_shadow historical.test_market_wide_sparse_research -v
       - name: Download official Kraken Q3 incremental OHLCVT archive
         run: |
           set -euo pipefail
@@ -80,6 +82,12 @@ jobs:
             --train-cohorts --observed-positive-sensitivity --training-end 2026-09-07T00:00:00Z \
             --holdout-start 2026-09-09T00:00:00Z --evaluation-asof 2026-09-15T00:00:00Z \
             --output historical/output/market-wide-positive-sensitivity.json
+      - name: Evaluate documented archive no-trade intervals separately from strict training
+        run: |
+          python -m historical.market_wide_sparse_research /tmp/kraken-archive/q3.zip \
+            historical/output/market-wide-cohorts.jsonl.gz \
+            --sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
+            --output historical/output/market-wide-sparse-research.json
       - name: Checksum reusable historical cohort and model outputs
         run: |
           cd historical/output
@@ -97,4 +105,5 @@ jobs:
             historical/output/market-wide-shadow.json
             historical/output/market-wide-positive-sensitivity.json
             historical/output/MARKET-WIDE-SHA256SUMS
+            historical/output/market-wide-sparse-research.json
           retention-days: 90
