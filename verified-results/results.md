@@ -2,12 +2,12 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T21:10:16.007001+00:00
+**UTC as-of:** 2026-11-18T21:15:16.570774+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44398529291
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44399411866
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** c26a6d7c32aabe47bfed9c0d63259077bd0e96f2 (atomic ledger/results publication)
-**Ledger generation:** 668 (remote push/readback verified)
+**Previous ledger commit:** 450752da3985d1a3fb086b44c52fae46999e62c4 (atomic ledger/results publication)
+**Ledger generation:** 669 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 10.
@@ -16,13 +16,13 @@
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | SENT/USD | 0.020088 | 72.584 | 73.680 | +7.60% | -0.08% | 0.93x | 5.0 | 2026-11-18T21:10:13.179484+00:00 | Not calibrated | WEAK 41/100 | VERY_HIGH 80/100 | Watch | WATCH |
+| 1 | SENT/USD | 0.020023 | 70.572 | 73.423 | +7.25% | -0.66% | 1.05x | 5.5 | 2026-11-18T21:15:13.350781+00:00 | Not calibrated | MODERATE 45/100 | VERY_HIGH 80/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SENT/USD | 73.680 | 0.020088 | -0.08% | 0.93x |
+| 1 | SENT/USD | 73.423 | 0.020023 | -0.66% | 1.05x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -38,8 +38,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 668; predictions: 5526; observations: 403819.
-- Matured sampled outcomes across 1/6/24/48h: 5133; gap abstentions: 13137. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 669; predictions: 5527; observations: 404428.
+- Matured sampled outcomes across 1/6/24/48h: 5137; gap abstentions: 13137. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 9 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -55,13 +55,13 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44398529291 · **Generation:** 668 · **Legacy run:** 44398529291
-**Main quote time:** 2026-11-18T21:10:16.007001+00:00 · **Legacy report time:** 2026-11-18T21:10:52.746531+00:00
+**Writer:** 44399411866 · **Generation:** 669 · **Legacy run:** 44399411866
+**Main quote time:** 2026-11-18T21:15:16.570774+00:00 · **Legacy report time:** 2026-11-18T21:15:47.380525+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD | 0.020088 | 72.58 | -0.08% | 0.93x | WEAK 41/100 | VERY_HIGH 80/100 | Watch |
+| 1 | SENT/USD | 0.020023 | 70.57 | -0.66% | 1.05x | MODERATE 45/100 | VERY_HIGH 80/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
