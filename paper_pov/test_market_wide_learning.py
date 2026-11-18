@@ -410,5 +410,26 @@ class MarketWideLearningTest(unittest.TestCase):
         self.assertEqual(report["missing_eligible_pairs"],["BUSD"])
         self.assertEqual(report["coverage_scope"],"PARTIAL_ROTATING_SHARD_PLUS_WATCH_CONTROLS")
 
+
+    def test_frozen_candidate_reused_only_for_identical_fit_and_data(self):
+        from paper_pov.market_wide_learning import choose_fitted_candidate
+        from paper_pov.shadow_learning_evidence import canonical_digest
+        def report(date,data):
+            m=dict(status="SHADOW_ONLY",training_end_utc=date,training_dataset_digest=data,
+                   feature_names=["f"],feature_weights={"f":1},feature_centers={"f":0},
+                   feature_scales={"f":1},training_count=10,positive_count=2,negative_count=8)
+            m["version"]=canonical_digest(m)
+            d=dict(schema="market_wide_cumulative_shadow_v1",model=m,production_applied=False,
+                   promotion_authorized=False)
+            d["digest"]=canonical_digest(d)
+            return d
+        old=report("2026-01-01T00:00:00Z","a"*64)
+        new=report("2026-01-02T00:00:00Z","a"*64)
+        chosen,reused=choose_fitted_candidate(new,old)
+        self.assertTrue(reused)
+        self.assertEqual(chosen,old)
+        changed=report("2026-01-02T00:00:00Z","b"*64)
+        self.assertEqual(choose_fitted_candidate(changed,old),(changed,False))
+
 if __name__ == "__main__":
     unittest.main()

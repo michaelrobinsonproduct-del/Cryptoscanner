@@ -1036,6 +1036,37 @@ def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256
     return report
 
 
+
+def choose_fitted_candidate(current, previous=None):
+    """Identical strict training examples must not fragment prospective metrics.
+
+    Only reuse a validated, shadow-only model with the same data fingerprint,
+    features and fitted values. A real data or algorithm change freezes a new
+    candidate. The original report is retained unchanged as model provenance.
+    """
+    def validate(report):
+        if (report.get("schema")!="market_wide_cumulative_shadow_v1"
+            or report.get("digest")!=canonical_digest({k:v for k,v in report.items() if k!="digest"})
+            or report.get("production_applied") is not False
+            or report.get("promotion_authorized") is not False):
+            raise ValueError("Invalid cumulative candidate report")
+        model=report["model"]
+        if (model.get("status")!="SHADOW_ONLY" or
+            model.get("version")!=canonical_digest({k:v for k,v in model.items() if k!="version"})):
+            raise ValueError("Invalid frozen candidate model")
+        return model
+    new=validate(current)
+    if previous is None:
+        return current,False
+    old=validate(previous)
+    fields=("training_dataset_digest","feature_names","feature_weights",
+            "feature_centers","feature_scales","training_count","positive_count","negative_count")
+    if (old.get("training_dataset_digest") and all(old.get(k)==new.get(k) for k in fields)
+        and utc_time(old["training_end_utc"])<=utc_time(new["training_end_utc"])):
+        return previous,True
+    return current,False
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Prediction-independent read-only Kraken outcome smoke")
     parser.add_argument("ledger", type=Path)

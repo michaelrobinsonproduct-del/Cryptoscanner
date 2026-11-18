@@ -119,6 +119,7 @@ jobs:
             gh run download "$prior_run" -n "market-wide-learning-continuity-pr-$prior_run" -D evidence/market-prior
             test -s evidence/market-prior/market-wide-state.json
             echo "MARKET_LEARNING_PRIOR_RUN=$prior_run"
+            echo "$prior_run" > evidence/market-prior-run.txt
             # Known incident checkpoint: recover evidence lost by unordered prior discovery.
             if [ "$prior_run" -ge 44221452274 ] && ! python -c 'import json; d=json.load(open("evidence/market-prior/market-wide-state.json")); raise SystemExit(not d.get("continuity_recovery_44220533486"))'; then
               mkdir -p evidence/market-recovery
@@ -135,7 +136,14 @@ jobs:
               fi
             fi
             if [ -s evidence/market-prior/market-wide-model.json ]; then
-              completed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run" --jq .updated_at)
+              origin="$prior_run"
+              if [ -s evidence/market-prior/market-wide-model-origin-run.txt ]; then
+                origin=$(cat evidence/market-prior/market-wide-model-origin-run.txt)
+              fi
+              [[ "$origin" =~ ^[0-9]+$ ]]
+              test "$origin" -le "$prior_run"
+              test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq '.status + ":" + (.conclusion // "") + ":" + .head_branch')" = "completed:success:$PR_BRANCH"
+              completed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq .updated_at)
               if python -c 'import json,sys; from paper_pov.market_wide_learning import eligible_scoring_model; a=json.load(open("evidence/ledger.json")); m=json.load(open(sys.argv[1])); sys.exit(not eligible_scoring_model(m,sys.argv[2],a["runs"][-1]["as_of"]))' evidence/market-prior/market-wide-model.json "$completed"; then
                 model_path=evidence/market-prior/market-wide-model.json
                 model_ready="$completed"
@@ -185,7 +193,27 @@ jobs:
             --cumulative-archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
             --additional-archive evidence/historical-q2/q2-market-wide-cohorts.jsonl.gz fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 \
             --retained-observed evidence/historical-recovered/post-q3-cohorts.jsonl.gz b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef \
-            --output evidence/market-wide-model.json
+            --output evidence/market-wide-training-report.json
+          export PRIOR_MARKET_RUN=""
+          if [ -s evidence/market-prior/market-wide-model-origin-run.txt ]; then
+            PRIOR_MARKET_RUN=$(cat evidence/market-prior/market-wide-model-origin-run.txt)
+          fi
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from paper_pov.market_wide_learning import choose_fitted_candidate
+          current=json.loads(Path("evidence/market-wide-training-report.json").read_text())
+          prior=Path("evidence/market-prior/market-wide-model.json")
+          chosen,reused=choose_fitted_candidate(current,json.loads(prior.read_text()) if prior.is_file() else None)
+          origin=os.environ["GITHUB_RUN_ID"]
+          if reused:
+              origin=os.environ.get("PRIOR_MARKET_RUN") or Path("evidence/market-prior-run.txt").read_text().strip()
+          if not origin.isdigit():
+              raise ValueError("Invalid candidate model origin")
+          Path("evidence/market-wide-model.json").write_text(json.dumps(chosen,sort_keys=True))
+          Path("evidence/market-wide-model-origin-run.txt").write_text(origin+"\\n")
+          print("FROZEN_CANDIDATE",chosen["model"]["version"],"REUSED",reused,"ORIGIN",origin)
+          PY
           python -c 'import json; d=json.load(open("evidence/market-wide-model.json")); assert d["model"]["status"]=="SHADOW_ONLY"; assert d["purge_hours"]==48 and len(d["archive_cohort_receipts"])==2'
       - name: Retain isolated market learning state for the next successful PR replay
         if: github.event_name == 'pull_request'
@@ -195,6 +223,8 @@ jobs:
           path: |
             evidence/market-wide-state.json
             evidence/market-wide-model.json
+            evidence/market-wide-model-origin-run.txt
+            evidence/market-wide-training-report.json
             evidence/market-wide-scoring-model.json
             evidence/market-wide-scoring-model-available.txt
           if-no-files-found: error
