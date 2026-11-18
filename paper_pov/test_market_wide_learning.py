@@ -271,6 +271,8 @@ class MarketWideLearningTest(unittest.TestCase):
             report=train_cumulative_market_model(path,state,expected_archive_sha256=digest)
             self.assertEqual(report["source_counts"]["archive"],{"examples":2,"positives":1})
             self.assertEqual(report["source_counts"]["recent_observed"],{"examples":1,"positives":1})
+            self.assertEqual(report["model"]["training_end_utc"],at(8))
+            self.assertEqual(report["model"]["holdout_start_utc"],at(10))
             self.assertEqual(report["model"]["training_count"],3)
             self.assertEqual(report["model"]["positive_count"],2)
             self.assertEqual(report["comparison_status"],"FUTURE_HOLDOUT_NOT_YET_MATURE")

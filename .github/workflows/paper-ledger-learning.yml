@@ -121,6 +121,7 @@ jobs:
             --cumulative-state evidence/market-wide-state.json \
             --cumulative-archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
             --output evidence/market-wide-model.json
+          python -c 'import json; d=json.load(open("evidence/market-wide-model.json")); assert d["model"]["status"]=="SHADOW_ONLY"; assert d["purge_hours"]==48'
       - name: Retain isolated market learning state for the next successful PR replay
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4

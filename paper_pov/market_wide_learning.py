@@ -696,7 +696,8 @@ def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256
     """Refit on archived and newly matured independent labels, then freeze.
 
     This is a new prospective model, not a repeat of the historical holdout.
-    Its training cutoff is the retained state's last observation time.
+    The training cutoff precedes the observed state by the required 48h
+    purge, so the next genuinely later scan can use the frozen model.
     Never claim source authentication, verified lift or production approval.
     """
     import gzip
@@ -706,7 +707,8 @@ def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256
     if (state.get("schema") != STATE_SCHEMA or state.get("digest") != canonical_digest(
             {k:v for k,v in state.items() if k!="digest"}) or state.get("production_applied") is not False):
         raise ValueError("Invalid cumulative learning state")
-    cutoff = utc_time(state["evaluation_asof_utc"])
+    observed_asof = utc_time(state["evaluation_asof_utc"])
+    cutoff = observed_asof - timedelta(hours=48)
     eligible, labels = {}, {}
     origin = {}
     def ingest(anchors, outcomes, namespace):
@@ -771,6 +773,7 @@ def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256
     report={"schema":"market_wide_cumulative_shadow_v1","model":model,
             "archive_cohort_sha256":file_hash.hexdigest(),"state_digest":state["digest"],
             "source_counts":counts,"training_data_cutoff_utc":cutoff.isoformat(),
+            "state_asof_utc":observed_asof.isoformat(),"purge_hours":48,
             "comparison_status":"FUTURE_HOLDOUT_NOT_YET_MATURE",
             "source_authenticated":False,"production_applied":False,
             "promotion_authorized":False,"measured_lift_verified":False}
