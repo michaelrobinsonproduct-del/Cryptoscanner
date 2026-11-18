@@ -9,6 +9,8 @@ on:
   pull_request:
     paths:
       - 'paper_pov/public_ledger_learning.py'
+      - 'paper_pov/market_wide_learning.py'
+      - 'paper_pov/test_market_wide_learning.py'
       - 'paper_pov/historical_paper_cohort.py'
       - 'paper_pov/kraken_observed_candles.py'
       - 'paper_pov/observed_kraken_outcomes.py'
@@ -40,7 +42,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Focused ledger schema acceptance
-        run: python -m unittest paper_pov.test_public_ledger_learning paper_pov.test_historical_paper_cohort paper_pov.test_rolling_kraken_candles paper_pov.test_frozen_historical_shadow paper_pov.test_rolling_learning_predictions -v
+        run: python -m unittest paper_pov.test_public_ledger_learning paper_pov.test_historical_paper_cohort paper_pov.test_rolling_kraken_candles paper_pov.test_frozen_historical_shadow paper_pov.test_rolling_learning_predictions paper_pov.test_market_wide_learning -v
       - name: Select latest persisted public paper ledger
         env:
           REQUESTED_RUN: ${{ inputs.paper_run_id }}
