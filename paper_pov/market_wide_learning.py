@@ -92,7 +92,106 @@ def build_market_cohort(candles, *, eligible_pairs, evaluation_asof_utc,
             "promotion_authorized": False}
 
 
-def select_market_batch(ledger, *, batch_size=12):
+
+STATE_SCHEMA = "market_wide_continuity_v1"
+MAX_RETAINED_ANCHORS = 250000
+
+
+def validate_prior_market_state(prior, ledger):
+    if prior is None:
+        return
+    if prior.get("schema") != STATE_SCHEMA or prior.get("digest") != canonical_digest(
+            {k: v for k, v in prior.items() if k != "digest"}):
+        raise ValueError("Invalid market learning continuity checksum")
+    if prior.get("production_applied") is not False:
+        raise ValueError("Refusing promoted market learning state")
+    if prior["ledger_generation"] > ledger["generation"]:
+        raise ValueError("Market learning generation rollback")
+    if utc_time(prior["evaluation_asof_utc"]) > utc_time(ledger["runs"][-1]["as_of"]):
+        raise ValueError("Market learning time rollback")
+
+
+def retain_hourly_eligibility(ledger, prior):
+    """Preserve an actual observation in the ten minutes before each hour.
+
+    Only the last 72h of evidence is needed for the recent REST OHLC window.
+    No observation is manufactured for times we did not see.
+    """
+    now = utc_time(ledger["runs"][-1]["as_of"])
+    cutoff = now - timedelta(hours=72)
+    latest = {}
+    for observation in (prior or {}).get("eligibility", []) + ledger["observations"]:
+        t = utc_time(observation["at"])
+        if not cutoff <= t <= now:
+            continue
+        hour = t.replace(minute=0, second=0, microsecond=0)
+        if t != hour:
+            hour += timedelta(hours=1)
+        if hour-t > timedelta(minutes=10):
+            continue
+        key = (observation["pair"], hour)
+        if key not in latest or t > utc_time(latest[key]["at"]):
+            latest[key] = {"pair": observation["pair"], "at": t.isoformat()}
+    return [latest[key] for key in sorted(latest)]
+
+
+def merge_market_state(cohort, eligibility, prior):
+    """Checksummed cumulative research state, never a second trade ledger.
+
+    Preserve mature complete outcomes; replace immature/gap records when a
+    genuinely complete re-observation becomes available. Each anchor/horizon
+    counts only once across shards and reruns.
+    """
+    prior = prior or {}
+    anchors = {a["prediction_id"]: a for a in prior.get("anchors", [])}
+    outcomes = {(o["prediction_id"], o["horizon_hours"]): o
+                for o in prior.get("outcomes", [])}
+    for a in cohort["anchors"]:
+        k = a["prediction_id"]
+        old = anchors.get(k)
+        if old is not None:
+            identity = ("pair", "entry_utc", "feature_asof_utc", "entry_price")
+            if any(old[f] != a[f] for f in identity):
+                raise ValueError("Market learning anchor identity changed")
+            if old["feature_complete"] and a["feature_complete"] and old["features"] != a["features"]:
+                raise ValueError("Complete historical feature window changed")
+            if old["feature_complete"] or not a["feature_complete"]:
+                continue
+        anchors[k] = a
+    for o in cohort["outcomes"]:
+        k = (o["prediction_id"], o["horizon_hours"])
+        if k[0] not in anchors:
+            raise ValueError("Outcome without retained market anchor")
+        old = outcomes.get(k)
+        if old is not None and old["coverage_complete"]:
+            if o["coverage_complete"] and any(old[f] != o[f] for f in
+                    ("hit", "max_favorable_return", "close_return")):
+                raise ValueError("Complete market outcome changed")
+            continue
+        if old is None or o["coverage_complete"] or old["outcome_status"] == "IMMATURE":
+            outcomes[k] = o
+    if len(anchors) > MAX_RETAINED_ANCHORS:
+        raise ValueError("Market learning state requires durable archive compaction; refusing silent loss")
+    attempts = dict(prior.get("last_attempt_generation", {}))
+    successes = dict(prior.get("last_success_generation", {}))
+    generation = cohort["ledger_generation"]
+    for pair in cohort["selected_pairs"]:
+        attempts[pair] = generation
+    for pair in cohort["observed_pairs"]:
+        successes[pair] = generation
+    result = {"schema": STATE_SCHEMA, "ledger_generation": generation,
+              "evaluation_asof_utc": cohort["evaluation_asof_utc"],
+              "previous_digest": prior.get("digest"),
+              "eligibility": eligibility,
+              "anchors": [anchors[k] for k in sorted(anchors)],
+              "outcomes": [outcomes[k] for k in sorted(outcomes)],
+              "last_attempt_generation": attempts, "last_success_generation": successes,
+              "production_applied": False, "source_authenticated": False}
+    result["digest"] = canonical_digest(result)
+    return result
+
+
+def select_market_batch(ledger, *, batch_size=12, prior=None):
     """Rotate independently of WATCH rankings across the latest observed universe.
 
     The latest writer's observations establish the current universe only.
@@ -109,14 +208,19 @@ def select_market_batch(ledger, *, batch_size=12):
         raise ValueError("Invalid ledger generation")
     shard_count = (len(pairs) + batch_size - 1) // batch_size
     shard = (generation - 1) % shard_count
+    if prior is not None:
+        attempts = prior['last_attempt_generation']
+        selected = sorted(pairs, key=lambda pair: (attempts.get(pair, 0), pair))[:batch_size]
+        return pairs, selected, shard, shard_count
     return pairs, pairs[shard*batch_size:(shard+1)*batch_size], shard, shard_count
 
 
-def run_observed_market_batch(ledger, *, fetch=None, batch_size=12):
+def run_observed_market_batch(ledger, *, fetch=None, batch_size=12, prior=None):
     """Read-only real Kraken smoke; never describes a shard as full coverage."""
     from .kraken_observed_candles import fetch_kraken_ohlc
     fetch = fetch or fetch_kraken_ohlc
-    pairs, selected, shard, shard_count = select_market_batch(ledger, batch_size=batch_size)
+    validate_prior_market_state(prior, ledger)
+    pairs, selected, shard, shard_count = select_market_batch(ledger, batch_size=batch_size, prior=prior)
     results, errors = [], {}
     for pair in selected:
         try:
@@ -133,10 +237,11 @@ def run_observed_market_batch(ledger, *, fetch=None, batch_size=12):
     if not results:
         raise ValueError("No successful Kraken OHLC responses: " + repr(errors))
     latest = ledger["runs"][-1]
+    eligibility = retain_hourly_eligibility(ledger, prior)
     cohort = build_market_cohort(
         [c for item in results for c in item["candles"]],
         eligible_pairs=pairs, evaluation_asof_utc=latest["as_of"],
-        eligibility_observations=ledger["observations"])
+        eligibility_observations=eligibility)
     digests = {item["pair"]: item["response_sha256"] for item in results}
     for row in cohort["anchors"] + cohort["outcomes"]:
         row["source_sha256"] = digests[row["pair"]]
@@ -146,6 +251,7 @@ def run_observed_market_batch(ledger, *, fetch=None, batch_size=12):
                   shard_index=shard, shard_count=shard_count, fetch_errors=errors,
                   source_digests=digests, coverage_scope="PARTIAL_ROTATING_SHARD",
                   measured_lift_verified=False)
+    cohort["continuity_state"] = merge_market_state(cohort, eligibility, prior)
     cohort["evidence_digest"] = canonical_digest(cohort)
     return cohort
 
@@ -237,6 +343,8 @@ def main(argv=None):
     parser.add_argument("ledger", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--batch-size", type=int, default=12)
+    parser.add_argument("--prior-state", type=Path)
+    parser.add_argument("--state-output", type=Path)
     parser.add_argument("--archive-sha256")
     parser.add_argument("--archive-start")
     parser.add_argument("--archive-end")
@@ -252,14 +360,20 @@ def main(argv=None):
         args.output.write_text(json.dumps(report, sort_keys=True) + "\n")
         print(json.dumps(report, sort_keys=True))
         return report
-    report = run_observed_market_batch(json.loads(args.ledger.read_text()), batch_size=args.batch_size)
+    prior = json.loads(args.prior_state.read_text()) if args.prior_state else None
+    report = run_observed_market_batch(json.loads(args.ledger.read_text()), batch_size=args.batch_size, prior=prior)
+    if args.state_output:
+        args.state_output.parent.mkdir(parents=True, exist_ok=True)
+        args.state_output.write_text(json.dumps(report["continuity_state"], sort_keys=True, separators=(",", ":")) + "\n")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, sort_keys=True, separators=(",", ":")) + "\n")
     summary = {k: report[k] for k in ("ledger_generation", "shard_index", "shard_count",
                "per_horizon", "feature_complete_anchors", "eligibility_abstentions",
                "fetch_errors", "coverage_scope", "source_authenticated")}
     summary.update(eligible_count=len(report["eligible_pairs"]), selected_count=len(report["selected_pairs"]),
-                   observed_count=len(report["observed_pairs"]))
+                   observed_count=len(report["observed_pairs"]),
+                   cumulative_anchors=len(report["continuity_state"]["anchors"]),
+                   cumulative_observed_markets=len(report["continuity_state"]["last_success_generation"]))
     print(json.dumps(summary, sort_keys=True))
     return report
 
