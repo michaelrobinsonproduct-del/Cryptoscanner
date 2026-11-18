@@ -8,6 +8,7 @@ from datetime import timedelta
 from math import isfinite
 from .shadow_learning_evidence import utc_time, canonical_digest
 from .heldout_outcome_adapter import reconstruct_forward_outcomes
+from .frozen_historical_shadow import features_at_entry
 
 def build_market_cohort(candles, *, eligible_pairs, evaluation_asof_utc):
     asof = utc_time(evaluation_asof_utc)
@@ -39,10 +40,14 @@ def build_market_cohort(candles, *, eligible_pairs, evaluation_asof_utc):
             if any(window[j][0]-window[j-1][0] != timedelta(minutes=5) for j in range(1,4)):
                 continue
             p = float(c["close"])
+            # Reuse the existing six-feature contract; label discovery remains
+            # independent of whether the full feature window is available.
+            features = features_at_entry(rows[max(0, i-12):i+1], t)
             anchors.append({"prediction_id": canonical_digest([pair,t.isoformat()]),
                             "pair": pair, "entry_utc": t.isoformat(),
                             "feature_asof_utc": t.isoformat(), "entry_price": p,
-                            "features": {"return_15m": p/float(window[0][1]["close"])-1},
+                            "features": features or {},
+                            "feature_complete": features is not None,
                             "liquidity_qualified": False})
     outcomes = reconstruct_forward_outcomes(anchors, observed, evaluation_asof_utc=evaluation_asof_utc)
     per_horizon = {}
@@ -56,6 +61,7 @@ def build_market_cohort(candles, *, eligible_pairs, evaluation_asof_utc):
         }
     return {"anchors": anchors, "outcomes": outcomes,
             "per_horizon": per_horizon,
+            "feature_complete_anchors": sum(a["feature_complete"] for a in anchors),
             "missing_eligible_pairs": sorted(eligible - set(grouped)),
             "eligible_pairs": sorted(eligible), "observed_pairs": sorted(grouped),
             "source_authenticated": False, "production_applied": False,
