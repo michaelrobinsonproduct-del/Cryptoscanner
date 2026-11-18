@@ -107,7 +107,8 @@ jobs:
           done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate \
             --jq '.artifacts[] | select(.expired == false and (.name | startswith("market-wide-learning-continuity-pr-"))) | [.workflow_run.head_branch,.workflow_run.id] | @tsv' | awk -v branch="$PR_BRANCH" '$1 == branch {print $2}' | sort -unr)
           prior_args=()
-          model_args=(--shadow-model historical/evidence/q3_2026_frozen_shadow_v1.json --shadow-model-available 2026-11-11T03:27:00Z)
+          model_path=historical/evidence/q3_2026_frozen_shadow_v1.json
+          model_ready=2026-11-11T03:27:00Z
           if [ -n "$prior_run" ]; then
             gh run download "$prior_run" -n "market-wide-learning-continuity-pr-$prior_run" -D evidence/market-prior
             test -s evidence/market-prior/market-wide-state.json
@@ -119,15 +120,27 @@ jobs:
               python -c 'import json; from pathlib import Path; from paper_pov.market_wide_learning import recover_market_state; from paper_pov.shadow_learning_evidence import canonical_digest; p=Path("evidence/market-prior/market-wide-state.json"); d=recover_market_state(json.loads(p.read_text()),json.load(open("evidence/market-recovery/market-wide-state.json"))); d["continuity_recovery_44220533486"]=True; d["digest"]=canonical_digest({k:v for k,v in d.items() if k!="digest"}); p.write_text(json.dumps(d)); print("MARKET_LEARNING_RECOVERED",len(d["anchors"]),len(d["shadow_predictions"]))'
             fi
             prior_args=(--prior-state evidence/market-prior/market-wide-state.json)
+            # Preserve the prior active model when scanning the same writer generation.
+            if [ -s evidence/market-prior/market-wide-scoring-model.json ] && [ -s evidence/market-prior/market-wide-scoring-model-available.txt ]; then
+              ready=$(cat evidence/market-prior/market-wide-scoring-model-available.txt)
+              if python -c 'import json,sys; from paper_pov.market_wide_learning import eligible_scoring_model; a=json.load(open("evidence/ledger.json")); m=json.load(open(sys.argv[1])); sys.exit(not eligible_scoring_model(m,sys.argv[2],a["runs"][-1]["as_of"]))' evidence/market-prior/market-wide-scoring-model.json "$ready"; then
+                model_path=evidence/market-prior/market-wide-scoring-model.json
+                model_ready="$ready"
+              fi
+            fi
             if [ -s evidence/market-prior/market-wide-model.json ]; then
               completed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run" --jq .updated_at)
-              if python -c 'import json,sys; from paper_pov.shadow_learning_evidence import utc_time; a=json.load(open("evidence/ledger.json")); m=json.load(open("evidence/market-prior/market-wide-model.json")); sys.exit(not (m["model"]["status"]=="SHADOW_ONLY" and utc_time(a["runs"][-1]["as_of"])>utc_time(sys.argv[1]) and (utc_time(a["runs"][-1]["as_of"])-utc_time(m["model"]["training_end_utc"])).total_seconds()>=48*3600))' "$completed"; then
-                model_args=(--shadow-model evidence/market-prior/market-wide-model.json --shadow-model-available "$completed")
+              if python -c 'import json,sys; from paper_pov.market_wide_learning import eligible_scoring_model; a=json.load(open("evidence/ledger.json")); m=json.load(open(sys.argv[1])); sys.exit(not eligible_scoring_model(m,sys.argv[2],a["runs"][-1]["as_of"]))' evidence/market-prior/market-wide-model.json "$completed"; then
+                model_path=evidence/market-prior/market-wide-model.json
+                model_ready="$completed"
               fi
             fi
           else
             echo "MARKET_LEARNING_PR_BOOTSTRAP_NO_COMPLETED_PRIOR"
           fi
+          cp "$model_path" evidence/market-wide-scoring-model.json
+          printf '%s\\n' "$model_ready" > evidence/market-wide-scoring-model-available.txt
+          model_args=(--shadow-model evidence/market-wide-scoring-model.json --shadow-model-available "$model_ready")
           python -m paper_pov.market_wide_learning evidence/ledger.json --batch-size 12 \
             "${prior_args[@]}" --state-output evidence/market-wide-state.json \
             "${model_args[@]}" \
@@ -159,6 +172,8 @@ jobs:
           path: |
             evidence/market-wide-state.json
             evidence/market-wide-model.json
+            evidence/market-wide-scoring-model.json
+            evidence/market-wide-scoring-model-available.txt
           if-no-files-found: error
           retention-days: 90
       - name: Reconstruct real persisted paper outcome accounting

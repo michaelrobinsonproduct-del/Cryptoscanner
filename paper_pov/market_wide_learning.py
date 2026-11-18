@@ -497,6 +497,67 @@ def score_prospective_market_shard(ledger, results, model_source, *, model_avail
             "production_applied":False, "promotion_authorized":False}
 
 
+
+def prospective_metrics_by_version(predictions, outcomes):
+    """Equal-budget paired metrics for each model and each horizon.
+
+    Never combine different fitted model versions into one performance claim.
+    Report incomplete or unselected batches rather than counting them as losses.
+    """
+    groups={}
+    for p in predictions:
+        if p.get("recording_scope")=="TIMELY_RECORDED_QUOTE_REFERENCE":
+            groups.setdefault((p["model_version"],p["batch_id"]),[]).append(p)
+    labels={(o["prediction_id"],o["horizon_hours"]):o for o in outcomes}
+    result={}
+    for (version,_),group in groups.items():
+        base=[p for p in group if p["baseline_watch"]]
+        shadow=[p for p in group if p["shadow_equal_budget_watch"]]
+        by_h=result.setdefault(version,{str(h):{"paired_complete_batches":0,"unavailable_batches":0,
+            "zero_budget_batches":0,"selected_per_scanner":0,"baseline_hits":0,"shadow_hits":0}
+            for h in (1,6,24,48)})
+        for h in (1,6,24,48):
+            m=by_h[str(h)]
+            if not base and not shadow:
+                m["zero_budget_batches"]+=1
+                continue
+            keys=[(p["prediction_id"],h) for p in base+shadow]
+            if (len(base)!=len(shadow) or any(k not in labels or
+                   labels[k]["coverage_complete"] is not True or type(labels[k]["hit"]) is not bool
+                   for k in keys)):
+                m["unavailable_batches"]+=1
+                continue
+            m["paired_complete_batches"]+=1
+            m["selected_per_scanner"]+=len(base)
+            m["baseline_hits"]+=sum(labels[(p["prediction_id"],h)]["hit"] for p in base)
+            m["shadow_hits"]+=sum(labels[(p["prediction_id"],h)]["hit"] for p in shadow)
+    for by_h in result.values():
+        for m in by_h.values():
+            n=m["selected_per_scanner"]
+            m["baseline_false_positives"]=n-m["baseline_hits"]
+            m["shadow_false_positives"]=n-m["shadow_hits"]
+            m["baseline_precision"]=m["baseline_hits"]/n if n else None
+            m["shadow_precision"]=m["shadow_hits"]/n if n else None
+            m["measured_lift_verified"]=False
+    return result
+
+
+def eligible_scoring_model(model, available, scan_at):
+    """Availability is an actual prior artifact completion timestamp."""
+    if model.get("schema")=="kraken_q3_frozen_shadow_v1":
+        training_end=utc_time(model["training_window_end"])
+    else:
+        if model.get("schema") not in ("market_wide_archive_shadow_v1","market_wide_cumulative_shadow_v1"):
+            raise ValueError("Unrecognized model schema")
+        if model.get("digest")!=canonical_digest({k:v for k,v in model.items() if k!="digest"}):
+            raise ValueError("Model report checksum mismatch")
+        if model["model"]["status"]!="SHADOW_ONLY":
+            return False
+        training_end=utc_time(model["model"]["training_end_utc"])
+    at,ready=utc_time(scan_at),utc_time(available)
+    return training_end<=ready<at and at>=training_end+timedelta(hours=48)
+
+
 def retain_prospective_shadow(state, prior, cohort, results, ledger, model_source=None, model_available_utc=None):
     """Retain immutable prospective predictions and re-evaluate revisited markets."""
     prior = prior or {}
@@ -557,6 +618,7 @@ def retain_prospective_shadow(state, prior, cohort, results, ledger, model_sourc
             "replay_only_predictions":sum(p.get("recording_scope")!="TIMELY_RECORDED_QUOTE_REFERENCE" for p in predictions.values()),
             "paired_complete_batches":count,"selected_per_scanner":selected,
             "baseline_hits":hits_base,"shadow_hits":hits_shadow,
+            "by_model_and_horizon":prospective_metrics_by_version(predictions.values(),outcomes.values()),
             "measured_lift_verified":False,"production_applied":False}
 
 

@@ -361,5 +361,23 @@ class MarketWideLearningTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"advance"):
             recover_market_state(b,a)
 
+
+    def test_prospective_metrics_separate_model_versions_and_horizons(self):
+        from paper_pov.market_wide_learning import prospective_metrics_by_version
+        preds=[]
+        for version in ("A","B"):
+            for key,base in (("base",True),("shadow",False)):
+                preds.append(dict(prediction_id=version+key,model_version=version,batch_id=version,
+                    recording_scope="TIMELY_RECORDED_QUOTE_REFERENCE",baseline_watch=base,
+                    shadow_equal_budget_watch=not base))
+        outcomes=[dict(prediction_id=p["prediction_id"],horizon_hours=1,coverage_complete=True,
+                       hit=p["shadow_equal_budget_watch"]) for p in preds if p["model_version"]=="A"]
+        x=prospective_metrics_by_version(preds,outcomes)
+        self.assertEqual(x["A"]["1"]["shadow_hits"],1)
+        self.assertEqual(x["A"]["1"]["baseline_false_positives"],1)
+        self.assertEqual(x["A"]["48"]["unavailable_batches"],1)
+        self.assertIsNone(x["B"]["1"]["shadow_precision"])
+        self.assertFalse(x["A"]["1"]["measured_lift_verified"])
+
 if __name__ == "__main__":
     unittest.main()
