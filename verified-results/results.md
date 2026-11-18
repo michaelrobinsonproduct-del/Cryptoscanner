@@ -2,27 +2,31 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T21:15:16.570774+00:00
+**UTC as-of:** 2026-11-18T21:20:17.155086+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44399411866
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44400287522
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** 450752da3985d1a3fb086b44c52fae46999e62c4 (atomic ledger/results publication)
-**Ledger generation:** 669 (remote push/readback verified)
+**Previous ledger commit:** c7abf957c125747afa6a667f46ed42aede005229 (atomic ledger/results publication)
+**Ledger generation:** 670 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 10.
+**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 12.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | SENT/USD | 0.020023 | 70.572 | 73.423 | +7.25% | -0.66% | 1.05x | 5.5 | 2026-11-18T21:15:13.350781+00:00 | Not calibrated | MODERATE 45/100 | VERY_HIGH 80/100 | Watch | WATCH |
+| 1 | SENT/USD | 0.020066 | 75.380 | 74.178 | +7.48% | +0.21% | 1.02x | 4.0 | 2026-11-18T21:20:12.673115+00:00 | Not calibrated | STRONG 73/100 | VERY_HIGH 74/100 | Watch | WATCH |
+| 2 | VVV/USD | 21.31 | 59.727 | 54.838 | +1.35% | +1.87% | 0.55x | 5.6 | 2026-11-18T21:20:12.673115+00:00 | Not calibrated | MODERATE 60/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 3 | AKT/USD | 0.512 | 37.624 | 32.700 | +0.53% | +0.59% | 1.20x | 5.9 | 2026-11-18T21:20:12.673115+00:00 | Not calibrated | MODERATE 54/100 | HIGH 67/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SENT/USD | 73.423 | 0.020023 | -0.66% | 1.05x |
+| 1 | SENT/USD | 74.178 | 0.020066 | +0.21% | 1.02x |
+| 2 | VVV/USD | 54.838 | 21.31 | +1.87% | 0.55x |
+| 3 | AKT/USD | 32.700 | 0.512 | +0.59% | 1.20x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -38,9 +42,9 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 669; predictions: 5527; observations: 404428.
-- Matured sampled outcomes across 1/6/24/48h: 5137; gap abstentions: 13137. Per-horizon counts require independent audit; do not infer held-out lift.
-- Observed +30% hits: 9 (sampled only; not a success-rate estimate).
+- Persisted scans: 670; predictions: 5530; observations: 405037.
+- Matured sampled outcomes across 1/6/24/48h: 5164; gap abstentions: 13137. Per-horizon counts require independent audit; do not infer held-out lift.
+- Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
@@ -55,20 +59,23 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44399411866 · **Generation:** 669 · **Legacy run:** 44399411866
-**Main quote time:** 2026-11-18T21:15:16.570774+00:00 · **Legacy report time:** 2026-11-18T21:15:47.380525+00:00
+**Writer:** 44400287522 · **Generation:** 670 · **Legacy run:** 44400287522
+**Main quote time:** 2026-11-18T21:20:17.155086+00:00 · **Legacy report time:** 2026-11-18T21:20:48.438459+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD | 0.020023 | 70.57 | -0.66% | 1.05x | MODERATE 45/100 | VERY_HIGH 80/100 | Watch |
+| 1 | SENT/USD ⭐ | 0.020066 | 75.38 | +0.21% | 1.02x | STRONG 83/100 | VERY_HIGH 74/100 | Watch |
+| 2 | VVV/USD | 21.31 | 59.73 | +1.87% | 0.55x | MODERATE 60/100 | VERY_HIGH 70/100 | Watch |
+| 3 | AKT/USD ⭐ | 0.512 | 37.62 | +0.59% | 1.20x | MODERATE 64/100 | HIGH 67/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
+| 1 | SENT/USD ⭐ | 0.020066 | 72.44 | +0.21% | 1.02x | 6318 | STRONG 81/100 | VERY_HIGH 74/100 | Watch |
+| 2 | AKT/USD ⭐ | 0.512 | 32.07 | +0.59% | 1.20x | 4386 | MODERATE 56/100 | VERY_HIGH 73/100 | Watch |
 
-**Same-run overlap:** None
+**Same-run overlap:** SENT/USD, AKT/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
