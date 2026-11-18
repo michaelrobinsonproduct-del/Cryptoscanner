@@ -280,7 +280,7 @@ def select_market_batch(ledger, *, batch_size=12, prior=None):
 
 
 
-def score_prospective_market_shard(ledger, results, model_source, *, model_available_utc, top_k=5):
+def score_prospective_market_shard(ledger, results, model_source, *, model_available_utc, top_k=5, recorded_at_utc=None):
     """Score independently selected current markets before forward outcomes.
 
     Compare only against actual WATCH decisions within this same scored shard,
@@ -312,6 +312,9 @@ def score_prospective_market_shard(ledger, results, model_source, *, model_avail
     latest = ledger["runs"][-1]
     scan_at = utc_time(latest["as_of"])
     available = utc_time(model_available_utc)
+    recorded = utc_time(recorded_at_utc) if recorded_at_utc else datetime.now(timezone.utc)
+    if recorded < scan_at:
+        raise ValueError("Recording precedes the writer snapshot")
     if available < train_end or scan_at <= available:
         raise ValueError("Model was not available before this prospective scan")
     if scan_at < train_end + timedelta(hours=48):
@@ -336,9 +339,15 @@ def score_prospective_market_shard(ledger, results, model_source, *, model_avail
         price = float(q["price"])
         if price <= 0 or not isfinite(price) or not isfinite(score):
             raise ValueError("Invalid prospective score or price")
+        timely = timedelta(0) <= recorded-at <= timedelta(minutes=10)
+        # Evaluate only the forward window after the actual signal recording.
+        # The earlier writer quote remains an explicitly non-executable reference.
+        entry = recorded if timely else at
         predictions.append({"prediction_id": canonical_digest([batch_id,pair]), "pair":pair,
                             "run_id":latest["id"], "batch_id":batch_id, "model_version":version,
-                            "model_available_utc":available.isoformat(), "entry_utc":at.isoformat(),
+                            "model_available_utc":available.isoformat(), "entry_utc":entry.isoformat(),
+                            "quote_observed_at":at.isoformat(),"recorded_at_utc":recorded.isoformat(),
+                            "recording_scope":"TIMELY_RECORDED_QUOTE_REFERENCE" if timely else "ASOF_REPLAY_ONLY",
                             "feature_asof_utc":max(t for t,_ in rows if t<=at).isoformat(),
                             "entry_price":price, "features":features, "shadow_score":score,
                             "baseline_watch":pair in watch, "source_sha256":result["response_sha256"],
@@ -369,7 +378,7 @@ def retain_prospective_shadow(state, prior, cohort, results, ledger, model_sourc
             # A repeated source fetch may have a different response digest, but
             # the originally recorded feature/decision/price must not change.
             if old is not None:
-                if any(old[k]!=p[k] for k in p if k!="source_sha256"):
+                if any(old.get(k)!=p[k] for k in p if k not in ("source_sha256","entry_utc","recorded_at_utc","recording_scope","quote_observed_at")):
                     raise ValueError("Prospective prediction identity changed")
                 continue
             predictions[p["prediction_id"]] = p
@@ -398,6 +407,8 @@ def retain_prospective_shadow(state, prior, cohort, results, ledger, model_sourc
         groups.setdefault(p["batch_id"],[]).append(p)
     count=hits_base=hits_shadow=selected=0
     for group in groups.values():
+        if not all(p.get("recording_scope")=="TIMELY_RECORDED_QUOTE_REFERENCE" for p in group):
+            continue
         base=[p for p in group if p["baseline_watch"]]
         shadow=[p for p in group if p["shadow_equal_budget_watch"]]
         keys=[(p["prediction_id"],48) for p in base+shadow]
@@ -409,6 +420,8 @@ def retain_prospective_shadow(state, prior, cohort, results, ledger, model_sourc
         hits_shadow+=sum(outcomes[(p["prediction_id"],48)]["hit"] for p in shadow)
     return {"scope":"ACTUAL_WATCHS_EQUAL_BUDGET_WITHIN_SCORED_SHARDS",
             "prospective_snapshot":snapshot, "retained_predictions":len(predictions),
+            "timely_recorded_predictions":sum(p.get("recording_scope")=="TIMELY_RECORDED_QUOTE_REFERENCE" for p in predictions.values()),
+            "replay_only_predictions":sum(p.get("recording_scope")!="TIMELY_RECORDED_QUOTE_REFERENCE" for p in predictions.values()),
             "paired_complete_batches":count,"selected_per_scanner":selected,
             "baseline_hits":hits_base,"shadow_hits":hits_shadow,
             "measured_lift_verified":False,"production_applied":False}
@@ -605,16 +618,31 @@ def train_archive_shadow(cohort_path, *, training_end_utc, holdout_start_utc,
     by_id = {a["prediction_id"]: a for a in predictions}
     labels = {o["prediction_id"]: o for o in outcomes
               if o["coverage_complete"] and type(o["hit"]) is bool}
+    outcome_by_id = {o["prediction_id"]:o for o in outcomes}
     scores = model.get("shadow_scores", {})
     groups = {}
     for key in scores:
         groups.setdefault(by_id[key]["entry_utc"], []).append(key)
     metrics = {n: {"selected": 0, "hits": 0, "false_positives": 0, "early_hits": 0,
                    "lead_hours_sum": 0., "lead_count": 0} for n in ("baseline_proxy", "challenger")}
+    bounds = {n:{"selected":0,"complete_hits":0,"complete_misses":0,
+                 "partial_observed_hits":0,"unknown":0} for n in metrics}
     comparable, unavailable, covered_positive_anchors = 0, 0, 0
     for stamp, keys in sorted(groups.items()):
         base = sorted(keys, key=lambda k: (-abs(by_id[k]["features"]["momentum_60m"]), k))[:top_k]
         challenger = sorted(keys, key=lambda k: (-scores[k], k))[:top_k]
+        if len(base) == top_k:
+            for name, selected in (("baseline_proxy",base),("challenger",challenger)):
+                b = bounds[name]
+                b["selected"] += len(selected)
+                for key in selected:
+                    o = outcome_by_id.get(key, {})
+                    if key in labels:
+                        b["complete_hits" if labels[key]["hit"] else "complete_misses"] += 1
+                    elif o.get("crossing_evidence") == "PARTIAL_WINDOW":
+                        b["partial_observed_hits"] += 1
+                    else:
+                        b["unknown"] += 1
         if len(base) != top_k or any(k not in labels for k in base+challenger):
             unavailable += 1
             continue
@@ -639,6 +667,11 @@ def train_archive_shadow(cohort_path, *, training_end_utc, holdout_start_utc,
         m["covered_anchor_recall"] = m["hits"]/covered_positive_anchors if covered_positive_anchors else None
         m["mean_lead_hours_upper_bound"] = m.pop("lead_hours_sum")/m["lead_count"] if m["lead_count"] else None
         m.pop("lead_hours_sum", None)
+    for b in bounds.values():
+        b["observed_hit_lower_bound"] = b["complete_hits"] + b["partial_observed_hits"]
+        b["possible_hit_upper_bound"] = b["observed_hit_lower_bound"] + b["unknown"]
+        b["precision_lower_bound"] = b["observed_hit_lower_bound"]/b["selected"] if b["selected"] else None
+        b["precision_upper_bound"] = b["possible_hit_upper_bound"]/b["selected"] if b["selected"] else None
     # Retain the actual fitted model, not the potentially large temporary
     # vector of holdout predictions. The model version is recomputed here.
     model.pop("shadow_scores", None)
@@ -650,6 +683,8 @@ def train_archive_shadow(cohort_path, *, training_end_utc, holdout_start_utc,
               "comparison_status": "SHADOW_EVALUATED" if comparable else "NO_PAIRED_COMPLETE_TIMESTAMPS",
               "comparable_timestamps": comparable, "unavailable_timestamps": unavailable,
               "covered_positive_anchors": covered_positive_anchors, "metrics": metrics,
+              "all_ranked_selection_observation_bounds":bounds,
+              "bounds_scope":"DESCRIPTIVE_CANDLE_HIGH_NOT_QUALIFIED_LIFT",
               "source_authenticated": False, "measured_lift_verified": False,
               "production_applied": False, "promotion_authorized": False}
     result["digest"] = canonical_digest(result)

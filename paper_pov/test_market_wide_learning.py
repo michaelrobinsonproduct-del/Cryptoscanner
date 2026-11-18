@@ -202,6 +202,8 @@ class MarketWideLearningTest(unittest.TestCase):
             self.assertEqual(result["metrics"]["baseline_proxy"]["hits"], 0)
             self.assertEqual(result["metrics"]["challenger"]["hits"], 1)
             self.assertEqual(result["metrics"]["challenger"]["early_hits"], 1)
+            self.assertEqual(result["all_ranked_selection_observation_bounds"]["challenger"]["observed_hit_lower_bound"],1)
+            self.assertEqual(result["all_ranked_selection_observation_bounds"]["baseline_proxy"]["possible_hit_upper_bound"],0)
             self.assertFalse(result["measured_lift_verified"])
             self.assertFalse(result["production_applied"])
 
@@ -221,13 +223,16 @@ class MarketWideLearningTest(unittest.TestCase):
                   "candles":[dict(pair=pair,timestamp_utc=at(i*5),close=100+i*.01,
                                   high=100+i*.01,volume=10+i,trades=5+i) for i in range(14)]}
                   for pair in ("GAINUSD","FLATUSD")]
-        first=score_prospective_market_shard(ledger,results,model,model_available_utc="2026-11-11T03:27:00Z")
+        first=score_prospective_market_shard(ledger,results,model,model_available_utc="2026-11-11T03:27:00Z",recorded_at_utc=at(62))
         self.assertEqual(first["baseline_budget"],1)
         self.assertEqual(len(first["predictions"]),2)
         self.assertEqual(sum(p["shadow_equal_budget_watch"] for p in first["predictions"]),1)
         self.assertTrue(all(p["feature_asof_utc"]==at(60) for p in first["predictions"]))
+        self.assertTrue(all(p["entry_utc"]==at(62) and p["recording_scope"]=="TIMELY_RECORDED_QUOTE_REFERENCE" for p in first["predictions"]))
+        replay=score_prospective_market_shard(ledger,results,model,model_available_utc="2026-11-11T03:27:00Z",recorded_at_utc=at(90))
+        self.assertTrue(all(p["recording_scope"]=="ASOF_REPLAY_ONLY" for p in replay["predictions"]))
         results[0]["candles"][-1]["close"]=999
-        second=score_prospective_market_shard(ledger,results,model,model_available_utc="2026-11-11T03:27:00Z")
+        second=score_prospective_market_shard(ledger,results,model,model_available_utc="2026-11-11T03:27:00Z",recorded_at_utc=at(62))
         self.assertEqual(first,second)
         with self.assertRaisesRegex(ValueError,"not available"):
             score_prospective_market_shard(ledger,results,model,model_available_utc=at(62))

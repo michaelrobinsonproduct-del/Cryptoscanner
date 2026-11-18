@@ -52,6 +52,13 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           RUN_ID="$REQUESTED_RUN"
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ -z "$RUN_ID" ]; then
+            gh api "repos/$GH_REPO/contents/verified-results/results.json?ref=paper-proof-ledger" --jq .content | base64 -d > /tmp/market-canonical.json
+            RUN_ID=$(python -c 'import json; d=json.load(open("/tmp/market-canonical.json")); assert d["status"]=="SUCCESS_PAPER_ONLY" and d["remote_readback_verified"] is True; print(d["run_id"])')
+            test -n "$RUN_ID"
+            gh api "repos/$GH_REPO/actions/runs/$RUN_ID" > /tmp/market-writer.json
+            python -c 'import json; a=json.load(open("/tmp/market-canonical.json")); b=json.load(open("/tmp/market-writer.json")); assert b["head_branch"]=="main" and b["status"]=="completed" and b["conclusion"]=="success" and b["head_sha"]==a["source_sha"], "Canonical writer not yet completed/verified"'
+          fi
           if [ -z "$RUN_ID" ]; then
             RUN_ID=$(gh api -X GET "repos/$GH_REPO/actions/artifacts?per_page=100" --jq '.artifacts[] | select(.expired == false and (.name | startswith("public-paper-ledger-"))) | .workflow_run.id' | head -n 1)
           fi
@@ -63,6 +70,9 @@ jobs:
           gh run download "$PAPER_RUN_ID" -n "public-paper-ledger-$PAPER_RUN_ID" -D evidence
           cd evidence
           sha256sum -c SHA256SUMS
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ -f /tmp/market-canonical.json ]; then
+            python -c 'import json; a=json.load(open("/tmp/market-canonical.json")); b=json.load(open("ledger.json")); assert a["ledger_generation"]==b["generation"], "Canonical artifact generation mismatch"'
+          fi
       - name: Exercise real Kraken market-wide discovery on isolated PR shard
         if: github.event_name == 'pull_request'
         env:
