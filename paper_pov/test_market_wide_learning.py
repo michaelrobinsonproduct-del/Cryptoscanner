@@ -106,5 +106,43 @@ class MarketWideLearningTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "SHA256 mismatch"):
                 run_archive_market_cohorts(archive, expected_sha256="0"*64, **args)
 
+    def test_cumulative_state_preserves_eligibility_and_matures_without_duplicate_labels(self):
+        from paper_pov.market_wide_learning import run_observed_market_batch
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        at = lambda minutes: (start+timedelta(minutes=minutes)).isoformat()
+        def ledger(generation, minutes, include_old=False):
+            rows = [{"run_id": "latest", "pair": p, "at": at(minutes)}
+                    for p in ("GAINUSD", "FLATUSD")]
+            if include_old:
+                rows.append({"run_id": "older", "pair": "GAINUSD", "at": at(59)})
+            return {"generation": generation, "runs": [{"id": "latest", "as_of": at(minutes), "observation_count": 2}],
+                    "observations": rows, "predictions": []}
+        def fetch(pair):
+            return {"pair": pair, "source": "kraken_public_ohlc_rest", "response_sha256": "a"*64,
+                    "candles": [dict(pair=pair, timestamp_utc=at(i*5),
+                                     close=100 if i<24 else 135, high=100 if i<24 else 135,
+                                     volume=10+i, trades=5+i) for i in range(601)]}
+        a = run_observed_market_batch(ledger(2, 120, True), fetch=fetch, batch_size=1)
+        state = a["continuity_state"]
+        key = a["anchors"][0]["prediction_id"]
+        self.assertTrue(any(r["at"] == at(59) for r in state["eligibility"]))
+        b = run_observed_market_batch(ledger(3, 180), fetch=fetch, batch_size=1, prior=state)
+        self.assertEqual(b["selected_pairs"], ["FLATUSD"])
+        c = run_observed_market_batch(ledger(4, 2940), fetch=fetch, batch_size=1, prior=b["continuity_state"])
+        self.assertEqual(c["selected_pairs"], ["GAINUSD"])
+        final = c["continuity_state"]
+        row = [o for o in final["outcomes"] if o["prediction_id"] == key and o["horizon_hours"] == 48]
+        self.assertEqual(len(row), 1)
+        self.assertTrue(row[0]["hit"])
+        self.assertEqual(len(final["last_success_generation"]), 2)
+        self.assertEqual(final["previous_digest"], b["continuity_state"]["digest"])
+        from copy import deepcopy
+        tampered = deepcopy(final)
+        tampered["ledger_generation"] = 0
+        with self.assertRaisesRegex(ValueError, "checksum"):
+            run_observed_market_batch(ledger(5, 3000), fetch=fetch, batch_size=1, prior=tampered)
+        with self.assertRaisesRegex(ValueError, "rollback"):
+            run_observed_market_batch(ledger(3, 180), fetch=fetch, batch_size=1, prior=final)
+
 if __name__ == "__main__":
     unittest.main()
