@@ -54,7 +54,7 @@ def store(directory,state,cohort,summary,attempts):
             "cohort_sha256":hashlib.sha256(c.read_bytes()).hexdigest(),
             "completed":summary["cursor_window_reached"],"attempts":attempts,"summary":summary}
 
-def run_batch(pairs,directory,*,prior=None,seed=None,batch_size=3,page_budget=10,fetch_page=None,pause=time.sleep):
+def run_batch(pairs,directory,*,prior=None,seed=None,batch_size=3,page_budget=10,fetch_page=None,pause=time.sleep,priority_windows=()):
     if not 1<=batch_size<=6 or not 1<=page_budget<=20:
         raise ValueError("Invalid bounded batch budget")
     directory=Path(directory)
@@ -90,8 +90,21 @@ def run_batch(pairs,directory,*,prior=None,seed=None,batch_size=3,page_budget=10
     keys=window_keys(pairs)
     pending=[k for k in keys if not records.get(key_name(k),{}).get("completed")]
     pending.sort(key=lambda k:(records.get(key_name(k),{}).get("attempts",0)+failures.get(key_name(k),{}).get("attempts",0),k[1],k[0]))
+    priorities={key_name(k) for k in priority_windows}
+    # Reserve one fair background/control window each batch. Prioritize
+    # observed event windows, then resume an incomplete cursor if available.
+    chosen=[]
+    if batch_size>=2 and pending:
+        chosen.append(pending[0])
+        candidates=[k for k in pending if k not in chosen and key_name(k) in priorities]
+        if candidates:
+            chosen.append(candidates[0])
+        resume=[k for k in pending if k not in chosen and key_name(k) in records]
+        if resume and len(chosen)<batch_size:
+            chosen.append(resume[0])
+    chosen.extend(k for k in pending if k not in chosen)
     attempted=[]
-    for key in pending[:batch_size]:
+    for key in chosen[:batch_size]:
         name=key_name(key)
         old=records.get(name)
         previous=checked_state(directory,old) if old else None
@@ -134,7 +147,14 @@ def main():
     pairs={x["pair"] for x in ledger["observations"] if x["run_id"]==latest["id"]}
     if len(pairs)!=latest["observation_count"]:
         raise ValueError("Incomplete observed universe")
-    run_batch(pairs,a.output_dir,prior=a.prior,seed=a.seed)
+    from .historical_coarse_discovery import discover, prioritized_windows
+    prior_discovery=None
+    if a.prior and (a.prior/"coarse-discovery.json").is_file():
+        prior_discovery=json.loads((a.prior/"coarse-discovery.json").read_text())
+    discovery=discover(pairs,prior_discovery)
+    run_batch(pairs,a.output_dir,prior=a.prior,seed=a.seed,
+              priority_windows=prioritized_windows(discovery))
+    (a.output_dir/"coarse-discovery.json").write_text(json.dumps(discovery,sort_keys=True)+"\n")
 
 if __name__=="__main__":
     main()

@@ -127,10 +127,17 @@ def recover(pair,start,end,*,max_pages=20,previous=None,fetch_page=fetch,pause=t
             raise ValueError("Historical checkpoint identity mismatch")
         state["pages"]=list(previous["pages"])
     cursor,done,watermark,candles,count=replay(state)
+    fetch_error=None
     for _ in range(max_pages):
         if done:
             break
-        raw=fetch_page(pair,cursor)
+        try:
+            raw=fetch_page(pair,cursor)
+        except OSError as exc:
+            if not state["pages"]:
+                raise
+            fetch_error=str(exc)[:200]
+            break
         _,last,trades=decode_page(raw,cursor)
         state["pages"].append(dict(since=cursor,last=last,sha256=hashlib.sha256(raw).hexdigest(),
                                    raw_b64=base64.b64encode(raw).decode("ascii")))
@@ -151,6 +158,7 @@ def recover(pair,start,end,*,max_pages=20,previous=None,fetch_page=fetch,pause=t
                   eligibility_scope="HISTORICAL_PAIR_NOT_LIVE_ELIGIBILITY")
     summary=dict(schema="historical_trade_recovery_v1",pair=pair,start_utc=start,end_utc=end,
                  cursor=cursor,pages=len(state["pages"]),cursor_window_reached=done,
+                 recoverable_fetch_error=fetch_error,
                  observed_through_utc=stamp(watermark),observed_trades=count,
                  completed_candles=len(candles),anchors=len(cohort["anchors"]),
                  feature_complete_anchors=cohort["feature_complete_anchors"],
