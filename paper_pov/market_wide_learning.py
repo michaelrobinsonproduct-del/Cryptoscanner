@@ -4,7 +4,7 @@ Input candles use close timestamps, not Kraken interval-open timestamps.
 Caller must authenticate source and supply the point-in-time eligible universe.
 No production decisions or ledger writes.
 """
-from bisect import bisect_right
+from bisect import bisect_left, bisect_right
 from datetime import datetime, timedelta, timezone
 import argparse
 import json
@@ -13,6 +13,68 @@ from math import isfinite
 from .shadow_learning_evidence import utc_time, canonical_digest
 from .heldout_outcome_adapter import reconstruct_forward_outcomes
 from .frozen_historical_shadow import features_at_entry
+
+
+def describe_observed_crossings(anchors, outcomes, candles, asof):
+    """Capture actual candle-high crossings, even when the window has gaps.
+
+    A partial observed positive is evidence of a price excursion, not a
+    qualified label or a guarantee of execution. The candle close is an
+    upper bound on crossing time, not the exact trade timestamp.
+    """
+    by_pair = {}
+    for row in candles:
+        t = utc_time(row["timestamp_utc"])
+        if t <= asof:
+            by_pair.setdefault(row["pair"], []).append((t, float(row["high"])))
+    for rows in by_pair.values():
+        rows.sort()
+    times = {pair: [t for t, _ in rows] for pair, rows in by_pair.items()}
+    by_id = {a["prediction_id"]: a for a in anchors}
+    for o in outcomes:
+        if o["hit"] is False:
+            continue
+        a = by_id[o["prediction_id"]]
+        entry = utc_time(a["entry_utc"])
+        end = min(asof, entry + timedelta(hours=o["horizon_hours"]))
+        stamps = times.get(a["pair"], [])
+        rows = by_pair.get(a["pair"], [])
+        lo, hi = bisect_right(stamps, entry), bisect_right(stamps, end)
+        first = next((t for t, high in rows[lo:hi] if high / a["entry_price"] - 1 >= .30), None)
+        if first is not None:
+            o["observed_crossing_candle_close_utc"] = first.isoformat()
+            o["observed_lead_hours_upper_bound"] = (first - entry).total_seconds()/3600
+            o["crossing_evidence"] = "COMPLETE_WINDOW" if o["coverage_complete"] else "PARTIAL_WINDOW"
+
+
+def crossing_summary(outcomes):
+    """Separate anchor-label counts from descriptive time-cluster counts.
+
+    Cluster completed 48h hit crossings by pair and consecutive crossings
+    within six hours. This is a reproducible event proxy, not exact exchange
+    trade-level surge identity.
+    """
+    partial = {str(h): 0 for h in (1, 6, 24, 48)}
+    by_pair = {}
+    for o in outcomes:
+        crossing = o.get("observed_crossing_candle_close_utc")
+        if crossing is None:
+            continue
+        if not o["coverage_complete"]:
+            partial[str(o["horizon_hours"])] += 1
+        if o["horizon_hours"] == 48 and o["hit"] is True and o["coverage_complete"]:
+            by_pair.setdefault(o["pair"], set()).add(utc_time(crossing))
+    clusters = 0
+    for stamps in by_pair.values():
+        previous = None
+        for stamp in sorted(stamps):
+            if previous is None or stamp-previous > timedelta(hours=6):
+                clusters += 1
+            previous = stamp
+    return {"partial_observed_crossings_by_horizon": partial,
+            "completed_48h_crossing_clusters": clusters,
+            "cluster_definition": "PAIR_CONSECUTIVE_CROSSINGS_WITHIN_6H_PROXY"}
+
 
 def build_market_cohort(candles, *, eligible_pairs, evaluation_asof_utc,
                         eligibility_observations=None, anchor_start_utc=None):
@@ -72,6 +134,7 @@ def build_market_cohort(candles, *, eligible_pairs, evaluation_asof_utc,
                             "feature_complete": features is not None,
                             "liquidity_qualified": False})
     outcomes = reconstruct_forward_outcomes(anchors, observed, evaluation_asof_utc=evaluation_asof_utc)
+    describe_observed_crossings(anchors, outcomes, observed, asof)
     per_horizon = {}
     for h in (1, 6, 24, 48):
         rows = [o for o in outcomes if o["horizon_hours"] == h]
@@ -83,6 +146,7 @@ def build_market_cohort(candles, *, eligible_pairs, evaluation_asof_utc,
         }
     return {"anchors": anchors, "outcomes": outcomes,
             "per_horizon": per_horizon,
+            "crossing_summary": crossing_summary(outcomes),
             "feature_complete_anchors": sum(a["feature_complete"] for a in anchors),
             "eligibility_abstentions": eligibility_abstentions,
             "eligibility_scope": "RECORDED_ASOF_OBSERVATIONS" if eligibility_observations is not None else "CALLER_SUPPLIED_UNIVERSE",
@@ -284,6 +348,8 @@ def run_archive_market_cohorts(zip_path, *, expected_sha256, start_utc, end_utc,
     counts = {str(h): {k: 0 for k in ("hits", "misses", "immature", "missing_candles")}
               for h in (1, 6, 24, 48)}
     observed_markets = anchors = features = valid_bars = 0
+    crossing_clusters = 0
+    partial_crossings = {str(h): 0 for h in (1, 6, 24, 48)}
     markets_with_hits = set()
     Path(cohort_output).parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(zip_path) as archive, gzip.open(cohort_output, "wt", encoding="utf-8") as output:
@@ -317,6 +383,9 @@ def run_archive_market_cohorts(zip_path, *, expected_sha256, start_utc, end_utc,
             cohort.update(source_archive_sha256=archive_sha, source_member=name,
                           eligibility_scope="OBSERVED_ARCHIVE_USD_NOT_LIVE_POLICY")
             output.write(json.dumps(cohort, sort_keys=True, separators=(",", ":")) + "\n")
+            crossing_clusters += cohort["crossing_summary"]["completed_48h_crossing_clusters"]
+            for h, count in cohort["crossing_summary"]["partial_observed_crossings_by_horizon"].items():
+                partial_crossings[h] += count
             anchors += len(cohort["anchors"])
             features += cohort["feature_complete_anchors"]
             for h, row_counts in cohort["per_horizon"].items():
@@ -332,6 +401,9 @@ def run_archive_market_cohorts(zip_path, *, expected_sha256, start_utc, end_utc,
             "archive_usd_members": len(members), "observed_markets": observed_markets,
             "valid_bars": valid_bars, "anchors": anchors, "feature_complete_anchors": features,
             "per_horizon": counts, "markets_with_hits": sorted(markets_with_hits),
+            "crossing_summary": {"partial_observed_crossings_by_horizon": partial_crossings,
+                                 "completed_48h_crossing_clusters": crossing_clusters,
+                                 "cluster_definition": "PAIR_CONSECUTIVE_CROSSINGS_WITHIN_6H_PROXY"},
             "eligibility_scope": "OBSERVED_ARCHIVE_USD_NOT_LIVE_POLICY",
             "label_scope": "COMPLETE_CANDLE_HIGH_NOT_EXECUTABLE_FILL",
             "production_applied": False, "promotion_authorized": False,
@@ -369,7 +441,7 @@ def main(argv=None):
     args.output.write_text(json.dumps(report, sort_keys=True, separators=(",", ":")) + "\n")
     summary = {k: report[k] for k in ("ledger_generation", "shard_index", "shard_count",
                "per_horizon", "feature_complete_anchors", "eligibility_abstentions",
-               "fetch_errors", "coverage_scope", "source_authenticated")}
+               "fetch_errors", "coverage_scope", "source_authenticated", "crossing_summary")}
     summary.update(eligible_count=len(report["eligible_pairs"]), selected_count=len(report["selected_pairs"]),
                    observed_count=len(report["observed_pairs"]),
                    cumulative_anchors=len(report["continuity_state"]["anchors"]),
