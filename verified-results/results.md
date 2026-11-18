@@ -2,31 +2,31 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T19:45:19.771867+00:00
+**UTC as-of:** 2026-11-18T19:50:14.852590+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44383433903
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44384388684
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** 5efd81a4a71656cd0391f1a0e1748ff088074fbb (atomic ledger/results publication)
-**Ledger generation:** 651 (remote push/readback verified)
+**Previous ledger commit:** a7661a2c8f53eba25f41bc8e00c49e513d0e1298 (atomic ledger/results publication)
+**Ledger generation:** 652 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 13.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | SENT/USD | 0.019841 | 78.528 | 74.107 | +6.28% | +0.46% | 1.21x | 2.0 | 2026-11-18T19:45:15.522062+00:00 | Not calibrated | STRONG 74/100 | VERY_HIGH 74/100 | Watch | WATCH |
-| 2 | TRX/USD | 0.308956 | 57.615 | 42.507 | +0.34% | +0.02% | 5.02x | 0.4 | 2026-11-18T19:45:15.522062+00:00 | Not calibrated | STRONG 74/100 | HIGH 55/100 | Watch | WATCH |
-| 3 | AKE/USD | 0.01023405 | 43.631 | 39.962 | +2.50% | +1.27% | 0.73x | 24.3 | 2026-11-18T19:45:15.522062+00:00 | Not calibrated | WEAK 42/100 | EXTREME 87/100 | Do nothing | WATCH |
+| 1 | SENT/USD | 0.019793 | 75.493 | 70.787 | +6.02% | -0.03% | 1.49x | 5.1 | 2026-11-18T19:50:10.258187+00:00 | Not calibrated | MODERATE 58/100 | VERY_HIGH 73/100 | Watch | WATCH |
+| 2 | TRX/USD | 0.308955 | 58.104 | 42.673 | +0.34% | +0.09% | 3.09x | 0.0 | 2026-11-18T19:50:10.258187+00:00 | Not calibrated | STRONG 74/100 | HIGH 55/100 | Watch | WATCH |
+| 3 | AKE/USD | 0.01014658 | 23.107 | 30.824 | +1.63% | -0.55% | 0.50x | 30.2 | 2026-11-18T19:50:10.258187+00:00 | Not calibrated | WEAK 7/100 | EXTREME 93/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SENT/USD | 74.107 | 0.019841 | +0.46% | 1.21x |
-| 2 | TRX/USD | 42.507 | 0.308956 | +0.02% | 5.02x |
-| 3 | AKE/USD | 39.962 | 0.01023405 | +1.27% | 0.73x |
+| 1 | SENT/USD | 70.787 | 0.019793 | -0.03% | 1.49x |
+| 2 | TRX/USD | 42.673 | 0.308955 | +0.09% | 3.09x |
+| 3 | AKE/USD | 30.824 | 0.01014658 | -0.55% | 0.50x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,8 +42,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 651; predictions: 5480; observations: 393466.
-- Matured sampled outcomes across 1/6/24/48h: 4862; gap abstentions: 13125. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 652; predictions: 5483; observations: 394075.
+- Matured sampled outcomes across 1/6/24/48h: 4868; gap abstentions: 13125. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -59,22 +59,22 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44383433903 · **Generation:** 651 · **Legacy run:** 44383433903
-**Main quote time:** 2026-11-18T19:45:19.771867+00:00 · **Legacy report time:** 2026-11-18T19:45:49.759898+00:00
+**Writer:** 44384388684 · **Generation:** 652 · **Legacy run:** 44384388684
+**Main quote time:** 2026-11-18T19:50:14.852590+00:00 · **Legacy report time:** 2026-11-18T19:50:44.422050+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD ⭐ | 0.019841 | 78.53 | +0.46% | 1.21x | STRONG 84/100 | VERY_HIGH 74/100 | Watch |
-| 2 | TRX/USD | 0.308956 | 57.62 | +0.02% | 5.02x | STRONG 74/100 | HIGH 55/100 | Watch |
-| 3 | AKE/USD | 0.01023405 | 43.63 | +1.27% | 0.73x | WEAK 42/100 | EXTREME 87/100 | Do nothing |
+| 1 | SENT/USD | 0.019793 | 75.49 | -0.03% | 1.49x | MODERATE 58/100 | VERY_HIGH 73/100 | Watch |
+| 2 | TRX/USD ⭐ | 0.308955 | 58.10 | +0.09% | 3.09x | STRONG 84/100 | HIGH 55/100 | Watch |
+| 3 | AKE/USD | 0.01014658 | 23.11 | -0.55% | 0.50x | WEAK 7/100 | EXTREME 93/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD ⭐ | 0.019841 | 74.82 | +0.46% | 1.21x | 6282 | STRONG 82/100 | VERY_HIGH 74/100 | Watch |
+| 1 | TRX/USD ⭐ | 0.30886 | 55.09 | +0.09% | 3.09x | 4090 | STRONG 83/100 | HIGH 55/100 | Watch |
 
-**Same-run overlap:** SENT/USD
+**Same-run overlap:** TRX/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
