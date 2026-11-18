@@ -237,5 +237,44 @@ class MarketWideLearningTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"not available"):
             score_prospective_market_shard(ledger,results,model,model_available_utc=at(62))
 
+
+    def test_cumulative_training_uses_archived_and_later_matured_examples(self):
+        import gzip
+        import json
+        import tempfile
+        from pathlib import Path
+        from paper_pov.frozen_historical_shadow import NAMES
+        from paper_pov.market_wide_learning import train_cumulative_market_model, STATE_SCHEMA
+        from paper_pov.shadow_learning_evidence import canonical_digest
+        start=datetime(2026,1,1,tzinfo=timezone.utc)
+        at=lambda d:(start+timedelta(days=d)).isoformat()
+        digest="a"*64
+        def sample(key,day,hit):
+            a=dict(prediction_id=key,pair=key+"USD",entry_utc=at(day),feature_asof_utc=at(day),
+                   entry_price=100,feature_complete=True,source_sha256=digest,
+                   features={n:float(hit) for n in NAMES})
+            o=dict(prediction_id=key,horizon_hours=48,hit=hit,coverage_complete=True,
+                   label_mature_utc=at(day+2),source_sha256=digest)
+            return a,o
+        a,b=sample("A",0,True)
+        c,d=sample("B",0,False)
+        e,f=sample("C",6,True)
+        g,h=sample("D",9,True)
+        state=dict(schema=STATE_SCHEMA,evaluation_asof_utc=at(10),production_applied=False,
+                   anchors=[e,g],outcomes=[f,h])
+        state["digest"]=canonical_digest(state)
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"cohorts.jsonl.gz"
+            with gzip.open(path,"wt") as out:
+                out.write(json.dumps(dict(source_archive_sha256=digest,production_applied=False,
+                    source_authenticated=False,anchors=[a,c],outcomes=[b,d]))+"\n")
+            report=train_cumulative_market_model(path,state,expected_archive_sha256=digest)
+            self.assertEqual(report["source_counts"]["archive"],{"examples":2,"positives":1})
+            self.assertEqual(report["source_counts"]["recent_observed"],{"examples":1,"positives":1})
+            self.assertEqual(report["model"]["training_count"],3)
+            self.assertEqual(report["model"]["positive_count"],2)
+            self.assertEqual(report["comparison_status"],"FUTURE_HOLDOUT_NOT_YET_MATURE")
+            self.assertFalse(report["production_applied"])
+
 if __name__ == "__main__":
     unittest.main()

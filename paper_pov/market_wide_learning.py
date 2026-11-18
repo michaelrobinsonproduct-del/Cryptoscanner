@@ -296,7 +296,7 @@ def score_prospective_market_shard(ledger, results, model_source, *, model_avail
         version = model_source["version"]
         train_end = utc_time(model_source["training_window_end"])
     else:
-        if (model_source.get("schema") != "market_wide_archive_shadow_v1"
+        if (model_source.get("schema") not in ("market_wide_archive_shadow_v1","market_wide_cumulative_shadow_v1")
                 or model_source.get("digest") != canonical_digest({k:v for k,v in model_source.items() if k!="digest"})
                 or model_source.get("production_applied") is not False):
             raise ValueError("Invalid shadow model report")
@@ -691,6 +691,93 @@ def train_archive_shadow(cohort_path, *, training_end_utc, holdout_start_utc,
     return result
 
 
+
+def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256):
+    """Refit on archived and newly matured independent labels, then freeze.
+
+    This is a new prospective model, not a repeat of the historical holdout.
+    Its training cutoff is the retained state's last observation time.
+    Never claim source authentication, verified lift or production approval.
+    """
+    import gzip
+    import hashlib
+    from .frozen_historical_shadow import NAMES
+    from .heldout_outcome_adapter import train_shadow_challenger
+    if (state.get("schema") != STATE_SCHEMA or state.get("digest") != canonical_digest(
+            {k:v for k,v in state.items() if k!="digest"}) or state.get("production_applied") is not False):
+        raise ValueError("Invalid cumulative learning state")
+    cutoff = utc_time(state["evaluation_asof_utc"])
+    eligible, labels = {}, {}
+    origin = {}
+    def ingest(anchors, outcomes, namespace):
+        by_id = {}
+        for a in anchors:
+            if not a.get("feature_complete"):
+                continue
+            entry = utc_time(a["entry_utc"])
+            if entry+timedelta(hours=48)>cutoff:
+                continue
+            key = a["prediction_id"]
+            if key in by_id:
+                raise ValueError("Duplicate source anchor")
+            by_id[key] = a
+        for o in outcomes:
+            if o["horizon_hours"]!=48 or o["prediction_id"] not in by_id:
+                continue
+            if not o["coverage_complete"] or type(o["hit"]) is not bool:
+                continue
+            if utc_time(o["label_mature_utc"])>cutoff:
+                continue
+            a = by_id[o["prediction_id"]]
+            identity = (a["pair"],utc_time(a["entry_utc"]).isoformat())
+            if utc_time(o["label_mature_utc"])!=utc_time(a["entry_utc"])+timedelta(hours=48):
+                raise ValueError("Unexpected label maturity")
+            if identity in eligible:
+                previous=eligible[identity]
+                previous_label=labels[identity]
+                if (previous["features"]!=a["features"] or previous["entry_price"]!=a["entry_price"]
+                        or previous_label["hit"]!=o["hit"]):
+                    raise ValueError("Conflicting historical/live training overlap")
+                continue
+            eligible[identity]=a
+            labels[identity]=o
+            origin[identity]=namespace
+    with gzip.open(cohort_path,"rt",encoding="utf-8") as src:
+        for line in src:
+            c=json.loads(line)
+            if (c.get("source_archive_sha256")!=expected_archive_sha256 or
+                    c.get("production_applied") is not False or c.get("source_authenticated") is not False):
+                raise ValueError("Unexpected historical cohort origin")
+            if any(r.get("source_sha256")!=expected_archive_sha256 for r in c["anchors"]+c["outcomes"]):
+                raise ValueError("Archive training provenance mismatch")
+            ingest(c["anchors"],c["outcomes"],"archive")
+    ingest(state["anchors"],state["outcomes"],"recent_observed")
+    keys=sorted(eligible)
+    model=train_shadow_challenger([eligible[k] for k in keys],[labels[k] for k in keys],
+                                  training_end_utc=cutoff.isoformat(),
+                                  holdout_start_utc=(cutoff+timedelta(hours=48)).isoformat(),feature_names=NAMES)
+    model.pop("shadow_scores",None)
+    model["source_archive_sha256"]=expected_archive_sha256
+    model["training_dataset_digest"]=canonical_digest([[eligible[k],labels[k]] for k in keys])
+    model["version"]=canonical_digest({k:v for k,v in model.items() if k!="version"})
+    counts={n:{"examples":0,"positives":0} for n in ("archive","recent_observed")}
+    for k in keys:
+        counts[origin[k]]["examples"]+=1
+        counts[origin[k]]["positives"]+=int(labels[k]["hit"])
+    file_hash=hashlib.sha256()
+    with Path(cohort_path).open("rb") as src:
+        for chunk in iter(lambda:src.read(1024*1024),b""):
+            file_hash.update(chunk)
+    report={"schema":"market_wide_cumulative_shadow_v1","model":model,
+            "archive_cohort_sha256":file_hash.hexdigest(),"state_digest":state["digest"],
+            "source_counts":counts,"training_data_cutoff_utc":cutoff.isoformat(),
+            "comparison_status":"FUTURE_HOLDOUT_NOT_YET_MATURE",
+            "source_authenticated":False,"production_applied":False,
+            "promotion_authorized":False,"measured_lift_verified":False}
+    report["digest"]=canonical_digest(report)
+    return report
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Prediction-independent read-only Kraken outcome smoke")
     parser.add_argument("ledger", type=Path)
@@ -701,6 +788,8 @@ def main(argv=None):
     parser.add_argument("--shadow-model", type=Path)
     parser.add_argument("--shadow-model-available")
     parser.add_argument("--train-cohorts", action="store_true")
+    parser.add_argument("--cumulative-state", type=Path)
+    parser.add_argument("--cumulative-archive-sha256")
     parser.add_argument("--training-end")
     parser.add_argument("--holdout-start")
     parser.add_argument("--evaluation-asof")
@@ -709,6 +798,15 @@ def main(argv=None):
     parser.add_argument("--archive-end")
     parser.add_argument("--archive-cohort-output", type=Path)
     args = parser.parse_args(argv)
+    if args.cumulative_state:
+        if not args.cumulative_archive_sha256:
+            parser.error("Cumulative training requires pinned archive digest")
+        report=train_cumulative_market_model(args.ledger,json.loads(args.cumulative_state.read_text()),
+                                             expected_archive_sha256=args.cumulative_archive_sha256)
+        args.output.parent.mkdir(parents=True,exist_ok=True)
+        args.output.write_text(json.dumps(report,sort_keys=True)+"\n")
+        print(json.dumps(report,sort_keys=True))
+        return report
     if args.train_cohorts:
         if not (args.training_end and args.holdout_start and args.evaluation_asof):
             parser.error("Training requires chronological split and evaluation date")
