@@ -52,3 +52,5 @@ readback verified; main-specific continuity and explicit bootstrap approved;
 independent learning receipt consumed read-only by delivery; no change to
 production scoring; preserve shadow-only status until paired live evidence
 qualifies. Present unavailable outcomes as unavailable, not zero losses.
+
+Optional ongoing main historical cursor recovery is enabled only by MARKET_WIDE_HISTORICAL_RECOVERY_ENABLED=true after approval. It resumes the pinned PR cursor evidence on the explicit first bootstrap and normally accepts only its own completed main job artifacts. Missing research-only cursor evidence does not stop independently qualified strict training. A missing main recovery checkpoint is not silently reset.

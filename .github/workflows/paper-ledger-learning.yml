@@ -449,21 +449,33 @@ jobs:
           python -c 'import json; d=json.load(open("evidence/historical-compact/strict-training-seed/manifest.json")); assert d["digest"]=="98059c9e5019a125202ccbe71dcc23cfeed60f88587a3bb4332d9c1a0e67b6e5"'
           mkdir -p evidence/historical-trades
           trade_run=""
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            trade_run=44243388087
-            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$trade_run" --jq '.status + ":" + (.conclusion // "") + ":" + .head_sha')" = "completed:success:ca97cec2c6f3f8d2577e03299b36f6cbc21fc87a"
-          else
+          learning_branch=${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}
           while read -r candidate; do
-            if [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate" --jq '.status + ":" + (.conclusion // "")')" = "completed:success" ]; then
+            test -n "$candidate" || continue
+            owner=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate/jobs?per_page=100" --jq '.jobs[] | select(.name=="historical-trade-recovery-pilot") | .status+":"+(.conclusion//"")')
+            if [ "$owner" = "completed:success" ]; then
               trade_run="$candidate"
               break
             fi
-          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.expired==false and (.name|startswith("historical-trade-batch-"))) | [.workflow_run.head_branch,.workflow_run.id] | @tsv' | awk -v branch="$GITHUB_HEAD_REF" '$1 == branch {print $2}' | sort -unr)
+          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.expired==false and (.name|startswith("historical-trade-batch-"))) | [.workflow_run.head_branch,.workflow_run.id] | @tsv' | awk -v branch="$learning_branch" '$1 == branch {print $2}' | sort -unr)
+          # Historical trades are separate research, not an input to the strict
+          # fit. Do not stop continuous strict training when research expires.
+          trade_args=()
+          if [ -z "$trade_run" ] && [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            seed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/44252876362/artifacts" --jq '.artifacts[]|select(.expired==false and .name=="historical-trade-batch-44252876362")|.id')
+            if [ -n "$seed" ]; then
+              test "$(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/134627815685" --jq '.status+":"+(.conclusion//"")+":"+(.run_id|tostring)+":"+.head_sha')" = "completed:success:44252876362:df8a7f6397cf0fff4e3929d5709fcbbdb60bcf57"
+              trade_run=44252876362
+            fi
           fi
-          test -n "$trade_run"
-          gh run download "$trade_run" -n "historical-trade-batch-$trade_run" -D evidence/historical-trades
+          if [ -n "$trade_run" ]; then
+            gh run download "$trade_run" -n "historical-trade-batch-$trade_run" -D evidence/historical-trades
+            trade_args=(--historical-trade-directory evidence/historical-trades)
+          else
+            echo "::notice::Historical trade research currently unavailable; strict fit uses independently qualified seed/live evidence"
+          fi
           python -m paper_pov.market_wide_learning evidence/historical-seed/market-wide-cohorts.jsonl.gz \
-            --historical-trade-directory evidence/historical-trades \
+            "${trade_args[@]}" \
             --cumulative-state evidence/market-wide-state.json \
             --cold-state-directory evidence/market-cold-history \
             --cumulative-archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
@@ -597,12 +609,17 @@ jobs:
           if-no-files-found: ignore
 
   historical-trade-recovery-pilot:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.MARKET_WIDE_HISTORICAL_RECOVERY_ENABLED == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    concurrency:
+      group: market-wide-historical-recovery-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+      cancel-in-progress: false
     env:
       GH_TOKEN: ${{ github.token }}
-      PR_BRANCH: ${{ github.head_ref }}
+      PR_BRANCH: ${{ github.head_ref || github.ref_name }}
+      LEARNING_SCOPE: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
+      ALLOW_MAIN_BOOTSTRAP: ${{ inputs.market_learning_bootstrap || false }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -632,13 +649,19 @@ jobs:
           (cd evidence/trades-ledger && sha256sum -c SHA256SUMS)
           prior=""
           while read -r candidate; do
-            if [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate" --jq '.status + ":" + (.conclusion // "")')" = "completed:success" ]; then
+            owner=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate/jobs?per_page=100" --jq '.jobs[]|select(.name=="historical-trade-recovery-pilot")|.status+":"+(.conclusion//"")')
+            if [ "$owner" = "completed:success" ]; then
               prior="$candidate"
               break
             fi
           done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.expired==false and (.name|startswith("historical-trade-batch-"))) | [.workflow_run.head_branch,.workflow_run.id] | @tsv' | awk -v branch="$PR_BRANCH" '$1 == branch {print $2}' | sort -unr)
           if [ -n "$prior" ]; then
             gh run download "$prior" -n "historical-trade-batch-$prior" -D evidence/trades-prior
+            args=(--prior evidence/trades-prior)
+          elif [ "$LEARNING_SCOPE" = "main" ]; then
+            test "$ALLOW_MAIN_BOOTSTRAP" = "true" || { echo "::error::Main historical cursor checkpoint unavailable; explicit recovery required"; exit 1; }
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/134627815685" --jq '.status+":"+(.conclusion//"")+":"+(.run_id|tostring)+":"+.head_sha')" = "completed:success:44252876362:df8a7f6397cf0fff4e3929d5709fcbbdb60bcf57"
+            gh run download 44252876362 -n historical-trade-batch-44252876362 -D evidence/trades-prior
             args=(--prior evidence/trades-prior)
           else
             gh run download 44228386331 -n historical-trade-recovery-pilot-44228386331 -D evidence/trades-seed

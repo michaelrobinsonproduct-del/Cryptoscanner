@@ -1074,7 +1074,7 @@ def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256
             "source_counts":counts,"training_data_cutoff_utc":cutoff.isoformat(),
             "historical_trade_research":{"complete_window_receipts":trade_receipts,
                 "feature_complete_mature_48h_examples":trade_examples,"positive_examples":trade_positives,
-                "included_in_strict_fit":False,"reason":"OUTCOME_ENRICHED_SAMPLING_NOT_YET_QUALIFIED"},
+                "included_in_strict_fit":False,"reason":("OUTCOME_ENRICHED_SAMPLING_NOT_YET_QUALIFIED" if historical_trade_directory is not None else "HISTORICAL_TRADE_EVIDENCE_NOT_AVAILABLE")},
             "state_asof_utc":observed_asof.isoformat(),"purge_hours":48,
             "comparison_status":"FUTURE_HOLDOUT_NOT_YET_MATURE",
             "source_authenticated":False,"production_applied":False,
