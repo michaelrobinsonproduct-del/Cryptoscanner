@@ -608,3 +608,90 @@ jobs:
           path: evidence/october-trades/
           if-no-files-found: error
           retention-days: 90
+
+  stage-learning-durable-backup:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Reuse an already staged identical backup
+        id: reuse
+        run: |
+          set -euo pipefail
+          echo "reuse=false" >> "$GITHUB_OUTPUT"
+          # A successful immutable backup is sufficient for this pinned set.
+          old=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --jq '.artifacts[]|select(.expired==false and .name=="market-wide-durable-backup-44244937090-v1")|.workflow_run.id' | sed -n '1p')
+          if [ -n "$old" ]; then
+            status=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$old/jobs?per_page=100" --jq '.jobs[]|select(.name=="stage-learning-durable-backup")|.status+":"+(.conclusion//"")')
+            if [ "$status" = "completed:success" ]; then
+              echo "reuse=true" >> "$GITHUB_OUTPUT"
+              echo "DURABLE_BACKUP_STAGED_PRIOR_RUN=$old"
+            fi
+          fi
+      - name: Stage exact verified historical and current learning evidence
+        if: steps.reuse.outputs.reuse != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p backup/{q2,q3,november,compact,live,trades,verify}
+          gh run download 44220694310 -n market-wide-q2-9caa513fe54a2e31559b1b8dc4eb61be771c04c7eb944c8cd02237ee9291224c -D backup/q2
+          (cd backup/q2 && sha256sum -c Q2-MARKET-WIDE-SHA256SUMS)
+          gh run download 44220694272 -n kraken-q3-frozen-48h-shadow-44220694272 -D backup/q3
+          (cd backup/q3 && sha256sum -c MARKET-WIDE-SHA256SUMS)
+          gh run download 44227877790 -n post-q3-observed-recovery-44227877790 -D backup/november
+          (cd backup/november && sha256sum -c POST-Q3-SHA256SUMS)
+          printf '%s\n' \
+            '8c4d7e86d170b17a7a6a3d4ebf9fae1d5cd5f4844f5b1c33a1605f0650823d63  backup/q2/q2-market-wide-cohorts.jsonl.gz' \
+            '5d883b8252b7a0a3186296801c3293060198481a13c67d0a384e9a41818241e5  backup/q3/market-wide-cohorts.jsonl.gz' \
+            '287a405ba7f99c61df3075737e24e3f24e30137a9c45fbcee1671f257b35474c  backup/november/post-q3-cohorts.jsonl.gz' | sha256sum -c -
+          gh run download 44244545891 -n market-wide-strict-seed-44244545891 -D backup/compact
+          python -m paper_pov.learning_retention pack-seed --directory backup/compact/strict-training-seed --archive backup/market-wide-strict-seed.tar.gz
+          python -m paper_pov.learning_retention unpack-seed --archive backup/market-wide-strict-seed.tar.gz --directory backup/verify/strict-training-seed
+          python -c 'import json; d=json.load(open("backup/verify/strict-training-seed/manifest.json")); assert d["digest"]=="98059c9e5019a125202ccbe71dcc23cfeed60f88587a3bb4332d9c1a0e67b6e5"'
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/44244937090" --jq '.status + ":" + (.conclusion // "") + ":" + .head_sha')" = "completed:success:fa9911d6fa5feb635ced2a27e31ae2af08110d0a"
+          gh run download 44244937090 -n market-wide-learning-continuity-pr-44244937090 -D backup/live
+          gh run download 44244937090 -n historical-trade-batch-44244937090 -D backup/trades
+          python -m paper_pov.learning_retention restore --directory backup/live/market-state-checkpoint --state backup/verify/state.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from paper_pov.shadow_learning_evidence import canonical_digest
+          from paper_pov.historical_trade_batch import verified_trade_cohorts
+          state=json.load(open("backup/verify/state.json"))
+          receipt=json.load(open("backup/live/market-wide-learning-receipt.json"))
+          assert receipt["digest"]==canonical_digest({k:v for k,v in receipt.items() if k!="digest"})
+          assert receipt["state_digest"]==state["digest"] and receipt["ledger_generation"]==state["ledger_generation"]
+          receipts=list(verified_trade_cohorts(Path("backup/trades")))
+          print("BACKUP_RESTORE_VERIFIED",state["ledger_generation"],len(state["anchors"]),len(state["shadow_predictions"]),len(receipts))
+          PY
+          cp docs/market-wide-learning-retention.md backup/RECOVERY.md
+          rm -r backup/verify backup/compact
+          mkdir -p durable-stage
+          cp backup/market-wide-strict-seed.tar.gz durable-stage/
+          cd backup
+          find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+          sha256sum -c SHA256SUMS >/dev/null
+          tar -czf ../durable-stage/market-wide-research-backup.tar.gz .
+          cd ../durable-stage
+          sha256sum market-wide-strict-seed.tar.gz market-wide-research-backup.tar.gz > SHA256SUMS
+          sha256sum -c SHA256SUMS
+          mkdir -p /tmp/learning-backup-readback
+          tar -xzf market-wide-research-backup.tar.gz -C /tmp/learning-backup-readback
+          (cd /tmp/learning-backup-readback && sha256sum -c SHA256SUMS >/dev/null)
+          echo "DURABLE_BACKUP_LOCAL_READBACK_VERIFIED"
+      - name: Retain staged backup for owner-approved durable publication
+        if: steps.reuse.outputs.reuse != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-wide-durable-backup-44244937090-v1
+          path: durable-stage/
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
