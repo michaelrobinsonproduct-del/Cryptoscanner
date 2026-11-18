@@ -54,3 +54,11 @@ production scoring; preserve shadow-only status until paired live evidence
 qualifies. Present unavailable outcomes as unavailable, not zero losses.
 
 Optional ongoing main historical cursor recovery is enabled only by MARKET_WIDE_HISTORICAL_RECOVERY_ENABLED=true after approval. It resumes the pinned PR cursor evidence on the explicit first bootstrap and normally accepts only its own completed main job artifacts. Missing research-only cursor evidence does not stop independently qualified strict training. A missing main recovery checkpoint is not silently reset.
+
+### Activation order (owner-approved only)
+
+1. Publish the verified staged seed and full-cohort backup to an approved research release; independently verify readback. Set the seed and durable checkpoint release tag variables. Leave MARKET_WIDE_LEARNING_ENABLED unset/false.
+2. Merge the approved exact head after required CI. Normal writer dispatches continue legacy learning, with the independent job disabled until bootstrap. If ongoing historical cursor recovery is approved, set MARKET_WIDE_HISTORICAL_RECOVERY_ENABLED=true before bootstrap.
+3. Dispatch the existing Paper Ledger Learning Read Only workflow on main with market_learning_bootstrap=true once, verifying the pinned current research state and durable readback. Never use a second writer or modify scanner scores.
+4. Verify the main-specific learning receipt, model and cursor continuity; then set MARKET_WIDE_LEARNING_ENABLED=true. Later automatic writer dispatches use only main learning ancestors.
+5. Delivery remains read-only. Read the newest completed main market-wide learning job receipt; verify its digest, source writer run, source SHA, ledger generation and checksum against verified canonical evidence. If the receipt predates the delivered scan, show the separate learning generation/timestamp and label it as lagging; never imply it contains the newest scan outcomes. Show training/positive counts, market coverage, mature per-version/horizon matched results, explicit unknown counts, and shadow-only status. Do not modify the production result or promote the model based on historical proxy comparison.

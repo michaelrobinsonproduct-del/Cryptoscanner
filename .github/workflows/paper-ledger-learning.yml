@@ -252,7 +252,8 @@ jobs:
           retention-days: 30
 
   market-wide-shadow-learning:
-    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    # Merge does not activate the new job. First establish a verified checkpoint.
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (vars.MARKET_WIDE_LEARNING_ENABLED == 'true' || inputs.market_learning_bootstrap == true || inputs.market_learning_restore_asset != ''))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
@@ -609,7 +610,7 @@ jobs:
           if-no-files-found: ignore
 
   historical-trade-recovery-pilot:
-    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.MARKET_WIDE_HISTORICAL_RECOVERY_ENABLED == 'true')
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.MARKET_WIDE_HISTORICAL_RECOVERY_ENABLED == 'true' && (vars.MARKET_WIDE_LEARNING_ENABLED == 'true' || inputs.market_learning_bootstrap == true))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
