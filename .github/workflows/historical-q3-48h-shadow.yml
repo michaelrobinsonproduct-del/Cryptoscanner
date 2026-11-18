@@ -10,6 +10,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: historical-q3-shadow-${{ github.ref }}
   cancel-in-progress: false
@@ -26,7 +27,54 @@ jobs:
           python-version: '3.11'
       - name: Exact-source leak, gap, eligibility and 48-hour embargo contracts
         run: python -m unittest historical.test_kraken_q3_48h_shadow historical.test_market_wide_sparse_research -v
+      - name: Reuse completed identical historical research rather than redownload raw archive
+        id: reuse
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          source_run=44227214122
+          source_head=ceda9e65bf17edbdea7b973b1080659e3a6be154
+          echo "reuse=false" >> "$GITHUB_OUTPUT"
+          if [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$source_run" --jq '.status + ":" + (.conclusion // "") + ":" + .head_sha')" != "completed:success:$source_head" ]; then
+            exit 0
+          fi
+          git fetch --no-tags --depth=1 origin "$source_head"
+          if python - <<'PY'
+          import ast,subprocess
+          from pathlib import Path
+          ref="ceda9e65bf17edbdea7b973b1080659e3a6be154"
+          deps=("historical/kraken_q3_48h_shadow.py","historical/market_wide_sparse_research.py",
+                "paper_pov/frozen_historical_shadow.py","paper_pov/heldout_outcome_adapter.py",
+                "paper_pov/shadow_learning_evidence.py")
+          for path in deps:
+              assert Path(path).read_bytes()==subprocess.check_output(["git","show",ref+":"+path]),path
+          path="paper_pov/market_wide_learning.py"
+          required={"run_archive_market_cohorts","build_market_cohort","describe_observed_crossings","crossing_summary","train_archive_shadow"}
+          def extract(source):
+              functions={n.name:ast.dump(n,include_attributes=False) for n in ast.parse(source).body
+                         if isinstance(n,ast.FunctionDef) and n.name in required}
+              assert set(functions)==required
+              return functions
+          assert extract(Path(path).read_text())==extract(subprocess.check_output(["git","show",ref+":"+path]).decode())
+          PY
+          then
+            mkdir -p historical/output
+            gh run download "$source_run" -n "kraken-q3-frozen-48h-shadow-$source_run" -D historical/output
+            (cd historical/output && sha256sum -c MARKET-WIDE-SHA256SUMS)
+            python - <<'PY'
+          import json
+          from paper_pov.shadow_learning_evidence import canonical_digest
+          d=json.load(open("historical/output/market-wide-sparse-research.json"))
+          assert d["digest"]==canonical_digest({k:v for k,v in d.items() if k!="digest"})
+          assert d["strict_training_unchanged"] is True and d["production_applied"] is False
+          assert d["archive_sha256"]=="96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226"
+          print("Q3_REUSED_EXACT_RESEARCH",d["comparison"]["comparable_timestamps"])
+          PY
+            echo "reuse=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Download official Kraken Q3 incremental OHLCVT archive
+        if: steps.reuse.outputs.reuse != 'true'
         run: |
           set -euo pipefail
           mkdir -p /tmp/kraken-archive historical/output
@@ -48,6 +96,7 @@ jobs:
           # successful archive replay; never silently train on changed source.
           echo '96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226  /tmp/kraken-archive/q3.zip' | sha256sum -c -
       - name: Frozen chronological 48h plus 1 6 24h labels, training and blind holdout
+        if: steps.reuse.outputs.reuse != 'true'
         run: |
           python -m historical.kraken_q3_48h_shadow \
             /tmp/kraken-archive/q3.zip \
@@ -64,6 +113,7 @@ jobs:
           print('TEST_SAME_UNIVERSE_RESULTS',json.dumps(d['evaluation']['test'],sort_keys=True))
           PY
       - name: Market-wide independent historical replay on same verified archive
+        if: steps.reuse.outputs.reuse != 'true'
         run: |
           python -m paper_pov.market_wide_learning /tmp/kraken-archive/q3.zip \
             --archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
@@ -71,29 +121,33 @@ jobs:
             --archive-cohort-output historical/output/market-wide-cohorts.jsonl.gz \
             --output historical/output/market-wide-summary.json
       - name: Fit market-wide shadow model and compare on purged blind holdout
+        if: steps.reuse.outputs.reuse != 'true'
         run: |
           python -m paper_pov.market_wide_learning historical/output/market-wide-cohorts.jsonl.gz \
             --train-cohorts --training-end 2026-09-07T00:00:00Z \
             --holdout-start 2026-09-09T00:00:00Z --evaluation-asof 2026-09-15T00:00:00Z \
             --output historical/output/market-wide-shadow.json
       - name: Compare observed-positive sensitivity on the same frozen archive holdout
+        if: steps.reuse.outputs.reuse != 'true'
         run: |
           python -m paper_pov.market_wide_learning historical/output/market-wide-cohorts.jsonl.gz \
             --train-cohorts --observed-positive-sensitivity --training-end 2026-09-07T00:00:00Z \
             --holdout-start 2026-09-09T00:00:00Z --evaluation-asof 2026-09-15T00:00:00Z \
             --output historical/output/market-wide-positive-sensitivity.json
       - name: Evaluate documented archive no-trade intervals separately from strict training
+        if: steps.reuse.outputs.reuse != 'true'
         run: |
           python -m historical.market_wide_sparse_research /tmp/kraken-archive/q3.zip \
             historical/output/market-wide-cohorts.jsonl.gz \
             --sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
             --output historical/output/market-wide-sparse-research.json
       - name: Checksum reusable historical cohort and model outputs
+        if: steps.reuse.outputs.reuse != 'true'
         run: |
           cd historical/output
           sha256sum market-wide-cohorts.jsonl.gz market-wide-summary.json market-wide-shadow.json market-wide-positive-sensitivity.json > MARKET-WIDE-SHA256SUMS
       - name: Retain reusable read-only source and comparison evidence
-        if: success()
+        if: success() && steps.reuse.outputs.reuse != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: kraken-q3-frozen-48h-shadow-${{ github.run_id }}
