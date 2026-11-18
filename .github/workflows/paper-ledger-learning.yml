@@ -29,6 +29,9 @@ on:
 permissions:
   contents: read
   actions: read
+concurrency:
+  group: paper-ledger-learning-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: false
 jobs:
   paper-ledger-learning:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
@@ -62,8 +65,42 @@ jobs:
           sha256sum -c SHA256SUMS
       - name: Exercise real Kraken market-wide discovery on isolated PR shard
         if: github.event_name == 'pull_request'
+        env:
+          PR_BRANCH: ${{ github.head_ref }}
         run: |
-          python -m paper_pov.market_wide_learning evidence/ledger.json --batch-size 12 --output evidence/market-wide-observed.json
+          set -euo pipefail
+          mkdir -p evidence/market-prior
+          # PR-only continuity, isolated from main and the canonical writer.
+          # Only successful completed jobs on this exact PR branch may seed it.
+          prior_run=""
+          while read -r candidate; do
+            test -n "$candidate" || continue
+            status=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate" --jq '.status + ":" + (.conclusion // "")')
+            if [ "$status" = "completed:success" ]; then
+              prior_run="$candidate"
+              break
+            fi
+          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate \
+            --jq '.artifacts[] | select(.expired == false and (.name | startswith("market-wide-learning-continuity-pr-"))) | [.workflow_run.head_branch,.workflow_run.id] | @tsv' | awk -v branch="$PR_BRANCH" '$1 == branch {print $2}')
+          prior_args=()
+          if [ -n "$prior_run" ]; then
+            gh run download "$prior_run" -n "market-wide-learning-continuity-pr-$prior_run" -D evidence/market-prior
+            test -s evidence/market-prior/market-wide-state.json
+            prior_args=(--prior-state evidence/market-prior/market-wide-state.json)
+          else
+            echo "MARKET_LEARNING_PR_BOOTSTRAP_NO_COMPLETED_PRIOR"
+          fi
+          python -m paper_pov.market_wide_learning evidence/ledger.json --batch-size 12 \
+            "${prior_args[@]}" --state-output evidence/market-wide-state.json \
+            --output evidence/market-wide-observed.json
+      - name: Retain isolated market learning state for the next successful PR replay
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-wide-learning-continuity-pr-${{ github.run_id }}
+          path: evidence/market-wide-state.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Reconstruct real persisted paper outcome accounting
         run: python -m paper_pov.public_ledger_learning evidence/ledger.json --output evidence/learning-state.json --report evidence/learning-report.md
       - name: Select pairs with recent persisted paper predictions
