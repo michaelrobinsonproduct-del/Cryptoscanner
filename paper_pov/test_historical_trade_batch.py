@@ -1,8 +1,9 @@
 import json
+import gzip
 import tempfile
 import unittest
 from pathlib import Path
-from paper_pov.historical_trade_batch import run_batch,window_keys
+from paper_pov.historical_trade_batch import run_batch,window_keys,verified_trade_cohorts
 
 class HistoricalTradeBatchTest(unittest.TestCase):
     def test_completed_window_not_refetched(self):
@@ -23,6 +24,14 @@ class HistoricalTradeBatchTest(unittest.TestCase):
             self.assertNotEqual(calls[0],calls[1])
             self.assertEqual(len(window_keys(["ACTUSD"])),12)
             self.assertFalse(second["source_authenticated"])
+            replayed=list(verified_trade_cohorts(b))
+            self.assertEqual(len(replayed),2)
+            self.assertEqual(len(calls),2)
+            self.assertEqual(replayed[0][1]["sampling_scope"],"EVENT_PRIORITIZED_AND_BACKGROUND_NOT_UNBIASED")
+            p=b/second["records"][0]["key"]/"cursor-state.json.gz"
+            p.write_bytes(p.read_bytes()+b"tampered")
+            with self.assertRaisesRegex(ValueError,"checksum"):
+                list(verified_trade_cohorts(b))
 
 if __name__=="__main__":
     unittest.main()
