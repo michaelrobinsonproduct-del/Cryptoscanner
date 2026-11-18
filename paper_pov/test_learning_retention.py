@@ -48,5 +48,30 @@ class LearningRetentionTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"original cohort"):
                 load_seed(root/"seed",[("archive",sha,"b"*64)])
 
+    def test_cold_archive_preserves_batches_and_rejects_missing_history(self):
+        from paper_pov.learning_retention import compact_live_state,assemble_history
+        old="2026-11-01T00:00:00Z"
+        recent="2026-11-05T00:00:00Z"
+        state=dict(schema="market_wide_continuity_v1",production_applied=False,
+            evaluation_asof_utc="2026-11-06T00:00:00Z",
+            anchors=[dict(prediction_id="a",entry_utc=old),dict(prediction_id="b",entry_utc=recent)],
+            outcomes=[dict(prediction_id="a",entry_utc=old,horizon_hours=48,hit=None)],
+            shadow_predictions=[dict(prediction_id="x",batch_id="mixed",entry_utc=old),
+                                dict(prediction_id="y",batch_id="mixed",entry_utc=recent),
+                                dict(prediction_id="z",batch_id="old",entry_utc=old)],
+            shadow_outcomes=[dict(prediction_id="z",entry_utc=old,horizon_hours=48,hit=True)])
+        state["digest"]=canonical_digest(state)
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            first=compact_live_state(state,root/"a")
+            self.assertEqual([p["prediction_id"] for p in first["anchors"]],["b"])
+            self.assertEqual(len(first["shadow_predictions"]),2)
+            self.assertEqual(assemble_history(first,root/"a")["outcomes"],state["outcomes"])
+            with self.assertRaisesRegex(ValueError,"Missing prior"):
+                compact_live_state(first,root/"b")
+            second=compact_live_state(first,root/"b",previous_directory=root/"a")
+            self.assertEqual(first,second)
+            self.assertEqual(len(assemble_history(second,root/"b")["shadow_predictions"]),3)
+
 if __name__=="__main__":
     unittest.main()

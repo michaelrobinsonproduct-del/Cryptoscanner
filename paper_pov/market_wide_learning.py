@@ -257,6 +257,7 @@ def merge_market_state(cohort, eligibility, prior):
               "production_applied": False, "source_authenticated": False}
     if prior.get("continuity_recovery_44220533486") is True:
         result["continuity_recovery_44220533486"]=True
+    result["cold_segments"]=list(prior.get("cold_segments",[]))
     result["digest"] = canonical_digest(result)
     return result
 
@@ -945,7 +946,7 @@ def train_archive_shadow(cohort_path, *, training_end_utc, holdout_start_utc,
 
 
 
-def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256, additional_archives=(), retained_observed=(), historical_trade_directory=None, compact_seed=None, original_cohort_hashes=None):
+def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256, additional_archives=(), retained_observed=(), historical_trade_directory=None, compact_seed=None, original_cohort_hashes=None, cold_state_directory=None):
     """Refit on archived and newly matured independent labels, then freeze.
 
     This is a new prospective model, not a repeat of the historical holdout.
@@ -1045,7 +1046,14 @@ def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256
                     trade_examples+=1
                     trade_positives+=int(o["hit"])
             trade_receipts.append(receipt)
-    ingest(state["anchors"],state["outcomes"],"recent_observed")
+    if state.get("cold_segments"):
+        if cold_state_directory is None:
+            raise ValueError("Cumulative training requires retained cold history")
+        from .learning_retention import assemble_history
+        history=assemble_history(state,cold_state_directory)
+        ingest(history["anchors"],history["outcomes"],"recent_observed")
+    else:
+        ingest(state["anchors"],state["outcomes"],"recent_observed")
     keys=sorted(eligible)
     model=train_shadow_challenger([eligible[k] for k in keys],[labels[k] for k in keys],
                                   training_end_utc=cutoff.isoformat(),
@@ -1136,7 +1144,9 @@ def build_learning_receipt(observed, training, candidate, *, writer, learning_sc
         "negative_count":model["negative_count"],"source_counts":training["source_counts"],
         "training_dataset_digest":model["training_dataset_digest"],
         "eligible_markets":len(eligible),"cumulative_observed_current_markets":len(eligible&set(state["last_success_generation"])),
-        "retained_anchors":len(state["anchors"]),"timely_shadow_predictions":shadow["timely_recorded_predictions"],
+        "retained_anchors":len(state["anchors"])+sum(r["counts"]["anchors"] for r in state.get("cold_segments",[])),
+        "active_anchors":len(state["anchors"]),"cold_segment_count":len(state.get("cold_segments",[])),
+        "timely_shadow_predictions":shadow["timely_recorded_predictions"],
         "per_horizon_current_shard":observed["per_horizon"],
         "prospective_by_version_and_horizon":shadow["by_model_and_horizon"],
         "historical_trade_research":training.get("historical_trade_research",{}),
@@ -1165,6 +1175,8 @@ def main(argv=None):
     parser.add_argument("--retained-observed",action="append",nargs=2,metavar=("COHORT_PATH","SNAPSHOT_SET_SHA256"),default=[])
     parser.add_argument("--historical-trade-directory",type=Path)
     parser.add_argument("--compact-seed",type=Path)
+    parser.add_argument("--cold-state-directory",type=Path)
+    parser.add_argument("--prior-cold-directory",type=Path)
     parser.add_argument("--original-cohort-hash",action="append")
     parser.add_argument("--training-end")
     parser.add_argument("--holdout-start")
@@ -1180,7 +1192,7 @@ def main(argv=None):
         report=train_cumulative_market_model(args.ledger,json.loads(args.cumulative_state.read_text()),
                                              expected_archive_sha256=args.cumulative_archive_sha256,
                                              additional_archives=args.additional_archive,retained_observed=args.retained_observed,historical_trade_directory=args.historical_trade_directory,compact_seed=args.compact_seed,
-                                             original_cohort_hashes=args.original_cohort_hash)
+                                             original_cohort_hashes=args.original_cohort_hash,cold_state_directory=args.cold_state_directory)
         args.output.parent.mkdir(parents=True,exist_ok=True)
         args.output.write_text(json.dumps(report,sort_keys=True)+"\n")
         print(json.dumps(report,sort_keys=True))
@@ -1212,6 +1224,23 @@ def main(argv=None):
     report = run_observed_market_batch(json.loads(args.ledger.read_text()), batch_size=args.batch_size, prior=prior,
                                        model_source=model_source, model_available_utc=args.shadow_model_available,
                                        include_watch_controls=args.include_watch_controls)
+    if args.cold_state_directory is not None:
+        from .learning_retention import compact_live_state,assemble_history
+        active=compact_live_state(report["continuity_state"],args.cold_state_directory,
+                                  previous_directory=args.prior_cold_directory)
+        report["continuity_state"]=active
+        history=assemble_history(active,args.cold_state_directory)
+        shadow=report["prospective_shadow"]
+        shadow["retained_predictions"]=len(history["shadow_predictions"])
+        shadow["timely_recorded_predictions"]=sum(p.get("recording_scope")=="TIMELY_RECORDED_QUOTE_REFERENCE" for p in history["shadow_predictions"])
+        shadow["replay_only_predictions"]=shadow["retained_predictions"]-shadow["timely_recorded_predictions"]
+        shadow["by_model_and_horizon"]=prospective_metrics_by_version(history["shadow_predictions"],history["shadow_outcomes"])
+        # Sum actual matched 48h batches by model without presenting pooled lift.
+        for target,source in (("paired_complete_batches","paired_complete_batches"),("selected_per_scanner","selected_per_scanner"),("baseline_hits","baseline_hits"),("shadow_hits","shadow_hits")):
+            shadow[target]=sum(m["48"][source] for m in shadow["by_model_and_horizon"].values())
+        report["evidence_digest"]=canonical_digest({k:v for k,v in report.items() if k!="evidence_digest"})
+    elif report["continuity_state"].get("cold_segments"):
+        raise ValueError("Missing cold history output; refusing loss")
     if args.state_output:
         args.state_output.parent.mkdir(parents=True, exist_ok=True)
         args.state_output.write_text(json.dumps(report["continuity_state"], sort_keys=True, separators=(",", ":")) + "\n")
@@ -1222,7 +1251,7 @@ def main(argv=None):
                "fetch_errors", "coverage_scope", "source_authenticated", "crossing_summary")}
     summary.update(eligible_count=len(report["eligible_pairs"]), selected_count=len(report["selected_pairs"]),
                    observed_count=len(report["observed_pairs"]),
-                   cumulative_anchors=len(report["continuity_state"]["anchors"]),
+                   cumulative_anchors=len(report["continuity_state"]["anchors"])+sum(r["counts"]["anchors"] for r in report["continuity_state"].get("cold_segments",[])),
                    cumulative_observed_markets=len(report["continuity_state"]["last_success_generation"]),
                    independent_selected_count=len(report["independent_selected_pairs"]),
                    watch_control_count=len(report["watch_control_pairs"]),

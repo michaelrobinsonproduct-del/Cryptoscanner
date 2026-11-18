@@ -390,6 +390,7 @@ jobs:
           model_args=(--shadow-model evidence/market-wide-scoring-model.json --shadow-model-available "$model_ready")
           python -m paper_pov.market_wide_learning evidence/ledger.json --batch-size 12 --include-watch-controls \
             "${prior_args[@]}" --state-output evidence/market-wide-state.json \
+            --cold-state-directory evidence/market-cold-history --prior-cold-directory evidence/market-prior/market-cold-history \
             "${model_args[@]}" \
             --output evidence/market-wide-observed.json
       - name: Train cumulative shadow on retained historical and recent mature labels
@@ -427,6 +428,7 @@ jobs:
           python -m paper_pov.market_wide_learning evidence/historical-seed/market-wide-cohorts.jsonl.gz \
             --historical-trade-directory evidence/historical-trades \
             --cumulative-state evidence/market-wide-state.json \
+            --cold-state-directory evidence/market-cold-history \
             --cumulative-archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
             --additional-archive evidence/historical-q2/q2-market-wide-cohorts.jsonl.gz fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 \
             --retained-observed evidence/historical-recovered/post-q3-cohorts.jsonl.gz b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef \
@@ -487,6 +489,7 @@ jobs:
             evidence/market-wide-training-report.json
             evidence/market-wide-learning-receipt.json
             evidence/market-state-checkpoint/
+            evidence/market-cold-history/
             evidence/market-wide-scoring-model.json
             evidence/market-wide-scoring-model-available.txt
           if-no-files-found: error

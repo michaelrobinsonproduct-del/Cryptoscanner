@@ -209,6 +209,113 @@ def restore_state(directory):
 
 
 
+
+COLD_SCHEMA="market_wide_cold_history_v1"
+
+def cold_history(directory, expected):
+    """Validate each immutable segment against the active state commitment."""
+    directory=Path(directory)
+    segments=[]
+    seen=set()
+    for rec in expected:
+        name=rec["sha256"]+".jsonl.gz"
+        if rec["sha256"] in seen or len(rec["sha256"])!=64 or any(c not in "0123456789abcdef" for c in rec["sha256"]):
+            raise ValueError("Invalid cold segment identity")
+        seen.add(rec["sha256"])
+        if file_sha(directory/name)!=rec["sha256"]:
+            raise ValueError("Cold history checksum mismatch")
+        rows=list(read_rows(directory/name))
+        if len(rows)!=1:
+            raise ValueError("Invalid cold segment")
+        segment=rows[0]
+        if segment.get("schema")!=COLD_SCHEMA or segment["digest"]!=canonical_digest({k:v for k,v in segment.items() if k!="digest"}):
+            raise ValueError("Invalid cold segment digest")
+        if {k:len(segment[k]) for k in STATE_FIELDS}!=rec["counts"]:
+            raise ValueError("Cold segment count mismatch")
+        segments.append(segment)
+    return segments
+
+
+def compact_live_state(state,directory,*,previous_directory=None):
+    """Seal old unrevisitable evidence while retaining active 72h windows.
+
+    Completed and incomplete outcomes retain their exact original semantics.
+    Archive an entire prospective batch together; never split matched groups.
+    Historical evidence stays available to fitting and metric accounting.
+    """
+    import shutil
+    if state.get("digest")!=canonical_digest({k:v for k,v in state.items() if k!="digest"}):
+        raise ValueError("Invalid active state checksum")
+    directory=Path(directory)
+    directory.mkdir(parents=True,exist_ok=True)
+    refs=list(state.get("cold_segments",[]))
+    if refs:
+        if previous_directory is None:
+            raise ValueError("Missing prior cold history; refusing reset")
+        cold_history(previous_directory,refs)
+        for rec in refs:
+            name=rec["sha256"]+".jsonl.gz"
+            src=Path(previous_directory)/name
+            dst=directory/name
+            if src.resolve()!=dst.resolve():
+                shutil.copyfile(src,dst)
+    cutoff=utc_time(state["evaluation_asof_utc"])-timedelta(hours=72)
+    old_anchor={a["prediction_id"] for a in state["anchors"] if utc_time(a["entry_utc"])<cutoff}
+    groups=defaultdict(list)
+    for p in state.get("shadow_predictions",[]):
+        groups[p["batch_id"]].append(p)
+    old_shadow={p["prediction_id"] for group in groups.values()
+                if all(utc_time(p["entry_utc"])<cutoff for p in group) for p in group}
+    active=dict(state)
+    sealed={"schema":COLD_SCHEMA}
+    for field in STATE_FIELDS:
+        ids=old_anchor if field in ("anchors","outcomes") else old_shadow
+        rows=state.get(field,[])
+        sealed[field]=[row for row in rows if row["prediction_id"] in ids]
+        active[field]=[row for row in rows if row["prediction_id"] not in ids]
+        if len(sealed[field])+len(active[field])!=len(rows):
+            raise ValueError("Cold split count mismatch")
+    if any(sealed[k] for k in STATE_FIELDS):
+        sealed["digest"]=canonical_digest(sealed)
+        temporary=directory/"new-segment.jsonl.gz"
+        write_gzip(temporary,[sealed])
+        sha=file_sha(temporary)
+        target=directory/(sha+".jsonl.gz")
+        if target.exists():
+            raise ValueError("Duplicate cold segment")
+        temporary.rename(target)
+        refs.append({"sha256":sha,"counts":{k:len(sealed[k]) for k in STATE_FIELDS}})
+    active["cold_segments"]=refs
+    active["digest"]=canonical_digest({k:v for k,v in active.items() if k!="digest"})
+    # Require disjoint identities and whole batches across every retained segment.
+    all_history=assemble_history(active,directory)
+    for field in STATE_FIELDS:
+        expected=len(state.get(field,[]))+sum(rec["counts"][field] for rec in state.get("cold_segments",[]))
+        if len(all_history[field])!=expected:
+            raise ValueError("Cold archive lost a retained row")
+    return active
+
+
+def assemble_history(state,directory):
+    """Exact archive+active research history, with duplicate identity rejection."""
+    segments=cold_history(directory,state.get("cold_segments",[]))
+    result={}
+    for field in STATE_FIELDS:
+        by_key={}
+        for group in segments+[state]:
+            for row in group.get(field,[]):
+                key=(row["prediction_id"],row["horizon_hours"]) if field in ("outcomes","shadow_outcomes") else row["prediction_id"]
+                if key in by_key:
+                    raise ValueError("Duplicate active/cold evidence identity")
+                by_key[key]=row
+        result[field]=[by_key[k] for k in sorted(by_key)]
+    for a,o in (("anchors","outcomes"),("shadow_predictions","shadow_outcomes")):
+        ids={row["prediction_id"] for row in result[a]}
+        if any(row["prediction_id"] not in ids for row in result[o]):
+            raise ValueError("Outcome missing source prediction")
+    return result
+
+
 def pack_seed_release(directory,archive):
     """Package only explicitly allowed compact seed files; never publish here."""
     import tarfile
