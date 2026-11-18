@@ -103,12 +103,19 @@ jobs:
               break
             fi
           done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate \
-            --jq '.artifacts[] | select(.expired == false and (.name | startswith("market-wide-learning-continuity-pr-"))) | [.workflow_run.head_branch,.workflow_run.id] | @tsv' | awk -v branch="$PR_BRANCH" '$1 == branch {print $2}')
+            --jq '.artifacts[] | select(.expired == false and (.name | startswith("market-wide-learning-continuity-pr-"))) | [.workflow_run.head_branch,.workflow_run.id] | @tsv' | awk -v branch="$PR_BRANCH" '$1 == branch {print $2}' | sort -unr)
           prior_args=()
           model_args=(--shadow-model historical/evidence/q3_2026_frozen_shadow_v1.json --shadow-model-available 2026-11-11T03:27:00Z)
           if [ -n "$prior_run" ]; then
             gh run download "$prior_run" -n "market-wide-learning-continuity-pr-$prior_run" -D evidence/market-prior
             test -s evidence/market-prior/market-wide-state.json
+            echo "MARKET_LEARNING_PRIOR_RUN=$prior_run"
+            # Known incident checkpoint: recover evidence lost by unordered prior discovery.
+            if [ "$prior_run" -ge 44221452274 ] && ! python -c 'import json; d=json.load(open("evidence/market-prior/market-wide-state.json")); raise SystemExit(not d.get("continuity_recovery_44220533486"))'; then
+              mkdir -p evidence/market-recovery
+              gh run download 44220533486 -n market-wide-learning-continuity-pr-44220533486 -D evidence/market-recovery
+              python -c 'import json; from pathlib import Path; from paper_pov.market_wide_learning import recover_market_state; from paper_pov.shadow_learning_evidence import canonical_digest; p=Path("evidence/market-prior/market-wide-state.json"); d=recover_market_state(json.loads(p.read_text()),json.load(open("evidence/market-recovery/market-wide-state.json"))); d["continuity_recovery_44220533486"]=True; d["digest"]=canonical_digest({k:v for k,v in d.items() if k!="digest"}); p.write_text(json.dumps(d)); print("MARKET_LEARNING_RECOVERED",len(d["anchors"]),len(d["shadow_predictions"]))'
+            fi
             prior_args=(--prior-state evidence/market-prior/market-wide-state.json)
             if [ -s evidence/market-prior/market-wide-model.json ]; then
               completed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run" --jq .updated_at)

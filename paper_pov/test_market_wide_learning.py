@@ -340,5 +340,26 @@ class MarketWideLearningTest(unittest.TestCase):
             select_completed_learning_publication(current,lambda r:dict(id=r,head_branch="main",
                 head_sha="b"*40,status="completed",conclusion="failure"),lambda ref:self.fail("No fallback for failure"))
 
+    def test_recovery_unions_compatible_state_without_duplicate_anchors(self):
+        from paper_pov.market_wide_learning import recover_market_state,STATE_SCHEMA
+        from paper_pov.shadow_learning_evidence import canonical_digest
+        at="2026-01-02T00:00:00+00:00"
+        def state(g,keys):
+            d=dict(schema=STATE_SCHEMA,ledger_generation=g,evaluation_asof_utc=at,
+                   production_applied=False,eligibility=[],anchors=[dict(prediction_id=k,pair=k,
+                   entry_utc=at,feature_asof_utc=at,entry_price=100,feature_complete=False,features={}) for k in keys],
+                   outcomes=[],shadow_predictions=[],shadow_outcomes=[],
+                   last_attempt_generation={k:g for k in keys},last_success_generation={k:g for k in keys})
+            d["digest"]=canonical_digest(d)
+            return d
+        a,b=state(5,["A","B"]),state(4,["B","C"])
+        out=recover_market_state(a,b)
+        self.assertEqual([x["prediction_id"] for x in out["anchors"]],["A","B","C"])
+        self.assertEqual(out["ledger_generation"],5)
+        self.assertEqual(out["last_success_generation"],{"A":5,"B":5,"C":4})
+        self.assertEqual(out["digest"],canonical_digest({k:v for k,v in out.items() if k!="digest"}))
+        with self.assertRaisesRegex(ValueError,"advance"):
+            recover_market_state(b,a)
+
 if __name__ == "__main__":
     unittest.main()

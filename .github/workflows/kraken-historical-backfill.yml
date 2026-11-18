@@ -89,6 +89,36 @@ jobs:
         run: |
           set -euo pipefail
           name="market-wide-q2-$COHORT_KEY"
+          # The first Q2 replay was started before unrelated scorer/continuity fixes.
+          # Reuse it only if the extraction implementation matches exactly.
+          first=44220694310
+          if [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$first" --jq '.status + ":" + (.conclusion // "")')" = "completed:success" ]; then
+            git fetch --no-tags --depth=1 origin 8b701967fed44336df210fb971642ffff209e241
+            if python - <<'PY'
+          import ast,subprocess
+          from pathlib import Path
+          ref="8b701967fed44336df210fb971642ffff209e241"
+          whole=("historical/backfill.py","historical/kraken_q3_48h_shadow.py","paper_pov/frozen_historical_shadow.py","paper_pov/heldout_outcome_adapter.py","paper_pov/shadow_learning_evidence.py")
+          for p in whole:
+              assert Path(p).read_bytes()==subprocess.check_output(["git","show",ref+":"+p]),p
+          p="paper_pov/market_wide_learning.py"
+          names={"run_archive_market_cohorts","build_market_cohort","describe_observed_crossings","crossing_summary"}
+          def extraction(source):
+              return {n.name:ast.dump(n,include_attributes=False) for n in ast.parse(source).body if isinstance(n,ast.FunctionDef) and n.name in names}
+          assert extraction(Path(p).read_text())==extraction(subprocess.check_output(["git","show",ref+":"+p]).decode())
+          PY
+            then
+              artifact=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$first/artifacts" --jq '.artifacts[] | select(.expired==false and (.name | startswith("market-wide-q2-"))) | .name' | head -n 1)
+              if [ -n "$artifact" ]; then
+                mkdir -p historical/output
+                gh run download "$first" -n "$artifact" -D historical/output
+                (cd historical/output && sha256sum -c Q2-MARKET-WIDE-SHA256SUMS)
+                echo "reuse=true" >> "$GITHUB_OUTPUT"
+                echo "Q2_REUSABLE_COHORT_RUN=$first"
+                exit 0
+              fi
+            fi
+          fi
           while read -r branch run; do
             if [ "$branch" != "$PR_BRANCH" ]; then continue; fi
             status=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq '.status + ":" + (.conclusion // "")')

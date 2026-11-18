@@ -255,9 +255,96 @@ def merge_market_state(cohort, eligibility, prior):
               "last_attempt_generation": attempts, "last_success_generation": successes,
               "attempt_sequence": sequence,"last_attempt_sequence":attempt_sequence,
               "production_applied": False, "source_authenticated": False}
+    if prior.get("continuity_recovery_44220533486") is True:
+        result["continuity_recovery_44220533486"]=True
     result["digest"] = canonical_digest(result)
     return result
 
+
+
+
+def recover_market_state(primary, earlier):
+    """Union two successful isolated research artifacts after a stale ancestor read.
+
+    Do not discard immutable evidence or manufacture completed outcomes. The
+    newer state remains the temporal authority; the earlier state contributes
+    only compatible observations, anchors, labels and original shadow records.
+    """
+    if primary.get("schema")!=STATE_SCHEMA or earlier.get("schema")!=STATE_SCHEMA:
+        raise ValueError("Invalid recovery state schema")
+    for state in (primary,earlier):
+        if state.get("digest")!=canonical_digest({k:v for k,v in state.items() if k!="digest"}) or state.get("production_applied") is not False:
+            raise ValueError("Invalid recovery state checksum")
+    if (earlier["ledger_generation"]>primary["ledger_generation"] or
+            utc_time(earlier["evaluation_asof_utc"])>utc_time(primary["evaluation_asof_utc"])):
+        raise ValueError("Recovery would advance beyond selected primary")
+    # Keep the earliest original signal for repeated IDs; a stale replay
+    # cannot replace a timely signal. Differences in signal economics fail.
+    shadow={}
+    for source in (earlier,primary):
+        for p in source.get("shadow_predictions",[]):
+            key=p["prediction_id"]
+            old=shadow.get(key)
+            if old is not None:
+                immutable=("pair","batch_id","model_version","run_id","entry_price",
+                           "feature_asof_utc","features","shadow_score","baseline_watch",
+                           "shadow_equal_budget_watch")
+                if any(old.get(k)!=p.get(k) for k in immutable):
+                    raise ValueError("Recovered prospective prediction conflict")
+                def order(row):
+                    return (row.get("recording_scope")!="TIMELY_RECORDED_QUOTE_REFERENCE",
+                            utc_time(row.get("recorded_at_utc",row["entry_utc"])))
+                if order(old)<=order(p):
+                    continue
+            shadow[key]=p
+    def union_outcomes(sources, field, allowed):
+        merged={}
+        for source in sources:
+            for o in source.get(field,[]):
+                key=(o["prediction_id"],o["horizon_hours"])
+                if key[0] not in allowed or o["entry_utc"]!=allowed[key[0]]["entry_utc"]:
+                    continue
+                old=merged.get(key)
+                if old is not None and old["coverage_complete"]:
+                    if o["coverage_complete"] and any(old[k]!=o[k] for k in ("hit","max_favorable_return","close_return")):
+                        raise ValueError("Recovered completed outcome conflict")
+                    continue
+                if old is None or o["coverage_complete"] or old["outcome_status"]=="IMMATURE":
+                    merged[key]=o
+        return [merged[k] for k in sorted(merged)]
+    anchors={}
+    for source in (earlier,primary):
+        for a in source["anchors"]:
+            key=a["prediction_id"]
+            old=anchors.get(key)
+            if old is not None:
+                if any(old[k]!=a[k] for k in ("pair","entry_utc","feature_asof_utc","entry_price")):
+                    raise ValueError("Recovered anchor identity conflict")
+                if old["feature_complete"]:
+                    if a["feature_complete"] and old["features"]!=a["features"]:
+                        raise ValueError("Recovered feature conflict")
+                    continue
+            anchors[key]=a
+    if max(len(anchors),len(shadow))>MAX_RETAINED_ANCHORS:
+        raise ValueError("Recovered state requires archive compaction")
+    result=dict(primary)
+    result["anchors"]=[anchors[k] for k in sorted(anchors)]
+    result["outcomes"]=union_outcomes((earlier,primary),"outcomes",anchors)
+    result["shadow_predictions"]=[shadow[k] for k in sorted(shadow)]
+    result["shadow_outcomes"]=union_outcomes((earlier,primary),"shadow_outcomes",shadow)
+    result["eligibility"]=retain_hourly_eligibility(
+        {"runs":[{"as_of":primary["evaluation_asof_utc"]}],"observations":primary["eligibility"]},earlier)
+    for field in ("last_attempt_generation","last_success_generation","last_attempt_sequence"):
+        values={}
+        for source in (earlier,primary):
+            for k,v in source.get(field,source.get("last_attempt_generation",{}) if field=="last_attempt_sequence" else {}).items():
+                values[k]=max(values.get(k,0),v)
+        result[field]=values
+    result["attempt_sequence"]=max(primary.get("attempt_sequence",0),earlier.get("attempt_sequence",0),
+                                  max(result["last_attempt_sequence"].values(),default=0))
+    result["recovered_state_digests"]=sorted({primary["digest"],earlier["digest"]})
+    result["digest"]=canonical_digest({k:v for k,v in result.items() if k!="digest"})
+    return result
 
 
 def select_completed_learning_publication(publication, fetch_writer, fetch_parent):
