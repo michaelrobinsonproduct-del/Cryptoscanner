@@ -7,6 +7,7 @@ instead of asserting active counts never fall. No network or production writes.
 import datetime as dt
 import hashlib
 from . import ledger
+from .segmented_storage import MAX_RAW_BYTES
 
 
 def _require(condition, reason):
@@ -28,8 +29,8 @@ def verify_transition(before, after, report, source_sha):
     This function proves known pre-transition IDs are either unchanged active
     or associated with an indexed archived run and exactly counted.
     """
-    ledger.verify(before)
-    ledger.verify(after)
+    ledger.verify(before, MAX_RAW_BYTES)
+    ledger.verify(after, MAX_RAW_BYTES)
     _require(after["generation"] == before["generation"] + 1, "GENERATION")
     _require(isinstance(report, dict) and isinstance(report.get("watch"), list)
              and isinstance(report.get("observations"), list), "REPORT")
@@ -121,7 +122,7 @@ def verify_transition(before, after, report, source_sha):
     expected_index += [r for r in before["runs"] if r["id"] in removed_runs]
     _require(after.get("archive_index", []) == expected_index, "ARCHIVE_INDEX_IDENTITY")
 
-    bscore, ascore = ledger.scoreboard(before), ledger.scoreboard(after)
+    bscore, ascore = ledger.scoreboard(before, MAX_RAW_BYTES), ledger.scoreboard(after, MAX_RAW_BYTES)
     for field, increment in (("actual_scans", 1),
                              ("immutable_predictions", len(report["watch"])),
                              ("market_observations", len(report["observations"]))):
