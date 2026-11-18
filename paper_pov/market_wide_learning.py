@@ -5,7 +5,7 @@ Caller must authenticate source and supply the point-in-time eligible universe.
 No production decisions or ledger writes.
 """
 from bisect import bisect_right
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import argparse
 import json
 from pathlib import Path
@@ -15,8 +15,9 @@ from .heldout_outcome_adapter import reconstruct_forward_outcomes
 from .frozen_historical_shadow import features_at_entry
 
 def build_market_cohort(candles, *, eligible_pairs, evaluation_asof_utc,
-                        eligibility_observations=None):
+                        eligibility_observations=None, anchor_start_utc=None):
     asof = utc_time(evaluation_asof_utc)
+    anchor_start = utc_time(anchor_start_utc) if anchor_start_utc else None
     eligible = set(eligible_pairs)
     grouped = {}
     seen_at = {}
@@ -47,6 +48,8 @@ def build_market_cohort(candles, *, eligible_pairs, evaluation_asof_utc,
             t, c = rows[i]
             if t + timedelta(hours=1) > asof:
                 break
+            if anchor_start is not None and t < anchor_start:
+                continue
             if t.minute or t.second or t.microsecond:
                 continue
             if eligibility_observations is not None:
@@ -147,12 +150,108 @@ def run_observed_market_batch(ledger, *, fetch=None, batch_size=12):
     return cohort
 
 
+
+def run_archive_market_cohorts(zip_path, *, expected_sha256, start_utc, end_utc, cohort_output):
+    """Stream independent market cohorts from pinned Kraken OHLCVT archive bytes.
+
+    Archive-listed USD pairs are an observed historical universe, not certified
+    past live eligibility or executable liquidity. Keep those distinctions.
+    Only one pair is in memory at a time; emitted cohorts can be reused.
+    """
+    import csv
+    import gzip
+    import hashlib
+    import io
+    import zipfile
+    from historical.kraken_q3_48h_shadow import parse_market, parse_bar
+
+    start, end = utc_time(start_utc), utc_time(end_utc)
+    if end <= start or end - start > timedelta(days=366):
+        raise ValueError("Expected bounded historical window")
+    digest = hashlib.sha256()
+    with Path(zip_path).open("rb") as src:
+        for block in iter(lambda: src.read(4*1024*1024), b""):
+            digest.update(block)
+    archive_sha = digest.hexdigest()
+    if archive_sha != expected_sha256:
+        raise ValueError("Historical archive SHA256 mismatch")
+    counts = {str(h): {k: 0 for k in ("hits", "misses", "immature", "missing_candles")}
+              for h in (1, 6, 24, 48)}
+    observed_markets = anchors = features = valid_bars = 0
+    markets_with_hits = set()
+    Path(cohort_output).parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(zip_path) as archive, gzip.open(cohort_output, "wt", encoding="utf-8") as output:
+        members = sorted((parse_market(n), n) for n in archive.namelist() if parse_market(n))
+        if not members or len({pair for pair, _ in members}) != len(members):
+            raise ValueError("Missing or ambiguous historical USD archive members")
+        for pair, name in members:
+            candles = []
+            with archive.open(name) as source:
+                for row in csv.reader(io.TextIOWrapper(source, encoding="utf-8")):
+                    bar = parse_bar(row)
+                    if bar is None:
+                        continue
+                    stamp, close, volume, trades = bar
+                    # Archive timestamps are interval-open; features know the
+                    # close only five minutes later.
+                    t = datetime.fromtimestamp(stamp, tz=timezone.utc) + timedelta(minutes=5)
+                    if start-timedelta(hours=1) <= t <= end:
+                        candles.append({"pair": pair, "timestamp_utc": t.isoformat(),
+                                        "close": close, "high": float(row[2]),
+                                        "volume": volume, "trades": trades})
+            if not candles:
+                continue
+            valid_bars += len(candles)
+            observed_markets += 1
+            cohort = build_market_cohort(candles, eligible_pairs=[pair],
+                                         evaluation_asof_utc=end.isoformat(),
+                                         anchor_start_utc=start.isoformat())
+            for record in cohort["anchors"] + cohort["outcomes"]:
+                record["source_sha256"] = archive_sha
+            cohort.update(source_archive_sha256=archive_sha, source_member=name,
+                          eligibility_scope="OBSERVED_ARCHIVE_USD_NOT_LIVE_POLICY")
+            output.write(json.dumps(cohort, sort_keys=True, separators=(",", ":")) + "\n")
+            anchors += len(cohort["anchors"])
+            features += cohort["feature_complete_anchors"]
+            for h, row_counts in cohort["per_horizon"].items():
+                for key, count in row_counts.items():
+                    counts[h][key] += count
+                if row_counts["hits"]:
+                    markets_with_hits.add(pair)
+    if anchors == 0:
+        raise ValueError("No historical learning anchors in requested window")
+    return {"schema": "market_wide_archive_summary_v1", "archive_sha256": archive_sha,
+            "pinned_archive_verified": True, "source_authenticated": False,
+            "start_utc": start.isoformat(), "end_utc": end.isoformat(),
+            "archive_usd_members": len(members), "observed_markets": observed_markets,
+            "valid_bars": valid_bars, "anchors": anchors, "feature_complete_anchors": features,
+            "per_horizon": counts, "markets_with_hits": sorted(markets_with_hits),
+            "eligibility_scope": "OBSERVED_ARCHIVE_USD_NOT_LIVE_POLICY",
+            "label_scope": "COMPLETE_CANDLE_HIGH_NOT_EXECUTABLE_FILL",
+            "production_applied": False, "promotion_authorized": False,
+            "measured_lift_verified": False}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Prediction-independent read-only Kraken outcome smoke")
     parser.add_argument("ledger", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--batch-size", type=int, default=12)
+    parser.add_argument("--archive-sha256")
+    parser.add_argument("--archive-start")
+    parser.add_argument("--archive-end")
+    parser.add_argument("--archive-cohort-output", type=Path)
     args = parser.parse_args(argv)
+    if args.archive_sha256:
+        if not (args.archive_start and args.archive_end and args.archive_cohort_output):
+            parser.error("Archive mode requires start, end and cohort output")
+        report = run_archive_market_cohorts(args.ledger, expected_sha256=args.archive_sha256,
+                                           start_utc=args.archive_start, end_utc=args.archive_end,
+                                           cohort_output=args.archive_cohort_output)
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(json.dumps(report, sort_keys=True) + "\n")
+        print(json.dumps(report, sort_keys=True))
+        return report
     report = run_observed_market_batch(json.loads(args.ledger.read_text()), batch_size=args.batch_size)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, sort_keys=True, separators=(",", ":")) + "\n")
