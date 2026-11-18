@@ -61,6 +61,13 @@ jobs:
           print('SHADOW_HISTORICAL_48H_REPLAY', d['training']['status'])
           print('TEST_SAME_UNIVERSE_RESULTS',json.dumps(d['evaluation']['test'],sort_keys=True))
           PY
+      - name: Market-wide independent historical replay on same verified archive
+        run: |
+          python -m paper_pov.market_wide_learning /tmp/kraken-archive/q3.zip \
+            --archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
+            --archive-start 2026-09-01T00:00:00Z --archive-end 2026-09-08T00:00:00Z \
+            --archive-cohort-output historical/output/market-wide-cohorts.jsonl.gz \
+            --output historical/output/market-wide-summary.json
       - name: Retain small read-only source and comparison evidence
         if: success()
         uses: actions/upload-artifact@v4
@@ -69,4 +76,6 @@ jobs:
           path: |
             historical/output/q3-shadow-48h.json
             historical/output/source-archive-SHA256SUMS
+            historical/output/market-wide-summary.json
+            historical/output/market-wide-cohorts.jsonl.gz
           retention-days: 30
