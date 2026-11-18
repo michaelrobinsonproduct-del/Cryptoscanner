@@ -13,6 +13,8 @@ on:
       - 'paper_pov/test_market_wide_learning.py'
       - 'paper_pov/post_q3_observed_recovery.py'
       - 'paper_pov/historical_trade_recovery.py'
+      - 'paper_pov/historical_trade_batch.py'
+      - 'paper_pov/test_historical_trade_batch.py'
       - 'paper_pov/test_historical_trade_recovery.py'
       - 'paper_pov/test_post_q3_observed_recovery.py'
       - 'paper_pov/historical_paper_cohort.py'
@@ -382,7 +384,10 @@ jobs:
   historical-trade-recovery-pilot:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_BRANCH: ${{ github.head_ref }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -390,18 +395,47 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Test bounded cursor replay and real-bar contract
-        run: python -m unittest paper_pov.test_historical_trade_recovery -v
-      - name: Recover actual October trades on a bounded historical market
+      - name: Test bounded cursor replay and window reuse
+        run: python -m unittest paper_pov.test_historical_trade_recovery paper_pov.test_historical_trade_batch -v
+      - name: Recover bounded historical windows using verified observed universe and retained cursor state
         run: |
-          python -m paper_pov.historical_trade_recovery --pair ACTUSD \
-            --start 2026-10-01T00:00:00Z --end 2026-10-04T00:00:00Z \
-            --max-pages 20 --output-dir evidence/october-trades
-          (cd evidence/october-trades && sha256sum cursor-state.json.gz cohort.jsonl.gz summary.json > SHA256SUMS)
-      - name: Retain source cursor checkpoint and partial coverage evidence
+          set -euo pipefail
+          mkdir -p evidence/trades-ledger evidence/trades-prior evidence/trades-seed
+          RUN_ID=$(python - <<'PY'
+          import base64,json,os,subprocess
+          from paper_pov.market_wide_learning import select_completed_learning_publication
+          repo=os.environ["GITHUB_REPOSITORY"]
+          def api(path):
+              return json.loads(subprocess.check_output(["gh","api",f"repos/{repo}/{path}"]))
+          def publication(ref):
+              return json.loads(base64.b64decode(api(f"contents/verified-results/results.json?ref={ref}")["content"]))
+          chosen,_=select_completed_learning_publication(publication("paper-proof-ledger"),lambda r:api(f"actions/runs/{r}"),publication)
+          print(chosen["run_id"])
+          PY
+          )
+          gh run download "$RUN_ID" -n "public-paper-ledger-$RUN_ID" -D evidence/trades-ledger
+          (cd evidence/trades-ledger && sha256sum -c SHA256SUMS)
+          prior=""
+          while read -r candidate; do
+            if [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate" --jq '.status + ":" + (.conclusion // "")')" = "completed:success" ]; then
+              prior="$candidate"
+              break
+            fi
+          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.expired==false and (.name|startswith("historical-trade-batch-"))) | [.workflow_run.head_branch,.workflow_run.id] | @tsv' | awk -v branch="$PR_BRANCH" '$1 == branch {print $2}' | sort -unr)
+          if [ -n "$prior" ]; then
+            gh run download "$prior" -n "historical-trade-batch-$prior" -D evidence/trades-prior
+            args=(--prior evidence/trades-prior)
+          else
+            gh run download 44228386331 -n historical-trade-recovery-pilot-44228386331 -D evidence/trades-seed
+            (cd evidence/trades-seed && sha256sum -c SHA256SUMS)
+            args=(--seed evidence/trades-seed)
+          fi
+          python -m paper_pov.historical_trade_batch --ledger evidence/trades-ledger/ledger.json \
+            "${args[@]}" --output-dir evidence/october-trades
+      - name: Retain cumulative source cursor checkpoints
         uses: actions/upload-artifact@v4
         with:
-          name: historical-trade-recovery-pilot-${{ github.run_id }}
+          name: historical-trade-batch-${{ github.run_id }}
           path: evidence/october-trades/
           if-no-files-found: error
           retention-days: 90
