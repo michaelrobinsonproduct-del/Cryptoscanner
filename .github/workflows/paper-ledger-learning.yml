@@ -158,10 +158,16 @@ jobs:
           gh run download 44220694310 -n market-wide-q2-9caa513fe54a2e31559b1b8dc4eb61be771c04c7eb944c8cd02237ee9291224c -D evidence/historical-q2
           (cd evidence/historical-q2 && sha256sum -c Q2-MARKET-WIDE-SHA256SUMS)
           python -c 'import json; d=json.load(open("evidence/historical-q2/q2-market-wide-summary.json")); assert d["pinned_archive_verified"] is True and d["archive_sha256"]=="fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4" and d["start_utc"]=="2025-11-17T00:00:00+00:00" and d["end_utc"]=="2026-07-01T00:00:00+00:00"'
+          mkdir -p evidence/historical-recovered
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/134545420953" --jq '.status + ":" + (.conclusion // "") + ":" + (.run_id|tostring) + ":" + .head_sha')" = "completed:success:44227877790:cbe95bcd007cf46ec9b73168c193838d477d89a9"
+          gh run download 44227877790 -n post-q3-observed-recovery-44227877790 -D evidence/historical-recovered
+          (cd evidence/historical-recovered && sha256sum -c POST-Q3-SHA256SUMS)
+          python -c 'import json; d=json.load(open("evidence/historical-recovered/post-q3-summary.json")); assert d["snapshot_set_sha256"]=="b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef" and d["coverage_scope"]=="PARTIAL_PREDICTION_SELECTED_NOT_MARKET_WIDE"'
           python -m paper_pov.market_wide_learning evidence/historical-seed/market-wide-cohorts.jsonl.gz \
             --cumulative-state evidence/market-wide-state.json \
             --cumulative-archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
             --additional-archive evidence/historical-q2/q2-market-wide-cohorts.jsonl.gz fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 \
+            --retained-observed evidence/historical-recovered/post-q3-cohorts.jsonl.gz b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef \
             --output evidence/market-wide-model.json
           python -c 'import json; d=json.load(open("evidence/market-wide-model.json")); assert d["model"]["status"]=="SHADOW_ONLY"; assert d["purge_hours"]==48 and len(d["archive_cohort_receipts"])==2'
       - name: Retain isolated market learning state for the next successful PR replay
@@ -214,8 +220,18 @@ jobs:
           mkdir -p evidence/prior
           # Only durable main-branch learning may extend the production
           # history; PR/test artifacts are never authoritative ancestors.
-          PRIOR_RUN="$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            # The isolated ledger may be older than main's newest learning
+            # artifact by the time this step executes. Do not import future
+            # prediction state or reset the cohort to hide a rollback.
+            ledger_at=$(python -c 'import json; from paper_pov.shadow_learning_evidence import utc_time; print(utc_time(json.load(open("evidence/ledger.json"))["runs"][-1]["as_of"]).strftime("%Y-%m-%dT%H:%M:%SZ"))')
+            PRIOR_RUN=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
+              --jq '.artifacts[] | select(.expired == false and (.name | startswith("public-paper-learning-")) and .workflow_run.head_branch == "main") | [.created_at,.workflow_run.id] | @tsv' | awk -v cutoff="$ledger_at" '$1 <= cutoff' | sort -r | head -n 1 | cut -f2)
+            test -n "$PRIOR_RUN" || { echo "No temporally compatible main learning ancestor"; exit 1; }
+          else
+            PRIOR_RUN="$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
             --jq '[.artifacts[] | select(.expired == false and (.name | startswith("public-paper-learning-")) and .workflow_run.head_branch == "main") | .workflow_run.id] | first // empty')"
+          fi
           if [ -n "$PRIOR_RUN" ]; then
             # Once continuity exists, a missing ancestor is an error: silently
             # replacing it with fresh 60h candles would erase mature cohorts.

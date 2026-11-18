@@ -889,7 +889,7 @@ def train_archive_shadow(cohort_path, *, training_end_utc, holdout_start_utc,
 
 
 
-def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256, additional_archives=()):
+def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256, additional_archives=(), retained_observed=()):
     """Refit on archived and newly matured independent labels, then freeze.
 
     This is a new prospective model, not a repeat of the historical holdout.
@@ -960,6 +960,26 @@ def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256
                     raise ValueError("Archive training provenance mismatch")
                 ingest(c["anchors"],c["outcomes"],"archive")
         source_receipts.append({"archive_sha256":expected,"cohort_sha256":file_hash.hexdigest()})
+    observed_receipts=[]
+    for path,expected in retained_observed:
+        if len(expected)!=64 or any(c not in "0123456789abcdef" for c in expected):
+            raise ValueError("Invalid retained snapshot set digest")
+        file_hash=hashlib.sha256()
+        with Path(path).open("rb") as raw:
+            for chunk in iter(lambda:raw.read(1024*1024),b""):
+                file_hash.update(chunk)
+        with gzip.open(path,"rt",encoding="utf-8") as src:
+            for line in src:
+                c=json.loads(line)
+                if (c.get("source_kind")!="RETAINED_KRAKEN_REST_ROLLING_SNAPSHOTS"
+                        or c.get("source_snapshot_set_sha256")!=expected
+                        or c.get("eligibility_scope")!="PREDICTION_SELECTED_HISTORY_NOT_FULL_MARKET"
+                        or c.get("production_applied") is not False or c.get("source_authenticated") is not False):
+                    raise ValueError("Unexpected retained observation cohort origin")
+                if any(r.get("source_sha256")!=expected for r in c["anchors"]+c["outcomes"]):
+                    raise ValueError("Retained observation provenance mismatch")
+                ingest(c["anchors"],c["outcomes"],"retained_observed")
+        observed_receipts.append({"snapshot_set_sha256":expected,"cohort_sha256":file_hash.hexdigest()})
     ingest(state["anchors"],state["outcomes"],"recent_observed")
     keys=sorted(eligible)
     model=train_shadow_challenger([eligible[k] for k in keys],[labels[k] for k in keys],
@@ -968,15 +988,16 @@ def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256
     model.pop("shadow_scores",None)
     model["source_archive_sha256"]=expected_archive_sha256
     model["archive_cohort_receipts"]=source_receipts
+    model["retained_observed_cohort_receipts"]=observed_receipts
     model["training_dataset_digest"]=canonical_digest([[eligible[k],labels[k]] for k in keys])
     model["version"]=canonical_digest({k:v for k,v in model.items() if k!="version"})
-    counts={n:{"examples":0,"positives":0} for n in ("archive","recent_observed")}
+    counts={n:{"examples":0,"positives":0} for n in ("archive","retained_observed","recent_observed")}
     for k in keys:
         counts[origin[k]]["examples"]+=1
         counts[origin[k]]["positives"]+=int(labels[k]["hit"])
     report={"schema":"market_wide_cumulative_shadow_v1","model":model,
             "archive_cohort_sha256":source_receipts[0]["cohort_sha256"],
-            "archive_cohort_receipts":source_receipts,"state_digest":state["digest"],
+            "archive_cohort_receipts":source_receipts,"retained_observed_cohort_receipts":observed_receipts,"state_digest":state["digest"],
             "source_counts":counts,"training_data_cutoff_utc":cutoff.isoformat(),
             "state_asof_utc":observed_asof.isoformat(),"purge_hours":48,
             "comparison_status":"FUTURE_HOLDOUT_NOT_YET_MATURE",
@@ -1000,6 +1021,7 @@ def main(argv=None):
     parser.add_argument("--cumulative-state", type=Path)
     parser.add_argument("--cumulative-archive-sha256")
     parser.add_argument("--additional-archive",action="append",nargs=2,metavar=("COHORT_PATH","SHA256"),default=[])
+    parser.add_argument("--retained-observed",action="append",nargs=2,metavar=("COHORT_PATH","SNAPSHOT_SET_SHA256"),default=[])
     parser.add_argument("--training-end")
     parser.add_argument("--holdout-start")
     parser.add_argument("--evaluation-asof")
@@ -1013,7 +1035,7 @@ def main(argv=None):
             parser.error("Cumulative training requires pinned archive digest")
         report=train_cumulative_market_model(args.ledger,json.loads(args.cumulative_state.read_text()),
                                              expected_archive_sha256=args.cumulative_archive_sha256,
-                                             additional_archives=args.additional_archive)
+                                             additional_archives=args.additional_archive,retained_observed=args.retained_observed)
         args.output.parent.mkdir(parents=True,exist_ok=True)
         args.output.write_text(json.dumps(report,sort_keys=True)+"\n")
         print(json.dumps(report,sort_keys=True))

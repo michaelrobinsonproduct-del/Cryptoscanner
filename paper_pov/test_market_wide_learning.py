@@ -286,6 +286,18 @@ class MarketWideLearningTest(unittest.TestCase):
                                                    additional_archives=[(extra,"b"*64)])
             self.assertEqual(combined["model"]["training_count"],4)
             self.assertEqual(len(combined["archive_cohort_receipts"]),2)
+            recovered=Path(tmp)/"observed.jsonl.gz"
+            obs_a,obs_o=sample("Y",2,True)
+            obs_a["source_sha256"]=obs_o["source_sha256"]="c"*64
+            with gzip.open(recovered,"wt") as out:
+                out.write(json.dumps(dict(source_kind="RETAINED_KRAKEN_REST_ROLLING_SNAPSHOTS",
+                    source_snapshot_set_sha256="c"*64,eligibility_scope="PREDICTION_SELECTED_HISTORY_NOT_FULL_MARKET",
+                    production_applied=False,source_authenticated=False,anchors=[obs_a],outcomes=[obs_o]))+"\n")
+            recovering=train_cumulative_market_model(path,state,expected_archive_sha256=digest,
+                retained_observed=[(recovered,"c"*64)])
+            self.assertEqual(recovering["source_counts"]["retained_observed"],{"examples":1,"positives":1})
+            self.assertEqual(recovering["model"]["training_count"],4)
+            self.assertEqual(len(recovering["retained_observed_cohort_receipts"]),1)
             self.assertFalse(report["production_applied"])
 
 
