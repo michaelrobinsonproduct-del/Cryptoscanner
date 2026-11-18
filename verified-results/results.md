@@ -2,31 +2,35 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T22:20:14.289094+00:00
+**UTC as-of:** 2026-11-18T22:25:11.369759+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44410472340
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44411291221
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** 52ae5fcf01f173da613011bdb02a70b5f76cf940 (atomic ledger/results publication)
-**Ledger generation:** 682 (remote push/readback verified)
+**Previous ledger commit:** 03dc4057fa1332c2284c465b20da77eb587b3864 (atomic ledger/results publication)
+**Ledger generation:** 683 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 11.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 13.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | SENT/USD | 0.020404 | 84.084 | 72.539 | +9.29% | -0.69% | 3.27x | 7.4 | 2026-11-18T22:20:10.491751+00:00 | Not calibrated | STRONG 72/100 | VERY_HIGH 73/100 | Watch | WATCH |
-| 2 | VVV/USD | 21.258 | 63.838 | 52.301 | +1.10% | +0.07% | 2.12x | 5.6 | 2026-11-18T22:20:10.491751+00:00 | Not calibrated | STRONG 77/100 | HIGH 55/100 | Watch | WATCH |
-| 3 | AKE/USD | 0.01028119 | 36.914 | 42.538 | +2.97% | -0.73% | 0.80x | 25.5 | 2026-11-18T22:20:10.491751+00:00 | Not calibrated | WEAK 13/100 | EXTREME 85/100 | Do nothing | WATCH |
+| 1 | SENT/USD | 0.020221 | 80.496 | 72.494 | +8.31% | -1.40% | 3.65x | 7.4 | 2026-11-18T22:25:07.767981+00:00 | Not calibrated | STRONG 70/100 | VERY_HIGH 77/100 | Do nothing | WATCH |
+| 2 | TRX/USD | 0.308701 | 56.473 | 41.371 | +0.26% | +0.02% | 3.39x | 0.8 | 2026-11-18T22:25:07.767981+00:00 | Not calibrated | STRONG 73/100 | HIGH 55/100 | Watch | WATCH |
+| 3 | VVV/USD | 21.18 | 42.610 | 49.363 | +0.73% | +0.07% | 0.29x | 6.1 | 2026-11-18T22:25:07.767981+00:00 | Not calibrated | WEAK 41/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 4 | AKE/USD | 0.0103007 | 40.920 | 43.418 | +3.17% | +0.07% | 0.71x | 26.5 | 2026-11-18T22:25:07.767981+00:00 | Not calibrated | WEAK 30/100 | EXTREME 87/100 | Do nothing | WATCH |
+| 5 | LUNA/USD | 4.248e-05 | 23.578 | 29.164 | +1.99% | +0.47% | 0.20x | 33.1 | 2026-11-18T22:25:07.767981+00:00 | Not calibrated | WEAK 32/100 | EXTREME 87/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SENT/USD | 72.539 | 0.020404 | -0.69% | 3.27x |
-| 2 | VVV/USD | 52.301 | 21.258 | +0.07% | 2.12x |
-| 3 | AKE/USD | 42.538 | 0.01028119 | -0.73% | 0.80x |
+| 1 | SENT/USD | 72.494 | 0.020221 | -1.40% | 3.65x |
+| 2 | VVV/USD | 49.363 | 21.18 | +0.07% | 0.29x |
+| 3 | AKE/USD | 43.418 | 0.0103007 | +0.07% | 0.71x |
+| 4 | TRX/USD | 41.371 | 0.308701 | +0.02% | 3.39x |
+| 5 | LUNA/USD | 29.164 | 4.248e-05 | +0.47% | 0.20x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,8 +46,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 682; predictions: 5576; observations: 412345.
-- Matured sampled outcomes across 1/6/24/48h: 5316; gap abstentions: 13170. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 683; predictions: 5581; observations: 412954.
+- Matured sampled outcomes across 1/6/24/48h: 5328; gap abstentions: 13170. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -59,22 +63,24 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44410472340 · **Generation:** 682 · **Legacy run:** 44410472340
-**Main quote time:** 2026-11-18T22:20:14.289094+00:00 · **Legacy report time:** 2026-11-18T22:20:44.484467+00:00
+**Writer:** 44411291221 · **Generation:** 683 · **Legacy run:** 44411291221
+**Main quote time:** 2026-11-18T22:25:11.369759+00:00 · **Legacy report time:** 2026-11-18T22:25:43.144601+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD | 0.020404 | 84.08 | -0.69% | 3.27x | STRONG 72/100 | VERY_HIGH 73/100 | Watch |
-| 2 | VVV/USD ⭐ | 21.258 | 63.84 | +0.07% | 2.12x | STRONG 87/100 | HIGH 55/100 | Watch |
-| 3 | AKE/USD | 0.01028119 | 36.91 | -0.73% | 0.80x | WEAK 13/100 | EXTREME 85/100 | Do nothing |
+| 1 | SENT/USD | 0.020221 | 80.50 | -1.40% | 3.65x | STRONG 70/100 | VERY_HIGH 77/100 | Do nothing |
+| 2 | TRX/USD | 0.308701 | 56.47 | +0.02% | 3.39x | STRONG 73/100 | HIGH 55/100 | Watch |
+| 3 | VVV/USD | 21.18 | 42.61 | +0.07% | 0.29x | WEAK 41/100 | VERY_HIGH 70/100 | Watch |
+| 4 | AKE/USD | 0.0103007 | 40.92 | +0.07% | 0.71x | WEAK 30/100 | EXTREME 87/100 | Do nothing |
+| 5 | LUNA/USD | 4.248e-05 | 23.58 | +0.47% | 0.20x | WEAK 32/100 | EXTREME 87/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | VVV/USD ⭐ | 21.258 | 54.06 | +0.07% | 2.12x | 7506 | STRONG 82/100 | HIGH 55/100 | Watch |
+| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
 
-**Same-run overlap:** VVV/USD
+**Same-run overlap:** None
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
