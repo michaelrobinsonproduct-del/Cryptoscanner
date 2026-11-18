@@ -75,7 +75,15 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertNotIn("  workflow_run:", learning)
         self.assertIn("  workflow_dispatch:", learning)
         self.assertIn("  contents: read", learning)
-        self.assertNotIn("  contents: write", learning)
+        # Only the explicitly enabled main research-release job may write contents.
+        read_only, retention = learning.split("\\n  retain-main-learning-durable-checkpoint:", 1)
+        self.assertNotRegex(read_only, r"(?m)^\\s*contents:\\s*write")
+        self.assertNotIn("gh release upload", read_only)
+        self.assertEqual(len(re.findall(r"(?m)^\\s*contents:\\s*write", retention)), 1)
+        self.assertIn("if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG != ''", retention)
+        self.assertIn("needs: market-wide-shadow-learning", retention)
+        self.assertIn("persist-credentials: false", retention)
+        self.assertNotIn("paper-proof-ledger", retention)
         self.assertNotIn("git push", learning)
         legacy = (PIPELINE.parent / "paper-legacy-shadow.yml").read_text()
         legacy_dispatch = "actions/workflows/paper-legacy-shadow.yml/dispatches"
