@@ -2,43 +2,43 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T04:50:02.993902+00:00
+**UTC as-of:** 2026-11-18T04:55:04.915523+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44239984895
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44240543635
 **Source SHA:** 394c17eeb7071fba40e02dbbb1ea97cedb3a0a8a
-**Previous ledger commit:** f0a2dcb0026d8e41c566ed56e4bcf27181e6bbc6 (atomic ledger/results publication)
-**Ledger generation:** 535 (remote push/readback verified)
+**Previous ledger commit:** 791976bed7608fb4cbf9beffcdc478307345ca15 (atomic ledger/results publication)
+**Ledger generation:** 536 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 6s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 17.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | ICNT/USD | 0.2896 | 71.558 | 59.651 | +4.89% | -0.62% | 5.71x | 13.8 | 2026-11-18T04:49:57.342221+00:00 | Not calibrated | MODERATE 61/100 | VERY_HIGH 72/100 | Watch | WATCH |
-| 2 | XDC/USD | 0.03088 | 62.277 | 49.051 | +1.85% | -0.35% | 3.94x | 3.2 | 2026-11-18T04:49:57.342221+00:00 | Not calibrated | MODERATE 61/100 | HIGH 61/100 | Watch | WATCH |
-| 3 | UP/USD | 0.05547 | 55.833 | 61.165 | +4.68% | -0.25% | 0.59x | 7.2 | 2026-11-18T04:49:57.342221+00:00 | Not calibrated | WEAK 33/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
-| 4 | UAI/USD | 0.03363 | 44.697 | 30.291 | +0.75% | -0.12% | 5.31x | 11.9 | 2026-11-18T04:49:57.342221+00:00 | Not calibrated | MODERATE 47/100 | VERY_HIGH 79/100 | Watch | WATCH |
-| 5 | SENT/USD | 0.019309 | 44.247 | 50.789 | +3.43% | +0.15% | 0.27x | 8.3 | 2026-11-18T04:49:57.342221+00:00 | Not calibrated | WEAK 42/100 | VERY_HIGH 82/100 | Watch | WATCH |
-| 6 | AKT/USD | 0.5112 | 38.642 | 26.172 | +0.37% | -0.51% | 6.34x | 17.6 | 2026-11-18T04:49:57.342221+00:00 | Not calibrated | WEAK 44/100 | VERY_HIGH 72/100 | Watch | WATCH |
-| 7 | CC/USD | 0.08323 | 38.235 | 41.359 | +1.34% | -0.08% | 0.73x | 7.2 | 2026-11-18T04:49:57.342221+00:00 | Not calibrated | WEAK 24/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
-| 8 | PEARL/USD | 1.8433 | 32.225 | 38.170 | +1.81% | +0.21% | 0.30x | 19.0 | 2026-11-18T04:49:57.342221+00:00 | Not calibrated | WEAK 41/100 | VERY_HIGH 81/100 | Watch | WATCH |
-| 9 | MELANIA/USD | 0.0503 | 28.581 | 43.777 | +3.29% | -1.97% | 0.46x | 20.0 | 2026-11-18T04:49:57.342221+00:00 | Not calibrated | WEAK 14/100 | EXTREME 98/100 | Do nothing | WATCH |
+| 1 | ICNT/USD | 0.2887 | 59.854 | 57.339 | +4.56% | +1.16% | 0.67x | 13.9 | 2026-11-18T04:54:59.858238+00:00 | Not calibrated | MODERATE 55/100 | VERY_HIGH 81/100 | Watch | WATCH |
+| 2 | SENT/USD | 0.01933 | 55.169 | 52.883 | +3.54% | +1.32% | 0.57x | 5.7 | 2026-11-18T04:54:59.858238+00:00 | Not calibrated | MODERATE 58/100 | VERY_HIGH 82/100 | Watch | WATCH |
+| 3 | XDC/USD | 0.03085 | 55.022 | 48.388 | +1.75% | -0.87% | 2.10x | 3.2 | 2026-11-18T04:54:59.858238+00:00 | Not calibrated | MODERATE 58/100 | HIGH 61/100 | Watch | WATCH |
+| 4 | UP/USD | 0.05542 | 52.746 | 58.684 | +4.59% | -0.07% | 0.44x | 10.8 | 2026-11-18T04:54:59.858238+00:00 | Not calibrated | WEAK 26/100 | EXTREME 87/100 | Do nothing | WATCH |
+| 5 | UAI/USD | 0.03369 | 42.411 | 28.596 | +0.93% | -0.24% | 4.94x | 17.8 | 2026-11-18T04:54:59.858238+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 79/100 | Watch | WATCH |
+| 6 | PEARL/USD | 1.848 | 40.642 | 43.787 | +2.07% | +0.17% | 0.60x | 11.4 | 2026-11-18T04:54:59.858238+00:00 | Not calibrated | WEAK 35/100 | VERY_HIGH 81/100 | Watch | WATCH |
+| 7 | CC/USD | 0.08328 | 34.574 | 41.788 | +1.40% | -0.26% | 0.41x | 7.2 | 2026-11-18T04:54:59.858238+00:00 | Not calibrated | WEAK 22/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
+| 8 | MELANIA/USD | 0.05 | 31.068 | 29.411 | +2.67% | +0.20% | 1.07x | 40.1 | 2026-11-18T04:54:59.858238+00:00 | Not calibrated | WEAK 36/100 | EXTREME 96/100 | Do nothing | WATCH |
+| 9 | MEGA/USD | 0.05214 | 22.372 | 28.442 | +0.97% | +0.04% | 0.37x | 19.2 | 2026-11-18T04:54:59.858238+00:00 | Not calibrated | WEAK 26/100 | EXTREME 88/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | UP/USD | 61.165 | 0.05547 | -0.25% | 0.59x |
-| 2 | ICNT/USD | 59.651 | 0.2896 | -0.62% | 5.71x |
-| 3 | SENT/USD | 50.789 | 0.019309 | +0.15% | 0.27x |
-| 4 | XDC/USD | 49.051 | 0.03088 | -0.35% | 3.94x |
-| 5 | MELANIA/USD | 43.777 | 0.0503 | -1.97% | 0.46x |
-| 6 | CC/USD | 41.359 | 0.08323 | -0.08% | 0.73x |
-| 7 | PEARL/USD | 38.170 | 1.8433 | +0.21% | 0.30x |
-| 8 | UAI/USD | 30.291 | 0.03363 | -0.12% | 5.31x |
-| 9 | AKT/USD | 26.172 | 0.5112 | -0.51% | 6.34x |
+| 1 | UP/USD | 58.684 | 0.05542 | -0.07% | 0.44x |
+| 2 | ICNT/USD | 57.339 | 0.2887 | +1.16% | 0.67x |
+| 3 | SENT/USD | 52.883 | 0.01933 | +1.32% | 0.57x |
+| 4 | XDC/USD | 48.388 | 0.03085 | -0.87% | 2.10x |
+| 5 | PEARL/USD | 43.787 | 1.848 | +0.17% | 0.60x |
+| 6 | CC/USD | 41.788 | 0.08328 | -0.26% | 0.41x |
+| 7 | MELANIA/USD | 29.411 | 0.05 | +0.20% | 1.07x |
+| 8 | UAI/USD | 28.596 | 0.03369 | -0.24% | 4.94x |
+| 9 | MEGA/USD | 28.442 | 0.05214 | +0.04% | 0.37x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -54,7 +54,7 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 535; predictions: 4521; observations: 322822.
+- Persisted scans: 536; predictions: 4530; observations: 323431.
 - Matured sampled outcomes across 1/6/24/48h: 3593; gap abstentions: 12463. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
@@ -71,28 +71,28 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44239984895 · **Generation:** 535 · **Legacy run:** 44239984895
-**Main quote time:** 2026-11-18T04:50:02.993902+00:00 · **Legacy report time:** 2026-11-18T04:50:18.917682+00:00
+**Writer:** 44240543635 · **Generation:** 536 · **Legacy run:** 44240543635
+**Main quote time:** 2026-11-18T04:55:04.915523+00:00 · **Legacy report time:** 2026-11-18T04:55:23.528149+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | ICNT/USD | 0.2896 | 71.56 | -0.62% | 5.71x | MODERATE 61/100 | VERY_HIGH 72/100 | Watch |
-| 2 | XDC/USD | 0.03088 | 62.28 | -0.35% | 3.94x | MODERATE 61/100 | HIGH 61/100 | Watch |
-| 3 | UP/USD | 0.05547 | 55.83 | -0.25% | 0.59x | WEAK 33/100 | VERY_HIGH 81/100 | Do nothing |
-| 4 | UAI/USD | 0.03363 | 44.70 | -0.12% | 5.31x | MODERATE 47/100 | VERY_HIGH 79/100 | Watch |
-| 5 | SENT/USD | 0.019309 | 44.25 | +0.15% | 0.27x | WEAK 42/100 | VERY_HIGH 82/100 | Watch |
-| 6 | AKT/USD | 0.5112 | 38.64 | -0.51% | 6.34x | WEAK 44/100 | VERY_HIGH 72/100 | Watch |
-| 7 | CC/USD | 0.08323 | 38.23 | -0.08% | 0.73x | WEAK 24/100 | VERY_HIGH 81/100 | Do nothing |
-| 8 | PEARL/USD | 1.8433 | 32.23 | +0.21% | 0.30x | WEAK 41/100 | VERY_HIGH 81/100 | Watch |
-| 9 | MELANIA/USD | 0.0503 | 28.58 | -1.97% | 0.46x | WEAK 14/100 | EXTREME 98/100 | Do nothing |
+| 1 | ICNT/USD | 0.2887 | 59.85 | +1.16% | 0.67x | MODERATE 55/100 | VERY_HIGH 81/100 | Watch |
+| 2 | SENT/USD | 0.01933 | 55.17 | +1.32% | 0.57x | MODERATE 58/100 | VERY_HIGH 82/100 | Watch |
+| 3 | XDC/USD | 0.03085 | 55.02 | -0.87% | 2.10x | MODERATE 58/100 | HIGH 61/100 | Watch |
+| 4 | UP/USD | 0.05542 | 52.75 | -0.07% | 0.44x | WEAK 26/100 | EXTREME 87/100 | Do nothing |
+| 5 | UAI/USD | 0.03369 | 42.41 | -0.24% | 4.94x | MODERATE 46/100 | VERY_HIGH 79/100 | Watch |
+| 6 | PEARL/USD | 1.848 | 40.64 | +0.17% | 0.60x | WEAK 35/100 | VERY_HIGH 81/100 | Watch |
+| 7 | CC/USD | 0.08328 | 34.57 | -0.26% | 0.41x | WEAK 22/100 | VERY_HIGH 81/100 | Do nothing |
+| 8 | MELANIA/USD ⭐ | 0.05 | 31.07 | +0.20% | 1.07x | MODERATE 46/100 | EXTREME 96/100 | Do nothing |
+| 9 | MEGA/USD | 0.05214 | 22.37 | +0.04% | 0.37x | WEAK 26/100 | EXTREME 88/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
+| 1 | MELANIA/USD ⭐ | 0.05 | 38.76 | +0.20% | 1.07x | 649 | MODERATE 49/100 | EXTREME 96/100 | Do nothing |
 
-**Same-run overlap:** None
+**Same-run overlap:** MELANIA/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
