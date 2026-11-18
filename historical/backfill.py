@@ -16,6 +16,19 @@ h=hashlib.sha256()
 with open(zp,"rb") as f:
  for b in iter(lambda:f.read(8*1024*1024),b""): h.update(b)
 if h.hexdigest()!=SHA: raise RuntimeError("checksum mismatch")
+# Explicit isolated research path; never reinterpret the old 24h close labels as 48h negatives.
+if "--market-wide-only" in __import__("sys").argv:
+ from pathlib import Path
+ from paper_pov.market_wide_learning import run_archive_market_cohorts
+ try:
+  report=run_archive_market_cohorts(zp,expected_sha256=SHA,
+   start_utc="2025-11-17T00:00:00Z",end_utc="2026-07-01T00:00:00Z",
+   cohort_output="historical/output/q2-market-wide-cohorts.jsonl.gz")
+  Path("historical/output/q2-market-wide-summary.json").write_text(json.dumps(report,sort_keys=True)+"\n")
+  print(json.dumps(report,sort_keys=True),flush=True)
+ finally:
+  shutil.rmtree(work)
+ raise SystemExit(0)
 def num(x):
  try:return float(x)
  except:return None

@@ -276,6 +276,16 @@ class MarketWideLearningTest(unittest.TestCase):
             self.assertEqual(report["model"]["training_count"],3)
             self.assertEqual(report["model"]["positive_count"],2)
             self.assertEqual(report["comparison_status"],"FUTURE_HOLDOUT_NOT_YET_MATURE")
+            extra=Path(tmp)/"extra.jsonl.gz"
+            other_a,other_o=sample("X",1,False)
+            other_a["source_sha256"]=other_o["source_sha256"]="b"*64
+            with gzip.open(extra,"wt") as out:
+                out.write(json.dumps(dict(source_archive_sha256="b"*64,production_applied=False,
+                    source_authenticated=False,anchors=[other_a],outcomes=[other_o]))+"\n")
+            combined=train_cumulative_market_model(path,state,expected_archive_sha256=digest,
+                                                   additional_archives=[(extra,"b"*64)])
+            self.assertEqual(combined["model"]["training_count"],4)
+            self.assertEqual(len(combined["archive_cohort_receipts"]),2)
             self.assertFalse(report["production_applied"])
 
 

@@ -1,6 +1,10 @@
 name: Kraken Historical Backfill
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/kraken-historical-backfill.yml'
+      - 'historical/backfill.py'
   push:
     branches: [main]
     paths:
@@ -9,6 +13,7 @@ on:
       - 'historical/test_backfill_contract.py'
 jobs:
   backfill:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -49,3 +54,66 @@ jobs:
           path: historical/output/
           retention-days: 90
           compression-level: 9
+
+  market-wide-q2-replay:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      actions: read
+    concurrency:
+      group: market-wide-q2-replay-${{ github.ref }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_BRANCH: ${{ github.head_ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify historical contracts and calculate source cohort identity
+        id: identity
+        run: |
+          python historical/test_backfill_contract.py
+          python -m unittest paper_pov.test_market_wide_learning -v
+          key=$(sha256sum historical/backfill.py historical/kraken_q3_48h_shadow.py paper_pov/market_wide_learning.py paper_pov/frozen_historical_shadow.py paper_pov/heldout_outcome_adapter.py | sha256sum | cut -d' ' -f1)
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+      - name: Reuse completed exact-source Q2 cohort instead of redownloading
+        id: reuse
+        env:
+          COHORT_KEY: ${{ steps.identity.outputs.key }}
+        run: |
+          set -euo pipefail
+          name="market-wide-q2-$COHORT_KEY"
+          while read -r branch run; do
+            if [ "$branch" != "$PR_BRANCH" ]; then continue; fi
+            status=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq '.status + ":" + (.conclusion // "")')
+            if [ "$status" = "completed:success" ]; then
+              echo "reuse=true" >> "$GITHUB_OUTPUT"
+              echo "Q2_REUSABLE_COHORT_RUN=$run"
+              exit 0
+            fi
+          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$name&per_page=100" --paginate --jq '.artifacts[] | select(.expired==false) | [.workflow_run.head_branch,.workflow_run.id] | @tsv')
+          echo "reuse=false" >> "$GITHUB_OUTPUT"
+      - name: Rebuild market-wide Q2 cohort from the pinned official archive
+        if: steps.reuse.outputs.reuse == 'false'
+        run: |
+          python -m historical.backfill --market-wide-only
+          cd historical/output
+          sha256sum q2-market-wide-cohorts.jsonl.gz q2-market-wide-summary.json > Q2-MARKET-WIDE-SHA256SUMS
+      - name: Retain reusable Q2 cohort without retaining raw archive
+        if: steps.reuse.outputs.reuse == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-wide-q2-${{ steps.identity.outputs.key }}
+          path: |
+            historical/output/q2-market-wide-cohorts.jsonl.gz
+            historical/output/q2-market-wide-summary.json
+            historical/output/Q2-MARKET-WIDE-SHA256SUMS
+          retention-days: 90
+          if-no-files-found: error
+          compression-level: 0
