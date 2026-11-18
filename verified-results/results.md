@@ -2,29 +2,29 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T20:10:12.047350+00:00
+**UTC as-of:** 2026-11-18T20:15:18.599417+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44388039059
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44388946389
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** 8580bfaa80bdf9dd17d2a5dd4560ec4433cb1958 (atomic ledger/results publication)
-**Ledger generation:** 656 (remote push/readback verified)
+**Previous ledger commit:** 3944aac6777b0de14cf014144994d98aa00eea68 (atomic ledger/results publication)
+**Ledger generation:** 657 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 10.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 12.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | SENT/USD | 0.01991 | 70.615 | 72.667 | +6.65% | +0.93% | 0.33x | 7.0 | 2026-11-18T20:10:09.138155+00:00 | Not calibrated | MODERATE 65/100 | VERY_HIGH 82/100 | Watch | WATCH |
-| 2 | AKE/USD | 0.01001831 | 12.566 | 25.609 | +0.34% | -1.48% | 0.44x | 22.5 | 2026-11-18T20:10:09.138155+00:00 | Not calibrated | WEAK 1/100 | EXTREME 97/100 | Do nothing | WATCH |
+| 1 | SENT/USD | 0.019933 | 76.720 | 74.929 | +6.77% | +1.47% | 0.44x | 2.5 | 2026-11-18T20:15:15.266473+00:00 | Not calibrated | MODERATE 68/100 | VERY_HIGH 82/100 | Watch | WATCH |
+| 2 | AKE/USD | 0.01011599 | 22.691 | 29.437 | +1.32% | -0.63% | 0.64x | 28.7 | 2026-11-18T20:15:15.266473+00:00 | Not calibrated | WEAK 6/100 | EXTREME 93/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SENT/USD | 72.667 | 0.01991 | +0.93% | 0.33x |
-| 2 | AKE/USD | 25.609 | 0.01001831 | -1.48% | 0.44x |
+| 1 | SENT/USD | 74.929 | 0.019933 | +1.47% | 0.44x |
+| 2 | AKE/USD | 29.437 | 0.01011599 | -0.63% | 0.64x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -40,15 +40,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 656; predictions: 5494; observations: 396511.
-- Matured sampled outcomes across 1/6/24/48h: 4924; gap abstentions: 13125. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 657; predictions: 5496; observations: 397120.
+- Matured sampled outcomes across 1/6/24/48h: 4948; gap abstentions: 13125. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 8; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 10; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -57,14 +57,14 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44388039059 · **Generation:** 656 · **Legacy run:** 44388039059
-**Main quote time:** 2026-11-18T20:10:12.047350+00:00 · **Legacy report time:** 2026-11-18T20:10:41.211597+00:00
+**Writer:** 44388946389 · **Generation:** 657 · **Legacy run:** 44388946389
+**Main quote time:** 2026-11-18T20:15:18.599417+00:00 · **Legacy report time:** 2026-11-18T20:15:54.483985+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD | 0.01991 | 70.61 | +0.93% | 0.33x | MODERATE 65/100 | VERY_HIGH 82/100 | Watch |
-| 2 | AKE/USD | 0.01001831 | 12.57 | -1.48% | 0.44x | WEAK 1/100 | EXTREME 97/100 | Do nothing |
+| 1 | SENT/USD | 0.019933 | 76.72 | +1.47% | 0.44x | MODERATE 68/100 | VERY_HIGH 82/100 | Watch |
+| 2 | AKE/USD | 0.01011599 | 22.69 | -0.63% | 0.64x | WEAK 6/100 | EXTREME 93/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
