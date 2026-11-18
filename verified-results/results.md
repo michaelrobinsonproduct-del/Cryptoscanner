@@ -2,12 +2,12 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T20:30:22.556873+00:00
+**UTC as-of:** 2026-11-18T20:35:13.402863+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44391576358
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44392472157
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** dfd92c23b1209fb587af5fe3cb5a8802145bae10 (atomic ledger/results publication)
-**Ledger generation:** 660 (remote push/readback verified)
+**Previous ledger commit:** a99185a679369dc9de1dc9d80bddf42fd57d3d0e (atomic ledger/results publication)
+**Ledger generation:** 661 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 10.
@@ -16,17 +16,17 @@
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | SENT/USD | 0.019868 | 66.143 | 73.614 | +6.42% | -0.33% | 0.42x | 5.0 | 2026-11-18T20:30:19.283121+00:00 | Not calibrated | WEAK 38/100 | EXTREME 88/100 | Do nothing | WATCH |
-| 2 | UAI/USD | 0.03438 | 42.744 | 44.577 | +3.00% | +0.35% | 0.64x | 14.6 | 2026-11-18T20:30:19.283121+00:00 | Not calibrated | MODERATE 46/100 | EXTREME 88/100 | Do nothing | WATCH |
-| 3 | AKE/USD | 0.01013021 | 35.352 | 34.714 | +1.46% | +0.34% | 0.89x | 20.1 | 2026-11-18T20:30:19.283121+00:00 | Not calibrated | WEAK 38/100 | VERY_HIGH 79/100 | Watch | WATCH |
+| 1 | SENT/USD | 0.019896 | 73.638 | 74.918 | +6.57% | +0.13% | 0.81x | 2.5 | 2026-11-18T20:35:10.644603+00:00 | Not calibrated | MODERATE 57/100 | VERY_HIGH 74/100 | Watch | WATCH |
+| 2 | UAI/USD | 0.03419 | 45.008 | 43.503 | +2.43% | -0.15% | 1.22x | 8.8 | 2026-11-18T20:35:10.644603+00:00 | Not calibrated | WEAK 33/100 | VERY_HIGH 80/100 | Do nothing | WATCH |
+| 3 | AKE/USD | 0.0102369 | 40.888 | 37.464 | +2.53% | +1.05% | 0.82x | 29.6 | 2026-11-18T20:35:10.644603+00:00 | Not calibrated | WEAK 40/100 | VERY_HIGH 79/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SENT/USD | 73.614 | 0.019868 | -0.33% | 0.42x |
-| 2 | UAI/USD | 44.577 | 0.03438 | +0.35% | 0.64x |
-| 3 | AKE/USD | 34.714 | 0.01013021 | +0.34% | 0.89x |
+| 1 | SENT/USD | 74.918 | 0.019896 | +0.13% | 0.81x |
+| 2 | UAI/USD | 43.503 | 0.03419 | -0.15% | 1.22x |
+| 3 | AKE/USD | 37.464 | 0.0102369 | +1.05% | 0.82x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,9 +42,9 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 660; predictions: 5503; observations: 398947.
-- Matured sampled outcomes across 1/6/24/48h: 5003; gap abstentions: 13125. Per-horizon counts require independent audit; do not infer held-out lift.
-- Observed +30% hits: 2 (sampled only; not a success-rate estimate).
+- Persisted scans: 661; predictions: 5506; observations: 399556.
+- Matured sampled outcomes across 1/6/24/48h: 5015; gap abstentions: 13125. Per-horizon counts require independent audit; do not infer held-out lift.
+- Observed +30% hits: 3 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
@@ -59,15 +59,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44391576358 · **Generation:** 660 · **Legacy run:** 44391576358
-**Main quote time:** 2026-11-18T20:30:22.556873+00:00 · **Legacy report time:** 2026-11-18T20:30:59.579252+00:00
+**Writer:** 44392472157 · **Generation:** 661 · **Legacy run:** 44392472157
+**Main quote time:** 2026-11-18T20:35:13.402863+00:00 · **Legacy report time:** 2026-11-18T20:35:42.268949+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD | 0.019868 | 66.14 | -0.33% | 0.42x | WEAK 38/100 | EXTREME 88/100 | Do nothing |
-| 2 | UAI/USD | 0.03438 | 42.74 | +0.35% | 0.64x | MODERATE 46/100 | EXTREME 88/100 | Do nothing |
-| 3 | AKE/USD | 0.01013021 | 35.35 | +0.34% | 0.89x | WEAK 38/100 | VERY_HIGH 79/100 | Watch |
+| 1 | SENT/USD | 0.019896 | 73.64 | +0.13% | 0.81x | MODERATE 57/100 | VERY_HIGH 74/100 | Watch |
+| 2 | UAI/USD | 0.03419 | 45.01 | -0.15% | 1.22x | WEAK 33/100 | VERY_HIGH 80/100 | Do nothing |
+| 3 | AKE/USD | 0.0102369 | 40.89 | +1.05% | 0.82x | WEAK 40/100 | VERY_HIGH 79/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
