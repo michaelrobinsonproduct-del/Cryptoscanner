@@ -362,6 +362,119 @@ def unpack_seed_release(archive,directory):
     return load_seed(directory,expected)
 
 
+
+DURABLE_SCHEMA="market_wide_durable_checkpoint_v1"
+CHECKPOINT_FILES=("market-wide-model.json","market-wide-model-origin-run.txt",
+    "market-wide-training-report.json","market-wide-learning-receipt.json",
+    "market-wide-scoring-model.json","market-wide-scoring-model-available.txt")
+
+
+def allowed_checkpoint_file(name):
+    import re
+    return (name in CHECKPOINT_FILES or name=="market-state-checkpoint/manifest.json"
+        or re.fullmatch(r"market-state-checkpoint/[0-9]{4}-[0-9]{2}\.jsonl\.gz",name) is not None
+        or re.fullmatch(r"market-cold-history/[0-9a-f]{64}\.jsonl\.gz",name) is not None)
+
+
+def verify_checkpoint_directory(directory, *, required_scope, expected_state=None):
+    root=Path(directory)
+    receipt=json.loads((root/"market-wide-learning-receipt.json").read_text())
+    if (receipt.get("schema")!="market_wide_learning_receipt_v1" or
+        receipt.get("learning_scope")!=required_scope or
+        receipt.get("digest")!=canonical_digest({k:v for k,v in receipt.items() if k!="digest"})
+        or receipt.get("production_applied") is not False or receipt.get("promotion_authorized") is not False):
+        raise ValueError("Invalid durable checkpoint receipt")
+    state=restore_state(root/"market-state-checkpoint")
+    if (state["digest"]!=receipt["state_digest"] or state["ledger_generation"]!=receipt["ledger_generation"]
+        or (expected_state is not None and state["digest"]!=expected_state)):
+        raise ValueError("Durable checkpoint/state mismatch")
+    history=assemble_history(state,root/"market-cold-history")
+    if len(history["anchors"])!=receipt["retained_anchors"]:
+        raise ValueError("Durable retained anchor count mismatch")
+    from .market_wide_learning import choose_fitted_candidate,eligible_scoring_model
+    candidate=json.loads((root/"market-wide-model.json").read_text())
+    training=json.loads((root/"market-wide-training-report.json").read_text())
+    chosen,_=choose_fitted_candidate(training,candidate)
+    if chosen!=candidate or training["state_digest"]!=state["digest"] or candidate["model"]["version"]!=receipt["candidate_model_version"]:
+        raise ValueError("Durable model lineage mismatch")
+    origin=(root/"market-wide-model-origin-run.txt").read_text().strip()
+    if not origin.isdigit():
+        raise ValueError("Invalid durable candidate origin")
+    scoring=json.loads((root/"market-wide-scoring-model.json").read_text())
+    available=(root/"market-wide-scoring-model-available.txt").read_text().strip()
+    if not eligible_scoring_model(scoring,available,state["evaluation_asof_utc"]):
+        raise ValueError("Invalid durable active model")
+    return state,receipt
+
+
+def pack_durable_checkpoint(directory,archive,*,run_id,scope):
+    import tarfile
+    root=Path(directory)
+    if not str(run_id).isdigit() or scope not in ("pr","main"):
+        raise ValueError("Invalid checkpoint source")
+    state,receipt=verify_checkpoint_directory(root,required_scope=scope)
+    files=sorted(p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file())
+    if not set(CHECKPOINT_FILES)<=set(files) or any(not allowed_checkpoint_file(n) for n in files):
+        raise ValueError("Unexpected checkpoint files")
+    manifest={"schema":DURABLE_SCHEMA,"source_run_id":str(run_id),"learning_scope":scope,
+              "state_digest":state["digest"],"ledger_generation":state["ledger_generation"],
+              "receipt_digest":receipt["digest"],"files":{n:file_sha(root/n) for n in files}}
+    manifest["digest"]=canonical_digest(manifest)
+    payload=(json.dumps(manifest,sort_keys=True)+chr(10)).encode()
+    import io
+    with Path(archive).open("wb") as raw,gzip.GzipFile(filename="",fileobj=raw,mode="wb",mtime=0) as compressed:
+        with tarfile.open(fileobj=compressed,mode="w") as tar:
+            for n in ["checkpoint-manifest.json"]+files:
+                data=payload if n=="checkpoint-manifest.json" else None
+                info=tarfile.TarInfo(n)
+                info.mode=0o644
+                info.mtime=0
+                if data is not None:
+                    info.size=len(data)
+                    tar.addfile(info,io.BytesIO(data))
+                else:
+                    path=root/n
+                    if path.is_symlink():
+                        raise ValueError("Refusing checkpoint symlink")
+                    info.size=path.stat().st_size
+                    with path.open("rb") as f:
+                        tar.addfile(info,f)
+    return manifest
+
+
+def unpack_durable_checkpoint(archive,directory,*,scope,expected_sha,expected_state=None):
+    import tarfile
+    import shutil
+    if file_sha(archive)!=expected_sha:
+        raise ValueError("Durable archive checksum mismatch")
+    root=Path(directory)
+    root.mkdir(parents=True,exist_ok=True)
+    if any(root.iterdir()):
+        raise ValueError("Restore destination must be empty")
+    seen=set()
+    with tarfile.open(archive,"r:gz") as tar:
+        for m in tar:
+            if (not m.isfile() or m.name in seen or m.size>2*1024**3 or
+                not (m.name=="checkpoint-manifest.json" or allowed_checkpoint_file(m.name))):
+                raise ValueError("Unexpected durable archive member")
+            seen.add(m.name)
+            target=root/m.name
+            target.parent.mkdir(parents=True,exist_ok=True)
+            with tar.extractfile(m) as raw,target.open("wb") as out:
+                shutil.copyfileobj(raw,out)
+    manifest=json.loads((root/"checkpoint-manifest.json").read_text())
+    if (manifest.get("schema")!=DURABLE_SCHEMA or manifest.get("learning_scope")!=scope
+        or manifest.get("digest")!=canonical_digest({k:v for k,v in manifest.items() if k!="digest"})
+        or seen!={"checkpoint-manifest.json"}|set(manifest["files"])
+        or any(file_sha(root/n)!=h for n,h in manifest["files"].items())):
+        raise ValueError("Durable checkpoint manifest mismatch")
+    state,receipt=verify_checkpoint_directory(root,required_scope=scope,expected_state=expected_state)
+    if (state["digest"]!=manifest["state_digest"] or state["ledger_generation"]!=manifest["ledger_generation"]
+        or receipt["digest"]!=manifest["receipt_digest"] or not manifest["source_run_id"].isdigit()):
+        raise ValueError("Durable checkpoint provenance mismatch")
+    return manifest
+
+
 def main():
     p=argparse.ArgumentParser()
     sub=p.add_subparsers(dest="command",required=True)
@@ -380,8 +493,23 @@ def main():
     q=sub.add_parser("unpack-seed")
     q.add_argument("--directory",type=Path,required=True)
     q.add_argument("--archive",type=Path,required=True)
+    q=sub.add_parser("pack-durable-checkpoint")
+    q.add_argument("--directory",type=Path,required=True)
+    q.add_argument("--archive",type=Path,required=True)
+    q.add_argument("--run-id",required=True)
+    q.add_argument("--scope",choices=("pr","main"),required=True)
+    q=sub.add_parser("unpack-durable-checkpoint")
+    q.add_argument("--directory",type=Path,required=True)
+    q.add_argument("--archive",type=Path,required=True)
+    q.add_argument("--scope",choices=("pr","main"),required=True)
+    q.add_argument("--sha256",required=True)
+    q.add_argument("--state-digest")
     a=p.parse_args()
-    if a.command=="pack-seed":
+    if a.command=="pack-durable-checkpoint":
+        print(json.dumps(pack_durable_checkpoint(a.directory,a.archive,run_id=a.run_id,scope=a.scope),sort_keys=True))
+    elif a.command=="unpack-durable-checkpoint":
+        print(json.dumps(unpack_durable_checkpoint(a.archive,a.directory,scope=a.scope,expected_sha=a.sha256,expected_state=a.state_digest),sort_keys=True))
+    elif a.command=="pack-seed":
         print(pack_seed_release(a.directory,a.archive))
     elif a.command=="unpack-seed":
         print(json.dumps(unpack_seed_release(a.archive,a.directory),sort_keys=True))

@@ -43,9 +43,7 @@ falling back to an older snapshot. The first main bootstrap is a pinned PR
 research checkpoint, not a production scan or promoted model. If main state
 is unavailable, restore a verified backup at or after the last accepted
 generation, and document the exact recovery source. Never use first-bootstrap
-as a reset. The latest main checkpoint still needs a durable recurring
-publication/readback mechanism before artifact expiry. No such remote write
-is enabled by this rehearsal.
+as a reset. After approval, set MARKET_WIDE_CHECKPOINT_RELEASE_TAG to an explicit existing research release. The same learning workflow's main-only retention job publishes at most one immutable daily checkpoint (including cold history and fitted models), independently downloads it, verifies its bytes and restores its state, then publishes a SHA256 readback receipt. No overwrite or canonical ledger write is performed. The publication job is disabled unless the owner configures this tag. The normal main learning job retains every successful run in Actions artifacts; daily release checkpoints protect against artifact expiration, but can lag the last run. For approved exact main restore, supply market_learning_restore_asset, market_learning_restore_sha256, and market_learning_restore_state_digest on manual dispatch only when main's normal checkpoint is missing. The restore refuses mismatched scopes, archive checksums and state digests; prior research bootstrap never replaces main state.
 
 ## Activation gate
 

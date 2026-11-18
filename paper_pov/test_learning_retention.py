@@ -73,5 +73,29 @@ class LearningRetentionTests(unittest.TestCase):
             self.assertEqual(first,second)
             self.assertEqual(len(assemble_history(second,root/"b")["shadow_predictions"]),3)
 
+    def test_durable_archive_rejects_wrong_hash_scope_state_and_unexpected_members(self):
+        from paper_pov.learning_retention import pack_durable_checkpoint,unpack_durable_checkpoint
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            source=root/"src"
+            source.mkdir()
+            from paper_pov.learning_retention import CHECKPOINT_FILES
+            for n in CHECKPOINT_FILES:
+                (source/n).write_text("{}")
+            state={"digest":"a"*64,"ledger_generation":7}
+            receipt={"digest":"b"*64}
+            with patch("paper_pov.learning_retention.verify_checkpoint_directory",return_value=(state,receipt)):
+                archive=root/"checkpoint.tar.gz"
+                m=pack_durable_checkpoint(source,archive,run_id="123",scope="pr")
+                self.assertEqual(unpack_durable_checkpoint(archive,root/"ok",scope="pr",expected_sha=file_sha(archive)),m)
+                with self.assertRaisesRegex(ValueError,"checksum"):
+                    unpack_durable_checkpoint(archive,root/"bad",scope="pr",expected_sha="c"*64)
+                with self.assertRaisesRegex(ValueError,"manifest"):
+                    unpack_durable_checkpoint(archive,root/"wrong",scope="main",expected_sha=file_sha(archive))
+                (source/"secret.txt").write_text("not part of research")
+                with self.assertRaisesRegex(ValueError,"Unexpected checkpoint"):
+                    pack_durable_checkpoint(source,archive,run_id="123",scope="pr")
+
 if __name__=="__main__":
     unittest.main()

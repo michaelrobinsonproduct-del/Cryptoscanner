@@ -11,6 +11,18 @@ on:
         required: false
         default: false
         type: boolean
+      market_learning_restore_asset:
+        description: "Approved exact main checkpoint asset name; only used if current main artifact missing"
+        required: false
+        type: string
+      market_learning_restore_sha256:
+        description: "Expected archive SHA256 from independent readback"
+        required: false
+        type: string
+      market_learning_restore_state_digest:
+        description: "Exact last approved main learning state digest, never an implicit rollback"
+        required: false
+        type: string
   pull_request:
     paths:
       - 'paper_pov/public_ledger_learning.py'
@@ -292,6 +304,10 @@ jobs:
           LEARNING_BRANCH: ${{ github.head_ref || github.ref_name }}
           LEARNING_SCOPE: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
           ALLOW_MAIN_BOOTSTRAP: ${{ inputs.market_learning_bootstrap || false }}
+          RESTORE_ASSET: ${{ inputs.market_learning_restore_asset }}
+          RESTORE_SHA: ${{ inputs.market_learning_restore_sha256 }}
+          RESTORE_STATE: ${{ inputs.market_learning_restore_state_digest }}
+          CHECKPOINT_RELEASE: ${{ vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG }}
         run: |
           set -euo pipefail
           mkdir -p evidence/market-prior
@@ -317,27 +333,48 @@ jobs:
             fi
           done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate \
             --jq '.artifacts[] | select(.expired == false and (.name | startswith("market-wide-learning-continuity-"))) | [.workflow_run.head_branch,.workflow_run.id,.name] | @tsv' | awk -v branch="$LEARNING_BRANCH" -v prefix="$prior_prefix" '$1 == branch && index($3,prefix)==1 {print $2}' | sort -unr)
+          restored=false
+          if [ -z "$prior_run" ] && [ "$LEARNING_SCOPE" = "main" ] && [ -n "$RESTORE_ASSET" ]; then
+            test "$ALLOW_MAIN_BOOTSTRAP" != "true"
+            [[ "$RESTORE_ASSET" =~ ^market-wide-checkpoint-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+-[0-9]+\.tar\.gz$ ]]
+            [[ "$RESTORE_SHA" =~ ^[0-9a-f]{64}$ ]]
+            [[ "$RESTORE_STATE" =~ ^[0-9a-f]{64}$ ]]
+            test -n "$CHECKPOINT_RELEASE"
+            mkdir -p evidence/market-restore
+            gh release download "$CHECKPOINT_RELEASE" --pattern "$RESTORE_ASSET" --dir evidence/market-restore
+            python -m paper_pov.learning_retention unpack-durable-checkpoint --archive "evidence/market-restore/$RESTORE_ASSET" --directory evidence/market-prior --scope main --sha256 "$RESTORE_SHA" --state-digest "$RESTORE_STATE"
+            prior_run=$(jq -r .source_run_id evidence/market-prior/checkpoint-manifest.json)
+            [[ "$prior_run" =~ ^[0-9]+$ ]]
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run" --jq .head_branch)" = "main"
+            restored=true
+            echo "EXPLICIT_MAIN_CHECKPOINT_RESTORED=$prior_run"
+          fi
           if [ -z "$prior_run" ] && [ "$LEARNING_SCOPE" = "main" ]; then
             # Never silently reset learning to a research snapshot when a main
             # checkpoint is missing, expired or deleted. Bootstrap is explicit.
             test "$ALLOW_MAIN_BOOTSTRAP" = "true" || { echo "::error::MAIN_LEARNING_CHECKPOINT_UNAVAILABLE; explicit first bootstrap or approved restore required"; exit 1; }
             existing=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.workflow_run.head_branch=="main" and (.name|startswith("market-wide-learning-continuity-main-"))) | .id' | sed -n '1p')
             test -z "$existing" || { echo "::error::Main checkpoint history exists; bootstrap cannot replace it"; exit 1; }
-            prior_run=44244545891
+            prior_run=44253116626
             prior_prefix=market-wide-learning-continuity-pr-
             prior_branch=learning-market-wide-20261117
-            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run" --jq '.status + ":" + (.conclusion // "") + ":" + .head_sha')" = "completed:success:822ef8f0205cf4f88d42aaa813eb5f24d883e8e0"
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/134628375708" --jq '.status + ":" + (.conclusion // "") + ":" + (.run_id|tostring) + ":" + .head_sha')" = "completed:success:44253116626:3160830000f63005daef5e55e8377fe0298750ef"
             echo "MAIN_RESEARCH_BOOTSTRAP_PINNED=$prior_run"
           fi
           prior_args=()
           model_path=historical/evidence/q3_2026_frozen_shadow_v1.json
           model_ready=2026-11-11T03:27:00Z
           if [ -n "$prior_run" ]; then
-            gh run download "$prior_run" -n "$prior_prefix$prior_run" -D evidence/market-prior
+            if [ "$restored" != "true" ]; then
+              gh run download "$prior_run" -n "$prior_prefix$prior_run" -D evidence/market-prior
+            fi
             if [ ! -s evidence/market-prior/market-wide-state.json ]; then
               python -m paper_pov.learning_retention restore --directory evidence/market-prior/market-state-checkpoint --state evidence/market-prior/market-wide-state.json
             fi
             test -s evidence/market-prior/market-wide-state.json
+            if [ "$LEARNING_SCOPE" = "main" ] && [ "$prior_prefix" = "market-wide-learning-continuity-pr-" ]; then
+              test "$(jq -r .digest evidence/market-prior/market-wide-state.json)" = "5b52b7578d54f5bd70e8c217d0c53eb00826aa3348f9a225efcd7a1e0c7912db"
+            fi
             echo "MARKET_LEARNING_PRIOR_RUN=$prior_run"
             echo "$prior_run" > evidence/market-prior-run.txt
             # Known incident checkpoint: recover evidence lost by unordered prior discovery.
@@ -365,7 +402,7 @@ jobs:
               origin_branch=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq '.head_branch')
               if [ "$origin_branch" != "$LEARNING_BRANCH" ]; then
                 test "$LEARNING_SCOPE" = "main"
-                test "$origin" = "44243388087"
+                test "$origin" = "44252782983"
                 test "$origin_branch" = "learning-market-wide-20261117"
               fi
               origin_jobs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin/jobs?per_page=100")
@@ -479,6 +516,15 @@ jobs:
           PY
       - name: Verify partitioned learning checkpoint round trip
         run: python -m paper_pov.learning_retention pack --state evidence/market-wide-state.json --directory evidence/market-state-checkpoint
+      - name: Rehearse durable checkpoint archive restore
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p /tmp/learning-pack
+          cp evidence/market-wide-model.json evidence/market-wide-model-origin-run.txt evidence/market-wide-training-report.json evidence/market-wide-learning-receipt.json evidence/market-wide-scoring-model.json evidence/market-wide-scoring-model-available.txt /tmp/learning-pack/
+          cp -r evidence/market-state-checkpoint evidence/market-cold-history /tmp/learning-pack/
+          python -m paper_pov.learning_retention pack-durable-checkpoint --directory /tmp/learning-pack --archive /tmp/learning-checkpoint.tar.gz --scope pr --run-id "$GITHUB_RUN_ID"
+          python -m paper_pov.learning_retention unpack-durable-checkpoint --archive /tmp/learning-checkpoint.tar.gz --directory /tmp/learning-readback --scope pr --sha256 "$(sha256sum /tmp/learning-checkpoint.tar.gz | cut -d' ' -f1)" --state-digest "$(jq -r .digest evidence/market-wide-state.json)"
+          echo "DURABLE_CHECKPOINT_ROUNDTRIP_VERIFIED"
       - name: Retain independent market learning state for the next successful run
         uses: actions/upload-artifact@v4
         with:
@@ -695,3 +741,60 @@ jobs:
           if-no-files-found: error
           retention-days: 90
           compression-level: 0
+
+  retain-main-learning-durable-checkpoint:
+    # Opt-in publication of research evidence only. No canonical ledger writes.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG != ''
+    needs: market-wide-shadow-learning
+    permissions:
+      contents: write
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    concurrency:
+      group: market-wide-durable-checkpoint-publication
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CHECKPOINT_RELEASE: ${{ vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Publish at most one verified immutable daily research checkpoint
+        run: |
+          set -euo pipefail
+          day=$(date -u +%F)
+          prefix="market-wide-checkpoint-$day-"
+          assets=$(gh release view "$CHECKPOINT_RELEASE" --json assets --jq '.assets[].name')
+          existing=$(printf '%s\n' "$assets" | awk -v p="$prefix" 'index($0,p)==1 && /\.tar\.gz\.sha256$/ {print}')
+          if [ -n "$existing" ]; then
+            echo "Daily durable research checkpoint already has a readback receipt: $existing"
+            exit 0
+          fi
+          mkdir -p evidence/checkpoint evidence/publish evidence/readback
+          pending=$(printf '%s\n' "$assets" | awk -v p="$prefix" 'index($0,p)==1 && /\.tar\.gz$/ {print}')
+          if [ -n "$pending" ]; then
+            test "$(printf '%s\n' "$pending" | wc -l)" -eq 1
+            name="$pending"
+            gh release download "$CHECKPOINT_RELEASE" --pattern "$name" --dir evidence/readback
+          else
+            gh run download "$GITHUB_RUN_ID" -n "market-wide-learning-continuity-main-$GITHUB_RUN_ID" -D evidence/checkpoint
+            generation=$(jq -r .ledger_generation evidence/checkpoint/market-wide-learning-receipt.json)
+            [[ "$generation" =~ ^[0-9]+$ ]]
+            name="$prefix$generation-$GITHUB_RUN_ID.tar.gz"
+            python -m paper_pov.learning_retention pack-durable-checkpoint --directory evidence/checkpoint --archive "evidence/publish/$name" --scope main --run-id "$GITHUB_RUN_ID"
+            gh release upload "$CHECKPOINT_RELEASE" "evidence/publish/$name"
+            gh release download "$CHECKPOINT_RELEASE" --pattern "$name" --dir evidence/readback
+            cmp "evidence/publish/$name" "evidence/readback/$name"
+          fi
+          digest=$(sha256sum "evidence/readback/$name" | cut -d' ' -f1)
+          python -m paper_pov.learning_retention unpack-durable-checkpoint --archive "evidence/readback/$name" --directory evidence/restored --scope main --sha256 "$digest"
+          printf '%s  %s\n' "$digest" "$name" > "evidence/readback/$name.sha256"
+          gh release upload "$CHECKPOINT_RELEASE" "evidence/readback/$name.sha256"
+          gh release download "$CHECKPOINT_RELEASE" --pattern "$name.sha256" --dir evidence/publish
+          cmp "evidence/readback/$name.sha256" "evidence/publish/$name.sha256"
+          echo "DURABLE_MAIN_CHECKPOINT_READBACK_VERIFIED=$name sha256=$digest"
