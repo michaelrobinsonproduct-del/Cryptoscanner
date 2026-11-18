@@ -278,5 +278,31 @@ class MarketWideLearningTest(unittest.TestCase):
             self.assertEqual(report["comparison_status"],"FUTURE_HOLDOUT_NOT_YET_MATURE")
             self.assertFalse(report["production_applied"])
 
+
+    def test_optional_partial_positive_training_does_not_invent_negative_labels(self):
+        from paper_pov.heldout_outcome_adapter import train_shadow_challenger
+        start=datetime(2026,1,1,tzinfo=timezone.utc)
+        at=lambda d:(start+timedelta(days=d)).isoformat()
+        preds=[dict(prediction_id=k,entry_utc=at(0),feature_asof_utc=at(0),features={"f":v})
+               for k,v in (("a",2.),("b",0.),("c",3.),("d",4.))]
+        def record(key,hit,complete):
+            return dict(prediction_id=key,horizon_hours=48,entry_utc=at(0),
+                        label_mature_utc=at(2),hit=hit,coverage_complete=complete,
+                        outcome_status="MATURE" if complete else "MISSING_CANDLES",
+                        source_sha256="a"*64)
+        outcomes=[record("a",True,True),record("b",False,True),
+                  record("c",None,False),record("d",None,False)]
+        outcomes[2].update(crossing_evidence="PARTIAL_WINDOW",observed_crossing_candle_close_utc=at(1))
+        kwargs=dict(training_end_utc=at(3),holdout_start_utc=at(5),feature_names=["f"])
+        base=train_shadow_challenger(preds,outcomes,**kwargs)
+        sensitivity=train_shadow_challenger(preds,outcomes,allow_observed_positive=True,**kwargs)
+        self.assertEqual(base["training_count"],2)
+        self.assertEqual(sensitivity["training_count"],3)
+        self.assertEqual(sensitivity["partial_observed_positive_count"],1)
+        self.assertEqual(sensitivity["negative_count"],1)
+        self.assertIsNone(outcomes[2]["hit"])
+        self.assertFalse(outcomes[2]["coverage_complete"])
+        self.assertFalse(sensitivity["production_applied"])
+
 if __name__ == "__main__":
     unittest.main()

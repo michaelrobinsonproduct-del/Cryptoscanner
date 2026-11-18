@@ -74,6 +74,12 @@ jobs:
             --train-cohorts --training-end 2026-09-07T00:00:00Z \
             --holdout-start 2026-09-09T00:00:00Z --evaluation-asof 2026-09-15T00:00:00Z \
             --output historical/output/market-wide-shadow.json
+      - name: Compare observed-positive sensitivity on the same frozen archive holdout
+        run: |
+          python -m paper_pov.market_wide_learning historical/output/market-wide-cohorts.jsonl.gz \
+            --train-cohorts --observed-positive-sensitivity --training-end 2026-09-07T00:00:00Z \
+            --holdout-start 2026-09-09T00:00:00Z --evaluation-asof 2026-09-15T00:00:00Z \
+            --output historical/output/market-wide-positive-sensitivity.json
       - name: Retain small read-only source and comparison evidence
         if: success()
         uses: actions/upload-artifact@v4
@@ -85,4 +91,5 @@ jobs:
             historical/output/market-wide-summary.json
             historical/output/market-wide-cohorts.jsonl.gz
             historical/output/market-wide-shadow.json
+            historical/output/market-wide-positive-sensitivity.json
           retention-days: 30

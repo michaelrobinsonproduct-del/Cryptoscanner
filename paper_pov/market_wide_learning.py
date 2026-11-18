@@ -563,7 +563,7 @@ def run_archive_market_cohorts(zip_path, *, expected_sha256, start_utc, end_utc,
 
 
 def train_archive_shadow(cohort_path, *, training_end_utc, holdout_start_utc,
-                         evaluation_asof_utc, top_k=5):
+                         evaluation_asof_utc, top_k=5, allow_observed_positive=False):
     """Fit the existing shadow trainer on saved archive cohorts, then rank.
 
     Historical baseline is the existing absolute 60m momentum proxy, NOT
@@ -614,7 +614,8 @@ def train_archive_shadow(cohort_path, *, training_end_utc, holdout_start_utc,
     if len(archive_digests) != 1:
         raise ValueError("Expected one pinned archive for initial shadow replay")
     model = train_shadow_challenger(predictions, outcomes, training_end_utc=training_end_utc,
-                                    holdout_start_utc=holdout_start_utc, feature_names=NAMES)
+                                    holdout_start_utc=holdout_start_utc, feature_names=NAMES,
+                                    allow_observed_positive=allow_observed_positive)
     by_id = {a["prediction_id"]: a for a in predictions}
     labels = {o["prediction_id"]: o for o in outcomes
               if o["coverage_complete"] and type(o["hit"]) is bool}
@@ -679,6 +680,7 @@ def train_archive_shadow(cohort_path, *, training_end_utc, holdout_start_utc,
     model["version"] = canonical_digest({k:v for k,v in model.items() if k!="version"})
     result = {"schema": "market_wide_archive_shadow_v1", "model": model,
               "evaluation_asof_utc": evaluation_asof_utc, "top_k": top_k,
+              "training_label_policy":"OBSERVED_POSITIVE_SENSITIVITY" if allow_observed_positive else "COMPLETE_ONLY",
               "baseline": "HISTORICAL_ABS_MOMENTUM_60M_PROXY_NOT_PRODUCTION",
               "comparison_status": "SHADOW_EVALUATED" if comparable else "NO_PAIRED_COMPLETE_TIMESTAMPS",
               "comparable_timestamps": comparable, "unavailable_timestamps": unavailable,
@@ -791,6 +793,7 @@ def main(argv=None):
     parser.add_argument("--shadow-model", type=Path)
     parser.add_argument("--shadow-model-available")
     parser.add_argument("--train-cohorts", action="store_true")
+    parser.add_argument("--observed-positive-sensitivity", action="store_true")
     parser.add_argument("--cumulative-state", type=Path)
     parser.add_argument("--cumulative-archive-sha256")
     parser.add_argument("--training-end")
@@ -814,7 +817,8 @@ def main(argv=None):
         if not (args.training_end and args.holdout_start and args.evaluation_asof):
             parser.error("Training requires chronological split and evaluation date")
         report = train_archive_shadow(args.ledger, training_end_utc=args.training_end,
-                                      holdout_start_utc=args.holdout_start, evaluation_asof_utc=args.evaluation_asof)
+                                      holdout_start_utc=args.holdout_start, evaluation_asof_utc=args.evaluation_asof,
+                                      allow_observed_positive=args.observed_positive_sensitivity)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, sort_keys=True) + "\n")
         print(json.dumps(report, sort_keys=True))

@@ -92,24 +92,43 @@ def reconstruct_forward_outcomes(predictions, candles, *, evaluation_asof_utc):
 
 
 def train_shadow_challenger(predictions, outcomes, *, training_end_utc,
-                            holdout_start_utc, feature_names):
-    """Learn from mature historical +30% labels without changing live scoring."""
+                            holdout_start_utc, feature_names, allow_observed_positive=False):
+    """Learn from mature historical +30% labels without changing live scoring.
+
+    Optional research sensitivity: independently observed in-window candle-high
+    crossings can inform a descriptive positive despite other missing candles.
+    Missing windows never imply negatives and coverage flags stay unchanged.
+    """
     training_end = utc_time(training_end_utc)
     holdout_start = utc_time(holdout_start_utc)
     if holdout_start < training_end + timedelta(hours=48):
         raise ValueError("48h chronological purge required")
     labels = {}
+    partial_positive_ids = set()
     for outcome in outcomes:
-        if outcome.get("horizon_hours") != 48 or outcome.get("coverage_complete") is not True:
+        if outcome.get("horizon_hours") != 48:
             continue
-        if type(outcome.get("hit")) is not bool:
-            continue
-        if utc_time(outcome["label_mature_utc"]) > training_end:
+        mature_at = utc_time(outcome["label_mature_utc"])
+        if mature_at > training_end:
             continue
         key = outcome["prediction_id"]
+        if outcome.get("coverage_complete") is True and type(outcome.get("hit")) is bool:
+            label = outcome["hit"]
+        elif (allow_observed_positive and outcome.get("coverage_complete") is False
+              and outcome.get("hit") is None and outcome.get("crossing_evidence") == "PARTIAL_WINDOW"
+              and outcome.get("outcome_status") == "MISSING_CANDLES"
+              and outcome.get("source_sha256")):
+            entry = utc_time(outcome["entry_utc"])
+            crossing = utc_time(outcome["observed_crossing_candle_close_utc"])
+            if mature_at != entry+timedelta(hours=48) or not entry<crossing<=mature_at:
+                raise ValueError("Invalid partial positive crossing evidence")
+            label = True
+            partial_positive_ids.add(key)
+        else:
+            continue
         if key in labels:
             raise ValueError("Duplicate training label")
-        labels[key] = outcome["hit"]
+        labels[key] = label
     training = []
     heldout = []
     for prediction in predictions:
@@ -130,6 +149,9 @@ def train_shadow_challenger(predictions, outcomes, *, training_end_utc,
              "holdout_count": len(heldout), "training_end_utc": training_end_utc,
              "holdout_start_utc": holdout_start_utc, "feature_names": list(feature_names),
              "promotion_authorized": False, "production_applied": False}
+    if allow_observed_positive:
+        state["training_label_policy"] = "RESEARCH_COMPLETE_OR_OBSERVED_POSITIVE_NO_UNKNOWN_NEGATIVES"
+        state["partial_observed_positive_count"] = sum(p["prediction_id"] in partial_positive_ids for p,_ in training)
     if not positives or not negatives or not feature_names:
         state["status"] = "INSUFFICIENT_LABEL_VARIETY"
         state["shadow_decisions"] = {}
