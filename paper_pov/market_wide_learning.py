@@ -1,0 +1,51 @@
+"""Build prediction-independent learning anchors from completed five-minute candles.
+
+Input candles use close timestamps, not Kraken interval-open timestamps.
+Caller must authenticate source and supply the point-in-time eligible universe.
+No production decisions or ledger writes.
+"""
+from datetime import timedelta
+from math import isfinite
+from .shadow_learning_evidence import utc_time, canonical_digest
+from .heldout_outcome_adapter import reconstruct_forward_outcomes
+
+def build_market_cohort(candles, *, eligible_pairs, evaluation_asof_utc):
+    asof = utc_time(evaluation_asof_utc)
+    eligible = set(eligible_pairs)
+    grouped = {}
+    for c in candles:
+        if c["pair"] not in eligible:
+            continue
+        t = utc_time(c["timestamp_utc"])
+        if t > asof:
+            continue
+        close, high = float(c["close"]), float(c["high"])
+        if not (isfinite(close) and isfinite(high) and 0 < close <= high):
+            raise ValueError("Invalid candle")
+        grouped.setdefault(c["pair"], []).append((t, c))
+    anchors, observed = [], []
+    for pair, rows in sorted(grouped.items()):
+        rows.sort(key=lambda r: r[0])
+        if len({t for t, _ in rows}) != len(rows):
+            raise ValueError("Duplicate candle")
+        observed.extend(c for _, c in rows)
+        for i in range(3, len(rows)):
+            t, c = rows[i]
+            if t + timedelta(hours=48) > asof:
+                break
+            if t.minute or t.second or t.microsecond:
+                continue
+            window = rows[i-3:i+1]
+            if any(window[j][0]-window[j-1][0] != timedelta(minutes=5) for j in range(1,4)):
+                continue
+            p = float(c["close"])
+            anchors.append({"prediction_id": canonical_digest([pair,t.isoformat()]),
+                            "pair": pair, "entry_utc": t.isoformat(),
+                            "feature_asof_utc": t.isoformat(), "entry_price": p,
+                            "features": {"return_15m": p/float(window[0][1]["close"])-1},
+                            "liquidity_qualified": False})
+    outcomes = reconstruct_forward_outcomes(anchors, observed, evaluation_asof_utc=evaluation_asof_utc)
+    return {"anchors": anchors, "outcomes": outcomes,
+            "eligible_pairs": sorted(eligible), "observed_pairs": sorted(grouped),
+            "source_authenticated": False, "production_applied": False,
+            "promotion_authorized": False}
