@@ -2,33 +2,35 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T21:30:11.047511+00:00
+**UTC as-of:** 2026-11-18T21:35:13.071997+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44402017764
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44402889681
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** 6ae2195ae421a55b0ab0e976e36484fdad494737 (atomic ledger/results publication)
-**Ledger generation:** 672 (remote push/readback verified)
+**Previous ledger commit:** 3f50327a804cd05b0aa057849472c22efe7246cc (atomic ledger/results publication)
+**Ledger generation:** 673 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 12.
+**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 14.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | SENT/USD | 0.020125 | 77.115 | 75.678 | +7.80% | +0.51% | 0.89x | 1.0 | 2026-11-18T21:30:06.532788+00:00 | Not calibrated | MODERATE 69/100 | VERY_HIGH 74/100 | Watch | WATCH |
-| 2 | VVV/USD | 21.171 | 50.651 | 49.144 | +0.69% | +0.44% | 0.93x | 7.5 | 2026-11-18T21:30:06.532788+00:00 | Not calibrated | MODERATE 55/100 | HIGH 62/100 | Watch | WATCH |
-| 3 | TRX/USD | 0.30875 | 41.217 | 41.514 | +0.28% | +0.11% | 0.91x | 0.9 | 2026-11-18T21:30:06.532788+00:00 | Not calibrated | WEAK 41/100 | HIGH 62/100 | Watch | WATCH |
-| 4 | AKT/USD | 0.5113 | 32.855 | 30.598 | +0.39% | +0.39% | 1.03x | 7.8 | 2026-11-18T21:30:06.532788+00:00 | Not calibrated | MODERATE 51/100 | HIGH 67/100 | Watch | WATCH |
+| 1 | SENT/USD | 0.020154 | 71.443 | 73.200 | +7.95% | +0.45% | 0.60x | 6.0 | 2026-11-18T21:35:08.866520+00:00 | Not calibrated | MODERATE 66/100 | VERY_HIGH 82/100 | Watch | WATCH |
+| 2 | VVV/USD | 21.348 | 52.983 | 55.197 | +1.53% | +0.18% | 0.69x | 7.5 | 2026-11-18T21:35:08.866520+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 3 | TRX/USD | 0.308692 | 42.083 | 41.739 | +0.26% | +0.11% | 0.98x | 0.1 | 2026-11-18T21:35:08.866520+00:00 | Not calibrated | WEAK 41/100 | HIGH 62/100 | Watch | WATCH |
+| 4 | WINGS/USD | 0.001922 | 36.696 | 47.389 | +4.86% | -0.83% | 0.34x | 36.5 | 2026-11-18T21:35:08.866520+00:00 | Not calibrated | WEAK 8/100 | EXTREME 100/100 | Do nothing | WATCH |
+| 5 | AKT/USD | 0.5126 | 32.612 | 30.436 | +0.65% | +0.12% | 1.16x | 11.7 | 2026-11-18T21:35:08.866520+00:00 | Not calibrated | WEAK 36/100 | VERY_HIGH 73/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SENT/USD | 75.678 | 0.020125 | +0.51% | 0.89x |
-| 2 | VVV/USD | 49.144 | 21.171 | +0.44% | 0.93x |
-| 3 | TRX/USD | 41.514 | 0.30875 | +0.11% | 0.91x |
-| 4 | AKT/USD | 30.598 | 0.5113 | +0.39% | 1.03x |
+| 1 | SENT/USD | 73.200 | 0.020154 | +0.45% | 0.60x |
+| 2 | VVV/USD | 55.197 | 21.348 | +0.18% | 0.69x |
+| 3 | WINGS/USD | 47.389 | 0.001922 | -0.83% | 0.34x |
+| 4 | TRX/USD | 41.739 | 0.308692 | +0.11% | 0.98x |
+| 5 | AKT/USD | 30.436 | 0.5126 | +0.12% | 1.16x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -44,15 +46,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 672; predictions: 5538; observations: 406255.
-- Matured sampled outcomes across 1/6/24/48h: 5175; gap abstentions: 13146. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 673; predictions: 5543; observations: 406864.
+- Matured sampled outcomes across 1/6/24/48h: 5197; gap abstentions: 13146. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 8; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 9; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -61,21 +63,22 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44402017764 · **Generation:** 672 · **Legacy run:** 44402017764
-**Main quote time:** 2026-11-18T21:30:11.047511+00:00 · **Legacy report time:** 2026-11-18T21:30:44.426711+00:00
+**Writer:** 44402889681 · **Generation:** 673 · **Legacy run:** 44402889681
+**Main quote time:** 2026-11-18T21:35:13.071997+00:00 · **Legacy report time:** 2026-11-18T21:35:48.375075+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD | 0.020125 | 77.12 | +0.51% | 0.89x | MODERATE 69/100 | VERY_HIGH 74/100 | Watch |
-| 2 | VVV/USD | 21.171 | 50.65 | +0.44% | 0.93x | MODERATE 55/100 | HIGH 62/100 | Watch |
-| 3 | TRX/USD | 0.30875 | 41.22 | +0.11% | 0.91x | WEAK 41/100 | HIGH 62/100 | Watch |
-| 4 | AKT/USD ⭐ | 0.5113 | 32.85 | +0.39% | 1.03x | MODERATE 61/100 | HIGH 67/100 | Watch |
+| 1 | SENT/USD | 0.020154 | 71.44 | +0.45% | 0.60x | MODERATE 66/100 | VERY_HIGH 82/100 | Watch |
+| 2 | VVV/USD | 21.348 | 52.98 | +0.18% | 0.69x | MODERATE 46/100 | VERY_HIGH 70/100 | Watch |
+| 3 | TRX/USD | 0.308692 | 42.08 | +0.11% | 0.98x | WEAK 41/100 | HIGH 62/100 | Watch |
+| 4 | WINGS/USD | 0.001922 | 36.70 | -0.83% | 0.34x | WEAK 8/100 | EXTREME 100/100 | Do nothing |
+| 5 | AKT/USD ⭐ | 0.5126 | 32.61 | +0.12% | 1.16x | MODERATE 46/100 | VERY_HIGH 73/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | AKT/USD ⭐ | 0.5117 | 30.00 | +0.39% | 1.03x | 4295 | MODERATE 55/100 | VERY_HIGH 73/100 | Watch |
+| 1 | AKT/USD ⭐ | 0.5126 | 42.91 | +0.12% | 1.16x | 4287 | MODERATE 56/100 | HIGH 67/100 | Watch |
 
 **Same-run overlap:** AKT/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
