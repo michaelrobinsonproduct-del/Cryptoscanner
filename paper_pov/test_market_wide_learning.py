@@ -144,5 +144,28 @@ class MarketWideLearningTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "rollback"):
             run_observed_market_batch(ledger(3, 180), fetch=fetch, batch_size=1, prior=final)
 
+    def test_partial_crossings_remain_unqualified_and_events_not_anchor_counts(self):
+        from paper_pov.market_wide_learning import crossing_summary
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        rows = []
+        for i in range(25):
+            if i == 18:
+                continue
+            rows.append(dict(pair="GAINUSD", timestamp_utc=(start+timedelta(minutes=5*i)).isoformat(),
+                             close=100, high=135 if i == 20 else 100))
+        report = build_market_cohort(rows, eligible_pairs=["GAINUSD"],
+                        evaluation_asof_utc=(start+timedelta(hours=2)).isoformat())
+        one = [o for o in report["outcomes"] if o["horizon_hours"] == 1][0]
+        self.assertIsNone(one["hit"])
+        self.assertFalse(one["coverage_complete"])
+        self.assertEqual(one["crossing_evidence"], "PARTIAL_WINDOW")
+        self.assertEqual(report["crossing_summary"]["partial_observed_crossings_by_horizon"]["1"], 1)
+        self.assertEqual(report["per_horizon"]["1"]["hits"], 0)
+        def event(hour):
+            return {"pair":"GAINUSD", "horizon_hours":48, "hit":True, "coverage_complete":True,
+                    "observed_crossing_candle_close_utc":(start+timedelta(hours=hour)).isoformat()}
+        self.assertEqual(crossing_summary([event(1), event(1), event(2), event(10)])
+                         ["completed_48h_crossing_clusters"], 2)
+
 if __name__ == "__main__":
     unittest.main()
