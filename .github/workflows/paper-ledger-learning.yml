@@ -143,7 +143,7 @@ jobs:
           cp "$model_path" evidence/market-wide-scoring-model.json
           printf '%s\n' "$model_ready" > evidence/market-wide-scoring-model-available.txt
           model_args=(--shadow-model evidence/market-wide-scoring-model.json --shadow-model-available "$model_ready")
-          python -m paper_pov.market_wide_learning evidence/ledger.json --batch-size 12 \
+          python -m paper_pov.market_wide_learning evidence/ledger.json --batch-size 12 --include-watch-controls \
             "${prior_args[@]}" --state-output evidence/market-wide-state.json \
             "${model_args[@]}" \
             --output evidence/market-wide-observed.json

@@ -623,12 +623,20 @@ def retain_prospective_shadow(state, prior, cohort, results, ledger, model_sourc
 
 
 def run_observed_market_batch(ledger, *, fetch=None, batch_size=12, prior=None,
-                              model_source=None, model_available_utc=None):
+                              model_source=None, model_available_utc=None, include_watch_controls=False):
     """Read-only real Kraken smoke; never describes a shard as full coverage."""
     from .kraken_observed_candles import fetch_kraken_ohlc
     fetch = fetch or fetch_kraken_ohlc
     validate_prior_market_state(prior, ledger)
     pairs, selected, shard, shard_count = select_market_batch(ledger, batch_size=batch_size, prior=prior)
+    independent = list(selected)
+    controls = []
+    if include_watch_controls:
+        latest_id = ledger['runs'][-1]['id']
+        controls = sorted({p['pair'] for p in ledger['predictions'] if p['run_id']==latest_id} & set(pairs))
+        selected = sorted(set(independent) | set(controls))
+        if len(selected)>30:
+            raise ValueError('Independent market and WATCH controls exceed bounded request budget')
     results, errors = [], {}
     for pair in selected:
         try:
@@ -656,8 +664,9 @@ def run_observed_market_batch(ledger, *, fetch=None, batch_size=12, prior=None,
     cohort.update(schema="market_wide_observed_learning_v1",
                   ledger_generation=ledger["generation"], ledger_run_id=latest["id"],
                   evaluation_asof_utc=latest["as_of"], selected_pairs=selected,
+                  independent_selected_pairs=independent, watch_control_pairs=controls,
                   shard_index=shard, shard_count=shard_count, fetch_errors=errors,
-                  source_digests=digests, coverage_scope="PARTIAL_ROTATING_SHARD",
+                  source_digests=digests, coverage_scope="PARTIAL_ROTATING_SHARD_PLUS_WATCH_CONTROLS" if include_watch_controls else "PARTIAL_ROTATING_SHARD",
                   measured_lift_verified=False)
     cohort["continuity_state"] = merge_market_state(cohort, eligibility, prior)
     cohort["prospective_shadow"] = retain_prospective_shadow(cohort["continuity_state"], prior, cohort,
@@ -1012,6 +1021,7 @@ def main(argv=None):
     parser.add_argument("ledger", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--batch-size", type=int, default=12)
+    parser.add_argument("--include-watch-controls",action="store_true")
     parser.add_argument("--prior-state", type=Path)
     parser.add_argument("--state-output", type=Path)
     parser.add_argument("--shadow-model", type=Path)
@@ -1065,7 +1075,8 @@ def main(argv=None):
         parser.error("Shadow model availability timestamp required")
     model_source = json.loads(args.shadow_model.read_text()) if args.shadow_model else None
     report = run_observed_market_batch(json.loads(args.ledger.read_text()), batch_size=args.batch_size, prior=prior,
-                                       model_source=model_source, model_available_utc=args.shadow_model_available)
+                                       model_source=model_source, model_available_utc=args.shadow_model_available,
+                                       include_watch_controls=args.include_watch_controls)
     if args.state_output:
         args.state_output.parent.mkdir(parents=True, exist_ok=True)
         args.state_output.write_text(json.dumps(report["continuity_state"], sort_keys=True, separators=(",", ":")) + "\n")
@@ -1077,7 +1088,9 @@ def main(argv=None):
     summary.update(eligible_count=len(report["eligible_pairs"]), selected_count=len(report["selected_pairs"]),
                    observed_count=len(report["observed_pairs"]),
                    cumulative_anchors=len(report["continuity_state"]["anchors"]),
-                   cumulative_observed_markets=len(report["continuity_state"]["last_success_generation"]))
+                   cumulative_observed_markets=len(report["continuity_state"]["last_success_generation"]),
+                   independent_selected_count=len(report["independent_selected_pairs"]),
+                   watch_control_count=len(report["watch_control_pairs"]))
     shadow = report["prospective_shadow"]
     snapshot = shadow["prospective_snapshot"]
     summary["prospective_shadow"] = {k:v for k,v in shadow.items() if k!="prospective_snapshot"}

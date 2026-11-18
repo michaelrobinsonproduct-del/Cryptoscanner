@@ -391,5 +391,24 @@ class MarketWideLearningTest(unittest.TestCase):
         self.assertIsNone(x["B"]["1"]["shadow_precision"])
         self.assertFalse(x["A"]["1"]["measured_lift_verified"])
 
+
+    def test_watch_controls_do_not_replace_independent_market_sample(self):
+        from paper_pov.market_wide_learning import run_observed_market_batch
+        start=datetime(2026,1,1,tzinfo=timezone.utc)
+        at=lambda m:(start+timedelta(minutes=m)).isoformat()
+        ledger={"generation":1,"runs":[{"id":"latest","as_of":at(120),"observation_count":3}],
+                "observations":[{"run_id":"latest","pair":p,"at":at(120)} for p in ("AAAUSD","BUSD","CUSD")],
+                "predictions":[{"run_id":"latest","pair":"CUSD"},{"run_id":"older","pair":"BUSD"}]}
+        def fetch(pair):
+            return {"pair":pair,"source":"kraken_public_ohlc_rest","response_sha256":"a"*64,
+                    "candles":[dict(pair=pair,timestamp_utc=at(i*5),close=100,high=100,
+                                    volume=10,trades=5) for i in range(25)]}
+        report=run_observed_market_batch(ledger,fetch=fetch,batch_size=1,include_watch_controls=True)
+        self.assertEqual(report["independent_selected_pairs"],["AAAUSD"])
+        self.assertEqual(report["watch_control_pairs"],["CUSD"])
+        self.assertEqual(report["observed_pairs"],["AAAUSD","CUSD"])
+        self.assertEqual(report["missing_eligible_pairs"],["BUSD"])
+        self.assertEqual(report["coverage_scope"],"PARTIAL_ROTATING_SHARD_PLUS_WATCH_CONTROLS")
+
 if __name__ == "__main__":
     unittest.main()
