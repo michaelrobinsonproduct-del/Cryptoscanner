@@ -2,35 +2,31 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T19:05:14.652276+00:00
+**UTC as-of:** 2026-11-18T19:10:09.803123+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44376591073
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44377503367
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** a2e1d93e38f314530fefb427c0b0f928eed00cb4 (atomic ledger/results publication)
-**Ledger generation:** 643 (remote push/readback verified)
+**Previous ledger commit:** c1b43b835a279422de37369cacbb8a1e5db3443c (atomic ledger/results publication)
+**Ledger generation:** 644 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 13.
+**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 11.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | SENT/USD | 0.019751 | 80.866 | 67.632 | +5.80% | -0.35% | 3.56x | 8.1 | 2026-11-18T19:05:10.786015+00:00 | Not calibrated | STRONG 70/100 | VERY_HIGH 73/100 | Watch | WATCH |
-| 2 | INFI/USD | 0.1334 | 70.168 | 55.168 | +5.04% | +0.00% | 4.16x | 22.5 | 2026-11-18T19:05:10.786015+00:00 | Not calibrated | STRONG 70/100 | VERY_HIGH 79/100 | Watch | WATCH |
-| 3 | MNT/USD | 0.3846 | 45.953 | 50.470 | +3.03% | -0.16% | 0.63x | 5.2 | 2026-11-18T19:05:10.786015+00:00 | Not calibrated | WEAK 28/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
-| 4 | AKE/USD | 0.01042578 | 38.213 | 50.980 | +4.42% | -1.26% | 0.35x | 29.1 | 2026-11-18T19:05:10.786015+00:00 | Not calibrated | WEAK 14/100 | EXTREME 97/100 | Do nothing | WATCH |
-| 5 | W/USD | 0.00899 | 32.280 | 30.440 | +0.67% | +0.11% | 1.13x | 11.1 | 2026-11-18T19:05:10.786015+00:00 | Not calibrated | WEAK 36/100 | VERY_HIGH 80/100 | Watch | WATCH |
+| 1 | SENT/USD | 0.019676 | 74.304 | 66.072 | +5.39% | -1.35% | 3.37x | 5.6 | 2026-11-18T19:10:06.892087+00:00 | Not calibrated | MODERATE 67/100 | VERY_HIGH 77/100 | Do nothing | WATCH |
+| 2 | MNT/USD | 0.3848 | 52.718 | 48.243 | +3.08% | -0.08% | 1.49x | 10.4 | 2026-11-18T19:10:06.892087+00:00 | Not calibrated | WEAK 41/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 3 | AKE/USD | 0.01035917 | 25.829 | 45.157 | +3.76% | -2.85% | 0.49x | 31.4 | 2026-11-18T19:10:06.892087+00:00 | Not calibrated | WEAK 8/100 | EXTREME 97/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SENT/USD | 67.632 | 0.019751 | -0.35% | 3.56x |
-| 2 | INFI/USD | 55.168 | 0.1334 | +0.00% | 4.16x |
-| 3 | AKE/USD | 50.980 | 0.01042578 | -1.26% | 0.35x |
-| 4 | MNT/USD | 50.470 | 0.3846 | -0.16% | 0.63x |
-| 5 | W/USD | 30.440 | 0.00899 | +0.11% | 1.13x |
+| 1 | SENT/USD | 66.072 | 0.019676 | -1.35% | 3.37x |
+| 2 | MNT/USD | 48.243 | 0.3848 | -0.08% | 1.49x |
+| 3 | AKE/USD | 45.157 | 0.01035917 | -2.85% | 0.49x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -46,8 +42,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 643; predictions: 5455; observations: 388594.
-- Matured sampled outcomes across 1/6/24/48h: 4742; gap abstentions: 13125. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 644; predictions: 5458; observations: 389203.
+- Matured sampled outcomes across 1/6/24/48h: 4749; gap abstentions: 13125. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -63,24 +59,22 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44376591073 · **Generation:** 643 · **Legacy run:** 44376591073
-**Main quote time:** 2026-11-18T19:05:14.652276+00:00 · **Legacy report time:** 2026-11-18T19:05:48.415521+00:00
+**Writer:** 44377503367 · **Generation:** 644 · **Legacy run:** 44377503367
+**Main quote time:** 2026-11-18T19:10:09.803123+00:00 · **Legacy report time:** 2026-11-18T19:10:37.144200+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD | 0.019751 | 80.87 | -0.35% | 3.56x | STRONG 70/100 | VERY_HIGH 73/100 | Watch |
-| 2 | INFI/USD | 0.1334 | 70.17 | +0.00% | 4.16x | STRONG 70/100 | VERY_HIGH 79/100 | Watch |
-| 3 | MNT/USD | 0.3846 | 45.95 | -0.16% | 0.63x | WEAK 28/100 | VERY_HIGH 81/100 | Do nothing |
-| 4 | AKE/USD | 0.01042578 | 38.21 | -1.26% | 0.35x | WEAK 14/100 | EXTREME 97/100 | Do nothing |
-| 5 | W/USD ⭐ | 0.00899 | 32.28 | +0.11% | 1.13x | MODERATE 46/100 | VERY_HIGH 80/100 | Watch |
+| 1 | SENT/USD | 0.019676 | 74.30 | -1.35% | 3.37x | MODERATE 67/100 | VERY_HIGH 77/100 | Do nothing |
+| 2 | MNT/USD | 0.3848 | 52.72 | -0.08% | 1.49x | WEAK 41/100 | VERY_HIGH 72/100 | Watch |
+| 3 | AKE/USD | 0.01035917 | 25.83 | -2.85% | 0.49x | WEAK 8/100 | EXTREME 97/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | W/USD ⭐ | 0.00899 | 18.01 | +0.11% | 1.13x | 999 | WEAK 34/100 | EXTREME 86/100 | Do nothing |
+| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
 
-**Same-run overlap:** W/USD
+**Same-run overlap:** None
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
