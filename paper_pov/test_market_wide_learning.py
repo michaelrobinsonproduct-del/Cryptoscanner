@@ -31,5 +31,19 @@ class MarketWideLearningTest(unittest.TestCase):
             self.assertEqual(result["per_horizon"][h]["immature"], 1)
             self.assertEqual(result["per_horizon"][h]["hits"], 0)
 
+    def test_features_reuse_existing_contract_without_future_leakage(self):
+        from .frozen_historical_shadow import NAMES
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        rows = [dict(pair="GAINUSD", timestamp_utc=(start+timedelta(minutes=5*i)).isoformat(),
+                     close=100 if i < 24 else 135, high=100 if i < 24 else 135,
+                     volume=10+i, trades=5+i) for i in range(25)]
+        kwargs = dict(eligible_pairs=["GAINUSD"], evaluation_asof_utc=(start+timedelta(hours=2)).isoformat())
+        result = build_market_cohort(rows, **kwargs)
+        self.assertEqual(result["feature_complete_anchors"], 1)
+        self.assertEqual(set(result["anchors"][0]["features"]), set(NAMES))
+        rows[-1]["close"] = rows[-1]["high"] = 150
+        later = build_market_cohort(rows, **kwargs)
+        self.assertEqual(result["anchors"][0]["features"], later["anchors"][0]["features"])
+
 if __name__ == "__main__":
     unittest.main()
