@@ -2,35 +2,33 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T02:35:01.825944+00:00
+**UTC as-of:** 2026-11-18T02:40:03.433368+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44224272371
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44224873314
 **Source SHA:** 394c17eeb7071fba40e02dbbb1ea97cedb3a0a8a
-**Previous ledger commit:** cce7158d04d337a368ab7bd203f83ea2fa1cd4b6 (atomic ledger/results publication)
-**Ledger generation:** 508 (remote push/readback verified)
+**Previous ledger commit:** 1775169781123c56779cbdb629f4bd6d658e8df7 (atomic ledger/results publication)
+**Ledger generation:** 509 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 9.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 8.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | UP/USD | 0.05536 | 60.346 | 61.063 | +4.47% | -0.60% | 1.23x | 3.6 | 2026-11-18T02:34:59.133177+00:00 | Not calibrated | WEAK 40/100 | VERY_HIGH 80/100 | Watch | WATCH |
-| 2 | AKT/USD | 0.5243 | 48.671 | 47.286 | +2.95% | +0.77% | 0.75x | 11.5 | 2026-11-18T02:34:59.133177+00:00 | Not calibrated | MODERATE 49/100 | VERY_HIGH 73/100 | Watch | WATCH |
-| 3 | ICNT/USD | 0.2772 | 34.560 | 25.971 | +0.40% | +1.17% | 1.27x | 18.1 | 2026-11-18T02:34:59.133177+00:00 | Not calibrated | MODERATE 47/100 | HIGH 66/100 | Watch | WATCH |
-| 4 | PEARL/USD | 1.8171 | 34.101 | 28.308 | +0.36% | -1.84% | 12.97x | 19.3 | 2026-11-18T02:34:59.133177+00:00 | Not calibrated | WEAK 42/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
-| 5 | TON/USD | 1.085 | 26.000 | 34.955 | +0.74% | +0.00% | 0.10x | 18.5 | 2026-11-18T02:34:59.133177+00:00 | Not calibrated | WEAK 28/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
+| 1 | UP/USD | 0.05587 | 71.222 | 60.709 | +5.43% | +0.90% | 1.60x | 17.9 | 2026-11-18T02:40:00.085653+00:00 | Not calibrated | STRONG 76/100 | VERY_HIGH 73/100 | Watch | WATCH |
+| 2 | AKT/USD | 0.527 | 47.435 | 50.100 | +3.48% | +0.56% | 0.45x | 13.3 | 2026-11-18T02:40:00.085653+00:00 | Not calibrated | MODERATE 49/100 | VERY_HIGH 81/100 | Watch | WATCH |
+| 3 | TON/USD | 1.085 | 25.882 | 34.915 | +0.74% | +0.00% | 0.10x | 18.5 | 2026-11-18T02:40:00.085653+00:00 | Not calibrated | WEAK 28/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
+| 4 | PEARL/USD | 1.8175 | 19.458 | 28.187 | +0.39% | -0.36% | 0.31x | 19.8 | 2026-11-18T02:40:00.085653+00:00 | Not calibrated | WEAK 10/100 | EXTREME 87/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | UP/USD | 61.063 | 0.05536 | -0.60% | 1.23x |
-| 2 | AKT/USD | 47.286 | 0.5243 | +0.77% | 0.75x |
-| 3 | TON/USD | 34.955 | 1.085 | +0.00% | 0.10x |
-| 4 | PEARL/USD | 28.308 | 1.8171 | -1.84% | 12.97x |
-| 5 | ICNT/USD | 25.971 | 0.2772 | +1.17% | 1.27x |
+| 1 | UP/USD | 60.709 | 0.05587 | +0.90% | 1.60x |
+| 2 | AKT/USD | 50.100 | 0.527 | +0.56% | 0.45x |
+| 3 | TON/USD | 34.915 | 1.085 | +0.00% | 0.10x |
+| 4 | PEARL/USD | 28.187 | 1.8175 | -0.36% | 0.31x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -46,8 +44,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 508; predictions: 4321; observations: 306379.
-- Matured sampled outcomes across 1/6/24/48h: 3477; gap abstentions: 12412. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 509; predictions: 4325; observations: 306988.
+- Matured sampled outcomes across 1/6/24/48h: 3481; gap abstentions: 12412. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -63,24 +61,23 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44224272371 · **Generation:** 508 · **Legacy run:** 44224272371
-**Main quote time:** 2026-11-18T02:35:01.825944+00:00 · **Legacy report time:** 2026-11-18T02:35:14.563885+00:00
+**Writer:** 44224873314 · **Generation:** 509 · **Legacy run:** 44224873314
+**Main quote time:** 2026-11-18T02:40:03.433368+00:00 · **Legacy report time:** 2026-11-18T02:40:19.794382+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | UP/USD | 0.05536 | 60.35 | -0.60% | 1.23x | WEAK 40/100 | VERY_HIGH 80/100 | Watch |
-| 2 | AKT/USD | 0.5243 | 48.67 | +0.77% | 0.75x | MODERATE 49/100 | VERY_HIGH 73/100 | Watch |
-| 3 | ICNT/USD ⭐ | 0.2772 | 34.56 | +1.17% | 1.27x | MODERATE 57/100 | HIGH 66/100 | Watch |
-| 4 | PEARL/USD | 1.8171 | 34.10 | -1.84% | 12.97x | WEAK 42/100 | VERY_HIGH 76/100 | Do nothing |
-| 5 | TON/USD | 1.085 | 26.00 | +0.00% | 0.10x | WEAK 28/100 | VERY_HIGH 76/100 | Do nothing |
+| 1 | UP/USD ⭐ | 0.05587 | 71.22 | +0.90% | 1.60x | STRONG 86/100 | VERY_HIGH 73/100 | Watch |
+| 2 | AKT/USD | 0.527 | 47.44 | +0.56% | 0.45x | MODERATE 49/100 | VERY_HIGH 81/100 | Watch |
+| 3 | TON/USD | 1.085 | 25.88 | +0.00% | 0.10x | WEAK 28/100 | VERY_HIGH 76/100 | Do nothing |
+| 4 | PEARL/USD | 1.8175 | 19.46 | -0.36% | 0.31x | WEAK 10/100 | EXTREME 87/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | ICNT/USD ⭐ | 0.2764 | 29.24 | +1.17% | 1.27x | 3670 | MODERATE 55/100 | HIGH 66/100 | Watch |
+| 1 | UP/USD ⭐ | 0.0558 | 76.09 | +0.90% | 1.60x | 4808 | STRONG 88/100 | VERY_HIGH 73/100 | Watch |
 
-**Same-run overlap:** ICNT/USD
+**Same-run overlap:** UP/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
