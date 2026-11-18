@@ -898,7 +898,7 @@ def train_archive_shadow(cohort_path, *, training_end_utc, holdout_start_utc,
 
 
 
-def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256, additional_archives=(), retained_observed=(), historical_trade_directory=None):
+def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256, additional_archives=(), retained_observed=(), historical_trade_directory=None, compact_seed=None, original_cohort_hashes=None):
     """Refit on archived and newly matured independent labels, then freeze.
 
     This is a new prospective model, not a repeat of the historical holdout.
@@ -953,42 +953,34 @@ def train_cumulative_market_model(cohort_path, state, *, expected_archive_sha256
     sources=[(Path(cohort_path),expected_archive_sha256)]+[(Path(p),d) for p,d in additional_archives]
     if any(len(d)!=64 or any(c not in "0123456789abcdef" for c in d) for _,d in sources):
         raise ValueError("Invalid pinned archive digest")
+    from .learning_retention import file_sha,load_seed,read_rows,validate_source
+    specs=[("archive",path,d) for path,d in sources]+[("retained_observed",Path(p),d) for p,d in retained_observed]
     source_receipts=[]
-    for path,expected in sources:
-        file_hash=hashlib.sha256()
-        with path.open("rb") as raw:
-            for chunk in iter(lambda:raw.read(1024*1024),b""):
-                file_hash.update(chunk)
-        with gzip.open(path,"rt",encoding="utf-8") as src:
-            for line in src:
-                c=json.loads(line)
-                if (c.get("source_archive_sha256")!=expected or
-                        c.get("production_applied") is not False or c.get("source_authenticated") is not False):
-                    raise ValueError("Unexpected historical cohort origin")
-                if any(r.get("source_sha256")!=expected for r in c["anchors"]+c["outcomes"]):
-                    raise ValueError("Archive training provenance mismatch")
-                ingest(c["anchors"],c["outcomes"],"archive")
-        source_receipts.append({"archive_sha256":expected,"cohort_sha256":file_hash.hexdigest()})
     observed_receipts=[]
-    for path,expected in retained_observed:
+    if compact_seed is not None:
+        if original_cohort_hashes is None or len(original_cohort_hashes)!=len(specs):
+            raise ValueError("Compact seed requires pinned original cohort hashes")
+        manifest=load_seed(compact_seed,[(kind,d,h) for (kind,_,d),h in zip(specs,original_cohort_hashes)])
+    else:
+        manifest=None
+    for i,(kind,path,expected) in enumerate(specs):
         if len(expected)!=64 or any(c not in "0123456789abcdef" for c in expected):
-            raise ValueError("Invalid retained snapshot set digest")
-        file_hash=hashlib.sha256()
-        with Path(path).open("rb") as raw:
-            for chunk in iter(lambda:raw.read(1024*1024),b""):
-                file_hash.update(chunk)
-        with gzip.open(path,"rt",encoding="utf-8") as src:
-            for line in src:
-                c=json.loads(line)
-                if (c.get("source_kind")!="RETAINED_KRAKEN_REST_ROLLING_SNAPSHOTS"
-                        or c.get("source_snapshot_set_sha256")!=expected
-                        or c.get("eligibility_scope")!="PREDICTION_SELECTED_HISTORY_NOT_FULL_MARKET"
-                        or c.get("production_applied") is not False or c.get("source_authenticated") is not False):
-                    raise ValueError("Unexpected retained observation cohort origin")
-                if any(r.get("source_sha256")!=expected for r in c["anchors"]+c["outcomes"]):
-                    raise ValueError("Retained observation provenance mismatch")
-                ingest(c["anchors"],c["outcomes"],"retained_observed")
-        observed_receipts.append({"snapshot_set_sha256":expected,"cohort_sha256":file_hash.hexdigest()})
+            raise ValueError("Invalid source digest")
+        if manifest is not None:
+            rec=manifest["sources"][i]
+            original=rec["cohort_sha256"]
+            path=Path(compact_seed)/rec["seed_file"]
+        else:
+            original=file_sha(path)
+            if original_cohort_hashes is not None and original!=original_cohort_hashes[i]:
+                raise ValueError("Pinned original cohort checksum mismatch")
+        for c in read_rows(path):
+            validate_source(c,kind,expected)
+            ingest(c["anchors"],c["outcomes"],kind)
+        if kind=="archive":
+            source_receipts.append({"archive_sha256":expected,"cohort_sha256":original})
+        else:
+            observed_receipts.append({"snapshot_set_sha256":expected,"cohort_sha256":original})
     trade_receipts=[]
     # Event-prioritized samples are potentially outcome-enriched. Retain
     # their counts in a distinct sensitivity dataset, not the strict fit.
@@ -1123,6 +1115,8 @@ def main(argv=None):
     parser.add_argument("--additional-archive",action="append",nargs=2,metavar=("COHORT_PATH","SHA256"),default=[])
     parser.add_argument("--retained-observed",action="append",nargs=2,metavar=("COHORT_PATH","SNAPSHOT_SET_SHA256"),default=[])
     parser.add_argument("--historical-trade-directory",type=Path)
+    parser.add_argument("--compact-seed",type=Path)
+    parser.add_argument("--original-cohort-hash",action="append")
     parser.add_argument("--training-end")
     parser.add_argument("--holdout-start")
     parser.add_argument("--evaluation-asof")
@@ -1136,7 +1130,8 @@ def main(argv=None):
             parser.error("Cumulative training requires pinned archive digest")
         report=train_cumulative_market_model(args.ledger,json.loads(args.cumulative_state.read_text()),
                                              expected_archive_sha256=args.cumulative_archive_sha256,
-                                             additional_archives=args.additional_archive,retained_observed=args.retained_observed,historical_trade_directory=args.historical_trade_directory)
+                                             additional_archives=args.additional_archive,retained_observed=args.retained_observed,historical_trade_directory=args.historical_trade_directory,compact_seed=args.compact_seed,
+                                             original_cohort_hashes=args.original_cohort_hash)
         args.output.parent.mkdir(parents=True,exist_ok=True)
         args.output.write_text(json.dumps(report,sort_keys=True)+"\n")
         print(json.dumps(report,sort_keys=True))

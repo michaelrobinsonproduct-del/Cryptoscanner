@@ -10,6 +10,8 @@ on:
     paths:
       - 'paper_pov/public_ledger_learning.py'
       - 'paper_pov/market_wide_learning.py'
+      - 'paper_pov/learning_retention.py'
+      - 'paper_pov/test_learning_retention.py'
       - 'paper_pov/test_market_wide_learning.py'
       - 'paper_pov/post_q3_observed_recovery.py'
       - 'paper_pov/historical_trade_recovery.py'
@@ -249,7 +251,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Focused market learning acceptance
-        run: python -m unittest paper_pov.test_market_wide_learning -v
+        run: python -m unittest paper_pov.test_market_wide_learning paper_pov.test_learning_retention -v
       - name: Select latest persisted public paper ledger
         env:
           REQUESTED_RUN: ${{ inputs.paper_run_id }}
@@ -321,6 +323,9 @@ jobs:
           model_ready=2026-11-11T03:27:00Z
           if [ -n "$prior_run" ]; then
             gh run download "$prior_run" -n "$prior_prefix$prior_run" -D evidence/market-prior
+            if [ ! -s evidence/market-prior/market-wide-state.json ]; then
+              python -m paper_pov.learning_retention restore --directory evidence/market-prior/market-state-checkpoint --state evidence/market-prior/market-wide-state.json
+            fi
             test -s evidence/market-prior/market-wide-state.json
             echo "MARKET_LEARNING_PRIOR_RUN=$prior_run"
             echo "$prior_run" > evidence/market-prior-run.txt
@@ -415,6 +420,21 @@ jobs:
             --additional-archive evidence/historical-q2/q2-market-wide-cohorts.jsonl.gz fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 \
             --retained-observed evidence/historical-recovered/post-q3-cohorts.jsonl.gz b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef \
             --output evidence/market-wide-training-report.json
+          # Validate compact storage against the actual full-cohort model once.
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            python -m paper_pov.learning_retention seed --directory evidence/strict-training-seed \
+              --source archive evidence/historical-seed/market-wide-cohorts.jsonl.gz 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 5d883b8252b7a0a3186296801c3293060198481a13c67d0a384e9a41818241e5 \
+              --source archive evidence/historical-q2/q2-market-wide-cohorts.jsonl.gz fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 8c4d7e86d170b17a7a6a3d4ebf9fae1d5cd5f4844f5b1c33a1605f0650823d63 \
+              --source retained_observed evidence/historical-recovered/post-q3-cohorts.jsonl.gz b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef 287a405ba7f99c61df3075737e24e3f24e30137a9c45fbcee1671f257b35474c
+            python -m paper_pov.market_wide_learning evidence/historical-seed/market-wide-cohorts.jsonl.gz \
+              --cumulative-state evidence/market-wide-state.json \
+              --cumulative-archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
+              --additional-archive evidence/historical-q2/q2-market-wide-cohorts.jsonl.gz fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 \
+              --retained-observed evidence/historical-recovered/post-q3-cohorts.jsonl.gz b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef \
+              --compact-seed evidence/strict-training-seed --original-cohort-hash 5d883b8252b7a0a3186296801c3293060198481a13c67d0a384e9a41818241e5 --original-cohort-hash 8c4d7e86d170b17a7a6a3d4ebf9fae1d5cd5f4844f5b1c33a1605f0650823d63 --original-cohort-hash 287a405ba7f99c61df3075737e24e3f24e30137a9c45fbcee1671f257b35474c \
+              --output evidence/compact-training-report.json
+            python -c 'import json; a=json.load(open("evidence/market-wide-training-report.json")); b=json.load(open("evidence/compact-training-report.json")); assert a["model"]==b["model"] and a["source_counts"]==b["source_counts"]; print("COMPACT_STRICT_FIT_IDENTICAL",a["model"]["training_count"],a["model"]["positive_count"],a["model"]["training_dataset_digest"])'
+          fi
           export PRIOR_MARKET_RUN=""
           if [ -s evidence/market-prior/market-wide-model-origin-run.txt ]; then
             PRIOR_MARKET_RUN=$(cat evidence/market-prior/market-wide-model-origin-run.txt)
@@ -455,6 +475,19 @@ jobs:
               summary.write("## Independent market-wide shadow learning"+chr(10))
               summary.write(f"Writer {d['writer_run_id']}, generation {d['ledger_generation']}; training {d['training_count']} examples / {d['positive_count']} positives; observed current markets {d['cumulative_observed_current_markets']}/{d['eligible_markets']}. Shadow only; verified lift unavailable."+chr(10))
           PY
+      - name: Verify partitioned learning checkpoint round trip
+        run: python -m paper_pov.learning_retention pack --state evidence/market-wide-state.json --directory evidence/market-state-checkpoint
+      - name: Retain compact strict training seed for controlled reuse
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-wide-strict-seed-${{ github.run_id }}
+          path: |
+            evidence/strict-training-seed/
+            evidence/compact-training-report.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
       - name: Retain independent market learning state for the next successful run
         uses: actions/upload-artifact@v4
         with:
@@ -465,6 +498,7 @@ jobs:
             evidence/market-wide-model-origin-run.txt
             evidence/market-wide-training-report.json
             evidence/market-wide-learning-receipt.json
+            evidence/market-state-checkpoint/
             evidence/market-wide-scoring-model.json
             evidence/market-wide-scoring-model-available.txt
           if-no-files-found: error
