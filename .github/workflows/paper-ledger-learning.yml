@@ -138,11 +138,17 @@ jobs:
           gh run download 44220694272 -n kraken-q3-frozen-48h-shadow-44220694272 -D evidence/historical-seed
           (cd evidence/historical-seed && sha256sum -c MARKET-WIDE-SHA256SUMS)
           python -c 'import json; d=json.load(open("evidence/historical-seed/market-wide-summary.json")); assert d["pinned_archive_verified"] is True and d["start_utc"]=="2026-07-01T00:00:00+00:00" and d["end_utc"]=="2026-10-01T00:00:00+00:00"'
+          mkdir -p evidence/historical-q2
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/44220694310" --jq '.status + ":" + (.conclusion // "") + ":" + .head_sha')" = "completed:success:8b701967fed44336df210fb971642ffff209e241"
+          gh run download 44220694310 -n market-wide-q2-9caa513fe54a2e31559b1b8dc4eb61be771c04c7eb944c8cd02237ee9291224c -D evidence/historical-q2
+          (cd evidence/historical-q2 && sha256sum -c Q2-MARKET-WIDE-SHA256SUMS)
+          python -c 'import json; d=json.load(open("evidence/historical-q2/q2-market-wide-summary.json")); assert d["pinned_archive_verified"] is True and d["archive_sha256"]=="fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4" and d["start_utc"]=="2025-11-17T00:00:00+00:00" and d["end_utc"]=="2026-07-01T00:00:00+00:00"'
           python -m paper_pov.market_wide_learning evidence/historical-seed/market-wide-cohorts.jsonl.gz \
             --cumulative-state evidence/market-wide-state.json \
             --cumulative-archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
+            --additional-archive evidence/historical-q2/q2-market-wide-cohorts.jsonl.gz fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 \
             --output evidence/market-wide-model.json
-          python -c 'import json; d=json.load(open("evidence/market-wide-model.json")); assert d["model"]["status"]=="SHADOW_ONLY"; assert d["purge_hours"]==48'
+          python -c 'import json; d=json.load(open("evidence/market-wide-model.json")); assert d["model"]["status"]=="SHADOW_ONLY"; assert d["purge_hours"]==48 and len(d["archive_cohort_receipts"])==2'
       - name: Retain isolated market learning state for the next successful PR replay
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
