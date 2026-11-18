@@ -2,45 +2,41 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T06:10:09.878807+00:00
+**UTC as-of:** 2026-11-18T06:15:05.673854+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44249271125
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44249893179
 **Source SHA:** 394c17eeb7071fba40e02dbbb1ea97cedb3a0a8a
-**Previous ledger commit:** 1803da19ded110affaede5d9ebcf0f9887f123f5 (atomic ledger/results publication)
-**Ledger generation:** 551 (remote push/readback verified)
+**Previous ledger commit:** 9a6e231b8c563300058d0b0d82ca520642fedd2a (atomic ledger/results publication)
+**Ledger generation:** 552 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 22.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 23.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | SENT/USD | 0.019822 | 95.653 | 72.475 | +6.18% | +1.64% | 3.71x | 3.5 | 2026-11-18T06:10:02.666601+00:00 | Not calibrated | STRONG 100/100 | HIGH 67/100 | Consider small entry | WATCH |
-| 2 | CC/USD | 0.08467 | 67.774 | 53.790 | +3.09% | +0.09% | 2.35x | 7.1 | 2026-11-18T06:10:02.666601+00:00 | Not calibrated | STRONG 79/100 | HIGH 60/100 | Watch | WATCH |
-| 3 | VVV/USD | 21.303 | 65.843 | 54.239 | +1.32% | +0.37% | 1.97x | 7.0 | 2026-11-18T06:10:02.666601+00:00 | Not calibrated | STRONG 78/100 | HIGH 55/100 | Watch | WATCH |
-| 4 | ICNT/USD | 0.2869 | 61.126 | 53.502 | +3.91% | +0.46% | 1.53x | 14.0 | 2026-11-18T06:10:02.666601+00:00 | Not calibrated | STRONG 71/100 | HIGH 66/100 | Watch | WATCH |
-| 5 | NEAR/USD | 3.41 | 54.158 | 57.543 | +0.51% | +0.59% | 0.36x | 2.1 | 2026-11-18T06:10:02.666601+00:00 | Not calibrated | MODERATE 57/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 6 | PEARL/USD | 1.847 | 42.658 | 46.146 | +2.02% | -0.10% | 0.70x | 5.4 | 2026-11-18T06:10:02.666601+00:00 | Not calibrated | WEAK 26/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
-| 7 | MNT/USD | 0.3787 | 39.966 | 39.039 | +1.45% | +0.32% | 0.93x | 7.9 | 2026-11-18T06:10:02.666601+00:00 | Not calibrated | MODERATE 50/100 | HIGH 67/100 | Watch | WATCH |
-| 8 | BLESS/USD | 0.01016 | 36.642 | 22.994 | +1.86% | +0.04% | 2.35x | 43.8 | 2026-11-18T06:10:02.666601+00:00 | Not calibrated | MODERATE 48/100 | VERY_HIGH 82/100 | Watch | WATCH |
-| 9 | AKT/USD | 0.514 | 31.996 | 36.931 | +0.92% | -0.98% | 1.00x | 3.9 | 2026-11-18T06:10:02.666601+00:00 | Not calibrated | WEAK 21/100 | VERY_HIGH 73/100 | Do nothing | WATCH |
-| 10 | CT/USD | 0.1151 | 25.369 | 35.274 | +1.86% | -0.26% | 0.14x | 17.4 | 2026-11-18T06:10:02.666601+00:00 | Not calibrated | WEAK 13/100 | EXTREME 94/100 | Do nothing | WATCH |
+| 1 | SENT/USD | 0.019935 | 95.167 | 71.989 | +6.78% | +1.64% | 3.71x | 8.0 | 2026-11-18T06:14:58.210505+00:00 | Not calibrated | STRONG 100/100 | HIGH 67/100 | Consider small entry | WATCH |
+| 2 | CC/USD | 0.08457 | 68.243 | 54.128 | +2.97% | -0.18% | 4.58x | 4.7 | 2026-11-18T06:14:58.210505+00:00 | Not calibrated | MODERATE 64/100 | HIGH 66/100 | Watch | WATCH |
+| 3 | VVV/USD | 21.317 | 64.433 | 53.281 | +1.38% | +0.30% | 1.97x | 9.8 | 2026-11-18T06:14:58.210505+00:00 | Not calibrated | STRONG 77/100 | HIGH 55/100 | Watch | WATCH |
+| 4 | NEAR/USD | 3.4166 | 55.227 | 58.613 | +0.70% | +0.59% | 0.36x | 2.6 | 2026-11-18T06:14:58.210505+00:00 | Not calibrated | MODERATE 58/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 5 | MNT/USD | 0.3787 | 39.439 | 39.036 | +1.45% | +0.40% | 0.84x | 7.9 | 2026-11-18T06:14:58.210505+00:00 | Not calibrated | MODERATE 50/100 | HIGH 67/100 | Watch | WATCH |
+| 6 | PEARL/USD | 1.8392 | 34.696 | 36.853 | +1.59% | -0.37% | 0.97x | 17.9 | 2026-11-18T06:14:58.210505+00:00 | Not calibrated | WEAK 17/100 | VERY_HIGH 79/100 | Do nothing | WATCH |
+| 7 | AKT/USD | 0.5143 | 34.605 | 38.313 | +0.98% | -0.85% | 1.05x | 1.9 | 2026-11-18T06:14:58.210505+00:00 | Not calibrated | WEAK 27/100 | VERY_HIGH 73/100 | Do nothing | WATCH |
+| 8 | CT/USD | 0.1154 | 27.227 | 37.151 | +2.12% | -0.26% | 0.14x | 17.3 | 2026-11-18T06:14:58.210505+00:00 | Not calibrated | WEAK 14/100 | EXTREME 94/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SENT/USD | 72.475 | 0.019822 | +1.64% | 3.71x |
-| 2 | NEAR/USD | 57.543 | 3.41 | +0.59% | 0.36x |
-| 3 | VVV/USD | 54.239 | 21.303 | +0.37% | 1.97x |
-| 4 | CC/USD | 53.790 | 0.08467 | +0.09% | 2.35x |
-| 5 | ICNT/USD | 53.502 | 0.2869 | +0.46% | 1.53x |
-| 6 | PEARL/USD | 46.146 | 1.847 | -0.10% | 0.70x |
-| 7 | MNT/USD | 39.039 | 0.3787 | +0.32% | 0.93x |
-| 8 | AKT/USD | 36.931 | 0.514 | -0.98% | 1.00x |
-| 9 | CT/USD | 35.274 | 0.1151 | -0.26% | 0.14x |
-| 10 | BLESS/USD | 22.994 | 0.01016 | +0.04% | 2.35x |
+| 1 | SENT/USD | 71.989 | 0.019935 | +1.64% | 3.71x |
+| 2 | NEAR/USD | 58.613 | 3.4166 | +0.59% | 0.36x |
+| 3 | CC/USD | 54.128 | 0.08457 | -0.18% | 4.58x |
+| 4 | VVV/USD | 53.281 | 21.317 | +0.30% | 1.97x |
+| 5 | MNT/USD | 39.036 | 0.3787 | +0.40% | 0.84x |
+| 6 | AKT/USD | 38.313 | 0.5143 | -0.85% | 1.05x |
+| 7 | CT/USD | 37.151 | 0.1154 | -0.26% | 0.14x |
+| 8 | PEARL/USD | 36.853 | 1.8392 | -0.37% | 0.97x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -56,7 +52,7 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 551; predictions: 4652; observations: 332566.
+- Persisted scans: 552; predictions: 4660; observations: 333175.
 - Matured sampled outcomes across 1/6/24/48h: 3890; gap abstentions: 12463. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
@@ -64,7 +60,7 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 12; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 15; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -73,32 +69,28 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44249271125 · **Generation:** 551 · **Legacy run:** 44249271125
-**Main quote time:** 2026-11-18T06:10:09.878807+00:00 · **Legacy report time:** 2026-11-18T06:10:28.283683+00:00
+**Writer:** 44249893179 · **Generation:** 552 · **Legacy run:** 44249893179
+**Main quote time:** 2026-11-18T06:15:05.673854+00:00 · **Legacy report time:** 2026-11-18T06:15:20.867033+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD ⭐ | 0.019822 | 95.65 | +1.64% | 3.71x | STRONG 100/100 | HIGH 67/100 | Consider small entry |
-| 2 | CC/USD ⭐ | 0.08467 | 67.77 | +0.09% | 2.35x | STRONG 89/100 | HIGH 60/100 | Watch |
-| 3 | VVV/USD ⭐ | 21.303 | 65.84 | +0.37% | 1.97x | STRONG 88/100 | HIGH 55/100 | Consider small entry |
-| 4 | ICNT/USD ⭐ | 0.2869 | 61.13 | +0.46% | 1.53x | STRONG 81/100 | HIGH 66/100 | Consider small entry |
-| 5 | NEAR/USD | 3.41 | 54.16 | +0.59% | 0.36x | MODERATE 57/100 | VERY_HIGH 70/100 | Watch |
-| 6 | PEARL/USD | 1.847 | 42.66 | -0.10% | 0.70x | WEAK 26/100 | VERY_HIGH 81/100 | Do nothing |
-| 7 | MNT/USD | 0.3787 | 39.97 | +0.32% | 0.93x | MODERATE 50/100 | HIGH 67/100 | Watch |
-| 8 | BLESS/USD | 0.01016 | 36.64 | +0.04% | 2.35x | MODERATE 48/100 | VERY_HIGH 82/100 | Watch |
-| 9 | AKT/USD | 0.514 | 32.00 | -0.98% | 1.00x | WEAK 21/100 | VERY_HIGH 73/100 | Do nothing |
-| 10 | CT/USD | 0.1151 | 25.37 | -0.26% | 0.14x | WEAK 13/100 | EXTREME 94/100 | Do nothing |
+| 1 | SENT/USD ⭐ | 0.019935 | 95.17 | +1.64% | 3.71x | STRONG 100/100 | HIGH 67/100 | Consider small entry |
+| 2 | CC/USD | 0.08457 | 68.24 | -0.18% | 4.58x | MODERATE 64/100 | HIGH 66/100 | Watch |
+| 3 | VVV/USD ⭐ | 21.317 | 64.43 | +0.30% | 1.97x | STRONG 87/100 | HIGH 55/100 | Consider small entry |
+| 4 | NEAR/USD | 3.4166 | 55.23 | +0.59% | 0.36x | MODERATE 58/100 | VERY_HIGH 70/100 | Watch |
+| 5 | MNT/USD | 0.3787 | 39.44 | +0.40% | 0.84x | MODERATE 50/100 | HIGH 67/100 | Watch |
+| 6 | PEARL/USD | 1.8392 | 34.70 | -0.37% | 0.97x | WEAK 17/100 | VERY_HIGH 79/100 | Do nothing |
+| 7 | AKT/USD | 0.5143 | 34.61 | -0.85% | 1.05x | WEAK 27/100 | VERY_HIGH 73/100 | Do nothing |
+| 8 | CT/USD | 0.1154 | 27.23 | -0.26% | 0.14x | WEAK 14/100 | EXTREME 94/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD ⭐ | 0.019857 | 83.51 | +1.64% | 3.71x | 4553 | STRONG 100/100 | HIGH 67/100 | Consider small entry |
-| 2 | CC/USD ⭐ | 0.08467 | 76.13 | +0.09% | 2.35x | 4363 | STRONG 93/100 | HIGH 60/100 | Watch |
-| 3 | ICNT/USD ⭐ | 0.2871 | 75.18 | +0.46% | 1.53x | 4654 | STRONG 83/100 | VERY_HIGH 72/100 | Watch |
-| 4 | VVV/USD ⭐ | 21.303 | 53.94 | +0.37% | 1.97x | 7374 | STRONG 82/100 | HIGH 55/100 | Consider small entry |
+| 1 | SENT/USD ⭐ | 0.019908 | 82.01 | +1.14% | 3.91x | 4560 | STRONG 100/100 | HIGH 67/100 | Consider small entry |
+| 2 | VVV/USD ⭐ | 21.317 | 54.47 | +0.30% | 1.97x | 7362 | STRONG 82/100 | HIGH 55/100 | Consider small entry |
 
-**Same-run overlap:** SENT/USD, CC/USD, VVV/USD, ICNT/USD
+**Same-run overlap:** SENT/USD, VVV/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
