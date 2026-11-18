@@ -54,20 +54,20 @@ jobs:
           RUN_ID="$REQUESTED_RUN"
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ -z "$RUN_ID" ]; then
             RUN_ID=$(python - <<'PY'
-            import base64,json,os,subprocess,sys
-            from pathlib import Path
-            from paper_pov.market_wide_learning import select_completed_learning_publication
-            repo=os.environ["GH_REPO"]
-            def api(path):
-                return json.loads(subprocess.check_output(["gh","api",f"repos/{repo}/{path}"]))
-            def publication(ref):
-                return json.loads(base64.b64decode(api(f"contents/verified-results/results.json?ref={ref}")["content"]))
-            selected,mode=select_completed_learning_publication(
-                publication("paper-proof-ledger"),lambda r:api(f"actions/runs/{r}"),publication)
-            Path("/tmp/market-canonical.json").write_text(json.dumps(selected))
-            print(mode,file=sys.stderr)
-            print(selected["run_id"])
-            PY
+          import base64,json,os,subprocess,sys
+          from pathlib import Path
+          from paper_pov.market_wide_learning import select_completed_learning_publication
+          repo=os.environ["GH_REPO"]
+          def api(path):
+              return json.loads(subprocess.check_output(["gh","api",f"repos/{repo}/{path}"]))
+          def publication(ref):
+              return json.loads(base64.b64decode(api(f"contents/verified-results/results.json?ref={ref}")["content"]))
+          selected,mode=select_completed_learning_publication(
+              publication("paper-proof-ledger"),lambda r:api(f"actions/runs/{r}"),publication)
+          Path("/tmp/market-canonical.json").write_text(json.dumps(selected))
+          print(mode,file=sys.stderr)
+          print(selected["run_id"])
+          PY
             )
             test -n "$RUN_ID"
           fi
