@@ -6,6 +6,11 @@ on:
         description: "Completed successful canonical writer run ID; automatically dispatched by same writer after verified publication"
         required: false
         type: string
+      market_learning_bootstrap:
+        description: "Explicit one-time main shadow learning bootstrap from approved pinned research checkpoint (never a reset)"
+        required: false
+        default: false
+        type: boolean
   pull_request:
     paths:
       - 'paper_pov/public_ledger_learning.py'
@@ -286,6 +291,7 @@ jobs:
         env:
           LEARNING_BRANCH: ${{ github.head_ref || github.ref_name }}
           LEARNING_SCOPE: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
+          ALLOW_MAIN_BOOTSTRAP: ${{ inputs.market_learning_bootstrap || false }}
         run: |
           set -euo pipefail
           mkdir -p evidence/market-prior
@@ -312,10 +318,15 @@ jobs:
           done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate \
             --jq '.artifacts[] | select(.expired == false and (.name | startswith("market-wide-learning-continuity-"))) | [.workflow_run.head_branch,.workflow_run.id,.name] | @tsv' | awk -v branch="$LEARNING_BRANCH" -v prefix="$prior_prefix" '$1 == branch && index($3,prefix)==1 {print $2}' | sort -unr)
           if [ -z "$prior_run" ] && [ "$LEARNING_SCOPE" = "main" ]; then
-            prior_run=44243388087
+            # Never silently reset learning to a research snapshot when a main
+            # checkpoint is missing, expired or deleted. Bootstrap is explicit.
+            test "$ALLOW_MAIN_BOOTSTRAP" = "true" || { echo "::error::MAIN_LEARNING_CHECKPOINT_UNAVAILABLE; explicit first bootstrap or approved restore required"; exit 1; }
+            existing=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.workflow_run.head_branch=="main" and (.name|startswith("market-wide-learning-continuity-main-"))) | .id' | sed -n '1p')
+            test -z "$existing" || { echo "::error::Main checkpoint history exists; bootstrap cannot replace it"; exit 1; }
+            prior_run=44243954157
             prior_prefix=market-wide-learning-continuity-pr-
             prior_branch=learning-market-wide-20261117
-            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run" --jq '.status + ":" + (.conclusion // "") + ":" + .head_sha')" = "completed:success:ca97cec2c6f3f8d2577e03299b36f6cbc21fc87a"
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run" --jq '.status + ":" + (.conclusion // "") + ":" + .head_sha')" = "completed:success:9be6945665688978fe22a5ee1c87b9189abbd005"
             echo "MAIN_RESEARCH_BOOTSTRAP_PINNED=$prior_run"
           fi
           prior_args=()
