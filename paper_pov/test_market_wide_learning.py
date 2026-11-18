@@ -167,5 +167,43 @@ class MarketWideLearningTest(unittest.TestCase):
         self.assertEqual(crossing_summary([event(1), event(1), event(2), event(10)])
                          ["completed_48h_crossing_clusters"], 2)
 
+    def test_archive_shadow_trains_and_compares_same_blind_top_one_cohort(self):
+        import gzip
+        import json
+        import tempfile
+        from pathlib import Path
+        from paper_pov.frozen_historical_shadow import NAMES
+        from paper_pov.market_wide_learning import train_archive_shadow
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        at = lambda day: (start+timedelta(days=day)).isoformat()
+        digest = "a"*64
+        anchors, outcomes = [], []
+        for day in (0, 5):
+            for positive in (True, False):
+                key = str((day, positive))
+                features = {f: (2.0 if positive else 1.0) for f in NAMES}
+                features["momentum_60m"] = .02 if positive else .3
+                anchors.append(dict(prediction_id=key, pair="GAINUSD" if positive else "FLATUSD",
+                                  entry_utc=at(day), feature_asof_utc=at(day),
+                                  feature_complete=True, features=features, source_sha256=digest))
+                outcomes.append(dict(prediction_id=key, horizon_hours=48, hit=positive,
+                                     coverage_complete=True, label_mature_utc=at(day+2),
+                                     source_sha256=digest, observed_lead_hours_upper_bound=12))
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)/"cohort.jsonl.gz"
+            with gzip.open(path, "wt") as f:
+                f.write(json.dumps(dict(anchors=anchors, outcomes=outcomes,
+                    source_archive_sha256=digest, production_applied=False, source_authenticated=False))+"\n")
+            result = train_archive_shadow(path, training_end_utc=at(3), holdout_start_utc=at(5),
+                                          evaluation_asof_utc=at(8), top_k=1)
+            self.assertEqual(result["model"]["positive_count"], 1)
+            self.assertEqual(result["model"]["negative_count"], 1)
+            self.assertEqual(result["comparable_timestamps"], 1)
+            self.assertEqual(result["metrics"]["baseline_proxy"]["hits"], 0)
+            self.assertEqual(result["metrics"]["challenger"]["hits"], 1)
+            self.assertEqual(result["metrics"]["challenger"]["early_hits"], 1)
+            self.assertFalse(result["measured_lift_verified"])
+            self.assertFalse(result["production_applied"])
+
 if __name__ == "__main__":
     unittest.main()
