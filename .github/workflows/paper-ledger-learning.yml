@@ -294,8 +294,16 @@ jobs:
           prior_branch="$LEARNING_BRANCH"
           while read -r candidate; do
             test -n "$candidate" || continue
-            status=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate" --jq '.status + ":" + (.conclusion // "")')
-            if [ "$status" = "completed:success" ]; then
+            # A completed market-wide job owns the checkpoint. Other parallel
+            # research jobs may still be running; don't lose this state.
+            jobs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate/jobs?per_page=100")
+            owner=$(jq -r '[.jobs[] | select(.name=="market-wide-shadow-learning") | .status+":"+(.conclusion//"")] | first // empty' <<< "$jobs")
+            if [ "$owner" = "completed:success" ]; then
+              prior_run="$candidate"
+              break
+            fi
+            # Old-format PR artifacts predate extraction into the separate job.
+            if [ -z "$owner" ] && [ "$LEARNING_SCOPE" = "pr" ] && [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate" --jq '.status + ":" + (.conclusion // "")')" = "completed:success" ]; then
               prior_run="$candidate"
               break
             fi
@@ -344,8 +352,15 @@ jobs:
                 test "$origin" = "44243388087"
                 test "$origin_branch" = "learning-market-wide-20261117"
               fi
-              test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq '.status + ":" + (.conclusion // "")')" = "completed:success"
-              completed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq .updated_at)
+              origin_jobs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin/jobs?per_page=100")
+              origin_owner=$(jq -r '[.jobs[]|select(.name=="market-wide-shadow-learning")]|first // empty' <<< "$origin_jobs")
+              if [ -n "$origin_owner" ]; then
+                test "$(jq -r '.status+":"+(.conclusion//"")' <<< "$origin_owner")" = "completed:success"
+                completed=$(jq -r '.completed_at' <<< "$origin_owner")
+              else
+                test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq '.status + ":" + (.conclusion // "")')" = "completed:success"
+                completed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq .updated_at)
+              fi
               if python -c 'import json,sys; from paper_pov.market_wide_learning import eligible_scoring_model; a=json.load(open("evidence/ledger.json")); m=json.load(open(sys.argv[1])); sys.exit(not eligible_scoring_model(m,sys.argv[2],a["runs"][-1]["as_of"]))' evidence/market-prior/market-wide-model.json "$completed"; then
                 model_path=evidence/market-prior/market-wide-model.json
                 model_ready="$completed"
