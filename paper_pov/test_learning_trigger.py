@@ -30,6 +30,23 @@ class LearningTriggerTests(unittest.TestCase):
         self.api["event"] = self.event["workflow_run"]["event"] = "schedule"
         self.assertEqual(self.valid()["writer_event"], "schedule")
 
+    def test_correlated_api_writer_name_with_exact_provenance(self):
+        name = "paper-api-1794956700000"
+        self.api["name"] = self.event["workflow_run"]["name"] = name
+        self.assertEqual(self.valid()["writer_event"], "workflow_dispatch")
+        for invalid in ("paper-api-invalid", "paper-api-1794956700001", name + "-extra"):
+            self.api["name"] = self.event["workflow_run"]["name"] = invalid
+            with self.assertRaises(ValueError):
+                self.valid()
+        self.api["name"] = self.event["workflow_run"]["name"] = name
+        self.api["event"] = self.event["workflow_run"]["event"] = "schedule"
+        with self.assertRaises(ValueError):
+            self.valid()
+        self.api["event"] = self.event["workflow_run"]["event"] = "workflow_dispatch"
+        self.api["path"] = self.event["workflow_run"]["path"] = ".github/workflows/other.yml"
+        with self.assertRaises(ValueError):
+            self.valid()
+
     def test_untrusted_events_and_api_mismatches_fail_closed(self):
         cases = [
             ("event", "action", "requested"), ("api", "conclusion", "failure"),

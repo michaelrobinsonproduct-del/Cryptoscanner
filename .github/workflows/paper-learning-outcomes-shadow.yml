@@ -4,6 +4,8 @@ on:
     paths:
       - 'paper_pov/learning_outcomes.py'
       - 'paper_pov/test_learning_outcomes.py'
+      - 'paper_pov/learning_trigger.py'
+      - 'paper_pov/test_learning_trigger.py'
       - '.github/workflows/paper-learning-outcomes-shadow.yml'
   workflow_dispatch:
   issue_comment:
