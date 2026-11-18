@@ -92,6 +92,8 @@ jobs:
           fi
           python -m paper_pov.market_wide_learning evidence/ledger.json --batch-size 12 \
             "${prior_args[@]}" --state-output evidence/market-wide-state.json \
+            --shadow-model historical/evidence/q3_2026_frozen_shadow_v1.json \
+            --shadow-model-available 2026-11-11T03:27:00Z \
             --output evidence/market-wide-observed.json
       - name: Retain isolated market learning state for the next successful PR replay
         if: github.event_name == 'pull_request'

@@ -279,7 +279,143 @@ def select_market_batch(ledger, *, batch_size=12, prior=None):
     return pairs, pairs[shard*batch_size:(shard+1)*batch_size], shard, shard_count
 
 
-def run_observed_market_batch(ledger, *, fetch=None, batch_size=12, prior=None):
+
+def score_prospective_market_shard(ledger, results, model_source, *, model_available_utc, top_k=5):
+    """Score independently selected current markets before forward outcomes.
+
+    Compare only against actual WATCH decisions within this same scored shard,
+    never represent it as a full production universe ranking. The shadow
+    equal-budget selection uses the number of actual WATCHs in the shard.
+    """
+    from .frozen_historical_shadow import NAMES, frozen_model
+    if not 1 <= top_k <= 12:
+        raise ValueError("Invalid shadow selection budget")
+    if model_source.get("schema") == "kraken_q3_frozen_shadow_v1":
+        fitted = frozen_model(model_source)
+        centers, scales, weights = fitted["means"], fitted["scales"], fitted["weights"]
+        version = model_source["version"]
+        train_end = utc_time(model_source["training_window_end"])
+    else:
+        if (model_source.get("schema") != "market_wide_archive_shadow_v1"
+                or model_source.get("digest") != canonical_digest({k:v for k,v in model_source.items() if k!="digest"})
+                or model_source.get("production_applied") is not False):
+            raise ValueError("Invalid shadow model report")
+        fitted = model_source["model"]
+        if fitted.get("status") != "SHADOW_ONLY" or fitted.get("version") != canonical_digest(
+                {k:v for k,v in fitted.items() if k!="version"}):
+            raise ValueError("Invalid fitted shadow model")
+        if tuple(fitted["feature_names"]) != NAMES:
+            raise ValueError("Incompatible shadow feature contract")
+        centers, scales, weights = fitted["feature_centers"], fitted["feature_scales"], fitted["feature_weights"]
+        version = fitted["version"]
+        train_end = utc_time(fitted["training_end_utc"])
+    latest = ledger["runs"][-1]
+    scan_at = utc_time(latest["as_of"])
+    available = utc_time(model_available_utc)
+    if available < train_end or scan_at <= available:
+        raise ValueError("Model was not available before this prospective scan")
+    if scan_at < train_end + timedelta(hours=48):
+        raise ValueError("Model training/scan purge insufficient")
+    quotes = {o["pair"]: o for o in ledger["observations"] if o["run_id"] == latest["id"]}
+    watch = {p["pair"] for p in ledger["predictions"] if p["run_id"] == latest["id"]}
+    batch_id = canonical_digest([latest["id"], version, sorted(r["pair"] for r in results)])
+    predictions, excluded = [], {}
+    for result in results:
+        pair = result["pair"]
+        q = quotes[pair]
+        at = utc_time(q["at"])
+        if at < available or at > scan_at or scan_at-at > timedelta(minutes=3):
+            excluded[pair] = "QUOTE_OUTSIDE_PROSPECTIVE_WINDOW"
+            continue
+        rows = sorted((utc_time(c["timestamp_utc"]), c) for c in result["candles"])
+        features = features_at_entry(rows, at)
+        if features is None:
+            excluded[pair] = "NO_COMPLETE_ASOF_FEATURES"
+            continue
+        score = sum((features[f]-centers[f])/scales[f]*weights[f] for f in NAMES)
+        price = float(q["price"])
+        if price <= 0 or not isfinite(price) or not isfinite(score):
+            raise ValueError("Invalid prospective score or price")
+        predictions.append({"prediction_id": canonical_digest([batch_id,pair]), "pair":pair,
+                            "run_id":latest["id"], "batch_id":batch_id, "model_version":version,
+                            "model_available_utc":available.isoformat(), "entry_utc":at.isoformat(),
+                            "feature_asof_utc":max(t for t,_ in rows if t<=at).isoformat(),
+                            "entry_price":price, "features":features, "shadow_score":score,
+                            "baseline_watch":pair in watch, "source_sha256":result["response_sha256"],
+                            "liquidity_qualified":False})
+    predictions.sort(key=lambda p:(-p["shadow_score"],p["pair"]))
+    budget = sum(p["baseline_watch"] for p in predictions)
+    for i,p in enumerate(predictions):
+        p["shadow_rank"] = i+1
+        p["shadow_top_k"] = i<top_k
+        p["shadow_equal_budget_watch"] = i<budget
+    return {"predictions": predictions, "excluded": excluded, "baseline_budget":budget,
+            "model_version":version, "batch_id":batch_id,
+            "scope":"CURRENT_ROTATING_SHARD_NOT_FULL_UNIVERSE",
+            "production_applied":False, "promotion_authorized":False}
+
+
+def retain_prospective_shadow(state, prior, cohort, results, ledger, model_source=None, model_available_utc=None):
+    """Retain immutable prospective predictions and re-evaluate revisited markets."""
+    prior = prior or {}
+    predictions = {p["prediction_id"]:p for p in prior.get("shadow_predictions",[])}
+    outcomes = {(o["prediction_id"],o["horizon_hours"]):o for o in prior.get("shadow_outcomes",[])}
+    snapshot = None
+    if model_source is not None:
+        snapshot = score_prospective_market_shard(ledger,results,model_source,
+                                                model_available_utc=model_available_utc)
+        for p in snapshot["predictions"]:
+            old = predictions.get(p["prediction_id"])
+            # A repeated source fetch may have a different response digest, but
+            # the originally recorded feature/decision/price must not change.
+            if old is not None:
+                if any(old[k]!=p[k] for k in p if k!="source_sha256"):
+                    raise ValueError("Prospective prediction identity changed")
+                continue
+            predictions[p["prediction_id"]] = p
+    observed = {r["pair"] for r in results}
+    asof = utc_time(cohort["evaluation_asof_utc"])
+    active = [p for p in predictions.values() if p["pair"] in observed
+              and asof-timedelta(hours=60)<=utc_time(p["entry_utc"])<=asof]
+    fresh = reconstruct_forward_outcomes(active,[c for r in results for c in r["candles"]],
+                                        evaluation_asof_utc=asof.isoformat())
+    for o in fresh:
+        key=(o["prediction_id"],o["horizon_hours"])
+        old=outcomes.get(key)
+        if old is not None and old["coverage_complete"]:
+            if o["coverage_complete"] and any(old[k]!=o[k] for k in ("hit","close_return","max_favorable_return")):
+                raise ValueError("Verified prospective outcome changed")
+            continue
+        if old is None or o["coverage_complete"] or old["outcome_status"]=="IMMATURE":
+            outcomes[key]=o
+    if len(predictions)>MAX_RETAINED_ANCHORS:
+        raise ValueError("Prospective evidence needs archive compaction")
+    state["shadow_predictions"]=[predictions[k] for k in sorted(predictions)]
+    state["shadow_outcomes"]=[outcomes[k] for k in sorted(outcomes)]
+    state["digest"]=canonical_digest({k:v for k,v in state.items() if k!="digest"})
+    groups={}
+    for p in predictions.values():
+        groups.setdefault(p["batch_id"],[]).append(p)
+    count=hits_base=hits_shadow=selected=0
+    for group in groups.values():
+        base=[p for p in group if p["baseline_watch"]]
+        shadow=[p for p in group if p["shadow_equal_budget_watch"]]
+        keys=[(p["prediction_id"],48) for p in base+shadow]
+        if not base or len(base)!=len(shadow) or any(k not in outcomes or not outcomes[k]["coverage_complete"] for k in keys):
+            continue
+        count+=1
+        selected+=len(base)
+        hits_base+=sum(outcomes[(p["prediction_id"],48)]["hit"] for p in base)
+        hits_shadow+=sum(outcomes[(p["prediction_id"],48)]["hit"] for p in shadow)
+    return {"scope":"ACTUAL_WATCHS_EQUAL_BUDGET_WITHIN_SCORED_SHARDS",
+            "prospective_snapshot":snapshot, "retained_predictions":len(predictions),
+            "paired_complete_batches":count,"selected_per_scanner":selected,
+            "baseline_hits":hits_base,"shadow_hits":hits_shadow,
+            "measured_lift_verified":False,"production_applied":False}
+
+
+def run_observed_market_batch(ledger, *, fetch=None, batch_size=12, prior=None,
+                              model_source=None, model_available_utc=None):
     """Read-only real Kraken smoke; never describes a shard as full coverage."""
     from .kraken_observed_candles import fetch_kraken_ohlc
     fetch = fetch or fetch_kraken_ohlc
@@ -316,6 +452,8 @@ def run_observed_market_batch(ledger, *, fetch=None, batch_size=12, prior=None):
                   source_digests=digests, coverage_scope="PARTIAL_ROTATING_SHARD",
                   measured_lift_verified=False)
     cohort["continuity_state"] = merge_market_state(cohort, eligibility, prior)
+    cohort["prospective_shadow"] = retain_prospective_shadow(cohort["continuity_state"], prior, cohort,
+        results, ledger, model_source, model_available_utc)
     cohort["evidence_digest"] = canonical_digest(cohort)
     return cohort
 
@@ -525,6 +663,8 @@ def main(argv=None):
     parser.add_argument("--batch-size", type=int, default=12)
     parser.add_argument("--prior-state", type=Path)
     parser.add_argument("--state-output", type=Path)
+    parser.add_argument("--shadow-model", type=Path)
+    parser.add_argument("--shadow-model-available")
     parser.add_argument("--train-cohorts", action="store_true")
     parser.add_argument("--training-end")
     parser.add_argument("--holdout-start")
@@ -554,7 +694,11 @@ def main(argv=None):
         print(json.dumps(report, sort_keys=True))
         return report
     prior = json.loads(args.prior_state.read_text()) if args.prior_state else None
-    report = run_observed_market_batch(json.loads(args.ledger.read_text()), batch_size=args.batch_size, prior=prior)
+    if args.shadow_model and not args.shadow_model_available:
+        parser.error("Shadow model availability timestamp required")
+    model_source = json.loads(args.shadow_model.read_text()) if args.shadow_model else None
+    report = run_observed_market_batch(json.loads(args.ledger.read_text()), batch_size=args.batch_size, prior=prior,
+                                       model_source=model_source, model_available_utc=args.shadow_model_available)
     if args.state_output:
         args.state_output.parent.mkdir(parents=True, exist_ok=True)
         args.state_output.write_text(json.dumps(report["continuity_state"], sort_keys=True, separators=(",", ":")) + "\n")
@@ -567,6 +711,13 @@ def main(argv=None):
                    observed_count=len(report["observed_pairs"]),
                    cumulative_anchors=len(report["continuity_state"]["anchors"]),
                    cumulative_observed_markets=len(report["continuity_state"]["last_success_generation"]))
+    shadow = report["prospective_shadow"]
+    snapshot = shadow["prospective_snapshot"]
+    summary["prospective_shadow"] = {k:v for k,v in shadow.items() if k!="prospective_snapshot"}
+    if snapshot is not None:
+        summary["prospective_shadow"].update(scored=len(snapshot["predictions"]),
+            baseline_budget=snapshot["baseline_budget"],model_version=snapshot["model_version"],
+            excluded_count=len(snapshot["excluded"]))
     print(json.dumps(summary, sort_keys=True))
     return report
 

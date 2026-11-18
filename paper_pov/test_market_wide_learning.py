@@ -205,5 +205,32 @@ class MarketWideLearningTest(unittest.TestCase):
             self.assertFalse(result["measured_lift_verified"])
             self.assertFalse(result["production_applied"])
 
+
+    def test_prospective_scoring_requires_preexisting_model_and_excludes_future_features(self):
+        import json
+        from pathlib import Path
+        from paper_pov.market_wide_learning import score_prospective_market_shard
+        model=json.loads(Path("historical/evidence/q3_2026_frozen_shadow_v1.json").read_text())
+        start=datetime(2026,11,15,tzinfo=timezone.utc)
+        at=lambda m:(start+timedelta(minutes=m)).isoformat()
+        ledger={"runs":[{"id":"scan","as_of":at(61)}],
+                "observations":[{"run_id":"scan","pair":"GAINUSD","at":at(60),"price":100},
+                                {"run_id":"scan","pair":"FLATUSD","at":at(60),"price":100}],
+                "predictions":[{"run_id":"scan","pair":"FLATUSD"}]}
+        results=[{"pair":pair,"response_sha256":"a"*64,
+                  "candles":[dict(pair=pair,timestamp_utc=at(i*5),close=100+i*.01,
+                                  high=100+i*.01,volume=10+i,trades=5+i) for i in range(14)]}
+                  for pair in ("GAINUSD","FLATUSD")]
+        first=score_prospective_market_shard(ledger,results,model,model_available_utc="2026-11-11T03:27:00Z")
+        self.assertEqual(first["baseline_budget"],1)
+        self.assertEqual(len(first["predictions"]),2)
+        self.assertEqual(sum(p["shadow_equal_budget_watch"] for p in first["predictions"]),1)
+        self.assertTrue(all(p["feature_asof_utc"]==at(60) for p in first["predictions"]))
+        results[0]["candles"][-1]["close"]=999
+        second=score_prospective_market_shard(ledger,results,model,model_available_utc="2026-11-11T03:27:00Z")
+        self.assertEqual(first,second)
+        with self.assertRaisesRegex(ValueError,"not available"):
+            score_prospective_market_shard(ledger,results,model,model_available_utc=at(62))
+
 if __name__ == "__main__":
     unittest.main()
