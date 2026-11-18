@@ -45,5 +45,31 @@ class MarketWideLearningTest(unittest.TestCase):
         later = build_market_cohort(rows, **kwargs)
         self.assertEqual(result["anchors"][0]["features"], later["anchors"][0]["features"])
 
+    def test_real_source_adapter_rotates_without_watchs_and_checks_asof_eligibility(self):
+        from .market_wide_learning import run_observed_market_batch, select_market_batch
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        at = lambda minutes: (start+timedelta(minutes=minutes)).isoformat()
+        ledger = {"generation": 2, "runs": [{"id": "latest", "as_of": at(120), "observation_count": 2}],
+                  "observations": [{"run_id": "older", "pair": "GAINUSD", "at": at(59)},
+                                   {"run_id": "latest", "pair": "GAINUSD", "at": at(120)},
+                                   {"run_id": "latest", "pair": "FLATUSD", "at": at(120)}],
+                  "predictions": []}
+        self.assertEqual(select_market_batch(ledger, batch_size=1)[1], ["GAINUSD"])
+        def fetch(pair):
+            return {"pair": pair, "source": "kraken_public_ohlc_rest", "response_sha256": "a"*64,
+                    "candles": [dict(pair=pair, timestamp_utc=at(i*5), close=100 if i<24 else 135,
+                                    high=100 if i<24 else 135, volume=10+i, trades=5+i)
+                                for i in range(25)]}
+        report = run_observed_market_batch(ledger, fetch=fetch, batch_size=1)
+        self.assertEqual(report["per_horizon"]["1"]["hits"], 1)
+        self.assertEqual(report["missing_eligible_pairs"], ["FLATUSD"])
+        self.assertEqual(report["outcomes"][0]["source_sha256"], "a"*64)
+        self.assertFalse(report["source_authenticated"])
+        self.assertFalse(report["production_applied"])
+        ledger["observations"].pop(0)
+        report = run_observed_market_batch(ledger, fetch=fetch, batch_size=1)
+        self.assertEqual(report["eligibility_abstentions"], 1)
+        self.assertEqual(report["per_horizon"]["1"]["hits"], 0)
+
 if __name__ == "__main__":
     unittest.main()
