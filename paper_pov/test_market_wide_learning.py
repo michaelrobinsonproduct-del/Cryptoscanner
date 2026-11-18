@@ -314,5 +314,31 @@ class MarketWideLearningTest(unittest.TestCase):
         self.assertFalse(outcomes[2]["coverage_complete"])
         self.assertFalse(sensitivity["production_applied"])
 
+
+    def test_learning_publication_completion_race_uses_exact_parent_once(self):
+        from paper_pov.market_wide_learning import select_completed_learning_publication
+        def pub(g,r):
+            return dict(schema=2,status="SUCCESS_PAPER_ONLY",publication_mode="ATOMIC_LEDGER_RESULTS",
+                        remote_readback_verified=True,buy_approved=False,production_applied=False,
+                        ledger_generation=g,ledger_sha256="a"*64,source_sha="b"*40,
+                        ledger_parent_commit="c"*40,run_id=str(r))
+        current,parent=pub(12,123),pub(11,122)
+        calls=[]
+        def writer(r):
+            calls.append(r)
+            return dict(id=r,head_branch="main",head_sha="b"*40,
+                        status="in_progress" if r=="123" else "completed",
+                        conclusion=None if r=="123" else "success")
+        def load_parent(ref):
+            calls.append(ref)
+            return parent
+        chosen,mode=select_completed_learning_publication(current,writer,load_parent)
+        self.assertEqual(chosen,parent)
+        self.assertEqual(mode,"IMMEDIATE_PARENT_COMPLETED_NEWER_IN_PROGRESS")
+        self.assertEqual(calls,["123","c"*40,"122"])
+        with self.assertRaisesRegex(ValueError,"not successful"):
+            select_completed_learning_publication(current,lambda r:dict(id=r,head_branch="main",
+                head_sha="b"*40,status="completed",conclusion="failure"),lambda ref:self.fail("No fallback for failure"))
+
 if __name__ == "__main__":
     unittest.main()

@@ -239,8 +239,11 @@ def merge_market_state(cohort, eligibility, prior):
     attempts = dict(prior.get("last_attempt_generation", {}))
     successes = dict(prior.get("last_success_generation", {}))
     generation = cohort["ledger_generation"]
+    sequence = max(prior.get("attempt_sequence",0),max(attempts.values(),default=0))+1
+    attempt_sequence = dict(prior.get("last_attempt_sequence",attempts))
     for pair in cohort["selected_pairs"]:
         attempts[pair] = generation
+        attempt_sequence[pair] = sequence
     for pair in cohort["observed_pairs"]:
         successes[pair] = generation
     result = {"schema": STATE_SCHEMA, "ledger_generation": generation,
@@ -250,9 +253,52 @@ def merge_market_state(cohort, eligibility, prior):
               "anchors": [anchors[k] for k in sorted(anchors)],
               "outcomes": [outcomes[k] for k in sorted(outcomes)],
               "last_attempt_generation": attempts, "last_success_generation": successes,
+              "attempt_sequence": sequence,"last_attempt_sequence":attempt_sequence,
               "production_applied": False, "source_authenticated": False}
     result["digest"] = canonical_digest(result)
     return result
+
+
+
+def select_completed_learning_publication(publication, fetch_writer, fetch_parent):
+    """Choose one completed canonical writer, or its immediate immutable parent.
+
+    This is research input selection, not scanner delivery. Stale research
+    inputs may be replayed but may never be counted as timely predictions.
+    """
+    import re
+    def validate(p):
+        if (p.get("schema")!=2 or p.get("status")!="SUCCESS_PAPER_ONLY"
+                or p.get("publication_mode")!="ATOMIC_LEDGER_RESULTS"
+                or p.get("remote_readback_verified") is not True
+                or p.get("buy_approved") is not False or p.get("production_applied") is not False
+                or type(p.get("ledger_generation")) is not int or p["ledger_generation"]<=0
+                or not re.fullmatch(r"[0-9a-f]{40}",str(p.get("source_sha","")))
+                or not re.fullmatch(r"[0-9a-f]{64}",str(p.get("ledger_sha256","")))
+                or not str(p.get("run_id","")).isdigit()):
+            raise ValueError("Invalid canonical learning publication")
+    def writer(p):
+        w=fetch_writer(str(p["run_id"]))
+        if str(w.get("id"))!=str(p["run_id"]) or w.get("head_branch")!="main" or w.get("head_sha")!=p["source_sha"]:
+            raise ValueError("Learning writer identity mismatch")
+        return w
+    validate(publication)
+    w=writer(publication)
+    if w.get("status")=="completed" and w.get("conclusion")=="success":
+        return publication, "CANONICAL_COMPLETED"
+    if w.get("status") not in ("queued","in_progress"):
+        raise ValueError("Canonical learning writer not successful")
+    parent=publication.get("ledger_parent_commit","")
+    if not re.fullmatch(r"[0-9a-f]{40}",parent):
+        raise ValueError("Invalid immutable learning parent")
+    prior=fetch_parent(parent)
+    validate(prior)
+    if prior["ledger_generation"]!=publication["ledger_generation"]-1 or str(prior["run_id"])==str(publication["run_id"]):
+        raise ValueError("Learning parent continuity mismatch")
+    w=writer(prior)
+    if w.get("status")!="completed" or w.get("conclusion")!="success":
+        raise ValueError("Immediate learning parent not successful")
+    return prior, "IMMEDIATE_PARENT_COMPLETED_NEWER_IN_PROGRESS"
 
 
 def select_market_batch(ledger, *, batch_size=12, prior=None):
@@ -273,7 +319,7 @@ def select_market_batch(ledger, *, batch_size=12, prior=None):
     shard_count = (len(pairs) + batch_size - 1) // batch_size
     shard = (generation - 1) % shard_count
     if prior is not None:
-        attempts = prior['last_attempt_generation']
+        attempts = prior.get('last_attempt_sequence', prior['last_attempt_generation'])
         selected = sorted(pairs, key=lambda pair: (attempts.get(pair, 0), pair))[:batch_size]
         return pairs, selected, shard, shard_count
     return pairs, pairs[shard*batch_size:(shard+1)*batch_size], shard, shard_count
