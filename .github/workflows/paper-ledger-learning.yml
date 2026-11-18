@@ -11,6 +11,8 @@ on:
       - 'paper_pov/public_ledger_learning.py'
       - 'paper_pov/market_wide_learning.py'
       - 'paper_pov/test_market_wide_learning.py'
+      - 'paper_pov/post_q3_observed_recovery.py'
+      - 'paper_pov/test_post_q3_observed_recovery.py'
       - 'paper_pov/historical_paper_cohort.py'
       - 'paper_pov/kraken_observed_candles.py'
       - 'paper_pov/observed_kraken_outcomes.py'
@@ -287,3 +289,59 @@ jobs:
             evidence/frozen-q3-prospective.json
             evidence/market-wide-observed.json
           retention-days: 30
+
+  recover-post-q3-observations:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify retained-observation reconstruction contract
+        run: python -m unittest paper_pov.test_post_q3_observed_recovery -v
+      - name: Recover a bounded set of completed main learning artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/post-q3
+          # 14-day rolling history: sample approximately weekly from the
+          # retained artifact horizon. Old expired/missing runs stay unknown.
+          for day in 2026-10-18 2026-10-25 2026-11-01 2026-11-08 2026-11-17; do
+            chosen=""
+            while read -r id; do
+              test -n "$id" || continue
+              artifact=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/artifacts" --jq '.artifacts[] | select(.expired==false and (.name|startswith("public-paper-learning-"))) | .name' | head -n 1)
+              if [ -z "$artifact" ]; then continue; fi
+              chosen="$id"
+              mkdir -p "evidence/post-q3/$id"
+              gh run download "$id" -n "$artifact" -D "evidence/post-q3/$id"
+              test -s "evidence/post-q3/$id/kraken-candles.json"
+              break
+            done < <(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/paper-ledger-learning.yml/runs" -f branch=main -f status=success -f created="$day" -f per_page=10 --jq '.workflow_runs[].id')
+            echo "RETAINED_OBSERVATION_DAY=$day RUN=${chosen:-UNAVAILABLE}"
+          done
+          shopt -s nullglob
+          snapshots=(evidence/post-q3/*/kraken-candles.json)
+          if [ "${#snapshots[@]}" -eq 0 ]; then
+            echo "::notice::No retained post-Q3 learning artifacts available; coverage remains unknown"
+            exit 0
+          fi
+          python -m paper_pov.post_q3_observed_recovery "${snapshots[@]}" \
+            --end 2026-11-18T00:00:00Z \
+            --cohorts evidence/post-q3-cohorts.jsonl.gz --output evidence/post-q3-summary.json
+          (cd evidence && sha256sum post-q3-cohorts.jsonl.gz post-q3-summary.json > POST-Q3-SHA256SUMS)
+      - name: Preserve post-Q3 observation evidence separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-q3-observed-recovery-${{ github.run_id }}
+          path: |
+            evidence/post-q3-cohorts.jsonl.gz
+            evidence/post-q3-summary.json
+            evidence/POST-Q3-SHA256SUMS
+          retention-days: 90
+          if-no-files-found: ignore
