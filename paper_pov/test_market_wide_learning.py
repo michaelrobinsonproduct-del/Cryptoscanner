@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, timedelta, timezone
-from .market_wide_learning import build_market_cohort
+from paper_pov.market_wide_learning import build_market_cohort
 
 class MarketWideLearningTest(unittest.TestCase):
     def test_unselected_market_and_negative_control(self):
@@ -32,7 +32,7 @@ class MarketWideLearningTest(unittest.TestCase):
             self.assertEqual(result["per_horizon"][h]["hits"], 0)
 
     def test_features_reuse_existing_contract_without_future_leakage(self):
-        from .frozen_historical_shadow import NAMES
+        from paper_pov.frozen_historical_shadow import NAMES
         start = datetime(2026, 1, 1, tzinfo=timezone.utc)
         rows = [dict(pair="GAINUSD", timestamp_utc=(start+timedelta(minutes=5*i)).isoformat(),
                      close=100 if i < 24 else 135, high=100 if i < 24 else 135,
@@ -46,7 +46,7 @@ class MarketWideLearningTest(unittest.TestCase):
         self.assertEqual(result["anchors"][0]["features"], later["anchors"][0]["features"])
 
     def test_real_source_adapter_rotates_without_watchs_and_checks_asof_eligibility(self):
-        from .market_wide_learning import run_observed_market_batch, select_market_batch
+        from paper_pov.market_wide_learning import run_observed_market_batch, select_market_batch
         start = datetime(2026, 1, 1, tzinfo=timezone.utc)
         at = lambda minutes: (start+timedelta(minutes=minutes)).isoformat()
         ledger = {"generation": 2, "runs": [{"id": "latest", "as_of": at(120), "observation_count": 2}],
@@ -78,7 +78,7 @@ class MarketWideLearningTest(unittest.TestCase):
         import tempfile
         import zipfile
         from pathlib import Path
-        from .market_wide_learning import run_archive_market_cohorts
+        from paper_pov.market_wide_learning import run_archive_market_cohorts
         start = datetime(2026, 1, 1, tzinfo=timezone.utc)
         with tempfile.TemporaryDirectory() as temp:
             archive, output = Path(temp)/"source.zip", Path(temp)/"rows.jsonl.gz"
