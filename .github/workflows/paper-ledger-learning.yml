@@ -93,142 +93,6 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ -f /tmp/market-canonical.json ]; then
             python -c 'import json; a=json.load(open("/tmp/market-canonical.json")); b=json.load(open("ledger.json")); assert a["ledger_generation"]==b["generation"], "Canonical artifact generation mismatch"'
           fi
-      - name: Exercise real Kraken market-wide discovery on isolated PR shard
-        if: github.event_name == 'pull_request'
-        env:
-          PR_BRANCH: ${{ github.head_ref }}
-        run: |
-          set -euo pipefail
-          mkdir -p evidence/market-prior
-          # PR-only continuity, isolated from main and the canonical writer.
-          # Only successful completed jobs on this exact PR branch may seed it.
-          prior_run=""
-          while read -r candidate; do
-            test -n "$candidate" || continue
-            status=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate" --jq '.status + ":" + (.conclusion // "")')
-            if [ "$status" = "completed:success" ]; then
-              prior_run="$candidate"
-              break
-            fi
-          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate \
-            --jq '.artifacts[] | select(.expired == false and (.name | startswith("market-wide-learning-continuity-pr-"))) | [.workflow_run.head_branch,.workflow_run.id] | @tsv' | awk -v branch="$PR_BRANCH" '$1 == branch {print $2}' | sort -unr)
-          prior_args=()
-          model_path=historical/evidence/q3_2026_frozen_shadow_v1.json
-          model_ready=2026-11-11T03:27:00Z
-          if [ -n "$prior_run" ]; then
-            gh run download "$prior_run" -n "market-wide-learning-continuity-pr-$prior_run" -D evidence/market-prior
-            test -s evidence/market-prior/market-wide-state.json
-            echo "MARKET_LEARNING_PRIOR_RUN=$prior_run"
-            echo "$prior_run" > evidence/market-prior-run.txt
-            # Known incident checkpoint: recover evidence lost by unordered prior discovery.
-            if [ "$prior_run" -ge 44221452274 ] && ! python -c 'import json; d=json.load(open("evidence/market-prior/market-wide-state.json")); raise SystemExit(not d.get("continuity_recovery_44220533486"))'; then
-              mkdir -p evidence/market-recovery
-              gh run download 44220533486 -n market-wide-learning-continuity-pr-44220533486 -D evidence/market-recovery
-              python -c 'import json; from pathlib import Path; from paper_pov.market_wide_learning import recover_market_state; from paper_pov.shadow_learning_evidence import canonical_digest; p=Path("evidence/market-prior/market-wide-state.json"); d=recover_market_state(json.loads(p.read_text()),json.load(open("evidence/market-recovery/market-wide-state.json"))); d["continuity_recovery_44220533486"]=True; d["digest"]=canonical_digest({k:v for k,v in d.items() if k!="digest"}); p.write_text(json.dumps(d)); print("MARKET_LEARNING_RECOVERED",len(d["anchors"]),len(d["shadow_predictions"]))'
-            fi
-            prior_args=(--prior-state evidence/market-prior/market-wide-state.json)
-            # Preserve the prior active model when scanning the same writer generation.
-            if [ -s evidence/market-prior/market-wide-scoring-model.json ] && [ -s evidence/market-prior/market-wide-scoring-model-available.txt ]; then
-              ready=$(python -c 'from pathlib import Path; print(Path("evidence/market-prior/market-wide-scoring-model-available.txt").read_text().strip().removesuffix(chr(92)+"n"))')
-              if python -c 'import json,sys; from paper_pov.market_wide_learning import eligible_scoring_model; a=json.load(open("evidence/ledger.json")); m=json.load(open(sys.argv[1])); sys.exit(not eligible_scoring_model(m,sys.argv[2],a["runs"][-1]["as_of"]))' evidence/market-prior/market-wide-scoring-model.json "$ready"; then
-                model_path=evidence/market-prior/market-wide-scoring-model.json
-                model_ready="$ready"
-              fi
-            fi
-            if [ -s evidence/market-prior/market-wide-model.json ]; then
-              origin="$prior_run"
-              if [ -s evidence/market-prior/market-wide-model-origin-run.txt ]; then
-                origin=$(cat evidence/market-prior/market-wide-model-origin-run.txt)
-              fi
-              [[ "$origin" =~ ^[0-9]+$ ]]
-              test "$origin" -le "$prior_run"
-              test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq '.status + ":" + (.conclusion // "") + ":" + .head_branch')" = "completed:success:$PR_BRANCH"
-              completed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq .updated_at)
-              if python -c 'import json,sys; from paper_pov.market_wide_learning import eligible_scoring_model; a=json.load(open("evidence/ledger.json")); m=json.load(open(sys.argv[1])); sys.exit(not eligible_scoring_model(m,sys.argv[2],a["runs"][-1]["as_of"]))' evidence/market-prior/market-wide-model.json "$completed"; then
-                model_path=evidence/market-prior/market-wide-model.json
-                model_ready="$completed"
-              fi
-            fi
-          else
-            echo "MARKET_LEARNING_PR_BOOTSTRAP_NO_COMPLETED_PRIOR"
-          fi
-          cp "$model_path" evidence/market-wide-scoring-model.json
-          printf '%s\n' "$model_ready" > evidence/market-wide-scoring-model-available.txt
-          model_args=(--shadow-model evidence/market-wide-scoring-model.json --shadow-model-available "$model_ready")
-          python -m paper_pov.market_wide_learning evidence/ledger.json --batch-size 12 --include-watch-controls \
-            "${prior_args[@]}" --state-output evidence/market-wide-state.json \
-            "${model_args[@]}" \
-            --output evidence/market-wide-observed.json
-      - name: Train cumulative shadow on retained historical and recent mature labels
-        if: github.event_name == 'pull_request'
-        run: |
-          set -euo pipefail
-          mkdir -p evidence/historical-seed
-          gh run download 44220694272 -n kraken-q3-frozen-48h-shadow-44220694272 -D evidence/historical-seed
-          (cd evidence/historical-seed && sha256sum -c MARKET-WIDE-SHA256SUMS)
-          python -c 'import json; d=json.load(open("evidence/historical-seed/market-wide-summary.json")); assert d["pinned_archive_verified"] is True and d["start_utc"]=="2026-07-01T00:00:00+00:00" and d["end_utc"]=="2026-10-01T00:00:00+00:00"'
-          mkdir -p evidence/historical-q2
-          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/44220694310" --jq '.status + ":" + (.conclusion // "") + ":" + .head_sha')" = "completed:success:8b701967fed44336df210fb971642ffff209e241"
-          gh run download 44220694310 -n market-wide-q2-9caa513fe54a2e31559b1b8dc4eb61be771c04c7eb944c8cd02237ee9291224c -D evidence/historical-q2
-          (cd evidence/historical-q2 && sha256sum -c Q2-MARKET-WIDE-SHA256SUMS)
-          python -c 'import json; d=json.load(open("evidence/historical-q2/q2-market-wide-summary.json")); assert d["pinned_archive_verified"] is True and d["archive_sha256"]=="fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4" and d["start_utc"]=="2025-11-17T00:00:00+00:00" and d["end_utc"]=="2026-07-01T00:00:00+00:00"'
-          mkdir -p evidence/historical-recovered
-          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/134545420953" --jq '.status + ":" + (.conclusion // "") + ":" + (.run_id|tostring) + ":" + .head_sha')" = "completed:success:44227877790:cbe95bcd007cf46ec9b73168c193838d477d89a9"
-          gh run download 44227877790 -n post-q3-observed-recovery-44227877790 -D evidence/historical-recovered
-          (cd evidence/historical-recovered && sha256sum -c POST-Q3-SHA256SUMS)
-          python -c 'import json; d=json.load(open("evidence/historical-recovered/post-q3-summary.json")); assert d["snapshot_set_sha256"]=="b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef" and d["coverage_scope"]=="PARTIAL_PREDICTION_SELECTED_NOT_MARKET_WIDE"'
-          mkdir -p evidence/historical-trades
-          trade_run=""
-          while read -r candidate; do
-            if [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate" --jq '.status + ":" + (.conclusion // "")')" = "completed:success" ]; then
-              trade_run="$candidate"
-              break
-            fi
-          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.expired==false and (.name|startswith("historical-trade-batch-"))) | [.workflow_run.head_branch,.workflow_run.id] | @tsv' | awk -v branch="$GITHUB_HEAD_REF" '$1 == branch {print $2}' | sort -unr)
-          test -n "$trade_run"
-          gh run download "$trade_run" -n "historical-trade-batch-$trade_run" -D evidence/historical-trades
-          python -m paper_pov.market_wide_learning evidence/historical-seed/market-wide-cohorts.jsonl.gz \
-            --historical-trade-directory evidence/historical-trades \
-            --cumulative-state evidence/market-wide-state.json \
-            --cumulative-archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
-            --additional-archive evidence/historical-q2/q2-market-wide-cohorts.jsonl.gz fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 \
-            --retained-observed evidence/historical-recovered/post-q3-cohorts.jsonl.gz b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef \
-            --output evidence/market-wide-training-report.json
-          export PRIOR_MARKET_RUN=""
-          if [ -s evidence/market-prior/market-wide-model-origin-run.txt ]; then
-            PRIOR_MARKET_RUN=$(cat evidence/market-prior/market-wide-model-origin-run.txt)
-          fi
-          python - <<'PY'
-          import json,os
-          from pathlib import Path
-          from paper_pov.market_wide_learning import choose_fitted_candidate
-          current=json.loads(Path("evidence/market-wide-training-report.json").read_text())
-          prior=Path("evidence/market-prior/market-wide-model.json")
-          chosen,reused=choose_fitted_candidate(current,json.loads(prior.read_text()) if prior.is_file() else None)
-          origin=os.environ["GITHUB_RUN_ID"]
-          if reused:
-              origin=os.environ.get("PRIOR_MARKET_RUN") or Path("evidence/market-prior-run.txt").read_text().strip()
-          if not origin.isdigit():
-              raise ValueError("Invalid candidate model origin")
-          Path("evidence/market-wide-model.json").write_text(json.dumps(chosen,sort_keys=True))
-          Path("evidence/market-wide-model-origin-run.txt").write_text(origin+chr(10))
-          print("FROZEN_CANDIDATE",chosen["model"]["version"],"REUSED",reused,"ORIGIN",origin)
-          PY
-          python -c 'import json; d=json.load(open("evidence/market-wide-model.json")); assert d["model"]["status"]=="SHADOW_ONLY"; assert d["purge_hours"]==48 and len(d["archive_cohort_receipts"])==2'
-      - name: Retain isolated market learning state for the next successful PR replay
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: market-wide-learning-continuity-pr-${{ github.run_id }}
-          path: |
-            evidence/market-wide-state.json
-            evidence/market-wide-model.json
-            evidence/market-wide-model-origin-run.txt
-            evidence/market-wide-training-report.json
-            evidence/market-wide-scoring-model.json
-            evidence/market-wide-scoring-model-available.txt
-          if-no-files-found: error
-          retention-days: 90
       - name: Reconstruct real persisted paper outcome accounting
         run: python -m paper_pov.public_ledger_learning evidence/ledger.json --output evidence/learning-state.json --report evidence/learning-report.md
       - name: Select pairs with recent persisted paper predictions
@@ -368,6 +232,218 @@ jobs:
             evidence/market-wide-observed.json
           retention-days: 30
 
+  market-wide-shadow-learning:
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: market-wide-shadow-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Focused market learning acceptance
+        run: python -m unittest paper_pov.test_market_wide_learning -v
+      - name: Select latest persisted public paper ledger
+        env:
+          REQUESTED_RUN: ${{ inputs.paper_run_id }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          RUN_ID="$REQUESTED_RUN"
+          # Resolve the latest completed publication independently of the trigger.
+          if true; then
+            RUN_ID=$(python - <<'PY'
+          import base64,json,os,subprocess,sys
+          from pathlib import Path
+          from paper_pov.market_wide_learning import select_completed_learning_publication
+          repo=os.environ["GH_REPO"]
+          def api(path):
+              return json.loads(subprocess.check_output(["gh","api",f"repos/{repo}/{path}"]))
+          def publication(ref):
+              return json.loads(base64.b64decode(api(f"contents/verified-results/results.json?ref={ref}")["content"]))
+          selected,mode=select_completed_learning_publication(
+              publication("paper-proof-ledger"),lambda r:api(f"actions/runs/{r}"),publication)
+          Path("/tmp/market-canonical.json").write_text(json.dumps(selected))
+          print(mode,file=sys.stderr)
+          print(selected["run_id"])
+          PY
+            )
+            test -n "$RUN_ID"
+          fi
+          if [ -z "$RUN_ID" ]; then
+            RUN_ID=$(gh api -X GET "repos/$GH_REPO/actions/artifacts?per_page=100" --jq '.artifacts[] | select(.expired == false and (.name | startswith("public-paper-ledger-"))) | .workflow_run.id' | head -n 1)
+          fi
+          test -n "$RUN_ID"
+          echo "PAPER_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+      - name: Read existing paper ledger artifact
+        run: |
+          mkdir -p evidence
+          gh run download "$PAPER_RUN_ID" -n "public-paper-ledger-$PAPER_RUN_ID" -D evidence
+          cd evidence
+          sha256sum -c SHA256SUMS
+          if [ -f /tmp/market-canonical.json ]; then
+            python -c 'import json; a=json.load(open("/tmp/market-canonical.json")); b=json.load(open("ledger.json")); assert a["ledger_generation"]==b["generation"], "Canonical artifact generation mismatch"'
+          fi
+      - name: Score and retain independent market-wide shadow shard
+        env:
+          LEARNING_BRANCH: ${{ github.head_ref || github.ref_name }}
+          LEARNING_SCOPE: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/market-prior
+          # Normal ancestry is branch-isolated. Main has one explicit research
+          # bootstrap receipt; it never searches arbitrary PR artifacts.
+          prior_run=""
+          prior_prefix="market-wide-learning-continuity-$LEARNING_SCOPE-"
+          prior_branch="$LEARNING_BRANCH"
+          while read -r candidate; do
+            test -n "$candidate" || continue
+            status=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate" --jq '.status + ":" + (.conclusion // "")')
+            if [ "$status" = "completed:success" ]; then
+              prior_run="$candidate"
+              break
+            fi
+          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate \
+            --jq '.artifacts[] | select(.expired == false and (.name | startswith("market-wide-learning-continuity-"))) | [.workflow_run.head_branch,.workflow_run.id,.name] | @tsv' | awk -v branch="$LEARNING_BRANCH" -v prefix="$prior_prefix" '$1 == branch && index($3,prefix)==1 {print $2}' | sort -unr)
+          if [ -z "$prior_run" ] && [ "$LEARNING_SCOPE" = "main" ]; then
+            prior_run=44243388087
+            prior_prefix=market-wide-learning-continuity-pr-
+            prior_branch=learning-market-wide-20261117
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run" --jq '.status + ":" + (.conclusion // "") + ":" + .head_sha')" = "completed:success:ca97cec2c6f3f8d2577e03299b36f6cbc21fc87a"
+            echo "MAIN_RESEARCH_BOOTSTRAP_PINNED=$prior_run"
+          fi
+          prior_args=()
+          model_path=historical/evidence/q3_2026_frozen_shadow_v1.json
+          model_ready=2026-11-11T03:27:00Z
+          if [ -n "$prior_run" ]; then
+            gh run download "$prior_run" -n "$prior_prefix$prior_run" -D evidence/market-prior
+            test -s evidence/market-prior/market-wide-state.json
+            echo "MARKET_LEARNING_PRIOR_RUN=$prior_run"
+            echo "$prior_run" > evidence/market-prior-run.txt
+            # Known incident checkpoint: recover evidence lost by unordered prior discovery.
+            if [ "$LEARNING_SCOPE" = "pr" ] && [ "$prior_run" -ge 44221452274 ] && ! python -c 'import json; d=json.load(open("evidence/market-prior/market-wide-state.json")); raise SystemExit(not d.get("continuity_recovery_44220533486"))'; then
+              mkdir -p evidence/market-recovery
+              gh run download 44220533486 -n market-wide-learning-continuity-pr-44220533486 -D evidence/market-recovery
+              python -c 'import json; from pathlib import Path; from paper_pov.market_wide_learning import recover_market_state; from paper_pov.shadow_learning_evidence import canonical_digest; p=Path("evidence/market-prior/market-wide-state.json"); d=recover_market_state(json.loads(p.read_text()),json.load(open("evidence/market-recovery/market-wide-state.json"))); d["continuity_recovery_44220533486"]=True; d["digest"]=canonical_digest({k:v for k,v in d.items() if k!="digest"}); p.write_text(json.dumps(d)); print("MARKET_LEARNING_RECOVERED",len(d["anchors"]),len(d["shadow_predictions"]))'
+            fi
+            prior_args=(--prior-state evidence/market-prior/market-wide-state.json)
+            # Preserve the prior active model when scanning the same writer generation.
+            if [ -s evidence/market-prior/market-wide-scoring-model.json ] && [ -s evidence/market-prior/market-wide-scoring-model-available.txt ]; then
+              ready=$(python -c 'from pathlib import Path; print(Path("evidence/market-prior/market-wide-scoring-model-available.txt").read_text().strip().removesuffix(chr(92)+"n"))')
+              if python -c 'import json,sys; from paper_pov.market_wide_learning import eligible_scoring_model; a=json.load(open("evidence/ledger.json")); m=json.load(open(sys.argv[1])); sys.exit(not eligible_scoring_model(m,sys.argv[2],a["runs"][-1]["as_of"]))' evidence/market-prior/market-wide-scoring-model.json "$ready"; then
+                model_path=evidence/market-prior/market-wide-scoring-model.json
+                model_ready="$ready"
+              fi
+            fi
+            if [ -s evidence/market-prior/market-wide-model.json ]; then
+              origin="$prior_run"
+              if [ -s evidence/market-prior/market-wide-model-origin-run.txt ]; then
+                origin=$(cat evidence/market-prior/market-wide-model-origin-run.txt)
+              fi
+              [[ "$origin" =~ ^[0-9]+$ ]]
+              test "$origin" -le "$prior_run"
+              origin_branch=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq '.head_branch')
+              if [ "$origin_branch" != "$LEARNING_BRANCH" ]; then
+                test "$LEARNING_SCOPE" = "main"
+                test "$origin" = "44243388087"
+                test "$origin_branch" = "learning-market-wide-20261117"
+              fi
+              test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq '.status + ":" + (.conclusion // "")')" = "completed:success"
+              completed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq .updated_at)
+              if python -c 'import json,sys; from paper_pov.market_wide_learning import eligible_scoring_model; a=json.load(open("evidence/ledger.json")); m=json.load(open(sys.argv[1])); sys.exit(not eligible_scoring_model(m,sys.argv[2],a["runs"][-1]["as_of"]))' evidence/market-prior/market-wide-model.json "$completed"; then
+                model_path=evidence/market-prior/market-wide-model.json
+                model_ready="$completed"
+              fi
+            fi
+          else
+            echo "MARKET_LEARNING_PR_BOOTSTRAP_NO_COMPLETED_PRIOR"
+          fi
+          cp "$model_path" evidence/market-wide-scoring-model.json
+          printf '%s\n' "$model_ready" > evidence/market-wide-scoring-model-available.txt
+          model_args=(--shadow-model evidence/market-wide-scoring-model.json --shadow-model-available "$model_ready")
+          python -m paper_pov.market_wide_learning evidence/ledger.json --batch-size 12 --include-watch-controls \
+            "${prior_args[@]}" --state-output evidence/market-wide-state.json \
+            "${model_args[@]}" \
+            --output evidence/market-wide-observed.json
+      - name: Train cumulative shadow on retained historical and recent mature labels
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/historical-seed
+          gh run download 44220694272 -n kraken-q3-frozen-48h-shadow-44220694272 -D evidence/historical-seed
+          (cd evidence/historical-seed && sha256sum -c MARKET-WIDE-SHA256SUMS)
+          python -c 'import json; d=json.load(open("evidence/historical-seed/market-wide-summary.json")); assert d["pinned_archive_verified"] is True and d["start_utc"]=="2026-07-01T00:00:00+00:00" and d["end_utc"]=="2026-10-01T00:00:00+00:00"'
+          mkdir -p evidence/historical-q2
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/44220694310" --jq '.status + ":" + (.conclusion // "") + ":" + .head_sha')" = "completed:success:8b701967fed44336df210fb971642ffff209e241"
+          gh run download 44220694310 -n market-wide-q2-9caa513fe54a2e31559b1b8dc4eb61be771c04c7eb944c8cd02237ee9291224c -D evidence/historical-q2
+          (cd evidence/historical-q2 && sha256sum -c Q2-MARKET-WIDE-SHA256SUMS)
+          python -c 'import json; d=json.load(open("evidence/historical-q2/q2-market-wide-summary.json")); assert d["pinned_archive_verified"] is True and d["archive_sha256"]=="fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4" and d["start_utc"]=="2025-11-17T00:00:00+00:00" and d["end_utc"]=="2026-07-01T00:00:00+00:00"'
+          mkdir -p evidence/historical-recovered
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/134545420953" --jq '.status + ":" + (.conclusion // "") + ":" + (.run_id|tostring) + ":" + .head_sha')" = "completed:success:44227877790:cbe95bcd007cf46ec9b73168c193838d477d89a9"
+          gh run download 44227877790 -n post-q3-observed-recovery-44227877790 -D evidence/historical-recovered
+          (cd evidence/historical-recovered && sha256sum -c POST-Q3-SHA256SUMS)
+          python -c 'import json; d=json.load(open("evidence/historical-recovered/post-q3-summary.json")); assert d["snapshot_set_sha256"]=="b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef" and d["coverage_scope"]=="PARTIAL_PREDICTION_SELECTED_NOT_MARKET_WIDE"'
+          mkdir -p evidence/historical-trades
+          trade_run=""
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            trade_run=44243388087
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$trade_run" --jq '.status + ":" + (.conclusion // "") + ":" + .head_sha')" = "completed:success:ca97cec2c6f3f8d2577e03299b36f6cbc21fc87a"
+          else
+          while read -r candidate; do
+            if [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate" --jq '.status + ":" + (.conclusion // "")')" = "completed:success" ]; then
+              trade_run="$candidate"
+              break
+            fi
+          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.expired==false and (.name|startswith("historical-trade-batch-"))) | [.workflow_run.head_branch,.workflow_run.id] | @tsv' | awk -v branch="$GITHUB_HEAD_REF" '$1 == branch {print $2}' | sort -unr)
+          fi
+          test -n "$trade_run"
+          gh run download "$trade_run" -n "historical-trade-batch-$trade_run" -D evidence/historical-trades
+          python -m paper_pov.market_wide_learning evidence/historical-seed/market-wide-cohorts.jsonl.gz \
+            --historical-trade-directory evidence/historical-trades \
+            --cumulative-state evidence/market-wide-state.json \
+            --cumulative-archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
+            --additional-archive evidence/historical-q2/q2-market-wide-cohorts.jsonl.gz fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 \
+            --retained-observed evidence/historical-recovered/post-q3-cohorts.jsonl.gz b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef \
+            --output evidence/market-wide-training-report.json
+          export PRIOR_MARKET_RUN=""
+          if [ -s evidence/market-prior/market-wide-model-origin-run.txt ]; then
+            PRIOR_MARKET_RUN=$(cat evidence/market-prior/market-wide-model-origin-run.txt)
+          fi
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from paper_pov.market_wide_learning import choose_fitted_candidate
+          current=json.loads(Path("evidence/market-wide-training-report.json").read_text())
+          prior=Path("evidence/market-prior/market-wide-model.json")
+          chosen,reused=choose_fitted_candidate(current,json.loads(prior.read_text()) if prior.is_file() else None)
+          origin=os.environ["GITHUB_RUN_ID"]
+          if reused:
+              origin=os.environ.get("PRIOR_MARKET_RUN") or Path("evidence/market-prior-run.txt").read_text().strip()
+          if not origin.isdigit():
+              raise ValueError("Invalid candidate model origin")
+          Path("evidence/market-wide-model.json").write_text(json.dumps(chosen,sort_keys=True))
+          Path("evidence/market-wide-model-origin-run.txt").write_text(origin+chr(10))
+          print("FROZEN_CANDIDATE",chosen["model"]["version"],"REUSED",reused,"ORIGIN",origin)
+          PY
+          python -c 'import json; d=json.load(open("evidence/market-wide-model.json")); assert d["model"]["status"]=="SHADOW_ONLY"; assert d["purge_hours"]==48 and len(d["archive_cohort_receipts"])==2'
+      - name: Retain independent market learning state for the next successful run
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-wide-learning-continuity-${{ github.event_name == 'pull_request' && 'pr' || 'main' }}-${{ github.run_id }}
+          path: |
+            evidence/market-wide-state.json
+            evidence/market-wide-model.json
+            evidence/market-wide-model-origin-run.txt
+            evidence/market-wide-training-report.json
+            evidence/market-wide-scoring-model.json
+            evidence/market-wide-scoring-model-available.txt
+          if-no-files-found: error
+          retention-days: 90
   recover-post-q3-observations:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
