@@ -102,6 +102,14 @@ def run_batch(pairs,directory,*,prior=None,seed=None,batch_size=3,page_budget=10
         resume=[k for k in pending if k not in chosen and key_name(k) in records]
         if resume and len(chosen)<batch_size:
             chosen.append(resume[0])
+    # Give previously blocked windows a bounded explicit recovery slot.
+    # Never let repeat API/identity failures displace independent coverage.
+    if batch_size>=4:
+        retry=[k for k in pending if k not in chosen and key_name(k) in failures and failures[key_name(k)].get("attempts",0)<3]
+        if retry:
+            chosen.append(retry[0])
+        candidates=[k for k in pending if k not in chosen and key_name(k) in priorities]
+        chosen.extend(candidates[:max(0,batch_size-len(chosen)-1)])
     chosen.extend(k for k in pending if k not in chosen)
     attempted=[]
     for key in chosen[:batch_size]:
@@ -174,8 +182,8 @@ def main():
     prior_discovery=None
     if a.prior and (a.prior/"coarse-discovery.json").is_file():
         prior_discovery=json.loads((a.prior/"coarse-discovery.json").read_text())
-    discovery=discover(pairs,prior_discovery)
-    run_batch(pairs,a.output_dir,prior=a.prior,seed=a.seed,
+    discovery=discover(pairs,prior_discovery,budget=60)
+    run_batch(pairs,a.output_dir,prior=a.prior,seed=a.seed,batch_size=6,page_budget=10,
               priority_windows=prioritized_windows(discovery))
     (a.output_dir/"coarse-discovery.json").write_text(json.dumps(discovery,sort_keys=True)+"\n")
 
