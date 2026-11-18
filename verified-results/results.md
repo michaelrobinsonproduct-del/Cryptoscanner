@@ -2,39 +2,39 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-18T03:10:05.030856+00:00
+**UTC as-of:** 2026-11-18T03:15:07.150125+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44228410900
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44229012698
 **Source SHA:** 394c17eeb7071fba40e02dbbb1ea97cedb3a0a8a
-**Previous ledger commit:** d03eda8ee83ecaed9cba2ae140953b3347398c8f (atomic ledger/results publication)
-**Ledger generation:** 515 (remote push/readback verified)
+**Previous ledger commit:** 2c556e77b9a3861f98268a4c156ccd00df815be1 (atomic ledger/results publication)
+**Ledger generation:** 516 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 10.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | ICNT/USD | 0.2839 | 60.290 | 39.768 | +2.83% | +1.83% | 2.14x | 24.6 | 2026-11-18T03:10:01.579801+00:00 | Not calibrated | STRONG 75/100 | VERY_HIGH 72/100 | Watch | WATCH |
-| 2 | PIEVERSE/USD | 2.15 | 58.401 | 62.062 | +4.95% | +0.04% | 0.62x | 8.8 | 2026-11-18T03:10:01.579801+00:00 | Not calibrated | MODERATE 49/100 | VERY_HIGH 75/100 | Watch | WATCH |
-| 3 | CC/USD | 0.08333 | 56.924 | 44.147 | +1.46% | +1.20% | 1.68x | 2.4 | 2026-11-18T03:10:01.579801+00:00 | Not calibrated | STRONG 73/100 | HIGH 60/100 | Watch | WATCH |
-| 4 | ZAMA/USD | 0.06014 | 50.949 | 29.208 | +0.35% | +1.35% | 3.33x | 13.3 | 2026-11-18T03:10:01.579801+00:00 | Not calibrated | STRONG 75/100 | HIGH 66/100 | Watch | WATCH |
-| 5 | AKT/USD | 0.5218 | 41.090 | 41.914 | +2.45% | +0.00% | 0.92x | 15.3 | 2026-11-18T03:10:01.579801+00:00 | Not calibrated | WEAK 36/100 | VERY_HIGH 73/100 | Watch | WATCH |
-| 6 | SENT/USD | 0.018761 | 39.517 | 32.431 | +0.49% | +0.99% | 1.21x | 3.7 | 2026-11-18T03:10:01.579801+00:00 | Not calibrated | MODERATE 55/100 | VERY_HIGH 74/100 | Watch | WATCH |
-| 7 | TON/USD | 1.08 | 34.158 | 36.235 | +0.28% | +0.09% | 0.75x | 9.3 | 2026-11-18T03:10:01.579801+00:00 | Not calibrated | WEAK 37/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 1 | ICNT/USD | 0.2835 | 58.012 | 40.442 | +2.68% | +1.54% | 1.99x | 21.2 | 2026-11-18T03:15:03.610062+00:00 | Not calibrated | MODERATE 64/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 2 | PIEVERSE/USD | 2.1576 | 53.928 | 56.076 | +5.32% | +0.41% | 0.58x | 26.0 | 2026-11-18T03:15:03.610062+00:00 | Not calibrated | MODERATE 47/100 | EXTREME 87/100 | Do nothing | WATCH |
+| 3 | CC/USD | 0.08344 | 53.146 | 42.088 | +1.59% | +0.59% | 1.81x | 8.4 | 2026-11-18T03:15:03.610062+00:00 | Not calibrated | STRONG 72/100 | HIGH 60/100 | Watch | WATCH |
+| 4 | ZAMA/USD | 0.0602 | 49.020 | 30.760 | +0.45% | +0.65% | 4.67x | 11.6 | 2026-11-18T03:15:03.610062+00:00 | Not calibrated | STRONG 75/100 | HIGH 66/100 | Watch | WATCH |
+| 5 | AKE/USD | 0.01003308 | 36.275 | 28.565 | +0.49% | -1.46% | 4.05x | 19.1 | 2026-11-18T03:15:03.610062+00:00 | Not calibrated | WEAK 43/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
+| 6 | AKT/USD | 0.521 | 34.692 | 42.708 | +2.30% | -0.38% | 0.39x | 11.5 | 2026-11-18T03:15:03.610062+00:00 | Not calibrated | WEAK 17/100 | EXTREME 87/100 | Do nothing | WATCH |
+| 7 | SENT/USD | 0.018748 | 31.116 | 30.607 | +0.42% | +0.13% | 0.98x | 6.4 | 2026-11-18T03:15:03.610062+00:00 | Not calibrated | WEAK 36/100 | VERY_HIGH 74/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | PIEVERSE/USD | 62.062 | 2.15 | +0.04% | 0.62x |
-| 2 | CC/USD | 44.147 | 0.08333 | +1.20% | 1.68x |
-| 3 | AKT/USD | 41.914 | 0.5218 | +0.00% | 0.92x |
-| 4 | ICNT/USD | 39.768 | 0.2839 | +1.83% | 2.14x |
-| 5 | TON/USD | 36.235 | 1.08 | +0.09% | 0.75x |
-| 6 | SENT/USD | 32.431 | 0.018761 | +0.99% | 1.21x |
-| 7 | ZAMA/USD | 29.208 | 0.06014 | +1.35% | 3.33x |
+| 1 | PIEVERSE/USD | 56.076 | 2.1576 | +0.41% | 0.58x |
+| 2 | AKT/USD | 42.708 | 0.521 | -0.38% | 0.39x |
+| 3 | CC/USD | 42.088 | 0.08344 | +0.59% | 1.81x |
+| 4 | ICNT/USD | 40.442 | 0.2835 | +1.54% | 1.99x |
+| 5 | ZAMA/USD | 30.760 | 0.0602 | +0.65% | 4.67x |
+| 6 | SENT/USD | 30.607 | 0.018748 | +0.13% | 0.98x |
+| 7 | AKE/USD | 28.565 | 0.01003308 | -1.46% | 4.05x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -50,8 +50,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 515; predictions: 4358; observations: 310642.
-- Matured sampled outcomes across 1/6/24/48h: 3503; gap abstentions: 12424. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 516; predictions: 4365; observations: 311251.
+- Matured sampled outcomes across 1/6/24/48h: 3507; gap abstentions: 12424. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 0 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -67,30 +67,28 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44228410900 · **Generation:** 515 · **Legacy run:** 44228410900
-**Main quote time:** 2026-11-18T03:10:05.030856+00:00 · **Legacy report time:** 2026-11-18T03:10:22.055135+00:00
+**Writer:** 44229012698 · **Generation:** 516 · **Legacy run:** 44229012698
+**Main quote time:** 2026-11-18T03:15:07.150125+00:00 · **Legacy report time:** 2026-11-18T03:15:22.744616+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | ICNT/USD ⭐ | 0.2839 | 60.29 | +1.83% | 2.14x | STRONG 85/100 | VERY_HIGH 72/100 | Watch |
-| 2 | PIEVERSE/USD | 2.15 | 58.40 | +0.04% | 0.62x | MODERATE 49/100 | VERY_HIGH 75/100 | Watch |
-| 3 | CC/USD ⭐ | 0.08333 | 56.92 | +1.20% | 1.68x | STRONG 83/100 | HIGH 60/100 | Consider small entry |
-| 4 | ZAMA/USD ⭐ | 0.06014 | 50.95 | +1.35% | 3.33x | STRONG 85/100 | HIGH 66/100 | Consider small entry |
-| 5 | AKT/USD | 0.5218 | 41.09 | +0.00% | 0.92x | WEAK 36/100 | VERY_HIGH 73/100 | Watch |
-| 6 | SENT/USD ⭐ | 0.018761 | 39.52 | +0.99% | 1.21x | MODERATE 65/100 | VERY_HIGH 74/100 | Watch |
-| 7 | TON/USD | 1.08 | 34.16 | +0.09% | 0.75x | WEAK 37/100 | VERY_HIGH 70/100 | Watch |
+| 1 | ICNT/USD ⭐ | 0.2835 | 58.01 | +1.54% | 1.99x | STRONG 74/100 | VERY_HIGH 72/100 | Watch |
+| 2 | PIEVERSE/USD | 2.1576 | 53.93 | +0.41% | 0.58x | MODERATE 47/100 | EXTREME 87/100 | Do nothing |
+| 3 | CC/USD ⭐ | 0.08344 | 53.15 | +0.59% | 1.81x | STRONG 82/100 | HIGH 60/100 | Consider small entry |
+| 4 | ZAMA/USD ⭐ | 0.0602 | 49.02 | +0.65% | 4.67x | STRONG 85/100 | HIGH 66/100 | Consider small entry |
+| 5 | AKE/USD | 0.01003308 | 36.27 | -1.46% | 4.05x | WEAK 43/100 | VERY_HIGH 76/100 | Do nothing |
+| 6 | AKT/USD | 0.521 | 34.69 | -0.38% | 0.39x | WEAK 17/100 | EXTREME 87/100 | Do nothing |
+| 7 | SENT/USD | 0.018748 | 31.12 | +0.13% | 0.98x | WEAK 36/100 | VERY_HIGH 74/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | ICNT/USD ⭐ | 0.2844 | 69.49 | +1.83% | 2.14x | 3727 | STRONG 90/100 | VERY_HIGH 72/100 | Watch |
-| 2 | CC/USD ⭐ | 0.08333 | 54.32 | +1.20% | 1.68x | 3986 | STRONG 82/100 | HIGH 60/100 | Consider small entry |
-| 3 | ZAMA/USD ⭐ | 0.06014 | 40.29 | +1.35% | 3.33x | 4484 | STRONG 80/100 | HIGH 66/100 | Consider small entry |
-| 4 | SENT/USD ⭐ | 0.018754 | 39.33 | +0.99% | 1.21x | 3783 | MODERATE 65/100 | VERY_HIGH 74/100 | Watch |
-| 5 | AKE/USD | 0.01000778 | 31.45 | +0.07% | 1.89x | 5447 | WEAK 41/100 | VERY_HIGH 72/100 | Watch |
+| 1 | ICNT/USD ⭐ | 0.2835 | 64.11 | +1.54% | 1.99x | 3758 | STRONG 72/100 | VERY_HIGH 72/100 | Watch |
+| 2 | CC/USD ⭐ | 0.08344 | 52.24 | +0.59% | 1.81x | 3977 | STRONG 81/100 | HIGH 60/100 | Consider small entry |
+| 3 | ZAMA/USD ⭐ | 0.06025 | 40.41 | +0.65% | 4.67x | 4487 | STRONG 80/100 | HIGH 66/100 | Consider small entry |
 
-**Same-run overlap:** ICNT/USD, CC/USD, ZAMA/USD, SENT/USD
+**Same-run overlap:** ICNT/USD, CC/USD, ZAMA/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
