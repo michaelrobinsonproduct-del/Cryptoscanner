@@ -211,7 +211,7 @@ jobs:
           if not origin.isdigit():
               raise ValueError("Invalid candidate model origin")
           Path("evidence/market-wide-model.json").write_text(json.dumps(chosen,sort_keys=True))
-          Path("evidence/market-wide-model-origin-run.txt").write_text(origin+"\\n")
+          Path("evidence/market-wide-model-origin-run.txt").write_text(origin+chr(10))
           print("FROZEN_CANDIDATE",chosen["model"]["version"],"REUSED",reused,"ORIGIN",origin)
           PY
           python -c 'import json; d=json.load(open("evidence/market-wide-model.json")); assert d["model"]["status"]=="SHADOW_ONLY"; assert d["purge_hours"]==48 and len(d["archive_cohort_receipts"])==2'
