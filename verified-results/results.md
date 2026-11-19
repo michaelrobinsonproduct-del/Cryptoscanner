@@ -2,45 +2,49 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-19T21:20:48.543882+00:00
+**UTC as-of:** 2026-11-19T21:30:33.190100+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44617610921
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44619292808
 **Source SHA:** f854bf15990e1aa3564d35bbec4100f929bd3d42
-**Previous ledger commit:** 2b3a67ca063f8507358a6ba3463b737f5c011efb (atomic ledger/results publication)
-**Ledger generation:** 861 (remote push/readback verified)
+**Previous ledger commit:** 1cdfb7342ce884a0203ff252e87f5414058d257f (atomic ledger/results publication)
+**Ledger generation:** 862 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 6s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 601; OHLC screened: 18.
+**Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 601; OHLC screened: 20.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | VVV/USD | 21.996 | 75.295 | 61.406 | +1.50% | -0.22% | 2.68x | 8.2 | 2026-11-19T21:20:42.183480+00:00 | Not calibrated | MODERATE 68/100 | HIGH 61/100 | Watch | WATCH |
-| 2 | AKT/USD | 0.5414 | 67.346 | 54.645 | +4.52% | -0.46% | 3.84x | 18.5 | 2026-11-19T21:20:42.183480+00:00 | Not calibrated | MODERATE 59/100 | VERY_HIGH 72/100 | Watch | WATCH |
-| 3 | BMT/USD | 0.01999 | 62.796 | 67.519 | +5.88% | -0.74% | 0.90x | 10.0 | 2026-11-19T21:20:42.183480+00:00 | Not calibrated | WEAK 31/100 | EXTREME 86/100 | Do nothing | WATCH |
-| 4 | ALEO/USD | 0.03096 | 59.889 | 59.760 | +3.27% | -0.61% | 1.32x | 3.2 | 2026-11-19T21:20:42.183480+00:00 | Not calibrated | MODERATE 50/100 | HIGH 61/100 | Watch | WATCH |
-| 5 | MEGA/USD | 0.05914 | 56.351 | 63.802 | +5.61% | -0.52% | 0.52x | 15.2 | 2026-11-19T21:20:42.183480+00:00 | Not calibrated | WEAK 28/100 | EXTREME 87/100 | Do nothing | WATCH |
-| 6 | PUMP/USD | 0.00261 | 54.160 | 40.688 | +0.54% | -0.31% | 3.40x | 11.5 | 2026-11-19T21:20:42.183480+00:00 | Not calibrated | MODERATE 52/100 | HIGH 67/100 | Watch | WATCH |
-| 7 | SKR/USD | 0.010019 | 53.261 | 48.692 | +4.01% | -0.32% | 1.62x | 21.0 | 2026-11-19T21:20:42.183480+00:00 | Not calibrated | WEAK 37/100 | EXTREME 85/100 | Do nothing | WATCH |
-| 8 | SENT/USD | 0.021299 | 49.656 | 54.651 | +3.37% | +0.49% | 0.26x | 6.6 | 2026-11-19T21:20:42.183480+00:00 | Not calibrated | MODERATE 55/100 | VERY_HIGH 75/100 | Watch | WATCH |
-| 9 | USELESS/USD | 0.09808 | 43.179 | 43.129 | +2.64% | -0.36% | 1.18x | 27.7 | 2026-11-19T21:20:42.183480+00:00 | Not calibrated | WEAK 22/100 | VERY_HIGH 80/100 | Do nothing | WATCH |
-| 10 | SYRUP/USD | 0.09674 | 33.786 | 29.567 | +1.87% | +0.95% | 0.95x | 30.0 | 2026-11-19T21:20:42.183480+00:00 | Not calibrated | WEAK 37/100 | EXTREME 86/100 | Do nothing | WATCH |
+| 1 | VVV/USD | 22.038 | 70.936 | 64.580 | +1.69% | -0.41% | 1.84x | 4.5 | 2026-11-19T21:30:26.055337+00:00 | Not calibrated | MODERATE 55/100 | HIGH 61/100 | Watch | WATCH |
+| 2 | MEGA/USD | 0.05965 | 61.367 | 64.605 | +6.52% | +0.84% | 0.25x | 25.2 | 2026-11-19T21:30:26.055337+00:00 | Not calibrated | MODERATE 51/100 | EXTREME 87/100 | Do nothing | WATCH |
+| 3 | CSPR/USD | 0.0017186 | 59.921 | 54.242 | +5.24% | +0.17% | 1.48x | 28.6 | 2026-11-19T21:30:26.055337+00:00 | Not calibrated | MODERATE 55/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 4 | BMT/USD | 0.02004 | 59.836 | 69.384 | +6.14% | -0.45% | 0.27x | 10.0 | 2026-11-19T21:30:26.055337+00:00 | Not calibrated | WEAK 35/100 | EXTREME 88/100 | Do nothing | WATCH |
+| 5 | PUMP/USD | 0.002615 | 57.606 | 42.031 | +0.73% | +0.11% | 2.54x | 11.5 | 2026-11-19T21:30:26.055337+00:00 | Not calibrated | MODERATE 69/100 | HIGH 61/100 | Watch | WATCH |
+| 6 | AKT/USD | 0.5368 | 55.499 | 47.462 | +3.63% | -1.39% | 2.78x | 20.5 | 2026-11-19T21:30:26.055337+00:00 | Not calibrated | MODERATE 48/100 | VERY_HIGH 82/100 | Do nothing | WATCH |
+| 7 | LUNA/USD | 4.82e-05 | 54.812 | 64.013 | +10.70% | -1.10% | 0.63x | 37.4 | 2026-11-19T21:30:26.055337+00:00 | Not calibrated | WEAK 17/100 | EXTREME 92/100 | Do nothing | WATCH |
+| 8 | SENT/USD | 0.021285 | 54.481 | 53.698 | +3.30% | -0.22% | 1.19x | 7.5 | 2026-11-19T21:30:26.055337+00:00 | Not calibrated | WEAK 37/100 | VERY_HIGH 73/100 | Watch | WATCH |
+| 9 | SKR/USD | 0.010029 | 49.391 | 46.919 | +4.11% | -0.10% | 1.30x | 26.0 | 2026-11-19T21:30:26.055337+00:00 | Not calibrated | WEAK 25/100 | EXTREME 85/100 | Do nothing | WATCH |
+| 10 | ALEO/USD | 0.03109 | 47.833 | 46.874 | +3.70% | +0.16% | 1.02x | 35.5 | 2026-11-19T21:30:26.055337+00:00 | Not calibrated | WEAK 34/100 | VERY_HIGH 74/100 | Do nothing | WATCH |
+| 11 | USELESS/USD | 0.09762 | 34.509 | 39.868 | +2.16% | -1.00% | 0.97x | 27.8 | 2026-11-19T21:30:26.055337+00:00 | Not calibrated | WEAK 12/100 | VERY_HIGH 84/100 | Do nothing | WATCH |
+| 12 | SYRUP/USD | 0.09685 | 30.753 | 40.238 | +1.99% | -0.46% | 0.28x | 10.3 | 2026-11-19T21:30:26.055337+00:00 | Not calibrated | WEAK 15/100 | EXTREME 94/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | BMT/USD | 67.519 | 0.01999 | -0.74% | 0.90x |
-| 2 | MEGA/USD | 63.802 | 0.05914 | -0.52% | 0.52x |
-| 3 | VVV/USD | 61.406 | 21.996 | -0.22% | 2.68x |
-| 4 | ALEO/USD | 59.760 | 0.03096 | -0.61% | 1.32x |
-| 5 | SENT/USD | 54.651 | 0.021299 | +0.49% | 0.26x |
-| 6 | AKT/USD | 54.645 | 0.5414 | -0.46% | 3.84x |
-| 7 | SKR/USD | 48.692 | 0.010019 | -0.32% | 1.62x |
-| 8 | USELESS/USD | 43.129 | 0.09808 | -0.36% | 1.18x |
-| 9 | PUMP/USD | 40.688 | 0.00261 | -0.31% | 3.40x |
-| 10 | SYRUP/USD | 29.567 | 0.09674 | +0.95% | 0.95x |
+| 1 | BMT/USD | 69.384 | 0.02004 | -0.45% | 0.27x |
+| 2 | MEGA/USD | 64.605 | 0.05965 | +0.84% | 0.25x |
+| 3 | VVV/USD | 64.580 | 22.038 | -0.41% | 1.84x |
+| 4 | LUNA/USD | 64.013 | 4.82e-05 | -1.10% | 0.63x |
+| 5 | CSPR/USD | 54.242 | 0.0017186 | +0.17% | 1.48x |
+| 6 | SENT/USD | 53.698 | 0.021285 | -0.22% | 1.19x |
+| 7 | AKT/USD | 47.462 | 0.5368 | -1.39% | 2.78x |
+| 8 | SKR/USD | 46.919 | 0.010029 | -0.10% | 1.30x |
+| 9 | ALEO/USD | 46.874 | 0.03109 | +0.16% | 1.02x |
+| 10 | PUMP/USD | 42.031 | 0.002615 | +0.11% | 2.54x |
+| 11 | SYRUP/USD | 40.238 | 0.09685 | -0.46% | 0.28x |
+| 12 | USELESS/USD | 39.868 | 0.09762 | -1.00% | 0.97x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -56,8 +60,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 861; predictions: 7468; observations: 520328.
-- Matured sampled outcomes across 1/6/24/48h: 7703; gap abstentions: 15688. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 862; predictions: 7480; observations: 520929.
+- Matured sampled outcomes across 1/6/24/48h: 7727; gap abstentions: 15694. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -73,29 +77,32 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44617610921 · **Generation:** 861 · **Legacy run:** 44617610921
-**Main quote time:** 2026-11-19T21:20:48.543882+00:00 · **Legacy report time:** 2026-11-19T21:21:39.639852+00:00
+**Writer:** 44619292808 · **Generation:** 862 · **Legacy run:** 44619292808
+**Main quote time:** 2026-11-19T21:30:33.190100+00:00 · **Legacy report time:** 2026-11-19T21:31:15.424558+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | VVV/USD | 21.996 | 75.30 | -0.22% | 2.68x | MODERATE 68/100 | HIGH 61/100 | Watch |
-| 2 | AKT/USD | 0.5414 | 67.35 | -0.46% | 3.84x | MODERATE 59/100 | VERY_HIGH 72/100 | Watch |
-| 3 | BMT/USD | 0.01999 | 62.80 | -0.74% | 0.90x | WEAK 31/100 | EXTREME 86/100 | Do nothing |
-| 4 | ALEO/USD | 0.03096 | 59.89 | -0.61% | 1.32x | MODERATE 50/100 | HIGH 61/100 | Watch |
-| 5 | MEGA/USD | 0.05914 | 56.35 | -0.52% | 0.52x | WEAK 28/100 | EXTREME 87/100 | Do nothing |
-| 6 | PUMP/USD | 0.00261 | 54.16 | -0.31% | 3.40x | MODERATE 52/100 | HIGH 67/100 | Watch |
-| 7 | SKR/USD | 0.010019 | 53.26 | -0.32% | 1.62x | WEAK 37/100 | EXTREME 85/100 | Do nothing |
-| 8 | SENT/USD | 0.021299 | 49.66 | +0.49% | 0.26x | MODERATE 55/100 | VERY_HIGH 75/100 | Watch |
-| 9 | USELESS/USD | 0.09808 | 43.18 | -0.36% | 1.18x | WEAK 22/100 | VERY_HIGH 80/100 | Do nothing |
-| 10 | SYRUP/USD | 0.09674 | 33.79 | +0.95% | 0.95x | WEAK 37/100 | EXTREME 86/100 | Do nothing |
+| 1 | VVV/USD | 22.038 | 70.94 | -0.41% | 1.84x | MODERATE 55/100 | HIGH 61/100 | Watch |
+| 2 | MEGA/USD | 0.05965 | 61.37 | +0.84% | 0.25x | MODERATE 51/100 | EXTREME 87/100 | Do nothing |
+| 3 | CSPR/USD ⭐ | 0.0017186 | 59.92 | +0.17% | 1.48x | MODERATE 65/100 | VERY_HIGH 72/100 | Watch |
+| 4 | BMT/USD | 0.02004 | 59.84 | -0.45% | 0.27x | WEAK 35/100 | EXTREME 88/100 | Do nothing |
+| 5 | PUMP/USD | 0.002615 | 57.61 | +0.11% | 2.54x | MODERATE 69/100 | HIGH 61/100 | Watch |
+| 6 | AKT/USD | 0.5368 | 55.50 | -1.39% | 2.78x | MODERATE 48/100 | VERY_HIGH 82/100 | Do nothing |
+| 7 | LUNA/USD | 4.82e-05 | 54.81 | -1.10% | 0.63x | WEAK 17/100 | EXTREME 92/100 | Do nothing |
+| 8 | SENT/USD | 0.021285 | 54.48 | -0.22% | 1.19x | WEAK 37/100 | VERY_HIGH 73/100 | Watch |
+| 9 | SKR/USD | 0.010029 | 49.39 | -0.10% | 1.30x | WEAK 25/100 | EXTREME 85/100 | Do nothing |
+| 10 | ALEO/USD ⭐ | 0.03109 | 47.83 | +0.16% | 1.02x | WEAK 44/100 | VERY_HIGH 74/100 | Watch |
+| 11 | USELESS/USD | 0.09762 | 34.51 | -1.00% | 0.97x | WEAK 12/100 | VERY_HIGH 84/100 | Do nothing |
+| 12 | SYRUP/USD | 0.09685 | 30.75 | -0.46% | 0.28x | WEAK 15/100 | EXTREME 94/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
+| 1 | CSPR/USD ⭐ | 0.0017109 | 73.57 | +0.17% | 1.48x | 5745 | STRONG 72/100 | VERY_HIGH 72/100 | Watch |
+| 2 | ALEO/USD ⭐ | 0.03102 | 69.38 | +0.16% | 1.02x | 11012 | MODERATE 55/100 | VERY_HIGH 74/100 | Watch |
 
-**Same-run overlap:** None
+**Same-run overlap:** CSPR/USD, ALEO/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
