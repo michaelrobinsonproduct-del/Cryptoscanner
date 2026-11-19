@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'paper_eval/capacity.py'
+      - 'paper_pov/ledger.py'
+      - 'paper_pov/segmented_storage.py'
       - 'paper_pov/segmented_repository.py'
       - 'paper_pov/git_ledger_fetch.py'
       - 'paper_eval/test_capacity.py'
@@ -16,7 +18,7 @@ concurrency:
 jobs:
   forecast:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,7 +36,11 @@ jobs:
       - name: Independently size genuine public Git ledger
         run: |
           set -euo pipefail
-          LEDGER_COMMIT="$(python -c 'from paper_pov.git_ledger_fetch import fetch_bounded;print(fetch_bounded())')"
+          git fetch --no-tags --depth=4096 origin refs/heads/paper-proof-ledger:refs/remotes/origin/paper-proof-ledger
+          LEDGER_COMMIT="$(git rev-parse refs/remotes/origin/paper-proof-ledger)"
+          echo "$LEDGER_COMMIT" > /tmp/paper-capacity-base.sha
+          CHECKPOINT="$(git show "${LEDGER_COMMIT}:paper-segment-manifest.json" | python -c 'import json,sys;print(json.load(sys.stdin)["checkpoint"]["git_commit"])')"
+          git cat-file -e "${CHECKPOINT}^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$CHECKPOINT"
           python -m paper_pov.segmented_repository export-git \
             --repository . --commit "$LEDGER_COMMIT" \
             --output /tmp/paper-capacity-ledger.json --full-replay
@@ -45,6 +51,35 @@ jobs:
             --output paper_eval/output/storage-capacity.json
           (cd paper_eval/output && sha256sum storage-capacity.json > STORAGE-SHA256SUMS)
           echo "PAPER_CAPACITY_LEDGER_COMMIT=$LEDGER_COMMIT"
+      - name: Stage a real current scan from the authenticated base without pushing
+        run: |
+          set -euo pipefail
+          python -m paper_pov.scanner
+          python -m paper_pov.segmented_live_writer stage \
+            --repository . --base "$(cat /tmp/paper-capacity-base.sha)" \
+            --report paper_pov/output/latest.json --source-sha "$(git rev-parse HEAD)" \
+            --staged /tmp/paper-capacity-staged --next-ledger /tmp/paper-capacity-next.json \
+            --scoreboard /tmp/paper-capacity-score.json
+          python - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          from paper_pov import ledger, segmented_storage as storage, segmented_repository as repo
+          from paper_pov.retention_acceptance import verify_transition
+          before=json.loads(Path("/tmp/paper-capacity-ledger.json").read_text())
+          after=json.loads(Path("/tmp/paper-capacity-next.json").read_text())
+          report=json.loads(Path("paper_pov/output/latest.json").read_text())
+          source=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip()
+          proof=verify_transition(before,after,report,source)
+          staged,manifest=repo.read_state("/tmp/paper-capacity-staged",full_replay=False)
+          assert staged==after and manifest["head"]["ledger_sha256"]==after["sha256"]
+          assert before["generation"]+1==after["generation"]
+          assert len(ledger.canonical(after))<=storage.MAX_RAW_BYTES
+          assert repo.active_storage_bytes("/tmp/paper-capacity-staged")<=repo.MAX_ACTIVE_TREE_BYTES
+          print("REAL_CAPACITY_RECOVERY_STAGE_OK",json.dumps(dict(proof,
+                before_bytes=len(ledger.canonical(before)),after_bytes=len(ledger.canonical(after)),
+                packed_bytes=Path("/tmp/paper-capacity-staged",repo.SNAPSHOT).stat().st_size,
+                ledger_sha256=after["sha256"]),sort_keys=True))
+          PY
       - name: Preserve checksum-sealed capacity evidence
         uses: actions/upload-artifact@v4
         with:

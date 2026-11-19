@@ -28,8 +28,8 @@ def _upper(items, fallback=0):
 
 
 def _forecast(state, cadence, counts, sizes, limit):
-    if cadence not in (1, 2):
-        raise ValueError("Only one or two scans per hour are modeled")
+    if cadence not in (1, 2, 6, 12):
+        raise ValueError("Unsupported scan cadence")
     active = math.ceil(ledger.RETENTION.total_seconds() / 3600 * cadence) + 4
     indexed = math.ceil(ledger.ARCHIVE_INDEX_RETENTION.total_seconds() / 3600 * cadence) + 4
     # Two conservative margins: +10% on record widths and quote population,
@@ -113,6 +113,9 @@ def capacity_report(state, *, max_bytes=ledger.MAX_BYTES):
         "sample_sufficient": sufficient,
         "serialized_max_record_bytes": sizes,
         "cadences": scenarios,
+        "segmented_live_cadences": {str(c): _forecast(state, c, counts, sizes, storage.MAX_RAW_BYTES)
+                                    for c in (6, 12)},
+        "segmented_logical_limit_bytes": storage.MAX_RAW_BYTES,
         "stage2_storage_gate_pass": sufficient and scenarios["2"]["storage_capacity_pass"],
         "stage2_authorized": False,
         "independent_held_out_lift": None,
@@ -150,6 +153,7 @@ def main():
         "hourly_forecast_bytes": result["cadences"]["1"]["forecast_ledger_bytes"],
         "twice_hourly_forecast_bytes": result["cadences"]["2"]["forecast_ledger_bytes"],
         "twice_hourly_storage_pass": result["stage2_storage_gate_pass"],
+        "segmented_live_cadences": result["segmented_live_cadences"],
         "stage2_authorized": False,
     }, sort_keys=True))
 
