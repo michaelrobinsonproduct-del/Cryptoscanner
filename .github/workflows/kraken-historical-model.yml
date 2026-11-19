@@ -11,7 +11,14 @@ concurrency:
   cancel-in-progress: false
 jobs:
   analyze:
-    if: github.event.workflow_run.conclusion == 'success'
+    # A successful PR-only Q2 research/reuse job is not a completed
+    # production backfill and intentionally does not emit the derived artifact.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' ||
+       github.event.workflow_run.event == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
