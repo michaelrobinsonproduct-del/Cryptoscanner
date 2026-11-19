@@ -299,7 +299,7 @@ jobs:
           mkdir -p evidence
           gh run download "$PAPER_RUN_ID" -n "public-paper-ledger-$PAPER_RUN_ID" -D evidence
           (cd evidence && sha256sum -c SHA256SUMS)
-          python -c 'import json; from paper_pov.ledger import verify; a=json.load(open("/tmp/market-canonical.json")); b=json.load(open("evidence/ledger.json")); verify(b); assert a["ledger_generation"]==b["generation"] and a["ledger_sha256"]==b["sha256"] and a["source_sha"]==b["runs"][-1]["source_sha"], "Canonical artifact provenance mismatch"'
+          python -c 'import json; from paper_pov.ledger import verify; from paper_pov.segmented_storage import MAX_RAW_BYTES; a=json.load(open("/tmp/market-canonical.json")); b=json.load(open("evidence/ledger.json")); verify(b, MAX_RAW_BYTES); assert a["ledger_generation"]==b["generation"] and a["ledger_sha256"]==b["sha256"] and a["source_sha"]==b["runs"][-1]["source_sha"], "Canonical artifact provenance mismatch"'
       - name: Score and retain independent market-wide shadow shard
         env:
           LEARNING_BRANCH: ${{ github.head_ref || github.ref_name }}
