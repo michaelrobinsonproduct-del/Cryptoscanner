@@ -13,7 +13,9 @@ concurrency:
 jobs:
   read-only-dryrun:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Real ledger at generation 767 reached rollover after 18–21 minutes.
+    # Preserve the complete replay and archive proof as the ledger grows.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
