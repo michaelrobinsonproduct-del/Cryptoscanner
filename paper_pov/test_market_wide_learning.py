@@ -392,6 +392,27 @@ class MarketWideLearningTest(unittest.TestCase):
         self.assertFalse(x["A"]["1"]["measured_lift_verified"])
 
 
+    def test_known_misses_and_lead_bounds_do_not_treat_unknowns_as_losses(self):
+        from paper_pov.market_wide_learning import prospective_metrics_by_version
+        def pred(key,base,shadow):
+            return dict(prediction_id=key,model_version="M",batch_id="B",
+                        recording_scope="TIMELY_RECORDED_QUOTE_REFERENCE",
+                        baseline_watch=base,shadow_equal_budget_watch=shadow)
+        preds=[pred("a",True,False),pred("b",False,True),
+               pred("c",False,False),pred("d",False,False)]
+        outcomes=[dict(prediction_id=k,horizon_hours=48,coverage_complete=True,hit=True,
+                       observed_lead_hours_upper_bound=lead) for k,lead in (("a",12),("b",6),("c",9))]
+        m=prospective_metrics_by_version(preds,outcomes)["M"]["48"]
+        self.assertEqual(m["known_positive_anchors"],3)
+        self.assertEqual(m["unknown_outcome_anchors"],1)
+        self.assertEqual(m["baseline_known_missed_positives"],2)
+        self.assertEqual(m["shadow_known_missed_positives"],2)
+        self.assertEqual(m["baseline_mean_lead_hours_upper_bound"],12)
+        self.assertEqual(m["shadow_mean_lead_hours_upper_bound"],6)
+        self.assertEqual(m["paired_complete_batches"],1)
+        self.assertFalse(m["measured_lift_verified"])
+
+
     def test_watch_controls_do_not_replace_independent_market_sample(self):
         from paper_pov.market_wide_learning import run_observed_market_batch
         start=datetime(2026,1,1,tzinfo=timezone.utc)

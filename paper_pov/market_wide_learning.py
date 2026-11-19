@@ -515,10 +515,31 @@ def prospective_metrics_by_version(predictions, outcomes):
         base=[p for p in group if p["baseline_watch"]]
         shadow=[p for p in group if p["shadow_equal_budget_watch"]]
         by_h=result.setdefault(version,{str(h):{"paired_complete_batches":0,"unavailable_batches":0,
-            "zero_budget_batches":0,"selected_per_scanner":0,"baseline_hits":0,"shadow_hits":0}
+            "zero_budget_batches":0,"selected_per_scanner":0,"baseline_hits":0,"shadow_hits":0,
+            "timely_scored_anchors":0,"known_positive_anchors":0,"unknown_outcome_anchors":0,
+            "baseline_known_missed_positives":0,"shadow_known_missed_positives":0,
+            "baseline_known_detected_positives":0,"shadow_known_detected_positives":0,
+            "baseline_crossing_lead_hours_upper_bounds":[],"shadow_crossing_lead_hours_upper_bounds":[]}
             for h in (1,6,24,48)})
         for h in (1,6,24,48):
             m=by_h[str(h)]
+            # Coverage and missed-positive accounting is restricted to timely
+            # scored shard anchors; it is not full-universe event recall.
+            for p in group:
+                o=labels.get((p["prediction_id"],h))
+                m["timely_scored_anchors"]+=1
+                if not o or o["coverage_complete"] is not True or type(o["hit"]) is not bool:
+                    m["unknown_outcome_anchors"]+=1
+                    continue
+                if not o["hit"]:
+                    continue
+                m["known_positive_anchors"]+=1
+                for scanner, selected in (("baseline",p["baseline_watch"]),
+                                          ("shadow",p["shadow_equal_budget_watch"])):
+                    m[f"{scanner}_known_{'detected' if selected else 'missed'}_positives"]+=1
+                    lead=o.get("observed_lead_hours_upper_bound")
+                    if selected and type(lead) in (int,float) and isfinite(lead) and 0<=lead<=h:
+                        m[f"{scanner}_crossing_lead_hours_upper_bounds"].append(lead)
             if not base and not shadow:
                 m["zero_budget_batches"]+=1
                 continue
@@ -539,6 +560,13 @@ def prospective_metrics_by_version(predictions, outcomes):
             m["shadow_false_positives"]=n-m["shadow_hits"]
             m["baseline_precision"]=m["baseline_hits"]/n if n else None
             m["shadow_precision"]=m["shadow_hits"]/n if n else None
+            # Report known misses and observed lead bounds separately from
+            # equal-budget paired precision. Never treat unknowns as negatives.
+            for scanner in ("baseline","shadow"):
+                leads=m.pop(f"{scanner}_crossing_lead_hours_upper_bounds")
+                m[f"{scanner}_crossing_lead_samples"]=len(leads)
+                m[f"{scanner}_mean_lead_hours_upper_bound"]=sum(leads)/len(leads) if leads else None
+            m["missed_positive_scope"]="TIMELY_SCORED_SHARD_ANCHORS_ONLY"
             m["measured_lift_verified"]=False
     return result
 
@@ -624,8 +652,9 @@ def retain_prospective_shadow(state, prior, cohort, results, ledger, model_sourc
     asof = utc_time(cohort["evaluation_asof_utc"])
     active = [p for p in predictions.values() if p["pair"] in observed
               and asof-timedelta(hours=60)<=utc_time(p["entry_utc"])<=asof]
-    fresh = reconstruct_forward_outcomes(active,[c for r in results for c in r["candles"]],
-                                        evaluation_asof_utc=asof.isoformat())
+    candles=[c for r in results for c in r["candles"]]
+    fresh = reconstruct_forward_outcomes(active,candles,evaluation_asof_utc=asof.isoformat())
+    describe_observed_crossings(active,fresh,candles,asof)
     for o in fresh:
         key=(o["prediction_id"],o["horizon_hours"])
         old=outcomes.get(key)
@@ -1148,6 +1177,7 @@ def build_learning_receipt(observed, training, candidate, *, writer, learning_sc
         "active_anchors":len(state["anchors"]),"cold_segment_count":len(state.get("cold_segments",[])),
         "timely_shadow_predictions":shadow["timely_recorded_predictions"],
         "per_horizon_current_shard":observed["per_horizon"],
+        "crossing_summary_current_shard":observed.get("crossing_summary"),
         "prospective_by_version_and_horizon":shadow["by_model_and_horizon"],
         "historical_trade_research":training.get("historical_trade_research",{}),
         "coverage_scope":observed["coverage_scope"],"fetch_errors":observed["fetch_errors"],
