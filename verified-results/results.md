@@ -2,43 +2,49 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-19T03:40:25.208570+00:00
+**UTC as-of:** 2026-11-19T03:45:21.673476+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44452977672
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44453540857
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** 3d12f10373fc71d0cf804ed0c39e725903fca637 (atomic ledger/results publication)
-**Ledger generation:** 745 (remote push/readback verified)
+**Previous ledger commit:** ed687e7976a07cc78425bd5ddec26ab64c75a2b4 (atomic ledger/results publication)
+**Ledger generation:** 746 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 8s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 24.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | NEAR/USD | 3.3509 | 80.239 | 64.418 | +1.62% | +0.16% | 5.33x | 3.9 | 2026-11-19T03:40:16.914085+00:00 | Not calibrated | STRONG 85/100 | HIGH 55/100 | Watch | WATCH |
-| 2 | TAO/USD | 192.7249 | 72.910 | 54.561 | +0.40% | +0.67% | 6.95x | 6.5 | 2026-11-19T03:40:16.914085+00:00 | Not calibrated | STRONG 91/100 | HIGH 55/100 | Consider small entry | WATCH |
-| 3 | LUNA/USD | 4.725e-05 | 64.763 | 68.216 | +8.52% | -0.92% | 1.12x | 19.1 | 2026-11-19T03:40:16.914085+00:00 | Not calibrated | WEAK 37/100 | VERY_HIGH 79/100 | Watch | WATCH |
-| 4 | VVV/USD | 22.102 | 58.956 | 59.283 | +1.99% | +0.43% | 0.75x | 8.2 | 2026-11-19T03:40:16.914085+00:00 | Not calibrated | MODERATE 59/100 | HIGH 62/100 | Watch | WATCH |
-| 5 | CC/USD | 0.08223 | 54.130 | 37.177 | +0.43% | +0.39% | 2.60x | 2.4 | 2026-11-19T03:40:16.914085+00:00 | Not calibrated | STRONG 82/100 | HIGH 60/100 | Watch | WATCH |
-| 6 | ONDO/USD | 0.29848 | 54.084 | 35.389 | +0.28% | +0.74% | 20.06x | 2.7 | 2026-11-19T03:40:16.914085+00:00 | Not calibrated | STRONG 82/100 | HIGH 60/100 | Watch | WATCH |
-| 7 | LTC/USD | 44.17 | 49.634 | 46.547 | +0.36% | +0.27% | 1.17x | 4.5 | 2026-11-19T03:40:16.914085+00:00 | Not calibrated | MODERATE 60/100 | HIGH 62/100 | Watch | WATCH |
-| 8 | TRX/USD | 0.310156 | 41.232 | 41.803 | +0.28% | +0.09% | 0.90x | 1.0 | 2026-11-19T03:40:16.914085+00:00 | Not calibrated | WEAK 41/100 | HIGH 62/100 | Watch | WATCH |
-| 9 | WLD/USD | 0.2611 | 27.561 | 32.051 | +0.27% | +0.38% | 0.36x | 3.8 | 2026-11-19T03:40:16.914085+00:00 | Not calibrated | WEAK 44/100 | VERY_HIGH 75/100 | Watch | WATCH |
+| 1 | NEAR/USD | 3.3634 | 83.273 | 66.932 | +2.00% | +0.27% | 4.24x | 4.2 | 2026-11-19T03:45:14.530800+00:00 | Not calibrated | STRONG 97/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 2 | LUNA/USD | 4.764e-05 | 74.448 | 75.727 | +9.42% | -0.95% | 1.35x | 4.2 | 2026-11-19T03:45:14.530800+00:00 | Not calibrated | MODERATE 57/100 | HIGH 66/100 | Watch | WATCH |
+| 3 | SUI/USD | 0.7213 | 72.271 | 55.950 | +0.33% | +0.26% | 6.04x | 2.8 | 2026-11-19T03:45:14.530800+00:00 | Not calibrated | STRONG 91/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 4 | ETH/USD | 1779.29 | 72.215 | 56.365 | +0.26% | +0.17% | 2.58x | 0.8 | 2026-11-19T03:45:14.530800+00:00 | Not calibrated | STRONG 81/100 | HIGH 55/100 | Watch | WATCH |
+| 5 | TAO/USD | 192.632 | 71.027 | 53.826 | +0.35% | +0.44% | 4.20x | 7.2 | 2026-11-19T03:45:14.530800+00:00 | Not calibrated | STRONG 91/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 6 | VVV/USD | 22.235 | 65.206 | 62.688 | +2.60% | +0.62% | 0.94x | 10.3 | 2026-11-19T03:45:14.530800+00:00 | Not calibrated | MODERATE 58/100 | HIGH 68/100 | Watch | WATCH |
+| 7 | SOL/USD | 73.74 | 61.774 | 55.548 | +0.27% | +0.39% | 1.43x | 2.7 | 2026-11-19T03:45:14.530800+00:00 | Not calibrated | STRONG 76/100 | HIGH 55/100 | Watch | WATCH |
+| 8 | ONDO/USD | 0.29895 | 53.987 | 35.501 | +0.44% | +0.70% | 10.60x | 4.7 | 2026-11-19T03:45:14.530800+00:00 | Not calibrated | STRONG 82/100 | HIGH 60/100 | Watch | WATCH |
+| 9 | AKT/USD | 0.5215 | 49.887 | 33.348 | +0.68% | +0.31% | 4.13x | 5.8 | 2026-11-19T03:45:14.530800+00:00 | Not calibrated | STRONG 80/100 | HIGH 67/100 | Watch | WATCH |
+| 10 | LTC/USD | 44.24 | 48.528 | 48.799 | +0.52% | +0.20% | 0.87x | 2.3 | 2026-11-19T03:45:14.530800+00:00 | Not calibrated | MODERATE 54/100 | HIGH 62/100 | Watch | WATCH |
+| 11 | TRX/USD | 0.310125 | 39.554 | 41.955 | +0.27% | +0.07% | 0.72x | 0.6 | 2026-11-19T03:45:14.530800+00:00 | Not calibrated | WEAK 40/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 12 | DRV/USD | 0.26774 | 38.388 | 39.019 | +1.15% | +0.18% | 0.85x | 4.9 | 2026-11-19T03:45:14.530800+00:00 | Not calibrated | WEAK 39/100 | HIGH 67/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | LUNA/USD | 68.216 | 4.725e-05 | -0.92% | 1.12x |
-| 2 | NEAR/USD | 64.418 | 3.3509 | +0.16% | 5.33x |
-| 3 | VVV/USD | 59.283 | 22.102 | +0.43% | 0.75x |
-| 4 | TAO/USD | 54.561 | 192.7249 | +0.67% | 6.95x |
-| 5 | LTC/USD | 46.547 | 44.17 | +0.27% | 1.17x |
-| 6 | TRX/USD | 41.803 | 0.310156 | +0.09% | 0.90x |
-| 7 | CC/USD | 37.177 | 0.08223 | +0.39% | 2.60x |
-| 8 | ONDO/USD | 35.389 | 0.29848 | +0.74% | 20.06x |
-| 9 | WLD/USD | 32.051 | 0.2611 | +0.38% | 0.36x |
+| 1 | LUNA/USD | 75.727 | 4.764e-05 | -0.95% | 1.35x |
+| 2 | NEAR/USD | 66.932 | 3.3634 | +0.27% | 4.24x |
+| 3 | VVV/USD | 62.688 | 22.235 | +0.62% | 0.94x |
+| 4 | ETH/USD | 56.365 | 1779.29 | +0.17% | 2.58x |
+| 5 | SUI/USD | 55.950 | 0.7213 | +0.26% | 6.04x |
+| 6 | SOL/USD | 55.548 | 73.74 | +0.39% | 1.43x |
+| 7 | TAO/USD | 53.826 | 192.632 | +0.44% | 4.20x |
+| 8 | LTC/USD | 48.799 | 44.24 | +0.20% | 0.87x |
+| 9 | TRX/USD | 41.955 | 0.310125 | +0.07% | 0.72x |
+| 10 | DRV/USD | 39.019 | 0.26774 | +0.18% | 0.85x |
+| 11 | ONDO/USD | 35.501 | 0.29895 | +0.70% | 10.60x |
+| 12 | AKT/USD | 33.348 | 0.5215 | +0.31% | 4.13x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -54,15 +60,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 745; predictions: 6084; observations: 450712.
-- Matured sampled outcomes across 1/6/24/48h: 6053; gap abstentions: 13555. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 746; predictions: 6096; observations: 451321.
+- Matured sampled outcomes across 1/6/24/48h: 6056; gap abstentions: 13563. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 15; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 9; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -71,32 +77,34 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44452977672 · **Generation:** 745 · **Legacy run:** 44452977672
-**Main quote time:** 2026-11-19T03:40:25.208570+00:00 · **Legacy report time:** 2026-11-19T03:41:14.395658+00:00
+**Writer:** 44453540857 · **Generation:** 746 · **Legacy run:** 44453540857
+**Main quote time:** 2026-11-19T03:45:21.673476+00:00 · **Legacy report time:** 2026-11-19T03:46:09.067971+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | NEAR/USD ⭐ | 3.3509 | 80.24 | +0.16% | 5.33x | STRONG 95/100 | HIGH 55/100 | Watch |
-| 2 | TAO/USD | 192.7249 | 72.91 | +0.67% | 6.95x | STRONG 91/100 | HIGH 55/100 | Consider small entry |
-| 3 | LUNA/USD | 4.725e-05 | 64.76 | -0.92% | 1.12x | WEAK 37/100 | VERY_HIGH 79/100 | Watch |
-| 4 | VVV/USD | 22.102 | 58.96 | +0.43% | 0.75x | MODERATE 59/100 | HIGH 62/100 | Watch |
-| 5 | CC/USD | 0.08223 | 54.13 | +0.39% | 2.60x | STRONG 82/100 | HIGH 60/100 | Watch |
-| 6 | ONDO/USD | 0.29848 | 54.08 | +0.74% | 20.06x | STRONG 82/100 | HIGH 60/100 | Watch |
-| 7 | LTC/USD ⭐ | 44.17 | 49.63 | +0.27% | 1.17x | STRONG 70/100 | HIGH 62/100 | Watch |
-| 8 | TRX/USD | 0.310156 | 41.23 | +0.09% | 0.90x | WEAK 41/100 | HIGH 62/100 | Watch |
-| 9 | WLD/USD | 0.2611 | 27.56 | +0.38% | 0.36x | WEAK 44/100 | VERY_HIGH 75/100 | Watch |
+| 1 | NEAR/USD ⭐ | 3.3634 | 83.27 | +0.27% | 4.24x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 2 | LUNA/USD | 4.764e-05 | 74.45 | -0.95% | 1.35x | MODERATE 57/100 | HIGH 66/100 | Watch |
+| 3 | SUI/USD ⭐ | 0.7213 | 72.27 | +0.26% | 6.04x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 4 | ETH/USD ⭐ | 1779.29 | 72.22 | +0.17% | 2.58x | STRONG 91/100 | HIGH 55/100 | Watch |
+| 5 | TAO/USD | 192.632 | 71.03 | +0.44% | 4.20x | STRONG 91/100 | HIGH 55/100 | Consider small entry |
+| 6 | VVV/USD | 22.235 | 65.21 | +0.62% | 0.94x | MODERATE 58/100 | HIGH 68/100 | Watch |
+| 7 | SOL/USD ⭐ | 73.74 | 61.77 | +0.39% | 1.43x | STRONG 86/100 | HIGH 55/100 | Watch |
+| 8 | ONDO/USD | 0.29895 | 53.99 | +0.70% | 10.60x | STRONG 82/100 | HIGH 60/100 | Watch |
+| 9 | AKT/USD | 0.5215 | 49.89 | +0.31% | 4.13x | STRONG 80/100 | HIGH 67/100 | Watch |
+| 10 | LTC/USD | 44.24 | 48.53 | +0.20% | 0.87x | MODERATE 54/100 | HIGH 62/100 | Watch |
+| 11 | TRX/USD | 0.310125 | 39.55 | +0.07% | 0.72x | WEAK 40/100 | VERY_HIGH 70/100 | Watch |
+| 12 | DRV/USD | 0.26774 | 38.39 | +0.18% | 0.85x | WEAK 39/100 | HIGH 67/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | NEAR/USD ⭐ | 3.357 | 76.82 | +0.16% | 5.33x | 13694 | STRONG 93/100 | HIGH 55/100 | Watch |
-| 2 | SOL/USD | 73.68 | 60.76 | +0.40% | 4.51x | 35157 | STRONG 85/100 | HIGH 55/100 | Watch |
-| 3 | SUI/USD | 0.72 | 59.98 | +0.31% | 6.26x | 6642 | STRONG 85/100 | HIGH 55/100 | Watch |
-| 4 | ETH/USD | 1778.95 | 58.47 | +0.23% | 1.77x | 57933 | STRONG 74/100 | HIGH 55/100 | Watch |
-| 5 | LTC/USD ⭐ | 44.23 | 49.76 | +0.27% | 1.17x | 11699 | STRONG 70/100 | HIGH 62/100 | Watch |
+| 1 | NEAR/USD ⭐ | 3.3773 | 81.00 | +0.27% | 4.24x | 13709 | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 2 | ETH/USD ⭐ | 1781.11 | 63.02 | +0.17% | 2.58x | 57983 | STRONG 87/100 | HIGH 55/100 | Watch |
+| 3 | SUI/USD ⭐ | 0.7213 | 62.03 | +0.26% | 6.04x | 6647 | STRONG 96/100 | HIGH 55/100 | Consider small entry |
+| 4 | SOL/USD ⭐ | 73.84 | 57.07 | +0.39% | 1.43x | 35128 | STRONG 84/100 | HIGH 55/100 | Watch |
 
-**Same-run overlap:** NEAR/USD, LTC/USD
+**Same-run overlap:** NEAR/USD, SUI/USD, ETH/USD, SOL/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
