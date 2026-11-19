@@ -166,10 +166,31 @@ class LegacyShadowTests(unittest.TestCase):
         api.rows = candle_rows(future=True)
         self.assertEqual(run(api)["candidates"], [])
 
-    def test_no_trade_candle_abstains(self):
+    def test_inconsistent_zero_volume_candle_abstains(self):
         api = FakeKraken()
         api.rows = candle_rows(empty=True)
         self.assertEqual(run(api)["candidates"], [])
+
+    def test_explicit_flat_no_trade_candle_is_valid(self):
+        api = FakeKraken()
+        price = api.rows[7][4]
+        api.rows[8][1:] = [price, price, price, price, 0, 0, 0]
+        report = run(api)
+        self.assertEqual(report["ohlc_data_rejections"], 0)
+        self.assertTrue(report["candidates"])
+
+    def test_no_trade_candle_cannot_move_price(self):
+        api = FakeKraken()
+        price = api.rows[7][4] + .01
+        api.rows[8][1:] = [price, price, price, price, 0, 0, 0]
+        self.assertEqual(run(api)["ohlc_data_rejections"], 16)
+
+    def test_zero_prior_volume_remains_invalid(self):
+        api = FakeKraken()
+        price = api.rows[0][4]
+        for row in api.rows[1:7]:
+            row[1:] = [price, price, price, price, 0, 0, 0]
+        self.assertEqual(run(api)["ohlc_data_rejection_reasons"], {"Invalid previous volume": 16})
 
     def test_expired_ticker_fails_closed(self):
         calls = [0]
