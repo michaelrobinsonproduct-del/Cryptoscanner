@@ -2,43 +2,49 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-19T02:10:25.807453+00:00
+**UTC as-of:** 2026-11-19T02:15:21.599935+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44442239895
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44442853734
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** 0ac1d4ea441e72d12fb7309e54fc42d2e93a3fdc (atomic ledger/results publication)
-**Ledger generation:** 727 (remote push/readback verified)
+**Previous ledger commit:** 1bd4b25264362c321082d8b3d4a06ca1c3bb44f2 (atomic ledger/results publication)
+**Ledger generation:** 728 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 10s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 24.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | CFG/USD | 0.0706 | 74.730 | 68.694 | +9.63% | +1.29% | 0.96x | 14.2 | 2026-11-19T02:10:15.903882+00:00 | Not calibrated | MODERATE 62/100 | VERY_HIGH 80/100 | Watch | WATCH |
-| 2 | LUNA/USD | 4.592e-05 | 70.434 | 52.879 | +5.47% | +0.92% | 2.29x | 35.1 | 2026-11-19T02:10:15.903882+00:00 | Not calibrated | STRONG 75/100 | VERY_HIGH 72/100 | Watch | WATCH |
-| 3 | SENT/USD | 0.021725 | 64.250 | 66.331 | +5.44% | +0.38% | 0.60x | 6.4 | 2026-11-19T02:10:15.903882+00:00 | Not calibrated | MODERATE 62/100 | VERY_HIGH 82/100 | Watch | WATCH |
-| 4 | PROS/USD | 0.6916 | 60.471 | 38.670 | +3.25% | +3.47% | 1.44x | 31.9 | 2026-11-19T02:10:15.903882+00:00 | Not calibrated | MODERATE 65/100 | VERY_HIGH 82/100 | Watch | WATCH |
-| 5 | TRX/USD | 0.310109 | 56.257 | 41.505 | +0.27% | -0.05% | 9.12x | 0.7 | 2026-11-19T02:10:15.903882+00:00 | Not calibrated | MODERATE 58/100 | HIGH 61/100 | Watch | WATCH |
-| 6 | MEGA/USD | 0.05783 | 49.087 | 46.320 | +3.27% | +1.01% | 0.77x | 15.6 | 2026-11-19T02:10:15.903882+00:00 | Not calibrated | MODERATE 50/100 | VERY_HIGH 80/100 | Watch | WATCH |
-| 7 | STX/USD | 0.273 | 41.749 | 30.668 | +0.70% | -0.18% | 2.20x | 11.0 | 2026-11-19T02:10:15.903882+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 79/100 | Watch | WATCH |
-| 8 | PYTH/USD | 0.05337 | 27.500 | 33.260 | +1.16% | -0.47% | 0.66x | 13.1 | 2026-11-19T02:10:15.903882+00:00 | Not calibrated | WEAK 14/100 | EXTREME 87/100 | Do nothing | WATCH |
-| 9 | DRV/USD | 0.26626 | 25.336 | 32.924 | +0.59% | +0.01% | 0.24x | 9.0 | 2026-11-19T02:10:15.903882+00:00 | Not calibrated | WEAK 33/100 | VERY_HIGH 75/100 | Do nothing | WATCH |
+| 1 | LUNA/USD | 4.693e-05 | 86.198 | 54.803 | +7.79% | +3.28% | 5.94x | 44.9 | 2026-11-19T02:15:14.759959+00:00 | Not calibrated | STRONG 83/100 | EXTREME 92/100 | Do nothing | WATCH |
+| 2 | CFG/USD | 0.0696 | 62.055 | 68.602 | +8.07% | -1.42% | 1.05x | 14.3 | 2026-11-19T02:15:14.759959+00:00 | Not calibrated | WEAK 36/100 | EXTREME 90/100 | Do nothing | WATCH |
+| 3 | VVV/USD | 22.011 | 60.217 | 54.806 | +1.57% | +1.74% | 0.67x | 8.2 | 2026-11-19T02:15:14.759959+00:00 | Not calibrated | MODERATE 60/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 4 | TRX/USD | 0.310636 | 58.807 | 43.159 | +0.44% | +0.13% | 18.87x | 0.0 | 2026-11-19T02:15:14.759959+00:00 | Not calibrated | STRONG 74/100 | HIGH 55/100 | Watch | WATCH |
+| 5 | NEAR/USD | 3.3213 | 53.229 | 59.019 | +0.72% | +0.52% | 0.16x | 2.1 | 2026-11-19T02:15:14.759959+00:00 | Not calibrated | MODERATE 57/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 6 | ICP/USD | 2.243 | 52.300 | 56.405 | +2.98% | +0.63% | 0.28x | 4.5 | 2026-11-19T02:15:14.759959+00:00 | Not calibrated | MODERATE 56/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 7 | HYPE/USD | 67.05 | 48.247 | 56.033 | +0.25% | +0.16% | 0.14x | 1.5 | 2026-11-19T02:15:14.759959+00:00 | Not calibrated | WEAK 44/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 8 | SENT/USD | 0.02164 | 46.288 | 50.668 | +5.02% | -0.50% | 0.81x | 32.0 | 2026-11-19T02:15:14.759959+00:00 | Not calibrated | WEAK 18/100 | EXTREME 92/100 | Do nothing | WATCH |
+| 9 | TRUMP/USD | 0.951 | 41.668 | 34.019 | +0.63% | +0.42% | 1.55x | 10.5 | 2026-11-19T02:15:14.759959+00:00 | Not calibrated | MODERATE 61/100 | HIGH 66/100 | Watch | WATCH |
+| 10 | PAXG/USD | 3743.06 | 38.800 | 43.191 | +0.32% | -0.07% | 0.59x | 1.3 | 2026-11-19T02:15:14.759959+00:00 | Not calibrated | WEAK 24/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
+| 11 | ENA/USD | 0.1121 | 32.469 | 34.721 | +0.36% | +0.18% | 0.69x | 17.9 | 2026-11-19T02:15:14.759959+00:00 | Not calibrated | WEAK 31/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
+| 12 | DRV/USD | 0.26653 | 25.940 | 33.275 | +0.70% | +0.04% | 0.24x | 9.8 | 2026-11-19T02:15:14.759959+00:00 | Not calibrated | WEAK 33/100 | VERY_HIGH 75/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | CFG/USD | 68.694 | 0.0706 | +1.29% | 0.96x |
-| 2 | SENT/USD | 66.331 | 0.021725 | +0.38% | 0.60x |
-| 3 | LUNA/USD | 52.879 | 4.592e-05 | +0.92% | 2.29x |
-| 4 | MEGA/USD | 46.320 | 0.05783 | +1.01% | 0.77x |
-| 5 | TRX/USD | 41.505 | 0.310109 | -0.05% | 9.12x |
-| 6 | PROS/USD | 38.670 | 0.6916 | +3.47% | 1.44x |
-| 7 | PYTH/USD | 33.260 | 0.05337 | -0.47% | 0.66x |
-| 8 | DRV/USD | 32.924 | 0.26626 | +0.01% | 0.24x |
-| 9 | STX/USD | 30.668 | 0.273 | -0.18% | 2.20x |
+| 1 | CFG/USD | 68.602 | 0.0696 | -1.42% | 1.05x |
+| 2 | NEAR/USD | 59.019 | 3.3213 | +0.52% | 0.16x |
+| 3 | ICP/USD | 56.405 | 2.243 | +0.63% | 0.28x |
+| 4 | HYPE/USD | 56.033 | 67.05 | +0.16% | 0.14x |
+| 5 | VVV/USD | 54.806 | 22.011 | +1.74% | 0.67x |
+| 6 | LUNA/USD | 54.803 | 4.693e-05 | +3.28% | 5.94x |
+| 7 | SENT/USD | 50.668 | 0.02164 | -0.50% | 0.81x |
+| 8 | PAXG/USD | 43.191 | 3743.06 | -0.07% | 0.59x |
+| 9 | TRX/USD | 43.159 | 0.310636 | +0.13% | 18.87x |
+| 10 | ENA/USD | 34.721 | 0.1121 | +0.18% | 0.69x |
+| 11 | TRUMP/USD | 34.019 | 0.951 | +0.42% | 1.55x |
+| 12 | DRV/USD | 33.275 | 0.26653 | +0.04% | 0.24x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -54,15 +60,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 727; predictions: 5901; observations: 439750.
-- Matured sampled outcomes across 1/6/24/48h: 5826; gap abstentions: 13478. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 728; predictions: 5913; observations: 440359.
+- Matured sampled outcomes across 1/6/24/48h: 5842; gap abstentions: 13482. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 15; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 12; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -71,28 +77,33 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44442239895 · **Generation:** 727 · **Legacy run:** 44442239895
-**Main quote time:** 2026-11-19T02:10:25.807453+00:00 · **Legacy report time:** 2026-11-19T02:11:12.942595+00:00
+**Writer:** 44442853734 · **Generation:** 728 · **Legacy run:** 44442853734
+**Main quote time:** 2026-11-19T02:15:21.599935+00:00 · **Legacy report time:** 2026-11-19T02:16:06.815450+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | CFG/USD | 0.0706 | 74.73 | +1.29% | 0.96x | MODERATE 62/100 | VERY_HIGH 80/100 | Watch |
-| 2 | LUNA/USD | 4.592e-05 | 70.43 | +0.92% | 2.29x | STRONG 75/100 | VERY_HIGH 72/100 | Watch |
-| 3 | SENT/USD | 0.021725 | 64.25 | +0.38% | 0.60x | MODERATE 62/100 | VERY_HIGH 82/100 | Watch |
-| 4 | PROS/USD ⭐ | 0.6916 | 60.47 | +3.47% | 1.44x | STRONG 75/100 | VERY_HIGH 82/100 | Watch |
-| 5 | TRX/USD | 0.310109 | 56.26 | -0.05% | 9.12x | MODERATE 58/100 | HIGH 61/100 | Watch |
-| 6 | MEGA/USD | 0.05783 | 49.09 | +1.01% | 0.77x | MODERATE 50/100 | VERY_HIGH 80/100 | Watch |
-| 7 | STX/USD | 0.273 | 41.75 | -0.18% | 2.20x | MODERATE 46/100 | VERY_HIGH 79/100 | Watch |
-| 8 | PYTH/USD | 0.05337 | 27.50 | -0.47% | 0.66x | WEAK 14/100 | EXTREME 87/100 | Do nothing |
-| 9 | DRV/USD | 0.26626 | 25.34 | +0.01% | 0.24x | WEAK 33/100 | VERY_HIGH 75/100 | Do nothing |
+| 1 | LUNA/USD ⭐ | 4.693e-05 | 86.20 | +3.28% | 5.94x | STRONG 93/100 | EXTREME 92/100 | Do nothing |
+| 2 | CFG/USD | 0.0696 | 62.05 | -1.42% | 1.05x | WEAK 36/100 | EXTREME 90/100 | Do nothing |
+| 3 | VVV/USD | 22.011 | 60.22 | +1.74% | 0.67x | MODERATE 60/100 | VERY_HIGH 70/100 | Watch |
+| 4 | TRX/USD ⭐ | 0.310636 | 58.81 | +0.13% | 18.87x | STRONG 84/100 | HIGH 55/100 | Watch |
+| 5 | NEAR/USD | 3.3213 | 53.23 | +0.52% | 0.16x | MODERATE 57/100 | VERY_HIGH 70/100 | Watch |
+| 6 | ICP/USD | 2.243 | 52.30 | +0.63% | 0.28x | MODERATE 56/100 | VERY_HIGH 70/100 | Watch |
+| 7 | HYPE/USD | 67.05 | 48.25 | +0.16% | 0.14x | WEAK 44/100 | VERY_HIGH 70/100 | Watch |
+| 8 | SENT/USD | 0.02164 | 46.29 | -0.50% | 0.81x | WEAK 18/100 | EXTREME 92/100 | Do nothing |
+| 9 | TRUMP/USD | 0.951 | 41.67 | +0.42% | 1.55x | MODERATE 61/100 | HIGH 66/100 | Watch |
+| 10 | PAXG/USD | 3743.06 | 38.80 | -0.07% | 0.59x | WEAK 24/100 | VERY_HIGH 76/100 | Do nothing |
+| 11 | ENA/USD | 0.1121 | 32.47 | +0.18% | 0.69x | WEAK 31/100 | VERY_HIGH 76/100 | Do nothing |
+| 12 | DRV/USD | 0.26653 | 25.94 | +0.04% | 0.24x | WEAK 33/100 | VERY_HIGH 75/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | PROS/USD ⭐ | 0.6861 | 62.07 | +3.47% | 1.44x | 2659 | STRONG 76/100 | VERY_HIGH 82/100 | Watch |
+| 1 | LUNA/USD ⭐ | 4.694e-05 | 82.03 | +3.28% | 5.94x | 2000 | STRONG 91/100 | EXTREME 92/100 | Do nothing |
+| 2 | TRX/USD ⭐ | 0.310436 | 54.06 | +0.13% | 18.87x | 4186 | STRONG 82/100 | HIGH 55/100 | Watch |
+| 3 | PROS/USD | 0.6821 | 51.33 | +1.30% | 1.57x | 2674 | MODERATE 61/100 | VERY_HIGH 72/100 | Watch |
 
-**Same-run overlap:** PROS/USD
+**Same-run overlap:** LUNA/USD, TRX/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
