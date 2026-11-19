@@ -379,8 +379,8 @@ class MarketWideLearningTest(unittest.TestCase):
         preds=[]
         for version in ("A","B"):
             for key,base in (("base",True),("shadow",False)):
-                preds.append(dict(prediction_id=version+key,model_version=version,batch_id=version,
-                    recording_scope="TIMELY_RECORDED_QUOTE_REFERENCE",baseline_watch=base,
+                preds.append(dict(prediction_id=version+key,model_version=version,batch_id=version,run_id=version,
+                    recorded_at_utc="2026-11-01T00:00:00Z",recording_scope="TIMELY_RECORDED_QUOTE_REFERENCE",baseline_watch=base,
                     shadow_equal_budget_watch=not base))
         outcomes=[dict(prediction_id=p["prediction_id"],horizon_hours=1,coverage_complete=True,
                        hit=p["shadow_equal_budget_watch"]) for p in preds if p["model_version"]=="A"]
@@ -395,8 +395,8 @@ class MarketWideLearningTest(unittest.TestCase):
     def test_known_misses_and_lead_bounds_do_not_treat_unknowns_as_losses(self):
         from paper_pov.market_wide_learning import prospective_metrics_by_version
         def pred(key,base,shadow):
-            return dict(prediction_id=key,model_version="M",batch_id="B",
-                        recording_scope="TIMELY_RECORDED_QUOTE_REFERENCE",
+            return dict(prediction_id=key,model_version="M",batch_id="B",run_id="R",
+                        recorded_at_utc="2026-11-01T00:00:00Z",recording_scope="TIMELY_RECORDED_QUOTE_REFERENCE",
                         baseline_watch=base,shadow_equal_budget_watch=shadow)
         preds=[pred("a",True,False),pred("b",False,True),
                pred("c",False,False),pred("d",False,False)]
@@ -411,6 +411,32 @@ class MarketWideLearningTest(unittest.TestCase):
         self.assertEqual(m["shadow_mean_lead_hours_upper_bound"],6)
         self.assertEqual(m["paired_complete_batches"],1)
         self.assertFalse(m["measured_lift_verified"])
+
+
+    def test_prospective_comparison_excludes_repeated_writer_batches_before_outcomes(self):
+        from paper_pov.market_wide_learning import prospective_metrics_by_version
+        def batch(writer,version,batch_id,recorded):
+            return [dict(prediction_id=batch_id+key,model_version=version,
+                         batch_id=batch_id,run_id=writer,recorded_at_utc=recorded,
+                         recording_scope="TIMELY_RECORDED_QUOTE_REFERENCE",
+                         baseline_watch=base,shadow_equal_budget_watch=not base)
+                    for key,base in (("a",True),("b",False))]
+        first=batch("writer1","A","first","2026-11-01T00:01:00Z")
+        later=batch("writer1","B","later","2026-11-01T00:02:00Z")
+        fresh=batch("writer2","B","fresh","2026-11-01T00:06:00Z")
+        # Later duplicate has attractive results; earliest cohort is incomplete.
+        outcomes=[dict(prediction_id=p["prediction_id"],horizon_hours=48,
+                       coverage_complete=True,hit=p["shadow_equal_budget_watch"])
+                  for p in later+fresh]
+        metrics=prospective_metrics_by_version(later+fresh+first,outcomes)
+        self.assertEqual(metrics["A"]["48"]["unavailable_batches"],1)
+        self.assertEqual(metrics["B"]["48"]["repeated_writer_batches"],1)
+        self.assertEqual(metrics["B"]["48"]["repeated_writer_anchors"],2)
+        self.assertEqual(metrics["B"]["48"]["paired_complete_batches"],1)
+        self.assertEqual(metrics["B"]["48"]["selected_per_scanner"],1)
+        self.assertEqual(metrics["B"]["48"]["shadow_hits"],1)
+        self.assertEqual(metrics["B"]["48"]["comparison_sampling"],
+                         "EARLIEST_TIMELY_BATCH_PER_WRITER_OUTCOME_BLIND")
 
 
     def test_watch_controls_do_not_replace_independent_market_sample(self):

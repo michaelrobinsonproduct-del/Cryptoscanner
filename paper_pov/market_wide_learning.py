@@ -510,12 +510,32 @@ def prospective_metrics_by_version(predictions, outcomes):
         if p.get("recording_scope")=="TIMELY_RECORDED_QUOTE_REFERENCE":
             groups.setdefault((p["model_version"],p["batch_id"]),[]).append(p)
     labels={(o["prediction_id"],o["horizon_hours"]):o for o in outcomes}
+    # Multiple research passes can reuse one canonical writer and its WATCH
+    # controls. Choose the earliest recorded timely batch per writer, across
+    # versions, BEFORE inspecting outcome labels or selection performance.
+    # Later batches remain in retained research/training evidence, but are not
+    # independent prospective comparison opportunities.
+    first_by_writer={}
+    batch_writers={}
+    for key,group in groups.items():
+        writers={p["run_id"] for p in group}
+        if len(writers)!=1:
+            raise ValueError("Prospective batch mixes writer identities")
+        writer=next(iter(writers))
+        recorded=min(utc_time(p["recorded_at_utc"]) for p in group)
+        order=(recorded,key)
+        batch_writers[key]=writer
+        if writer not in first_by_writer or order<first_by_writer[writer]:
+            first_by_writer[writer]=order
     result={}
-    for (version,_),group in groups.items():
+    for key,group in groups.items():
+        version,_=key
+        repeated=first_by_writer[batch_writers[key]][1]!=key
         base=[p for p in group if p["baseline_watch"]]
         shadow=[p for p in group if p["shadow_equal_budget_watch"]]
         by_h=result.setdefault(version,{str(h):{"paired_complete_batches":0,"unavailable_batches":0,
             "zero_budget_batches":0,"selected_per_scanner":0,"baseline_hits":0,"shadow_hits":0,
+            "repeated_writer_batches":0,"repeated_writer_anchors":0,
             "timely_scored_anchors":0,"known_positive_anchors":0,"unknown_outcome_anchors":0,
             "baseline_known_missed_positives":0,"shadow_known_missed_positives":0,
             "baseline_known_detected_positives":0,"shadow_known_detected_positives":0,
@@ -523,6 +543,10 @@ def prospective_metrics_by_version(predictions, outcomes):
             for h in (1,6,24,48)})
         for h in (1,6,24,48):
             m=by_h[str(h)]
+            if repeated:
+                m["repeated_writer_batches"]+=1
+                m["repeated_writer_anchors"]+=len(group)
+                continue
             # Coverage and missed-positive accounting is restricted to timely
             # scored shard anchors; it is not full-universe event recall.
             for p in group:
@@ -566,7 +590,8 @@ def prospective_metrics_by_version(predictions, outcomes):
                 leads=m.pop(f"{scanner}_crossing_lead_hours_upper_bounds")
                 m[f"{scanner}_crossing_lead_samples"]=len(leads)
                 m[f"{scanner}_mean_lead_hours_upper_bound"]=sum(leads)/len(leads) if leads else None
-            m["missed_positive_scope"]="TIMELY_SCORED_SHARD_ANCHORS_ONLY"
+            m["missed_positive_scope"]="FIRST_TIMELY_SCORED_SHARD_PER_WRITER_ONLY"
+            m["comparison_sampling"]="EARLIEST_TIMELY_BATCH_PER_WRITER_OUTCOME_BLIND"
             m["measured_lift_verified"]=False
     return result
 
@@ -695,29 +720,18 @@ def retain_prospective_shadow(state, prior, cohort, results, ledger, model_sourc
     state["shadow_predictions"]=[predictions[k] for k in sorted(predictions)]
     state["shadow_outcomes"]=[outcomes[k] for k in sorted(outcomes)]
     state["digest"]=canonical_digest({k:v for k,v in state.items() if k!="digest"})
-    groups={}
-    for p in predictions.values():
-        groups.setdefault(p["batch_id"],[]).append(p)
-    count=hits_base=hits_shadow=selected=0
-    for group in groups.values():
-        if not all(p.get("recording_scope")=="TIMELY_RECORDED_QUOTE_REFERENCE" for p in group):
-            continue
-        base=[p for p in group if p["baseline_watch"]]
-        shadow=[p for p in group if p["shadow_equal_budget_watch"]]
-        keys=[(p["prediction_id"],48) for p in base+shadow]
-        if not base or len(base)!=len(shadow) or any(k not in outcomes or not outcomes[k]["coverage_complete"] for k in keys):
-            continue
-        count+=1
-        selected+=len(base)
-        hits_base+=sum(outcomes[(p["prediction_id"],48)]["hit"] for p in base)
-        hits_shadow+=sum(outcomes[(p["prediction_id"],48)]["hit"] for p in shadow)
+    by_version=prospective_metrics_by_version(predictions.values(),outcomes.values())
+    count=sum(m["48"]["paired_complete_batches"] for m in by_version.values())
+    selected=sum(m["48"]["selected_per_scanner"] for m in by_version.values())
+    hits_base=sum(m["48"]["baseline_hits"] for m in by_version.values())
+    hits_shadow=sum(m["48"]["shadow_hits"] for m in by_version.values())
     return {"scope":"ACTUAL_WATCHS_EQUAL_BUDGET_WITHIN_SCORED_SHARDS",
             "prospective_snapshot":snapshot, "retained_predictions":len(predictions),
             "timely_recorded_predictions":sum(p.get("recording_scope")=="TIMELY_RECORDED_QUOTE_REFERENCE" for p in predictions.values()),
             "replay_only_predictions":sum(p.get("recording_scope")!="TIMELY_RECORDED_QUOTE_REFERENCE" for p in predictions.values()),
             "paired_complete_batches":count,"selected_per_scanner":selected,
             "baseline_hits":hits_base,"shadow_hits":hits_shadow,
-            "by_model_and_horizon":prospective_metrics_by_version(predictions.values(),outcomes.values()),
+            "by_model_and_horizon":by_version,
             "measured_lift_verified":False,"production_applied":False}
 
 
