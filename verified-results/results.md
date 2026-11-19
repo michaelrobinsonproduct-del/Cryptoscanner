@@ -2,12 +2,12 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-19T02:50:25.139281+00:00
+**UTC as-of:** 2026-11-19T02:55:21.404284+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44447097072
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44447678142
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** c9e4e836c434627be65026a202fa3bb5d220cc4a (atomic ledger/results publication)
-**Ledger generation:** 735 (remote push/readback verified)
+**Previous ledger commit:** f5f0e5a5fe59c542cedb26ca0feb16904d71425e (atomic ledger/results publication)
+**Ledger generation:** 736 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 6s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 24.
@@ -16,31 +16,31 @@
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | NEAR/USD | 3.3159 | 70.958 | 56.816 | +0.56% | -0.17% | 3.96x | 4.2 | 2026-11-19T02:50:18.790859+00:00 | Not calibrated | MODERATE 65/100 | HIGH 61/100 | Watch | WATCH |
-| 2 | SENT/USD | 0.021975 | 70.569 | 68.380 | +6.65% | +0.37% | 1.03x | 16.4 | 2026-11-19T02:50:18.790859+00:00 | Not calibrated | MODERATE 65/100 | VERY_HIGH 80/100 | Watch | WATCH |
-| 3 | VVV/USD | 21.972 | 54.866 | 56.889 | +1.39% | +0.16% | 0.72x | 3.6 | 2026-11-19T02:50:18.790859+00:00 | Not calibrated | MODERATE 47/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 4 | ICP/USD | 2.244 | 49.923 | 54.772 | +3.03% | -0.09% | 0.56x | 8.9 | 2026-11-19T02:50:18.790859+00:00 | Not calibrated | WEAK 30/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
-| 5 | BMT/USD | 0.01952 | 45.852 | 46.781 | +3.39% | -0.51% | 1.16x | 15.4 | 2026-11-19T02:50:18.790859+00:00 | Not calibrated | WEAK 28/100 | EXTREME 86/100 | Do nothing | WATCH |
-| 6 | TRUMP/USD | 0.95 | 43.397 | 33.341 | +0.53% | -0.11% | 2.06x | 10.5 | 2026-11-19T02:50:18.790859+00:00 | Not calibrated | MODERATE 47/100 | VERY_HIGH 72/100 | Watch | WATCH |
-| 7 | UAI/USD | 0.03349 | 42.608 | 32.926 | +1.15% | -1.06% | 8.24x | 12.0 | 2026-11-19T02:50:18.790859+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 83/100 | Watch | WATCH |
-| 8 | AKE/USD | 0.01043795 | 39.174 | 30.887 | +0.45% | -0.62% | 2.14x | 13.7 | 2026-11-19T02:50:18.790859+00:00 | Not calibrated | MODERATE 45/100 | VERY_HIGH 72/100 | Watch | WATCH |
-| 9 | DRV/USD | 0.26626 | 35.987 | 34.630 | +0.59% | +0.06% | 1.11x | 5.6 | 2026-11-19T02:50:18.790859+00:00 | Not calibrated | WEAK 43/100 | HIGH 67/100 | Watch | WATCH |
-| 10 | MEGA/USD | 0.05704 | 29.890 | 35.512 | +1.86% | -0.37% | 0.62x | 17.6 | 2026-11-19T02:50:18.790859+00:00 | Not calibrated | WEAK 15/100 | EXTREME 94/100 | Do nothing | WATCH |
+| 1 | NEAR/USD | 3.3387 | 79.469 | 61.221 | +1.25% | +0.65% | 3.33x | 5.1 | 2026-11-19T02:55:15.029176+00:00 | Not calibrated | STRONG 95/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 2 | SENT/USD | 0.022116 | 73.607 | 73.419 | +7.33% | +0.19% | 0.92x | 6.3 | 2026-11-19T02:55:15.029176+00:00 | Not calibrated | MODERATE 57/100 | VERY_HIGH 74/100 | Watch | WATCH |
+| 3 | VVV/USD | 22.112 | 61.709 | 60.299 | +2.04% | +0.61% | 0.84x | 6.3 | 2026-11-19T02:55:15.029176+00:00 | Not calibrated | MODERATE 61/100 | HIGH 62/100 | Watch | WATCH |
+| 4 | INFI/USD | 0.1214 | 53.847 | 67.787 | +6.68% | -3.57% | 1.39x | 16.5 | 2026-11-19T02:55:15.029176+00:00 | Not calibrated | WEAK 42/100 | VERY_HIGH 83/100 | Do nothing | WATCH |
+| 5 | ICP/USD | 2.254 | 49.578 | 53.606 | +3.49% | +0.00% | 0.60x | 17.8 | 2026-11-19T02:55:15.029176+00:00 | Not calibrated | WEAK 40/100 | VERY_HIGH 76/100 | Watch | WATCH |
+| 6 | TRUMP/USD | 0.953 | 46.888 | 35.612 | +0.85% | +0.00% | 2.13x | 10.5 | 2026-11-19T02:55:15.029176+00:00 | Not calibrated | MODERATE 63/100 | HIGH 66/100 | Watch | WATCH |
+| 7 | MEGA/USD | 0.0573 | 39.897 | 38.830 | +2.32% | +0.77% | 0.72x | 17.5 | 2026-11-19T02:55:15.029176+00:00 | Not calibrated | MODERATE 45/100 | EXTREME 88/100 | Do nothing | WATCH |
+| 8 | TON/USD | 1.026 | 39.246 | 32.726 | +0.49% | +0.00% | 1.65x | 9.7 | 2026-11-19T02:55:15.029176+00:00 | Not calibrated | MODERATE 55/100 | HIGH 60/100 | Watch | WATCH |
+| 9 | DRV/USD | 0.26627 | 32.691 | 30.714 | +0.60% | +0.15% | 1.12x | 13.5 | 2026-11-19T02:55:15.029176+00:00 | Not calibrated | WEAK 36/100 | VERY_HIGH 73/100 | Watch | WATCH |
+| 10 | AKE/USD | 0.01044898 | 24.923 | 32.729 | +0.56% | -0.20% | 0.32x | 11.4 | 2026-11-19T02:55:15.029176+00:00 | Not calibrated | WEAK 12/100 | EXTREME 87/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SENT/USD | 68.380 | 0.021975 | +0.37% | 1.03x |
-| 2 | VVV/USD | 56.889 | 21.972 | +0.16% | 0.72x |
-| 3 | NEAR/USD | 56.816 | 3.3159 | -0.17% | 3.96x |
-| 4 | ICP/USD | 54.772 | 2.244 | -0.09% | 0.56x |
-| 5 | BMT/USD | 46.781 | 0.01952 | -0.51% | 1.16x |
-| 6 | MEGA/USD | 35.512 | 0.05704 | -0.37% | 0.62x |
-| 7 | DRV/USD | 34.630 | 0.26626 | +0.06% | 1.11x |
-| 8 | TRUMP/USD | 33.341 | 0.95 | -0.11% | 2.06x |
-| 9 | UAI/USD | 32.926 | 0.03349 | -1.06% | 8.24x |
-| 10 | AKE/USD | 30.887 | 0.01043795 | -0.62% | 2.14x |
+| 1 | SENT/USD | 73.419 | 0.022116 | +0.19% | 0.92x |
+| 2 | INFI/USD | 67.787 | 0.1214 | -3.57% | 1.39x |
+| 3 | NEAR/USD | 61.221 | 3.3387 | +0.65% | 3.33x |
+| 4 | VVV/USD | 60.299 | 22.112 | +0.61% | 0.84x |
+| 5 | ICP/USD | 53.606 | 2.254 | +0.00% | 0.60x |
+| 6 | MEGA/USD | 38.830 | 0.0573 | +0.77% | 0.72x |
+| 7 | TRUMP/USD | 35.612 | 0.953 | +0.00% | 2.13x |
+| 8 | AKE/USD | 32.729 | 0.01044898 | -0.20% | 0.32x |
+| 9 | TON/USD | 32.726 | 1.026 | +0.00% | 1.65x |
+| 10 | DRV/USD | 30.714 | 0.26627 | +0.15% | 1.12x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -56,8 +56,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 735; predictions: 5987; observations: 444622.
-- Matured sampled outcomes across 1/6/24/48h: 5947; gap abstentions: 13506. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 736; predictions: 5997; observations: 445231.
+- Matured sampled outcomes across 1/6/24/48h: 5961; gap abstentions: 13511. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -73,31 +73,29 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44447097072 · **Generation:** 735 · **Legacy run:** 44447097072
-**Main quote time:** 2026-11-19T02:50:25.139281+00:00 · **Legacy report time:** 2026-11-19T02:50:58.216695+00:00
+**Writer:** 44447678142 · **Generation:** 736 · **Legacy run:** 44447678142
+**Main quote time:** 2026-11-19T02:55:21.404284+00:00 · **Legacy report time:** 2026-11-19T02:55:58.632097+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | NEAR/USD | 3.3159 | 70.96 | -0.17% | 3.96x | MODERATE 65/100 | HIGH 61/100 | Watch |
-| 2 | SENT/USD ⭐ | 0.021975 | 70.57 | +0.37% | 1.03x | STRONG 75/100 | VERY_HIGH 80/100 | Watch |
-| 3 | VVV/USD | 21.972 | 54.87 | +0.16% | 0.72x | MODERATE 47/100 | VERY_HIGH 70/100 | Watch |
-| 4 | ICP/USD | 2.244 | 49.92 | -0.09% | 0.56x | WEAK 30/100 | VERY_HIGH 76/100 | Do nothing |
-| 5 | BMT/USD | 0.01952 | 45.85 | -0.51% | 1.16x | WEAK 28/100 | EXTREME 86/100 | Do nothing |
-| 6 | TRUMP/USD | 0.95 | 43.40 | -0.11% | 2.06x | MODERATE 47/100 | VERY_HIGH 72/100 | Watch |
-| 7 | UAI/USD | 0.03349 | 42.61 | -1.06% | 8.24x | MODERATE 46/100 | VERY_HIGH 83/100 | Watch |
-| 8 | AKE/USD | 0.01043795 | 39.17 | -0.62% | 2.14x | MODERATE 45/100 | VERY_HIGH 72/100 | Watch |
-| 9 | DRV/USD ⭐ | 0.26626 | 35.99 | +0.06% | 1.11x | MODERATE 53/100 | HIGH 67/100 | Watch |
-| 10 | MEGA/USD | 0.05704 | 29.89 | -0.37% | 0.62x | WEAK 15/100 | EXTREME 94/100 | Do nothing |
+| 1 | NEAR/USD ⭐ | 3.3387 | 79.47 | +0.65% | 3.33x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 2 | SENT/USD | 0.022116 | 73.61 | +0.19% | 0.92x | MODERATE 57/100 | VERY_HIGH 74/100 | Watch |
+| 3 | VVV/USD | 22.112 | 61.71 | +0.61% | 0.84x | MODERATE 61/100 | HIGH 62/100 | Watch |
+| 4 | INFI/USD | 0.1214 | 53.85 | -3.57% | 1.39x | WEAK 42/100 | VERY_HIGH 83/100 | Do nothing |
+| 5 | ICP/USD | 2.254 | 49.58 | +0.00% | 0.60x | WEAK 40/100 | VERY_HIGH 76/100 | Watch |
+| 6 | TRUMP/USD | 0.953 | 46.89 | +0.00% | 2.13x | MODERATE 63/100 | HIGH 66/100 | Watch |
+| 7 | MEGA/USD | 0.0573 | 39.90 | +0.77% | 0.72x | MODERATE 45/100 | EXTREME 88/100 | Do nothing |
+| 8 | TON/USD | 1.026 | 39.25 | +0.00% | 1.65x | MODERATE 55/100 | HIGH 60/100 | Watch |
+| 9 | DRV/USD | 0.26627 | 32.69 | +0.15% | 1.12x | WEAK 36/100 | VERY_HIGH 73/100 | Watch |
+| 10 | AKE/USD | 0.01044898 | 24.92 | -0.20% | 0.32x | WEAK 12/100 | EXTREME 87/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD ⭐ | 0.022 | 72.19 | +0.37% | 1.03x | 7910 | STRONG 81/100 | VERY_HIGH 74/100 | Watch |
-| 2 | TON/USD | 1.028 | 37.17 | +0.10% | 2.04x | 2751 | MODERATE 64/100 | HIGH 60/100 | Watch |
-| 3 | DRV/USD ⭐ | 0.26626 | 35.28 | +0.06% | 1.11x | 2624 | MODERATE 53/100 | HIGH 67/100 | Watch |
+| 1 | NEAR/USD ⭐ | 3.3429 | 63.51 | +0.65% | 3.33x | 13327 | STRONG 97/100 | HIGH 55/100 | Consider small entry |
 
-**Same-run overlap:** SENT/USD, DRV/USD
+**Same-run overlap:** NEAR/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
