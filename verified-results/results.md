@@ -2,35 +2,33 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-19T00:00:19.048020+00:00
+**UTC as-of:** 2026-11-19T00:05:13.122879+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44425332365
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44426030219
 **Source SHA:** b271b90a2cae9e5307600070ce7d0e510fe68996
-**Previous ledger commit:** 49c3676adfe5c91966c20a7a8c3e3085824d847a (atomic ledger/results publication)
-**Ledger generation:** 701 (remote push/readback verified)
+**Previous ledger commit:** eb83a713863aa46181511c2b26501f963bf51af2 (atomic ledger/results publication)
+**Ledger generation:** 702 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 14.
+**Freshness:** Kraken public ticker client-observed, max quote age 2s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 609; OHLC screened: 7.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | MEGA/USD | 0.05598 | 63.960 | 65.434 | +8.40% | +0.63% | 0.54x | 21.5 | 2026-11-19T00:00:13.564922+00:00 | Not calibrated | MODERATE 52/100 | EXTREME 94/100 | Do nothing | WATCH |
-| 2 | TRX/USD | 0.309315 | 57.078 | 42.491 | +0.46% | -0.08% | 4.75x | 1.2 | 2026-11-19T00:00:13.564922+00:00 | Not calibrated | MODERATE 59/100 | HIGH 61/100 | Watch | WATCH |
-| 3 | LUNA/USD | 4.378e-05 | 46.231 | 48.318 | +5.11% | -0.43% | 1.01x | 39.0 | 2026-11-19T00:00:13.564922+00:00 | Not calibrated | WEAK 18/100 | EXTREME 85/100 | Do nothing | WATCH |
-| 4 | NIGHT/USD | 0.04548 | 44.162 | 48.764 | +1.31% | +0.26% | 0.41x | 8.8 | 2026-11-19T00:00:13.564922+00:00 | Not calibrated | MODERATE 52/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 5 | MON/USD | 0.0143 | 23.948 | 16.342 | +0.28% | +0.42% | 1.55x | 35.1 | 2026-11-19T00:00:13.564922+00:00 | Not calibrated | WEAK 42/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 1 | ZRO/USD | 1.404 | 50.910 | 34.840 | +0.29% | +0.21% | 3.50x | 14.3 | 2026-11-19T00:05:10.989809+00:00 | Not calibrated | STRONG 75/100 | HIGH 61/100 | Watch | WATCH |
+| 2 | NIGHT/USD | 0.04557 | 42.884 | 42.988 | +0.33% | +0.44% | 0.77x | 6.6 | 2026-11-19T00:05:10.989809+00:00 | Not calibrated | MODERATE 51/100 | HIGH 62/100 | Watch | WATCH |
+| 3 | STX/USD | 0.2718 | 31.288 | 25.630 | +0.26% | -0.29% | 1.71x | 14.7 | 2026-11-19T00:05:10.989809+00:00 | Not calibrated | WEAK 31/100 | VERY_HIGH 79/100 | Do nothing | WATCH |
+| 4 | ICP/USD | 2.186 | 21.302 | 32.543 | +0.37% | -0.77% | 0.26x | 13.8 | 2026-11-19T00:05:10.989809+00:00 | Not calibrated | WEAK 11/100 | VERY_HIGH 82/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | MEGA/USD | 65.434 | 0.05598 | +0.63% | 0.54x |
-| 2 | NIGHT/USD | 48.764 | 0.04548 | +0.26% | 0.41x |
-| 3 | LUNA/USD | 48.318 | 4.378e-05 | -0.43% | 1.01x |
-| 4 | TRX/USD | 42.491 | 0.309315 | -0.08% | 4.75x |
-| 5 | MON/USD | 16.342 | 0.0143 | +0.42% | 1.55x |
+| 1 | NIGHT/USD | 42.988 | 0.04557 | +0.44% | 0.77x |
+| 2 | ZRO/USD | 34.840 | 1.404 | +0.21% | 3.50x |
+| 3 | ICP/USD | 32.543 | 2.186 | -0.77% | 0.26x |
+| 4 | STX/USD | 25.630 | 0.2718 | -0.29% | 1.71x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -46,15 +44,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 701; predictions: 5663; observations: 423916.
-- Matured sampled outcomes across 1/6/24/48h: 5533; gap abstentions: 13314. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 702; predictions: 5667; observations: 424525.
+- Matured sampled outcomes across 1/6/24/48h: 5533; gap abstentions: 13326. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 9; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 3; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -63,24 +61,23 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44425332365 · **Generation:** 701 · **Legacy run:** 44425332365
-**Main quote time:** 2026-11-19T00:00:19.048020+00:00 · **Legacy report time:** 2026-11-19T00:00:54.169573+00:00
+**Writer:** 44426030219 · **Generation:** 702 · **Legacy run:** 44426030219
+**Main quote time:** 2026-11-19T00:05:13.122879+00:00 · **Legacy report time:** 2026-11-19T00:05:41.029141+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | MEGA/USD | 0.05598 | 63.96 | +0.63% | 0.54x | MODERATE 52/100 | EXTREME 94/100 | Do nothing |
-| 2 | TRX/USD | 0.309315 | 57.08 | -0.08% | 4.75x | MODERATE 59/100 | HIGH 61/100 | Watch |
-| 3 | LUNA/USD | 4.378e-05 | 46.23 | -0.43% | 1.01x | WEAK 18/100 | EXTREME 85/100 | Do nothing |
-| 4 | NIGHT/USD | 0.04548 | 44.16 | +0.26% | 0.41x | MODERATE 52/100 | VERY_HIGH 70/100 | Watch |
-| 5 | MON/USD ⭐ | 0.0143 | 23.95 | +0.42% | 1.55x | MODERATE 52/100 | VERY_HIGH 72/100 | Watch |
+| 1 | ZRO/USD ⭐ | 1.404 | 50.91 | +0.21% | 3.50x | STRONG 85/100 | HIGH 61/100 | Consider small entry |
+| 2 | NIGHT/USD | 0.04557 | 42.88 | +0.44% | 0.77x | MODERATE 51/100 | HIGH 62/100 | Watch |
+| 3 | STX/USD | 0.2718 | 31.29 | -0.29% | 1.71x | WEAK 31/100 | VERY_HIGH 79/100 | Do nothing |
+| 4 | ICP/USD | 2.186 | 21.30 | -0.77% | 0.26x | WEAK 11/100 | VERY_HIGH 82/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | MON/USD ⭐ | 0.01428 | 20.01 | +0.42% | 1.55x | 1642 | MODERATE 60/100 | HIGH 66/100 | Watch |
+| 1 | ZRO/USD ⭐ | 1.404 | 40.06 | +0.21% | 3.50x | 2730 | STRONG 80/100 | HIGH 61/100 | Consider small entry |
 
-**Same-run overlap:** MON/USD
+**Same-run overlap:** ZRO/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
