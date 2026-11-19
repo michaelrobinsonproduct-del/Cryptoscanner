@@ -11,6 +11,18 @@ on:
         required: false
         default: false
         type: boolean
+      market_learning_bootstrap_run_id:
+        description: "Exact approved completed PR research run for first bootstrap"
+        required: false
+        type: string
+      market_learning_bootstrap_source_sha:
+        description: "Exact approved research commit SHA"
+        required: false
+        type: string
+      market_learning_bootstrap_state_digest:
+        description: "Exact independently verified research state SHA256 digest"
+        required: false
+        type: string
       market_learning_restore_asset:
         description: "Approved exact main checkpoint asset name; only used if current main artifact missing"
         required: false
@@ -305,6 +317,10 @@ jobs:
           LEARNING_BRANCH: ${{ github.head_ref || github.ref_name }}
           LEARNING_SCOPE: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
           ALLOW_MAIN_BOOTSTRAP: ${{ inputs.market_learning_bootstrap || false }}
+          BOOTSTRAP_RUN: ${{ inputs.market_learning_bootstrap_run_id }}
+          BOOTSTRAP_SHA: ${{ inputs.market_learning_bootstrap_source_sha }}
+          BOOTSTRAP_STATE: ${{ inputs.market_learning_bootstrap_state_digest }}
+          APPROVED_RESEARCH_ORIGIN: ${{ vars.MARKET_WIDE_BOOTSTRAP_MODEL_ORIGIN_RUN_ID }}
           RESTORE_ASSET: ${{ inputs.market_learning_restore_asset }}
           RESTORE_SHA: ${{ inputs.market_learning_restore_sha256 }}
           RESTORE_STATE: ${{ inputs.market_learning_restore_state_digest }}
@@ -335,6 +351,10 @@ jobs:
           done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate \
             --jq '.artifacts[] | select(.expired == false and (.name | startswith("market-wide-learning-continuity-"))) | [.workflow_run.head_branch,.workflow_run.id,.name] | @tsv' | awk -v branch="$LEARNING_BRANCH" -v prefix="$prior_prefix" '$1 == branch && index($3,prefix)==1 {print $2}' | sort -unr)
           restored=false
+          if [ "$LEARNING_SCOPE" = "main" ] && [ "$ALLOW_MAIN_BOOTSTRAP" = "true" ] && [ -n "$prior_run" ]; then
+            echo "::error::Main checkpoint already exists; bootstrap cannot replace it"
+            exit 1
+          fi
           if [ -z "$prior_run" ] && [ "$LEARNING_SCOPE" = "main" ] && [ -n "$RESTORE_ASSET" ]; then
             test "$ALLOW_MAIN_BOOTSTRAP" != "true"
             [[ "$RESTORE_ASSET" =~ ^market-wide-checkpoint-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+-[0-9]+\.tar\.gz$ ]]
@@ -356,10 +376,16 @@ jobs:
             test "$ALLOW_MAIN_BOOTSTRAP" = "true" || { echo "::error::MAIN_LEARNING_CHECKPOINT_UNAVAILABLE; explicit first bootstrap or approved restore required"; exit 1; }
             existing=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.workflow_run.head_branch=="main" and (.name|startswith("market-wide-learning-continuity-main-"))) | .id' | sed -n '1p')
             test -z "$existing" || { echo "::error::Main checkpoint history exists; bootstrap cannot replace it"; exit 1; }
-            prior_run=44253116626
+            [[ "$BOOTSTRAP_RUN" =~ ^[0-9]+$ ]]
+            [[ "$BOOTSTRAP_SHA" =~ ^[0-9a-f]{40}$ ]]
+            [[ "$BOOTSTRAP_STATE" =~ ^[0-9a-f]{64}$ ]]
+            [[ "$APPROVED_RESEARCH_ORIGIN" =~ ^[0-9]+$ ]]
+            prior_run="$BOOTSTRAP_RUN"
             prior_prefix=market-wide-learning-continuity-pr-
             prior_branch=learning-market-wide-20261117
-            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/134628375708" --jq '.status + ":" + (.conclusion // "") + ":" + (.run_id|tostring) + ":" + .head_sha')" = "completed:success:44253116626:3160830000f63005daef5e55e8377fe0298750ef"
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run" --jq '.head_branch+":"+.event+":"+.head_sha')" = "$prior_branch:pull_request:$BOOTSTRAP_SHA"
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run/jobs?per_page=100" --jq '.jobs[]|select(.name=="market-wide-shadow-learning")|.status+":"+(.conclusion//"")+":"+(.run_id|tostring)+":"+.head_sha')" = "completed:success:$prior_run:$BOOTSTRAP_SHA"
+            test -n "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run/artifacts?per_page=100" --jq '.artifacts[]|select(.expired==false and .name=="market-wide-learning-continuity-pr-'"$prior_run"'")|.id')"
             echo "MAIN_RESEARCH_BOOTSTRAP_PINNED=$prior_run"
           fi
           prior_args=()
@@ -374,7 +400,9 @@ jobs:
             fi
             test -s evidence/market-prior/market-wide-state.json
             if [ "$LEARNING_SCOPE" = "main" ] && [ "$prior_prefix" = "market-wide-learning-continuity-pr-" ]; then
-              test "$(jq -r .digest evidence/market-prior/market-wide-state.json)" = "5b52b7578d54f5bd70e8c217d0c53eb00826aa3348f9a225efcd7a1e0c7912db"
+              test "$(jq -r .digest evidence/market-prior/market-wide-state.json)" = "$BOOTSTRAP_STATE"
+              python -c 'import os; from paper_pov.learning_retention import verify_checkpoint_directory; verify_checkpoint_directory("evidence/market-prior",required_scope="pr",expected_state=os.environ["BOOTSTRAP_STATE"])'
+              test "$(cat evidence/market-prior/market-wide-model-origin-run.txt)" = "$APPROVED_RESEARCH_ORIGIN"
             fi
             echo "MARKET_LEARNING_PRIOR_RUN=$prior_run"
             echo "$prior_run" > evidence/market-prior-run.txt
@@ -403,7 +431,7 @@ jobs:
               origin_branch=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq '.head_branch')
               if [ "$origin_branch" != "$LEARNING_BRANCH" ]; then
                 test "$LEARNING_SCOPE" = "main"
-                test "$origin" = "44252782983"
+                test "$origin" = "$APPROVED_RESEARCH_ORIGIN"
                 test "$origin_branch" = "learning-market-wide-20261117"
               fi
               origin_jobs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin/jobs?per_page=100")
@@ -434,6 +462,9 @@ jobs:
       - name: Train cumulative shadow on retained historical and recent mature labels
         env:
           DURABLE_SEED_RELEASE: ${{ vars.MARKET_WIDE_SEED_RELEASE_TAG }}
+          ALLOW_MAIN_BOOTSTRAP: ${{ inputs.market_learning_bootstrap || false }}
+          BOOTSTRAP_RUN: ${{ inputs.market_learning_bootstrap_run_id }}
+          BOOTSTRAP_SHA: ${{ inputs.market_learning_bootstrap_source_sha }}
         run: |
           set -euo pipefail
           # Reuse the exact compact seed verified against the full originals.
@@ -462,11 +493,13 @@ jobs:
           # Historical trades are separate research, not an input to the strict
           # fit. Do not stop continuous strict training when research expires.
           trade_args=()
-          if [ -z "$trade_run" ] && [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            seed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/44252876362/artifacts" --jq '.artifacts[]|select(.expired==false and .name=="historical-trade-batch-44252876362")|.id')
+          if [ -z "$trade_run" ] && [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$ALLOW_MAIN_BOOTSTRAP" = "true" ]; then
+            [[ "$BOOTSTRAP_RUN" =~ ^[0-9]+$ ]]
+            [[ "$BOOTSTRAP_SHA" =~ ^[0-9a-f]{40}$ ]]
+            seed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BOOTSTRAP_RUN/artifacts?per_page=100" --jq '.artifacts[]|select(.expired==false and .name=="historical-trade-batch-'"$BOOTSTRAP_RUN"'")|.id')
             if [ -n "$seed" ]; then
-              test "$(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/134627815685" --jq '.status+":"+(.conclusion//"")+":"+(.run_id|tostring)+":"+.head_sha')" = "completed:success:44252876362:df8a7f6397cf0fff4e3929d5709fcbbdb60bcf57"
-              trade_run=44252876362
+              test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BOOTSTRAP_RUN/jobs?per_page=100" --jq '.jobs[]|select(.name=="historical-trade-recovery-pilot")|.status+":"+(.conclusion//"")+":"+(.run_id|tostring)+":"+.head_sha')" = "completed:success:$BOOTSTRAP_RUN:$BOOTSTRAP_SHA"
+              trade_run="$BOOTSTRAP_RUN"
             fi
           fi
           if [ -n "$trade_run" ]; then
@@ -621,6 +654,8 @@ jobs:
       PR_BRANCH: ${{ github.head_ref || github.ref_name }}
       LEARNING_SCOPE: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
       ALLOW_MAIN_BOOTSTRAP: ${{ inputs.market_learning_bootstrap || false }}
+      BOOTSTRAP_RUN: ${{ inputs.market_learning_bootstrap_run_id }}
+      BOOTSTRAP_SHA: ${{ inputs.market_learning_bootstrap_source_sha }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -661,8 +696,11 @@ jobs:
             args=(--prior evidence/trades-prior)
           elif [ "$LEARNING_SCOPE" = "main" ]; then
             test "$ALLOW_MAIN_BOOTSTRAP" = "true" || { echo "::error::Main historical cursor checkpoint unavailable; explicit recovery required"; exit 1; }
-            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/134627815685" --jq '.status+":"+(.conclusion//"")+":"+(.run_id|tostring)+":"+.head_sha')" = "completed:success:44252876362:df8a7f6397cf0fff4e3929d5709fcbbdb60bcf57"
-            gh run download 44252876362 -n historical-trade-batch-44252876362 -D evidence/trades-prior
+            [[ "$BOOTSTRAP_RUN" =~ ^[0-9]+$ ]]
+            [[ "$BOOTSTRAP_SHA" =~ ^[0-9a-f]{40}$ ]]
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BOOTSTRAP_RUN" --jq '.head_branch+":"+.event+":"+.head_sha')" = "learning-market-wide-20261117:pull_request:$BOOTSTRAP_SHA"
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BOOTSTRAP_RUN/jobs?per_page=100" --jq '.jobs[]|select(.name=="historical-trade-recovery-pilot")|.status+":"+(.conclusion//"")+":"+(.run_id|tostring)+":"+.head_sha')" = "completed:success:$BOOTSTRAP_RUN:$BOOTSTRAP_SHA"
+            gh run download "$BOOTSTRAP_RUN" -n "historical-trade-batch-$BOOTSTRAP_RUN" -D evidence/trades-prior
             args=(--prior evidence/trades-prior)
           else
             gh run download 44228386331 -n historical-trade-recovery-pilot-44228386331 -D evidence/trades-seed

@@ -102,6 +102,22 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertNotIn("  contents: write", legacy)
         self.assertNotIn("git push", legacy)
 
+    def test_main_learning_bootstrap_requires_approved_exact_checkpoint(self):
+        learning = (PIPELINE.parent / "paper-ledger-learning.yml").read_text()
+        for field in ("market_learning_bootstrap_run_id", "market_learning_bootstrap_source_sha",
+                      "market_learning_bootstrap_state_digest"):
+            self.assertIn(field + ":", learning)
+            self.assertIn("inputs." + field, learning)
+        self.assertIn('prior_run="$BOOTSTRAP_RUN"', learning)
+        self.assertIn('required_scope="pr",expected_state=os.environ["BOOTSTRAP_STATE"]', learning)
+        self.assertIn('"$prior_branch:pull_request:$BOOTSTRAP_SHA"', learning)
+        self.assertIn('"completed:success:$prior_run:$BOOTSTRAP_SHA"', learning)
+        self.assertIn('"completed:success:$BOOTSTRAP_RUN:$BOOTSTRAP_SHA"', learning)
+        self.assertIn('test "$origin" = "$APPROVED_RESEARCH_ORIGIN"', learning)
+        self.assertIn("Main checkpoint already exists; bootstrap cannot replace it", learning)
+        self.assertNotIn("prior_run=44253116626", learning)
+        self.assertNotIn("trade_run=44252876362", learning)
+
     def test_legacy_workflow_publishes_same_run_challenger_and_shadow(self):
         text = (PIPELINE.parent / "paper-legacy-shadow.yml").read_text()
         self.assertIn('gh run download "$PAPER_TRIGGER_RUN_ID"', text)
