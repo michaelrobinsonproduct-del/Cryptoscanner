@@ -112,6 +112,19 @@ class StorageForecastTests(unittest.TestCase):
                 for call in verifier.call_args_list))
         self.assertEqual(storage.MAX_PACKED_BYTES, 12_000_000)
 
+    def test_live_cadences_use_bounded_segmented_capacity(self):
+        r = capacity_report(fixture(quotes=609))
+        six, twelve = (r["segmented_live_cadences"][str(c)] for c in (6, 12))
+        self.assertEqual(twelve["modeled_active_runs"], 604)
+        self.assertEqual(six["modeled_active_runs"], 304)
+        self.assertEqual(twelve["max_ledger_bytes"], ledger.MAX_SEGMENTED_LOGICAL_BYTES)
+        self.assertEqual(storage.MAX_RAW_BYTES, 96_000_000)
+        self.assertLess(six["forecast_ledger_bytes"], twelve["forecast_ledger_bytes"])
+        with self.assertRaisesRegex(ValueError, "Invalid logical ledger capacity"):
+            ledger.verify(fixture(), storage.MAX_RAW_BYTES + 1)
+        self.assertEqual(storage.MAX_PACKED_BYTES, 12_000_000)
+        self.assertEqual(ledger.RETENTION, dt.timedelta(hours=50))
+
     def test_current_bytes_exact_canonical(self):
         s = fixture()
         r = capacity_report(s)

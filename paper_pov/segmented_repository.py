@@ -25,8 +25,10 @@ MAX_MANIFEST_BYTES = 8_000_000
 MAX_SEGMENTS = 30_000
 # Aggregate active Git-tree budget, including immutable checkpoint and segments.
 # The per-object 12 MB packed bound is NOT an aggregate ledger limit.
-# Reserve 2 MB of headroom; fail closed before any new ledger commit.
-MAX_ACTIVE_TREE_BYTES = 10_000_000
+# A rollover can hold two independently bounded 12 MB packed snapshots
+# plus manifest and segment objects. Keep a finite 30 MB aggregate bound.
+# The per-object compressed bound, checksum and rollover checks are unchanged.
+MAX_ACTIVE_TREE_BYTES = 30_000_000
 
 
 def sha(data):
