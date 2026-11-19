@@ -479,7 +479,7 @@ class MarketWideLearningTest(unittest.TestCase):
             build_learning_receipt(observed,report,report,writer=dict(writer,ledger_generation=6),learning_scope="pr")
 
 
-    def test_due_followups_prioritize_matured_selected_outcomes_only(self):
+    def test_due_followups_prioritize_matured_selected_then_unselected_outcomes(self):
         from paper_pov.market_wide_learning import due_outcome_followups
         p=dict(recording_scope="TIMELY_RECORDED_QUOTE_REFERENCE",model_version="M",batch_id="B",
                entry_utc="2026-11-01T00:00:00Z",baseline_watch=True,shadow_equal_budget_watch=False,
@@ -488,14 +488,22 @@ class MarketWideLearningTest(unittest.TestCase):
         c=dict(p,prediction_id="c",pair="C",baseline_watch=False,shadow_equal_budget_watch=False)
         prior=dict(shadow_predictions=[p,q,c],shadow_outcomes=[])
         self.assertEqual(due_outcome_followups(prior,["A","B","C"],["A"],
-                asof="2026-11-01T02:00:00Z",budget=5),["B"])
+                asof="2026-11-01T02:00:00Z",budget=5),["B","C"])
+        self.assertEqual(due_outcome_followups(prior,["A","B","C"],["A"],
+                asof="2026-11-01T02:00:00Z",budget=1),["B"])
         self.assertEqual(due_outcome_followups(prior,["A","B","C"],[],
                 asof="2026-11-01T00:30:00Z",budget=5),[])
         self.assertEqual(due_outcome_followups(prior,["A","B","C"],[],
                 asof="2026-11-04T00:00:00Z",budget=5),[])
         prior["shadow_outcomes"]=[dict(prediction_id="a",horizon_hours=1,outcome_status="MISSING_CANDLES")]
         self.assertEqual(due_outcome_followups(prior,["A","B","C"],[],
+                asof="2026-11-01T02:00:00Z",budget=5),["C"])
+        prior["shadow_outcomes"].append(dict(prediction_id="c",horizon_hours=1,outcome_status="MISSING_CANDLES"))
+        self.assertEqual(due_outcome_followups(prior,["A","B","C"],[],
                 asof="2026-11-01T02:00:00Z",budget=5),[])
+        prior=dict(shadow_predictions=[c],shadow_outcomes=[])
+        self.assertEqual(due_outcome_followups(prior,["C"],[],
+                asof="2026-11-01T02:00:00Z",budget=1),["C"])
 
 if __name__ == "__main__":
     unittest.main()

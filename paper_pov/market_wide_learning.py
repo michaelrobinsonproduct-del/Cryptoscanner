@@ -589,11 +589,12 @@ def eligible_scoring_model(model, available, scan_at):
 
 
 def due_outcome_followups(prior, eligible_pairs, scored_pairs, *, asof, budget):
-    """Reserve spare requests for genuinely matured paired comparison windows.
+    """Use spare requests for matured paired windows first, then missed-gainer controls.
 
-    Revisit older selected pairs before their five-minute REST history expires.
-    Missing observed rows remain abstentions; a completed missing-candle label
-    does not cause repeated requests for that same horizon.
+    Revisit older markets before their five-minute REST history expires.
+    A genuinely incomplete window remains an abstention. Unselected timely
+    anchors need outcomes too: otherwise known-miss counts are selection-biased.
+    The independent rotation and WATCH controls keep their existing budget.
     """
     if not prior or budget<=0:
         return []
@@ -626,7 +627,32 @@ def due_outcome_followups(prior, eligible_pairs, scored_pairs, *, asof, budget):
                 priority=(entry,-hours,p["pair"])
                 if p["pair"] not in due or priority<due[p["pair"]]:
                     due[p["pair"]]=priority
-    return sorted(due,key=due.get)[:budget]
+    # Complete the paired evaluation budget first. Only remaining requests
+    # go to timely anchors not selected by either scanner (including zero
+    # selection-budget batches). This measures known missed positives without
+    # treating uncovered controls as negatives or altering the scoring set.
+    paired=sorted(due,key=due.get)[:budget]
+    if len(paired)==budget:
+        return paired
+    controls={}
+    for group in groups.values():
+        for p in group:
+            if p["baseline_watch"] or p["shadow_equal_budget_watch"]:
+                continue
+            pair=p["pair"]
+            if pair not in eligible or pair in due:
+                continue
+            entry=utc_time(p["entry_utc"])
+            for hours in (1,6,24,48):
+                if not entry+timedelta(hours=hours)<=now<=entry+timedelta(hours=59):
+                    continue
+                o=outcomes.get((p["prediction_id"],hours))
+                if o and o["outcome_status"]!="IMMATURE":
+                    continue
+                priority=(entry,-hours,pair)
+                if pair not in controls or priority<controls[pair]:
+                    controls[pair]=priority
+    return paired+sorted(controls,key=controls.get)[:budget-len(paired)]
 
 
 def retain_prospective_shadow(state, prior, cohort, results, ledger, model_source=None, model_available_utc=None, scored_pairs=None):
