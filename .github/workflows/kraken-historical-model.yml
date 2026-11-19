@@ -3,17 +3,46 @@ on:
   workflow_run:
     workflows: ['Kraken Historical Backfill']
     types: [completed]
+  pull_request:
+    paths:
+      - '.github/workflows/kraken-historical-model.yml'
 permissions:
-  contents: write
-  actions: read
+  contents: read
 concurrency:
-  group: kraken-historical-model
+  group: kraken-historical-model-${{ github.event_name }}
   cancel-in-progress: false
 jobs:
+  producer-scope-contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Verify main-only producer and no PR publication
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s = Path(".github/workflows/kraken-historical-model.yml").read_text()
+          guard = s.split("  analyze:\n", 1)[1].split("    runs-on:", 1)[0]
+          assert "github.event_name == 'workflow_run' &&" in guard
+          assert "github.event.workflow_run.conclusion == 'success' &&" in guard
+          assert "github.event.workflow_run.head_branch == 'main' &&" in guard
+          assert "github.event.workflow_run.head_repository.full_name == github.repository &&" in guard
+          assert "(github.event.workflow_run.event == 'push' ||" in guard
+          assert "github.event.workflow_run.event == 'workflow_dispatch')" in guard
+          print("HISTORICAL_PRODUCER_SCOPE_CONTRACT_OK")
+          PY
   analyze:
+    permissions:
+      contents: write
+      actions: read
     # A successful PR-only Q2 research/reuse job is not a completed
     # production backfill and intentionally does not emit the derived artifact.
     if: >-
+      github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.head_branch == 'main' &&
       github.event.workflow_run.head_repository.full_name == github.repository &&
