@@ -124,6 +124,18 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertIn("github.event_name == 'push' && '44529882265' || inputs.market_learning_bootstrap_run_id", learning)
         self.assertNotIn("publish-approved-research-backup:", learning)
 
+    def test_approved_push_bootstraps_historical_cursor_and_durable_release(self):
+        learning = (PIPELINE.parent / "paper-ledger-learning.yml").read_text()
+        history = learning.split("\n  historical-trade-recovery-pilot:", 1)[1].split("\n  stage-learning-durable-backup:", 1)[0]
+        self.assertIn("(github.event_name == 'push' && github.ref == 'refs/heads/main')", history.split("\n    runs-on:", 1)[0])
+        self.assertIn("Bootstrap marker already existed; never reset main", history)
+        self.assertIn("python -m paper_pov.approved_market_bootstrap verify", history)
+        self.assertLess(history.index("Verify one-time approved historical bootstrap"), history.index("Recover bounded historical windows"))
+        self.assertIn('"completed:success:$BOOTSTRAP_RUN:$BOOTSTRAP_SHA"', history)
+        retention = learning.split("\n  retain-main-learning-durable-checkpoint:", 1)[1]
+        self.assertIn("CHECKPOINT_RELEASE: ${{ github.event_name == 'push' && 'market-wide-research-v1' || vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG }}", retention)
+
+
     def test_legacy_workflow_publishes_same_run_challenger_and_shadow(self):
         text = (PIPELINE.parent / "paper-legacy-shadow.yml").read_text()
         self.assertIn('gh run download "$PAPER_TRIGGER_RUN_ID"', text)
