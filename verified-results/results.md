@@ -2,31 +2,33 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T05:50:27.130475+00:00
+**UTC as-of:** 2026-11-20T05:55:26.508165+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44683589208
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44684132775
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** 488463bfb57c3fe5e22f8330a798cba339016552 (atomic ledger/results publication)
-**Ledger generation:** 935 (remote push/readback verified)
+**Previous ledger commit:** 808f445b16bb5dd69572de81ec5c6973ecbf9ed8 (atomic ledger/results publication)
+**Ledger generation:** 936 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 605; OHLC screened: 11.
+**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 605; OHLC screened: 13.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | XRP/USD | 0.97022 | 66.677 | 62.954 | +1.14% | +0.70% | 1.02x | 0.1 | 2026-11-20T05:50:23.944098+00:00 | Not calibrated | MODERATE 68/100 | HIGH 62/100 | Watch | WATCH |
-| 2 | XLM/USD | 0.133601 | 66.093 | 59.715 | +0.68% | +0.88% | 1.20x | 0.1 | 2026-11-20T05:50:23.944098+00:00 | Not calibrated | MODERATE 68/100 | HIGH 62/100 | Watch | WATCH |
-| 3 | SKR/USD | 0.01023 | 47.986 | 38.150 | +1.83% | +2.00% | 0.98x | 11.7 | 2026-11-20T05:50:23.944098+00:00 | Not calibrated | MODERATE 49/100 | VERY_HIGH 80/100 | Watch | WATCH |
+| 1 | XLM/USD | 0.133922 | 73.051 | 61.409 | +0.92% | +0.92% | 1.71x | 0.1 | 2026-11-20T05:55:21.481528+00:00 | Not calibrated | STRONG 82/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 2 | XRP/USD | 0.97025 | 67.075 | 62.873 | +1.15% | +0.56% | 1.14x | 0.3 | 2026-11-20T05:55:21.481528+00:00 | Not calibrated | MODERATE 69/100 | HIGH 62/100 | Watch | WATCH |
+| 3 | HBAR/USD | 0.054 | 55.349 | 41.473 | +0.45% | +1.07% | 1.85x | 1.9 | 2026-11-20T05:55:21.481528+00:00 | Not calibrated | STRONG 73/100 | HIGH 55/100 | Watch | WATCH |
+| 4 | SKR/USD | 0.010231 | 53.630 | 38.711 | +1.84% | +1.34% | 1.82x | 10.8 | 2026-11-20T05:55:21.481528+00:00 | Not calibrated | MODERATE 67/100 | VERY_HIGH 73/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | XRP/USD | 62.954 | 0.97022 | +0.70% | 1.02x |
-| 2 | XLM/USD | 59.715 | 0.133601 | +0.88% | 1.20x |
-| 3 | SKR/USD | 38.150 | 0.01023 | +2.00% | 0.98x |
+| 1 | XRP/USD | 62.873 | 0.97025 | +0.56% | 1.14x |
+| 2 | XLM/USD | 61.409 | 0.133922 | +0.92% | 1.71x |
+| 3 | HBAR/USD | 41.473 | 0.054 | +1.07% | 1.85x |
+| 4 | SKR/USD | 38.711 | 0.010231 | +1.34% | 1.82x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,15 +44,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 935; predictions: 7956; observations: 564946.
-- Matured sampled outcomes across 1/6/24/48h: 9301; gap abstentions: 17075. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 936; predictions: 7960; observations: 565551.
+- Matured sampled outcomes across 1/6/24/48h: 9301; gap abstentions: 17094. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 8; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 9; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -59,23 +61,27 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44683589208 · **Generation:** 935 · **Legacy run:** 44683589208
-**Main quote time:** 2026-11-20T05:50:27.130475+00:00 · **Legacy report time:** 2026-11-20T05:51:19.363272+00:00
+**Writer:** 44684132775 · **Generation:** 936 · **Legacy run:** 44684132775
+**Main quote time:** 2026-11-20T05:55:26.508165+00:00 · **Legacy report time:** 2026-11-20T05:56:11.366488+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | XRP/USD ⭐ | 0.97022 | 66.68 | +0.70% | 1.02x | STRONG 78/100 | HIGH 62/100 | Watch |
-| 2 | XLM/USD ⭐ | 0.133601 | 66.09 | +0.88% | 1.20x | STRONG 78/100 | HIGH 62/100 | Watch |
-| 3 | SKR/USD | 0.01023 | 47.99 | +2.00% | 0.98x | MODERATE 49/100 | VERY_HIGH 80/100 | Watch |
+| 1 | XLM/USD ⭐ | 0.133922 | 73.05 | +0.92% | 1.71x | STRONG 92/100 | HIGH 55/100 | Consider small entry |
+| 2 | XRP/USD ⭐ | 0.97025 | 67.07 | +0.56% | 1.14x | STRONG 79/100 | HIGH 62/100 | Watch |
+| 3 | HBAR/USD ⭐ | 0.054 | 55.35 | +1.07% | 1.85x | STRONG 83/100 | HIGH 55/100 | Consider small entry |
+| 4 | SKR/USD ⭐ | 0.010231 | 53.63 | +1.34% | 1.82x | STRONG 77/100 | VERY_HIGH 73/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | XRP/USD ⭐ | 0.969 | 64.94 | +0.70% | 1.02x | 32741 | STRONG 77/100 | HIGH 62/100 | Watch |
-| 2 | XLM/USD ⭐ | 0.133544 | 56.62 | +0.88% | 1.20x | 9896 | STRONG 73/100 | HIGH 62/100 | Watch |
+| 1 | XRP/USD ⭐ | 0.96866 | 64.15 | +0.56% | 1.14x | 32822 | STRONG 77/100 | HIGH 62/100 | Watch |
+| 2 | XLM/USD ⭐ | 0.133798 | 61.67 | +0.92% | 1.71x | 9929 | STRONG 86/100 | HIGH 55/100 | Consider small entry |
+| 3 | AUD/USD | 0.66695 | 50.75 | +0.11% | 4.60x | 3994 | STRONG 70/100 | HIGH 55/100 | Watch |
+| 4 | HBAR/USD ⭐ | 0.05398 | 50.38 | +1.07% | 1.85x | 8590 | STRONG 80/100 | HIGH 55/100 | Consider small entry |
+| 5 | SKR/USD ⭐ | 0.010226 | 42.74 | +1.34% | 1.82x | 1586 | STRONG 71/100 | VERY_HIGH 73/100 | Watch |
 
-**Same-run overlap:** XRP/USD, XLM/USD
+**Same-run overlap:** XLM/USD, XRP/USD, HBAR/USD, SKR/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
