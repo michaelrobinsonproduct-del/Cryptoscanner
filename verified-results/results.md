@@ -2,33 +2,31 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T13:21:10.480815+00:00
+**UTC as-of:** 2026-11-20T13:30:51.295812+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44743319254
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44744764765
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** 6427b451626ef516abcc134a3eacb9cca76391d3 (atomic ledger/results publication)
-**Ledger generation:** 984 (remote push/readback verified)
+**Previous ledger commit:** 08387e724b3a3432b9d376e6ef45373b9b1e41ea (atomic ledger/results publication)
+**Ledger generation:** 985 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 607; OHLC screened: 13.
+**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 607; OHLC screened: 12.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | GBP/USD | 1.31247 | 72.069 | 57.084 | +0.32% | -0.00% | 3.75x | 0.3 | 2026-11-20T13:21:05.472023+00:00 | Not calibrated | MODERATE 66/100 | HIGH 61/100 | Watch | WATCH |
-| 2 | REKT/USD | 7.79e-08 | 60.304 | 54.160 | +3.87% | -0.90% | 2.06x | 12.8 | 2026-11-20T13:21:05.472023+00:00 | Not calibrated | MODERATE 55/100 | VERY_HIGH 72/100 | Watch | WATCH |
-| 3 | SENT/USD | 0.021757 | 45.867 | 43.834 | +2.20% | +0.64% | 0.88x | 7.8 | 2026-11-20T13:21:05.472023+00:00 | Not calibrated | MODERATE 53/100 | HIGH 67/100 | Watch | WATCH |
-| 4 | ICNT/USD | 0.4289 | 19.935 | 24.700 | +0.66% | -1.36% | 1.21x | 35.1 | 2026-11-20T13:21:05.472023+00:00 | Not calibrated | WEAK 5/100 | VERY_HIGH 84/100 | Do nothing | WATCH |
+| 1 | GBP/USD | 1.31203 | 71.418 | 56.506 | +0.29% | -0.02% | 2.54x | 1.0 | 2026-11-20T13:30:47.020581+00:00 | Not calibrated | MODERATE 66/100 | HIGH 61/100 | Watch | WATCH |
+| 2 | WINGS/USD | 0.001889 | 60.056 | 43.291 | +2.44% | +0.48% | 2.44x | 10.5 | 2026-11-20T13:30:47.020581+00:00 | Not calibrated | STRONG 80/100 | VERY_HIGH 73/100 | Watch | WATCH |
+| 3 | SENT/USD | 0.021544 | 29.570 | 38.614 | +1.20% | -0.83% | 0.51x | 4.2 | 2026-11-20T13:30:47.020581+00:00 | Not calibrated | WEAK 20/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | GBP/USD | 57.084 | 1.31247 | -0.00% | 3.75x |
-| 2 | REKT/USD | 54.160 | 7.79e-08 | -0.90% | 2.06x |
-| 3 | SENT/USD | 43.834 | 0.021757 | +0.64% | 0.88x |
-| 4 | ICNT/USD | 24.700 | 0.4289 | -1.36% | 1.21x |
+| 1 | GBP/USD | 56.506 | 1.31203 | -0.02% | 2.54x |
+| 2 | WINGS/USD | 43.291 | 0.001889 | +0.48% | 2.44x |
+| 3 | SENT/USD | 38.614 | 0.021544 | -0.83% | 0.51x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -44,8 +42,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 984; predictions: 8226; observations: 594642.
-- Matured sampled outcomes across 1/6/24/48h: 9939; gap abstentions: 17479. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 985; predictions: 8229; observations: 595249.
+- Matured sampled outcomes across 1/6/24/48h: 9959; gap abstentions: 17488. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -61,23 +59,22 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44743319254 · **Generation:** 984 · **Legacy run:** 44743319254
-**Main quote time:** 2026-11-20T13:21:10.480815+00:00 · **Legacy report time:** 2026-11-20T13:22:01.268554+00:00
+**Writer:** 44744764765 · **Generation:** 985 · **Legacy run:** 44744764765
+**Main quote time:** 2026-11-20T13:30:51.295812+00:00 · **Legacy report time:** 2026-11-20T13:31:50.130491+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | GBP/USD | 1.31247 | 72.07 | -0.00% | 3.75x | MODERATE 66/100 | HIGH 61/100 | Watch |
-| 2 | REKT/USD | 7.79e-08 | 60.30 | -0.90% | 2.06x | MODERATE 55/100 | VERY_HIGH 72/100 | Watch |
-| 3 | SENT/USD | 0.021757 | 45.87 | +0.64% | 0.88x | MODERATE 53/100 | HIGH 67/100 | Watch |
-| 4 | ICNT/USD | 0.4289 | 19.94 | -1.36% | 1.21x | WEAK 5/100 | VERY_HIGH 84/100 | Do nothing |
+| 1 | GBP/USD | 1.31203 | 71.42 | -0.02% | 2.54x | MODERATE 66/100 | HIGH 61/100 | Watch |
+| 2 | WINGS/USD ⭐ | 0.001889 | 60.06 | +0.48% | 2.44x | STRONG 90/100 | VERY_HIGH 73/100 | Watch |
+| 3 | SENT/USD | 0.021544 | 29.57 | -0.83% | 0.51x | WEAK 20/100 | VERY_HIGH 81/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
+| 1 | WINGS/USD ⭐ | 0.001889 | 59.35 | +0.48% | 2.44x | 5844 | STRONG 90/100 | VERY_HIGH 73/100 | Watch |
 
-**Same-run overlap:** None
+**Same-run overlap:** WINGS/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
