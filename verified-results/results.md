@@ -2,27 +2,27 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T04:40:41.952696+00:00
+**UTC as-of:** 2026-11-20T04:50:42.069817+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44675882494
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44676961568
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** f96554e630f2c7e4b1e01d35406ea690c67842b3 (atomic ledger/results publication)
-**Ledger generation:** 925 (remote push/readback verified)
+**Previous ledger commit:** d67d386d1f589df2e1a752370bf097360cc53518 (atomic ledger/results publication)
+**Ledger generation:** 926 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 603; OHLC screened: 8.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 604; OHLC screened: 8.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | PROS/USD | 0.5944 | 73.468 | 64.205 | +10.34% | -1.15% | 2.67x | 23.5 | 2026-11-20T04:40:39.116280+00:00 | Not calibrated | MODERATE 57/100 | EXTREME 89/100 | Do nothing | WATCH |
+| 1 | PROS/USD | 0.5826 | 47.679 | 63.984 | +8.15% | -2.49% | 0.62x | 23.9 | 2026-11-20T04:50:39.254347+00:00 | Not calibrated | WEAK 19/100 | EXTREME 100/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | PROS/USD | 64.205 | 0.5944 | -1.15% | 2.67x |
+| 1 | PROS/USD | 63.984 | 0.5826 | -2.49% | 0.62x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -38,8 +38,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 925; predictions: 7935; observations: 558900.
-- Matured sampled outcomes across 1/6/24/48h: 9147; gap abstentions: 16789. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 926; predictions: 7936; observations: 559504.
+- Matured sampled outcomes across 1/6/24/48h: 9175; gap abstentions: 16831. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -55,13 +55,13 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44675882494 · **Generation:** 925 · **Legacy run:** 44675882494
-**Main quote time:** 2026-11-20T04:40:41.952696+00:00 · **Legacy report time:** 2026-11-20T04:41:29.188620+00:00
+**Writer:** 44676961568 · **Generation:** 926 · **Legacy run:** 44676961568
+**Main quote time:** 2026-11-20T04:50:42.069817+00:00 · **Legacy report time:** 2026-11-20T04:51:40.467273+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | PROS/USD | 0.5944 | 73.47 | -1.15% | 2.67x | MODERATE 57/100 | EXTREME 89/100 | Do nothing |
+| 1 | PROS/USD | 0.5826 | 47.68 | -2.49% | 0.62x | WEAK 19/100 | EXTREME 100/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
