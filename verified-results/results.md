@@ -2,31 +2,29 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T13:30:51.295812+00:00
+**UTC as-of:** 2026-11-20T13:40:47.929265+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44744764765
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44746234660
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** 08387e724b3a3432b9d376e6ef45373b9b1e41ea (atomic ledger/results publication)
-**Ledger generation:** 985 (remote push/readback verified)
+**Previous ledger commit:** e8fdde939b8587d7971ddf7970c87a929770b0b9 (atomic ledger/results publication)
+**Ledger generation:** 986 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 607; OHLC screened: 12.
+**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 607; OHLC screened: 11.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | GBP/USD | 1.31203 | 71.418 | 56.506 | +0.29% | -0.02% | 2.54x | 1.0 | 2026-11-20T13:30:47.020581+00:00 | Not calibrated | MODERATE 66/100 | HIGH 61/100 | Watch | WATCH |
-| 2 | WINGS/USD | 0.001889 | 60.056 | 43.291 | +2.44% | +0.48% | 2.44x | 10.5 | 2026-11-20T13:30:47.020581+00:00 | Not calibrated | STRONG 80/100 | VERY_HIGH 73/100 | Watch | WATCH |
-| 3 | SENT/USD | 0.021544 | 29.570 | 38.614 | +1.20% | -0.83% | 0.51x | 4.2 | 2026-11-20T13:30:47.020581+00:00 | Not calibrated | WEAK 20/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
+| 1 | GBP/USD | 1.31165 | 54.676 | 56.455 | +0.26% | -0.07% | 0.86x | 0.7 | 2026-11-20T13:40:44.949980+00:00 | Not calibrated | WEAK 32/100 | HIGH 68/100 | Do nothing | WATCH |
+| 2 | SENT/USD | 0.021533 | 30.271 | 36.365 | +1.15% | -0.39% | 0.59x | 7.9 | 2026-11-20T13:40:44.949980+00:00 | Not calibrated | WEAK 20/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | GBP/USD | 56.506 | 1.31203 | -0.02% | 2.54x |
-| 2 | WINGS/USD | 43.291 | 0.001889 | +0.48% | 2.44x |
-| 3 | SENT/USD | 38.614 | 0.021544 | -0.83% | 0.51x |
+| 1 | GBP/USD | 56.455 | 1.31165 | -0.07% | 0.86x |
+| 2 | SENT/USD | 36.365 | 0.021533 | -0.39% | 0.59x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,8 +40,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 985; predictions: 8229; observations: 595249.
-- Matured sampled outcomes across 1/6/24/48h: 9959; gap abstentions: 17488. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 986; predictions: 8231; observations: 595856.
+- Matured sampled outcomes across 1/6/24/48h: 9972; gap abstentions: 17510. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -59,22 +57,21 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44744764765 · **Generation:** 985 · **Legacy run:** 44744764765
-**Main quote time:** 2026-11-20T13:30:51.295812+00:00 · **Legacy report time:** 2026-11-20T13:31:50.130491+00:00
+**Writer:** 44746234660 · **Generation:** 986 · **Legacy run:** 44746234660
+**Main quote time:** 2026-11-20T13:40:47.929265+00:00 · **Legacy report time:** 2026-11-20T13:41:35.693599+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | GBP/USD | 1.31203 | 71.42 | -0.02% | 2.54x | MODERATE 66/100 | HIGH 61/100 | Watch |
-| 2 | WINGS/USD ⭐ | 0.001889 | 60.06 | +0.48% | 2.44x | STRONG 90/100 | VERY_HIGH 73/100 | Watch |
-| 3 | SENT/USD | 0.021544 | 29.57 | -0.83% | 0.51x | WEAK 20/100 | VERY_HIGH 81/100 | Do nothing |
+| 1 | GBP/USD | 1.31165 | 54.68 | -0.07% | 0.86x | WEAK 32/100 | HIGH 68/100 | Do nothing |
+| 2 | SENT/USD | 0.021533 | 30.27 | -0.39% | 0.59x | WEAK 20/100 | VERY_HIGH 81/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | WINGS/USD ⭐ | 0.001889 | 59.35 | +0.48% | 2.44x | 5844 | STRONG 90/100 | VERY_HIGH 73/100 | Watch |
+| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
 
-**Same-run overlap:** WINGS/USD
+**Same-run overlap:** None
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
