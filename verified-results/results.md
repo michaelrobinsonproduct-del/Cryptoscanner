@@ -2,41 +2,39 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T00:30:28.627957+00:00
+**UTC as-of:** 2026-11-20T00:35:28.918667+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44646282963
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44646957443
 **Source SHA:** f854bf15990e1aa3564d35bbec4100f929bd3d42
-**Previous ledger commit:** 32298a24459549a26ac7b060cb835ca93934b1dc (atomic ledger/results publication)
-**Ledger generation:** 887 (remote push/readback verified)
+**Previous ledger commit:** 07e302dab5e8e4ad5fde311c33fca6c0e4755050 (atomic ledger/results publication)
+**Ledger generation:** 888 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 8s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 603; OHLC screened: 23.
+**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 603; OHLC screened: 19.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | XMR/USD | 500.7 | 71.798 | 55.235 | +0.65% | +0.31% | 5.27x | 8.6 | 2026-11-20T00:30:20.142184+00:00 | Not calibrated | STRONG 91/100 | HIGH 55/100 | Consider small entry | WATCH |
-| 2 | XLM/USD | 0.13305 | 48.493 | 54.477 | +0.26% | +0.08% | 0.36x | 4.7 | 2026-11-20T00:30:20.142184+00:00 | Not calibrated | WEAK 44/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 3 | CAP/USD | 0.097215 | 46.535 | 34.370 | +0.62% | -0.02% | 2.23x | 9.2 | 2026-11-20T00:30:20.142184+00:00 | Not calibrated | MODERATE 53/100 | HIGH 66/100 | Watch | WATCH |
-| 4 | ICNT/USD | 0.428 | 42.522 | 28.918 | +0.45% | -0.28% | 2.77x | 23.4 | 2026-11-20T00:30:20.142184+00:00 | Not calibrated | WEAK 41/100 | VERY_HIGH 73/100 | Watch | WATCH |
-| 5 | AKT/USD | 0.5359 | 38.594 | 28.491 | +0.45% | -0.98% | 9.65x | 15.0 | 2026-11-20T00:30:20.142184+00:00 | Not calibrated | WEAK 44/100 | VERY_HIGH 72/100 | Watch | WATCH |
-| 6 | BLESS/USD | 0.012465 | 38.361 | 34.036 | +2.26% | +1.21% | 0.83x | 28.2 | 2026-11-20T00:30:20.142184+00:00 | Not calibrated | WEAK 39/100 | VERY_HIGH 79/100 | Watch | WATCH |
-| 7 | MEGA/USD | 0.05919 | 33.904 | 34.973 | +1.60% | +1.21% | 0.29x | 16.9 | 2026-11-20T00:30:20.142184+00:00 | Not calibrated | WEAK 42/100 | VERY_HIGH 81/100 | Watch | WATCH |
-| 8 | STRK/USD | 0.03194 | 31.890 | 36.414 | +0.79% | +0.19% | 0.45x | 9.4 | 2026-11-20T00:30:20.142184+00:00 | Not calibrated | WEAK 36/100 | VERY_HIGH 75/100 | Watch | WATCH |
+| 1 | XMR/USD | 500.93 | 71.814 | 56.554 | +0.69% | +0.05% | 3.58x | 6.6 | 2026-11-20T00:35:23.696754+00:00 | Not calibrated | STRONG 81/100 | HIGH 55/100 | Watch | WATCH |
+| 2 | XLM/USD | 0.133337 | 50.316 | 55.698 | +0.48% | -0.03% | 0.48x | 5.3 | 2026-11-20T00:35:23.696754+00:00 | Not calibrated | WEAK 30/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
+| 3 | ICNT/USD | 0.4275 | 41.804 | 29.241 | +0.33% | -0.49% | 3.09x | 21.1 | 2026-11-20T00:35:23.696754+00:00 | Not calibrated | WEAK 41/100 | VERY_HIGH 73/100 | Watch | WATCH |
+| 4 | BLESS/USD | 0.012435 | 37.273 | 31.822 | +2.01% | +1.48% | 0.81x | 29.2 | 2026-11-20T00:35:23.696754+00:00 | Not calibrated | WEAK 39/100 | VERY_HIGH 79/100 | Watch | WATCH |
+| 5 | MEGA/USD | 0.05923 | 29.562 | 32.052 | +1.67% | +0.92% | 0.29x | 23.7 | 2026-11-20T00:35:23.696754+00:00 | Not calibrated | WEAK 35/100 | EXTREME 87/100 | Do nothing | WATCH |
+| 6 | STRK/USD | 0.03186 | 25.367 | 34.628 | +0.54% | -0.59% | 0.37x | 9.4 | 2026-11-20T00:35:23.696754+00:00 | Not calibrated | WEAK 18/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
+| 7 | CAP/USD | 0.096871 | 23.291 | 23.127 | +0.26% | -0.78% | 1.41x | 26.6 | 2026-11-20T00:35:23.696754+00:00 | Not calibrated | WEAK 22/100 | VERY_HIGH 78/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | XMR/USD | 55.235 | 500.7 | +0.31% | 5.27x |
-| 2 | XLM/USD | 54.477 | 0.13305 | +0.08% | 0.36x |
-| 3 | STRK/USD | 36.414 | 0.03194 | +0.19% | 0.45x |
-| 4 | MEGA/USD | 34.973 | 0.05919 | +1.21% | 0.29x |
-| 5 | CAP/USD | 34.370 | 0.097215 | -0.02% | 2.23x |
-| 6 | BLESS/USD | 34.036 | 0.012465 | +1.21% | 0.83x |
-| 7 | ICNT/USD | 28.918 | 0.428 | -0.28% | 2.77x |
-| 8 | AKT/USD | 28.491 | 0.5359 | -0.98% | 9.65x |
+| 1 | XMR/USD | 56.554 | 500.93 | +0.05% | 3.58x |
+| 2 | XLM/USD | 55.698 | 0.133337 | -0.03% | 0.48x |
+| 3 | STRK/USD | 34.628 | 0.03186 | -0.59% | 0.37x |
+| 4 | MEGA/USD | 32.052 | 0.05923 | +0.92% | 0.29x |
+| 5 | BLESS/USD | 31.822 | 0.012435 | +1.48% | 0.81x |
+| 6 | ICNT/USD | 29.241 | 0.4275 | -0.49% | 3.09x |
+| 7 | CAP/USD | 23.127 | 0.096871 | -0.78% | 1.41x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -52,15 +50,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 887; predictions: 7743; observations: 535986.
-- Matured sampled outcomes across 1/6/24/48h: 8411; gap abstentions: 16054. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 888; predictions: 7750; observations: 536589.
+- Matured sampled outcomes across 1/6/24/48h: 8446; gap abstentions: 16072. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 15; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 12; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -69,25 +67,24 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44646282963 · **Generation:** 887 · **Legacy run:** 44646282963
-**Main quote time:** 2026-11-20T00:30:28.627957+00:00 · **Legacy report time:** 2026-11-20T00:31:24.054324+00:00
+**Writer:** 44646957443 · **Generation:** 888 · **Legacy run:** 44646957443
+**Main quote time:** 2026-11-20T00:35:28.918667+00:00 · **Legacy report time:** 2026-11-20T00:36:33.516767+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | XMR/USD ⭐ | 500.7 | 71.80 | +0.31% | 5.27x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
-| 2 | XLM/USD | 0.13305 | 48.49 | +0.08% | 0.36x | WEAK 44/100 | VERY_HIGH 70/100 | Watch |
-| 3 | CAP/USD | 0.097215 | 46.53 | -0.02% | 2.23x | MODERATE 53/100 | HIGH 66/100 | Watch |
-| 4 | ICNT/USD | 0.428 | 42.52 | -0.28% | 2.77x | WEAK 41/100 | VERY_HIGH 73/100 | Watch |
-| 5 | AKT/USD | 0.5359 | 38.59 | -0.98% | 9.65x | WEAK 44/100 | VERY_HIGH 72/100 | Watch |
-| 6 | BLESS/USD | 0.012465 | 38.36 | +1.21% | 0.83x | WEAK 39/100 | VERY_HIGH 79/100 | Watch |
-| 7 | MEGA/USD | 0.05919 | 33.90 | +1.21% | 0.29x | WEAK 42/100 | VERY_HIGH 81/100 | Watch |
-| 8 | STRK/USD | 0.03194 | 31.89 | +0.19% | 0.45x | WEAK 36/100 | VERY_HIGH 75/100 | Watch |
+| 1 | XMR/USD ⭐ | 500.93 | 71.81 | +0.05% | 3.58x | STRONG 91/100 | HIGH 55/100 | Watch |
+| 2 | XLM/USD | 0.133337 | 50.32 | -0.03% | 0.48x | WEAK 30/100 | VERY_HIGH 76/100 | Do nothing |
+| 3 | ICNT/USD | 0.4275 | 41.80 | -0.49% | 3.09x | WEAK 41/100 | VERY_HIGH 73/100 | Watch |
+| 4 | BLESS/USD | 0.012435 | 37.27 | +1.48% | 0.81x | WEAK 39/100 | VERY_HIGH 79/100 | Watch |
+| 5 | MEGA/USD | 0.05923 | 29.56 | +0.92% | 0.29x | WEAK 35/100 | EXTREME 87/100 | Do nothing |
+| 6 | STRK/USD | 0.03186 | 25.37 | -0.59% | 0.37x | WEAK 18/100 | VERY_HIGH 81/100 | Do nothing |
+| 7 | CAP/USD | 0.096871 | 23.29 | -0.78% | 1.41x | WEAK 22/100 | VERY_HIGH 78/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | XMR/USD ⭐ | 500.87 | 54.11 | +0.31% | 5.27x | 7878 | STRONG 87/100 | HIGH 61/100 | Consider small entry |
+| 1 | XMR/USD ⭐ | 499.66 | 51.81 | +0.05% | 3.58x | 7845 | STRONG 81/100 | HIGH 55/100 | Watch |
 
 **Same-run overlap:** XMR/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
