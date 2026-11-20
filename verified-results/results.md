@@ -2,12 +2,12 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T20:50:55.153399+00:00
+**UTC as-of:** 2026-11-20T21:00:44.097049+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44814826826
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44816282707
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** ad8276796c7e00f2a229eb26713f9c281d17c3d1 (atomic ledger/results publication)
-**Ledger generation:** 1023 (remote push/readback verified)
+**Previous ledger commit:** a65ec626c82368d9ce15d60ea1a595cb1cb547ec (atomic ledger/results publication)
+**Ledger generation:** 1024 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 9.
@@ -16,13 +16,13 @@
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | BLUR/USD | 0.00728 | 78.852 | 70.096 | +8.82% | +1.96% | 0.90x | 13.8 | 2026-11-20T20:50:52.489187+00:00 | Not calibrated | MODERATE 64/100 | VERY_HIGH 73/100 | Watch | WATCH |
+| 1 | BLUR/USD | 0.00724 | 54.074 | 56.362 | +8.22% | +0.42% | 0.56x | 41.2 | 2026-11-20T21:00:40.908029+00:00 | Not calibrated | WEAK 42/100 | EXTREME 97/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | BLUR/USD | 70.096 | 0.00728 | +1.96% | 0.90x |
+| 1 | BLUR/USD | 56.362 | 0.00724 | +0.42% | 0.56x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -38,8 +38,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1023; predictions: 8321; observations: 618344.
-- Matured sampled outcomes across 1/6/24/48h: 10911; gap abstentions: 18474. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1024; predictions: 8322; observations: 618952.
+- Matured sampled outcomes across 1/6/24/48h: 10911; gap abstentions: 18506. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -55,13 +55,13 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44814826826 · **Generation:** 1023 · **Legacy run:** 44814826826
-**Main quote time:** 2026-11-20T20:50:55.153399+00:00 · **Legacy report time:** 2026-11-20T20:52:00.359191+00:00
+**Writer:** 44816282707 · **Generation:** 1024 · **Legacy run:** 44816282707
+**Main quote time:** 2026-11-20T21:00:44.097049+00:00 · **Legacy report time:** 2026-11-20T21:01:36.161830+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | BLUR/USD | 0.00728 | 78.85 | +1.96% | 0.90x | MODERATE 64/100 | VERY_HIGH 73/100 | Watch |
+| 1 | BLUR/USD | 0.00724 | 54.07 | +0.42% | 0.56x | WEAK 42/100 | EXTREME 97/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
