@@ -177,7 +177,7 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                         or not count.is_integer() or count <= 0
                         or low > min(opn, close, vwap)
                         or high < max(opn, close, vwap)):
-                    raise ValueError("invalid traded OHLC candle")
+                    raise ValueError("invalid or no-trade OHLC candle")
                 closes.append(close)
                 volumes.append(volume)
             if any(b - a != 300 for a, b in zip(starts, starts[1:])):
@@ -192,7 +192,9 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             if not 0 <= age <= 600:
                 raise ValueError("stale or future completed OHLC")
             previous_volume = sum(volumes[-12:-6])
-            if not math.isfinite(previous_volume) or previous_volume <= 0:
+            if not math.isfinite(previous_volume):
+                raise ValueError("nonfinite OHLC derived metric")
+            if previous_volume <= 0:
                 raise ValueError("invalid previous OHLC volume")
             accel = sum(volumes[-6:]) / previous_volume
             move15 = 100 * (closes[-1] / closes[-4] - 1)
