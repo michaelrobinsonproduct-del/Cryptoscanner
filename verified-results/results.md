@@ -2,29 +2,29 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T12:20:49.728523+00:00
+**UTC as-of:** 2026-11-20T12:30:48.711542+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44734833056
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44736215231
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** 30014af2e97b5764ba053342ce0decbf89be166c (atomic ledger/results publication)
-**Ledger generation:** 977 (remote push/readback verified)
+**Previous ledger commit:** 4c44a7b5551fcd599c14313d537fd13177b13d4c (atomic ledger/results publication)
+**Ledger generation:** 978 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 607; OHLC screened: 11.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | SENT/USD | 0.021684 | 58.073 | 39.098 | +1.86% | +0.79% | 2.53x | 12.9 | 2026-11-20T12:20:45.737978+00:00 | Not calibrated | STRONG 79/100 | HIGH 66/100 | Watch | WATCH |
-| 2 | ICNT/USD | 0.43 | 26.014 | 34.717 | +0.92% | -1.02% | 0.64x | 18.6 | 2026-11-20T12:20:45.737978+00:00 | Not calibrated | WEAK 13/100 | EXTREME 86/100 | Do nothing | WATCH |
+| 1 | ICNT/USD | 0.443 | 79.847 | 53.102 | +3.97% | +4.84% | 1.25x | 24.9 | 2026-11-20T12:30:45.446416+00:00 | Not calibrated | MODERATE 65/100 | VERY_HIGH 77/100 | Watch | WATCH |
+| 2 | SENT/USD | 0.021818 | 58.438 | 45.779 | +2.48% | +0.43% | 2.05x | 8.2 | 2026-11-20T12:30:45.446416+00:00 | Not calibrated | STRONG 84/100 | HIGH 60/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SENT/USD | 39.098 | 0.021684 | +0.79% | 2.53x |
-| 2 | ICNT/USD | 34.717 | 0.43 | -1.02% | 0.64x |
+| 1 | ICNT/USD | 53.102 | 0.443 | +4.84% | 1.25x |
+| 2 | SENT/USD | 45.779 | 0.021818 | +0.43% | 2.05x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -40,8 +40,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 977; predictions: 8207; observations: 590393.
-- Matured sampled outcomes across 1/6/24/48h: 9864; gap abstentions: 17479. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 978; predictions: 8209; observations: 591000.
+- Matured sampled outcomes across 1/6/24/48h: 9877; gap abstentions: 17479. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -57,22 +57,22 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44734833056 · **Generation:** 977 · **Legacy run:** 44734833056
-**Main quote time:** 2026-11-20T12:20:49.728523+00:00 · **Legacy report time:** 2026-11-20T12:21:44.069951+00:00
+**Writer:** 44736215231 · **Generation:** 978 · **Legacy run:** 44736215231
+**Main quote time:** 2026-11-20T12:30:48.711542+00:00 · **Legacy report time:** 2026-11-20T12:31:47.779307+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD ⭐ | 0.021684 | 58.07 | +0.79% | 2.53x | STRONG 89/100 | HIGH 66/100 | Consider small entry |
-| 2 | ICNT/USD | 0.43 | 26.01 | -1.02% | 0.64x | WEAK 13/100 | EXTREME 86/100 | Do nothing |
+| 1 | ICNT/USD ⭐ | 0.443 | 79.85 | +4.84% | 1.25x | STRONG 75/100 | VERY_HIGH 77/100 | Watch |
+| 2 | SENT/USD ⭐ | 0.021818 | 58.44 | +0.43% | 2.05x | STRONG 94/100 | HIGH 60/100 | Consider small entry |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | BLESS/USD | 0.012537 | 73.85 | +3.16% | 4.41x | 2470 | STRONG 77/100 | EXTREME 92/100 | Do nothing |
-| 2 | SENT/USD ⭐ | 0.021669 | 53.46 | +0.79% | 2.53x | 7936 | STRONG 92/100 | HIGH 60/100 | Consider small entry |
+| 1 | ICNT/USD ⭐ | 0.4429 | 82.97 | +4.84% | 1.25x | 6959 | STRONG 76/100 | VERY_HIGH 77/100 | Watch |
+| 2 | SENT/USD ⭐ | 0.021826 | 66.03 | +0.43% | 2.05x | 7829 | STRONG 98/100 | HIGH 60/100 | Consider small entry |
 
-**Same-run overlap:** SENT/USD
+**Same-run overlap:** ICNT/USD, SENT/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
