@@ -2,12 +2,12 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T14:00:55.091396+00:00
+**UTC as-of:** 2026-11-20T14:10:52.182824+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44749197008
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44750768625
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** 54b3acd84e051fe57747a3945688a98853f39580 (atomic ledger/results publication)
-**Ledger generation:** 988 (remote push/readback verified)
+**Previous ledger commit:** 95987cf9b17f8fdfa37da6cd88cbe9c0c9db35af (atomic ledger/results publication)
+**Ledger generation:** 989 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 607; OHLC screened: 16.
@@ -16,19 +16,21 @@
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | SENT/USD | 0.021766 | 56.057 | 43.768 | +2.24% | +1.28% | 1.59x | 8.3 | 2026-11-20T14:00:50.324546+00:00 | Not calibrated | STRONG 73/100 | HIGH 60/100 | Watch | WATCH |
-| 2 | GBP/USD | 1.31208 | 54.460 | 56.685 | +0.29% | +0.04% | 0.76x | 0.7 | 2026-11-20T14:00:50.324546+00:00 | Not calibrated | MODERATE 47/100 | HIGH 62/100 | Watch | WATCH |
-| 3 | MNT/USD | 0.3937 | 48.212 | 30.659 | +0.54% | +0.51% | 2.70x | 7.6 | 2026-11-20T14:00:50.324546+00:00 | Not calibrated | STRONG 79/100 | HIGH 67/100 | Watch | WATCH |
-| 4 | MON/USD | 0.01387 | 33.172 | 31.957 | +0.80% | +1.39% | 0.43x | 14.5 | 2026-11-20T14:00:50.324546+00:00 | Not calibrated | WEAK 42/100 | VERY_HIGH 81/100 | Watch | WATCH |
+| 1 | SENT/USD | 0.021992 | 66.964 | 51.434 | +3.30% | +1.80% | 1.65x | 7.7 | 2026-11-20T14:10:47.518115+00:00 | Not calibrated | STRONG 78/100 | HIGH 60/100 | Watch | WATCH |
+| 2 | MNT/USD | 0.3941 | 47.020 | 31.385 | +0.64% | +0.13% | 4.37x | 7.6 | 2026-11-20T14:10:47.518115+00:00 | Not calibrated | MODERATE 69/100 | HIGH 67/100 | Watch | WATCH |
+| 3 | MON/USD | 0.01388 | 44.830 | 36.127 | +0.87% | +0.65% | 1.54x | 7.2 | 2026-11-20T14:10:47.518115+00:00 | Not calibrated | MODERATE 67/100 | HIGH 60/100 | Watch | WATCH |
+| 4 | CAP/USD | 0.09701 | 35.529 | 33.289 | +0.41% | +0.31% | 1.07x | 6.0 | 2026-11-20T14:10:47.518115+00:00 | Not calibrated | MODERATE 53/100 | HIGH 67/100 | Watch | WATCH |
+| 5 | ICNT/USD | 0.4275 | 28.575 | 31.696 | +0.33% | +0.64% | 0.37x | 16.4 | 2026-11-20T14:10:47.518115+00:00 | Not calibrated | WEAK 39/100 | VERY_HIGH 76/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | GBP/USD | 56.685 | 1.31208 | +0.04% | 0.76x |
-| 2 | SENT/USD | 43.768 | 0.021766 | +1.28% | 1.59x |
-| 3 | MON/USD | 31.957 | 0.01387 | +1.39% | 0.43x |
-| 4 | MNT/USD | 30.659 | 0.3937 | +0.51% | 2.70x |
+| 1 | SENT/USD | 51.434 | 0.021992 | +1.80% | 1.65x |
+| 2 | MON/USD | 36.127 | 0.01388 | +0.65% | 1.54x |
+| 3 | CAP/USD | 33.289 | 0.09701 | +0.31% | 1.07x |
+| 4 | ICNT/USD | 31.696 | 0.4275 | +0.64% | 0.37x |
+| 5 | MNT/USD | 31.385 | 0.3941 | +0.13% | 4.37x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -44,15 +46,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 988; predictions: 8239; observations: 597070.
-- Matured sampled outcomes across 1/6/24/48h: 10043; gap abstentions: 17550. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 989; predictions: 8244; observations: 597677.
+- Matured sampled outcomes across 1/6/24/48h: 10078; gap abstentions: 17568. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 12; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 11; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -61,24 +63,27 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44749197008 · **Generation:** 988 · **Legacy run:** 44749197008
-**Main quote time:** 2026-11-20T14:00:55.091396+00:00 · **Legacy report time:** 2026-11-20T14:02:05.408151+00:00
+**Writer:** 44750768625 · **Generation:** 989 · **Legacy run:** 44750768625
+**Main quote time:** 2026-11-20T14:10:52.182824+00:00 · **Legacy report time:** 2026-11-20T14:11:52.289956+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD ⭐ | 0.021766 | 56.06 | +1.28% | 1.59x | STRONG 83/100 | HIGH 60/100 | Consider small entry |
-| 2 | GBP/USD | 1.31208 | 54.46 | +0.04% | 0.76x | MODERATE 47/100 | HIGH 62/100 | Watch |
-| 3 | MNT/USD ⭐ | 0.3937 | 48.21 | +0.51% | 2.70x | STRONG 89/100 | HIGH 67/100 | Consider small entry |
-| 4 | MON/USD | 0.01387 | 33.17 | +1.39% | 0.43x | WEAK 42/100 | VERY_HIGH 81/100 | Watch |
+| 1 | SENT/USD ⭐ | 0.021992 | 66.96 | +1.80% | 1.65x | STRONG 88/100 | HIGH 60/100 | Consider small entry |
+| 2 | MNT/USD ⭐ | 0.3941 | 47.02 | +0.13% | 4.37x | STRONG 79/100 | HIGH 67/100 | Watch |
+| 3 | MON/USD ⭐ | 0.01388 | 44.83 | +0.65% | 1.54x | STRONG 77/100 | HIGH 60/100 | Consider small entry |
+| 4 | CAP/USD ⭐ | 0.09701 | 35.53 | +0.31% | 1.07x | MODERATE 63/100 | HIGH 67/100 | Watch |
+| 5 | ICNT/USD | 0.4275 | 28.58 | +0.64% | 0.37x | WEAK 39/100 | VERY_HIGH 76/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD ⭐ | 0.021687 | 51.96 | +1.28% | 1.59x | 7125 | STRONG 81/100 | HIGH 60/100 | Consider small entry |
-| 2 | MNT/USD ⭐ | 0.3937 | 25.24 | +0.51% | 2.70x | 1206 | STRONG 78/100 | HIGH 67/100 | Consider small entry |
+| 1 | SENT/USD ⭐ | 0.021997 | 71.67 | +1.80% | 1.65x | 7008 | STRONG 91/100 | HIGH 60/100 | Consider small entry |
+| 2 | MON/USD ⭐ | 0.01388 | 39.38 | +0.65% | 1.54x | 3531 | STRONG 75/100 | HIGH 60/100 | Consider small entry |
+| 3 | CAP/USD ⭐ | 0.09701 | 35.29 | +0.31% | 1.07x | 5204 | MODERATE 63/100 | HIGH 67/100 | Watch |
+| 4 | MNT/USD ⭐ | 0.3947 | 28.43 | +0.13% | 4.37x | 1214 | MODERATE 69/100 | HIGH 67/100 | Watch |
 
-**Same-run overlap:** SENT/USD, MNT/USD
+**Same-run overlap:** SENT/USD, MNT/USD, MON/USD, CAP/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
