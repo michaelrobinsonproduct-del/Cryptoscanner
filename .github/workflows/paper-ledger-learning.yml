@@ -1,5 +1,9 @@
 name: Paper Ledger Learning Read Only
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/publish_approved_market_research.sh'
   workflow_dispatch:
     inputs:
       paper_run_id:
@@ -65,6 +69,7 @@ on:
       - 'paper_pov/rolling_kraken_candles.py'
       - 'paper_pov/test_rolling_kraken_candles.py'
       - '.github/workflows/paper-ledger-learning.yml'
+      - 'scripts/publish_approved_market_research.sh'
 permissions:
   contents: read
   actions: read
@@ -72,6 +77,41 @@ concurrency:
   group: paper-ledger-learning-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: false
 jobs:
+  verify-approved-research-backup:
+    if: github.event_name == 'pull_request' && github.head_ref == 'fix/market-learning-durable-publication-20261119'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: bash scripts/publish_approved_market_research.sh verify
+  publish-approved-research-backup:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: approved-market-research-publication
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: bash scripts/publish_approved_market_research.sh publish
   paper-ledger-learning:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
