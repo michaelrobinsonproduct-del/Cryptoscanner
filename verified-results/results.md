@@ -2,29 +2,29 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T12:00:44.431484+00:00
+**UTC as-of:** 2026-11-20T12:10:42.237825+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44732051525
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44733443859
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** 01dba18546888cd3e061f595da5262d5f3d646aa (atomic ledger/results publication)
-**Ledger generation:** 975 (remote push/readback verified)
+**Previous ledger commit:** b5b912533553fb056a1e4be88d5b564ab5eddc09 (atomic ledger/results publication)
+**Ledger generation:** 976 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 607; OHLC screened: 10.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | ICNT/USD | 0.4316 | 36.231 | 37.627 | +1.29% | -0.55% | 1.14x | 18.5 | 2026-11-20T12:00:40.751560+00:00 | Not calibrated | WEAK 23/100 | VERY_HIGH 74/100 | Do nothing | WATCH |
-| 2 | SENT/USD | 0.021701 | 31.108 | 42.293 | +1.94% | -2.01% | 0.88x | 8.3 | 2026-11-20T12:00:40.751560+00:00 | Not calibrated | WEAK 21/100 | VERY_HIGH 77/100 | Do nothing | WATCH |
+| 1 | SENT/USD | 0.021745 | 53.301 | 43.883 | +2.14% | -0.32% | 2.10x | 7.8 | 2026-11-20T12:10:39.500406+00:00 | Not calibrated | MODERATE 57/100 | HIGH 66/100 | Watch | WATCH |
+| 2 | ICNT/USD | 0.4319 | 31.211 | 37.938 | +1.36% | +0.07% | 0.29x | 18.5 | 2026-11-20T12:10:39.500406+00:00 | Not calibrated | WEAK 31/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SENT/USD | 42.293 | 0.021701 | -2.01% | 0.88x |
-| 2 | ICNT/USD | 37.627 | 0.4316 | -0.55% | 1.14x |
+| 1 | SENT/USD | 43.883 | 0.021745 | -0.32% | 2.10x |
+| 2 | ICNT/USD | 37.938 | 0.4319 | +0.07% | 0.29x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -40,8 +40,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 975; predictions: 8203; observations: 589179.
-- Matured sampled outcomes across 1/6/24/48h: 9852; gap abstentions: 17479. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 976; predictions: 8205; observations: 589786.
+- Matured sampled outcomes across 1/6/24/48h: 9859; gap abstentions: 17479. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -57,14 +57,14 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44732051525 · **Generation:** 975 · **Legacy run:** 44732051525
-**Main quote time:** 2026-11-20T12:00:44.431484+00:00 · **Legacy report time:** 2026-11-20T12:01:51.151704+00:00
+**Writer:** 44733443859 · **Generation:** 976 · **Legacy run:** 44733443859
+**Main quote time:** 2026-11-20T12:10:42.237825+00:00 · **Legacy report time:** 2026-11-20T12:11:30.055779+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | ICNT/USD | 0.4316 | 36.23 | -0.55% | 1.14x | WEAK 23/100 | VERY_HIGH 74/100 | Do nothing |
-| 2 | SENT/USD | 0.021701 | 31.11 | -2.01% | 0.88x | WEAK 21/100 | VERY_HIGH 77/100 | Do nothing |
+| 1 | SENT/USD | 0.021745 | 53.30 | -0.32% | 2.10x | MODERATE 57/100 | HIGH 66/100 | Watch |
+| 2 | ICNT/USD | 0.4319 | 31.21 | +0.07% | 0.29x | WEAK 31/100 | VERY_HIGH 76/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
