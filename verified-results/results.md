@@ -2,41 +2,47 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T07:40:38.080123+00:00
+**UTC as-of:** 2026-11-20T07:50:51.379403+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44696587180
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44697814208
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** 506ee5907f1f75959987bbe57067172dd22c5870 (atomic ledger/results publication)
-**Ledger generation:** 949 (remote push/readback verified)
+**Previous ledger commit:** 70cffd199a85fc6bed3c970b89387af70991d650 (atomic ledger/results publication)
+**Ledger generation:** 950 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 605; OHLC screened: 17.
+**Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 605; OHLC screened: 19.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | ICNT/USD | 0.4732 | 104.082 | 69.539 | +11.05% | +3.91% | 2.56x | 29.7 | 2026-11-20T07:40:32.593473+00:00 | Not calibrated | STRONG 95/100 | VERY_HIGH 77/100 | Watch | WATCH |
-| 2 | XRP/USD | 0.9633 | 71.353 | 57.229 | +0.42% | -0.18% | 3.68x | 1.5 | 2026-11-20T07:40:32.593473+00:00 | Not calibrated | MODERATE 66/100 | HIGH 61/100 | Watch | WATCH |
-| 3 | XLM/USD | 0.134267 | 66.627 | 62.260 | +1.18% | -0.07% | 1.47x | 2.0 | 2026-11-20T07:40:32.593473+00:00 | Not calibrated | MODERATE 53/100 | HIGH 61/100 | Watch | WATCH |
-| 4 | SKR/USD | 0.010392 | 65.439 | 50.537 | +3.44% | +1.30% | 1.84x | 9.6 | 2026-11-20T07:40:32.593473+00:00 | Not calibrated | STRONG 78/100 | HIGH 67/100 | Watch | WATCH |
-| 5 | ATOM/USD | 1.2681 | 49.478 | 32.657 | +0.52% | +0.36% | 2.52x | 7.1 | 2026-11-20T07:40:32.593473+00:00 | Not calibrated | STRONG 80/100 | HIGH 60/100 | Watch | WATCH |
-| 6 | SYRUP/USD | 0.09944 | 42.904 | 50.433 | +3.34% | -0.77% | 0.63x | 10.1 | 2026-11-20T07:40:32.593473+00:00 | Not calibrated | WEAK 21/100 | EXTREME 87/100 | Do nothing | WATCH |
-| 7 | AUD/USD | 0.66756 | 41.646 | 40.661 | +0.31% | -0.01% | 1.11x | 1.0 | 2026-11-20T07:40:32.593473+00:00 | Not calibrated | WEAK 31/100 | HIGH 68/100 | Do nothing | WATCH |
-| 8 | HBAR/USD | 0.05391 | 33.663 | 40.477 | +0.28% | +0.00% | 0.32x | 3.7 | 2026-11-20T07:40:32.593473+00:00 | Not calibrated | WEAK 37/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 1 | XLM/USD | 0.13433 | 80.011 | 62.965 | +1.23% | +0.41% | 3.14x | 1.3 | 2026-11-20T07:50:44.506848+00:00 | Not calibrated | STRONG 95/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 2 | SKR/USD | 0.010403 | 56.631 | 53.234 | +3.55% | +0.58% | 1.05x | 5.8 | 2026-11-20T07:50:44.506848+00:00 | Not calibrated | MODERATE 63/100 | VERY_HIGH 74/100 | Watch | WATCH |
+| 3 | STRK/USD | 0.03195 | 55.669 | 35.284 | +0.82% | +1.08% | 4.32x | 9.4 | 2026-11-20T07:50:44.506848+00:00 | Not calibrated | STRONG 83/100 | HIGH 60/100 | Watch | WATCH |
+| 4 | XRP/USD | 0.96431 | 54.549 | 58.641 | +0.53% | +0.50% | 0.34x | 0.1 | 2026-11-20T07:50:44.506848+00:00 | Not calibrated | MODERATE 57/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 5 | ICNT/USD | 0.45 | 53.309 | 56.016 | +5.61% | +0.57% | 0.44x | 44.4 | 2026-11-20T07:50:44.506848+00:00 | Not calibrated | WEAK 42/100 | EXTREME 92/100 | Do nothing | WATCH |
+| 6 | GBP/USD | 1.31159 | 52.722 | 56.461 | +0.25% | +0.03% | 0.61x | 0.6 | 2026-11-20T07:50:44.506848+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 7 | SYRUP/USD | 0.09968 | 47.382 | 50.159 | +3.59% | -0.26% | 0.85x | 14.1 | 2026-11-20T07:50:44.506848+00:00 | Not calibrated | WEAK 24/100 | VERY_HIGH 79/100 | Do nothing | WATCH |
+| 8 | AUD/USD | 0.66759 | 41.947 | 40.905 | +0.32% | +0.05% | 1.08x | 0.4 | 2026-11-20T07:50:44.506848+00:00 | Not calibrated | MODERATE 46/100 | HIGH 62/100 | Watch | WATCH |
+| 9 | ENA/USD | 0.1051 | 40.540 | 43.876 | +0.29% | +1.06% | 0.14x | 9.5 | 2026-11-20T07:50:44.506848+00:00 | Not calibrated | MODERATE 50/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 10 | HBAR/USD | 0.05408 | 37.505 | 42.737 | +0.60% | +0.46% | 0.24x | 3.7 | 2026-11-20T07:50:44.506848+00:00 | Not calibrated | MODERATE 49/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 11 | ATOM/USD | 1.2669 | 34.538 | 32.386 | +0.43% | +0.28% | 1.07x | 6.3 | 2026-11-20T07:50:44.506848+00:00 | Not calibrated | MODERATE 52/100 | HIGH 67/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | ICNT/USD | 69.539 | 0.4732 | +3.91% | 2.56x |
-| 2 | XLM/USD | 62.260 | 0.134267 | -0.07% | 1.47x |
-| 3 | XRP/USD | 57.229 | 0.9633 | -0.18% | 3.68x |
-| 4 | SKR/USD | 50.537 | 0.010392 | +1.30% | 1.84x |
-| 5 | SYRUP/USD | 50.433 | 0.09944 | -0.77% | 0.63x |
-| 6 | AUD/USD | 40.661 | 0.66756 | -0.01% | 1.11x |
-| 7 | HBAR/USD | 40.477 | 0.05391 | +0.00% | 0.32x |
-| 8 | ATOM/USD | 32.657 | 1.2681 | +0.36% | 2.52x |
+| 1 | XLM/USD | 62.965 | 0.13433 | +0.41% | 3.14x |
+| 2 | XRP/USD | 58.641 | 0.96431 | +0.50% | 0.34x |
+| 3 | GBP/USD | 56.461 | 1.31159 | +0.03% | 0.61x |
+| 4 | ICNT/USD | 56.016 | 0.45 | +0.57% | 0.44x |
+| 5 | SKR/USD | 53.234 | 0.010403 | +0.58% | 1.05x |
+| 6 | SYRUP/USD | 50.159 | 0.09968 | -0.26% | 0.85x |
+| 7 | ENA/USD | 43.876 | 0.1051 | +1.06% | 0.14x |
+| 8 | HBAR/USD | 42.737 | 0.05408 | +0.46% | 0.24x |
+| 9 | AUD/USD | 40.905 | 0.66759 | +0.05% | 1.08x |
+| 10 | STRK/USD | 35.284 | 0.03195 | +1.08% | 4.32x |
+| 11 | ATOM/USD | 32.386 | 1.2669 | +0.28% | 1.07x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -52,15 +58,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 949; predictions: 8056; observations: 573416.
-- Matured sampled outcomes across 1/6/24/48h: 9488; gap abstentions: 17418. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 950; predictions: 8067; observations: 574021.
+- Matured sampled outcomes across 1/6/24/48h: 9508; gap abstentions: 17435. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 9; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 8; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -69,29 +75,33 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44696587180 · **Generation:** 949 · **Legacy run:** 44696587180
-**Main quote time:** 2026-11-20T07:40:38.080123+00:00 · **Legacy report time:** 2026-11-20T07:41:34.081565+00:00
+**Writer:** 44697814208 · **Generation:** 950 · **Legacy run:** 44697814208
+**Main quote time:** 2026-11-20T07:50:51.379403+00:00 · **Legacy report time:** 2026-11-20T07:51:39.914430+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | ICNT/USD ⭐ | 0.4732 | 104.08 | +3.91% | 2.56x | STRONG 100/100 | VERY_HIGH 77/100 | Watch |
-| 2 | XRP/USD | 0.9633 | 71.35 | -0.18% | 3.68x | MODERATE 66/100 | HIGH 61/100 | Watch |
-| 3 | XLM/USD | 0.134267 | 66.63 | -0.07% | 1.47x | MODERATE 53/100 | HIGH 61/100 | Watch |
-| 4 | SKR/USD ⭐ | 0.010392 | 65.44 | +1.30% | 1.84x | STRONG 88/100 | HIGH 67/100 | Consider small entry |
-| 5 | ATOM/USD ⭐ | 1.2681 | 49.48 | +0.36% | 2.52x | STRONG 90/100 | HIGH 60/100 | Consider small entry |
-| 6 | SYRUP/USD | 0.09944 | 42.90 | -0.77% | 0.63x | WEAK 21/100 | EXTREME 87/100 | Do nothing |
-| 7 | AUD/USD | 0.66756 | 41.65 | -0.01% | 1.11x | WEAK 31/100 | HIGH 68/100 | Do nothing |
-| 8 | HBAR/USD | 0.05391 | 33.66 | +0.00% | 0.32x | WEAK 37/100 | VERY_HIGH 70/100 | Watch |
+| 1 | XLM/USD ⭐ | 0.13433 | 80.01 | +0.41% | 3.14x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 2 | SKR/USD ⭐ | 0.010403 | 56.63 | +0.58% | 1.05x | STRONG 73/100 | VERY_HIGH 74/100 | Watch |
+| 3 | STRK/USD ⭐ | 0.03195 | 55.67 | +1.08% | 4.32x | STRONG 93/100 | HIGH 60/100 | Consider small entry |
+| 4 | XRP/USD | 0.96431 | 54.55 | +0.50% | 0.34x | MODERATE 57/100 | VERY_HIGH 70/100 | Watch |
+| 5 | ICNT/USD | 0.45 | 53.31 | +0.57% | 0.44x | WEAK 42/100 | EXTREME 92/100 | Do nothing |
+| 6 | GBP/USD | 1.31159 | 52.72 | +0.03% | 0.61x | MODERATE 46/100 | VERY_HIGH 70/100 | Watch |
+| 7 | SYRUP/USD | 0.09968 | 47.38 | -0.26% | 0.85x | WEAK 24/100 | VERY_HIGH 79/100 | Do nothing |
+| 8 | AUD/USD ⭐ | 0.66759 | 41.95 | +0.05% | 1.08x | MODERATE 56/100 | HIGH 62/100 | Watch |
+| 9 | ENA/USD | 0.1051 | 40.54 | +1.06% | 0.14x | MODERATE 50/100 | VERY_HIGH 70/100 | Watch |
+| 10 | HBAR/USD | 0.05408 | 37.51 | +0.46% | 0.24x | MODERATE 49/100 | VERY_HIGH 70/100 | Watch |
+| 11 | ATOM/USD | 1.2669 | 34.54 | +0.28% | 1.07x | MODERATE 52/100 | HIGH 67/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | ICNT/USD ⭐ | 0.4718 | 89.83 | +3.91% | 2.56x | 7914 | STRONG 100/100 | VERY_HIGH 77/100 | Watch |
-| 2 | SKR/USD ⭐ | 0.010409 | 65.09 | +1.30% | 1.84x | 1647 | STRONG 78/100 | VERY_HIGH 79/100 | Watch |
-| 3 | ATOM/USD ⭐ | 1.2671 | 49.44 | +0.36% | 2.52x | 3294 | STRONG 90/100 | HIGH 60/100 | Consider small entry |
+| 1 | XLM/USD ⭐ | 0.134265 | 67.78 | +0.41% | 3.14x | 9663 | STRONG 99/100 | HIGH 55/100 | Consider small entry |
+| 2 | SKR/USD ⭐ | 0.010389 | 57.43 | +0.58% | 1.05x | 1653 | MODERATE 69/100 | VERY_HIGH 80/100 | Watch |
+| 3 | STRK/USD ⭐ | 0.032 | 47.52 | +1.08% | 4.32x | 3336 | STRONG 84/100 | HIGH 66/100 | Consider small entry |
+| 4 | AUD/USD ⭐ | 0.66759 | 45.41 | +0.05% | 1.08x | 3951 | MODERATE 58/100 | HIGH 62/100 | Watch |
 
-**Same-run overlap:** ICNT/USD, SKR/USD, ATOM/USD
+**Same-run overlap:** XLM/USD, SKR/USD, STRK/USD, AUD/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
