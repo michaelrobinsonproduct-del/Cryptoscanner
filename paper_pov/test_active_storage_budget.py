@@ -30,7 +30,8 @@ class AggregateBudgetTests(unittest.TestCase):
         actual = sum(p.stat().st_size for p in files)
         self.assertEqual(repo.active_storage_bytes(second), actual)
         self.assertEqual(info["active_storage_bytes"], actual)
-        self.assertEqual(info["active_storage_budget_bytes"], 10_000_000)
+        self.assertEqual(info["active_storage_budget_bytes"], 30_000_000)
+        self.assertEqual(info["active_storage_budget_bytes"], repo.MAX_ACTIVE_TREE_BYTES)
         self.assertLess(actual, info["active_storage_budget_bytes"])
         self.assertEqual(repo.read_state(second, full_replay=True)[0]["generation"], 1)
 
