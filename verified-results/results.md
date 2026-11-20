@@ -2,31 +2,33 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T02:10:38.483076+00:00
+**UTC as-of:** 2026-11-20T02:20:29.026533+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44658778539
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44659964441
 **Source SHA:** f854bf15990e1aa3564d35bbec4100f929bd3d42
-**Previous ledger commit:** e7247eadf06333a8673d7c1947e7dea7caac8adf (atomic ledger/results publication)
-**Ledger generation:** 904 (remote push/readback verified)
+**Previous ledger commit:** c97f4744236a250fefd536c7fb842f2d8d3eb3f7 (atomic ledger/results publication)
+**Ledger generation:** 905 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 603; OHLC screened: 8.
+**Freshness:** Kraken public ticker client-observed, max quote age 2s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 603; OHLC screened: 9.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | NIGHT/USD | 0.04529 | 54.508 | 46.814 | +1.18% | +1.37% | 1.09x | 4.4 | 2026-11-20T02:10:35.562479+00:00 | Not calibrated | MODERATE 62/100 | HIGH 62/100 | Watch | WATCH |
-| 2 | ICNT/USD | 0.4316 | 52.376 | 36.294 | +1.29% | +1.48% | 1.87x | 20.9 | 2026-11-20T02:10:35.562479+00:00 | Not calibrated | MODERATE 61/100 | HIGH 67/100 | Watch | WATCH |
-| 3 | CAP/USD | 0.097206 | 36.347 | 23.709 | +0.61% | -0.47% | 3.40x | 30.1 | 2026-11-20T02:10:35.562479+00:00 | Not calibrated | WEAK 38/100 | VERY_HIGH 78/100 | Watch | WATCH |
+| 1 | NIGHT/USD | 0.04535 | 55.445 | 47.877 | +1.32% | +0.60% | 1.46x | 4.4 | 2026-11-20T02:20:26.559811+00:00 | Not calibrated | STRONG 73/100 | HIGH 55/100 | Watch | WATCH |
+| 2 | ICNT/USD | 0.4329 | 53.504 | 40.778 | +1.60% | +0.26% | 2.15x | 16.2 | 2026-11-20T02:20:26.559811+00:00 | Not calibrated | STRONG 77/100 | HIGH 61/100 | Watch | WATCH |
+| 3 | CAP/USD | 0.097469 | 51.149 | 35.018 | +0.88% | +0.23% | 4.74x | 11.1 | 2026-11-20T02:20:26.559811+00:00 | Not calibrated | STRONG 76/100 | HIGH 66/100 | Watch | WATCH |
+| 4 | SYRUP/USD | 0.09666 | 10.629 | 20.131 | +0.45% | -0.06% | 0.08x | 30.0 | 2026-11-20T02:20:26.559811+00:00 | Not calibrated | WEAK 0/100 | EXTREME 93/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | NIGHT/USD | 46.814 | 0.04529 | +1.37% | 1.09x |
-| 2 | ICNT/USD | 36.294 | 0.4316 | +1.48% | 1.87x |
-| 3 | CAP/USD | 23.709 | 0.097206 | -0.47% | 3.40x |
+| 1 | NIGHT/USD | 47.877 | 0.04535 | +0.60% | 1.46x |
+| 2 | ICNT/USD | 40.778 | 0.4329 | +0.26% | 2.15x |
+| 3 | CAP/USD | 35.018 | 0.097469 | +0.23% | 4.74x |
+| 4 | SYRUP/USD | 20.131 | 0.09666 | -0.06% | 0.08x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,8 +44,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 904; predictions: 7870; observations: 546237.
-- Matured sampled outcomes across 1/6/24/48h: 8754; gap abstentions: 16331. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 905; predictions: 7874; observations: 546840.
+- Matured sampled outcomes across 1/6/24/48h: 8793; gap abstentions: 16349. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -59,23 +61,25 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44658778539 · **Generation:** 904 · **Legacy run:** 44658778539
-**Main quote time:** 2026-11-20T02:10:38.483076+00:00 · **Legacy report time:** 2026-11-20T02:11:44.082107+00:00
+**Writer:** 44659964441 · **Generation:** 905 · **Legacy run:** 44659964441
+**Main quote time:** 2026-11-20T02:20:29.026533+00:00 · **Legacy report time:** 2026-11-20T02:21:19.920832+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | NIGHT/USD ⭐ | 0.04529 | 54.51 | +1.37% | 1.09x | STRONG 72/100 | HIGH 62/100 | Watch |
-| 2 | ICNT/USD ⭐ | 0.4316 | 52.38 | +1.48% | 1.87x | STRONG 71/100 | HIGH 67/100 | Watch |
-| 3 | CAP/USD | 0.097206 | 36.35 | -0.47% | 3.40x | WEAK 38/100 | VERY_HIGH 78/100 | Watch |
+| 1 | NIGHT/USD ⭐ | 0.04535 | 55.44 | +0.60% | 1.46x | STRONG 83/100 | HIGH 55/100 | Watch |
+| 2 | ICNT/USD ⭐ | 0.4329 | 53.50 | +0.26% | 2.15x | STRONG 87/100 | HIGH 61/100 | Consider small entry |
+| 3 | CAP/USD ⭐ | 0.097469 | 51.15 | +0.23% | 4.74x | STRONG 86/100 | HIGH 66/100 | Consider small entry |
+| 4 | SYRUP/USD | 0.09666 | 10.63 | -0.06% | 0.08x | WEAK 0/100 | EXTREME 93/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | ICNT/USD ⭐ | 0.4328 | 53.41 | +1.48% | 1.87x | 7310 | STRONG 77/100 | HIGH 61/100 | Consider small entry |
-| 2 | NIGHT/USD ⭐ | 0.04526 | 46.28 | +1.37% | 1.09x | 7999 | MODERATE 63/100 | HIGH 68/100 | Watch |
+| 1 | ICNT/USD ⭐ | 0.4324 | 49.71 | +0.26% | 2.15x | 7322 | STRONG 85/100 | HIGH 61/100 | Consider small entry |
+| 2 | NIGHT/USD ⭐ | 0.0453 | 46.61 | +0.60% | 1.46x | 8063 | STRONG 73/100 | HIGH 61/100 | Watch |
+| 3 | CAP/USD ⭐ | 0.097469 | 43.89 | +0.23% | 4.74x | 7856 | STRONG 82/100 | HIGH 66/100 | Consider small entry |
 
-**Same-run overlap:** NIGHT/USD, ICNT/USD
+**Same-run overlap:** NIGHT/USD, ICNT/USD, CAP/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
