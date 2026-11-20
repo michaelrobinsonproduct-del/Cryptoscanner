@@ -75,7 +75,15 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertNotIn("  workflow_run:", learning)
         self.assertIn("  workflow_dispatch:", learning)
         self.assertIn("  contents: read", learning)
-        self.assertNotIn("  contents: write", learning)
+        # Only the explicitly enabled main research-release job may write contents.
+        read_only, retention = learning.split("\n  retain-main-learning-durable-checkpoint:", 1)
+        self.assertNotRegex(read_only, r"(?m)^\s*contents:\s*write")
+        self.assertNotIn("gh release upload", read_only)
+        self.assertEqual(len(re.findall(r"(?m)^\s*contents:\s*write", retention)), 1)
+        self.assertIn("if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG != ''", retention)
+        self.assertIn("needs: market-wide-shadow-learning", retention)
+        self.assertIn("persist-credentials: false", retention)
+        self.assertNotIn("paper-proof-ledger", retention)
         self.assertNotIn("git push", learning)
         legacy = (PIPELINE.parent / "paper-legacy-shadow.yml").read_text()
         legacy_dispatch = "actions/workflows/paper-legacy-shadow.yml/dispatches"
@@ -93,6 +101,22 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertIn("  contents: read", legacy)
         self.assertNotIn("  contents: write", legacy)
         self.assertNotIn("git push", legacy)
+
+    def test_main_learning_bootstrap_requires_approved_exact_checkpoint(self):
+        learning = (PIPELINE.parent / "paper-ledger-learning.yml").read_text()
+        for field in ("market_learning_bootstrap_run_id", "market_learning_bootstrap_source_sha",
+                      "market_learning_bootstrap_state_digest"):
+            self.assertIn(field + ":", learning)
+            self.assertIn("inputs." + field, learning)
+        self.assertIn('prior_run="$BOOTSTRAP_RUN"', learning)
+        self.assertIn('required_scope="pr",expected_state=os.environ["BOOTSTRAP_STATE"]', learning)
+        self.assertIn('"$prior_branch:pull_request:$BOOTSTRAP_SHA"', learning)
+        self.assertIn('"completed:success:$prior_run:$BOOTSTRAP_SHA"', learning)
+        self.assertIn('"completed:success:$BOOTSTRAP_RUN:$BOOTSTRAP_SHA"', learning)
+        self.assertIn('test "$origin" = "$APPROVED_RESEARCH_ORIGIN"', learning)
+        self.assertIn("Main checkpoint already exists; bootstrap cannot replace it", learning)
+        self.assertNotIn("prior_run=44253116626", learning)
+        self.assertNotIn("trade_run=44252876362", learning)
 
     def test_legacy_workflow_publishes_same_run_challenger_and_shadow(self):
         text = (PIPELINE.parent / "paper-legacy-shadow.yml").read_text()

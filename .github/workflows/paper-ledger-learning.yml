@@ -6,9 +6,50 @@ on:
         description: "Completed successful canonical writer run ID; automatically dispatched by same writer after verified publication"
         required: false
         type: string
+      market_learning_bootstrap:
+        description: "Explicit one-time main shadow learning bootstrap from approved pinned research checkpoint (never a reset)"
+        required: false
+        default: false
+        type: boolean
+      market_learning_bootstrap_run_id:
+        description: "Exact approved completed PR research run for first bootstrap"
+        required: false
+        type: string
+      market_learning_bootstrap_source_sha:
+        description: "Exact approved research commit SHA"
+        required: false
+        type: string
+      market_learning_bootstrap_state_digest:
+        description: "Exact independently verified research state SHA256 digest"
+        required: false
+        type: string
+      market_learning_restore_asset:
+        description: "Approved exact main checkpoint asset name; only used if current main artifact missing"
+        required: false
+        type: string
+      market_learning_restore_sha256:
+        description: "Expected archive SHA256 from independent readback"
+        required: false
+        type: string
+      market_learning_restore_state_digest:
+        description: "Exact last approved main learning state digest, never an implicit rollback"
+        required: false
+        type: string
   pull_request:
     paths:
       - 'paper_pov/public_ledger_learning.py'
+      - 'paper_pov/market_wide_learning.py'
+      - 'paper_pov/learning_retention.py'
+      - 'paper_pov/test_learning_retention.py'
+      - 'paper_pov/test_market_wide_learning.py'
+      - 'paper_pov/post_q3_observed_recovery.py'
+      - 'paper_pov/historical_trade_recovery.py'
+      - 'paper_pov/historical_trade_batch.py'
+      - 'paper_pov/historical_coarse_discovery.py'
+      - 'paper_pov/test_historical_coarse_discovery.py'
+      - 'paper_pov/test_historical_trade_batch.py'
+      - 'paper_pov/test_historical_trade_recovery.py'
+      - 'paper_pov/test_post_q3_observed_recovery.py'
       - 'paper_pov/historical_paper_cohort.py'
       - 'paper_pov/kraken_observed_candles.py'
       - 'paper_pov/observed_kraken_outcomes.py'
@@ -27,6 +68,9 @@ on:
 permissions:
   contents: read
   actions: read
+concurrency:
+  group: paper-ledger-learning-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: false
 jobs:
   paper-ledger-learning:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
@@ -40,13 +84,32 @@ jobs:
         with:
           python-version: '3.11'
       - name: Focused ledger schema acceptance
-        run: python -m unittest paper_pov.test_public_ledger_learning paper_pov.test_historical_paper_cohort paper_pov.test_rolling_kraken_candles paper_pov.test_frozen_historical_shadow paper_pov.test_rolling_learning_predictions -v
+        run: python -m unittest paper_pov.test_public_ledger_learning paper_pov.test_historical_paper_cohort paper_pov.test_rolling_kraken_candles paper_pov.test_frozen_historical_shadow paper_pov.test_rolling_learning_predictions paper_pov.test_market_wide_learning -v
       - name: Select latest persisted public paper ledger
         env:
           REQUESTED_RUN: ${{ inputs.paper_run_id }}
           GH_REPO: ${{ github.repository }}
         run: |
           RUN_ID="$REQUESTED_RUN"
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ -z "$RUN_ID" ]; then
+            RUN_ID=$(python - <<'PY'
+          import base64,json,os,subprocess,sys
+          from pathlib import Path
+          from paper_pov.market_wide_learning import select_completed_learning_publication
+          repo=os.environ["GH_REPO"]
+          def api(path):
+              return json.loads(subprocess.check_output(["gh","api",f"repos/{repo}/{path}"]))
+          def publication(ref):
+              return json.loads(base64.b64decode(api(f"contents/verified-results/results.json?ref={ref}")["content"]))
+          selected,mode=select_completed_learning_publication(
+              publication("paper-proof-ledger"),lambda r:api(f"actions/runs/{r}"),publication)
+          Path("/tmp/market-canonical.json").write_text(json.dumps(selected))
+          print(mode,file=sys.stderr)
+          print(selected["run_id"])
+          PY
+            )
+            test -n "$RUN_ID"
+          fi
           if [ -z "$RUN_ID" ]; then
             RUN_ID=$(gh api -X GET "repos/$GH_REPO/actions/artifacts?per_page=100" --jq '.artifacts[] | select(.expired == false and (.name | startswith("public-paper-ledger-"))) | .workflow_run.id' | head -n 1)
           fi
@@ -58,6 +121,9 @@ jobs:
           gh run download "$PAPER_RUN_ID" -n "public-paper-ledger-$PAPER_RUN_ID" -D evidence
           cd evidence
           sha256sum -c SHA256SUMS
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ -f /tmp/market-canonical.json ]; then
+            python -c 'import json; a=json.load(open("/tmp/market-canonical.json")); b=json.load(open("ledger.json")); assert a["ledger_generation"]==b["generation"], "Canonical artifact generation mismatch"'
+          fi
       - name: Reconstruct real persisted paper outcome accounting
         run: python -m paper_pov.public_ledger_learning evidence/ledger.json --output evidence/learning-state.json --report evidence/learning-report.md
       - name: Select pairs with recent persisted paper predictions
@@ -96,8 +162,18 @@ jobs:
           mkdir -p evidence/prior
           # Only durable main-branch learning may extend the production
           # history; PR/test artifacts are never authoritative ancestors.
-          PRIOR_RUN="$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            # The isolated ledger may be older than main's newest learning
+            # artifact by the time this step executes. Do not import future
+            # prediction state or reset the cohort to hide a rollback.
+            ledger_at=$(python -c 'import json; from paper_pov.shadow_learning_evidence import utc_time; print(utc_time(json.load(open("evidence/ledger.json"))["runs"][-1]["as_of"]).strftime("%Y-%m-%dT%H:%M:%SZ"))')
+            PRIOR_RUN=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
+              --jq '.artifacts[] | select(.expired == false and (.name | startswith("public-paper-learning-")) and .workflow_run.head_branch == "main") | [.created_at,.workflow_run.id] | @tsv' | awk -v cutoff="$ledger_at" '$1 <= cutoff' | sort -r | head -n 1 | cut -f2)
+            test -n "$PRIOR_RUN" || { echo "No temporally compatible main learning ancestor"; exit 1; }
+          else
+            PRIOR_RUN="$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
             --jq '[.artifacts[] | select(.expired == false and (.name | startswith("public-paper-learning-")) and .workflow_run.head_branch == "main") | .workflow_run.id] | first // empty')"
+          fi
           if [ -n "$PRIOR_RUN" ]; then
             # Once continuity exists, a missing ancestor is an error: silently
             # replacing it with fresh 60h candles would erase mature cohorts.
@@ -184,4 +260,603 @@ jobs:
             evidence/kraken-candles.json
             evidence/shadow-handoff.json
             evidence/frozen-q3-prospective.json
+            evidence/market-wide-observed.json
           retention-days: 30
+
+  market-wide-shadow-learning:
+    # Merge does not activate the new job. First establish a verified checkpoint.
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (vars.MARKET_WIDE_LEARNING_ENABLED == 'true' || inputs.market_learning_bootstrap == true || inputs.market_learning_restore_asset != ''))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: market-wide-shadow-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Focused market learning acceptance
+        run: python -m unittest paper_pov.test_market_wide_learning paper_pov.test_learning_retention -v
+      - name: Select latest persisted public paper ledger
+        env:
+          REQUESTED_RUN: ${{ inputs.paper_run_id }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # Resolve the latest completed publication independently of the trigger.
+          RUN_ID=$(python - <<'PY'
+          import base64,json,os,subprocess,sys
+          from pathlib import Path
+          from paper_pov.market_wide_learning import select_completed_learning_publication
+          repo=os.environ["GH_REPO"]
+          def api(path):
+              return json.loads(subprocess.check_output(["gh","api",f"repos/{repo}/{path}"]))
+          def publication(ref):
+              return json.loads(base64.b64decode(api(f"contents/verified-results/results.json?ref={ref}")["content"]))
+          selected,mode=select_completed_learning_publication(
+              publication("paper-proof-ledger"),lambda r:api(f"actions/runs/{r}"),publication)
+          Path("/tmp/market-canonical.json").write_text(json.dumps(selected))
+          print(mode,file=sys.stderr)
+          print(selected["run_id"])
+          PY
+          )
+          test -n "$RUN_ID"
+          echo "PAPER_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+      - name: Read existing paper ledger artifact
+        run: |
+          mkdir -p evidence
+          gh run download "$PAPER_RUN_ID" -n "public-paper-ledger-$PAPER_RUN_ID" -D evidence
+          (cd evidence && sha256sum -c SHA256SUMS)
+          python -c 'import json; from paper_pov.ledger import verify; from paper_pov.segmented_storage import MAX_RAW_BYTES; a=json.load(open("/tmp/market-canonical.json")); b=json.load(open("evidence/ledger.json")); verify(b, MAX_RAW_BYTES); assert a["ledger_generation"]==b["generation"] and a["ledger_sha256"]==b["sha256"] and a["source_sha"]==b["runs"][-1]["source_sha"], "Canonical artifact provenance mismatch"'
+      - name: Score and retain independent market-wide shadow shard
+        env:
+          LEARNING_BRANCH: ${{ github.head_ref || github.ref_name }}
+          LEARNING_SCOPE: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
+          ALLOW_MAIN_BOOTSTRAP: ${{ inputs.market_learning_bootstrap || false }}
+          BOOTSTRAP_RUN: ${{ inputs.market_learning_bootstrap_run_id }}
+          BOOTSTRAP_SHA: ${{ inputs.market_learning_bootstrap_source_sha }}
+          BOOTSTRAP_STATE: ${{ inputs.market_learning_bootstrap_state_digest }}
+          APPROVED_RESEARCH_ORIGIN: ${{ vars.MARKET_WIDE_BOOTSTRAP_MODEL_ORIGIN_RUN_ID }}
+          RESTORE_ASSET: ${{ inputs.market_learning_restore_asset }}
+          RESTORE_SHA: ${{ inputs.market_learning_restore_sha256 }}
+          RESTORE_STATE: ${{ inputs.market_learning_restore_state_digest }}
+          CHECKPOINT_RELEASE: ${{ vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG }}
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/market-prior
+          # Normal ancestry is branch-isolated. Main has one explicit research
+          # bootstrap receipt; it never searches arbitrary PR artifacts.
+          prior_run=""
+          prior_prefix="market-wide-learning-continuity-$LEARNING_SCOPE-"
+          prior_branch="$LEARNING_BRANCH"
+          while read -r candidate; do
+            test -n "$candidate" || continue
+            # A completed market-wide job owns the checkpoint. Other parallel
+            # research jobs may still be running; don't lose this state.
+            jobs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate/jobs?per_page=100")
+            owner=$(jq -r '[.jobs[] | select(.name=="market-wide-shadow-learning") | .status+":"+(.conclusion//"")] | first // empty' <<< "$jobs")
+            if [ "$owner" = "completed:success" ]; then
+              prior_run="$candidate"
+              break
+            fi
+            # Old-format PR artifacts predate extraction into the separate job.
+            if [ -z "$owner" ] && [ "$LEARNING_SCOPE" = "pr" ] && [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate" --jq '.status + ":" + (.conclusion // "")')" = "completed:success" ]; then
+              prior_run="$candidate"
+              break
+            fi
+          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate \
+            --jq '.artifacts[] | select(.expired == false and (.name | startswith("market-wide-learning-continuity-"))) | [.workflow_run.head_branch,.workflow_run.id,.name] | @tsv' | awk -v branch="$LEARNING_BRANCH" -v prefix="$prior_prefix" '$1 == branch && index($3,prefix)==1 {print $2}' | sort -unr)
+          restored=false
+          if [ "$LEARNING_SCOPE" = "main" ] && [ "$ALLOW_MAIN_BOOTSTRAP" = "true" ] && [ -n "$prior_run" ]; then
+            echo "::error::Main checkpoint already exists; bootstrap cannot replace it"
+            exit 1
+          fi
+          if [ -z "$prior_run" ] && [ "$LEARNING_SCOPE" = "main" ] && [ -n "$RESTORE_ASSET" ]; then
+            test "$ALLOW_MAIN_BOOTSTRAP" != "true"
+            [[ "$RESTORE_ASSET" =~ ^market-wide-checkpoint-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+-[0-9]+\.tar\.gz$ ]]
+            [[ "$RESTORE_SHA" =~ ^[0-9a-f]{64}$ ]]
+            [[ "$RESTORE_STATE" =~ ^[0-9a-f]{64}$ ]]
+            test -n "$CHECKPOINT_RELEASE"
+            mkdir -p evidence/market-restore
+            gh release download "$CHECKPOINT_RELEASE" --pattern "$RESTORE_ASSET" --dir evidence/market-restore
+            python -m paper_pov.learning_retention unpack-durable-checkpoint --archive "evidence/market-restore/$RESTORE_ASSET" --directory evidence/market-prior --scope main --sha256 "$RESTORE_SHA" --state-digest "$RESTORE_STATE"
+            prior_run=$(jq -r .source_run_id evidence/market-prior/checkpoint-manifest.json)
+            [[ "$prior_run" =~ ^[0-9]+$ ]]
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run" --jq .head_branch)" = "main"
+            restored=true
+            echo "EXPLICIT_MAIN_CHECKPOINT_RESTORED=$prior_run"
+          fi
+          if [ -z "$prior_run" ] && [ "$LEARNING_SCOPE" = "main" ]; then
+            # Never silently reset learning to a research snapshot when a main
+            # checkpoint is missing, expired or deleted. Bootstrap is explicit.
+            test "$ALLOW_MAIN_BOOTSTRAP" = "true" || { echo "::error::MAIN_LEARNING_CHECKPOINT_UNAVAILABLE; explicit first bootstrap or approved restore required"; exit 1; }
+            existing=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.workflow_run.head_branch=="main" and (.name|startswith("market-wide-learning-continuity-main-"))) | .id' | sed -n '1p')
+            test -z "$existing" || { echo "::error::Main checkpoint history exists; bootstrap cannot replace it"; exit 1; }
+            [[ "$BOOTSTRAP_RUN" =~ ^[0-9]+$ ]]
+            [[ "$BOOTSTRAP_SHA" =~ ^[0-9a-f]{40}$ ]]
+            [[ "$BOOTSTRAP_STATE" =~ ^[0-9a-f]{64}$ ]]
+            [[ "$APPROVED_RESEARCH_ORIGIN" =~ ^[0-9]+$ ]]
+            prior_run="$BOOTSTRAP_RUN"
+            prior_prefix=market-wide-learning-continuity-pr-
+            prior_branch=learning-market-wide-20261117
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run" --jq '.head_branch+":"+.event+":"+.head_sha')" = "$prior_branch:pull_request:$BOOTSTRAP_SHA"
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run/jobs?per_page=100" --jq '.jobs[]|select(.name=="market-wide-shadow-learning")|.status+":"+(.conclusion//"")+":"+(.run_id|tostring)+":"+.head_sha')" = "completed:success:$prior_run:$BOOTSTRAP_SHA"
+            test -n "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$prior_run/artifacts?per_page=100" --jq '.artifacts[]|select(.expired==false and .name=="market-wide-learning-continuity-pr-'"$prior_run"'")|.id')"
+            echo "MAIN_RESEARCH_BOOTSTRAP_PINNED=$prior_run"
+          fi
+          prior_args=()
+          model_path=historical/evidence/q3_2026_frozen_shadow_v1.json
+          model_ready=2026-11-11T03:27:00Z
+          if [ -n "$prior_run" ]; then
+            if [ "$restored" != "true" ]; then
+              gh run download "$prior_run" -n "$prior_prefix$prior_run" -D evidence/market-prior
+            fi
+            if [ ! -s evidence/market-prior/market-wide-state.json ]; then
+              python -m paper_pov.learning_retention restore --directory evidence/market-prior/market-state-checkpoint --state evidence/market-prior/market-wide-state.json
+            fi
+            test -s evidence/market-prior/market-wide-state.json
+            if [ "$LEARNING_SCOPE" = "main" ] && [ "$prior_prefix" = "market-wide-learning-continuity-pr-" ]; then
+              test "$(jq -r .digest evidence/market-prior/market-wide-state.json)" = "$BOOTSTRAP_STATE"
+              python -c 'import os; from paper_pov.learning_retention import verify_checkpoint_directory; verify_checkpoint_directory("evidence/market-prior",required_scope="pr",expected_state=os.environ["BOOTSTRAP_STATE"])'
+              test "$(cat evidence/market-prior/market-wide-model-origin-run.txt)" = "$APPROVED_RESEARCH_ORIGIN"
+            fi
+            echo "MARKET_LEARNING_PRIOR_RUN=$prior_run"
+            echo "$prior_run" > evidence/market-prior-run.txt
+            # Known incident checkpoint: recover evidence lost by unordered prior discovery.
+            if [ "$LEARNING_SCOPE" = "pr" ] && [ "$prior_run" -ge 44221452274 ] && ! python -c 'import json; d=json.load(open("evidence/market-prior/market-wide-state.json")); raise SystemExit(not d.get("continuity_recovery_44220533486"))'; then
+              mkdir -p evidence/market-recovery
+              gh run download 44220533486 -n market-wide-learning-continuity-pr-44220533486 -D evidence/market-recovery
+              python -c 'import json; from pathlib import Path; from paper_pov.market_wide_learning import recover_market_state; from paper_pov.shadow_learning_evidence import canonical_digest; p=Path("evidence/market-prior/market-wide-state.json"); d=recover_market_state(json.loads(p.read_text()),json.load(open("evidence/market-recovery/market-wide-state.json"))); d["continuity_recovery_44220533486"]=True; d["digest"]=canonical_digest({k:v for k,v in d.items() if k!="digest"}); p.write_text(json.dumps(d)); print("MARKET_LEARNING_RECOVERED",len(d["anchors"]),len(d["shadow_predictions"]))'
+            fi
+            prior_args=(--prior-state evidence/market-prior/market-wide-state.json)
+            # Preserve the prior active model when scanning the same writer generation.
+            if [ -s evidence/market-prior/market-wide-scoring-model.json ] && [ -s evidence/market-prior/market-wide-scoring-model-available.txt ]; then
+              ready=$(python -c 'from pathlib import Path; print(Path("evidence/market-prior/market-wide-scoring-model-available.txt").read_text().strip().removesuffix(chr(92)+"n"))')
+              if python -c 'import json,sys; from paper_pov.market_wide_learning import eligible_scoring_model; a=json.load(open("evidence/ledger.json")); m=json.load(open(sys.argv[1])); sys.exit(not eligible_scoring_model(m,sys.argv[2],a["runs"][-1]["as_of"]))' evidence/market-prior/market-wide-scoring-model.json "$ready"; then
+                model_path=evidence/market-prior/market-wide-scoring-model.json
+                model_ready="$ready"
+              fi
+            fi
+            if [ -s evidence/market-prior/market-wide-model.json ]; then
+              origin="$prior_run"
+              if [ -s evidence/market-prior/market-wide-model-origin-run.txt ]; then
+                origin=$(cat evidence/market-prior/market-wide-model-origin-run.txt)
+              fi
+              [[ "$origin" =~ ^[0-9]+$ ]]
+              test "$origin" -le "$prior_run"
+              origin_branch=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq '.head_branch')
+              if [ "$origin_branch" != "$LEARNING_BRANCH" ]; then
+                test "$LEARNING_SCOPE" = "main"
+                test "$origin" = "$APPROVED_RESEARCH_ORIGIN"
+                test "$origin_branch" = "learning-market-wide-20261117"
+              fi
+              origin_jobs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin/jobs?per_page=100")
+              origin_owner=$(jq -r '[.jobs[]|select(.name=="market-wide-shadow-learning")]|first // empty' <<< "$origin_jobs")
+              if [ -n "$origin_owner" ]; then
+                test "$(jq -r '.status+":"+(.conclusion//"")' <<< "$origin_owner")" = "completed:success"
+                completed=$(jq -r '.completed_at' <<< "$origin_owner")
+              else
+                test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq '.status + ":" + (.conclusion // "")')" = "completed:success"
+                completed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq .updated_at)
+              fi
+              if python -c 'import json,sys; from paper_pov.market_wide_learning import eligible_scoring_model; a=json.load(open("evidence/ledger.json")); m=json.load(open(sys.argv[1])); sys.exit(not eligible_scoring_model(m,sys.argv[2],a["runs"][-1]["as_of"]))' evidence/market-prior/market-wide-model.json "$completed"; then
+                model_path=evidence/market-prior/market-wide-model.json
+                model_ready="$completed"
+              fi
+            fi
+          else
+            echo "MARKET_LEARNING_PR_BOOTSTRAP_NO_COMPLETED_PRIOR"
+          fi
+          cp "$model_path" evidence/market-wide-scoring-model.json
+          printf '%s\n' "$model_ready" > evidence/market-wide-scoring-model-available.txt
+          model_args=(--shadow-model evidence/market-wide-scoring-model.json --shadow-model-available "$model_ready")
+          python -m paper_pov.market_wide_learning evidence/ledger.json --batch-size 12 --include-watch-controls \
+            "${prior_args[@]}" --state-output evidence/market-wide-state.json \
+            --cold-state-directory evidence/market-cold-history --prior-cold-directory evidence/market-prior/market-cold-history \
+            "${model_args[@]}" \
+            --output evidence/market-wide-observed.json
+      - name: Train cumulative shadow on retained historical and recent mature labels
+        env:
+          DURABLE_SEED_RELEASE: ${{ vars.MARKET_WIDE_SEED_RELEASE_TAG }}
+          ALLOW_MAIN_BOOTSTRAP: ${{ inputs.market_learning_bootstrap || false }}
+          BOOTSTRAP_RUN: ${{ inputs.market_learning_bootstrap_run_id }}
+          BOOTSTRAP_SHA: ${{ inputs.market_learning_bootstrap_source_sha }}
+        run: |
+          set -euo pipefail
+          # Reuse the exact compact seed verified against the full originals.
+          # It contains all complete strict 48h examples (including those
+          # not yet admitted by a given chronological cutoff).
+          mkdir -p evidence/historical-compact
+          if [ -n "$DURABLE_SEED_RELEASE" ]; then
+            gh release download "$DURABLE_SEED_RELEASE" --pattern market-wide-strict-seed.tar.gz --dir evidence/historical-compact
+            python -m paper_pov.learning_retention unpack-seed --archive evidence/historical-compact/market-wide-strict-seed.tar.gz --directory evidence/historical-compact/strict-training-seed
+          else
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/jobs/134600230522" --jq '.status + ":" + (.conclusion // "") + ":" + (.run_id|tostring) + ":" + .head_sha')" = "completed:success:44244545891:822ef8f0205cf4f88d42aaa813eb5f24d883e8e0"
+            gh run download 44244545891 -n market-wide-strict-seed-44244545891 -D evidence/historical-compact
+          fi
+          python -c 'import json; d=json.load(open("evidence/historical-compact/strict-training-seed/manifest.json")); assert d["digest"]=="98059c9e5019a125202ccbe71dcc23cfeed60f88587a3bb4332d9c1a0e67b6e5"'
+          mkdir -p evidence/historical-trades
+          trade_run=""
+          learning_branch=${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}
+          while read -r candidate; do
+            test -n "$candidate" || continue
+            owner=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate/jobs?per_page=100" --jq '.jobs[] | select(.name=="historical-trade-recovery-pilot") | .status+":"+(.conclusion//"")')
+            if [ "$owner" = "completed:success" ]; then
+              trade_run="$candidate"
+              break
+            fi
+          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.expired==false and (.name|startswith("historical-trade-batch-"))) | [.workflow_run.head_branch,.workflow_run.id] | @tsv' | awk -v branch="$learning_branch" '$1 == branch {print $2}' | sort -unr)
+          # Historical trades are separate research, not an input to the strict
+          # fit. Do not stop continuous strict training when research expires.
+          trade_args=()
+          if [ -z "$trade_run" ] && [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$ALLOW_MAIN_BOOTSTRAP" = "true" ]; then
+            [[ "$BOOTSTRAP_RUN" =~ ^[0-9]+$ ]]
+            [[ "$BOOTSTRAP_SHA" =~ ^[0-9a-f]{40}$ ]]
+            seed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BOOTSTRAP_RUN/artifacts?per_page=100" --jq '.artifacts[]|select(.expired==false and .name=="historical-trade-batch-'"$BOOTSTRAP_RUN"'")|.id')
+            if [ -n "$seed" ]; then
+              test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BOOTSTRAP_RUN/jobs?per_page=100" --jq '.jobs[]|select(.name=="historical-trade-recovery-pilot")|.status+":"+(.conclusion//"")+":"+(.run_id|tostring)+":"+.head_sha')" = "completed:success:$BOOTSTRAP_RUN:$BOOTSTRAP_SHA"
+              trade_run="$BOOTSTRAP_RUN"
+            fi
+          fi
+          if [ -n "$trade_run" ]; then
+            gh run download "$trade_run" -n "historical-trade-batch-$trade_run" -D evidence/historical-trades
+            trade_args=(--historical-trade-directory evidence/historical-trades)
+          else
+            echo "::notice::Historical trade research currently unavailable; strict fit uses independently qualified seed/live evidence"
+          fi
+          python -m paper_pov.market_wide_learning evidence/historical-seed/market-wide-cohorts.jsonl.gz \
+            "${trade_args[@]}" \
+            --cumulative-state evidence/market-wide-state.json \
+            --cold-state-directory evidence/market-cold-history \
+            --cumulative-archive-sha256 96daae63c7b3acb522892e1f602f9c564d1a3fb659089d9b0699282f30d41226 \
+            --additional-archive evidence/historical-q2/q2-market-wide-cohorts.jsonl.gz fc81b54cba6e12af3e9422dde9416179e6ef76af4831d48d839fbdb43018eaa4 \
+            --retained-observed evidence/historical-recovered/post-q3-cohorts.jsonl.gz b532ac5eb892e931c096d0c3885d80f2838581a023b8dc9bc64118cb9027faef \
+            --compact-seed evidence/historical-compact/strict-training-seed \
+            --original-cohort-hash 5d883b8252b7a0a3186296801c3293060198481a13c67d0a384e9a41818241e5 \
+            --original-cohort-hash 8c4d7e86d170b17a7a6a3d4ebf9fae1d5cd5f4844f5b1c33a1605f0650823d63 \
+            --original-cohort-hash 287a405ba7f99c61df3075737e24e3f24e30137a9c45fbcee1671f257b35474c \
+            --output evidence/market-wide-training-report.json
+          export PRIOR_MARKET_RUN=""
+          if [ -s evidence/market-prior/market-wide-model-origin-run.txt ]; then
+            PRIOR_MARKET_RUN=$(cat evidence/market-prior/market-wide-model-origin-run.txt)
+          fi
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from paper_pov.market_wide_learning import choose_fitted_candidate
+          current=json.loads(Path("evidence/market-wide-training-report.json").read_text())
+          prior=Path("evidence/market-prior/market-wide-model.json")
+          chosen,reused=choose_fitted_candidate(current,json.loads(prior.read_text()) if prior.is_file() else None)
+          origin=os.environ["GITHUB_RUN_ID"]
+          if reused:
+              origin=os.environ.get("PRIOR_MARKET_RUN") or Path("evidence/market-prior-run.txt").read_text().strip()
+          if not origin.isdigit():
+              raise ValueError("Invalid candidate model origin")
+          Path("evidence/market-wide-model.json").write_text(json.dumps(chosen,sort_keys=True))
+          Path("evidence/market-wide-model-origin-run.txt").write_text(origin+chr(10))
+          print("FROZEN_CANDIDATE",chosen["model"]["version"],"REUSED",reused,"ORIGIN",origin)
+          PY
+          python -c 'import json; d=json.load(open("evidence/market-wide-model.json")); assert d["model"]["status"]=="SHADOW_ONLY"; assert d["purge_hours"]==48 and len(d["archive_cohort_receipts"])==2'
+      - name: Publish compact checksummed learning receipt independently of production results
+        env:
+          LEARNING_SCOPE: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from paper_pov.market_wide_learning import build_learning_receipt
+          def load(name):
+              return json.loads(Path("evidence",name).read_text())
+          d=build_learning_receipt(load("market-wide-observed.json"),load("market-wide-training-report.json"),
+               load("market-wide-model.json"),writer=json.loads(Path("/tmp/market-canonical.json").read_text()),
+               learning_scope=os.environ["LEARNING_SCOPE"])
+          Path("evidence/market-wide-learning-receipt.json").write_text(json.dumps(d,sort_keys=True)+chr(10))
+          print("MARKET_WIDE_LEARNING_RECEIPT",json.dumps(d,sort_keys=True))
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a") as summary:
+              summary.write("## Independent market-wide shadow learning"+chr(10))
+              summary.write(f"Writer {d['writer_run_id']}, generation {d['ledger_generation']}; training {d['training_count']} examples / {d['positive_count']} positives; observed current markets {d['cumulative_observed_current_markets']}/{d['eligible_markets']}. Shadow only; verified lift unavailable."+chr(10))
+          PY
+      - name: Verify partitioned learning checkpoint round trip
+        run: python -m paper_pov.learning_retention pack --state evidence/market-wide-state.json --directory evidence/market-state-checkpoint
+      - name: Rehearse durable checkpoint archive restore
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p /tmp/learning-pack
+          cp evidence/market-wide-model.json evidence/market-wide-model-origin-run.txt evidence/market-wide-training-report.json evidence/market-wide-learning-receipt.json evidence/market-wide-scoring-model.json evidence/market-wide-scoring-model-available.txt /tmp/learning-pack/
+          cp -r evidence/market-state-checkpoint evidence/market-cold-history /tmp/learning-pack/
+          python -m paper_pov.learning_retention pack-durable-checkpoint --directory /tmp/learning-pack --archive /tmp/learning-checkpoint.tar.gz --scope pr --run-id "$GITHUB_RUN_ID"
+          python -m paper_pov.learning_retention unpack-durable-checkpoint --archive /tmp/learning-checkpoint.tar.gz --directory /tmp/learning-readback --scope pr --sha256 "$(sha256sum /tmp/learning-checkpoint.tar.gz | cut -d' ' -f1)" --state-digest "$(jq -r .digest evidence/market-wide-state.json)"
+          echo "DURABLE_CHECKPOINT_ROUNDTRIP_VERIFIED"
+      - name: Retain independent market learning state for the next successful run
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-wide-learning-continuity-${{ github.event_name == 'pull_request' && 'pr' || 'main' }}-${{ github.run_id }}
+          path: |
+            evidence/market-wide-model.json
+            evidence/market-wide-model-origin-run.txt
+            evidence/market-wide-training-report.json
+            evidence/market-wide-learning-receipt.json
+            evidence/market-state-checkpoint/
+            evidence/market-cold-history/
+            evidence/market-wide-scoring-model.json
+            evidence/market-wide-scoring-model-available.txt
+          if-no-files-found: error
+          retention-days: 90
+  recover-post-q3-observations:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify retained-observation reconstruction contract
+        run: python -m unittest paper_pov.test_post_q3_observed_recovery -v
+      - name: Recover a bounded set of completed main learning artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/post-q3
+          # 14-day rolling history: sample approximately weekly from the
+          # retained artifact horizon. Old expired/missing runs stay unknown.
+          for day in 2026-10-18 2026-10-25 2026-11-01 2026-11-08 2026-11-17; do
+            chosen=""
+            while read -r id; do
+              test -n "$id" || continue
+              artifact=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/artifacts" --jq '.artifacts[] | select(.expired==false and (.name|startswith("public-paper-learning-"))) | .name' | head -n 1)
+              if [ -z "$artifact" ]; then continue; fi
+              chosen="$id"
+              mkdir -p "evidence/post-q3/$id"
+              gh run download "$id" -n "$artifact" -D "evidence/post-q3/$id"
+              test -s "evidence/post-q3/$id/kraken-candles.json"
+              break
+            done < <(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/paper-ledger-learning.yml/runs" -f branch=main -f status=success -f created="$day" -f per_page=10 --jq '.workflow_runs[].id')
+            echo "RETAINED_OBSERVATION_DAY=$day RUN=${chosen:-UNAVAILABLE}"
+          done
+          shopt -s nullglob
+          snapshots=(evidence/post-q3/*/kraken-candles.json)
+          if [ "${#snapshots[@]}" -eq 0 ]; then
+            echo "::notice::No retained post-Q3 learning artifacts available; coverage remains unknown"
+            exit 0
+          fi
+          python -m paper_pov.post_q3_observed_recovery "${snapshots[@]}" \
+            --end 2026-11-18T00:00:00Z \
+            --cohorts evidence/post-q3-cohorts.jsonl.gz --output evidence/post-q3-summary.json
+          (cd evidence && sha256sum post-q3-cohorts.jsonl.gz post-q3-summary.json > POST-Q3-SHA256SUMS)
+      - name: Preserve post-Q3 observation evidence separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-q3-observed-recovery-${{ github.run_id }}
+          path: |
+            evidence/post-q3-cohorts.jsonl.gz
+            evidence/post-q3-summary.json
+            evidence/POST-Q3-SHA256SUMS
+          retention-days: 90
+          if-no-files-found: ignore
+
+  historical-trade-recovery-pilot:
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.MARKET_WIDE_HISTORICAL_RECOVERY_ENABLED == 'true' && (vars.MARKET_WIDE_LEARNING_ENABLED == 'true' || inputs.market_learning_bootstrap == true))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: market-wide-historical-recovery-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_BRANCH: ${{ github.head_ref || github.ref_name }}
+      LEARNING_SCOPE: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
+      ALLOW_MAIN_BOOTSTRAP: ${{ inputs.market_learning_bootstrap || false }}
+      BOOTSTRAP_RUN: ${{ inputs.market_learning_bootstrap_run_id }}
+      BOOTSTRAP_SHA: ${{ inputs.market_learning_bootstrap_source_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test bounded cursor replay and window reuse
+        run: python -m unittest paper_pov.test_historical_trade_recovery paper_pov.test_historical_trade_batch paper_pov.test_historical_coarse_discovery -v
+      - name: Recover bounded historical windows using verified observed universe and retained cursor state
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/trades-ledger evidence/trades-prior evidence/trades-seed
+          RUN_ID=$(python - <<'PY'
+          import base64,json,os,subprocess
+          from paper_pov.market_wide_learning import select_completed_learning_publication
+          repo=os.environ["GITHUB_REPOSITORY"]
+          def api(path):
+              return json.loads(subprocess.check_output(["gh","api",f"repos/{repo}/{path}"]))
+          def publication(ref):
+              return json.loads(base64.b64decode(api(f"contents/verified-results/results.json?ref={ref}")["content"]))
+          chosen,_=select_completed_learning_publication(publication("paper-proof-ledger"),lambda r:api(f"actions/runs/{r}"),publication)
+          print(chosen["run_id"])
+          PY
+          )
+          gh run download "$RUN_ID" -n "public-paper-ledger-$RUN_ID" -D evidence/trades-ledger
+          (cd evidence/trades-ledger && sha256sum -c SHA256SUMS)
+          prior=""
+          while read -r candidate; do
+            owner=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate/jobs?per_page=100" --jq '.jobs[]|select(.name=="historical-trade-recovery-pilot")|.status+":"+(.conclusion//"")')
+            if [ "$owner" = "completed:success" ]; then
+              prior="$candidate"
+              break
+            fi
+          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.expired==false and (.name|startswith("historical-trade-batch-"))) | [.workflow_run.head_branch,.workflow_run.id] | @tsv' | awk -v branch="$PR_BRANCH" '$1 == branch {print $2}' | sort -unr)
+          if [ -n "$prior" ]; then
+            gh run download "$prior" -n "historical-trade-batch-$prior" -D evidence/trades-prior
+            args=(--prior evidence/trades-prior)
+          elif [ "$LEARNING_SCOPE" = "main" ]; then
+            test "$ALLOW_MAIN_BOOTSTRAP" = "true" || { echo "::error::Main historical cursor checkpoint unavailable; explicit recovery required"; exit 1; }
+            [[ "$BOOTSTRAP_RUN" =~ ^[0-9]+$ ]]
+            [[ "$BOOTSTRAP_SHA" =~ ^[0-9a-f]{40}$ ]]
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BOOTSTRAP_RUN" --jq '.head_branch+":"+.event+":"+.head_sha')" = "learning-market-wide-20261117:pull_request:$BOOTSTRAP_SHA"
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BOOTSTRAP_RUN/jobs?per_page=100" --jq '.jobs[]|select(.name=="historical-trade-recovery-pilot")|.status+":"+(.conclusion//"")+":"+(.run_id|tostring)+":"+.head_sha')" = "completed:success:$BOOTSTRAP_RUN:$BOOTSTRAP_SHA"
+            gh run download "$BOOTSTRAP_RUN" -n "historical-trade-batch-$BOOTSTRAP_RUN" -D evidence/trades-prior
+            args=(--prior evidence/trades-prior)
+          else
+            gh run download 44228386331 -n historical-trade-recovery-pilot-44228386331 -D evidence/trades-seed
+            (cd evidence/trades-seed && sha256sum -c SHA256SUMS)
+            args=(--seed evidence/trades-seed)
+          fi
+          python -m paper_pov.historical_trade_batch --ledger evidence/trades-ledger/ledger.json \
+            "${args[@]}" --output-dir evidence/october-trades
+      - name: Retain cumulative source cursor checkpoints
+        uses: actions/upload-artifact@v4
+        with:
+          name: historical-trade-batch-${{ github.run_id }}
+          path: evidence/october-trades/
+          if-no-files-found: error
+          retention-days: 90
+
+  stage-learning-durable-backup:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Reuse an already staged identical backup
+        id: reuse
+        run: |
+          set -euo pipefail
+          echo "reuse=false" >> "$GITHUB_OUTPUT"
+          # A successful immutable backup is sufficient for this pinned set.
+          old=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --jq '.artifacts[]|select(.expired==false and .name=="market-wide-durable-backup-44244937090-v1")|.workflow_run.id' | sed -n '1p')
+          if [ -n "$old" ]; then
+            status=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$old/jobs?per_page=100" --jq '.jobs[]|select(.name=="stage-learning-durable-backup")|.status+":"+(.conclusion//"")')
+            if [ "$status" = "completed:success" ]; then
+              echo "reuse=true" >> "$GITHUB_OUTPUT"
+              echo "DURABLE_BACKUP_STAGED_PRIOR_RUN=$old"
+            fi
+          fi
+      - name: Stage exact verified historical and current learning evidence
+        if: steps.reuse.outputs.reuse != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p backup/{q2,q3,november,compact,live,trades,verify}
+          gh run download 44220694310 -n market-wide-q2-9caa513fe54a2e31559b1b8dc4eb61be771c04c7eb944c8cd02237ee9291224c -D backup/q2
+          (cd backup/q2 && sha256sum -c Q2-MARKET-WIDE-SHA256SUMS)
+          gh run download 44220694272 -n kraken-q3-frozen-48h-shadow-44220694272 -D backup/q3
+          (cd backup/q3 && sha256sum -c MARKET-WIDE-SHA256SUMS)
+          gh run download 44227877790 -n post-q3-observed-recovery-44227877790 -D backup/november
+          (cd backup/november && sha256sum -c POST-Q3-SHA256SUMS)
+          printf '%s\n' \
+            '8c4d7e86d170b17a7a6a3d4ebf9fae1d5cd5f4844f5b1c33a1605f0650823d63  backup/q2/q2-market-wide-cohorts.jsonl.gz' \
+            '5d883b8252b7a0a3186296801c3293060198481a13c67d0a384e9a41818241e5  backup/q3/market-wide-cohorts.jsonl.gz' \
+            '287a405ba7f99c61df3075737e24e3f24e30137a9c45fbcee1671f257b35474c  backup/november/post-q3-cohorts.jsonl.gz' | sha256sum -c -
+          gh run download 44244545891 -n market-wide-strict-seed-44244545891 -D backup/compact
+          python -m paper_pov.learning_retention pack-seed --directory backup/compact/strict-training-seed --archive backup/market-wide-strict-seed.tar.gz
+          python -m paper_pov.learning_retention unpack-seed --archive backup/market-wide-strict-seed.tar.gz --directory backup/verify/strict-training-seed
+          python -c 'import json; d=json.load(open("backup/verify/strict-training-seed/manifest.json")); assert d["digest"]=="98059c9e5019a125202ccbe71dcc23cfeed60f88587a3bb4332d9c1a0e67b6e5"'
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/44244937090" --jq '.status + ":" + (.conclusion // "") + ":" + .head_sha')" = "completed:success:fa9911d6fa5feb635ced2a27e31ae2af08110d0a"
+          gh run download 44244937090 -n market-wide-learning-continuity-pr-44244937090 -D backup/live
+          gh run download 44244937090 -n historical-trade-batch-44244937090 -D backup/trades
+          python -m paper_pov.learning_retention restore --directory backup/live/market-state-checkpoint --state backup/verify/state.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from paper_pov.shadow_learning_evidence import canonical_digest
+          from paper_pov.historical_trade_batch import verified_trade_cohorts
+          state=json.load(open("backup/verify/state.json"))
+          receipt=json.load(open("backup/live/market-wide-learning-receipt.json"))
+          assert receipt["digest"]==canonical_digest({k:v for k,v in receipt.items() if k!="digest"})
+          assert receipt["state_digest"]==state["digest"] and receipt["ledger_generation"]==state["ledger_generation"]
+          receipts=list(verified_trade_cohorts(Path("backup/trades")))
+          print("BACKUP_RESTORE_VERIFIED",state["ledger_generation"],len(state["anchors"]),len(state["shadow_predictions"]),len(receipts))
+          PY
+          cp docs/market-wide-learning-retention.md backup/RECOVERY.md
+          rm -r backup/verify backup/compact
+          mkdir -p durable-stage
+          cp backup/market-wide-strict-seed.tar.gz durable-stage/
+          cd backup
+          find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+          sha256sum -c SHA256SUMS >/dev/null
+          tar -czf ../durable-stage/market-wide-research-backup.tar.gz .
+          cd ../durable-stage
+          sha256sum market-wide-strict-seed.tar.gz market-wide-research-backup.tar.gz > SHA256SUMS
+          sha256sum -c SHA256SUMS
+          mkdir -p /tmp/learning-backup-readback
+          tar -xzf market-wide-research-backup.tar.gz -C /tmp/learning-backup-readback
+          (cd /tmp/learning-backup-readback && sha256sum -c SHA256SUMS >/dev/null)
+          echo "DURABLE_BACKUP_LOCAL_READBACK_VERIFIED"
+      - name: Retain staged backup for owner-approved durable publication
+        if: steps.reuse.outputs.reuse != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-wide-durable-backup-44244937090-v1
+          path: durable-stage/
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+  retain-main-learning-durable-checkpoint:
+    # Opt-in publication of research evidence only. No canonical ledger writes.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG != ''
+    needs: market-wide-shadow-learning
+    permissions:
+      contents: write
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    concurrency:
+      group: market-wide-durable-checkpoint-publication
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CHECKPOINT_RELEASE: ${{ vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Publish at most one verified immutable daily research checkpoint
+        run: |
+          set -euo pipefail
+          day=$(date -u +%F)
+          prefix="market-wide-checkpoint-$day-"
+          assets=$(gh release view "$CHECKPOINT_RELEASE" --json assets --jq '.assets[].name')
+          existing=$(printf '%s\n' "$assets" | awk -v p="$prefix" 'index($0,p)==1 && /\.tar\.gz\.sha256$/ {print}')
+          if [ -n "$existing" ]; then
+            echo "Daily durable research checkpoint already has a readback receipt: $existing"
+            exit 0
+          fi
+          mkdir -p evidence/checkpoint evidence/publish evidence/readback
+          pending=$(printf '%s\n' "$assets" | awk -v p="$prefix" 'index($0,p)==1 && /\.tar\.gz$/ {print}')
+          if [ -n "$pending" ]; then
+            test "$(printf '%s\n' "$pending" | wc -l)" -eq 1
+            name="$pending"
+            gh release download "$CHECKPOINT_RELEASE" --pattern "$name" --dir evidence/readback
+          else
+            gh run download "$GITHUB_RUN_ID" -n "market-wide-learning-continuity-main-$GITHUB_RUN_ID" -D evidence/checkpoint
+            generation=$(jq -r .ledger_generation evidence/checkpoint/market-wide-learning-receipt.json)
+            [[ "$generation" =~ ^[0-9]+$ ]]
+            name="$prefix$generation-$GITHUB_RUN_ID.tar.gz"
+            python -m paper_pov.learning_retention pack-durable-checkpoint --directory evidence/checkpoint --archive "evidence/publish/$name" --scope main --run-id "$GITHUB_RUN_ID"
+            gh release upload "$CHECKPOINT_RELEASE" "evidence/publish/$name"
+            gh release download "$CHECKPOINT_RELEASE" --pattern "$name" --dir evidence/readback
+            cmp "evidence/publish/$name" "evidence/readback/$name"
+          fi
+          digest=$(sha256sum "evidence/readback/$name" | cut -d' ' -f1)
+          python -m paper_pov.learning_retention unpack-durable-checkpoint --archive "evidence/readback/$name" --directory evidence/restored --scope main --sha256 "$digest"
+          printf '%s  %s\n' "$digest" "$name" > "evidence/readback/$name.sha256"
+          gh release upload "$CHECKPOINT_RELEASE" "evidence/readback/$name.sha256"
+          gh release download "$CHECKPOINT_RELEASE" --pattern "$name.sha256" --dir evidence/publish
+          cmp "evidence/readback/$name.sha256" "evidence/publish/$name.sha256"
+          echo "DURABLE_MAIN_CHECKPOINT_READBACK_VERIFIED=$name sha256=$digest"
