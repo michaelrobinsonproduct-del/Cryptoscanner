@@ -2,27 +2,29 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T19:00:30.796799+00:00
+**UTC as-of:** 2026-11-20T19:25:32.796512+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44797937911
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44801843819
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** ccd5490cf584b4342d091229dd969a3f48225bac (atomic ledger/results publication)
-**Ledger generation:** 1011 (remote push/readback verified)
+**Previous ledger commit:** 2c78c58b3bab23c9b945e75a68de93d65fcfd721 (atomic ledger/results publication)
+**Ledger generation:** 1012 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 12.
+**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 10.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | AI/USD | 0.01429 | 79.605 | 69.173 | +8.50% | +2.28% | 0.90x | 14.0 | 2026-11-20T19:00:26.738664+00:00 | Not calibrated | MODERATE 65/100 | VERY_HIGH 80/100 | Watch | WATCH |
+| 1 | RARE/USD | 0.01432 | 101.035 | 63.418 | +7.99% | +13.02% | 2.26x | 27.9 | 2026-11-20T19:25:29.416007+00:00 | Not calibrated | STRONG 95/100 | VERY_HIGH 82/100 | Watch | WATCH |
+| 2 | BLUR/USD | 0.00738 | 51.100 | 63.273 | +10.31% | -1.60% | 0.58x | 27.2 | 2026-11-20T19:25:29.416007+00:00 | Not calibrated | WEAK 21/100 | EXTREME 97/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | AI/USD | 69.173 | 0.01429 | +2.28% | 0.90x |
+| 1 | RARE/USD | 63.418 | 0.01432 | +13.02% | 2.26x |
+| 2 | BLUR/USD | 63.273 | 0.00738 | -1.60% | 0.58x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -38,15 +40,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1011; predictions: 8298; observations: 611048.
-- Matured sampled outcomes across 1/6/24/48h: 10909; gap abstentions: 18103. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1012; predictions: 8300; observations: 611656.
+- Matured sampled outcomes across 1/6/24/48h: 10909; gap abstentions: 18182. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 11; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 8; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -55,20 +57,21 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44797937911 · **Generation:** 1011 · **Legacy run:** 44797937911
-**Main quote time:** 2026-11-20T19:00:30.796799+00:00 · **Legacy report time:** 2026-11-20T19:01:16.372062+00:00
+**Writer:** 44801843819 · **Generation:** 1012 · **Legacy run:** 44801843819
+**Main quote time:** 2026-11-20T19:25:32.796512+00:00 · **Legacy report time:** 2026-11-20T19:26:36.723178+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | AI/USD | 0.01429 | 79.61 | +2.28% | 0.90x | MODERATE 65/100 | VERY_HIGH 80/100 | Watch |
+| 1 | RARE/USD ⭐ | 0.01432 | 101.04 | +13.02% | 2.26x | STRONG 100/100 | VERY_HIGH 82/100 | Watch |
+| 2 | BLUR/USD | 0.00738 | 51.10 | -1.60% | 0.58x | WEAK 21/100 | EXTREME 97/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
+| 1 | RARE/USD ⭐ | 0.01466 | 84.49 | +13.02% | 2.26x | 8270 | STRONG 97/100 | VERY_HIGH 82/100 | Watch |
 
-**Same-run overlap:** None
+**Same-run overlap:** RARE/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
