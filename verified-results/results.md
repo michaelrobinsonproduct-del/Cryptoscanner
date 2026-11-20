@@ -2,33 +2,29 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T11:50:42.714392+00:00
+**UTC as-of:** 2026-11-20T12:00:44.431484+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44730726972
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44732051525
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** 868411b316f3d74615d5a2e5874e021c6dba2ad4 (atomic ledger/results publication)
-**Ledger generation:** 974 (remote push/readback verified)
+**Previous ledger commit:** 01dba18546888cd3e061f595da5262d5f3d646aa (atomic ledger/results publication)
+**Ledger generation:** 975 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 607; OHLC screened: 12.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 607; OHLC screened: 10.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | SENT/USD | 0.021938 | 53.314 | 50.405 | +3.05% | +0.18% | 1.20x | 7.7 | 2026-11-20T11:50:38.898897+00:00 | Not calibrated | MODERATE 52/100 | HIGH 67/100 | Watch | WATCH |
-| 2 | AERO/USD | 0.4174 | 42.083 | 33.203 | +0.58% | -0.29% | 2.03x | 7.2 | 2026-11-20T11:50:38.898897+00:00 | Not calibrated | MODERATE 51/100 | HIGH 66/100 | Watch | WATCH |
-| 3 | ICNT/USD | 0.4313 | 37.963 | 34.837 | +1.22% | -0.23% | 1.43x | 23.2 | 2026-11-20T11:50:38.898897+00:00 | Not calibrated | WEAK 29/100 | VERY_HIGH 73/100 | Do nothing | WATCH |
-| 4 | BMT/USD | 0.02065 | 22.981 | 34.105 | +2.84% | -0.91% | 0.34x | 33.9 | 2026-11-20T11:50:38.898897+00:00 | Not calibrated | WEAK 6/100 | EXTREME 100/100 | Do nothing | WATCH |
+| 1 | ICNT/USD | 0.4316 | 36.231 | 37.627 | +1.29% | -0.55% | 1.14x | 18.5 | 2026-11-20T12:00:40.751560+00:00 | Not calibrated | WEAK 23/100 | VERY_HIGH 74/100 | Do nothing | WATCH |
+| 2 | SENT/USD | 0.021701 | 31.108 | 42.293 | +1.94% | -2.01% | 0.88x | 8.3 | 2026-11-20T12:00:40.751560+00:00 | Not calibrated | WEAK 21/100 | VERY_HIGH 77/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SENT/USD | 50.405 | 0.021938 | +0.18% | 1.20x |
-| 2 | ICNT/USD | 34.837 | 0.4313 | -0.23% | 1.43x |
-| 3 | BMT/USD | 34.105 | 0.02065 | -0.91% | 0.34x |
-| 4 | AERO/USD | 33.203 | 0.4174 | -0.29% | 2.03x |
+| 1 | SENT/USD | 42.293 | 0.021701 | -2.01% | 0.88x |
+| 2 | ICNT/USD | 37.627 | 0.4316 | -0.55% | 1.14x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -44,8 +40,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 974; predictions: 8201; observations: 588572.
-- Matured sampled outcomes across 1/6/24/48h: 9850; gap abstentions: 17479. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 975; predictions: 8203; observations: 589179.
+- Matured sampled outcomes across 1/6/24/48h: 9852; gap abstentions: 17479. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -61,23 +57,21 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44730726972 · **Generation:** 974 · **Legacy run:** 44730726972
-**Main quote time:** 2026-11-20T11:50:42.714392+00:00 · **Legacy report time:** 2026-11-20T11:51:48.118855+00:00
+**Writer:** 44732051525 · **Generation:** 975 · **Legacy run:** 44732051525
+**Main quote time:** 2026-11-20T12:00:44.431484+00:00 · **Legacy report time:** 2026-11-20T12:01:51.151704+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD ⭐ | 0.021938 | 53.31 | +0.18% | 1.20x | MODERATE 62/100 | HIGH 67/100 | Watch |
-| 2 | AERO/USD | 0.4174 | 42.08 | -0.29% | 2.03x | MODERATE 51/100 | HIGH 66/100 | Watch |
-| 3 | ICNT/USD | 0.4313 | 37.96 | -0.23% | 1.43x | WEAK 29/100 | VERY_HIGH 73/100 | Do nothing |
-| 4 | BMT/USD | 0.02065 | 22.98 | -0.91% | 0.34x | WEAK 6/100 | EXTREME 100/100 | Do nothing |
+| 1 | ICNT/USD | 0.4316 | 36.23 | -0.55% | 1.14x | WEAK 23/100 | VERY_HIGH 74/100 | Do nothing |
+| 2 | SENT/USD | 0.021701 | 31.11 | -2.01% | 0.88x | WEAK 21/100 | VERY_HIGH 77/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD ⭐ | 0.021938 | 61.69 | +0.18% | 1.20x | 8217 | MODERATE 66/100 | HIGH 67/100 | Watch |
+| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
 
-**Same-run overlap:** SENT/USD
+**Same-run overlap:** None
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
