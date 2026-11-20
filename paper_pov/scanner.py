@@ -165,11 +165,19 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
                 opn, high, low, close, vwap, volume = (
                     finite(candle[i]) for i in (1, 2, 3, 4, 5, 6))
                 count = finite(candle[7])
-                if (min(opn, high, low, close, vwap, volume) <= 0
+                # Explicit flat zero-trade bars are observed inactivity, not
+                # missing data. Do not synthesize absent bars or accept any
+                # price movement without trades. Keep all traded-bar checks.
+                if count == 0 and volume == 0:
+                    if (close <= 0 or not opn == high == low == close
+                            or vwap not in (0, close)
+                            or (closes and close != closes[-1])):
+                        raise ValueError("inconsistent zero-trade OHLC candle")
+                elif (min(opn, high, low, close, vwap, volume) <= 0
                         or not count.is_integer() or count <= 0
                         or low > min(opn, close, vwap)
                         or high < max(opn, close, vwap)):
-                    raise ValueError("invalid or no-trade OHLC candle")
+                    raise ValueError("invalid traded OHLC candle")
                 closes.append(close)
                 volumes.append(volume)
             if any(b - a != 300 for a, b in zip(starts, starts[1:])):
@@ -183,7 +191,10 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
             age = clock().astimezone(UTC).timestamp() - (starts[-1] + 300)
             if not 0 <= age <= 600:
                 raise ValueError("stale or future completed OHLC")
-            accel = sum(volumes[-6:]) / sum(volumes[-12:-6])
+            previous_volume = sum(volumes[-12:-6])
+            if not math.isfinite(previous_volume) or previous_volume <= 0:
+                raise ValueError("invalid previous OHLC volume")
+            accel = sum(volumes[-6:]) / previous_volume
             move15 = 100 * (closes[-1] / closes[-4] - 1)
             if not all(map(math.isfinite, (accel, move15))):
                 raise ValueError("nonfinite OHLC derived metric")
@@ -202,7 +213,13 @@ def scan(api=fetch, clock=None, sleep=time.sleep, max_ohlc=24):
     if not 0 <= (completed - quote_at).total_seconds() <= 180:
         raise RuntimeError("Quote observations expired during OHLC screening")
     if not watch:
-        raise RuntimeError("No fresh contiguous liquid OHLC candidates")
+        reasons = {}
+        for item in abstentions:
+            reason = item["reason"]
+            reasons[reason] = reasons.get(reason, 0) + 1
+        raise RuntimeError("No fresh contiguous liquid OHLC candidates: " +
+                           json.dumps({"screened": len(selected),
+                                       "reasons": reasons}, sort_keys=True))
     watch.sort(key=lambda x: (-x["challenger_score"], x["pair"]))
     watch = watch[:12]
     as_of = completed.isoformat()
