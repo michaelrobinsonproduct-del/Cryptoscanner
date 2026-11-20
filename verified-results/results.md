@@ -2,41 +2,45 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T08:00:42.623909+00:00
+**UTC as-of:** 2026-11-20T08:10:41.299171+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44699020981
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44700323339
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** 97aa431d112701372a565aaf50cf7db094a4acd7 (atomic ledger/results publication)
-**Ledger generation:** 951 (remote push/readback verified)
+**Previous ledger commit:** cce67101c286a89b7c6e78c4177a8a52e88af0f1 (atomic ledger/results publication)
+**Ledger generation:** 952 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 6s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 605; OHLC screened: 18.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 605; OHLC screened: 20.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | XLM/USD | 0.13401 | 66.658 | 59.485 | +0.99% | -0.27% | 1.85x | 4.9 | 2026-11-20T08:00:36.186172+00:00 | Not calibrated | MODERATE 53/100 | HIGH 61/100 | Watch | WATCH |
-| 2 | STRK/USD | 0.03212 | 54.917 | 37.563 | +1.36% | +0.47% | 5.26x | 12.4 | 2026-11-20T08:00:36.186172+00:00 | Not calibrated | STRONG 77/100 | HIGH 66/100 | Watch | WATCH |
-| 3 | XRP/USD | 0.96454 | 51.687 | 58.809 | +0.55% | +0.02% | 0.28x | 0.1 | 2026-11-20T08:00:36.186172+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 4 | SYRUP/USD | 0.09905 | 43.883 | 45.050 | +2.93% | -0.30% | 1.03x | 15.1 | 2026-11-20T08:00:36.186172+00:00 | Not calibrated | WEAK 27/100 | VERY_HIGH 79/100 | Do nothing | WATCH |
-| 5 | ENA/USD | 0.1057 | 41.242 | 48.006 | +0.86% | +0.29% | 0.18x | 9.5 | 2026-11-20T08:00:36.186172+00:00 | Not calibrated | MODERATE 51/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 6 | SKR/USD | 0.010328 | 40.923 | 45.075 | +2.81% | -0.60% | 0.88x | 11.6 | 2026-11-20T08:00:36.186172+00:00 | Not calibrated | WEAK 20/100 | EXTREME 86/100 | Do nothing | WATCH |
-| 7 | AUD/USD | 0.66741 | 37.949 | 40.622 | +0.29% | -0.01% | 0.74x | 0.6 | 2026-11-20T08:00:36.186172+00:00 | Not calibrated | WEAK 24/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
-| 8 | ATOM/USD | 1.2668 | 31.027 | 33.523 | +0.42% | -0.17% | 0.84x | 3.9 | 2026-11-20T08:00:36.186172+00:00 | Not calibrated | WEAK 21/100 | VERY_HIGH 73/100 | Do nothing | WATCH |
+| 1 | XLM/USD | 0.13406 | 72.790 | 60.198 | +1.02% | -0.13% | 2.32x | 4.0 | 2026-11-20T08:10:35.639291+00:00 | Not calibrated | MODERATE 66/100 | HIGH 61/100 | Watch | WATCH |
+| 2 | ICNT/USD | 0.4559 | 68.736 | 66.430 | +6.99% | +1.83% | 0.32x | 35.2 | 2026-11-20T08:10:35.639291+00:00 | Not calibrated | MODERATE 49/100 | VERY_HIGH 82/100 | Watch | WATCH |
+| 3 | PROS/USD | 0.5903 | 57.735 | 62.257 | +9.58% | -1.24% | 1.17x | 27.2 | 2026-11-20T08:10:35.639291+00:00 | Not calibrated | WEAK 29/100 | EXTREME 96/100 | Do nothing | WATCH |
+| 4 | SKR/USD | 0.010484 | 56.302 | 49.387 | +4.36% | +1.35% | 1.01x | 24.8 | 2026-11-20T08:10:35.639291+00:00 | Not calibrated | MODERATE 53/100 | EXTREME 86/100 | Do nothing | WATCH |
+| 5 | SYRUP/USD | 0.09961 | 53.514 | 48.696 | +3.51% | -0.29% | 1.63x | 16.0 | 2026-11-20T08:10:35.639291+00:00 | Not calibrated | WEAK 42/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 6 | XRP/USD | 0.96544 | 52.590 | 59.000 | +0.65% | +0.17% | 0.27x | 1.0 | 2026-11-20T08:10:35.639291+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 7 | STRK/USD | 0.03188 | 46.233 | 32.170 | +0.60% | -0.19% | 8.86x | 12.6 | 2026-11-20T08:10:35.639291+00:00 | Not calibrated | MODERATE 48/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 8 | ENA/USD | 0.1057 | 43.873 | 43.483 | +0.86% | +0.28% | 0.90x | 18.9 | 2026-11-20T08:10:35.639291+00:00 | Not calibrated | MODERATE 47/100 | HIGH 68/100 | Watch | WATCH |
+| 9 | CC/USD | 0.08078 | 33.607 | 34.674 | +0.47% | +1.04% | 0.37x | 6.2 | 2026-11-20T08:10:35.639291+00:00 | Not calibrated | MODERATE 47/100 | VERY_HIGH 75/100 | Watch | WATCH |
+| 10 | ATOM/USD | 1.2693 | 30.648 | 34.143 | +0.62% | +0.15% | 0.58x | 5.5 | 2026-11-20T08:10:35.639291+00:00 | Not calibrated | WEAK 35/100 | VERY_HIGH 75/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | XLM/USD | 59.485 | 0.13401 | -0.27% | 1.85x |
-| 2 | XRP/USD | 58.809 | 0.96454 | +0.02% | 0.28x |
-| 3 | ENA/USD | 48.006 | 0.1057 | +0.29% | 0.18x |
-| 4 | SKR/USD | 45.075 | 0.010328 | -0.60% | 0.88x |
-| 5 | SYRUP/USD | 45.050 | 0.09905 | -0.30% | 1.03x |
-| 6 | AUD/USD | 40.622 | 0.66741 | -0.01% | 0.74x |
-| 7 | STRK/USD | 37.563 | 0.03212 | +0.47% | 5.26x |
-| 8 | ATOM/USD | 33.523 | 1.2668 | -0.17% | 0.84x |
+| 1 | ICNT/USD | 66.430 | 0.4559 | +1.83% | 0.32x |
+| 2 | PROS/USD | 62.257 | 0.5903 | -1.24% | 1.17x |
+| 3 | XLM/USD | 60.198 | 0.13406 | -0.13% | 2.32x |
+| 4 | XRP/USD | 59.000 | 0.96544 | +0.17% | 0.27x |
+| 5 | SKR/USD | 49.387 | 0.010484 | +1.35% | 1.01x |
+| 6 | SYRUP/USD | 48.696 | 0.09961 | -0.29% | 1.63x |
+| 7 | ENA/USD | 43.483 | 0.1057 | +0.28% | 0.90x |
+| 8 | CC/USD | 34.674 | 0.08078 | +1.04% | 0.37x |
+| 9 | ATOM/USD | 34.143 | 1.2693 | +0.15% | 0.58x |
+| 10 | STRK/USD | 32.170 | 0.03188 | -0.19% | 8.86x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -52,8 +56,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 951; predictions: 8075; observations: 574626.
-- Matured sampled outcomes across 1/6/24/48h: 9543; gap abstentions: 17453. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 952; predictions: 8085; observations: 575231.
+- Matured sampled outcomes across 1/6/24/48h: 9573; gap abstentions: 17471. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -69,27 +73,30 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44699020981 · **Generation:** 951 · **Legacy run:** 44699020981
-**Main quote time:** 2026-11-20T08:00:42.623909+00:00 · **Legacy report time:** 2026-11-20T08:01:29.827169+00:00
+**Writer:** 44700323339 · **Generation:** 952 · **Legacy run:** 44700323339
+**Main quote time:** 2026-11-20T08:10:41.299171+00:00 · **Legacy report time:** 2026-11-20T08:11:38.169457+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | XLM/USD | 0.13401 | 66.66 | -0.27% | 1.85x | MODERATE 53/100 | HIGH 61/100 | Watch |
-| 2 | STRK/USD ⭐ | 0.03212 | 54.92 | +0.47% | 5.26x | STRONG 87/100 | HIGH 66/100 | Consider small entry |
-| 3 | XRP/USD | 0.96454 | 51.69 | +0.02% | 0.28x | MODERATE 46/100 | VERY_HIGH 70/100 | Watch |
-| 4 | SYRUP/USD | 0.09905 | 43.88 | -0.30% | 1.03x | WEAK 27/100 | VERY_HIGH 79/100 | Do nothing |
-| 5 | ENA/USD | 0.1057 | 41.24 | +0.29% | 0.18x | MODERATE 51/100 | VERY_HIGH 70/100 | Watch |
-| 6 | SKR/USD | 0.010328 | 40.92 | -0.60% | 0.88x | WEAK 20/100 | EXTREME 86/100 | Do nothing |
-| 7 | AUD/USD | 0.66741 | 37.95 | -0.01% | 0.74x | WEAK 24/100 | VERY_HIGH 76/100 | Do nothing |
-| 8 | ATOM/USD | 1.2668 | 31.03 | -0.17% | 0.84x | WEAK 21/100 | VERY_HIGH 73/100 | Do nothing |
+| 1 | XLM/USD | 0.13406 | 72.79 | -0.13% | 2.32x | MODERATE 66/100 | HIGH 61/100 | Watch |
+| 2 | ICNT/USD | 0.4559 | 68.74 | +1.83% | 0.32x | MODERATE 49/100 | VERY_HIGH 82/100 | Watch |
+| 3 | PROS/USD | 0.5903 | 57.73 | -1.24% | 1.17x | WEAK 29/100 | EXTREME 96/100 | Do nothing |
+| 4 | SKR/USD ⭐ | 0.010484 | 56.30 | +1.35% | 1.01x | MODERATE 63/100 | EXTREME 86/100 | Do nothing |
+| 5 | SYRUP/USD | 0.09961 | 53.51 | -0.29% | 1.63x | WEAK 42/100 | VERY_HIGH 72/100 | Watch |
+| 6 | XRP/USD | 0.96544 | 52.59 | +0.17% | 0.27x | MODERATE 46/100 | VERY_HIGH 70/100 | Watch |
+| 7 | STRK/USD | 0.03188 | 46.23 | -0.19% | 8.86x | MODERATE 48/100 | VERY_HIGH 72/100 | Watch |
+| 8 | ENA/USD | 0.1057 | 43.87 | +0.28% | 0.90x | MODERATE 47/100 | HIGH 68/100 | Watch |
+| 9 | CC/USD | 0.08078 | 33.61 | +1.04% | 0.37x | MODERATE 47/100 | VERY_HIGH 75/100 | Watch |
+| 10 | ATOM/USD | 1.2693 | 30.65 | +0.15% | 0.58x | WEAK 35/100 | VERY_HIGH 75/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | STRK/USD ⭐ | 0.03221 | 53.67 | +0.47% | 5.26x | 3337 | STRONG 92/100 | HIGH 60/100 | Consider small entry |
+| 1 | SKR/USD ⭐ | 0.010477 | 66.90 | +1.35% | 1.01x | 1681 | MODERATE 68/100 | EXTREME 86/100 | Do nothing |
+| 2 | ETH/USD | 1757.23 | 58.20 | +0.32% | 2.02x | 67548 | STRONG 84/100 | HIGH 55/100 | Watch |
 
-**Same-run overlap:** STRK/USD
+**Same-run overlap:** SKR/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
