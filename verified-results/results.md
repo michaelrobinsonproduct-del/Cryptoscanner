@@ -2,27 +2,27 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T22:10:44.481402+00:00
+**UTC as-of:** 2026-11-20T22:40:45.166202+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44826565416
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44830748855
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** 8019d36511b79357ee1e2a589063af557d04b9f6 (atomic ledger/results publication)
-**Ledger generation:** 1027 (remote push/readback verified)
+**Previous ledger commit:** bd5acadc1ec956a1086e5db97b3e5e741b18cd08 (atomic ledger/results publication)
+**Ledger generation:** 1028 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 11.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | PIEVERSE/USD | 3.0006 | 32.414 | 28.797 | +0.52% | +0.60% | 1.06x | 19.3 | 2026-11-20T22:10:41.323226+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 73/100 | Watch | WATCH |
+| 1 | BLUR/USD | 0.00737 | 49.115 | 63.350 | +10.16% | -1.34% | 0.25x | 27.2 | 2026-11-20T22:40:41.165443+00:00 | Not calibrated | WEAK 20/100 | EXTREME 97/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | PIEVERSE/USD | 28.797 | 3.0006 | +0.60% | 1.06x |
+| 1 | BLUR/USD | 63.350 | 0.00737 | -1.34% | 0.25x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -38,8 +38,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1027; predictions: 8325; observations: 620776.
-- Matured sampled outcomes across 1/6/24/48h: 10926; gap abstentions: 18662. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1028; predictions: 8326; observations: 621384.
+- Matured sampled outcomes across 1/6/24/48h: 10926; gap abstentions: 18735. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -55,13 +55,13 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44826565416 · **Generation:** 1027 · **Legacy run:** 44826565416
-**Main quote time:** 2026-11-20T22:10:44.481402+00:00 · **Legacy report time:** 2026-11-20T22:11:34.711371+00:00
+**Writer:** 44830748855 · **Generation:** 1028 · **Legacy run:** 44830748855
+**Main quote time:** 2026-11-20T22:40:45.166202+00:00 · **Legacy report time:** 2026-11-20T22:41:35.994272+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | PIEVERSE/USD | 3.0006 | 32.41 | +0.60% | 1.06x | MODERATE 46/100 | VERY_HIGH 73/100 | Watch |
+| 1 | BLUR/USD | 0.00737 | 49.12 | -1.34% | 0.25x | WEAK 20/100 | EXTREME 97/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
