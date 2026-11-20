@@ -2,31 +2,29 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-20T16:41:28.258570+00:00
+**UTC as-of:** 2026-11-20T16:51:02.950982+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44775572968
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44777222853
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** 41621e6bc0a07919a3bd6bc07bce8fe653c23df6 (atomic ledger/results publication)
-**Ledger generation:** 1002 (remote push/readback verified)
+**Previous ledger commit:** 7924c77419285bc43bf0e635f2c7ca2602d41140 (atomic ledger/results publication)
+**Ledger generation:** 1003 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 9.
+**Freshness:** Kraken public ticker client-observed, max quote age 2s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 8.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | DOS/USD | 0.1848 | 41.690 | 25.058 | +0.71% | +0.33% | 3.61x | 21.7 | 2026-11-20T16:41:24.538975+00:00 | Not calibrated | MODERATE 66/100 | VERY_HIGH 79/100 | Watch | WATCH |
-| 2 | PROS/USD | 0.5404 | 33.033 | 18.495 | +0.32% | -0.09% | 8.55x | 29.6 | 2026-11-20T16:41:24.538975+00:00 | Not calibrated | WEAK 37/100 | EXTREME 85/100 | Do nothing | WATCH |
-| 3 | BLESS/USD | 0.012493 | 6.405 | 30.488 | +2.49% | -3.01% | 0.10x | 44.1 | 2026-11-20T16:41:24.538975+00:00 | Not calibrated | WEAK 0/100 | EXTREME 100/100 | Do nothing | WATCH |
+| 1 | BLUR/USD | 0.00735 | 54.295 | 56.478 | +9.87% | -0.27% | 0.92x | 40.4 | 2026-11-20T16:51:00.865195+00:00 | Not calibrated | WEAK 17/100 | EXTREME 95/100 | Do nothing | WATCH |
+| 2 | BLESS/USD | 0.012405 | 10.388 | 28.071 | +1.76% | -2.10% | 0.28x | 38.7 | 2026-11-20T16:51:00.865195+00:00 | Not calibrated | WEAK 0/100 | EXTREME 97/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | BLESS/USD | 30.488 | 0.012493 | -3.01% | 0.10x |
-| 2 | DOS/USD | 25.058 | 0.1848 | +0.33% | 3.61x |
-| 3 | PROS/USD | 18.495 | 0.5404 | -0.09% | 8.55x |
+| 1 | BLUR/USD | 56.478 | 0.00735 | -0.27% | 0.92x |
+| 2 | BLESS/USD | 28.071 | 0.012405 | -2.10% | 0.28x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,8 +40,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1002; predictions: 8284; observations: 605576.
-- Matured sampled outcomes across 1/6/24/48h: 10546; gap abstentions: 17897. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1003; predictions: 8286; observations: 606184.
+- Matured sampled outcomes across 1/6/24/48h: 10564; gap abstentions: 17916. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -59,22 +57,21 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44775572968 · **Generation:** 1002 · **Legacy run:** 44775572968
-**Main quote time:** 2026-11-20T16:41:28.258570+00:00 · **Legacy report time:** 2026-11-20T16:42:16.517510+00:00
+**Writer:** 44777222853 · **Generation:** 1003 · **Legacy run:** 44777222853
+**Main quote time:** 2026-11-20T16:51:02.950982+00:00 · **Legacy report time:** 2026-11-20T16:52:08.986763+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | DOS/USD ⭐ | 0.1848 | 41.69 | +0.33% | 3.61x | STRONG 76/100 | VERY_HIGH 79/100 | Watch |
-| 2 | PROS/USD | 0.5404 | 33.03 | -0.09% | 8.55x | WEAK 37/100 | EXTREME 85/100 | Do nothing |
-| 3 | BLESS/USD | 0.012493 | 6.41 | -3.01% | 0.10x | WEAK 0/100 | EXTREME 100/100 | Do nothing |
+| 1 | BLUR/USD | 0.00735 | 54.29 | -0.27% | 0.92x | WEAK 17/100 | EXTREME 95/100 | Do nothing |
+| 2 | BLESS/USD | 0.012405 | 10.39 | -2.10% | 0.28x | WEAK 0/100 | EXTREME 97/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | DOS/USD ⭐ | 0.1848 | 33.10 | +0.33% | 3.61x | 1807 | STRONG 72/100 | VERY_HIGH 79/100 | Watch |
+| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
 
-**Same-run overlap:** DOS/USD
+**Same-run overlap:** None
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
