@@ -144,16 +144,16 @@ jobs:
               # The preceding real-ledger stage already authenticates the base.
               # The final Git-backed full replay below remains mandatory.
               print("ARCHIVE_STEP_STAGE_ROLLOVER_BEGIN", flush=True)
-    repo.stage_rollover(initial,base,archived,full_replay=False)
-    print("ARCHIVE_STEP_STAGE_ROLLOVER_OK", flush=True)
+              repo.stage_rollover(initial,base,archived,full_replay=False)
+              print("ARCHIVE_STEP_STAGE_ROLLOVER_OK", flush=True)
               staged=root/"staged"
               print("ARCHIVE_STEP_APPEND_BEGIN", flush=True)
-    repo.stage_append(archived,report,source,staged)
-    print("ARCHIVE_STEP_APPEND_OK", flush=True)
+              repo.stage_append(archived,report,source,staged)
+              print("ARCHIVE_STEP_APPEND_OK", flush=True)
               expected=ledger.advance(before,report,source,storage.MAX_RAW_BYTES)
               print("ARCHIVE_STEP_STAGED_REPLAY_BEGIN", flush=True)
-    after,manifest=repo.read_state(staged,full_replay=True)
-    print("ARCHIVE_STEP_STAGED_REPLAY_OK", flush=True)
+              after,manifest=repo.read_state(staged,full_replay=True)
+              print("ARCHIVE_STEP_STAGED_REPLAY_OK", flush=True)
               assert after==expected
               assert manifest["checkpoint"]["git_commit"]==base
               assert manifest["checkpoint"]["generation"]==before["generation"]
@@ -161,8 +161,8 @@ jobs:
               assert repo.active_storage_bytes(staged)<repo.active_storage_bytes(initial), (
                   "Rollover did not reduce real active Git storage")
               print("ARCHIVE_STEP_ORIGIN_BEGIN", flush=True)
-    repo.verify_checkpoint_origin(staged,".")
-    print("ARCHIVE_STEP_ORIGIN_OK", flush=True)
+              repo.verify_checkpoint_origin(staged,".")
+              print("ARCHIVE_STEP_ORIGIN_OK", flush=True)
               old_manifest=json.loads(live.show(".",base,repo.MANIFEST,repo.MAX_MANIFEST_BYTES))
               old_paths=[repo._segment_path(e["generation"]) for e in old_manifest["segments"]]
               changed=live.changed_paths(".",base,staged)
@@ -171,8 +171,8 @@ jobs:
               git("worktree","add","--detach",str(worktree),base)
               try:
                   print("ARCHIVE_STEP_GIT_APPLY_BEGIN", flush=True)
-        live.apply(worktree,base,staged)
-        print("ARCHIVE_STEP_GIT_APPLY_OK", flush=True)
+                  live.apply(worktree,base,staged)
+                  print("ARCHIVE_STEP_GIT_APPLY_OK", flush=True)
                   git("-C",str(worktree),"-c","user.name=Paper Test",
                       "-c","user.email=paper@example.invalid",
                       "commit","-m","local-only archive rollover rehearsal")
@@ -182,8 +182,8 @@ jobs:
                   assert sorted(git("-C",str(worktree),"diff","--name-only",
                                     base,commit).splitlines())==changed
                   print("ARCHIVE_STEP_GIT_REPLAY_BEGIN", flush=True)
-        recovered,kind=repo.read_git_state(worktree,commit,full_replay=True)
-        print("ARCHIVE_STEP_GIT_REPLAY_OK", flush=True)
+                  recovered,kind=repo.read_git_state(worktree,commit,full_replay=True)
+                  print("ARCHIVE_STEP_GIT_REPLAY_OK", flush=True)
                   assert kind=="segmented" and recovered==after
                   for path in old_paths:
                       assert repo._git_has(worktree,base,path)
