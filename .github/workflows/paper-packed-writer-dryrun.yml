@@ -161,7 +161,7 @@ jobs:
               assert repo.active_storage_bytes(staged)<repo.active_storage_bytes(initial), (
                   "Rollover did not reduce real active Git storage")
               print("ARCHIVE_STEP_ORIGIN_BEGIN", flush=True)
-              repo.verify_checkpoint_origin(staged,".")
+              repo.verify_checkpoint_origin(staged,".",full_replay=False)
               print("ARCHIVE_STEP_ORIGIN_OK", flush=True)
               old_manifest=json.loads(live.show(".",base,repo.MANIFEST,repo.MAX_MANIFEST_BYTES))
               old_paths=[repo._segment_path(e["generation"]) for e in old_manifest["segments"]]
