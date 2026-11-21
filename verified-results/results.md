@@ -2,47 +2,49 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-21T00:45:27.243048+00:00
+**UTC as-of:** 2026-11-21T00:50:29.345048+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44845820357
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44846363502
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** fb0b30d5647f730679bc2e806c9ff79f6edd9732 (atomic ledger/results publication)
-**Ledger generation:** 1048 (remote push/readback verified)
+**Previous ledger commit:** 54dd9dc1242eee7a335a2ae774f07123d1439b28 (atomic ledger/results publication)
+**Ledger generation:** 1049 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 8s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 24.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | PEARL/USD | 1.888 | 73.612 | 62.262 | +3.27% | +2.23% | 1.02x | 19.1 | 2026-11-21T00:45:20.259541+00:00 | Not calibrated | MODERATE 67/100 | HIGH 68/100 | Watch | WATCH |
-| 2 | BLESS/USD | 0.014254 | 62.912 | 39.603 | +3.50% | +1.66% | 3.02x | 41.0 | 2026-11-21T00:45:20.259541+00:00 | Not calibrated | STRONG 71/100 | VERY_HIGH 82/100 | Watch | WATCH |
-| 3 | AKT/USD | 0.5088 | 56.592 | 38.626 | +0.97% | +0.59% | 2.80x | 2.0 | 2026-11-21T00:45:20.259541+00:00 | Not calibrated | STRONG 83/100 | HIGH 60/100 | Watch | WATCH |
-| 4 | DRV/USD | 0.24773 | 55.774 | 40.408 | +0.89% | +0.36% | 2.36x | 2.4 | 2026-11-21T00:45:20.259541+00:00 | Not calibrated | STRONG 83/100 | HIGH 60/100 | Watch | WATCH |
-| 5 | PIEVERSE/USD | 3.0301 | 55.419 | 36.712 | +1.05% | +0.74% | 2.78x | 10.9 | 2026-11-21T00:45:20.259541+00:00 | Not calibrated | STRONG 78/100 | HIGH 66/100 | Watch | WATCH |
-| 6 | XBT/USD | 58957.9 | 54.478 | 56.795 | +0.26% | +0.03% | 0.75x | 0.0 | 2026-11-21T00:45:20.259541+00:00 | Not calibrated | MODERATE 47/100 | HIGH 62/100 | Watch | WATCH |
-| 7 | AKE/USD | 0.0061751 | 48.240 | 53.078 | +1.05% | +0.23% | 0.40x | 18.5 | 2026-11-21T00:45:20.259541+00:00 | Not calibrated | MODERATE 49/100 | VERY_HIGH 76/100 | Watch | WATCH |
-| 8 | ZBCN/USD | 0.001604 | 45.627 | 28.436 | +0.82% | +0.44% | 5.35x | 18.8 | 2026-11-21T00:45:20.259541+00:00 | Not calibrated | STRONG 73/100 | HIGH 66/100 | Watch | WATCH |
-| 9 | CAP/USD | 0.092002 | 38.595 | 32.359 | +0.50% | -0.04% | 1.64x | 7.7 | 2026-11-21T00:45:20.259541+00:00 | Not calibrated | WEAK 39/100 | HIGH 66/100 | Watch | WATCH |
-| 10 | CT/USD | 0.1222 | 30.817 | 30.060 | +0.91% | +1.08% | 0.54x | 16.4 | 2026-11-21T00:45:20.259541+00:00 | Not calibrated | WEAK 40/100 | VERY_HIGH 81/100 | Watch | WATCH |
-| 11 | BLUR/USD | 0.00732 | 20.456 | 20.229 | +0.27% | -0.14% | 1.09x | 27.3 | 2026-11-21T00:45:20.259541+00:00 | Not calibrated | WEAK 10/100 | EXTREME 85/100 | Do nothing | WATCH |
+| 1 | PEARL/USD | 1.8981 | 81.379 | 66.865 | +3.82% | +1.88% | 1.51x | 18.0 | 2026-11-21T00:50:21.740119+00:00 | Not calibrated | STRONG 81/100 | HIGH 61/100 | Consider small entry | WATCH |
+| 2 | XBT/USD | 59020 | 57.789 | 57.534 | +0.36% | +0.10% | 0.98x | 0.0 | 2026-11-21T00:50:21.740119+00:00 | Not calibrated | MODERATE 49/100 | HIGH 62/100 | Watch | WATCH |
+| 3 | AKT/USD | 0.5097 | 57.641 | 39.879 | +1.15% | +0.55% | 3.27x | 2.0 | 2026-11-21T00:50:21.740119+00:00 | Not calibrated | STRONG 84/100 | HIGH 60/100 | Watch | WATCH |
+| 4 | DRV/USD | 0.24776 | 54.287 | 38.681 | +0.90% | +0.12% | 2.51x | 6.1 | 2026-11-21T00:50:21.740119+00:00 | Not calibrated | STRONG 72/100 | HIGH 60/100 | Watch | WATCH |
+| 5 | ETH/USD | 1624.4 | 52.108 | 57.104 | +0.31% | +0.11% | 0.45x | 0.2 | 2026-11-21T00:50:21.740119+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 6 | SOL/USD | 68.95 | 51.717 | 56.719 | +0.35% | -0.12% | 0.56x | 1.5 | 2026-11-21T00:50:21.740119+00:00 | Not calibrated | WEAK 31/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
+| 7 | VVV/USD | 20.857 | 51.236 | 54.426 | +0.57% | +0.63% | 0.36x | 9.1 | 2026-11-21T00:50:21.740119+00:00 | Not calibrated | MODERATE 56/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 8 | UNI/USD | 4.4811 | 50.338 | 48.275 | +0.31% | +0.21% | 1.10x | 4.5 | 2026-11-21T00:50:21.740119+00:00 | Not calibrated | MODERATE 60/100 | HIGH 62/100 | Watch | WATCH |
+| 9 | LINK/USD | 8.5555 | 50.029 | 54.514 | +0.30% | +0.12% | 0.49x | 5.2 | 2026-11-21T00:50:21.740119+00:00 | Not calibrated | MODERATE 45/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 10 | CC/USD | 0.07491 | 39.327 | 35.894 | +0.48% | +0.31% | 1.19x | 8.0 | 2026-11-21T00:50:21.740119+00:00 | Not calibrated | MODERATE 55/100 | HIGH 67/100 | Watch | WATCH |
+| 11 | DCR/USD | 10.159 | 38.375 | 31.017 | +0.53% | +0.32% | 1.58x | 6.9 | 2026-11-21T00:50:21.740119+00:00 | Not calibrated | MODERATE 64/100 | HIGH 67/100 | Watch | WATCH |
+| 12 | CAP/USD | 0.092086 | 31.121 | 33.820 | +0.59% | +0.14% | 0.66x | 6.1 | 2026-11-21T00:50:21.740119+00:00 | Not calibrated | WEAK 36/100 | VERY_HIGH 75/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | PEARL/USD | 62.262 | 1.888 | +2.23% | 1.02x |
-| 2 | XBT/USD | 56.795 | 58957.9 | +0.03% | 0.75x |
-| 3 | AKE/USD | 53.078 | 0.0061751 | +0.23% | 0.40x |
-| 4 | DRV/USD | 40.408 | 0.24773 | +0.36% | 2.36x |
-| 5 | BLESS/USD | 39.603 | 0.014254 | +1.66% | 3.02x |
-| 6 | AKT/USD | 38.626 | 0.5088 | +0.59% | 2.80x |
-| 7 | PIEVERSE/USD | 36.712 | 3.0301 | +0.74% | 2.78x |
-| 8 | CAP/USD | 32.359 | 0.092002 | -0.04% | 1.64x |
-| 9 | CT/USD | 30.060 | 0.1222 | +1.08% | 0.54x |
-| 10 | ZBCN/USD | 28.436 | 0.001604 | +0.44% | 5.35x |
-| 11 | BLUR/USD | 20.229 | 0.00732 | -0.14% | 1.09x |
+| 1 | PEARL/USD | 66.865 | 1.8981 | +1.88% | 1.51x |
+| 2 | XBT/USD | 57.534 | 59020 | +0.10% | 0.98x |
+| 3 | ETH/USD | 57.104 | 1624.4 | +0.11% | 0.45x |
+| 4 | SOL/USD | 56.719 | 68.95 | -0.12% | 0.56x |
+| 5 | LINK/USD | 54.514 | 8.5555 | +0.12% | 0.49x |
+| 6 | VVV/USD | 54.426 | 20.857 | +0.63% | 0.36x |
+| 7 | UNI/USD | 48.275 | 4.4811 | +0.21% | 1.10x |
+| 8 | AKT/USD | 39.879 | 0.5097 | +0.55% | 3.27x |
+| 9 | DRV/USD | 38.681 | 0.24776 | +0.12% | 2.51x |
+| 10 | CC/USD | 35.894 | 0.07491 | +0.31% | 1.19x |
+| 11 | CAP/USD | 33.820 | 0.092086 | +0.14% | 0.66x |
+| 12 | DCR/USD | 31.017 | 10.159 | +0.32% | 1.58x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -58,15 +60,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1048; predictions: 8384; observations: 633544.
-- Matured sampled outcomes across 1/6/24/48h: 10930; gap abstentions: 19047. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1049; predictions: 8396; observations: 634152.
+- Matured sampled outcomes across 1/6/24/48h: 10931; gap abstentions: 19059. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 13; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 9; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -75,36 +77,35 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44845820357 · **Generation:** 1048 · **Legacy run:** 44845820357
-**Main quote time:** 2026-11-21T00:45:27.243048+00:00 · **Legacy report time:** 2026-11-21T00:46:16.703505+00:00
+**Writer:** 44846363502 · **Generation:** 1049 · **Legacy run:** 44846363502
+**Main quote time:** 2026-11-21T00:50:29.345048+00:00 · **Legacy report time:** 2026-11-21T00:51:20.387369+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | PEARL/USD ⭐ | 1.888 | 73.61 | +2.23% | 1.02x | STRONG 77/100 | HIGH 68/100 | Watch |
-| 2 | BLESS/USD ⭐ | 0.014254 | 62.91 | +1.66% | 3.02x | STRONG 81/100 | VERY_HIGH 82/100 | Watch |
-| 3 | AKT/USD ⭐ | 0.5088 | 56.59 | +0.59% | 2.80x | STRONG 93/100 | HIGH 60/100 | Consider small entry |
-| 4 | DRV/USD ⭐ | 0.24773 | 55.77 | +0.36% | 2.36x | STRONG 93/100 | HIGH 60/100 | Consider small entry |
-| 5 | PIEVERSE/USD ⭐ | 3.0301 | 55.42 | +0.74% | 2.78x | STRONG 88/100 | HIGH 66/100 | Consider small entry |
-| 6 | XBT/USD | 58957.9 | 54.48 | +0.03% | 0.75x | MODERATE 47/100 | HIGH 62/100 | Watch |
-| 7 | AKE/USD | 0.0061751 | 48.24 | +0.23% | 0.40x | MODERATE 49/100 | VERY_HIGH 76/100 | Watch |
-| 8 | ZBCN/USD | 0.001604 | 45.63 | +0.44% | 5.35x | STRONG 73/100 | HIGH 66/100 | Watch |
-| 9 | CAP/USD | 0.092002 | 38.59 | -0.04% | 1.64x | WEAK 39/100 | HIGH 66/100 | Watch |
-| 10 | CT/USD | 0.1222 | 30.82 | +1.08% | 0.54x | WEAK 40/100 | VERY_HIGH 81/100 | Watch |
-| 11 | BLUR/USD | 0.00732 | 20.46 | -0.14% | 1.09x | WEAK 10/100 | EXTREME 85/100 | Do nothing |
+| 1 | PEARL/USD ⭐ | 1.8981 | 81.38 | +1.88% | 1.51x | STRONG 91/100 | HIGH 61/100 | Consider small entry |
+| 2 | XBT/USD | 59020 | 57.79 | +0.10% | 0.98x | MODERATE 49/100 | HIGH 62/100 | Watch |
+| 3 | AKT/USD ⭐ | 0.5097 | 57.64 | +0.55% | 3.27x | STRONG 94/100 | HIGH 60/100 | Consider small entry |
+| 4 | DRV/USD ⭐ | 0.24776 | 54.29 | +0.12% | 2.51x | STRONG 82/100 | HIGH 60/100 | Watch |
+| 5 | ETH/USD | 1624.4 | 52.11 | +0.11% | 0.45x | MODERATE 46/100 | VERY_HIGH 70/100 | Watch |
+| 6 | SOL/USD | 68.95 | 51.72 | -0.12% | 0.56x | WEAK 31/100 | VERY_HIGH 76/100 | Do nothing |
+| 7 | VVV/USD | 20.857 | 51.24 | +0.63% | 0.36x | MODERATE 56/100 | VERY_HIGH 70/100 | Watch |
+| 8 | UNI/USD ⭐ | 4.4811 | 50.34 | +0.21% | 1.10x | STRONG 70/100 | HIGH 62/100 | Watch |
+| 9 | LINK/USD | 8.5555 | 50.03 | +0.12% | 0.49x | MODERATE 45/100 | VERY_HIGH 70/100 | Watch |
+| 10 | CC/USD | 0.07491 | 39.33 | +0.31% | 1.19x | MODERATE 55/100 | HIGH 67/100 | Watch |
+| 11 | DCR/USD | 10.159 | 38.37 | +0.32% | 1.58x | MODERATE 64/100 | HIGH 67/100 | Watch |
+| 12 | CAP/USD | 0.092086 | 31.12 | +0.14% | 0.66x | WEAK 36/100 | VERY_HIGH 75/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | PEARL/USD ⭐ | 1.895 | 83.99 | +2.23% | 1.02x | 22002 | STRONG 82/100 | HIGH 68/100 | Watch |
-| 2 | BLESS/USD ⭐ | 0.014176 | 72.63 | +1.66% | 3.02x | 2531 | STRONG 86/100 | VERY_HIGH 82/100 | Watch |
-| 3 | PIEVERSE/USD ⭐ | 3.0301 | 46.80 | +0.74% | 2.78x | 2724 | STRONG 88/100 | HIGH 60/100 | Consider small entry |
-| 4 | UNI/USD | 4.4781 | 45.28 | +0.45% | 1.04x | 9181 | MODERATE 58/100 | HIGH 62/100 | Watch |
-| 5 | AKT/USD ⭐ | 0.5088 | 44.33 | +0.59% | 2.80x | 4550 | STRONG 87/100 | HIGH 60/100 | Consider small entry |
-| 6 | DRV/USD ⭐ | 0.24773 | 43.70 | +0.36% | 2.36x | 5978 | STRONG 87/100 | HIGH 60/100 | Consider small entry |
-| 7 | NIGHT/USD | 0.04227 | 33.79 | +0.09% | 1.12x | 13536 | WEAK 42/100 | HIGH 62/100 | Watch |
+| 1 | PEARL/USD ⭐ | 1.8977 | 86.69 | +1.88% | 1.51x | 21980 | STRONG 88/100 | HIGH 67/100 | Consider small entry |
+| 2 | BLESS/USD | 0.014257 | 79.51 | +1.58% | 3.34x | 2535 | STRONG 80/100 | VERY_HIGH 82/100 | Watch |
+| 3 | AKT/USD ⭐ | 0.5097 | 47.15 | +0.55% | 3.27x | 4549 | STRONG 84/100 | HIGH 66/100 | Consider small entry |
+| 4 | DRV/USD ⭐ | 0.24776 | 46.17 | +0.12% | 2.51x | 5988 | STRONG 78/100 | HIGH 60/100 | Watch |
+| 5 | UNI/USD ⭐ | 4.4811 | 44.73 | +0.21% | 1.10x | 9187 | MODERATE 67/100 | HIGH 62/100 | Watch |
 
-**Same-run overlap:** PEARL/USD, BLESS/USD, AKT/USD, DRV/USD, PIEVERSE/USD
+**Same-run overlap:** PEARL/USD, AKT/USD, DRV/USD, UNI/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
