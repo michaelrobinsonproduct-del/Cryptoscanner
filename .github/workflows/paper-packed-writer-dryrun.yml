@@ -141,7 +141,9 @@ jobs:
                          storage.MAX_PACKED_BYTES)
                   repo._write(initial/path,live.show(".",base,path,limit))
               archived=root/"archived"
-              # The preceding real-ledger stage already authenticates the base.\n              # The final Git-backed full replay below remains mandatory.\n              repo.stage_rollover(initial,base,archived,full_replay=False)
+              # The preceding real-ledger stage already authenticates the base.
+              # The final Git-backed full replay below remains mandatory.
+              repo.stage_rollover(initial,base,archived,full_replay=False)
               staged=root/"staged"
               repo.stage_append(archived,report,source,staged)
               expected=ledger.advance(before,report,source,storage.MAX_RAW_BYTES)
