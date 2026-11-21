@@ -2,41 +2,41 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-21T02:20:31.228324+00:00
+**UTC as-of:** 2026-11-21T02:25:39.350613+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44855259149
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44855726300
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** 20a4318094873133f4edec3b16d4009dbd8274cc (atomic ledger/results publication)
-**Ledger generation:** 1063 (remote push/readback verified)
+**Previous ledger commit:** 46da1fc829c2b55ce5ed0cfa5dce3c1abd5f5f22 (atomic ledger/results publication)
+**Ledger generation:** 1064 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 6s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 9s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 24.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | XDG/USD | 0.0545509 | 59.070 | 58.283 | +0.51% | +0.15% | 1.00x | 0.6 | 2026-11-21T02:20:24.957337+00:00 | Not calibrated | MODERATE 55/100 | HIGH 62/100 | Watch | WATCH |
-| 2 | SKY/USD | 0.0444 | 58.462 | 42.559 | +1.28% | +0.18% | 7.11x | 4.5 | 2026-11-21T02:20:24.957337+00:00 | Not calibrated | STRONG 74/100 | HIGH 60/100 | Watch | WATCH |
-| 3 | VVV/USD | 21.074 | 56.365 | 63.221 | +1.62% | -0.67% | 0.65x | 6.2 | 2026-11-21T02:20:24.957337+00:00 | Not calibrated | WEAK 33/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
-| 4 | ADA/USD | 0.143271 | 55.962 | 56.051 | +0.29% | +0.11% | 0.94x | 2.0 | 2026-11-21T02:20:24.957337+00:00 | Not calibrated | MODERATE 48/100 | HIGH 62/100 | Watch | WATCH |
-| 5 | DCR/USD | 10.211 | 47.283 | 32.723 | +1.05% | -0.09% | 6.57x | 10.8 | 2026-11-21T02:20:24.957337+00:00 | Not calibrated | MODERATE 49/100 | VERY_HIGH 79/100 | Watch | WATCH |
-| 6 | ALGO/USD | 0.07357 | 39.980 | 38.624 | +0.56% | +0.12% | 1.07x | 8.2 | 2026-11-21T02:20:24.957337+00:00 | Not calibrated | MODERATE 45/100 | HIGH 62/100 | Watch | WATCH |
-| 7 | DOT/USD | 0.6656 | 33.569 | 37.624 | +0.70% | -0.12% | 0.65x | 3.0 | 2026-11-21T02:20:24.957337+00:00 | Not calibrated | WEAK 22/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
-| 8 | AB/USD | 0.000527 | 15.488 | 17.786 | +0.38% | +0.76% | 0.39x | 38.0 | 2026-11-21T02:20:24.957337+00:00 | Not calibrated | WEAK 23/100 | EXTREME 87/100 | Do nothing | WATCH |
+| 1 | UNI/USD | 4.4795 | 63.311 | 47.181 | +0.28% | +0.23% | 20.94x | 5.1 | 2026-11-21T02:25:30.426103+00:00 | Not calibrated | STRONG 87/100 | HIGH 55/100 | Watch | WATCH |
+| 2 | VVV/USD | 21.103 | 62.657 | 63.261 | +1.76% | -0.79% | 1.33x | 8.1 | 2026-11-21T02:25:30.426103+00:00 | Not calibrated | MODERATE 51/100 | HIGH 61/100 | Watch | WATCH |
+| 3 | XDG/USD | 0.0546139 | 61.382 | 59.343 | +0.62% | +0.14% | 1.14x | 0.1 | 2026-11-21T02:25:30.426103+00:00 | Not calibrated | MODERATE 56/100 | HIGH 62/100 | Watch | WATCH |
+| 4 | ADA/USD | 0.1433 | 61.268 | 55.427 | +0.32% | +0.06% | 1.55x | 3.6 | 2026-11-21T02:25:30.426103+00:00 | Not calibrated | MODERATE 66/100 | HIGH 55/100 | Watch | WATCH |
+| 5 | CAP/USD | 0.094286 | 48.968 | 52.132 | +3.00% | +0.38% | 0.49x | 4.4 | 2026-11-21T02:25:30.426103+00:00 | Not calibrated | MODERATE 54/100 | VERY_HIGH 75/100 | Watch | WATCH |
+| 6 | PENGU/USD | 0.004356 | 44.630 | 32.534 | +0.28% | +0.74% | 1.84x | 4.6 | 2026-11-21T02:25:30.426103+00:00 | Not calibrated | MODERATE 67/100 | HIGH 60/100 | Watch | WATCH |
+| 7 | ALGO/USD | 0.07354 | 40.836 | 39.019 | +0.52% | +0.16% | 1.10x | 6.8 | 2026-11-21T02:25:30.426103+00:00 | Not calibrated | MODERATE 45/100 | HIGH 62/100 | Watch | WATCH |
+| 8 | DOT/USD | 0.6674 | 36.371 | 38.748 | +0.97% | +0.18% | 0.67x | 4.5 | 2026-11-21T02:25:30.426103+00:00 | Not calibrated | WEAK 38/100 | VERY_HIGH 75/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | VVV/USD | 63.221 | 21.074 | -0.67% | 0.65x |
-| 2 | XDG/USD | 58.283 | 0.0545509 | +0.15% | 1.00x |
-| 3 | ADA/USD | 56.051 | 0.143271 | +0.11% | 0.94x |
-| 4 | SKY/USD | 42.559 | 0.0444 | +0.18% | 7.11x |
-| 5 | ALGO/USD | 38.624 | 0.07357 | +0.12% | 1.07x |
-| 6 | DOT/USD | 37.624 | 0.6656 | -0.12% | 0.65x |
-| 7 | DCR/USD | 32.723 | 10.211 | -0.09% | 6.57x |
-| 8 | AB/USD | 17.786 | 0.000527 | +0.76% | 0.39x |
+| 1 | VVV/USD | 63.261 | 21.103 | -0.79% | 1.33x |
+| 2 | XDG/USD | 59.343 | 0.0546139 | +0.14% | 1.14x |
+| 3 | ADA/USD | 55.427 | 0.1433 | +0.06% | 1.55x |
+| 4 | CAP/USD | 52.132 | 0.094286 | +0.38% | 0.49x |
+| 5 | UNI/USD | 47.181 | 4.4795 | +0.23% | 20.94x |
+| 6 | ALGO/USD | 39.019 | 0.07354 | +0.16% | 1.10x |
+| 7 | DOT/USD | 38.748 | 0.6674 | +0.18% | 0.67x |
+| 8 | PENGU/USD | 32.534 | 0.004356 | +0.74% | 1.84x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -52,8 +52,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1063; predictions: 8534; observations: 642664.
-- Matured sampled outcomes across 1/6/24/48h: 10965; gap abstentions: 19385. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1064; predictions: 8542; observations: 643272.
+- Matured sampled outcomes across 1/6/24/48h: 10975; gap abstentions: 19400. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -69,29 +69,29 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44855259149 · **Generation:** 1063 · **Legacy run:** 44855259149
-**Main quote time:** 2026-11-21T02:20:31.228324+00:00 · **Legacy report time:** 2026-11-21T02:21:16.491282+00:00
+**Writer:** 44855726300 · **Generation:** 1064 · **Legacy run:** 44855726300
+**Main quote time:** 2026-11-21T02:25:39.350613+00:00 · **Legacy report time:** 2026-11-21T02:26:40.070925+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | XDG/USD ⭐ | 0.0545509 | 59.07 | +0.15% | 1.00x | MODERATE 65/100 | HIGH 62/100 | Watch |
-| 2 | SKY/USD ⭐ | 0.0444 | 58.46 | +0.18% | 7.11x | STRONG 84/100 | HIGH 60/100 | Watch |
-| 3 | VVV/USD | 21.074 | 56.36 | -0.67% | 0.65x | WEAK 33/100 | VERY_HIGH 76/100 | Do nothing |
-| 4 | ADA/USD | 0.143271 | 55.96 | +0.11% | 0.94x | MODERATE 48/100 | HIGH 62/100 | Watch |
-| 5 | DCR/USD | 10.211 | 47.28 | -0.09% | 6.57x | MODERATE 49/100 | VERY_HIGH 79/100 | Watch |
-| 6 | ALGO/USD ⭐ | 0.07357 | 39.98 | +0.12% | 1.07x | MODERATE 55/100 | HIGH 62/100 | Watch |
-| 7 | DOT/USD | 0.6656 | 33.57 | -0.12% | 0.65x | WEAK 22/100 | VERY_HIGH 81/100 | Do nothing |
-| 8 | AB/USD | 0.000527 | 15.49 | +0.76% | 0.39x | WEAK 23/100 | EXTREME 87/100 | Do nothing |
+| 1 | UNI/USD ⭐ | 4.4795 | 63.31 | +0.23% | 20.94x | STRONG 97/100 | HIGH 55/100 | Consider small entry |
+| 2 | VVV/USD | 21.103 | 62.66 | -0.79% | 1.33x | MODERATE 51/100 | HIGH 61/100 | Watch |
+| 3 | XDG/USD ⭐ | 0.0546139 | 61.38 | +0.14% | 1.14x | MODERATE 66/100 | HIGH 62/100 | Watch |
+| 4 | ADA/USD ⭐ | 0.1433 | 61.27 | +0.06% | 1.55x | STRONG 76/100 | HIGH 55/100 | Watch |
+| 5 | CAP/USD | 0.094286 | 48.97 | +0.38% | 0.49x | MODERATE 54/100 | VERY_HIGH 75/100 | Watch |
+| 6 | PENGU/USD | 0.004356 | 44.63 | +0.74% | 1.84x | MODERATE 67/100 | HIGH 60/100 | Watch |
+| 7 | ALGO/USD | 0.07354 | 40.84 | +0.16% | 1.10x | MODERATE 45/100 | HIGH 62/100 | Watch |
+| 8 | DOT/USD | 0.6674 | 36.37 | +0.18% | 0.67x | WEAK 38/100 | VERY_HIGH 75/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | XDG/USD ⭐ | 0.0545322 | 57.75 | +0.15% | 1.00x | 12034 | MODERATE 64/100 | HIGH 62/100 | Watch |
-| 2 | SKY/USD ⭐ | 0.0444 | 55.38 | +0.18% | 7.11x | 5834 | STRONG 83/100 | HIGH 60/100 | Watch |
-| 3 | ALGO/USD ⭐ | 0.07357 | 36.06 | +0.12% | 1.07x | 5273 | MODERATE 53/100 | HIGH 62/100 | Watch |
+| 1 | XDG/USD ⭐ | 0.0546468 | 59.86 | +0.14% | 1.14x | 11941 | MODERATE 65/100 | HIGH 62/100 | Watch |
+| 2 | UNI/USD ⭐ | 4.4836 | 54.08 | +0.23% | 20.94x | 8902 | STRONG 92/100 | HIGH 55/100 | Consider small entry |
+| 3 | ADA/USD ⭐ | 0.143345 | 50.19 | +0.06% | 1.55x | 17096 | STRONG 70/100 | HIGH 55/100 | Watch |
 
-**Same-run overlap:** XDG/USD, SKY/USD, ALGO/USD
+**Same-run overlap:** UNI/USD, XDG/USD, ADA/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
