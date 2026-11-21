@@ -2,31 +2,29 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-21T00:15:28.606746+00:00
+**UTC as-of:** 2026-11-21T00:20:23.259509+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44842488950
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44843057508
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** abd66d31402ab941e062fd3a17be626350b66231 (atomic ledger/results publication)
-**Ledger generation:** 1043 (remote push/readback verified)
+**Previous ledger commit:** d731c2a99c902370f676556db14be9732ed0e0f3 (atomic ledger/results publication)
+**Ledger generation:** 1044 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 17.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 15.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | NIGHT/USD | 0.04234 | 43.138 | 46.889 | +0.28% | +0.28% | 0.48x | 2.4 | 2026-11-21T00:15:23.714245+00:00 | Not calibrated | MODERATE 52/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 2 | KAS/USD | 0.02606 | 27.082 | 34.724 | +0.31% | +0.27% | 0.10x | 11.5 | 2026-11-21T00:15:23.714245+00:00 | Not calibrated | WEAK 39/100 | VERY_HIGH 76/100 | Watch | WATCH |
-| 3 | ZBCN/USD | 0.0016 | 13.147 | 20.338 | +0.57% | +0.25% | 0.16x | 31.3 | 2026-11-21T00:15:23.714245+00:00 | Not calibrated | WEAK 27/100 | EXTREME 87/100 | Do nothing | WATCH |
+| 1 | PENGU/USD | 0.004358 | 38.388 | 30.572 | +0.32% | +0.18% | 1.69x | 9.2 | 2026-11-21T00:20:18.266752+00:00 | Not calibrated | MODERATE 54/100 | HIGH 60/100 | Watch | WATCH |
+| 2 | ZBCN/USD | 0.001595 | 23.328 | 27.553 | +0.25% | +0.38% | 0.39x | 12.5 | 2026-11-21T00:20:18.266752+00:00 | Not calibrated | WEAK 37/100 | VERY_HIGH 81/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | NIGHT/USD | 46.889 | 0.04234 | +0.28% | 0.48x |
-| 2 | KAS/USD | 34.724 | 0.02606 | +0.27% | 0.10x |
-| 3 | ZBCN/USD | 20.338 | 0.0016 | +0.25% | 0.16x |
+| 1 | PENGU/USD | 30.572 | 0.004358 | +0.18% | 1.69x |
+| 2 | ZBCN/USD | 27.553 | 0.001595 | +0.38% | 0.39x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,15 +40,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1043; predictions: 8346; observations: 630504.
-- Matured sampled outcomes across 1/6/24/48h: 10927; gap abstentions: 18974. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1044; predictions: 8348; observations: 631112.
+- Matured sampled outcomes across 1/6/24/48h: 10927; gap abstentions: 18988. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 14; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 13; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -59,21 +57,20 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44842488950 · **Generation:** 1043 · **Legacy run:** 44842488950
-**Main quote time:** 2026-11-21T00:15:28.606746+00:00 · **Legacy report time:** 2026-11-21T00:16:12.840421+00:00
+**Writer:** 44843057508 · **Generation:** 1044 · **Legacy run:** 44843057508
+**Main quote time:** 2026-11-21T00:20:23.259509+00:00 · **Legacy report time:** 2026-11-21T00:21:04.695709+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | NIGHT/USD | 0.04234 | 43.14 | +0.28% | 0.48x | MODERATE 52/100 | VERY_HIGH 70/100 | Watch |
-| 2 | KAS/USD | 0.02606 | 27.08 | +0.27% | 0.10x | WEAK 39/100 | VERY_HIGH 76/100 | Watch |
-| 3 | ZBCN/USD | 0.0016 | 13.15 | +0.25% | 0.16x | WEAK 27/100 | EXTREME 87/100 | Do nothing |
+| 1 | PENGU/USD | 0.004358 | 38.39 | +0.18% | 1.69x | MODERATE 54/100 | HIGH 60/100 | Watch |
+| 2 | ZBCN/USD | 0.001595 | 23.33 | +0.38% | 0.39x | WEAK 37/100 | VERY_HIGH 81/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | XBT/USD | 58868.1 | 54.28 | +0.10% | 1.19x | 231386 | MODERATE 52/100 | HIGH 62/100 | Watch |
-| 2 | DRV/USD | 0.24595 | 49.89 | +0.17% | 3.38x | 5936 | STRONG 70/100 | HIGH 60/100 | Watch |
+| 1 | SOL/USD | 68.78 | 52.43 | +0.12% | 1.44x | 43642 | MODERATE 61/100 | HIGH 55/100 | Watch |
+| 2 | DRV/USD | 0.24631 | 43.83 | +0.08% | 1.11x | 5935 | MODERATE 47/100 | HIGH 67/100 | Watch |
 
 **Same-run overlap:** None
 A ⭐ means both independently executed scanners identified the exact same /USD market.
