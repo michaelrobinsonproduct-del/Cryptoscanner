@@ -54,7 +54,15 @@ def _closed_features(payload, pair, now):
             raise ValueError("Unaligned candle")
         opn, high, low, close, vwap, volume = (_number(candle[i]) for i in (1, 2, 3, 4, 5, 6))
         count = _number(candle[7])
-        if (min(opn, high, low, close, vwap, volume) <= 0 or not count.is_integer()
+        # A returned, flat zero-trade candle is an observation of inactivity,
+        # not a missing interval. Never fill absent candles or accept a price
+        # change without trades; retain the strict traded-candle checks.
+        if count == 0 and volume == 0:
+            if (close <= 0 or not opn == high == low == close
+                    or vwap not in (0, close)
+                    or (closes and close != closes[-1])):
+                raise ValueError("Invalid or empty completed candle")
+        elif (min(opn, high, low, close, vwap, volume) <= 0 or not count.is_integer()
                 or count <= 0 or low > min(opn, close, vwap)
                 or high < max(opn, close, vwap)):
             raise ValueError("Invalid or empty completed candle")
