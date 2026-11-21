@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'scripts/publish_approved_market_research.sh'
+      - 'docs/market-wide-bootstrap-20261119.json'
   workflow_dispatch:
     inputs:
       paper_run_id:
@@ -44,6 +44,7 @@ on:
       - 'paper_pov/public_ledger_learning.py'
       - 'paper_pov/market_wide_learning.py'
       - 'paper_pov/learning_retention.py'
+      - 'paper_pov/approved_market_bootstrap.py'
       - 'paper_pov/test_learning_retention.py'
       - 'paper_pov/test_market_wide_learning.py'
       - 'paper_pov/post_q3_observed_recovery.py'
@@ -70,6 +71,7 @@ on:
       - 'paper_pov/test_rolling_kraken_candles.py'
       - '.github/workflows/paper-ledger-learning.yml'
       - 'scripts/publish_approved_market_research.sh'
+      - 'docs/market-wide-bootstrap-20261119.json'
 permissions:
   contents: read
   actions: read
@@ -77,41 +79,6 @@ concurrency:
   group: paper-ledger-learning-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: false
 jobs:
-  verify-approved-research-backup:
-    if: github.event_name == 'pull_request' && github.head_ref == 'fix/market-learning-durable-publication-20261119'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - run: bash scripts/publish_approved_market_research.sh verify
-  publish-approved-research-backup:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    permissions:
-      contents: write
-      actions: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    concurrency:
-      group: approved-market-research-publication
-      cancel-in-progress: false
-    env:
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - run: bash scripts/publish_approved_market_research.sh publish
   paper-ledger-learning:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -304,8 +271,8 @@ jobs:
           retention-days: 30
 
   market-wide-shadow-learning:
-    # Merge does not activate the new job. First establish a verified checkpoint.
-    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (vars.MARKET_WIDE_LEARNING_ENABLED == 'true' || inputs.market_learning_bootstrap == true || inputs.market_learning_restore_asset != ''))
+    # A path-scoped owner-approved push bootstraps once; ordinary dispatch remains disabled until verified.
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (vars.MARKET_WIDE_LEARNING_ENABLED == 'true' || inputs.market_learning_bootstrap == true || inputs.market_learning_restore_asset != ''))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
@@ -320,6 +287,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Verify owner-pinned bootstrap and durable backup
+        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.head_ref == 'fix/market-learning-bootstrap-20261119')
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            test "$GITHUB_REF" = refs/heads/main
+            [[ "$BEFORE" =~ ^[0-9a-f]{40}$ ]]
+            git fetch --no-tags --depth=1 origin "$BEFORE"
+            if git cat-file -e "$BEFORE:docs/market-wide-bootstrap-20261119.json" 2>/dev/null; then
+              echo "::error::Bootstrap marker already existed; never reset main"
+              exit 1
+            fi
+          fi
+          python -m paper_pov.approved_market_bootstrap verify --marker docs/market-wide-bootstrap-20261119.json
       - name: Focused market learning acceptance
         run: python -m unittest paper_pov.test_market_wide_learning paper_pov.test_learning_retention -v
       - name: Select latest persisted public paper ledger
@@ -356,15 +339,15 @@ jobs:
         env:
           LEARNING_BRANCH: ${{ github.head_ref || github.ref_name }}
           LEARNING_SCOPE: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
-          ALLOW_MAIN_BOOTSTRAP: ${{ inputs.market_learning_bootstrap || false }}
-          BOOTSTRAP_RUN: ${{ inputs.market_learning_bootstrap_run_id }}
-          BOOTSTRAP_SHA: ${{ inputs.market_learning_bootstrap_source_sha }}
-          BOOTSTRAP_STATE: ${{ inputs.market_learning_bootstrap_state_digest }}
-          APPROVED_RESEARCH_ORIGIN: ${{ vars.MARKET_WIDE_BOOTSTRAP_MODEL_ORIGIN_RUN_ID }}
+          ALLOW_MAIN_BOOTSTRAP: ${{ github.event_name == 'push' || inputs.market_learning_bootstrap || false }}
+          BOOTSTRAP_RUN: ${{ github.event_name == 'push' && '44529882265' || inputs.market_learning_bootstrap_run_id }}
+          BOOTSTRAP_SHA: ${{ github.event_name == 'push' && '0411959db3093f048d7a49170a483430e646ec4b' || inputs.market_learning_bootstrap_source_sha }}
+          BOOTSTRAP_STATE: ${{ github.event_name == 'push' && '7785f362dc7795a54ae40474dbde6ab481e7fd4ab6004ea0ead63e2eb76f9459' || inputs.market_learning_bootstrap_state_digest }}
+          APPROVED_RESEARCH_ORIGIN: ${{ vars.MARKET_WIDE_BOOTSTRAP_MODEL_ORIGIN_RUN_ID || '44529483795' }}
           RESTORE_ASSET: ${{ inputs.market_learning_restore_asset }}
           RESTORE_SHA: ${{ inputs.market_learning_restore_sha256 }}
           RESTORE_STATE: ${{ inputs.market_learning_restore_state_digest }}
-          CHECKPOINT_RELEASE: ${{ vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG }}
+          CHECKPOINT_RELEASE: ${{ vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG || 'market-wide-research-v1' }}
         run: |
           set -euo pipefail
           mkdir -p evidence/market-prior
@@ -501,10 +484,10 @@ jobs:
             --output evidence/market-wide-observed.json
       - name: Train cumulative shadow on retained historical and recent mature labels
         env:
-          DURABLE_SEED_RELEASE: ${{ vars.MARKET_WIDE_SEED_RELEASE_TAG }}
-          ALLOW_MAIN_BOOTSTRAP: ${{ inputs.market_learning_bootstrap || false }}
-          BOOTSTRAP_RUN: ${{ inputs.market_learning_bootstrap_run_id }}
-          BOOTSTRAP_SHA: ${{ inputs.market_learning_bootstrap_source_sha }}
+          DURABLE_SEED_RELEASE: ${{ vars.MARKET_WIDE_SEED_RELEASE_TAG || 'market-wide-research-v1' }}
+          ALLOW_MAIN_BOOTSTRAP: ${{ github.event_name == 'push' || inputs.market_learning_bootstrap || false }}
+          BOOTSTRAP_RUN: ${{ github.event_name == 'push' && '44529882265' || inputs.market_learning_bootstrap_run_id }}
+          BOOTSTRAP_SHA: ${{ github.event_name == 'push' && '0411959db3093f048d7a49170a483430e646ec4b' || inputs.market_learning_bootstrap_source_sha }}
         run: |
           set -euo pipefail
           # Reuse the exact compact seed verified against the full originals.
@@ -533,7 +516,7 @@ jobs:
           # Historical trades are separate research, not an input to the strict
           # fit. Do not stop continuous strict training when research expires.
           trade_args=()
-          if [ -z "$trade_run" ] && [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$ALLOW_MAIN_BOOTSTRAP" = "true" ]; then
+          if [ -z "$trade_run" ] && [ "$ALLOW_MAIN_BOOTSTRAP" = "true" ]; then
             [[ "$BOOTSTRAP_RUN" =~ ^[0-9]+$ ]]
             [[ "$BOOTSTRAP_SHA" =~ ^[0-9a-f]{40}$ ]]
             seed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BOOTSTRAP_RUN/artifacts?per_page=100" --jq '.artifacts[]|select(.expired==false and .name=="historical-trade-batch-'"$BOOTSTRAP_RUN"'")|.id')
@@ -683,7 +666,7 @@ jobs:
           if-no-files-found: ignore
 
   historical-trade-recovery-pilot:
-    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.MARKET_WIDE_HISTORICAL_RECOVERY_ENABLED == 'true' && (vars.MARKET_WIDE_LEARNING_ENABLED == 'true' || inputs.market_learning_bootstrap == true))
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.MARKET_WIDE_HISTORICAL_RECOVERY_ENABLED == 'true' && (vars.MARKET_WIDE_LEARNING_ENABLED == 'true' || inputs.market_learning_bootstrap == true))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
@@ -693,9 +676,9 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       PR_BRANCH: ${{ github.head_ref || github.ref_name }}
       LEARNING_SCOPE: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
-      ALLOW_MAIN_BOOTSTRAP: ${{ inputs.market_learning_bootstrap || false }}
-      BOOTSTRAP_RUN: ${{ inputs.market_learning_bootstrap_run_id }}
-      BOOTSTRAP_SHA: ${{ inputs.market_learning_bootstrap_source_sha }}
+      ALLOW_MAIN_BOOTSTRAP: ${{ github.event_name == 'push' || inputs.market_learning_bootstrap || false }}
+      BOOTSTRAP_RUN: ${{ github.event_name == 'push' && '44529882265' || inputs.market_learning_bootstrap_run_id }}
+      BOOTSTRAP_SHA: ${{ github.event_name == 'push' && '0411959db3093f048d7a49170a483430e646ec4b' || inputs.market_learning_bootstrap_source_sha }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -703,6 +686,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Verify one-time approved historical bootstrap
+        if: github.event_name == 'push'
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          [[ "$BEFORE" =~ ^[0-9a-f]{40}$ ]]
+          git fetch --no-tags --depth=1 origin "$BEFORE"
+          if git cat-file -e "$BEFORE:docs/market-wide-bootstrap-20261119.json" 2>/dev/null; then
+            echo "::error::Bootstrap marker already existed; never reset main"
+            exit 1
+          fi
+          python -m paper_pov.approved_market_bootstrap verify --marker docs/market-wide-bootstrap-20261119.json
       - name: Test bounded cursor replay and window reuse
         run: python -m unittest paper_pov.test_historical_trade_recovery paper_pov.test_historical_trade_batch paper_pov.test_historical_coarse_discovery -v
       - name: Recover bounded historical windows using verified observed universe and retained cursor state
@@ -846,7 +843,7 @@ jobs:
 
   retain-main-learning-durable-checkpoint:
     # Opt-in publication of research evidence only. No canonical ledger writes.
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG != ''
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG != ''))
     needs: market-wide-shadow-learning
     permissions:
       contents: write
@@ -858,7 +855,7 @@ jobs:
       cancel-in-progress: false
     env:
       GH_TOKEN: ${{ github.token }}
-      CHECKPOINT_RELEASE: ${{ vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG }}
+      CHECKPOINT_RELEASE: ${{ github.event_name == 'push' && 'market-wide-research-v1' || vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG }}
     steps:
       - uses: actions/checkout@v4
         with:

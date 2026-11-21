@@ -80,7 +80,7 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertNotRegex(read_only, r"(?m)^\s*contents:\s*write")
         self.assertNotIn("gh release upload", read_only)
         self.assertEqual(len(re.findall(r"(?m)^\s*contents:\s*write", retention)), 1)
-        self.assertIn("if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG != ''", retention)
+        self.assertIn("if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG != ''))", retention)
         self.assertIn("needs: market-wide-shadow-learning", retention)
         self.assertIn("persist-credentials: false", retention)
         self.assertNotIn("paper-proof-ledger", retention)
@@ -117,6 +117,24 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertIn("Main checkpoint already exists; bootstrap cannot replace it", learning)
         self.assertNotIn("prior_run=44253116626", learning)
         self.assertNotIn("trade_run=44252876362", learning)
+        self.assertIn("'docs/market-wide-bootstrap-20261119.json'", learning)
+        self.assertIn('python -m paper_pov.approved_market_bootstrap verify', learning)
+        self.assertIn('Bootstrap marker already existed; never reset main', learning)
+        self.assertIn("github.event_name == 'push' || inputs.market_learning_bootstrap || false", learning)
+        self.assertIn("github.event_name == 'push' && '44529882265' || inputs.market_learning_bootstrap_run_id", learning)
+        self.assertNotIn("publish-approved-research-backup:", learning)
+
+    def test_approved_push_bootstraps_historical_cursor_and_durable_release(self):
+        learning = (PIPELINE.parent / "paper-ledger-learning.yml").read_text()
+        history = learning.split("\n  historical-trade-recovery-pilot:", 1)[1].split("\n  stage-learning-durable-backup:", 1)[0]
+        self.assertIn("(github.event_name == 'push' && github.ref == 'refs/heads/main')", history.split("\n    runs-on:", 1)[0])
+        self.assertIn("Bootstrap marker already existed; never reset main", history)
+        self.assertIn("python -m paper_pov.approved_market_bootstrap verify", history)
+        self.assertLess(history.index("Verify one-time approved historical bootstrap"), history.index("Recover bounded historical windows"))
+        self.assertIn('"completed:success:$BOOTSTRAP_RUN:$BOOTSTRAP_SHA"', history)
+        retention = learning.split("\n  retain-main-learning-durable-checkpoint:", 1)[1]
+        self.assertIn("CHECKPOINT_RELEASE: ${{ github.event_name == 'push' && 'market-wide-research-v1' || vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG }}", retention)
+
 
     def test_legacy_workflow_publishes_same_run_challenger_and_shadow(self):
         text = (PIPELINE.parent / "paper-legacy-shadow.yml").read_text()
