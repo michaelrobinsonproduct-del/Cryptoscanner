@@ -2,31 +2,29 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-21T06:00:47.515957+00:00
+**UTC as-of:** 2026-11-21T06:10:35.699032+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44873401140
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44874206197
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** e31845afaaf3a3a90cfe6a5e5a83bb1b2c1c6f4d (atomic ledger/results publication)
-**Ledger generation:** 1093 (remote push/readback verified)
+**Previous ledger commit:** aff2785265a555604b3c9dacb62587517215ff23 (atomic ledger/results publication)
+**Ledger generation:** 1094 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 2s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 6.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 5.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | CAP/USD | 0.095475 | 53.086 | 57.843 | +4.30% | -0.04% | 0.54x | 11.9 | 2026-11-21T06:00:45.461610+00:00 | Not calibrated | WEAK 27/100 | EXTREME 87/100 | Do nothing | WATCH |
-| 2 | CSPR/USD | 0.001715 | 43.103 | 30.289 | +2.56% | +2.54% | 1.01x | 36.9 | 2026-11-21T06:00:45.461610+00:00 | Not calibrated | WEAK 42/100 | EXTREME 86/100 | Do nothing | WATCH |
-| 3 | RARE/USD | 0.01386 | 41.612 | 46.814 | +4.21% | -0.57% | 0.77x | 28.8 | 2026-11-21T06:00:45.461610+00:00 | Not calibrated | WEAK 16/100 | EXTREME 85/100 | Do nothing | WATCH |
+| 1 | RARE/USD | 0.01444 | 101.749 | 73.420 | +8.57% | +5.32% | 1.33x | 6.9 | 2026-11-21T06:10:34.072432+00:00 | Not calibrated | STRONG 95/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 2 | CAP/USD | 0.093697 | 27.769 | 41.156 | +2.35% | -2.01% | 0.67x | 17.9 | 2026-11-21T06:10:34.072432+00:00 | Not calibrated | WEAK 14/100 | EXTREME 91/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | CAP/USD | 57.843 | 0.095475 | -0.04% | 0.54x |
-| 2 | RARE/USD | 46.814 | 0.01386 | -0.57% | 0.77x |
-| 3 | CSPR/USD | 30.289 | 0.001715 | +2.54% | 1.01x |
+| 1 | RARE/USD | 73.420 | 0.01444 | +5.32% | 1.33x |
+| 2 | CAP/USD | 41.156 | 0.093697 | -2.01% | 0.67x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,8 +40,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1093; predictions: 8628; observations: 660903.
-- Matured sampled outcomes across 1/6/24/48h: 11196; gap abstentions: 19974. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1094; predictions: 8630; observations: 661511.
+- Matured sampled outcomes across 1/6/24/48h: 11202; gap abstentions: 19991. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -59,22 +57,21 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44873401140 · **Generation:** 1093 · **Legacy run:** 44873401140
-**Main quote time:** 2026-11-21T06:00:47.515957+00:00 · **Legacy report time:** 2026-11-21T06:01:26.734270+00:00
+**Writer:** 44874206197 · **Generation:** 1094 · **Legacy run:** 44874206197
+**Main quote time:** 2026-11-21T06:10:35.699032+00:00 · **Legacy report time:** 2026-11-21T06:11:17.905104+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | CAP/USD | 0.095475 | 53.09 | -0.04% | 0.54x | WEAK 27/100 | EXTREME 87/100 | Do nothing |
-| 2 | CSPR/USD ⭐ | 0.001715 | 43.10 | +2.54% | 1.01x | MODERATE 52/100 | EXTREME 86/100 | Do nothing |
-| 3 | RARE/USD | 0.01386 | 41.61 | -0.57% | 0.77x | WEAK 16/100 | EXTREME 85/100 | Do nothing |
+| 1 | RARE/USD ⭐ | 0.01444 | 101.75 | +5.32% | 1.33x | STRONG 100/100 | VERY_HIGH 70/100 | Watch |
+| 2 | CAP/USD | 0.093697 | 27.77 | -2.01% | 0.67x | WEAK 14/100 | EXTREME 91/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | CSPR/USD ⭐ | 0.0017151 | 60.94 | +2.54% | 1.01x | 4846 | MODERATE 65/100 | EXTREME 86/100 | Do nothing |
+| 1 | RARE/USD ⭐ | 0.01439 | 81.55 | +5.32% | 1.33x | 6483 | STRONG 96/100 | VERY_HIGH 70/100 | Watch |
 
-**Same-run overlap:** CSPR/USD
+**Same-run overlap:** RARE/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
