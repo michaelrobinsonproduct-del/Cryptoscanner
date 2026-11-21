@@ -271,8 +271,8 @@ jobs:
           retention-days: 30
 
   market-wide-shadow-learning:
-    # A path-scoped owner-approved push bootstraps once; ordinary dispatch remains disabled until verified.
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (vars.MARKET_WIDE_LEARNING_ENABLED == 'true' || inputs.market_learning_bootstrap == true || inputs.market_learning_restore_asset != ''))
+    # The owner-approved main push bootstrapped successfully (run 44922874678); ordinary writer dispatch continues from that verified main checkpoint unless explicitly opted out.
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (vars.MARKET_WIDE_LEARNING_ENABLED != 'false' || inputs.market_learning_bootstrap == true || inputs.market_learning_restore_asset != ''))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
@@ -666,7 +666,7 @@ jobs:
           if-no-files-found: ignore
 
   historical-trade-recovery-pilot:
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.MARKET_WIDE_HISTORICAL_RECOVERY_ENABLED == 'true' && (vars.MARKET_WIDE_LEARNING_ENABLED == 'true' || inputs.market_learning_bootstrap == true))
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.MARKET_WIDE_HISTORICAL_RECOVERY_ENABLED != 'false' && (vars.MARKET_WIDE_LEARNING_ENABLED != 'false' || inputs.market_learning_bootstrap == true))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
@@ -842,8 +842,8 @@ jobs:
           compression-level: 0
 
   retain-main-learning-durable-checkpoint:
-    # Opt-in publication of research evidence only. No canonical ledger writes.
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG != ''))
+    # At most one verified daily research archive on ordinary writer dispatch; explicit opt-out supported. No canonical ledger writes.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && vars.MARKET_WIDE_LEARNING_ENABLED != 'false'))
     needs: market-wide-shadow-learning
     permissions:
       contents: write
@@ -855,7 +855,7 @@ jobs:
       cancel-in-progress: false
     env:
       GH_TOKEN: ${{ github.token }}
-      CHECKPOINT_RELEASE: ${{ github.event_name == 'push' && 'market-wide-research-v1' || vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG }}
+      CHECKPOINT_RELEASE: ${{ vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG || 'market-wide-research-v1' }}
     steps:
       - uses: actions/checkout@v4
         with:
