@@ -2,31 +2,31 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-21T03:05:37.828766+00:00
+**UTC as-of:** 2026-11-21T03:15:27.653556+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44859222400
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44860086002
 **Source SHA:** bdc7e68f7fa75fae6636b7738d52f10a65d92038
-**Previous ledger commit:** f1a618886adc106ed1d0eaea74a6a51ba676c24e (atomic ledger/results publication)
-**Ledger generation:** 1068 (remote push/readback verified)
+**Previous ledger commit:** 7987422ff0371b18c935e55b2025ca1a68a2ac2a (atomic ledger/results publication)
+**Ledger generation:** 1069 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 12.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 14.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | DRV/USD | 0.27005 | 76.499 | 70.724 | +9.98% | +0.28% | 1.44x | 22.6 | 2026-11-21T03:05:33.689816+00:00 | Not calibrated | STRONG 73/100 | HIGH 67/100 | Watch | WATCH |
-| 2 | CAP/USD | 0.094005 | 42.510 | 45.024 | +2.69% | -0.28% | 0.89x | 14.4 | 2026-11-21T03:05:33.689816+00:00 | Not calibrated | WEAK 21/100 | VERY_HIGH 79/100 | Do nothing | WATCH |
-| 3 | DCR/USD | 10.168 | 19.816 | 29.196 | +0.62% | -0.49% | 0.31x | 11.8 | 2026-11-21T03:05:33.689816+00:00 | Not calibrated | WEAK 10/100 | EXTREME 94/100 | Do nothing | WATCH |
+| 1 | DRV/USD | 0.2685 | 70.865 | 72.737 | +9.35% | +0.33% | 0.65x | 18.6 | 2026-11-21T03:15:23.647554+00:00 | Not calibrated | MODERATE 60/100 | VERY_HIGH 76/100 | Watch | WATCH |
+| 2 | CAP/USD | 0.094709 | 58.868 | 51.316 | +3.46% | +0.26% | 1.63x | 12.6 | 2026-11-21T03:15:23.647554+00:00 | Not calibrated | MODERATE 69/100 | HIGH 66/100 | Watch | WATCH |
+| 3 | DCR/USD | 10.139 | 25.185 | 28.646 | +0.34% | -0.65% | 0.98x | 8.9 | 2026-11-21T03:15:23.647554+00:00 | Not calibrated | WEAK 18/100 | VERY_HIGH 80/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | DRV/USD | 70.724 | 0.27005 | +0.28% | 1.44x |
-| 2 | CAP/USD | 45.024 | 0.094005 | -0.28% | 0.89x |
-| 3 | DCR/USD | 29.196 | 10.168 | -0.49% | 0.31x |
+| 1 | DRV/USD | 72.737 | 0.2685 | +0.33% | 0.65x |
+| 2 | CAP/USD | 51.316 | 0.094709 | +0.26% | 1.63x |
+| 3 | DCR/USD | 28.646 | 10.139 | -0.65% | 0.98x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,15 +42,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1068; predictions: 8562; observations: 645704.
-- Matured sampled outcomes across 1/6/24/48h: 11041; gap abstentions: 19509. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1069; predictions: 8565; observations: 646312.
+- Matured sampled outcomes across 1/6/24/48h: 11053; gap abstentions: 19537. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 10 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 9; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 11; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -59,23 +59,23 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44859222400 · **Generation:** 1068 · **Legacy run:** 44859222400
-**Main quote time:** 2026-11-21T03:05:37.828766+00:00 · **Legacy report time:** 2026-11-21T03:06:35.064814+00:00
+**Writer:** 44860086002 · **Generation:** 1069 · **Legacy run:** 44860086002
+**Main quote time:** 2026-11-21T03:15:27.653556+00:00 · **Legacy report time:** 2026-11-21T03:16:11.089479+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | DRV/USD ⭐ | 0.27005 | 76.50 | +0.28% | 1.44x | STRONG 83/100 | HIGH 67/100 | Watch |
-| 2 | CAP/USD | 0.094005 | 42.51 | -0.28% | 0.89x | WEAK 21/100 | VERY_HIGH 79/100 | Do nothing |
-| 3 | DCR/USD | 10.168 | 19.82 | -0.49% | 0.31x | WEAK 10/100 | EXTREME 94/100 | Do nothing |
+| 1 | DRV/USD | 0.2685 | 70.86 | +0.33% | 0.65x | MODERATE 60/100 | VERY_HIGH 76/100 | Watch |
+| 2 | CAP/USD ⭐ | 0.094709 | 58.87 | +0.26% | 1.63x | STRONG 79/100 | HIGH 66/100 | Consider small entry |
+| 3 | DCR/USD | 10.139 | 25.18 | -0.65% | 0.98x | WEAK 18/100 | VERY_HIGH 80/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | DRV/USD ⭐ | 0.26962 | 76.80 | +0.28% | 1.44x | 7310 | STRONG 88/100 | HIGH 61/100 | Watch |
-| 2 | TRUST/USD | 0.05081 | 28.63 | +0.08% | 1.51x | 3194 | WEAK 39/100 | VERY_HIGH 79/100 | Watch |
+| 1 | CAP/USD ⭐ | 0.094681 | 79.44 | +0.26% | 1.63x | 4312 | STRONG 95/100 | HIGH 60/100 | Consider small entry |
+| 2 | TRUST/USD | 0.05081 | 35.48 | +0.38% | 3.15x | 3191 | MODERATE 68/100 | VERY_HIGH 73/100 | Watch |
 
-**Same-run overlap:** DRV/USD
+**Same-run overlap:** CAP/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
