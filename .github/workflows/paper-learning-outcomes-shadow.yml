@@ -112,11 +112,10 @@ jobs:
           git merge-base --is-ancestor "$BASE" refs/remotes/origin/paper-proof-ledger || {
             echo "LEARNING_REMOTE_HISTORY_REWRITTEN_ABSTAIN"; exit 1;
           }
-          if test "$GITHUB_EVENT_NAME" != workflow_run; then
-            test "$(git rev-parse refs/remotes/origin/paper-proof-ledger)" = "$BASE" || {
-              echo "LEARNING_REMOTE_MOVED_ABSTAIN"; exit 1;
-            }
-          fi
+          # The canonical writer advances this branch during long read-only audits.
+          # BASE is an immutable authenticated commit; requiring it to remain the
+          # branch tip would reject valid evidence whenever a new writer succeeds.
+          # The ancestry assertion above still rejects rewritten source history.
       - uses: actions/upload-artifact@v4
         if: always()
         with:
