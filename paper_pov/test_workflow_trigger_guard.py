@@ -80,7 +80,7 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertNotRegex(read_only, r"(?m)^\s*contents:\s*write")
         self.assertNotIn("gh release upload", read_only)
         self.assertEqual(len(re.findall(r"(?m)^\s*contents:\s*write", retention)), 1)
-        self.assertIn("if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG != ''))", retention)
+        self.assertIn("if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && vars.MARKET_WIDE_LEARNING_ENABLED != 'false'))", retention)
         self.assertIn("needs: market-wide-shadow-learning", retention)
         self.assertIn("persist-credentials: false", retention)
         self.assertNotIn("paper-proof-ledger", retention)
@@ -133,7 +133,7 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertLess(history.index("Verify one-time approved historical bootstrap"), history.index("Recover bounded historical windows"))
         self.assertIn('"completed:success:$BOOTSTRAP_RUN:$BOOTSTRAP_SHA"', history)
         retention = learning.split("\n  retain-main-learning-durable-checkpoint:", 1)[1]
-        self.assertIn("CHECKPOINT_RELEASE: ${{ github.event_name == 'push' && 'market-wide-research-v1' || vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG }}", retention)
+        self.assertIn("CHECKPOINT_RELEASE: ${{ vars.MARKET_WIDE_CHECKPOINT_RELEASE_TAG || 'market-wide-research-v1' }}", retention)
 
 
     def test_legacy_workflow_publishes_same_run_challenger_and_shadow(self):
