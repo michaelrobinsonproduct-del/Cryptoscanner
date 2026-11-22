@@ -2,31 +2,29 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-22T03:40:52.733050+00:00
+**UTC as-of:** 2026-11-22T03:51:00.502838+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44981634992
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44982358480
 **Source SHA:** 4066e028afbd46ef7ad268722dcaaaa2ca6a4e7e
-**Previous ledger commit:** 9548575b3d1d59685dfc924c7ac7b8ac9388cc96 (atomic ledger/results publication)
-**Ledger generation:** 1228 (remote push/readback verified)
+**Previous ledger commit:** 134a0232b35a8707c560e0a1dd9671c5a4fc2501 (atomic ledger/results publication)
+**Ledger generation:** 1229 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 2s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 7.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | ZBCN/USD | 0.001808 | 41.953 | 46.343 | +4.69% | +0.11% | 0.51x | 38.9 | 2026-11-22T03:40:50.416750+00:00 | Not calibrated | WEAK 26/100 | EXTREME 87/100 | Do nothing | WATCH |
-| 2 | PEARL/USD | 1.9661 | 29.799 | 35.836 | +0.91% | -0.07% | 0.43x | 27.5 | 2026-11-22T03:40:50.416750+00:00 | Not calibrated | WEAK 10/100 | EXTREME 88/100 | Do nothing | WATCH |
-| 3 | SPX/USD | 0.2816 | 21.175 | 27.917 | +0.79% | +0.50% | 0.08x | 21.3 | 2026-11-22T03:40:50.416750+00:00 | Not calibrated | WEAK 31/100 | EXTREME 87/100 | Do nothing | WATCH |
+| 1 | ZBCN/USD | 0.001816 | 63.116 | 55.142 | +5.15% | +1.00% | 1.30x | 27.6 | 2026-11-22T03:50:57.812606+00:00 | Not calibrated | MODERATE 57/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 2 | SPX/USD | 0.2814 | 15.847 | 23.824 | +0.72% | +0.25% | 0.08x | 28.4 | 2026-11-22T03:50:57.812606+00:00 | Not calibrated | WEAK 28/100 | EXTREME 87/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | ZBCN/USD | 46.343 | 0.001808 | +0.11% | 0.51x |
-| 2 | PEARL/USD | 35.836 | 1.9661 | -0.07% | 0.43x |
-| 3 | SPX/USD | 27.917 | 0.2816 | +0.50% | 0.08x |
+| 1 | ZBCN/USD | 55.142 | 0.001816 | +1.00% | 1.30x |
+| 2 | SPX/USD | 23.824 | 0.2814 | +0.25% | 0.08x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,15 +40,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1228; predictions: 9891; observations: 742982.
-- Matured sampled outcomes across 1/6/24/48h: 13871; gap abstentions: 21934. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1229; predictions: 9893; observations: 743590.
+- Matured sampled outcomes across 1/6/24/48h: 13895; gap abstentions: 21939. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 28 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 4; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 5; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -59,22 +57,21 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44981634992 · **Generation:** 1228 · **Legacy run:** 44981634992
-**Main quote time:** 2026-11-22T03:40:52.733050+00:00 · **Legacy report time:** 2026-11-22T03:41:36.122099+00:00
+**Writer:** 44982358480 · **Generation:** 1229 · **Legacy run:** 44982358480
+**Main quote time:** 2026-11-22T03:51:00.502838+00:00 · **Legacy report time:** 2026-11-22T03:52:05.007325+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | ZBCN/USD | 0.001808 | 41.95 | +0.11% | 0.51x | WEAK 26/100 | EXTREME 87/100 | Do nothing |
-| 2 | PEARL/USD | 1.9661 | 29.80 | -0.07% | 0.43x | WEAK 10/100 | EXTREME 88/100 | Do nothing |
-| 3 | SPX/USD | 0.2816 | 21.18 | +0.50% | 0.08x | WEAK 31/100 | EXTREME 87/100 | Do nothing |
+| 1 | ZBCN/USD ⭐ | 0.001816 | 63.12 | +1.00% | 1.30x | MODERATE 67/100 | VERY_HIGH 72/100 | Watch |
+| 2 | SPX/USD | 0.2814 | 15.85 | +0.25% | 0.08x | WEAK 28/100 | EXTREME 87/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
+| 1 | ZBCN/USD ⭐ | 0.001816 | 75.91 | +1.00% | 1.30x | 3463 | STRONG 73/100 | VERY_HIGH 72/100 | Watch |
 
-**Same-run overlap:** None
+**Same-run overlap:** ZBCN/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
