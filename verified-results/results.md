@@ -2,33 +2,31 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-22T06:21:01.431689+00:00
+**UTC as-of:** 2026-11-22T06:30:52.094530+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44993204701
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44993953128
 **Source SHA:** 4066e028afbd46ef7ad268722dcaaaa2ca6a4e7e
-**Previous ledger commit:** 432158a3ce8f193ba5e9500e7e7355a2ab7bf355 (atomic ledger/results publication)
-**Ledger generation:** 1244 (remote push/readback verified)
+**Previous ledger commit:** 276198f9e7fce3b6d33f083dd5f7d4572fb3486e (atomic ledger/results publication)
+**Ledger generation:** 1245 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 13.
+**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 14.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | ZEC/USD | 783.42 | 72.231 | 58.192 | +0.67% | -0.19% | 10.00x | 3.1 | 2026-11-22T06:20:58.133656+00:00 | Not calibrated | MODERATE 66/100 | HIGH 61/100 | Watch | WATCH |
-| 2 | MEGA/USD | 0.0487 | 61.043 | 38.646 | +1.69% | +1.48% | 3.44x | 8.2 | 2026-11-22T06:20:58.133656+00:00 | Not calibrated | STRONG 86/100 | HIGH 67/100 | Watch | WATCH |
-| 3 | TRUMP/USD | 0.891 | 40.235 | 32.733 | +0.56% | +0.34% | 1.58x | 11.2 | 2026-11-22T06:20:58.133656+00:00 | Not calibrated | MODERATE 60/100 | HIGH 66/100 | Watch | WATCH |
-| 4 | PEARL/USD | 1.9588 | 33.014 | 36.581 | +0.54% | -0.62% | 0.95x | 18.9 | 2026-11-22T06:20:58.133656+00:00 | Not calibrated | WEAK 17/100 | VERY_HIGH 74/100 | Do nothing | WATCH |
+| 1 | ZEC/USD | 785.13 | 57.597 | 59.285 | +0.89% | +0.47% | 0.59x | 4.0 | 2026-11-22T06:30:48.078618+00:00 | Not calibrated | MODERATE 59/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 2 | TRUMP/USD | 0.895 | 49.961 | 30.456 | +1.02% | +0.90% | 2.94x | 22.4 | 2026-11-22T06:30:48.078618+00:00 | Not calibrated | STRONG 70/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 3 | PEARL/USD | 1.9695 | 39.798 | 36.216 | +1.09% | +0.51% | 1.11x | 27.5 | 2026-11-22T06:30:48.078618+00:00 | Not calibrated | MODERATE 45/100 | VERY_HIGH 74/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | ZEC/USD | 58.192 | 783.42 | -0.19% | 10.00x |
-| 2 | MEGA/USD | 38.646 | 0.0487 | +1.48% | 3.44x |
-| 3 | PEARL/USD | 36.581 | 1.9588 | -0.62% | 0.95x |
-| 4 | TRUMP/USD | 32.733 | 0.891 | +0.34% | 1.58x |
+| 1 | ZEC/USD | 59.285 | 785.13 | +0.47% | 0.59x |
+| 2 | PEARL/USD | 36.216 | 1.9695 | +0.51% | 1.11x |
+| 3 | TRUMP/USD | 30.456 | 0.895 | +0.90% | 2.94x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -44,15 +42,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1244; predictions: 9936; observations: 752710.
-- Matured sampled outcomes across 1/6/24/48h: 14212; gap abstentions: 21994. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1245; predictions: 9939; observations: 753318.
+- Matured sampled outcomes across 1/6/24/48h: 14231; gap abstentions: 21999. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 55 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 9; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 11; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -61,23 +59,23 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44993204701 · **Generation:** 1244 · **Legacy run:** 44993204701
-**Main quote time:** 2026-11-22T06:21:01.431689+00:00 · **Legacy report time:** 2026-11-22T06:22:04.763162+00:00
+**Writer:** 44993953128 · **Generation:** 1245 · **Legacy run:** 44993953128
+**Main quote time:** 2026-11-22T06:30:52.094530+00:00 · **Legacy report time:** 2026-11-22T06:31:32.509322+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | ZEC/USD | 783.42 | 72.23 | -0.19% | 10.00x | MODERATE 66/100 | HIGH 61/100 | Watch |
-| 2 | MEGA/USD | 0.0487 | 61.04 | +1.48% | 3.44x | STRONG 86/100 | HIGH 67/100 | Watch |
-| 3 | TRUMP/USD ⭐ | 0.891 | 40.23 | +0.34% | 1.58x | STRONG 70/100 | HIGH 66/100 | Watch |
-| 4 | PEARL/USD | 1.9588 | 33.01 | -0.62% | 0.95x | WEAK 17/100 | VERY_HIGH 74/100 | Do nothing |
+| 1 | ZEC/USD | 785.13 | 57.60 | +0.47% | 0.59x | MODERATE 59/100 | VERY_HIGH 70/100 | Watch |
+| 2 | TRUMP/USD ⭐ | 0.895 | 49.96 | +0.90% | 2.94x | STRONG 80/100 | VERY_HIGH 72/100 | Watch |
+| 3 | PEARL/USD ⭐ | 1.9695 | 39.80 | +0.51% | 1.11x | MODERATE 55/100 | VERY_HIGH 74/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | TRUMP/USD ⭐ | 0.889 | 32.05 | +0.34% | 1.58x | 2919 | MODERATE 66/100 | HIGH 66/100 | Watch |
+| 1 | TRUMP/USD ⭐ | 0.895 | 47.38 | +0.90% | 2.94x | 2944 | STRONG 84/100 | HIGH 66/100 | Consider small entry |
+| 2 | PEARL/USD ⭐ | 1.9699 | 44.57 | +0.51% | 1.11x | 8695 | MODERATE 57/100 | VERY_HIGH 74/100 | Watch |
 
-**Same-run overlap:** TRUMP/USD
+**Same-run overlap:** TRUMP/USD, PEARL/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
