@@ -330,7 +330,7 @@ def stage_rollover(previous, checkpoint_git_sha, destination, *, full_replay=Tru
             shutil.rmtree(temporary)
 
 
-def verify_checkpoint_origin(directory, git_repository, full_replay=True):
+def verify_checkpoint_origin(directory, git_repository, full_replay=True, _verified_git_states=None):
     """Verify checkpoint identity against its immutable Git origin.
 
     Runtime bounded reads compare the sealed checkpoint with the exact
@@ -348,7 +348,8 @@ def verify_checkpoint_origin(directory, git_repository, full_replay=True):
             raise ValueError("Partially archived checkpoint commit")
         if has_packed:
             if full_replay:
-                state, mode = read_git_state(git_repository, commit, full_replay=True)
+                state, mode = read_git_state(git_repository, commit, full_replay=True,
+                                             _verified_git_states=_verified_git_states)
                 if mode != "segmented" or storage.unpack_snapshot(checkpoint) != state:
                     raise ValueError("Archived packed checkpoint differs from Git history")
             else:
@@ -404,7 +405,7 @@ def _git_has(repository, commit, path):
     return result.returncode == 0
 
 
-def read_git_state(repository, commit, full_replay=False):
+def read_git_state(repository, commit, full_replay=False, _verified_git_states=None):
     """Read legacy or packed Git commit with the SAME verified ledger contract.
 
     No remote access, no writer, and no fallback when a packed manifest or
@@ -412,6 +413,13 @@ def read_git_state(repository, commit, full_replay=False):
     """
     if not _hex(commit, 40):
         raise ValueError("Git state requires an exact commit SHA")
+    # Reuse only fully authenticated, exact-commit results within this audit.
+    # No persistent cache, no trust across repositories or separate invocations.
+    if _verified_git_states is None:
+        _verified_git_states = {}
+    key = (str(Path(repository).resolve()), commit, bool(full_replay))
+    if key in _verified_git_states:
+        return _verified_git_states[key]
     resolved = _git(repository, "rev-parse", "--verify", commit + "^{commit}").decode().strip()
     if resolved != commit:
         raise ValueError("Git commit identity mismatch")
@@ -468,7 +476,9 @@ def read_git_state(repository, commit, full_replay=False):
                     _git_has(repository, parent, MANIFEST) or
                     _git_has(repository, parent, SNAPSHOT)):
                 raise ValueError("Legacy genesis did not introduce ledger: unsafe downgrade")
-        return state, "legacy"
+        result = (state, "legacy")
+        _verified_git_states[key] = result
+        return result
     manifest_bytes = _git(repository, "show", commit + ":" + MANIFEST)
     if len(manifest_bytes) > MAX_MANIFEST_BYTES:
         raise ValueError("Git manifest exceeds bound")
@@ -494,8 +504,11 @@ def read_git_state(repository, commit, full_replay=False):
                 raise ValueError("Git segment exceeds bound")
             _write(root / path, data)
         state, _ = read_state(root, full_replay)
-        verify_checkpoint_origin(root, repository, full_replay=full_replay)
-        return state, "segmented"
+        verify_checkpoint_origin(root, repository, full_replay=full_replay,
+                                 _verified_git_states=_verified_git_states)
+        result = (state, "segmented")
+        _verified_git_states[key] = result
+        return result
 
 
 def main(argv=None):
