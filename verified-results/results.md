@@ -2,41 +2,45 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-22T01:43:11.748625+00:00
+**UTC as-of:** 2026-11-22T01:51:07.687641+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44972474832
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/44973250956
 **Source SHA:** 4066e028afbd46ef7ad268722dcaaaa2ca6a4e7e
-**Previous ledger commit:** 24642434c36825755c7a53a26076a0a09579d3c1 (atomic ledger/results publication)
-**Ledger generation:** 1216 (remote push/readback verified)
+**Previous ledger commit:** 71cbd3e0fdbb8d29d3761f8af3f8b0275bec7f30 (atomic ledger/results publication)
+**Ledger generation:** 1217 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 8s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 9s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 24.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | NEAR/USD | 2.9075 | 55.917 | 58.078 | +0.73% | +0.33% | 0.62x | 4.1 | 2026-11-22T01:43:03.799310+00:00 | Not calibrated | MODERATE 58/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 2 | TAO/USD | 186.3897 | 54.339 | 55.026 | +0.36% | +0.04% | 0.91x | 4.9 | 2026-11-22T01:43:03.799310+00:00 | Not calibrated | MODERATE 47/100 | HIGH 62/100 | Watch | WATCH |
-| 3 | PEARL/USD | 1.991 | 48.764 | 48.475 | +2.19% | +0.89% | 0.59x | 19.6 | 2026-11-22T01:43:03.799310+00:00 | Not calibrated | MODERATE 49/100 | VERY_HIGH 76/100 | Watch | WATCH |
-| 4 | DRV/USD | 0.3439 | 45.917 | 55.998 | +2.60% | -2.12% | 1.05x | 20.4 | 2026-11-22T01:43:03.799310+00:00 | Not calibrated | WEAK 23/100 | VERY_HIGH 84/100 | Do nothing | WATCH |
-| 5 | ENA/USD | 0.0986 | 43.734 | 38.602 | +0.31% | +0.20% | 1.41x | 10.2 | 2026-11-22T01:43:03.799310+00:00 | Not calibrated | MODERATE 62/100 | HIGH 61/100 | Watch | WATCH |
-| 6 | ZRO/USD | 1.195 | 42.406 | 44.931 | +1.88% | +0.84% | 0.33x | 16.8 | 2026-11-22T01:43:03.799310+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 76/100 | Watch | WATCH |
-| 7 | CAP/USD | 0.092343 | 28.813 | 35.062 | +0.42% | -0.39% | 0.57x | 6.1 | 2026-11-22T01:43:03.799310+00:00 | Not calibrated | WEAK 19/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
-| 8 | PENGU/USD | 0.004292 | 26.898 | 34.569 | +0.30% | +0.12% | 0.17x | 4.7 | 2026-11-22T01:43:03.799310+00:00 | Not calibrated | WEAK 33/100 | VERY_HIGH 75/100 | Do nothing | WATCH |
+| 1 | TAO/USD | 186.8566 | 58.550 | 56.810 | +0.61% | +0.51% | 0.92x | 4.9 | 2026-11-22T01:50:58.943257+00:00 | Not calibrated | MODERATE 59/100 | HIGH 62/100 | Watch | WATCH |
+| 2 | NEAR/USD | 2.9105 | 58.208 | 59.323 | +0.84% | +0.29% | 0.74x | 3.1 | 2026-11-22T01:50:58.943257+00:00 | Not calibrated | MODERATE 59/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 3 | ZEC/USD | 782.8 | 53.960 | 58.012 | +0.59% | +0.81% | 0.19x | 2.3 | 2026-11-22T01:50:58.943257+00:00 | Not calibrated | MODERATE 57/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 4 | HYPE/USD | 61.45 | 53.390 | 56.587 | +0.34% | +0.33% | 0.52x | 1.6 | 2026-11-22T01:50:58.943257+00:00 | Not calibrated | MODERATE 57/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 5 | LTC/USD | 39.83 | 51.732 | 54.734 | +0.25% | +0.33% | 0.54x | 2.5 | 2026-11-22T01:50:58.943257+00:00 | Not calibrated | MODERATE 56/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 6 | PEARL/USD | 1.995 | 46.949 | 48.393 | +2.40% | +0.19% | 0.76x | 22.7 | 2026-11-22T01:50:58.943257+00:00 | Not calibrated | WEAK 33/100 | VERY_HIGH 74/100 | Do nothing | WATCH |
+| 7 | RENDER/USD | 1.327 | 46.276 | 46.890 | +1.76% | +1.07% | 0.41x | 7.5 | 2026-11-22T01:50:58.943257+00:00 | Not calibrated | MODERATE 53/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 8 | BNB/USD | 549.33 | 39.712 | 46.206 | +0.35% | +0.30% | 0.20x | 0.7 | 2026-11-22T01:50:58.943257+00:00 | Not calibrated | MODERATE 50/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 9 | ZRO/USD | 1.193 | 38.648 | 43.718 | +1.71% | +0.34% | 0.32x | 16.8 | 2026-11-22T01:50:58.943257+00:00 | Not calibrated | WEAK 44/100 | VERY_HIGH 76/100 | Watch | WATCH |
+| 10 | PENGU/USD | 0.004296 | 31.479 | 36.393 | +0.40% | +0.42% | 0.30x | 2.3 | 2026-11-22T01:50:58.943257+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 75/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | NEAR/USD | 58.078 | 2.9075 | +0.33% | 0.62x |
-| 2 | DRV/USD | 55.998 | 0.3439 | -2.12% | 1.05x |
-| 3 | TAO/USD | 55.026 | 186.3897 | +0.04% | 0.91x |
-| 4 | PEARL/USD | 48.475 | 1.991 | +0.89% | 0.59x |
-| 5 | ZRO/USD | 44.931 | 1.195 | +0.84% | 0.33x |
-| 6 | ENA/USD | 38.602 | 0.0986 | +0.20% | 1.41x |
-| 7 | CAP/USD | 35.062 | 0.092343 | -0.39% | 0.57x |
-| 8 | PENGU/USD | 34.569 | 0.004292 | +0.12% | 0.17x |
+| 1 | NEAR/USD | 59.323 | 2.9105 | +0.29% | 0.74x |
+| 2 | ZEC/USD | 58.012 | 782.8 | +0.81% | 0.19x |
+| 3 | TAO/USD | 56.810 | 186.8566 | +0.51% | 0.92x |
+| 4 | HYPE/USD | 56.587 | 61.45 | +0.33% | 0.52x |
+| 5 | LTC/USD | 54.734 | 39.83 | +0.33% | 0.54x |
+| 6 | PEARL/USD | 48.393 | 1.995 | +0.19% | 0.76x |
+| 7 | RENDER/USD | 46.890 | 1.327 | +1.07% | 0.41x |
+| 8 | BNB/USD | 46.206 | 549.33 | +0.30% | 0.20x |
+| 9 | ZRO/USD | 43.718 | 1.193 | +0.34% | 0.32x |
+| 10 | PENGU/USD | 36.393 | 0.004296 | +0.42% | 0.30x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -52,15 +56,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1216; predictions: 9831; observations: 735686.
-- Matured sampled outcomes across 1/6/24/48h: 13491; gap abstentions: 21815. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1217; predictions: 9841; observations: 736294.
+- Matured sampled outcomes across 1/6/24/48h: 13528; gap abstentions: 21831. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 22 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 16; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 14; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -69,25 +73,27 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 44972474832 · **Generation:** 1216 · **Legacy run:** 44972474832
-**Main quote time:** 2026-11-22T01:43:11.748625+00:00 · **Legacy report time:** 2026-11-22T01:44:10.457441+00:00
+**Writer:** 44973250956 · **Generation:** 1217 · **Legacy run:** 44973250956
+**Main quote time:** 2026-11-22T01:51:07.687641+00:00 · **Legacy report time:** 2026-11-22T01:52:06.452779+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | NEAR/USD | 2.9075 | 55.92 | +0.33% | 0.62x | MODERATE 58/100 | VERY_HIGH 70/100 | Watch |
-| 2 | TAO/USD | 186.3897 | 54.34 | +0.04% | 0.91x | MODERATE 47/100 | HIGH 62/100 | Watch |
-| 3 | PEARL/USD | 1.991 | 48.76 | +0.89% | 0.59x | MODERATE 49/100 | VERY_HIGH 76/100 | Watch |
-| 4 | DRV/USD | 0.3439 | 45.92 | -2.12% | 1.05x | WEAK 23/100 | VERY_HIGH 84/100 | Do nothing |
-| 5 | ENA/USD | 0.0986 | 43.73 | +0.20% | 1.41x | MODERATE 62/100 | HIGH 61/100 | Watch |
-| 6 | ZRO/USD | 1.195 | 42.41 | +0.84% | 0.33x | MODERATE 46/100 | VERY_HIGH 76/100 | Watch |
-| 7 | CAP/USD | 0.092343 | 28.81 | -0.39% | 0.57x | WEAK 19/100 | VERY_HIGH 81/100 | Do nothing |
-| 8 | PENGU/USD | 0.004292 | 26.90 | +0.12% | 0.17x | WEAK 33/100 | VERY_HIGH 75/100 | Do nothing |
+| 1 | TAO/USD | 186.8566 | 58.55 | +0.51% | 0.92x | MODERATE 59/100 | HIGH 62/100 | Watch |
+| 2 | NEAR/USD | 2.9105 | 58.21 | +0.29% | 0.74x | MODERATE 59/100 | VERY_HIGH 70/100 | Watch |
+| 3 | ZEC/USD | 782.8 | 53.96 | +0.81% | 0.19x | MODERATE 57/100 | VERY_HIGH 70/100 | Watch |
+| 4 | HYPE/USD | 61.45 | 53.39 | +0.33% | 0.52x | MODERATE 57/100 | VERY_HIGH 70/100 | Watch |
+| 5 | LTC/USD | 39.83 | 51.73 | +0.33% | 0.54x | MODERATE 56/100 | VERY_HIGH 70/100 | Watch |
+| 6 | PEARL/USD | 1.995 | 46.95 | +0.19% | 0.76x | WEAK 33/100 | VERY_HIGH 74/100 | Do nothing |
+| 7 | RENDER/USD | 1.327 | 46.28 | +1.07% | 0.41x | MODERATE 53/100 | VERY_HIGH 70/100 | Watch |
+| 8 | BNB/USD | 549.33 | 39.71 | +0.30% | 0.20x | MODERATE 50/100 | VERY_HIGH 70/100 | Watch |
+| 9 | ZRO/USD | 1.193 | 38.65 | +0.34% | 0.32x | WEAK 44/100 | VERY_HIGH 76/100 | Watch |
+| 10 | PENGU/USD | 0.004296 | 31.48 | +0.42% | 0.30x | MODERATE 46/100 | VERY_HIGH 75/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
+| 1 | ETH/USD | 1684.31 | 56.00 | +0.31% | 1.43x | 63175 | STRONG 73/100 | HIGH 55/100 | Watch |
 
 **Same-run overlap:** None
 A ⭐ means both independently executed scanners identified the exact same /USD market.
