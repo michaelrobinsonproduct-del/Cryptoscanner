@@ -30,9 +30,10 @@ jobs:
        github.event.workflow_run.repository.full_name == 'michaelrobinsonproduct-del/Cryptoscanner' &&
        github.event.workflow_run.head_branch == 'main' &&
        github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.run_number % 6 == 0 &&
        (github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch'))
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
         with:
