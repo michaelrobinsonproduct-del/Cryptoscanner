@@ -2,27 +2,29 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-23T00:31:15.845790+00:00
+**UTC as-of:** 2026-11-23T00:41:17.951741+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45089079732
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45090057587
 **Source SHA:** 193371a597e6dbc5a6a884defbe9e1519a6a183a
-**Previous ledger commit:** 95e7bb683b6490b6435a635df22bdd96f7e44958 (atomic ledger/results publication)
-**Ledger generation:** 1356 (remote push/readback verified)
+**Previous ledger commit:** 72a4e7763f3ada2bfb3fe4ecdd1abcde0efbc4dc (atomic ledger/results publication)
+**Ledger generation:** 1357 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 10.
+**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 11.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | SPX/USD | 0.2843 | 36.792 | 20.374 | +0.64% | +0.28% | 3.01x | 31.8 | 2026-11-23T00:31:13.060473+00:00 | Not calibrated | MODERATE 63/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 1 | SPX/USD | 0.2838 | 43.191 | 24.464 | +0.46% | +0.75% | 27.87x | 21.1 | 2026-11-23T00:41:13.331403+00:00 | Not calibrated | MODERATE 67/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 2 | PEARL/USD | 2.0599 | 32.287 | 29.146 | +0.27% | +0.31% | 1.16x | 26.3 | 2026-11-23T00:41:13.331403+00:00 | Not calibrated | WEAK 41/100 | VERY_HIGH 74/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | SPX/USD | 20.374 | 0.2843 | +0.28% | 3.01x |
+| 1 | PEARL/USD | 29.146 | 2.0599 | +0.31% | 1.16x |
+| 2 | SPX/USD | 24.464 | 0.2838 | +0.75% | 27.87x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -38,9 +40,9 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1356; predictions: 11150; observations: 820910.
-- Matured sampled outcomes across 1/6/24/48h: 17482; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
-- Observed +30% hits: 62 (sampled only; not a success-rate estimate).
+- Persisted scans: 1357; predictions: 11152; observations: 821519.
+- Matured sampled outcomes across 1/6/24/48h: 17520; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Observed +30% hits: 63 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
@@ -55,20 +57,21 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45089079732 · **Generation:** 1356 · **Legacy run:** 45089079732
-**Main quote time:** 2026-11-23T00:31:15.845790+00:00 · **Legacy report time:** 2026-11-23T00:32:25.044622+00:00
+**Writer:** 45090057587 · **Generation:** 1357 · **Legacy run:** 45090057587
+**Main quote time:** 2026-11-23T00:41:17.951741+00:00 · **Legacy report time:** 2026-11-23T00:42:07.053665+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | SPX/USD ⭐ | 0.2843 | 36.79 | +0.28% | 3.01x | STRONG 73/100 | VERY_HIGH 72/100 | Watch |
+| 1 | SPX/USD | 0.2838 | 43.19 | +0.75% | 27.87x | MODERATE 67/100 | VERY_HIGH 72/100 | Watch |
+| 2 | PEARL/USD ⭐ | 2.0599 | 32.29 | +0.31% | 1.16x | MODERATE 51/100 | VERY_HIGH 74/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | SPX/USD ⭐ | 0.2843 | 26.92 | +0.28% | 3.01x | 1121 | MODERATE 68/100 | VERY_HIGH 72/100 | Watch |
+| 1 | PEARL/USD ⭐ | 2.0594 | 32.73 | +0.31% | 1.16x | 6304 | MODERATE 51/100 | VERY_HIGH 74/100 | Watch |
 
-**Same-run overlap:** SPX/USD
+**Same-run overlap:** PEARL/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
