@@ -2,33 +2,35 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-23T01:01:19.987581+00:00
+**UTC as-of:** 2026-11-23T01:11:20.189632+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45091971503
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45092935555
 **Source SHA:** 193371a597e6dbc5a6a884defbe9e1519a6a183a
-**Previous ledger commit:** 5ea044ca978161dfc4afc586347f51cbc73b1d07 (atomic ledger/results publication)
-**Ledger generation:** 1359 (remote push/readback verified)
+**Previous ledger commit:** 444351bb3561e846483b472187c24b0afe03bc65 (atomic ledger/results publication)
+**Ledger generation:** 1360 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 15.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 16.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | DRV/USD | 0.39336 | 89.501 | 86.140 | +6.64% | +0.44% | 1.12x | 8.6 | 2026-11-23T01:01:15.774640+00:00 | Not calibrated | STRONG 80/100 | HIGH 62/100 | Watch | WATCH |
-| 2 | PEARL/USD | 2.1045 | 78.889 | 51.094 | +2.44% | +2.56% | 4.79x | 14.8 | 2026-11-23T01:01:15.774640+00:00 | Not calibrated | STRONG 89/100 | HIGH 61/100 | Consider small entry | WATCH |
-| 3 | SPX/USD | 0.2843 | 41.046 | 23.927 | +0.64% | +0.42% | 5.53x | 24.7 | 2026-11-23T01:01:15.774640+00:00 | Not calibrated | MODERATE 66/100 | VERY_HIGH 72/100 | Watch | WATCH |
-| 4 | CPOOL/USD | 0.02277 | 40.560 | 41.869 | +1.97% | -0.65% | 1.20x | 8.8 | 2026-11-23T01:01:15.774640+00:00 | Not calibrated | WEAK 30/100 | VERY_HIGH 73/100 | Do nothing | WATCH |
+| 1 | DRV/USD | 0.38756 | 60.876 | 72.171 | +5.07% | -1.56% | 0.65x | 17.3 | 2026-11-23T01:11:15.928988+00:00 | Not calibrated | WEAK 30/100 | EXTREME 86/100 | Do nothing | WATCH |
+| 2 | PEARL/USD | 2.0996 | 60.303 | 47.922 | +2.20% | -0.52% | 4.68x | 17.7 | 2026-11-23T01:11:15.928988+00:00 | Not calibrated | MODERATE 55/100 | HIGH 67/100 | Watch | WATCH |
+| 3 | PAXG/USD | 3589.06 | 58.364 | 46.152 | +0.47% | +0.59% | 1.93x | 1.8 | 2026-11-23T01:11:15.928988+00:00 | Not calibrated | STRONG 74/100 | HIGH 55/100 | Watch | WATCH |
+| 4 | XAUT/USD | 3588.4 | 53.414 | 35.454 | +0.46% | +0.59% | 6.36x | 1.1 | 2026-11-23T01:11:15.928988+00:00 | Not calibrated | STRONG 82/100 | HIGH 60/100 | Watch | WATCH |
+| 5 | SPX/USD | 0.2837 | 21.661 | 25.966 | +0.42% | -0.18% | 0.66x | 17.7 | 2026-11-23T01:11:15.928988+00:00 | Not calibrated | WEAK 11/100 | EXTREME 87/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | DRV/USD | 86.140 | 0.39336 | +0.44% | 1.12x |
-| 2 | PEARL/USD | 51.094 | 2.1045 | +2.56% | 4.79x |
-| 3 | CPOOL/USD | 41.869 | 0.02277 | -0.65% | 1.20x |
-| 4 | SPX/USD | 23.927 | 0.2843 | +0.42% | 5.53x |
+| 1 | DRV/USD | 72.171 | 0.38756 | -1.56% | 0.65x |
+| 2 | PEARL/USD | 47.922 | 2.0996 | -0.52% | 4.68x |
+| 3 | PAXG/USD | 46.152 | 3589.06 | +0.59% | 1.93x |
+| 4 | XAUT/USD | 35.454 | 3588.4 | +0.59% | 6.36x |
+| 5 | SPX/USD | 25.966 | 0.2837 | -0.18% | 0.66x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -44,9 +46,9 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1359; predictions: 11161; observations: 822737.
-- Matured sampled outcomes across 1/6/24/48h: 17570; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
-- Observed +30% hits: 65 (sampled only; not a success-rate estimate).
+- Persisted scans: 1360; predictions: 11166; observations: 823346.
+- Matured sampled outcomes across 1/6/24/48h: 17607; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Observed +30% hits: 67 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
@@ -61,25 +63,26 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45091971503 · **Generation:** 1359 · **Legacy run:** 45091971503
-**Main quote time:** 2026-11-23T01:01:19.987581+00:00 · **Legacy report time:** 2026-11-23T01:02:28.336135+00:00
+**Writer:** 45092935555 · **Generation:** 1360 · **Legacy run:** 45092935555
+**Main quote time:** 2026-11-23T01:11:20.189632+00:00 · **Legacy report time:** 2026-11-23T01:12:27.281548+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | DRV/USD ⭐ | 0.39336 | 89.50 | +0.44% | 1.12x | STRONG 90/100 | HIGH 62/100 | Watch |
-| 2 | PEARL/USD ⭐ | 2.1045 | 78.89 | +2.56% | 4.79x | STRONG 99/100 | HIGH 61/100 | Consider small entry |
-| 3 | SPX/USD ⭐ | 0.2843 | 41.05 | +0.42% | 5.53x | STRONG 76/100 | VERY_HIGH 72/100 | Watch |
-| 4 | CPOOL/USD | 0.02277 | 40.56 | -0.65% | 1.20x | WEAK 30/100 | VERY_HIGH 73/100 | Do nothing |
+| 1 | DRV/USD | 0.38756 | 60.88 | -1.56% | 0.65x | WEAK 30/100 | EXTREME 86/100 | Do nothing |
+| 2 | PEARL/USD | 2.0996 | 60.30 | -0.52% | 4.68x | MODERATE 55/100 | HIGH 67/100 | Watch |
+| 3 | PAXG/USD ⭐ | 3589.06 | 58.36 | +0.59% | 1.93x | STRONG 84/100 | HIGH 55/100 | Consider small entry |
+| 4 | XAUT/USD ⭐ | 3588.4 | 53.41 | +0.59% | 6.36x | STRONG 92/100 | HIGH 60/100 | Consider small entry |
+| 5 | SPX/USD | 0.2837 | 21.66 | -0.18% | 0.66x | WEAK 11/100 | EXTREME 87/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | DRV/USD ⭐ | 0.3926 | 81.04 | +0.44% | 1.12x | 17383 | STRONG 71/100 | VERY_HIGH 84/100 | Watch |
-| 2 | PEARL/USD ⭐ | 2.1032 | 73.02 | +2.56% | 4.79x | 6424 | STRONG 97/100 | HIGH 61/100 | Consider small entry |
-| 3 | SPX/USD ⭐ | 0.2846 | 28.73 | +0.42% | 5.53x | 1132 | MODERATE 69/100 | VERY_HIGH 72/100 | Watch |
+| 1 | PAXG/USD ⭐ | 3595.58 | 43.84 | +0.59% | 1.93x | 7018 | STRONG 72/100 | HIGH 61/100 | Watch |
+| 2 | XAUT/USD ⭐ | 3589 | 42.86 | +0.59% | 6.36x | 1620 | STRONG 86/100 | HIGH 60/100 | Consider small entry |
+| 3 | AUD/USD | 0.66448 | 39.36 | +0.40% | 1.32x | 3324 | MODERATE 65/100 | HIGH 55/100 | Watch |
 
-**Same-run overlap:** DRV/USD, PEARL/USD, SPX/USD
+**Same-run overlap:** PAXG/USD, XAUT/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
