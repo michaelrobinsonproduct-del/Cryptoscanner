@@ -65,6 +65,48 @@ class PaperScanTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "No fresh"):
             run(zero_volume=True)
 
+    def test_explicit_flat_zero_trade_bar_retains_real_contiguous_evidence(self):
+        def api(path):
+            result = fixture()(path)
+            if path.startswith("OHLC?"):
+                pair = path.split("pair=")[1].split("&")[0]
+                previous_close = result[pair][7][4]
+                result[pair][8][1:] = [previous_close] * 4 + ["0", "0", "0"]
+            return result
+        result = scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+        self.assertEqual(len(result["watch"]), 12)
+        self.assertEqual(result["abstentions"], [])
+        self.assertAlmostEqual(result["watch"][0]["volume_accel"], 5 / 6, places=4)
+
+    def test_zero_trade_price_change_and_nonzero_volume_still_fail_closed(self):
+        for mutation in ("price_change", "positive_volume"):
+            with self.subTest(mutation=mutation):
+                def api(path):
+                    result = fixture()(path)
+                    if path.startswith("OHLC?"):
+                        pair = path.split("pair=")[1].split("&")[0]
+                        price = "1.03" if mutation == "price_change" else result[pair][7][4]
+                        result[pair][8][1:] = [price] * 4 + ["0", "1" if mutation == "positive_volume" else "0", "0"]
+                    return result
+                with self.assertRaisesRegex(RuntimeError, "No fresh.*OHLC candle"):
+                    scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+
+    def test_zero_comparison_volume_remains_unqualified(self):
+        def api(path):
+            result = fixture()(path)
+            if path.startswith("OHLC?"):
+                pair = path.split("pair=")[1].split("&")[0]
+                price = result[pair][0][4]
+                for row in result[pair][1:7]:
+                    row[1:] = [price] * 4 + ["0", "0", "0"]
+            return result
+        with self.assertRaisesRegex(RuntimeError, "invalid previous OHLC volume"):
+            scanner.scan(api=api, clock=lambda: NOW, sleep=lambda _: None)
+
+    def test_total_abstention_reports_exact_reasons_without_invented_candidates(self):
+        with self.assertRaisesRegex(RuntimeError, 'No fresh.*OHLC interval gap.*screened'):
+            run(gap=True)
+
     def test_stale_candle_fails_closed(self):
         with self.assertRaisesRegex(RuntimeError, "No fresh"):
             run(stale=True)

@@ -75,8 +75,23 @@ class MainOnlyPaperTriggerTests(unittest.TestCase):
         self.assertNotIn("  workflow_run:", learning)
         self.assertIn("  workflow_dispatch:", learning)
         self.assertIn("  contents: read", learning)
-        # Only the explicitly enabled main research-release job may write contents.
+        # The approved one-time public research backup publisher (if still
+        # present) and daily main retention job alone have contents: write.
+        # Both are main-only and neither can write the canonical ledger.
         read_only, retention = learning.split("\n  retain-main-learning-durable-checkpoint:", 1)
+        publisher_name = "\n  publish-approved-research-backup:\n"
+        if publisher_name in read_only:
+            self.assertEqual(read_only.count(publisher_name), 1)
+            before, rest = read_only.split(publisher_name, 1)
+            publisher, after = rest.split("\n  paper-ledger-learning:", 1)
+            self.assertIn("if: github.event_name == 'push' && github.ref == 'refs/heads/main'", publisher)
+            self.assertIn("branches: [main]", before.split("\npermissions:", 1)[0])
+            self.assertIn("'scripts/publish_approved_market_research.sh'", before.split("\n  workflow_dispatch:", 1)[0])
+            self.assertEqual(len(re.findall(r"(?m)^\s*contents:\s*write", publisher)), 1)
+            self.assertIn("persist-credentials: false", publisher)
+            self.assertIn("bash scripts/publish_approved_market_research.sh publish", publisher)
+            self.assertNotIn("paper-proof-ledger", publisher)
+            read_only = before + "\n  paper-ledger-learning:" + after
         self.assertNotRegex(read_only, r"(?m)^\s*contents:\s*write")
         self.assertNotIn("gh release upload", read_only)
         self.assertEqual(len(re.findall(r"(?m)^\s*contents:\s*write", retention)), 1)
