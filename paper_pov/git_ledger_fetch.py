@@ -17,8 +17,11 @@ MAX_ANCESTRY_DEPTH = 4096
 
 
 def _git(*args):
+    # The 4096-commit remote fetch can exceed 120 seconds on GitHub runners.
+    # Preserve the full ancestry proof and bound only that network operation.
+    timeout = 480 if args and args[0] == "fetch" else 120
     return subprocess.run(["git", *args], check=True, stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE, timeout=120).stdout
+                          stderr=subprocess.PIPE, timeout=timeout).stdout
 
 
 def _checkpoint_needs_fetch(checkpoint):
