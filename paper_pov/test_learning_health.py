@@ -34,6 +34,21 @@ class HealthTests(unittest.TestCase):
         self.assertFalse(state["predictive_lift_verified"])
         self.assertFalse(state["production_applied"])
 
+    def test_optional_skipped_jobs_are_not_failures(self):
+        observed = jobs(41)
+        observed[41].extend([
+            {"conclusion": "skipped", "steps": []},
+            {"conclusion": "success", "steps": []},
+        ])
+        state = assess(NOW, [run(41, 10)], observed, artifacts(41))
+        self.assertEqual(state["status"], "HEALTHY")
+
+    def test_failed_optional_job_is_not_ignored(self):
+        observed = jobs(41)
+        observed[41].append({"conclusion": "failure", "steps": []})
+        state = assess(NOW, [run(41, 10)], observed, artifacts(41))
+        self.assertEqual(state["status"], "ALERT")
+
     def test_old_success_does_not_mask_staleness(self):
         state = assess(NOW, [run(41, 95)], jobs(41), artifacts(41))
         self.assertIn("NO_VERIFIED_READ_ONLY_LEARNING_90M", state["alerts"])

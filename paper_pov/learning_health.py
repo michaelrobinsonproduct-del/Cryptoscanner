@@ -38,8 +38,10 @@ def assess(now, runs, jobs_by_run, artifacts_by_run, *, maximum_age_minutes=90):
         jobs = jobs_by_run.get(run["id"], [])
         steps = {s.get("name"): s.get("conclusion")
                  for job in jobs for s in job.get("steps", [])}
-        valid_jobs = bool(jobs) and all(j.get("conclusion") == "success"
-                                        for j in jobs)
+        valid_jobs = (bool(jobs)
+                      and any(j.get("conclusion") == "success" for j in jobs)
+                      and all(j.get("conclusion") in ("success", "skipped")
+                              for j in jobs))
         valid_steps = all(steps.get(name) == "success" for name in REQUIRED)
         valid_artifact = any(a.get("name") == "public-paper-learning-" + str(run["id"])
                              and not a.get("expired", True)
