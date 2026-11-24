@@ -458,6 +458,27 @@ class MarketWideLearningTest(unittest.TestCase):
         self.assertEqual(report["coverage_scope"],"PARTIAL_ROTATING_SHARD_PLUS_WATCH_CONTROLS")
 
 
+    def test_shadow_evaluation_model_stays_stable_while_training_can_advance(self):
+        from paper_pov.market_wide_learning import should_switch_scoring_model
+        from paper_pov.shadow_learning_evidence import canonical_digest
+        def model(train, version):
+            m=dict(schema="market_wide_cumulative_shadow_v1",
+                   model=dict(status="SHADOW_ONLY",training_end_utc=train,version=version),
+                   production_applied=False,promotion_authorized=False)
+            m["digest"]=canonical_digest(m)
+            return m
+        old=model("2026-11-01T00:00:00Z","old")
+        new=model("2026-11-02T00:00:00Z","new")
+        old_ready="2026-11-03T00:00:00Z"
+        new_ready="2026-11-04T00:00:00Z"
+        self.assertFalse(should_switch_scoring_model(old,old_ready,new,new_ready,"2026-11-04T01:00:00Z"))
+        self.assertFalse(should_switch_scoring_model(old,old_ready,new,new_ready,"2026-11-05T23:59:59Z"))
+        self.assertTrue(should_switch_scoring_model(old,old_ready,new,new_ready,"2026-11-06T00:00:00Z"))
+        self.assertFalse(should_switch_scoring_model(old,old_ready,new,new_ready,"2026-11-04T00:00:00Z"))
+        self.assertFalse(should_switch_scoring_model(new,new_ready,old,old_ready,"2026-11-10T00:00:00Z"))
+        self.assertFalse(should_switch_scoring_model(old,old_ready,old,old_ready,"2026-11-10T00:00:00Z"))
+
+
     def test_frozen_candidate_reused_only_for_identical_fit_and_data(self):
         from paper_pov.market_wide_learning import choose_fitted_candidate
         from paper_pov.shadow_learning_evidence import canonical_digest
