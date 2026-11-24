@@ -374,6 +374,35 @@ class MarketWideLearningTest(unittest.TestCase):
             recover_market_state(b,a)
 
 
+    def test_prospective_event_metrics_deduplicate_and_require_pre_crossing_alert(self):
+        from paper_pov.market_wide_learning import prospective_event_metrics
+        start = datetime(2026, 11, 1, tzinfo=timezone.utc)
+        at = lambda m: (start+timedelta(minutes=m)).isoformat()
+        def row(key, entry, crossing, base, shadow, pair="GAINUSD", momentum=.01):
+            return (dict(prediction_id=key, pair=pair, entry_utc=at(entry),
+                         baseline_watch=base, shadow_equal_budget_watch=shadow,
+                         features={"momentum_60m":momentum}),
+                    dict(observed_crossing_candle_close_utc=at(crossing)))
+        rows = [row("a", 0, 120, False, True),
+                row("b", 60, 125, True, True),
+                row("c", 121, 130, True, False),
+                row("d", 10, 150, False, False, "OTHERUSD"),
+                row("e", 480, 600, True, False),
+                row("f", 10, 150, False, True)]
+        rows[-1][1].pop("observed_crossing_candle_close_utc")
+        m = prospective_event_metrics(rows)
+        self.assertEqual(m["known_events"], 3)
+        self.assertEqual(m["positive_anchors_missing_event_timing"], 1)
+        self.assertEqual(m["baseline"]["detected_events"], 2)
+        self.assertEqual(m["baseline"]["early_events"], 1)
+        self.assertEqual(m["shadow"]["detected_events"], 1)
+        self.assertEqual(m["shadow"]["early_events"], 1)
+        self.assertEqual(m["shadow"]["missed_events"], 2)
+        self.assertAlmostEqual(m["shadow"]["mean_lead_hours_lower_bound"], 115/60)
+        self.assertFalse(m["measured_lift_verified"])
+        self.assertIsNone(prospective_event_metrics([])["shadow"]["event_recall"])
+
+
     def test_prospective_metrics_separate_model_versions_and_horizons(self):
         from paper_pov.market_wide_learning import prospective_metrics_by_version
         preds=[]
