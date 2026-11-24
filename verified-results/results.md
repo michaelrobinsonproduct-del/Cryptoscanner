@@ -2,41 +2,39 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-24T19:07:17.233496+00:00
+**UTC as-of:** 2026-11-24T19:16:54.027600+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45466333622
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45468122081
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** b099d963c01a07de029380a4b8be80747d9904fd (atomic ledger/results publication)
-**Ledger generation:** 1614 (remote push/readback verified)
+**Previous ledger commit:** edb8ad8f6ebd67bd714a457def81f104639e50b1 (atomic ledger/results publication)
+**Ledger generation:** 1615 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 14.
+**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 13.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | XMR/USD | 503.9 | 77.577 | 78.667 | +3.68% | -0.18% | 0.98x | 4.2 | 2026-11-24T19:07:12.589504+00:00 | Not calibrated | WEAK 44/100 | HIGH 68/100 | Watch | WATCH |
-| 2 | ZEUS/USD | 0.00467 | 69.102 | 54.959 | +6.62% | +2.19% | 1.32x | 42.9 | 2026-11-24T19:07:12.589504+00:00 | Not calibrated | MODERATE 65/100 | EXTREME 89/100 | Do nothing | WATCH |
-| 3 | LUNA/USD | 4.621e-05 | 63.176 | 74.930 | +6.30% | -2.92% | 1.28x | 2.2 | 2026-11-24T19:07:12.589504+00:00 | Not calibrated | WEAK 42/100 | VERY_HIGH 70/100 | Do nothing | WATCH |
-| 4 | VVV/USD | 24.931 | 60.488 | 68.428 | +1.98% | -0.26% | 0.34x | 0.8 | 2026-11-24T19:07:12.589504+00:00 | Not calibrated | WEAK 35/100 | VERY_HIGH 76/100 | Watch | WATCH |
-| 5 | NIGHT/USD | 0.04841 | 54.867 | 41.718 | +0.54% | -0.37% | 4.63x | 6.2 | 2026-11-24T19:07:12.589504+00:00 | Not calibrated | MODERATE 57/100 | HIGH 61/100 | Watch | WATCH |
-| 6 | GBP/USD | 1.31126 | 52.442 | 59.074 | +0.61% | -0.01% | 0.34x | 0.5 | 2026-11-24T19:07:12.589504+00:00 | Not calibrated | WEAK 31/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
-| 7 | AUD/USD | 0.66444 | 45.598 | 44.332 | +0.28% | -0.03% | 1.14x | 1.2 | 2026-11-24T19:07:12.589504+00:00 | Not calibrated | WEAK 33/100 | HIGH 68/100 | Do nothing | WATCH |
-| 8 | CT/USD | 0.1252 | 44.398 | 28.598 | +1.38% | +0.16% | 4.13x | 23.9 | 2026-11-24T19:07:12.589504+00:00 | Not calibrated | MODERATE 57/100 | VERY_HIGH 79/100 | Watch | WATCH |
+| 1 | LUNA/USD | 4.621e-05 | 82.718 | 72.773 | +6.30% | -0.06% | 2.03x | 6.5 | 2026-11-24T19:16:49.625465+00:00 | Not calibrated | STRONG 71/100 | HIGH 66/100 | Watch | WATCH |
+| 2 | XMR/USD | 502.01 | 67.085 | 72.752 | +3.29% | -0.05% | 0.46x | 10.6 | 2026-11-24T19:16:49.625465+00:00 | Not calibrated | WEAK 34/100 | VERY_HIGH 82/100 | Do nothing | WATCH |
+| 3 | VVV/USD | 24.986 | 59.803 | 66.797 | +2.20% | -0.10% | 0.35x | 7.2 | 2026-11-24T19:16:49.625465+00:00 | Not calibrated | WEAK 35/100 | VERY_HIGH 76/100 | Watch | WATCH |
+| 4 | PEPE/USD | 3.462e-06 | 51.841 | 49.323 | +1.17% | +0.35% | 1.08x | 5.8 | 2026-11-24T19:16:49.625465+00:00 | Not calibrated | MODERATE 61/100 | HIGH 62/100 | Watch | WATCH |
+| 5 | GBP/USD | 1.31139 | 51.066 | 59.296 | +0.62% | +0.04% | 0.16x | 0.2 | 2026-11-24T19:16:49.625465+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 6 | AUD/USD | 0.66474 | 44.251 | 44.658 | +0.32% | +0.03% | 0.94x | 1.2 | 2026-11-24T19:16:49.625465+00:00 | Not calibrated | WEAK 42/100 | HIGH 62/100 | Watch | WATCH |
+| 7 | NIGHT/USD | 0.04863 | 38.791 | 45.953 | +1.00% | +0.14% | 0.21x | 4.1 | 2026-11-24T19:16:49.625465+00:00 | Not calibrated | WEAK 39/100 | VERY_HIGH 70/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | XMR/USD | 78.667 | 503.9 | -0.18% | 0.98x |
-| 2 | LUNA/USD | 74.930 | 4.621e-05 | -2.92% | 1.28x |
-| 3 | VVV/USD | 68.428 | 24.931 | -0.26% | 0.34x |
-| 4 | GBP/USD | 59.074 | 1.31126 | -0.01% | 0.34x |
-| 5 | ZEUS/USD | 54.959 | 0.00467 | +2.19% | 1.32x |
-| 6 | AUD/USD | 44.332 | 0.66444 | -0.03% | 1.14x |
-| 7 | NIGHT/USD | 41.718 | 0.04841 | -0.37% | 4.63x |
-| 8 | CT/USD | 28.598 | 0.1252 | +0.16% | 4.13x |
+| 1 | LUNA/USD | 72.773 | 4.621e-05 | -0.06% | 2.03x |
+| 2 | XMR/USD | 72.752 | 502.01 | -0.05% | 0.46x |
+| 3 | VVV/USD | 66.797 | 24.986 | -0.10% | 0.35x |
+| 4 | GBP/USD | 59.296 | 1.31139 | +0.04% | 0.16x |
+| 5 | PEPE/USD | 49.323 | 3.462e-06 | +0.35% | 1.08x |
+| 6 | NIGHT/USD | 45.953 | 0.04863 | +0.14% | 0.21x |
+| 7 | AUD/USD | 44.658 | 0.66474 | +0.03% | 0.94x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -52,8 +50,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1614; predictions: 13859; observations: 978018.
-- Matured sampled outcomes across 1/6/24/48h: 28052; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1615; predictions: 13866; observations: 978627.
+- Matured sampled outcomes across 1/6/24/48h: 28088; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 143 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -69,28 +67,26 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45466333622 · **Generation:** 1614 · **Legacy run:** 45466333622
-**Main quote time:** 2026-11-24T19:07:17.233496+00:00 · **Legacy report time:** 2026-11-24T19:08:05.825274+00:00
+**Writer:** 45468122081 · **Generation:** 1615 · **Legacy run:** 45468122081
+**Main quote time:** 2026-11-24T19:16:54.027600+00:00 · **Legacy report time:** 2026-11-24T19:17:51.208479+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | XMR/USD | 503.9 | 77.58 | -0.18% | 0.98x | WEAK 44/100 | HIGH 68/100 | Watch |
-| 2 | ZEUS/USD ⭐ | 0.00467 | 69.10 | +2.19% | 1.32x | STRONG 75/100 | EXTREME 89/100 | Do nothing |
-| 3 | LUNA/USD | 4.621e-05 | 63.18 | -2.92% | 1.28x | WEAK 42/100 | VERY_HIGH 70/100 | Do nothing |
-| 4 | VVV/USD | 24.931 | 60.49 | -0.26% | 0.34x | WEAK 35/100 | VERY_HIGH 76/100 | Watch |
-| 5 | NIGHT/USD | 0.04841 | 54.87 | -0.37% | 4.63x | MODERATE 57/100 | HIGH 61/100 | Watch |
-| 6 | GBP/USD | 1.31126 | 52.44 | -0.01% | 0.34x | WEAK 31/100 | VERY_HIGH 76/100 | Do nothing |
-| 7 | AUD/USD | 0.66444 | 45.60 | -0.03% | 1.14x | WEAK 33/100 | HIGH 68/100 | Do nothing |
-| 8 | CT/USD ⭐ | 0.1252 | 44.40 | +0.16% | 4.13x | MODERATE 67/100 | VERY_HIGH 79/100 | Watch |
+| 1 | LUNA/USD | 4.621e-05 | 82.72 | -0.06% | 2.03x | STRONG 71/100 | HIGH 66/100 | Watch |
+| 2 | XMR/USD | 502.01 | 67.08 | -0.05% | 0.46x | WEAK 34/100 | VERY_HIGH 82/100 | Do nothing |
+| 3 | VVV/USD | 24.986 | 59.80 | -0.10% | 0.35x | WEAK 35/100 | VERY_HIGH 76/100 | Watch |
+| 4 | PEPE/USD ⭐ | 3.462e-06 | 51.84 | +0.35% | 1.08x | STRONG 71/100 | HIGH 62/100 | Watch |
+| 5 | GBP/USD | 1.31139 | 51.07 | +0.04% | 0.16x | MODERATE 46/100 | VERY_HIGH 70/100 | Watch |
+| 6 | AUD/USD | 0.66474 | 44.25 | +0.03% | 0.94x | WEAK 42/100 | HIGH 62/100 | Watch |
+| 7 | NIGHT/USD | 0.04863 | 38.79 | +0.14% | 0.21x | WEAK 39/100 | VERY_HIGH 70/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | ZEUS/USD ⭐ | 0.00466 | 78.69 | +2.19% | 1.32x | 2884 | STRONG 79/100 | EXTREME 89/100 | Do nothing |
-| 2 | CT/USD ⭐ | 0.1252 | 35.47 | +0.16% | 4.13x | 1190 | MODERATE 68/100 | VERY_HIGH 73/100 | Watch |
+| 1 | PEPE/USD ⭐ | 3.462e-06 | 49.24 | +0.35% | 1.08x | 6690 | STRONG 70/100 | HIGH 62/100 | Watch |
 
-**Same-run overlap:** ZEUS/USD, CT/USD
+**Same-run overlap:** PEPE/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
