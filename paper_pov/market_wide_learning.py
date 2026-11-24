@@ -1081,6 +1081,9 @@ def train_archive_shadow(cohort_path, *, training_end_utc, holdout_start_utc,
               "production_applied": False, "promotion_authorized": False}
     from .specialist_shadow import compare_specialists
     result["specialist_replay"] = compare_specialists(specialist_batches, outcome_by_id, scope="RETROSPECTIVE_ARCHIVE_HELDOUT_FEATURE_COMPLETE_UNIVERSE")
+    from .early_objective_shadow import learned_replay
+    result["learned_objective_replay"] = learned_replay(predictions, outcomes, specialist_batches,
+        training_end_utc=training_end_utc, holdout_start_utc=holdout_start_utc)
     result["digest"] = canonical_digest(result)
     return result
 
