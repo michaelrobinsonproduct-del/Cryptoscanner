@@ -586,6 +586,7 @@ def prospective_metrics_by_version(predictions, outcomes):
             first_by_writer[writer]=order
     result={}
     event_rows={}
+    specialist_batches={}
     for key,group in groups.items():
         version,_=key
         repeated=first_by_writer[batch_writers[key]][1]!=key
@@ -599,6 +600,8 @@ def prospective_metrics_by_version(predictions, outcomes):
             "baseline_known_detected_positives":0,"shadow_known_detected_positives":0,
             "baseline_crossing_lead_hours_upper_bounds":[],"shadow_crossing_lead_hours_upper_bounds":[]}
             for h in (1,6,24,48)})
+        if not repeated:
+            specialist_batches.setdefault(version, []).append((group, [p["prediction_id"] for p in base], [p["prediction_id"] for p in shadow]))
         for h in (1,6,24,48):
             m=by_h[str(h)]
             if repeated:
@@ -637,7 +640,10 @@ def prospective_metrics_by_version(predictions, outcomes):
             m["selected_per_scanner"]+=len(base)
             m["baseline_hits"]+=sum(labels[(p["prediction_id"],h)]["hit"] for p in base)
             m["shadow_hits"]+=sum(labels[(p["prediction_id"],h)]["hit"] for p in shadow)
+    from .specialist_shadow import compare_specialists
+    labels48={key:o for (key,h),o in labels.items() if h==48}
     for version, by_h in result.items():
+        by_h["48"]["specialist_replay"] = compare_specialists(specialist_batches.get(version, []), labels48, scope="RETROSPECTIVE_FIRST_TIMELY_SHARD_PER_WRITER")
         by_h["48"]["event_metrics"] = prospective_event_metrics(event_rows.get(version, []))
         for m in by_h.values():
             n=m["selected_per_scanner"]
@@ -1011,10 +1017,12 @@ def train_archive_shadow(cohort_path, *, training_end_utc, holdout_start_utc,
     bounds = {n:{"selected":0,"complete_hits":0,"complete_misses":0,
                  "partial_observed_hits":0,"unknown":0} for n in metrics}
     comparable, unavailable, covered_positive_anchors = 0, 0, 0
+    specialist_batches=[]
     for stamp, keys in sorted(groups.items()):
         base = sorted(keys, key=lambda k: (-abs(by_id[k]["features"]["momentum_60m"]), k))[:top_k]
         challenger = sorted(keys, key=lambda k: (-scores[k], k))[:top_k]
         if len(base) == top_k:
+            specialist_batches.append(([by_id[k] for k in keys], base, challenger))
             for name, selected in (("baseline_proxy",base),("challenger",challenger)):
                 b = bounds[name]
                 b["selected"] += len(selected)
@@ -1071,6 +1079,8 @@ def train_archive_shadow(cohort_path, *, training_end_utc, holdout_start_utc,
               "bounds_scope":"DESCRIPTIVE_CANDLE_HIGH_NOT_QUALIFIED_LIFT",
               "source_authenticated": False, "measured_lift_verified": False,
               "production_applied": False, "promotion_authorized": False}
+    from .specialist_shadow import compare_specialists
+    result["specialist_replay"] = compare_specialists(specialist_batches, outcome_by_id, scope="RETROSPECTIVE_ARCHIVE_HELDOUT_FEATURE_COMPLETE_UNIVERSE")
     result["digest"] = canonical_digest(result)
     return result
 
