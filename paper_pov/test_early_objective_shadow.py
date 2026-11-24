@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, timedelta, timezone
-from paper_pov.early_objective_shadow import early_label, interaction_features, learned_replay
+from paper_pov.early_objective_shadow import early_label, interaction_features, learned_replay, historical_context
 
 
 class EarlyObjectiveTests(unittest.TestCase):
@@ -19,6 +19,27 @@ class EarlyObjectiveTests(unittest.TestCase):
         self.assertFalse(early_label(p,dict(o,observed_lead_hours_upper_bound=1)))
         self.assertGreater(interaction_features(self.features())["activity_x_quiet"],
                            interaction_features(self.features(.2))["activity_x_quiet"])
+
+    def test_context_uses_only_exact_prior_references_and_same_time_markets(self):
+        start=datetime(2026,1,1,tzinfo=timezone.utc)
+        at=lambda h:(start+timedelta(hours=h)).isoformat()
+        def p(key,pair,h,price,m=.01):
+            return dict(prediction_id=key,pair=pair,entry_utc=at(h),feature_asof_utc=at(h),
+                        entry_price=price,features=self.features(m))
+        rows=[p("old","A",0,100),p("six","A",18,105),p("now","A",24,110,.03)]
+        rows.extend(p("peer"+str(i),"P"+str(i),24,200,.01) for i in range(9))
+        before=historical_context(rows)["now"]
+        self.assertAlmostEqual(before["return_6h"],110/105-1)
+        self.assertAlmostEqual(before["return_24h"],.1)
+        self.assertAlmostEqual(before["relative_momentum_60m"],.02)
+        self.assertEqual(before["has_cross_section"],1)
+        after=historical_context(rows+[p("future","A",30,9999)])["now"]
+        self.assertEqual(before,after)
+        missing=historical_context([p("near","A",17,105),rows[2]])["now"]
+        self.assertEqual(missing["has_6h_reference"],0)
+        self.assertEqual(missing["return_6h"],0)
+        self.assertEqual(missing["has_cross_section"],0)
+
 
     def test_fit_chronological_and_preserves_unlabeled_holdout(self):
         start=datetime(2026,1,1,tzinfo=timezone.utc)
