@@ -33,6 +33,63 @@ def interaction_features(f):
     return {**{n:f[n] for n in NAMES}, **dict(zip(EXTRA, extras))}
 
 
+CONTEXT = ("return_6h", "return_24h", "has_6h_reference", "has_24h_reference",
+           "relative_momentum_60m", "relative_activity", "has_cross_section",
+           "quiet_6h_activity", "momentum_vs_6h_trend")
+
+
+def historical_context(predictions):
+    """Point-in-time hourly price references and same-time market context.
+
+    Exact earlier observed anchors only; no interpolation or assumption of
+    continuous hourly prices. Unknown context is encoded by explicit flags
+    and neutral numeric inputs. Relative strength is against the observed
+    archive cross section, not a verified live eligible universe.
+    """
+    from statistics import median
+    by_pair_time={}
+    sections={}
+    prepared=[]
+    for p in predictions:
+        f=interaction_features(p.get("features",{}))
+        if f is None:
+            continue
+        at=utc_time(p["entry_utc"])
+        if utc_time(p["feature_asof_utc"])>at:
+            raise ValueError("Context feature lookahead")
+        pair=p.get("pair")
+        price=p.get("entry_price")
+        valid_price=type(price) in (int,float) and math.isfinite(price) and price>0
+        if isinstance(pair,str) and pair and valid_price:
+            identity=(pair,at)
+            if identity in by_pair_time:
+                raise ValueError("Duplicate contextual market anchor")
+            by_pair_time[identity]=price
+        sections.setdefault(at,[]).append((f["momentum_60m"],f["log_volume_accel"]+f["log_trade_accel"]))
+        prepared.append((p,at,pair,price if valid_price else None,f))
+    medians={at:(median(x[0] for x in rows),median(x[1] for x in rows))
+             for at,rows in sections.items() if len(rows)>=10}
+    result={}
+    for p,at,pair,price,f in prepared:
+        reference6=by_pair_time.get((pair,at-timedelta(hours=6)))
+        reference24=by_pair_time.get((pair,at-timedelta(hours=24)))
+        has6=price is not None and reference6 is not None
+        has24=price is not None and reference24 is not None
+        # Clip only the model input, not outcome returns or reference prices.
+        ret6=max(-2.,min(2.,price/reference6-1)) if has6 else 0.
+        ret24=max(-2.,min(2.,price/reference24-1)) if has24 else 0.
+        activity=f["log_volume_accel"]+f["log_trade_accel"]
+        relative=medians.get(at)
+        values=(ret6,ret24,float(has6),float(has24),
+                f["momentum_60m"]-relative[0] if relative is not None else 0.,
+                activity-relative[1] if relative is not None else 0.,
+                float(relative is not None),
+                activity/(1+20*abs(ret6)) if has6 else 0.,
+                f["momentum_60m"]-ret6/6 if has6 else 0.)
+        result[p["prediction_id"]]={**f,**dict(zip(CONTEXT,values))}
+    return result
+
+
 def early_label(p, o):
     """Complete target: +30%, >=1h conservative lead, <=3% prior 60m move."""
     if o.get("coverage_complete") is not True or type(o.get("hit")) is not bool:
@@ -90,10 +147,17 @@ def learned_replay(predictions, outcomes, batches, *, training_end_utc, holdout_
         target=early_label(by_id[key],o)
         if target is not None:
             early.append(dict(o,hit=target))
+    context=historical_context(predictions)
+    contextual=[dict(p,features=context[p["prediction_id"]]) for p in predictions
+                if p["prediction_id"] in context]
     fitted={}
-    for name,target in (("learned_interactions",original),("learned_early_objective",early)):
-        fit=train_shadow_challenger(transformed,target,training_end_utc=training_end_utc,
-                                    holdout_start_utc=holdout_start_utc,feature_names=FEATURES)
+    for name,target,inputs,feature_names in (
+            ("learned_interactions",original,transformed,FEATURES),
+            ("learned_early_objective",early,transformed,FEATURES),
+            ("contextual_48h_objective",original,contextual,FEATURES+CONTEXT),
+            ("contextual_early_objective",early,contextual,FEATURES+CONTEXT)):
+        fit=train_shadow_challenger(inputs,target,training_end_utc=training_end_utc,
+                                    holdout_start_utc=holdout_start_utc,feature_names=feature_names)
         scores=fit.pop("shadow_scores",{})
         fit["version"]=canonical_digest({k:v for k,v in fit.items() if k!="version"})
         fitted[name]=(fit,scores)
@@ -159,8 +223,15 @@ def learned_replay(predictions, outcomes, batches, *, training_end_utc, holdout_
         m["precision_upper_bound"]=(m["complete_hits"]+m["unknown"])/n if n else None
         m["early_precision_lower_bound"]=m["early_hits"]/n if n else None
         m["early_precision_upper_bound"]=(m["early_hits"]+m["early_unknown"])/n if n else None
+    context_coverage={}
+    for name,group in (("before_training_cutoff",[p for p in contextual if utc_time(p["entry_utc"])<cutoff]),
+                       ("heldout",[p for p in contextual if utc_time(p["entry_utc"])>=start])):
+        context_coverage[name]={"anchors":len(group)}
+        for flag in ("has_6h_reference","has_24h_reference","has_cross_section"):
+            context_coverage[name][flag]=sum(int(p["features"][flag]) for p in group)
     result=dict(schema="learned_early_objectives_replay_v1",
                 models={n:fit for n,(fit,_) in fitted.items()},metrics=metrics,
+                contextual_feature_coverage=context_coverage,
                 scope="RETROSPECTIVE_ARCHIVE_FEATURE_COMPLETE_UNIVERSE",
                 early_definition="COMPLETE_30PCT_48H_60M_ABS_LE_3PCT_LEAD_LOWER_BOUND_GE_1H",
                 calibrated_probability=False,measured_lift_verified=False,
