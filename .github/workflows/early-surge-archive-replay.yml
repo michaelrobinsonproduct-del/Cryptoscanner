@@ -1,0 +1,63 @@
+name: Early surge archived specialist replay
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/early-surge-archive-replay.yml'
+      - 'paper_pov/specialist_shadow.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  archived-specialist-replay:
+    # Research-only replay; no writer, ledger changes, or release writes.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Retrieve pinned original market-wide cohorts
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/replay
+          gh release download market-wide-research-v1 --pattern market-wide-research-backup.tar.gz --dir evidence/replay
+          cd evidence/replay
+          echo 'aefc1fe3a2756d9b730d8ab30ce2159e7962668458f762e0dae980a7bc604c5d  market-wide-research-backup.tar.gz' | sha256sum -c -
+          tar -xzf market-wide-research-backup.tar.gz ./q2/q2-market-wide-cohorts.jsonl.gz ./q3/market-wide-cohorts.jsonl.gz
+          printf '%s\n' \
+            '8c4d7e86d170b17a7a6a3d4ebf9fae1d5cd5f4844f5b1c33a1605f0650823d63  q2/q2-market-wide-cohorts.jsonl.gz' \
+            '5d883b8252b7a0a3186296801c3293060198481a13c67d0a384e9a41818241e5  q3/market-wide-cohorts.jsonl.gz' | sha256sum -c -
+      - name: Run fixed chronological archive comparisons
+        run: |
+          set -euo pipefail
+          python -m unittest paper_pov.test_specialist_shadow -v
+          mkdir -p evidence/results
+          python -m paper_pov.market_wide_learning evidence/replay/q2/q2-market-wide-cohorts.jsonl.gz \
+            --train-cohorts --training-end 2026-06-07T00:00:00Z \
+            --holdout-start 2026-06-09T00:00:00Z --evaluation-asof 2026-06-15T00:00:00Z \
+            --output evidence/results/q2.json
+          python -m paper_pov.market_wide_learning evidence/replay/q3/market-wide-cohorts.jsonl.gz \
+            --train-cohorts --training-end 2026-09-07T00:00:00Z \
+            --holdout-start 2026-09-09T00:00:00Z --evaluation-asof 2026-09-15T00:00:00Z \
+            --output evidence/results/q3.json
+          python - <<'PY'
+          import json
+          for quarter in ("q2", "q3"):
+              r=json.load(open("evidence/results/"+quarter+".json"))
+              s=r["specialist_replay"]
+              assert s["production_applied"] is False and s["measured_lift_verified"] is False
+              print("SPECIALIST_REPLAY",quarter,json.dumps(s,sort_keys=True))
+          PY
+          (cd evidence/results && sha256sum q2.json q3.json > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: early-surge-archive-replay-${{ github.run_id }}
+          path: evidence/results/
+          if-no-files-found: error
+          retention-days: 30
