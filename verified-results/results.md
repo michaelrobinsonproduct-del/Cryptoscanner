@@ -2,35 +2,35 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-24T15:24:15.996502+00:00
+**UTC as-of:** 2026-11-24T15:32:08.043517+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45424185393
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45426124314
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** c80b22b16a9014a477a95fa122282116e188921c (atomic ledger/results publication)
-**Ledger generation:** 1591 (remote push/readback verified)
+**Previous ledger commit:** e7bd3bff2474167270123a2db723aff601757a0b (atomic ledger/results publication)
+**Ledger generation:** 1592 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 12.
+**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 9.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | GBP/USD | 1.31079 | 73.676 | 58.974 | +0.58% | -0.06% | 2.57x | 0.2 | 2026-11-24T15:24:11.900729+00:00 | Not calibrated | MODERATE 67/100 | HIGH 61/100 | Watch | WATCH |
-| 2 | VVV/USD | 24.813 | 70.350 | 61.626 | +1.49% | -1.26% | 9.52x | 7.6 | 2026-11-24T15:24:11.900729+00:00 | Not calibrated | MODERATE 65/100 | HIGH 65/100 | Do nothing | WATCH |
-| 3 | XMR/USD | 493.27 | 59.100 | 61.487 | +1.49% | -0.37% | 0.94x | 7.9 | 2026-11-24T15:24:11.900729+00:00 | Not calibrated | WEAK 35/100 | HIGH 68/100 | Watch | WATCH |
-| 4 | AUD/USD | 0.66445 | 49.075 | 42.540 | +0.28% | -0.08% | 1.69x | 1.1 | 2026-11-24T15:24:11.900729+00:00 | Not calibrated | MODERATE 45/100 | HIGH 61/100 | Watch | WATCH |
-| 5 | 2Z/USD | 0.0161 | 35.121 | 47.759 | +2.88% | -2.13% | 0.80x | 6.2 | 2026-11-24T15:24:11.900729+00:00 | Not calibrated | WEAK 23/100 | VERY_HIGH 84/100 | Do nothing | WATCH |
+| 1 | GBP/USD | 1.31092 | 73.292 | 59.005 | +0.59% | +0.06% | 2.40x | 0.2 | 2026-11-24T15:32:05.350523+00:00 | Not calibrated | STRONG 82/100 | HIGH 55/100 | Watch | WATCH |
+| 2 | XMR/USD | 492.79 | 72.020 | 60.079 | +1.39% | -0.61% | 2.51x | 9.3 | 2026-11-24T15:32:05.350523+00:00 | Not calibrated | MODERATE 66/100 | HIGH 61/100 | Watch | WATCH |
+| 3 | VVV/USD | 24.616 | 65.815 | 56.563 | +0.69% | -1.15% | 2.85x | 6.5 | 2026-11-24T15:32:05.350523+00:00 | Not calibrated | MODERATE 63/100 | HIGH 65/100 | Watch | WATCH |
+| 4 | LUNA/USD | 4.591e-05 | 65.253 | 68.493 | +5.61% | -0.24% | 0.80x | 4.3 | 2026-11-24T15:32:05.350523+00:00 | Not calibrated | WEAK 38/100 | VERY_HIGH 80/100 | Watch | WATCH |
+| 5 | 2Z/USD | 0.01606 | 31.442 | 30.380 | +2.62% | -0.31% | 1.26x | 37.4 | 2026-11-24T15:32:05.350523+00:00 | Not calibrated | WEAK 11/100 | EXTREME 85/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | VVV/USD | 61.626 | 24.813 | -1.26% | 9.52x |
-| 2 | XMR/USD | 61.487 | 493.27 | -0.37% | 0.94x |
-| 3 | GBP/USD | 58.974 | 1.31079 | -0.06% | 2.57x |
-| 4 | 2Z/USD | 47.759 | 0.0161 | -2.13% | 0.80x |
-| 5 | AUD/USD | 42.540 | 0.66445 | -0.08% | 1.69x |
+| 1 | LUNA/USD | 68.493 | 4.591e-05 | -0.24% | 0.80x |
+| 2 | XMR/USD | 60.079 | 492.79 | -0.61% | 2.51x |
+| 3 | GBP/USD | 59.005 | 1.31092 | +0.06% | 2.40x |
+| 4 | VVV/USD | 56.563 | 24.616 | -1.15% | 2.85x |
+| 5 | 2Z/USD | 30.380 | 0.01606 | -0.31% | 1.26x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -46,15 +46,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1591; predictions: 13709; observations: 964011.
-- Matured sampled outcomes across 1/6/24/48h: 27117; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1592; predictions: 13714; observations: 964620.
+- Matured sampled outcomes across 1/6/24/48h: 27161; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 143 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 7; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 4; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -63,24 +63,24 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45424185393 · **Generation:** 1591 · **Legacy run:** 45424185393
-**Main quote time:** 2026-11-24T15:24:15.996502+00:00 · **Legacy report time:** 2026-11-24T15:25:28.604127+00:00
+**Writer:** 45426124314 · **Generation:** 1592 · **Legacy run:** 45426124314
+**Main quote time:** 2026-11-24T15:32:08.043517+00:00 · **Legacy report time:** 2026-11-24T15:33:19.702138+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | GBP/USD | 1.31079 | 73.68 | -0.06% | 2.57x | MODERATE 67/100 | HIGH 61/100 | Watch |
-| 2 | VVV/USD | 24.813 | 70.35 | -1.26% | 9.52x | MODERATE 65/100 | HIGH 65/100 | Do nothing |
-| 3 | XMR/USD | 493.27 | 59.10 | -0.37% | 0.94x | WEAK 35/100 | HIGH 68/100 | Watch |
-| 4 | AUD/USD | 0.66445 | 49.08 | -0.08% | 1.69x | MODERATE 45/100 | HIGH 61/100 | Watch |
-| 5 | 2Z/USD | 0.0161 | 35.12 | -2.13% | 0.80x | WEAK 23/100 | VERY_HIGH 84/100 | Do nothing |
+| 1 | GBP/USD ⭐ | 1.31092 | 73.29 | +0.06% | 2.40x | STRONG 92/100 | HIGH 55/100 | Watch |
+| 2 | XMR/USD | 492.79 | 72.02 | -0.61% | 2.51x | MODERATE 66/100 | HIGH 61/100 | Watch |
+| 3 | VVV/USD | 24.616 | 65.82 | -1.15% | 2.85x | MODERATE 63/100 | HIGH 65/100 | Watch |
+| 4 | LUNA/USD | 4.591e-05 | 65.25 | -0.24% | 0.80x | WEAK 38/100 | VERY_HIGH 80/100 | Watch |
+| 5 | 2Z/USD | 0.01606 | 31.44 | -0.31% | 1.26x | WEAK 11/100 | EXTREME 85/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
+| 1 | GBP/USD ⭐ | 1.31095 | 63.80 | +0.06% | 2.40x | 20618 | STRONG 87/100 | HIGH 55/100 | Watch |
 
-**Same-run overlap:** None
+**Same-run overlap:** GBP/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
