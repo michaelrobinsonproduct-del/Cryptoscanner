@@ -2,12 +2,12 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-24T08:42:42.679789+00:00
+**UTC as-of:** 2026-11-24T08:51:37.732448+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45358049299
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45359499320
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** 1c5c636b57087ab64858cd7c814f282584470700 (atomic ledger/results publication)
-**Ledger generation:** 1551 (remote push/readback verified)
+**Previous ledger commit:** 0ed08671070610896aa2db1789fd24e68651b446 (atomic ledger/results publication)
+**Ledger generation:** 1552 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 8s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 24.
@@ -16,35 +16,35 @@
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | XMR/USD | 497.17 | 80.875 | 65.633 | +2.29% | +0.05% | 8.73x | 10.9 | 2026-11-24T08:42:34.780566+00:00 | Not calibrated | STRONG 80/100 | HIGH 61/100 | Watch | WATCH |
-| 2 | PEPE/USD | 3.514e-06 | 76.754 | 67.803 | +2.69% | -1.21% | 9.46x | 2.8 | 2026-11-24T08:42:34.780566+00:00 | Not calibrated | MODERATE 68/100 | HIGH 65/100 | Do nothing | WATCH |
-| 3 | VVV/USD | 25.197 | 69.595 | 72.677 | +3.06% | -0.16% | 0.77x | 7.5 | 2026-11-24T08:42:34.780566+00:00 | Not calibrated | WEAK 40/100 | HIGH 68/100 | Watch | WATCH |
-| 4 | BAT/USD | 0.07977 | 68.817 | 53.440 | +3.37% | +0.08% | 8.39x | 5.0 | 2026-11-24T08:42:34.780566+00:00 | Not calibrated | STRONG 79/100 | HIGH 60/100 | Watch | WATCH |
-| 5 | NEAR/USD | 2.9983 | 66.888 | 57.180 | +0.57% | -0.32% | 2.13x | 3.7 | 2026-11-24T08:42:34.780566+00:00 | Not calibrated | MODERATE 63/100 | HIGH 61/100 | Watch | WATCH |
-| 6 | LUNA/USD | 4.584e-05 | 65.700 | 60.389 | +5.45% | +0.70% | 1.18x | 19.6 | 2026-11-24T08:42:34.780566+00:00 | Not calibrated | MODERATE 63/100 | VERY_HIGH 73/100 | Watch | WATCH |
-| 7 | XRP/USD | 0.94209 | 58.730 | 56.640 | +0.29% | -0.46% | 1.44x | 0.7 | 2026-11-24T08:42:34.780566+00:00 | Not calibrated | MODERATE 49/100 | HIGH 61/100 | Watch | WATCH |
-| 8 | ICNT/USD | 0.3257 | 57.278 | 56.273 | +5.37% | +1.88% | 0.16x | 27.6 | 2026-11-24T08:42:34.780566+00:00 | Not calibrated | MODERATE 49/100 | EXTREME 87/100 | Do nothing | WATCH |
-| 9 | LINK/USD | 9.06939 | 56.946 | 57.778 | +0.72% | -0.10% | 0.97x | 4.5 | 2026-11-24T08:42:34.780566+00:00 | Not calibrated | WEAK 33/100 | HIGH 68/100 | Do nothing | WATCH |
-| 10 | LTC/USD | 41.53 | 53.029 | 55.655 | +0.27% | -0.12% | 0.80x | 2.4 | 2026-11-24T08:42:34.780566+00:00 | Not calibrated | WEAK 32/100 | HIGH 68/100 | Do nothing | WATCH |
-| 11 | DOT/USD | 0.678 | 48.908 | 35.380 | +0.37% | -0.29% | 5.69x | 2.9 | 2026-11-24T08:42:34.780566+00:00 | Not calibrated | MODERATE 54/100 | HIGH 66/100 | Watch | WATCH |
-| 12 | NIGHT/USD | 0.04845 | 47.957 | 49.163 | +0.62% | +0.00% | 0.88x | 8.3 | 2026-11-24T08:42:34.780566+00:00 | Not calibrated | WEAK 44/100 | HIGH 62/100 | Watch | WATCH |
+| 1 | PEPE/USD | 3.537e-06 | 83.096 | 69.871 | +3.36% | +0.17% | 2.24x | 8.5 | 2026-11-24T08:51:30.142959+00:00 | Not calibrated | STRONG 87/100 | HIGH 55/100 | Watch | WATCH |
+| 2 | XMR/USD | 498.42 | 76.700 | 64.325 | +2.55% | +0.62% | 1.93x | 17.1 | 2026-11-24T08:51:30.142959+00:00 | Not calibrated | STRONG 78/100 | HIGH 61/100 | Consider small entry | WATCH |
+| 3 | HYPE/USD | 63.96 | 76.599 | 57.738 | +0.50% | +0.77% | 3.95x | 1.6 | 2026-11-24T08:51:30.142959+00:00 | Not calibrated | STRONG 93/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 4 | LTC/USD | 41.61 | 70.768 | 55.808 | +0.46% | +0.65% | 2.17x | 4.8 | 2026-11-24T08:51:30.142959+00:00 | Not calibrated | STRONG 90/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 5 | VVV/USD | 25.161 | 70.639 | 71.445 | +2.92% | +0.06% | 0.89x | 7.9 | 2026-11-24T08:51:30.142959+00:00 | Not calibrated | MODERATE 55/100 | HIGH 62/100 | Watch | WATCH |
+| 6 | LUNA/USD | 4.629e-05 | 70.108 | 56.331 | +6.49% | +1.27% | 1.74x | 41.5 | 2026-11-24T08:51:30.142959+00:00 | Not calibrated | MODERATE 65/100 | VERY_HIGH 82/100 | Watch | WATCH |
+| 7 | NEAR/USD | 2.9933 | 63.980 | 56.504 | +0.41% | +0.67% | 1.41x | 2.7 | 2026-11-24T08:51:30.142959+00:00 | Not calibrated | STRONG 77/100 | HIGH 55/100 | Watch | WATCH |
+| 8 | LINK/USD | 9.08493 | 57.491 | 59.027 | +0.89% | +0.74% | 0.48x | 4.4 | 2026-11-24T08:51:30.142959+00:00 | Not calibrated | MODERATE 59/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 9 | XRP/USD | 0.94332 | 55.895 | 57.610 | +0.42% | +0.42% | 0.62x | 0.6 | 2026-11-24T08:51:30.142959+00:00 | Not calibrated | MODERATE 58/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 10 | DOT/USD | 0.6788 | 52.466 | 35.472 | +0.49% | +0.40% | 6.32x | 4.4 | 2026-11-24T08:51:30.142959+00:00 | Not calibrated | STRONG 81/100 | HIGH 60/100 | Watch | WATCH |
+| 11 | NIGHT/USD | 0.04841 | 51.517 | 49.625 | +0.54% | -0.19% | 1.28x | 6.2 | 2026-11-24T08:51:30.142959+00:00 | Not calibrated | WEAK 36/100 | HIGH 61/100 | Watch | WATCH |
+| 12 | WLD/USD | 0.2407 | 42.047 | 38.273 | +1.01% | +0.50% | 1.13x | 8.3 | 2026-11-24T08:51:30.142959+00:00 | Not calibrated | MODERATE 56/100 | HIGH 67/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | VVV/USD | 72.677 | 25.197 | -0.16% | 0.77x |
-| 2 | PEPE/USD | 67.803 | 3.514e-06 | -1.21% | 9.46x |
-| 3 | XMR/USD | 65.633 | 497.17 | +0.05% | 8.73x |
-| 4 | LUNA/USD | 60.389 | 4.584e-05 | +0.70% | 1.18x |
-| 5 | LINK/USD | 57.778 | 9.06939 | -0.10% | 0.97x |
-| 6 | NEAR/USD | 57.180 | 2.9983 | -0.32% | 2.13x |
-| 7 | XRP/USD | 56.640 | 0.94209 | -0.46% | 1.44x |
-| 8 | ICNT/USD | 56.273 | 0.3257 | +1.88% | 0.16x |
-| 9 | LTC/USD | 55.655 | 41.53 | -0.12% | 0.80x |
-| 10 | BAT/USD | 53.440 | 0.07977 | +0.08% | 8.39x |
-| 11 | NIGHT/USD | 49.163 | 0.04845 | +0.00% | 0.88x |
-| 12 | DOT/USD | 35.380 | 0.678 | -0.29% | 5.69x |
+| 1 | VVV/USD | 71.445 | 25.161 | +0.06% | 0.89x |
+| 2 | PEPE/USD | 69.871 | 3.537e-06 | +0.17% | 2.24x |
+| 3 | XMR/USD | 64.325 | 498.42 | +0.62% | 1.93x |
+| 4 | LINK/USD | 59.027 | 9.08493 | +0.74% | 0.48x |
+| 5 | HYPE/USD | 57.738 | 63.96 | +0.77% | 3.95x |
+| 6 | XRP/USD | 57.610 | 0.94332 | +0.42% | 0.62x |
+| 7 | NEAR/USD | 56.504 | 2.9933 | +0.67% | 1.41x |
+| 8 | LUNA/USD | 56.331 | 4.629e-05 | +1.27% | 1.74x |
+| 9 | LTC/USD | 55.808 | 41.61 | +0.65% | 2.17x |
+| 10 | NIGHT/USD | 49.625 | 0.04841 | -0.19% | 1.28x |
+| 11 | WLD/USD | 38.273 | 0.2407 | +0.50% | 1.13x |
+| 12 | DOT/USD | 35.472 | 0.6788 | +0.40% | 6.32x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -60,15 +60,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1551; predictions: 13344; observations: 939657.
-- Matured sampled outcomes across 1/6/24/48h: 25261; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
-- Observed +30% hits: 141 (sampled only; not a success-rate estimate).
+- Persisted scans: 1552; predictions: 13356; observations: 940266.
+- Matured sampled outcomes across 1/6/24/48h: 25304; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Observed +30% hits: 142 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 9; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 11; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -77,32 +77,36 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45358049299 · **Generation:** 1551 · **Legacy run:** 45358049299
-**Main quote time:** 2026-11-24T08:42:42.679789+00:00 · **Legacy report time:** 2026-11-24T08:43:55.413629+00:00
+**Writer:** 45359499320 · **Generation:** 1552 · **Legacy run:** 45359499320
+**Main quote time:** 2026-11-24T08:51:37.732448+00:00 · **Legacy report time:** 2026-11-24T08:52:28.340950+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | XMR/USD | 497.17 | 80.87 | +0.05% | 8.73x | STRONG 80/100 | HIGH 61/100 | Watch |
-| 2 | PEPE/USD | 3.514e-06 | 76.75 | -1.21% | 9.46x | MODERATE 68/100 | HIGH 65/100 | Do nothing |
-| 3 | VVV/USD | 25.197 | 69.59 | -0.16% | 0.77x | WEAK 40/100 | HIGH 68/100 | Watch |
-| 4 | BAT/USD ⭐ | 0.07977 | 68.82 | +0.08% | 8.39x | STRONG 89/100 | HIGH 60/100 | Watch |
-| 5 | NEAR/USD | 2.9983 | 66.89 | -0.32% | 2.13x | MODERATE 63/100 | HIGH 61/100 | Watch |
-| 6 | LUNA/USD ⭐ | 4.584e-05 | 65.70 | +0.70% | 1.18x | STRONG 73/100 | VERY_HIGH 73/100 | Watch |
-| 7 | XRP/USD | 0.94209 | 58.73 | -0.46% | 1.44x | MODERATE 49/100 | HIGH 61/100 | Watch |
-| 8 | ICNT/USD | 0.3257 | 57.28 | +1.88% | 0.16x | MODERATE 49/100 | EXTREME 87/100 | Do nothing |
-| 9 | LINK/USD | 9.06939 | 56.95 | -0.10% | 0.97x | WEAK 33/100 | HIGH 68/100 | Do nothing |
-| 10 | LTC/USD | 41.53 | 53.03 | -0.12% | 0.80x | WEAK 32/100 | HIGH 68/100 | Do nothing |
-| 11 | DOT/USD | 0.678 | 48.91 | -0.29% | 5.69x | MODERATE 54/100 | HIGH 66/100 | Watch |
-| 12 | NIGHT/USD | 0.04845 | 47.96 | +0.00% | 0.88x | WEAK 44/100 | HIGH 62/100 | Watch |
+| 1 | PEPE/USD ⭐ | 3.537e-06 | 83.10 | +0.17% | 2.24x | STRONG 97/100 | HIGH 55/100 | Watch |
+| 2 | XMR/USD ⭐ | 498.42 | 76.70 | +0.62% | 1.93x | STRONG 88/100 | HIGH 61/100 | Consider small entry |
+| 3 | HYPE/USD ⭐ | 63.96 | 76.60 | +0.77% | 3.95x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 4 | LTC/USD | 41.61 | 70.77 | +0.65% | 2.17x | STRONG 90/100 | HIGH 55/100 | Consider small entry |
+| 5 | VVV/USD | 25.161 | 70.64 | +0.06% | 0.89x | MODERATE 55/100 | HIGH 62/100 | Watch |
+| 6 | LUNA/USD ⭐ | 4.629e-05 | 70.11 | +1.27% | 1.74x | STRONG 75/100 | VERY_HIGH 82/100 | Watch |
+| 7 | NEAR/USD | 2.9933 | 63.98 | +0.67% | 1.41x | STRONG 77/100 | HIGH 55/100 | Watch |
+| 8 | LINK/USD | 9.08493 | 57.49 | +0.74% | 0.48x | MODERATE 59/100 | VERY_HIGH 70/100 | Watch |
+| 9 | XRP/USD | 0.94332 | 55.90 | +0.42% | 0.62x | MODERATE 58/100 | VERY_HIGH 70/100 | Watch |
+| 10 | DOT/USD | 0.6788 | 52.47 | +0.40% | 6.32x | STRONG 81/100 | HIGH 60/100 | Watch |
+| 11 | NIGHT/USD | 0.04841 | 51.52 | -0.19% | 1.28x | WEAK 36/100 | HIGH 61/100 | Watch |
+| 12 | WLD/USD | 0.2407 | 42.05 | +0.50% | 1.13x | MODERATE 56/100 | HIGH 67/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | BAT/USD ⭐ | 0.07997 | 80.17 | +0.08% | 8.39x | 3605 | STRONG 95/100 | HIGH 60/100 | Watch |
-| 2 | LUNA/USD ⭐ | 4.591e-05 | 67.59 | +0.70% | 1.18x | 1864 | STRONG 74/100 | VERY_HIGH 73/100 | Watch |
+| 1 | BABY/USD | 0.00921 | 85.16 | +1.86% | 3.22x | 4608 | STRONG 88/100 | VERY_HIGH 72/100 | Watch |
+| 2 | PEPE/USD ⭐ | 3.534e-06 | 79.08 | +0.17% | 2.24x | 9168 | STRONG 95/100 | HIGH 55/100 | Watch |
+| 3 | BAT/USD | 0.07981 | 76.25 | +0.44% | 5.67x | 3609 | STRONG 93/100 | HIGH 60/100 | Consider small entry |
+| 4 | XMR/USD ⭐ | 498.69 | 73.85 | +0.62% | 1.93x | 11300 | STRONG 87/100 | HIGH 61/100 | Consider small entry |
+| 5 | LUNA/USD ⭐ | 4.629e-05 | 71.62 | +1.27% | 1.74x | 1872 | STRONG 76/100 | VERY_HIGH 82/100 | Watch |
+| 6 | HYPE/USD ⭐ | 63.91 | 64.28 | +0.77% | 3.95x | 30946 | STRONG 97/100 | HIGH 55/100 | Consider small entry |
 
-**Same-run overlap:** BAT/USD, LUNA/USD
+**Same-run overlap:** PEPE/USD, XMR/USD, HYPE/USD, LUNA/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
