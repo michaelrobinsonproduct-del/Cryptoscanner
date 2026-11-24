@@ -2,49 +2,49 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-24T04:31:31.195593+00:00
+**UTC as-of:** 2026-11-24T04:41:35.436472+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45326763284
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45327906798
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** c07f273bc2b304c98c5c00b09513453b23dfb6ef (atomic ledger/results publication)
-**Ledger generation:** 1525 (remote push/readback verified)
+**Previous ledger commit:** 2d28e030e0df508985d17d4103507d11a581f606 (atomic ledger/results publication)
+**Ledger generation:** 1526 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 8s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 9s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 24.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | MON/USD | 0.0128 | 97.309 | 77.402 | +11.11% | +2.81% | 1.58x | 15.7 | 2026-11-24T04:31:23.437289+00:00 | Not calibrated | STRONG 89/100 | HIGH 61/100 | Consider small entry | WATCH |
-| 2 | VVV/USD | 25.069 | 74.670 | 68.592 | +2.54% | +0.80% | 1.21x | 8.4 | 2026-11-24T04:31:23.437289+00:00 | Not calibrated | STRONG 72/100 | HIGH 62/100 | Watch | WATCH |
-| 3 | AAVE/USD | 98.24 | 71.022 | 54.439 | +1.23% | +0.32% | 8.62x | 5.1 | 2026-11-24T04:31:23.437289+00:00 | Not calibrated | STRONG 91/100 | HIGH 55/100 | Consider small entry | WATCH |
-| 4 | HYPE/USD | 63.8 | 70.233 | 55.976 | +0.25% | +0.41% | 2.22x | 1.6 | 2026-11-24T04:31:23.437289+00:00 | Not calibrated | STRONG 90/100 | HIGH 55/100 | Consider small entry | WATCH |
-| 5 | UNI/USD | 4.8651 | 69.594 | 51.932 | +0.56% | +0.53% | 6.11x | 4.7 | 2026-11-24T04:31:23.437289+00:00 | Not calibrated | STRONG 90/100 | HIGH 55/100 | Watch | WATCH |
-| 6 | LINK/USD | 9.07468 | 69.411 | 60.416 | +0.77% | +0.29% | 1.76x | 0.0 | 2026-11-24T04:31:23.437289+00:00 | Not calibrated | STRONG 80/100 | HIGH 55/100 | Watch | WATCH |
-| 7 | PEPE/USD | 3.502e-06 | 68.254 | 64.847 | +2.34% | +0.43% | 1.13x | 2.9 | 2026-11-24T04:31:23.437289+00:00 | Not calibrated | MODERATE 69/100 | HIGH 62/100 | Watch | WATCH |
-| 8 | AI/USD | 0.01616 | 67.484 | 61.596 | +6.11% | -1.82% | 2.66x | 24.6 | 2026-11-24T04:31:23.437289+00:00 | Not calibrated | MODERATE 54/100 | EXTREME 89/100 | Do nothing | WATCH |
-| 9 | NEAR/USD | 2.9933 | 65.630 | 56.338 | +0.41% | +0.12% | 1.87x | 3.0 | 2026-11-24T04:31:23.437289+00:00 | Not calibrated | MODERATE 68/100 | HIGH 55/100 | Watch | WATCH |
-| 10 | XMR/USD | 491.35 | 65.136 | 58.195 | +1.10% | +0.28% | 1.56x | 9.0 | 2026-11-24T04:31:23.437289+00:00 | Not calibrated | STRONG 78/100 | HIGH 55/100 | Watch | WATCH |
-| 11 | BABY/USD | 0.00895 | 65.079 | 56.953 | +5.29% | +1.94% | 0.84x | 22.5 | 2026-11-24T04:31:23.437289+00:00 | Not calibrated | MODERATE 53/100 | EXTREME 86/100 | Do nothing | WATCH |
-| 12 | XRP/USD | 0.9529 | 65.038 | 64.595 | +1.44% | +0.39% | 0.85x | 0.9 | 2026-11-24T04:31:23.437289+00:00 | Not calibrated | MODERATE 63/100 | HIGH 62/100 | Watch | WATCH |
+| 1 | MON/USD | 0.01289 | 83.703 | 77.746 | +11.89% | -0.93% | 2.06x | 15.6 | 2026-11-24T04:41:26.363647+00:00 | Not calibrated | MODERATE 67/100 | HIGH 67/100 | Watch | WATCH |
+| 2 | XRP/USD | 0.95435 | 83.363 | 65.676 | +1.59% | +0.54% | 4.00x | 0.9 | 2026-11-24T04:41:26.363647+00:00 | Not calibrated | STRONG 97/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 3 | INX/USD | 0.00412 | 76.233 | 59.167 | +5.70% | +3.16% | 1.13x | 24.4 | 2026-11-24T04:41:26.363647+00:00 | Not calibrated | MODERATE 63/100 | EXTREME 96/100 | Do nothing | WATCH |
+| 4 | PEPE/USD | 3.514e-06 | 73.218 | 64.552 | +2.69% | +0.80% | 1.47x | 8.5 | 2026-11-24T04:41:26.363647+00:00 | Not calibrated | STRONG 82/100 | HIGH 55/100 | Watch | WATCH |
+| 5 | HYPE/USD | 63.84 | 72.986 | 56.416 | +0.31% | +0.31% | 3.23x | 1.6 | 2026-11-24T04:41:26.363647+00:00 | Not calibrated | STRONG 91/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 6 | AI/USD | 0.0163 | 72.444 | 73.099 | +7.03% | -0.18% | 1.03x | 6.2 | 2026-11-24T04:41:26.363647+00:00 | Not calibrated | MODERATE 46/100 | VERY_HIGH 80/100 | Watch | WATCH |
+| 7 | VVV/USD | 25.194 | 71.657 | 72.983 | +3.05% | +1.25% | 0.24x | 6.8 | 2026-11-24T04:41:26.363647+00:00 | Not calibrated | MODERATE 66/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 8 | XDG/USD | 0.0565185 | 69.140 | 57.007 | +0.38% | +0.56% | 1.93x | 1.3 | 2026-11-24T04:41:26.363647+00:00 | Not calibrated | STRONG 80/100 | HIGH 55/100 | Watch | WATCH |
+| 9 | NEAR/USD | 3.017 | 68.544 | 62.078 | +1.20% | +0.99% | 1.15x | 2.7 | 2026-11-24T04:41:26.363647+00:00 | Not calibrated | MODERATE 69/100 | HIGH 62/100 | Watch | WATCH |
+| 10 | AAVE/USD | 97.9 | 66.882 | 52.442 | +0.88% | -0.11% | 4.79x | 4.1 | 2026-11-24T04:41:26.363647+00:00 | Not calibrated | MODERATE 63/100 | HIGH 61/100 | Watch | WATCH |
+| 11 | LINK/USD | 9.09378 | 64.971 | 60.449 | +0.99% | +0.52% | 1.19x | 2.9 | 2026-11-24T04:41:26.363647+00:00 | Not calibrated | MODERATE 67/100 | HIGH 62/100 | Watch | WATCH |
+| 12 | AVAX/USD | 6.812 | 64.450 | 47.168 | +0.52% | +0.46% | 6.43x | 4.4 | 2026-11-24T04:41:26.363647+00:00 | Not calibrated | STRONG 87/100 | HIGH 55/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | MON/USD | 77.402 | 0.0128 | +2.81% | 1.58x |
-| 2 | VVV/USD | 68.592 | 25.069 | +0.80% | 1.21x |
-| 3 | PEPE/USD | 64.847 | 3.502e-06 | +0.43% | 1.13x |
-| 4 | XRP/USD | 64.595 | 0.9529 | +0.39% | 0.85x |
-| 5 | AI/USD | 61.596 | 0.01616 | -1.82% | 2.66x |
-| 6 | LINK/USD | 60.416 | 9.07468 | +0.29% | 1.76x |
-| 7 | XMR/USD | 58.195 | 491.35 | +0.28% | 1.56x |
-| 8 | BABY/USD | 56.953 | 0.00895 | +1.94% | 0.84x |
-| 9 | NEAR/USD | 56.338 | 2.9933 | +0.12% | 1.87x |
-| 10 | HYPE/USD | 55.976 | 63.8 | +0.41% | 2.22x |
-| 11 | AAVE/USD | 54.439 | 98.24 | +0.32% | 8.62x |
-| 12 | UNI/USD | 51.932 | 4.8651 | +0.53% | 6.11x |
+| 1 | MON/USD | 77.746 | 0.01289 | -0.93% | 2.06x |
+| 2 | AI/USD | 73.099 | 0.0163 | -0.18% | 1.03x |
+| 3 | VVV/USD | 72.983 | 25.194 | +1.25% | 0.24x |
+| 4 | XRP/USD | 65.676 | 0.95435 | +0.54% | 4.00x |
+| 5 | PEPE/USD | 64.552 | 3.514e-06 | +0.80% | 1.47x |
+| 6 | NEAR/USD | 62.078 | 3.017 | +0.99% | 1.15x |
+| 7 | LINK/USD | 60.449 | 9.09378 | +0.52% | 1.19x |
+| 8 | INX/USD | 59.167 | 0.00412 | +3.16% | 1.13x |
+| 9 | XDG/USD | 57.007 | 0.0565185 | +0.56% | 1.93x |
+| 10 | HYPE/USD | 56.416 | 63.84 | +0.31% | 3.23x |
+| 11 | AAVE/USD | 52.442 | 97.9 | -0.11% | 4.79x |
+| 12 | AVAX/USD | 47.168 | 6.812 | +0.46% | 6.43x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -60,8 +60,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1525; predictions: 13033; observations: 923823.
-- Matured sampled outcomes across 1/6/24/48h: 24300; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1526; predictions: 13045; observations: 924432.
+- Matured sampled outcomes across 1/6/24/48h: 24335; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 135 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -77,38 +77,39 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45326763284 · **Generation:** 1525 · **Legacy run:** 45326763284
-**Main quote time:** 2026-11-24T04:31:31.195593+00:00 · **Legacy report time:** 2026-11-24T04:32:29.543679+00:00
+**Writer:** 45327906798 · **Generation:** 1526 · **Legacy run:** 45327906798
+**Main quote time:** 2026-11-24T04:41:35.436472+00:00 · **Legacy report time:** 2026-11-24T04:42:46.514687+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | MON/USD ⭐ | 0.0128 | 97.31 | +2.81% | 1.58x | STRONG 99/100 | HIGH 61/100 | Consider small entry |
-| 2 | VVV/USD ⭐ | 25.069 | 74.67 | +0.80% | 1.21x | STRONG 82/100 | HIGH 62/100 | Watch |
-| 3 | AAVE/USD ⭐ | 98.24 | 71.02 | +0.32% | 8.62x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
-| 4 | HYPE/USD ⭐ | 63.8 | 70.23 | +0.41% | 2.22x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
-| 5 | UNI/USD | 4.8651 | 69.59 | +0.53% | 6.11x | STRONG 90/100 | HIGH 55/100 | Watch |
-| 6 | LINK/USD ⭐ | 9.07468 | 69.41 | +0.29% | 1.76x | STRONG 90/100 | HIGH 55/100 | Consider small entry |
-| 7 | PEPE/USD ⭐ | 3.502e-06 | 68.25 | +0.43% | 1.13x | STRONG 79/100 | HIGH 62/100 | Watch |
-| 8 | AI/USD | 0.01616 | 67.48 | -1.82% | 2.66x | MODERATE 54/100 | EXTREME 89/100 | Do nothing |
-| 9 | NEAR/USD ⭐ | 2.9933 | 65.63 | +0.12% | 1.87x | STRONG 78/100 | HIGH 55/100 | Watch |
-| 10 | XMR/USD ⭐ | 491.35 | 65.14 | +0.28% | 1.56x | STRONG 88/100 | HIGH 55/100 | Consider small entry |
-| 11 | BABY/USD | 0.00895 | 65.08 | +1.94% | 0.84x | MODERATE 53/100 | EXTREME 86/100 | Do nothing |
-| 12 | XRP/USD | 0.9529 | 65.04 | +0.39% | 0.85x | MODERATE 63/100 | HIGH 62/100 | Watch |
+| 1 | MON/USD | 0.01289 | 83.70 | -0.93% | 2.06x | MODERATE 67/100 | HIGH 67/100 | Watch |
+| 2 | XRP/USD ⭐ | 0.95435 | 83.36 | +0.54% | 4.00x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 3 | INX/USD ⭐ | 0.00412 | 76.23 | +3.16% | 1.13x | STRONG 73/100 | EXTREME 96/100 | Do nothing |
+| 4 | PEPE/USD ⭐ | 3.514e-06 | 73.22 | +0.80% | 1.47x | STRONG 92/100 | HIGH 55/100 | Watch |
+| 5 | HYPE/USD | 63.84 | 72.99 | +0.31% | 3.23x | STRONG 91/100 | HIGH 55/100 | Consider small entry |
+| 6 | AI/USD | 0.0163 | 72.44 | -0.18% | 1.03x | MODERATE 46/100 | VERY_HIGH 80/100 | Watch |
+| 7 | VVV/USD | 25.194 | 71.66 | +1.25% | 0.24x | MODERATE 66/100 | VERY_HIGH 70/100 | Watch |
+| 8 | XDG/USD ⭐ | 0.0565185 | 69.14 | +0.56% | 1.93x | STRONG 90/100 | HIGH 55/100 | Consider small entry |
+| 9 | NEAR/USD ⭐ | 3.017 | 68.54 | +0.99% | 1.15x | STRONG 79/100 | HIGH 62/100 | Watch |
+| 10 | AAVE/USD | 97.9 | 66.88 | -0.11% | 4.79x | MODERATE 63/100 | HIGH 61/100 | Watch |
+| 11 | LINK/USD ⭐ | 9.09378 | 64.97 | +0.52% | 1.19x | STRONG 77/100 | HIGH 62/100 | Watch |
+| 12 | AVAX/USD | 6.812 | 64.45 | +0.46% | 6.43x | STRONG 87/100 | HIGH 55/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | MON/USD ⭐ | 0.01279 | 86.47 | +2.81% | 1.58x | 8758 | STRONG 93/100 | HIGH 61/100 | Consider small entry |
-| 2 | VVV/USD ⭐ | 25.091 | 71.79 | +0.80% | 1.21x | 13557 | STRONG 81/100 | HIGH 62/100 | Watch |
-| 3 | PEPE/USD ⭐ | 3.497e-06 | 65.59 | +0.43% | 1.13x | 9348 | STRONG 78/100 | HIGH 62/100 | Watch |
-| 4 | AAVE/USD ⭐ | 98.01 | 60.67 | +0.32% | 8.62x | 6602 | STRONG 95/100 | HIGH 55/100 | Consider small entry |
-| 5 | LINK/USD ⭐ | 9.07468 | 59.36 | +0.29% | 1.76x | 8854 | STRONG 85/100 | HIGH 55/100 | Consider small entry |
-| 6 | XMR/USD ⭐ | 491.84 | 58.85 | +0.28% | 1.56x | 11891 | STRONG 84/100 | HIGH 55/100 | Consider small entry |
-| 7 | HYPE/USD ⭐ | 63.81 | 58.18 | +0.41% | 2.22x | 30399 | STRONG 94/100 | HIGH 55/100 | Consider small entry |
-| 8 | NEAR/USD ⭐ | 2.9942 | 55.06 | +0.12% | 1.87x | 23683 | STRONG 73/100 | HIGH 55/100 | Watch |
+| 1 | INX/USD ⭐ | 0.004115 | 79.39 | +3.16% | 1.13x | 2995 | STRONG 70/100 | EXTREME 96/100 | Do nothing |
+| 2 | XRP/USD ⭐ | 0.95347 | 79.39 | +0.54% | 4.00x | 46917 | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 3 | BABY/USD | 0.00897 | 79.12 | +1.36% | 2.15x | 2610 | STRONG 85/100 | VERY_HIGH 79/100 | Watch |
+| 4 | PEPE/USD ⭐ | 3.507e-06 | 68.10 | +0.80% | 1.47x | 9367 | STRONG 84/100 | HIGH 61/100 | Watch |
+| 5 | UNI/USD | 4.8865 | 63.44 | +0.64% | 5.09x | 9303 | STRONG 87/100 | HIGH 55/100 | Watch |
+| 6 | NEAR/USD ⭐ | 3.0144 | 61.64 | +0.99% | 1.15x | 23600 | STRONG 76/100 | HIGH 62/100 | Watch |
+| 7 | XDG/USD ⭐ | 0.0564602 | 59.09 | +0.56% | 1.93x | 11148 | STRONG 85/100 | HIGH 55/100 | Consider small entry |
+| 8 | LINK/USD ⭐ | 9.08678 | 57.45 | +0.52% | 1.19x | 8869 | STRONG 74/100 | HIGH 62/100 | Watch |
+| 9 | XMR/USD | 492.11 | 53.13 | +0.25% | 1.09x | 11838 | MODERATE 57/100 | HIGH 68/100 | Watch |
 
-**Same-run overlap:** MON/USD, VVV/USD, AAVE/USD, HYPE/USD, LINK/USD, PEPE/USD, NEAR/USD, XMR/USD
+**Same-run overlap:** XRP/USD, INX/USD, PEPE/USD, XDG/USD, NEAR/USD, LINK/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
