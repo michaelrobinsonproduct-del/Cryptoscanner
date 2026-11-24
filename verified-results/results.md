@@ -2,35 +2,39 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-24T21:51:50.975671+00:00
+**UTC as-of:** 2026-11-24T22:01:49.985032+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45494956157
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45496544979
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** 3a165d6163cfa2480ac7bf457e5b5b97b4cbabe9 (atomic ledger/results publication)
-**Ledger generation:** 1630 (remote push/readback verified)
+**Previous ledger commit:** 0f4871dbd09236972c52d126d37a82e25fa4789a (atomic ledger/results publication)
+**Ledger generation:** 1631 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 11.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 13.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | XMR/USD | 503.65 | 84.410 | 79.995 | +3.63% | +0.49% | 1.20x | 0.8 | 2026-11-24T21:51:47.319963+00:00 | Not calibrated | STRONG 77/100 | HIGH 62/100 | Watch | WATCH |
-| 2 | PEPE/USD | 3.488e-06 | 66.606 | 56.728 | +1.93% | +0.49% | 1.74x | 2.9 | 2026-11-24T21:51:47.319963+00:00 | Not calibrated | STRONG 78/100 | HIGH 55/100 | Watch | WATCH |
-| 3 | GBP/USD | 1.31088 | 58.826 | 59.022 | +0.59% | -0.01% | 0.99x | 0.2 | 2026-11-24T21:51:47.319963+00:00 | Not calibrated | WEAK 34/100 | HIGH 68/100 | Do nothing | WATCH |
-| 4 | SKY/USD | 0.04083 | 57.571 | 36.504 | +1.09% | +1.21% | 4.03x | 9.8 | 2026-11-24T21:51:47.319963+00:00 | Not calibrated | STRONG 84/100 | HIGH 60/100 | Watch | WATCH |
-| 5 | NIGHT/USD | 0.04838 | 37.400 | 40.210 | +0.48% | -0.14% | 0.79x | 6.2 | 2026-11-24T21:51:47.319963+00:00 | Not calibrated | WEAK 24/100 | HIGH 68/100 | Do nothing | WATCH |
+| 1 | XMR/USD | 504.95 | 77.200 | 74.529 | +3.89% | +0.52% | 1.01x | 15.5 | 2026-11-24T22:01:45.553662+00:00 | Not calibrated | MODERATE 69/100 | HIGH 68/100 | Watch | WATCH |
+| 2 | GBP/USD | 1.3111 | 60.459 | 58.988 | +0.60% | +0.00% | 1.15x | 0.5 | 2026-11-24T22:01:45.553662+00:00 | Not calibrated | MODERATE 55/100 | HIGH 62/100 | Watch | WATCH |
+| 3 | PEPE/USD | 3.484e-06 | 60.351 | 56.196 | +1.81% | +0.17% | 1.33x | 2.9 | 2026-11-24T22:01:45.553662+00:00 | Not calibrated | MODERATE 65/100 | HIGH 55/100 | Watch | WATCH |
+| 4 | SKY/USD | 0.04084 | 59.355 | 40.414 | +1.11% | +0.79% | 10.38x | 2.4 | 2026-11-24T22:01:45.553662+00:00 | Not calibrated | STRONG 85/100 | HIGH 60/100 | Watch | WATCH |
+| 5 | NIGHT/USD | 0.04862 | 52.485 | 45.570 | +0.98% | +0.31% | 1.54x | 2.1 | 2026-11-24T22:01:45.553662+00:00 | Not calibrated | STRONG 71/100 | HIGH 55/100 | Watch | WATCH |
+| 6 | LUNA/USD | 4.528e-05 | 46.599 | 57.635 | +4.16% | -0.83% | 0.31x | 6.6 | 2026-11-24T22:01:45.553662+00:00 | Not calibrated | WEAK 28/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
+| 7 | REKT/USD | 7.95e-08 | 42.656 | 27.249 | +1.53% | +1.27% | 1.91x | 37.9 | 2026-11-24T22:01:45.553662+00:00 | Not calibrated | MODERATE 51/100 | VERY_HIGH 72/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | XMR/USD | 79.995 | 503.65 | +0.49% | 1.20x |
-| 2 | GBP/USD | 59.022 | 1.31088 | -0.01% | 0.99x |
-| 3 | PEPE/USD | 56.728 | 3.488e-06 | +0.49% | 1.74x |
-| 4 | NIGHT/USD | 40.210 | 0.04838 | -0.14% | 0.79x |
-| 5 | SKY/USD | 36.504 | 0.04083 | +1.21% | 4.03x |
+| 1 | XMR/USD | 74.529 | 504.95 | +0.52% | 1.01x |
+| 2 | GBP/USD | 58.988 | 1.3111 | +0.00% | 1.15x |
+| 3 | LUNA/USD | 57.635 | 4.528e-05 | -0.83% | 0.31x |
+| 4 | PEPE/USD | 56.196 | 3.484e-06 | +0.17% | 1.33x |
+| 5 | NIGHT/USD | 45.570 | 0.04862 | +0.31% | 1.54x |
+| 6 | SKY/USD | 40.414 | 0.04084 | +0.79% | 10.38x |
+| 7 | REKT/USD | 27.249 | 7.95e-08 | +1.27% | 1.91x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -46,8 +50,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1630; predictions: 13967; observations: 987761.
-- Matured sampled outcomes across 1/6/24/48h: 28702; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1631; predictions: 13974; observations: 988370.
+- Matured sampled outcomes across 1/6/24/48h: 28739; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 143 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -63,26 +67,30 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45494956157 · **Generation:** 1630 · **Legacy run:** 45494956157
-**Main quote time:** 2026-11-24T21:51:50.975671+00:00 · **Legacy report time:** 2026-11-24T21:52:40.930281+00:00
+**Writer:** 45496544979 · **Generation:** 1631 · **Legacy run:** 45496544979
+**Main quote time:** 2026-11-24T22:01:49.985032+00:00 · **Legacy report time:** 2026-11-24T22:02:40.316671+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | XMR/USD ⭐ | 503.65 | 84.41 | +0.49% | 1.20x | STRONG 87/100 | HIGH 62/100 | Watch |
-| 2 | PEPE/USD ⭐ | 3.488e-06 | 66.61 | +0.49% | 1.74x | STRONG 88/100 | HIGH 55/100 | Consider small entry |
-| 3 | GBP/USD | 1.31088 | 58.83 | -0.01% | 0.99x | WEAK 34/100 | HIGH 68/100 | Do nothing |
-| 4 | SKY/USD ⭐ | 0.04083 | 57.57 | +1.21% | 4.03x | STRONG 94/100 | HIGH 60/100 | Consider small entry |
-| 5 | NIGHT/USD | 0.04838 | 37.40 | -0.14% | 0.79x | WEAK 24/100 | HIGH 68/100 | Do nothing |
+| 1 | XMR/USD ⭐ | 504.95 | 77.20 | +0.52% | 1.01x | STRONG 79/100 | HIGH 68/100 | Watch |
+| 2 | GBP/USD | 1.3111 | 60.46 | +0.00% | 1.15x | MODERATE 55/100 | HIGH 62/100 | Watch |
+| 3 | PEPE/USD ⭐ | 3.484e-06 | 60.35 | +0.17% | 1.33x | STRONG 75/100 | HIGH 55/100 | Watch |
+| 4 | SKY/USD ⭐ | 0.04084 | 59.35 | +0.79% | 10.38x | STRONG 95/100 | HIGH 60/100 | Consider small entry |
+| 5 | NIGHT/USD ⭐ | 0.04862 | 52.48 | +0.31% | 1.54x | STRONG 81/100 | HIGH 55/100 | Consider small entry |
+| 6 | LUNA/USD | 4.528e-05 | 46.60 | -0.83% | 0.31x | WEAK 28/100 | VERY_HIGH 81/100 | Do nothing |
+| 7 | REKT/USD ⭐ | 7.95e-08 | 42.66 | +1.27% | 1.91x | MODERATE 61/100 | VERY_HIGH 72/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | XMR/USD ⭐ | 503.75 | 96.05 | +0.49% | 1.20x | 7615 | STRONG 93/100 | HIGH 62/100 | Watch |
-| 2 | PEPE/USD ⭐ | 3.481e-06 | 65.17 | +0.49% | 1.74x | 6656 | STRONG 88/100 | HIGH 55/100 | Consider small entry |
-| 3 | SKY/USD ⭐ | 0.04081 | 58.49 | +1.21% | 4.03x | 4380 | STRONG 94/100 | HIGH 60/100 | Consider small entry |
+| 1 | XMR/USD ⭐ | 505.88 | 86.59 | +0.52% | 1.01x | 7567 | STRONG 83/100 | HIGH 68/100 | Watch |
+| 2 | PEPE/USD ⭐ | 3.483e-06 | 63.45 | +0.17% | 1.33x | 6710 | STRONG 77/100 | HIGH 55/100 | Watch |
+| 3 | SKY/USD ⭐ | 0.04084 | 53.25 | +0.79% | 10.38x | 4431 | STRONG 92/100 | HIGH 60/100 | Consider small entry |
+| 4 | REKT/USD ⭐ | 7.95e-08 | 51.10 | +1.27% | 1.91x | 12280 | MODERATE 66/100 | VERY_HIGH 72/100 | Watch |
+| 5 | NIGHT/USD ⭐ | 0.04867 | 50.66 | +0.31% | 1.54x | 9195 | STRONG 80/100 | HIGH 55/100 | Consider small entry |
 
-**Same-run overlap:** XMR/USD, PEPE/USD, SKY/USD
+**Same-run overlap:** XMR/USD, PEPE/USD, SKY/USD, NIGHT/USD, REKT/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
