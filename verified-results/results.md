@@ -2,45 +2,33 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-24T03:01:20.986929+00:00
+**UTC as-of:** 2026-11-24T03:11:33.921320+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45316317612
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45317523305
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** 137bb669346093b5c06fd01d5a1ef34735c70c82 (atomic ledger/results publication)
-**Ledger generation:** 1516 (remote push/readback verified)
+**Previous ledger commit:** 5708c3204cbd1dfc216d5a393c8238d060420d36 (atomic ledger/results publication)
+**Ledger generation:** 1517 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 16.
+**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 8.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | MON/USD | 0.01226 | 72.702 | 75.497 | +6.42% | -0.89% | 1.16x | 16.3 | 2026-11-24T03:01:16.352095+00:00 | Not calibrated | WEAK 41/100 | VERY_HIGH 74/100 | Watch | WATCH |
-| 2 | AI/USD | 0.01567 | 46.758 | 44.976 | +2.89% | -0.26% | 1.31x | 12.8 | 2026-11-24T03:01:16.352095+00:00 | Not calibrated | WEAK 38/100 | VERY_HIGH 79/100 | Watch | WATCH |
-| 3 | PEPE/USD | 3.435e-06 | 46.069 | 48.560 | +0.38% | -0.20% | 0.85x | 5.8 | 2026-11-24T03:01:16.352095+00:00 | Not calibrated | WEAK 28/100 | HIGH 68/100 | Do nothing | WATCH |
-| 4 | NIGHT/USD | 0.04852 | 44.567 | 49.934 | +0.77% | +0.25% | 0.34x | 10.3 | 2026-11-24T03:01:16.352095+00:00 | Not calibrated | MODERATE 47/100 | VERY_HIGH 76/100 | Watch | WATCH |
-| 5 | CPOOL/USD | 0.02175 | 40.017 | 37.145 | +1.49% | -2.43% | 3.95x | 9.3 | 2026-11-24T03:01:16.352095+00:00 | Not calibrated | MODERATE 50/100 | VERY_HIGH 77/100 | Do nothing | WATCH |
-| 6 | XDC/USD | 0.02619 | 34.950 | 39.036 | +0.81% | +0.23% | 0.48x | 3.8 | 2026-11-24T03:01:16.352095+00:00 | Not calibrated | MODERATE 47/100 | VERY_HIGH 75/100 | Watch | WATCH |
-| 7 | CC/USD | 0.07903 | 34.076 | 37.347 | +0.60% | -0.21% | 0.78x | 6.3 | 2026-11-24T03:01:16.352095+00:00 | Not calibrated | WEAK 22/100 | VERY_HIGH 73/100 | Do nothing | WATCH |
-| 8 | BABY/USD | 0.00854 | 32.233 | 28.422 | +0.47% | -0.81% | 1.79x | 11.7 | 2026-11-24T03:01:16.352095+00:00 | Not calibrated | WEAK 31/100 | VERY_HIGH 79/100 | Do nothing | WATCH |
-| 9 | XTZ/USD | 0.21385 | 27.353 | 28.044 | +0.47% | -0.02% | 0.94x | 12.2 | 2026-11-24T03:01:16.352095+00:00 | Not calibrated | WEAK 14/100 | EXTREME 86/100 | Do nothing | WATCH |
-| 10 | BAT/USD | 0.07791 | 26.590 | 26.491 | +0.96% | -0.33% | 1.18x | 24.4 | 2026-11-24T03:01:16.352095+00:00 | Not calibrated | WEAK 13/100 | EXTREME 85/100 | Do nothing | WATCH |
+| 1 | MON/USD | 0.01214 | 68.660 | 72.480 | +5.38% | -0.57% | 0.90x | 8.2 | 2026-11-24T03:11:31.289008+00:00 | Not calibrated | WEAK 39/100 | HIGH 68/100 | Watch | WATCH |
+| 2 | XDC/USD | 0.02623 | 54.589 | 38.252 | +0.96% | +0.27% | 3.41x | 7.6 | 2026-11-24T03:11:31.289008+00:00 | Not calibrated | STRONG 82/100 | HIGH 60/100 | Watch | WATCH |
+| 3 | NIGHT/USD | 0.04845 | 47.525 | 53.080 | +0.62% | -0.06% | 0.48x | 2.1 | 2026-11-24T03:11:31.289008+00:00 | Not calibrated | WEAK 29/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
+| 4 | AI/USD | 0.01571 | 35.730 | 30.937 | +3.15% | +0.89% | 1.03x | 44.5 | 2026-11-24T03:11:31.289008+00:00 | Not calibrated | WEAK 38/100 | EXTREME 96/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | MON/USD | 75.497 | 0.01226 | -0.89% | 1.16x |
-| 2 | NIGHT/USD | 49.934 | 0.04852 | +0.25% | 0.34x |
-| 3 | PEPE/USD | 48.560 | 3.435e-06 | -0.20% | 0.85x |
-| 4 | AI/USD | 44.976 | 0.01567 | -0.26% | 1.31x |
-| 5 | XDC/USD | 39.036 | 0.02619 | +0.23% | 0.48x |
-| 6 | CC/USD | 37.347 | 0.07903 | -0.21% | 0.78x |
-| 7 | CPOOL/USD | 37.145 | 0.02175 | -2.43% | 3.95x |
-| 8 | BABY/USD | 28.422 | 0.00854 | -0.81% | 1.79x |
-| 9 | XTZ/USD | 28.044 | 0.21385 | -0.02% | 0.94x |
-| 10 | BAT/USD | 26.491 | 0.07791 | -0.33% | 1.18x |
+| 1 | MON/USD | 72.480 | 0.01214 | -0.57% | 0.90x |
+| 2 | NIGHT/USD | 53.080 | 0.04845 | -0.06% | 0.48x |
+| 3 | XDC/USD | 38.252 | 0.02623 | +0.27% | 3.41x |
+| 4 | AI/USD | 30.937 | 0.01571 | +0.89% | 1.03x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -56,15 +44,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1516; predictions: 12944; observations: 918345.
-- Matured sampled outcomes across 1/6/24/48h: 23994; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1517; predictions: 12948; observations: 918953.
+- Matured sampled outcomes across 1/6/24/48h: 24030; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 135 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 6; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 4; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -73,29 +61,24 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45316317612 · **Generation:** 1516 · **Legacy run:** 45316317612
-**Main quote time:** 2026-11-24T03:01:20.986929+00:00 · **Legacy report time:** 2026-11-24T03:02:30.460104+00:00
+**Writer:** 45317523305 · **Generation:** 1517 · **Legacy run:** 45317523305
+**Main quote time:** 2026-11-24T03:11:33.921320+00:00 · **Legacy report time:** 2026-11-24T03:12:36.517595+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | MON/USD | 0.01226 | 72.70 | -0.89% | 1.16x | WEAK 41/100 | VERY_HIGH 74/100 | Watch |
-| 2 | AI/USD | 0.01567 | 46.76 | -0.26% | 1.31x | WEAK 38/100 | VERY_HIGH 79/100 | Watch |
-| 3 | PEPE/USD | 3.435e-06 | 46.07 | -0.20% | 0.85x | WEAK 28/100 | HIGH 68/100 | Do nothing |
-| 4 | NIGHT/USD | 0.04852 | 44.57 | +0.25% | 0.34x | MODERATE 47/100 | VERY_HIGH 76/100 | Watch |
-| 5 | CPOOL/USD | 0.02175 | 40.02 | -2.43% | 3.95x | MODERATE 50/100 | VERY_HIGH 77/100 | Do nothing |
-| 6 | XDC/USD | 0.02619 | 34.95 | +0.23% | 0.48x | MODERATE 47/100 | VERY_HIGH 75/100 | Watch |
-| 7 | CC/USD | 0.07903 | 34.08 | -0.21% | 0.78x | WEAK 22/100 | VERY_HIGH 73/100 | Do nothing |
-| 8 | BABY/USD | 0.00854 | 32.23 | -0.81% | 1.79x | WEAK 31/100 | VERY_HIGH 79/100 | Do nothing |
-| 9 | XTZ/USD | 0.21385 | 27.35 | -0.02% | 0.94x | WEAK 14/100 | EXTREME 86/100 | Do nothing |
-| 10 | BAT/USD | 0.07791 | 26.59 | -0.33% | 1.18x | WEAK 13/100 | EXTREME 85/100 | Do nothing |
+| 1 | MON/USD | 0.01214 | 68.66 | -0.57% | 0.90x | WEAK 39/100 | HIGH 68/100 | Watch |
+| 2 | XDC/USD ⭐ | 0.02623 | 54.59 | +0.27% | 3.41x | STRONG 92/100 | HIGH 60/100 | Consider small entry |
+| 3 | NIGHT/USD | 0.04845 | 47.52 | -0.06% | 0.48x | WEAK 29/100 | VERY_HIGH 76/100 | Do nothing |
+| 4 | AI/USD ⭐ | 0.01571 | 35.73 | +0.89% | 1.03x | MODERATE 48/100 | EXTREME 96/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
+| 1 | AI/USD ⭐ | 0.01569 | 63.89 | +0.89% | 1.03x | 2807 | STRONG 77/100 | VERY_HIGH 74/100 | Watch |
+| 2 | XDC/USD ⭐ | 0.02624 | 53.38 | +0.27% | 3.41x | 4431 | STRONG 92/100 | HIGH 60/100 | Consider small entry |
 
-**Same-run overlap:** None
+**Same-run overlap:** XDC/USD, AI/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
