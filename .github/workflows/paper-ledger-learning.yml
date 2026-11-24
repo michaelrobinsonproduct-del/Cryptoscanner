@@ -466,9 +466,14 @@ jobs:
                 test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq '.status + ":" + (.conclusion // "")')" = "completed:success"
                 completed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$origin" --jq .updated_at)
               fi
-              if python -c 'import json,sys; from paper_pov.market_wide_learning import eligible_scoring_model; a=json.load(open("evidence/ledger.json")); m=json.load(open(sys.argv[1])); sys.exit(not eligible_scoring_model(m,sys.argv[2],a["runs"][-1]["as_of"]))' evidence/market-prior/market-wide-model.json "$completed"; then
+              # Keep one shadow evaluation model for a 72h window while fitting new candidates continuously.
+              # The active model and original availability receipt are persisted unchanged when held.
+              if python -c 'import json,sys; from paper_pov.market_wide_learning import should_switch_scoring_model; a=json.load(open("evidence/ledger.json")); old=json.load(open(sys.argv[1])); new=json.load(open(sys.argv[3])); sys.exit(not should_switch_scoring_model(old,sys.argv[2],new,sys.argv[4],a["runs"][-1]["as_of"]))' "$model_path" "$model_ready" evidence/market-prior/market-wide-model.json "$completed"; then
                 model_path=evidence/market-prior/market-wide-model.json
                 model_ready="$completed"
+                echo "SHADOW_EVALUATION_ROTATED=$model_ready"
+              else
+                echo "SHADOW_EVALUATION_RETAINED=$model_ready"
               fi
             fi
           else

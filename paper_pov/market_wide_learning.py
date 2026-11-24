@@ -613,6 +613,38 @@ def eligible_scoring_model(model, available, scan_at):
 
 
 
+SHADOW_EVALUATION_MIN_HOURS = 72
+
+
+def should_switch_scoring_model(active, active_available, candidate, candidate_available, scan_at):
+    """Keep a shadow model stable long enough to collect and mature 48h labels.
+
+    Training continues on every cycle; only prospective research selection
+    is held. The original verified availability time is retained when the
+    active model is reused. Never change the canonical production scorer.
+    """
+    if not eligible_scoring_model(candidate,candidate_available,scan_at):
+        return False
+    if not eligible_scoring_model(active,active_available,scan_at):
+        return True
+    if active == candidate:
+        return False
+    old_ready=utc_time(active_available)
+    new_ready=utc_time(candidate_available)
+    now=utc_time(scan_at)
+    if new_ready <= old_ready:
+        return False
+    # The pre-existing frozen historical bootstrap is a fallback, not a
+    # newly activated cumulative candidate.
+    if active.get("schema")=="kraken_q3_frozen_shadow_v1":
+        return True
+    if candidate.get("schema")!="market_wide_cumulative_shadow_v1":
+        return False
+    if utc_time(candidate["model"]["training_end_utc"]) < utc_time(active["model"]["training_end_utc"]):
+        return False
+    return now-old_ready >= timedelta(hours=SHADOW_EVALUATION_MIN_HOURS)
+
+
 def due_outcome_followups(prior, eligible_pairs, scored_pairs, *, asof, budget):
     """Use spare requests for matured paired windows first, then missed-gainer controls.
 
