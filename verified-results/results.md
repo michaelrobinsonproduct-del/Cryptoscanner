@@ -2,33 +2,39 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-24T03:11:33.921320+00:00
+**UTC as-of:** 2026-11-24T03:21:27.415217+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45317523305
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45318708442
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** 5708c3204cbd1dfc216d5a393c8238d060420d36 (atomic ledger/results publication)
-**Ledger generation:** 1517 (remote push/readback verified)
+**Previous ledger commit:** c33e2d4d08a98bca3237ba1786770b93f65a37a1 (atomic ledger/results publication)
+**Ledger generation:** 1518 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 8.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 11.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | MON/USD | 0.01214 | 68.660 | 72.480 | +5.38% | -0.57% | 0.90x | 8.2 | 2026-11-24T03:11:31.289008+00:00 | Not calibrated | WEAK 39/100 | HIGH 68/100 | Watch | WATCH |
-| 2 | XDC/USD | 0.02623 | 54.589 | 38.252 | +0.96% | +0.27% | 3.41x | 7.6 | 2026-11-24T03:11:31.289008+00:00 | Not calibrated | STRONG 82/100 | HIGH 60/100 | Watch | WATCH |
-| 3 | NIGHT/USD | 0.04845 | 47.525 | 53.080 | +0.62% | -0.06% | 0.48x | 2.1 | 2026-11-24T03:11:31.289008+00:00 | Not calibrated | WEAK 29/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
-| 4 | AI/USD | 0.01571 | 35.730 | 30.937 | +3.15% | +0.89% | 1.03x | 44.5 | 2026-11-24T03:11:31.289008+00:00 | Not calibrated | WEAK 38/100 | EXTREME 96/100 | Do nothing | WATCH |
+| 1 | MON/USD | 0.01208 | 69.761 | 68.948 | +4.86% | -0.33% | 1.25x | 8.3 | 2026-11-24T03:21:24.365976+00:00 | Not calibrated | MODERATE 45/100 | HIGH 68/100 | Watch | WATCH |
+| 2 | NIGHT/USD | 0.04843 | 49.448 | 49.541 | +0.58% | -0.58% | 1.28x | 8.3 | 2026-11-24T03:21:24.365976+00:00 | Not calibrated | WEAK 35/100 | HIGH 61/100 | Watch | WATCH |
+| 3 | XDC/USD | 0.02621 | 45.470 | 33.887 | +0.89% | -0.68% | 3.92x | 15.3 | 2026-11-24T03:21:24.365976+00:00 | Not calibrated | MODERATE 48/100 | VERY_HIGH 72/100 | Watch | WATCH |
+| 4 | AI/USD | 0.01567 | 36.313 | 48.173 | +2.89% | -1.52% | 0.57x | 6.4 | 2026-11-24T03:21:24.365976+00:00 | Not calibrated | WEAK 23/100 | EXTREME 92/100 | Do nothing | WATCH |
+| 5 | XTZ/USD | 0.21368 | 35.495 | 27.511 | +0.39% | -0.27% | 1.93x | 12.2 | 2026-11-24T03:21:24.365976+00:00 | Not calibrated | WEAK 33/100 | VERY_HIGH 79/100 | Do nothing | WATCH |
+| 6 | BAT/USD | 0.07773 | 27.438 | 32.389 | +0.73% | -0.21% | 0.61x | 9.0 | 2026-11-24T03:21:24.365976+00:00 | Not calibrated | WEAK 19/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
+| 7 | BABY/USD | 0.00853 | 22.451 | 27.610 | +0.35% | -0.47% | 0.72x | 11.7 | 2026-11-24T03:21:24.365976+00:00 | Not calibrated | WEAK 11/100 | EXTREME 94/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | MON/USD | 72.480 | 0.01214 | -0.57% | 0.90x |
-| 2 | NIGHT/USD | 53.080 | 0.04845 | -0.06% | 0.48x |
-| 3 | XDC/USD | 38.252 | 0.02623 | +0.27% | 3.41x |
-| 4 | AI/USD | 30.937 | 0.01571 | +0.89% | 1.03x |
+| 1 | MON/USD | 68.948 | 0.01208 | -0.33% | 1.25x |
+| 2 | NIGHT/USD | 49.541 | 0.04843 | -0.58% | 1.28x |
+| 3 | AI/USD | 48.173 | 0.01567 | -1.52% | 0.57x |
+| 4 | XDC/USD | 33.887 | 0.02621 | -0.68% | 3.92x |
+| 5 | BAT/USD | 32.389 | 0.07773 | -0.21% | 0.61x |
+| 6 | BABY/USD | 27.610 | 0.00853 | -0.47% | 0.72x |
+| 7 | XTZ/USD | 27.511 | 0.21368 | -0.27% | 1.93x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -44,8 +50,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1517; predictions: 12948; observations: 918953.
-- Matured sampled outcomes across 1/6/24/48h: 24030; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1518; predictions: 12955; observations: 919561.
+- Matured sampled outcomes across 1/6/24/48h: 24067; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 135 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -61,24 +67,26 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45317523305 · **Generation:** 1517 · **Legacy run:** 45317523305
-**Main quote time:** 2026-11-24T03:11:33.921320+00:00 · **Legacy report time:** 2026-11-24T03:12:36.517595+00:00
+**Writer:** 45318708442 · **Generation:** 1518 · **Legacy run:** 45318708442
+**Main quote time:** 2026-11-24T03:21:27.415217+00:00 · **Legacy report time:** 2026-11-24T03:22:36.143638+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | MON/USD | 0.01214 | 68.66 | -0.57% | 0.90x | WEAK 39/100 | HIGH 68/100 | Watch |
-| 2 | XDC/USD ⭐ | 0.02623 | 54.59 | +0.27% | 3.41x | STRONG 92/100 | HIGH 60/100 | Consider small entry |
-| 3 | NIGHT/USD | 0.04845 | 47.52 | -0.06% | 0.48x | WEAK 29/100 | VERY_HIGH 76/100 | Do nothing |
-| 4 | AI/USD ⭐ | 0.01571 | 35.73 | +0.89% | 1.03x | MODERATE 48/100 | EXTREME 96/100 | Do nothing |
+| 1 | MON/USD | 0.01208 | 69.76 | -0.33% | 1.25x | MODERATE 45/100 | HIGH 68/100 | Watch |
+| 2 | NIGHT/USD | 0.04843 | 49.45 | -0.58% | 1.28x | WEAK 35/100 | HIGH 61/100 | Watch |
+| 3 | XDC/USD | 0.02621 | 45.47 | -0.68% | 3.92x | MODERATE 48/100 | VERY_HIGH 72/100 | Watch |
+| 4 | AI/USD | 0.01567 | 36.31 | -1.52% | 0.57x | WEAK 23/100 | EXTREME 92/100 | Do nothing |
+| 5 | XTZ/USD | 0.21368 | 35.50 | -0.27% | 1.93x | WEAK 33/100 | VERY_HIGH 79/100 | Do nothing |
+| 6 | BAT/USD | 0.07773 | 27.44 | -0.21% | 0.61x | WEAK 19/100 | VERY_HIGH 81/100 | Do nothing |
+| 7 | BABY/USD | 0.00853 | 22.45 | -0.47% | 0.72x | WEAK 11/100 | EXTREME 94/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | AI/USD ⭐ | 0.01569 | 63.89 | +0.89% | 1.03x | 2807 | STRONG 77/100 | VERY_HIGH 74/100 | Watch |
-| 2 | XDC/USD ⭐ | 0.02624 | 53.38 | +0.27% | 3.41x | 4431 | STRONG 92/100 | HIGH 60/100 | Consider small entry |
+| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
 
-**Same-run overlap:** XDC/USD, AI/USD
+**Same-run overlap:** None
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
