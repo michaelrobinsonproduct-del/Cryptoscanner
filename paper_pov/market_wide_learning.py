@@ -499,6 +499,63 @@ def score_prospective_market_shard(ledger, results, model_source, *, model_avail
 
 
 
+def prospective_event_metrics(rows):
+    """Deduplicate complete 48h positive anchors into pair crossing proxies.
+
+    Only first timely shard per writer, separately per model version.
+    Candle-close times bound crossings; a five-minute subtraction makes
+    lead times conservative. This is not full-universe event recall.
+    """
+    by_pair = {}
+    missing = 0
+    for p, o in rows:
+        try:
+            pair = p["pair"]
+            entry = utc_time(p["entry_utc"])
+            crossing = utc_time(o["observed_crossing_candle_close_utc"])
+            if not pair or not entry < crossing <= entry + timedelta(hours=48):
+                raise ValueError("Invalid event timing")
+        except (KeyError, ValueError, TypeError):
+            missing += 1
+            continue
+        by_pair.setdefault(pair, []).append((crossing, entry, p))
+    clusters = []
+    for pair, records in sorted(by_pair.items()):
+        previous = None
+        for record in sorted(records, key=lambda x: (x[0], x[1], x[2]["prediction_id"])):
+            if previous is None or record[0] - previous > timedelta(hours=6):
+                clusters.append([])
+            clusters[-1].append(record)
+            previous = record[0]
+    result = {"scope": "FIRST_TIMELY_SCORED_SHARD_PER_WRITER_48H_EVENT_PROXY",
+              "event_definition": "PAIR_CONSECUTIVE_CROSSINGS_WITHIN_6H",
+              "known_events": len(clusters), "positive_anchors_missing_event_timing": missing,
+              "measured_lift_verified": False}
+    for name, field in (("baseline", "baseline_watch"), ("shadow", "shadow_equal_budget_watch")):
+        leads = []
+        early = 0
+        for cluster in clusters:
+            first = cluster[0][0]
+            earliest_crossing = first - timedelta(minutes=5)
+            candidates = [(entry, p) for _, entry, p in cluster
+                          if p[field] and entry < earliest_crossing]
+            if not candidates:
+                continue
+            lead = (earliest_crossing - min(entry for entry, _ in candidates)).total_seconds()/3600
+            leads.append(lead)
+            # Early means at least one hour of conservative lead and no
+            # more than 3% absolute preceding 60m momentum at selection.
+            early += int(any((earliest_crossing-entry) >= timedelta(hours=1)
+                             and type(p.get("features", {}).get("momentum_60m")) in (int, float)
+                             and abs(p["features"]["momentum_60m"]) <= .03
+                             for entry, p in candidates))
+        result[name] = {"detected_events": len(leads), "missed_events": len(clusters)-len(leads),
+                        "early_events": early,
+                        "event_recall": len(leads)/len(clusters) if clusters else None,
+                        "mean_lead_hours_lower_bound": sum(leads)/len(leads) if leads else None}
+    return result
+
+
 def prospective_metrics_by_version(predictions, outcomes):
     """Equal-budget paired metrics for each model and each horizon.
 
@@ -528,6 +585,7 @@ def prospective_metrics_by_version(predictions, outcomes):
         if writer not in first_by_writer or order<first_by_writer[writer]:
             first_by_writer[writer]=order
     result={}
+    event_rows={}
     for key,group in groups.items():
         version,_=key
         repeated=first_by_writer[batch_writers[key]][1]!=key
@@ -558,6 +616,8 @@ def prospective_metrics_by_version(predictions, outcomes):
                 if not o["hit"]:
                     continue
                 m["known_positive_anchors"]+=1
+                if h == 48:
+                    event_rows.setdefault(version, []).append((p, o))
                 for scanner, selected in (("baseline",p["baseline_watch"]),
                                           ("shadow",p["shadow_equal_budget_watch"])):
                     m[f"{scanner}_known_{'detected' if selected else 'missed'}_positives"]+=1
@@ -577,7 +637,8 @@ def prospective_metrics_by_version(predictions, outcomes):
             m["selected_per_scanner"]+=len(base)
             m["baseline_hits"]+=sum(labels[(p["prediction_id"],h)]["hit"] for p in base)
             m["shadow_hits"]+=sum(labels[(p["prediction_id"],h)]["hit"] for p in shadow)
-    for by_h in result.values():
+    for version, by_h in result.items():
+        by_h["48"]["event_metrics"] = prospective_event_metrics(event_rows.get(version, []))
         for m in by_h.values():
             n=m["selected_per_scanner"]
             m["baseline_false_positives"]=n-m["baseline_hits"]
