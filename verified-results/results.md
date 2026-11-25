@@ -2,37 +2,35 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-25T01:32:18.929306+00:00
-**GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45526128537
+**UTC as-of:** 2026-11-25T01:40:42.735512+00:00
+**GitHub trigger:** scheduled (verified event=schedule; originating cron=2,7,12,17,22,27,32,37,42,47,52,57 * * * *, intended UTC minute=2,7,12,17,22,27,32,37,42,47,52,57; actual start punctuality NOT verified)
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45527203803
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** 246868b2d74fd3faf26931dc332f692ee22852ee (atomic ledger/results publication)
-**Ledger generation:** 1651 (remote push/readback verified)
+**Previous ledger commit:** c90ea0f70ae730c2bb5c5849930ae65e8ae2149c (atomic ledger/results publication)
+**Ledger generation:** 1652 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 14.
+**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 12.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | PEARL/USD | 2.1908 | 52.457 | 51.773 | +2.37% | -0.09% | 1.11x | 7.3 | 2026-11-25T01:32:13.436470+00:00 | Not calibrated | WEAK 36/100 | HIGH 68/100 | Watch | WATCH |
-| 2 | DRV/USD | 0.32003 | 50.292 | 47.108 | +1.83% | +0.86% | 0.89x | 0.3 | 2026-11-25T01:32:13.436470+00:00 | Not calibrated | MODERATE 55/100 | HIGH 67/100 | Watch | WATCH |
-| 3 | SKY/USD | 0.0414 | 33.365 | 36.256 | +1.02% | -0.81% | 1.12x | 9.7 | 2026-11-25T01:32:13.436470+00:00 | Not calibrated | WEAK 27/100 | VERY_HIGH 73/100 | Do nothing | WATCH |
-| 4 | GWEI/USD | 0.010423 | 33.252 | 27.784 | +1.15% | +1.14% | 0.98x | 21.9 | 2026-11-25T01:32:13.436470+00:00 | Not calibrated | WEAK 37/100 | EXTREME 86/100 | Do nothing | WATCH |
-| 5 | SYRUP/USD | 0.07077 | 30.371 | 25.696 | +1.58% | +0.53% | 1.20x | 34.0 | 2026-11-25T01:32:13.436470+00:00 | Not calibrated | WEAK 40/100 | EXTREME 86/100 | Do nothing | WATCH |
-| 6 | LUNA/USD | 4.594e-05 | 20.565 | 21.073 | +0.35% | +0.24% | 0.83x | 26.2 | 2026-11-25T01:32:13.436470+00:00 | Not calibrated | WEAK 30/100 | VERY_HIGH 79/100 | Do nothing | WATCH |
+| 1 | DRV/USD | 0.32063 | 56.426 | 45.036 | +2.02% | +0.24% | 2.02x | 7.2 | 2026-11-25T01:40:38.360464+00:00 | Not calibrated | STRONG 83/100 | HIGH 60/100 | Watch | WATCH |
+| 2 | GWEI/USD | 0.010554 | 40.624 | 29.992 | +2.42% | +2.13% | 1.00x | 35.3 | 2026-11-25T01:40:38.360464+00:00 | Not calibrated | WEAK 35/100 | EXTREME 86/100 | Do nothing | WATCH |
+| 3 | SYRUP/USD | 0.07095 | 38.603 | 36.735 | +1.84% | +0.84% | 0.77x | 15.5 | 2026-11-25T01:40:38.360464+00:00 | Not calibrated | WEAK 44/100 | VERY_HIGH 80/100 | Watch | WATCH |
+| 4 | SKY/USD | 0.04137 | 29.365 | 35.757 | +0.95% | +0.00% | 0.36x | 9.7 | 2026-11-25T01:40:38.360464+00:00 | Not calibrated | WEAK 35/100 | VERY_HIGH 75/100 | Watch | WATCH |
+| 5 | PEARL/USD | 2.1589 | 19.920 | 35.365 | +0.88% | -1.81% | 0.36x | 19.0 | 2026-11-25T01:40:38.360464+00:00 | Not calibrated | WEAK 10/100 | EXTREME 86/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | PEARL/USD | 51.773 | 2.1908 | -0.09% | 1.11x |
-| 2 | DRV/USD | 47.108 | 0.32003 | +0.86% | 0.89x |
-| 3 | SKY/USD | 36.256 | 0.0414 | -0.81% | 1.12x |
-| 4 | GWEI/USD | 27.784 | 0.010423 | +1.14% | 0.98x |
-| 5 | SYRUP/USD | 25.696 | 0.07077 | +0.53% | 1.20x |
-| 6 | LUNA/USD | 21.073 | 4.594e-05 | +0.24% | 0.83x |
+| 1 | DRV/USD | 45.036 | 0.32063 | +0.24% | 2.02x |
+| 2 | SYRUP/USD | 36.735 | 0.07095 | +0.84% | 0.77x |
+| 3 | SKY/USD | 35.757 | 0.04137 | +0.00% | 0.36x |
+| 4 | PEARL/USD | 35.365 | 2.1589 | -1.81% | 0.36x |
+| 5 | GWEI/USD | 29.992 | 0.010554 | +2.13% | 1.00x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -48,15 +46,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1651; predictions: 14105; observations: 1000550.
-- Matured sampled outcomes across 1/6/24/48h: 29459; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1652; predictions: 14110; observations: 1001159.
+- Matured sampled outcomes across 1/6/24/48h: 29484; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 143 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 8; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 7; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -65,25 +63,24 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45526128537 · **Generation:** 1651 · **Legacy run:** 45526128537
-**Main quote time:** 2026-11-25T01:32:18.929306+00:00 · **Legacy report time:** 2026-11-25T01:33:27.989665+00:00
+**Writer:** 45527203803 · **Generation:** 1652 · **Legacy run:** 45527203803
+**Main quote time:** 2026-11-25T01:40:42.735512+00:00 · **Legacy report time:** 2026-11-25T01:41:29.333686+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | PEARL/USD | 2.1908 | 52.46 | -0.09% | 1.11x | WEAK 36/100 | HIGH 68/100 | Watch |
-| 2 | DRV/USD | 0.32003 | 50.29 | +0.86% | 0.89x | MODERATE 55/100 | HIGH 67/100 | Watch |
-| 3 | SKY/USD | 0.0414 | 33.36 | -0.81% | 1.12x | WEAK 27/100 | VERY_HIGH 73/100 | Do nothing |
-| 4 | GWEI/USD | 0.010423 | 33.25 | +1.14% | 0.98x | WEAK 37/100 | EXTREME 86/100 | Do nothing |
-| 5 | SYRUP/USD ⭐ | 0.07077 | 30.37 | +0.53% | 1.20x | MODERATE 50/100 | EXTREME 86/100 | Do nothing |
-| 6 | LUNA/USD | 4.594e-05 | 20.57 | +0.24% | 0.83x | WEAK 30/100 | VERY_HIGH 79/100 | Do nothing |
+| 1 | DRV/USD ⭐ | 0.32063 | 56.43 | +0.24% | 2.02x | STRONG 93/100 | HIGH 60/100 | Consider small entry |
+| 2 | GWEI/USD | 0.010554 | 40.62 | +2.13% | 1.00x | WEAK 35/100 | EXTREME 86/100 | Do nothing |
+| 3 | SYRUP/USD | 0.07095 | 38.60 | +0.84% | 0.77x | WEAK 44/100 | VERY_HIGH 80/100 | Watch |
+| 4 | SKY/USD | 0.04137 | 29.37 | +0.00% | 0.36x | WEAK 35/100 | VERY_HIGH 75/100 | Watch |
+| 5 | PEARL/USD | 2.1589 | 19.92 | -1.81% | 0.36x | WEAK 10/100 | EXTREME 86/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | SYRUP/USD ⭐ | 0.07061 | 41.56 | +0.53% | 1.20x | 3320 | MODERATE 56/100 | EXTREME 86/100 | Do nothing |
+| 1 | DRV/USD ⭐ | 0.32063 | 60.00 | +0.24% | 2.02x | 6497 | STRONG 95/100 | HIGH 60/100 | Consider small entry |
 
-**Same-run overlap:** SYRUP/USD
+**Same-run overlap:** DRV/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
