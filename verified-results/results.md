@@ -2,33 +2,33 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-25T11:22:52.163215+00:00
+**UTC as-of:** 2026-11-25T11:32:32.483448+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45603381978
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45604922843
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** dc6571ae33946622e785800dc8581d72e4d1b4fe (atomic ledger/results publication)
-**Ledger generation:** 1711 (remote push/readback verified)
+**Previous ledger commit:** 59b285b62292bf51a16175821863e41f348c21d2 (atomic ledger/results publication)
+**Ledger generation:** 1712 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 6s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 608; OHLC screened: 16.
+**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 608; OHLC screened: 14.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | DRV/USD | 0.3373 | 81.848 | 77.080 | +7.32% | -0.61% | 1.78x | 11.9 | 2026-11-25T11:22:46.549684+00:00 | Not calibrated | MODERATE 56/100 | HIGH 67/100 | Watch | WATCH |
-| 2 | VVV/USD | 25.058 | 67.992 | 62.217 | +2.12% | +0.47% | 1.34x | 15.2 | 2026-11-25T11:22:46.549684+00:00 | Not calibrated | STRONG 74/100 | HIGH 61/100 | Watch | WATCH |
-| 3 | MON/USD | 0.0099 | 62.061 | 70.566 | +4.54% | -1.10% | 0.70x | 20.2 | 2026-11-25T11:22:46.549684+00:00 | Not calibrated | WEAK 26/100 | EXTREME 92/100 | Do nothing | WATCH |
-| 4 | BABY/USD | 0.00853 | 33.236 | 42.655 | +3.27% | -0.35% | 0.23x | 23.4 | 2026-11-25T11:22:46.549684+00:00 | Not calibrated | WEAK 12/100 | EXTREME 100/100 | Do nothing | WATCH |
+| 1 | MON/USD | 0.00991 | 73.805 | 76.297 | +4.65% | +0.30% | 0.60x | 10.1 | 2026-11-25T11:32:27.360551+00:00 | Not calibrated | MODERATE 62/100 | VERY_HIGH 76/100 | Watch | WATCH |
+| 2 | DRV/USD | 0.33705 | 72.926 | 77.521 | +7.25% | -0.86% | 0.97x | 11.0 | 2026-11-25T11:32:27.360551+00:00 | Not calibrated | WEAK 36/100 | VERY_HIGH 74/100 | Watch | WATCH |
+| 3 | VVV/USD | 24.845 | 45.742 | 55.712 | +1.25% | -0.65% | 0.33x | 16.1 | 2026-11-25T11:32:27.360551+00:00 | Not calibrated | WEAK 23/100 | VERY_HIGH 82/100 | Do nothing | WATCH |
+| 4 | BABY/USD | 0.00853 | 40.497 | 36.747 | +3.27% | -0.12% | 1.43x | 35.2 | 2026-11-25T11:32:27.360551+00:00 | Not calibrated | WEAK 25/100 | EXTREME 85/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | DRV/USD | 77.080 | 0.3373 | -0.61% | 1.78x |
-| 2 | MON/USD | 70.566 | 0.0099 | -1.10% | 0.70x |
-| 3 | VVV/USD | 62.217 | 25.058 | +0.47% | 1.34x |
-| 4 | BABY/USD | 42.655 | 0.00853 | -0.35% | 0.23x |
+| 1 | DRV/USD | 77.521 | 0.33705 | -0.86% | 0.97x |
+| 2 | MON/USD | 76.297 | 0.00991 | +0.30% | 0.60x |
+| 3 | VVV/USD | 55.712 | 24.845 | -0.65% | 0.33x |
+| 4 | BABY/USD | 36.747 | 0.00853 | -0.12% | 1.43x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -44,15 +44,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1711; predictions: 14473; observations: 1037073.
-- Matured sampled outcomes across 1/6/24/48h: 31478; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1712; predictions: 14477; observations: 1037681.
+- Matured sampled outcomes across 1/6/24/48h: 31507; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 146 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 12; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 10; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -61,23 +61,23 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45603381978 · **Generation:** 1711 · **Legacy run:** 45603381978
-**Main quote time:** 2026-11-25T11:22:52.163215+00:00 · **Legacy report time:** 2026-11-25T11:24:07.435551+00:00
+**Writer:** 45604922843 · **Generation:** 1712 · **Legacy run:** 45604922843
+**Main quote time:** 2026-11-25T11:32:32.483448+00:00 · **Legacy report time:** 2026-11-25T11:33:48.430232+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | DRV/USD | 0.3373 | 81.85 | -0.61% | 1.78x | MODERATE 56/100 | HIGH 67/100 | Watch |
-| 2 | VVV/USD ⭐ | 25.058 | 67.99 | +0.47% | 1.34x | STRONG 84/100 | HIGH 61/100 | Watch |
-| 3 | MON/USD | 0.0099 | 62.06 | -1.10% | 0.70x | WEAK 26/100 | EXTREME 92/100 | Do nothing |
-| 4 | BABY/USD | 0.00853 | 33.24 | -0.35% | 0.23x | WEAK 12/100 | EXTREME 100/100 | Do nothing |
+| 1 | MON/USD | 0.00991 | 73.80 | +0.30% | 0.60x | MODERATE 62/100 | VERY_HIGH 76/100 | Watch |
+| 2 | DRV/USD | 0.33705 | 72.93 | -0.86% | 0.97x | WEAK 36/100 | VERY_HIGH 74/100 | Watch |
+| 3 | VVV/USD | 24.845 | 45.74 | -0.65% | 0.33x | WEAK 23/100 | VERY_HIGH 82/100 | Do nothing |
+| 4 | BABY/USD | 0.00853 | 40.50 | -0.12% | 1.43x | WEAK 25/100 | EXTREME 85/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | VVV/USD ⭐ | 24.968 | 60.80 | +0.47% | 1.34x | 13129 | STRONG 85/100 | HIGH 55/100 | Watch |
+| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
 
-**Same-run overlap:** VVV/USD
+**Same-run overlap:** None
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
