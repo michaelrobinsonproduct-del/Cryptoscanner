@@ -2,12 +2,12 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-25T08:37:32.543726+00:00
+**UTC as-of:** 2026-11-25T08:47:26.608342+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45577487742
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45578947910
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** bfc425590eee6d9728fd93d7c284ada9faf5722a (atomic ledger/results publication)
-**Ledger generation:** 1694 (remote push/readback verified)
+**Previous ledger commit:** 8a9896d43127a3d90779a5a7b579ef8ab5368b11 (atomic ledger/results publication)
+**Ledger generation:** 1695 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 24.
@@ -16,31 +16,31 @@
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | MON/USD | 0.0106 | 93.152 | 90.364 | +11.93% | -0.85% | 1.70x | 9.4 | 2026-11-25T08:37:25.580627+00:00 | Not calibrated | MODERATE 67/100 | HIGH 61/100 | Watch | WATCH |
-| 2 | DRV/USD | 0.33279 | 74.230 | 71.956 | +5.89% | +0.09% | 1.18x | 13.2 | 2026-11-25T08:37:25.580627+00:00 | Not calibrated | MODERATE 57/100 | HIGH 68/100 | Watch | WATCH |
-| 3 | VVV/USD | 24.744 | 48.553 | 56.618 | +0.84% | -0.06% | 0.22x | 8.5 | 2026-11-25T08:37:25.580627+00:00 | Not calibrated | WEAK 29/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
-| 4 | PROS/USD | 0.7129 | 43.502 | 56.397 | +6.29% | -1.60% | 0.51x | 39.4 | 2026-11-25T08:37:25.580627+00:00 | Not calibrated | WEAK 12/100 | EXTREME 97/100 | Do nothing | WATCH |
-| 5 | PEPE/USD | 3.48e-06 | 43.097 | 49.183 | +0.78% | +0.00% | 0.39x | 2.9 | 2026-11-25T08:37:25.580627+00:00 | Not calibrated | WEAK 42/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 6 | BABY/USD | 0.0086 | 35.014 | 43.126 | +4.12% | -0.46% | 0.42x | 34.9 | 2026-11-25T08:37:25.580627+00:00 | Not calibrated | WEAK 13/100 | EXTREME 93/100 | Do nothing | WATCH |
-| 7 | AKT/USD | 0.4727 | 34.814 | 38.443 | +1.68% | +0.45% | 0.41x | 10.6 | 2026-11-25T08:37:25.580627+00:00 | Not calibrated | WEAK 42/100 | VERY_HIGH 81/100 | Watch | WATCH |
-| 8 | HBAR/USD | 0.05045 | 33.494 | 37.783 | +0.38% | +0.58% | 0.28x | 2.0 | 2026-11-25T08:37:25.580627+00:00 | Not calibrated | MODERATE 47/100 | VERY_HIGH 75/100 | Watch | WATCH |
-| 9 | CC/USD | 0.07534 | 30.162 | 35.867 | +0.39% | -0.01% | 0.44x | 2.7 | 2026-11-25T08:37:25.580627+00:00 | Not calibrated | WEAK 20/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
-| 10 | TON/USD | 0.935 | 25.462 | 29.949 | +0.43% | +0.65% | 0.23x | 10.7 | 2026-11-25T08:37:25.580627+00:00 | Not calibrated | WEAK 38/100 | VERY_HIGH 81/100 | Watch | WATCH |
+| 1 | DRV/USD | 0.33795 | 96.971 | 73.833 | +7.53% | +1.63% | 5.46x | 17.5 | 2026-11-25T08:47:19.519246+00:00 | Not calibrated | STRONG 98/100 | HIGH 61/100 | Consider small entry | WATCH |
+| 2 | PROS/USD | 0.7117 | 59.489 | 60.777 | +6.11% | +0.51% | 0.62x | 28.1 | 2026-11-25T08:47:19.519246+00:00 | Not calibrated | MODERATE 50/100 | EXTREME 87/100 | Do nothing | WATCH |
+| 3 | BABY/USD | 0.0087 | 58.332 | 63.243 | +5.33% | +0.58% | 0.22x | 11.4 | 2026-11-25T08:47:19.519246+00:00 | Not calibrated | MODERATE 54/100 | VERY_HIGH 81/100 | Watch | WATCH |
+| 4 | VVV/USD | 24.654 | 48.204 | 54.263 | +0.47% | -0.19% | 0.49x | 8.1 | 2026-11-25T08:47:19.519246+00:00 | Not calibrated | WEAK 29/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
+| 5 | PEPE/USD | 3.479e-06 | 42.755 | 48.844 | +0.75% | -0.06% | 0.42x | 2.9 | 2026-11-25T08:47:19.519246+00:00 | Not calibrated | WEAK 26/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
+| 6 | AKT/USD | 0.473 | 36.252 | 41.013 | +1.74% | +0.11% | 0.47x | 6.3 | 2026-11-25T08:47:19.519246+00:00 | Not calibrated | WEAK 38/100 | VERY_HIGH 75/100 | Watch | WATCH |
+| 7 | HBAR/USD | 0.05045 | 35.358 | 37.794 | +0.38% | +0.46% | 0.53x | 2.0 | 2026-11-25T08:47:19.519246+00:00 | Not calibrated | MODERATE 48/100 | VERY_HIGH 75/100 | Watch | WATCH |
+| 8 | ATOM/USD | 1.2564 | 26.059 | 31.626 | +0.88% | +0.22% | 0.33x | 13.5 | 2026-11-25T08:47:19.519246+00:00 | Not calibrated | WEAK 38/100 | VERY_HIGH 81/100 | Watch | WATCH |
+| 9 | TON/USD | 0.934 | 24.902 | 29.189 | +0.32% | +0.43% | 0.36x | 10.7 | 2026-11-25T08:47:19.519246+00:00 | Not calibrated | WEAK 37/100 | VERY_HIGH 81/100 | Watch | WATCH |
+| 10 | CC/USD | 0.07532 | 24.013 | 32.368 | +0.36% | -0.13% | 0.23x | 9.3 | 2026-11-25T08:47:19.519246+00:00 | Not calibrated | WEAK 17/100 | VERY_HIGH 81/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | MON/USD | 90.364 | 0.0106 | -0.85% | 1.70x |
-| 2 | DRV/USD | 71.956 | 0.33279 | +0.09% | 1.18x |
-| 3 | VVV/USD | 56.618 | 24.744 | -0.06% | 0.22x |
-| 4 | PROS/USD | 56.397 | 0.7129 | -1.60% | 0.51x |
-| 5 | PEPE/USD | 49.183 | 3.48e-06 | +0.00% | 0.39x |
-| 6 | BABY/USD | 43.126 | 0.0086 | -0.46% | 0.42x |
-| 7 | AKT/USD | 38.443 | 0.4727 | +0.45% | 0.41x |
-| 8 | HBAR/USD | 37.783 | 0.05045 | +0.58% | 0.28x |
-| 9 | CC/USD | 35.867 | 0.07534 | -0.01% | 0.44x |
-| 10 | TON/USD | 29.949 | 0.935 | +0.65% | 0.23x |
+| 1 | DRV/USD | 73.833 | 0.33795 | +1.63% | 5.46x |
+| 2 | BABY/USD | 63.243 | 0.0087 | +0.58% | 0.22x |
+| 3 | PROS/USD | 60.777 | 0.7117 | +0.51% | 0.62x |
+| 4 | VVV/USD | 54.263 | 24.654 | -0.19% | 0.49x |
+| 5 | PEPE/USD | 48.844 | 3.479e-06 | -0.06% | 0.42x |
+| 6 | AKT/USD | 41.013 | 0.473 | +0.11% | 0.47x |
+| 7 | HBAR/USD | 37.794 | 0.05045 | +0.46% | 0.53x |
+| 8 | CC/USD | 32.368 | 0.07532 | -0.13% | 0.23x |
+| 9 | ATOM/USD | 31.626 | 1.2564 | +0.22% | 0.33x |
+| 10 | TON/USD | 29.189 | 0.934 | +0.43% | 0.36x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -56,8 +56,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1694; predictions: 14384; observations: 1026735.
-- Matured sampled outcomes across 1/6/24/48h: 30900; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1695; predictions: 14394; observations: 1027343.
+- Matured sampled outcomes across 1/6/24/48h: 30933; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 146 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -73,27 +73,27 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45577487742 · **Generation:** 1694 · **Legacy run:** 45577487742
-**Main quote time:** 2026-11-25T08:37:32.543726+00:00 · **Legacy report time:** 2026-11-25T08:38:25.645136+00:00
+**Writer:** 45578947910 · **Generation:** 1695 · **Legacy run:** 45578947910
+**Main quote time:** 2026-11-25T08:47:26.608342+00:00 · **Legacy report time:** 2026-11-25T08:48:13.380228+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | MON/USD | 0.0106 | 93.15 | -0.85% | 1.70x | MODERATE 67/100 | HIGH 61/100 | Watch |
-| 2 | DRV/USD ⭐ | 0.33279 | 74.23 | +0.09% | 1.18x | MODERATE 67/100 | HIGH 68/100 | Watch |
-| 3 | VVV/USD | 24.744 | 48.55 | -0.06% | 0.22x | WEAK 29/100 | VERY_HIGH 76/100 | Do nothing |
-| 4 | PROS/USD | 0.7129 | 43.50 | -1.60% | 0.51x | WEAK 12/100 | EXTREME 97/100 | Do nothing |
-| 5 | PEPE/USD | 3.48e-06 | 43.10 | +0.00% | 0.39x | WEAK 42/100 | VERY_HIGH 70/100 | Watch |
-| 6 | BABY/USD | 0.0086 | 35.01 | -0.46% | 0.42x | WEAK 13/100 | EXTREME 93/100 | Do nothing |
-| 7 | AKT/USD | 0.4727 | 34.81 | +0.45% | 0.41x | WEAK 42/100 | VERY_HIGH 81/100 | Watch |
-| 8 | HBAR/USD | 0.05045 | 33.49 | +0.58% | 0.28x | MODERATE 47/100 | VERY_HIGH 75/100 | Watch |
-| 9 | CC/USD | 0.07534 | 30.16 | -0.01% | 0.44x | WEAK 20/100 | VERY_HIGH 81/100 | Do nothing |
-| 10 | TON/USD | 0.935 | 25.46 | +0.65% | 0.23x | WEAK 38/100 | VERY_HIGH 81/100 | Watch |
+| 1 | DRV/USD ⭐ | 0.33795 | 96.97 | +1.63% | 5.46x | STRONG 100/100 | HIGH 61/100 | Consider small entry |
+| 2 | PROS/USD | 0.7117 | 59.49 | +0.51% | 0.62x | MODERATE 50/100 | EXTREME 87/100 | Do nothing |
+| 3 | BABY/USD | 0.0087 | 58.33 | +0.58% | 0.22x | MODERATE 54/100 | VERY_HIGH 81/100 | Watch |
+| 4 | VVV/USD | 24.654 | 48.20 | -0.19% | 0.49x | WEAK 29/100 | VERY_HIGH 76/100 | Do nothing |
+| 5 | PEPE/USD | 3.479e-06 | 42.76 | -0.06% | 0.42x | WEAK 26/100 | VERY_HIGH 76/100 | Do nothing |
+| 6 | AKT/USD | 0.473 | 36.25 | +0.11% | 0.47x | WEAK 38/100 | VERY_HIGH 75/100 | Watch |
+| 7 | HBAR/USD | 0.05045 | 35.36 | +0.46% | 0.53x | MODERATE 48/100 | VERY_HIGH 75/100 | Watch |
+| 8 | ATOM/USD | 1.2564 | 26.06 | +0.22% | 0.33x | WEAK 38/100 | VERY_HIGH 81/100 | Watch |
+| 9 | TON/USD | 0.934 | 24.90 | +0.43% | 0.36x | WEAK 37/100 | VERY_HIGH 81/100 | Watch |
+| 10 | CC/USD | 0.07532 | 24.01 | -0.13% | 0.23x | WEAK 17/100 | VERY_HIGH 81/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | DRV/USD ⭐ | 0.33231 | 75.41 | +0.09% | 1.18x | 9149 | MODERATE 63/100 | VERY_HIGH 74/100 | Watch |
+| 1 | DRV/USD ⭐ | 0.33732 | 87.42 | +1.63% | 5.46x | 9276 | STRONG 100/100 | HIGH 55/100 | Consider small entry |
 
 **Same-run overlap:** DRV/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
