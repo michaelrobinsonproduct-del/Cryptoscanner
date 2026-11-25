@@ -2,35 +2,33 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-25T14:02:37.497278+00:00
+**UTC as-of:** 2026-11-25T14:12:57.114262+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45629216497
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45631004586
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** 347c65cb3ea35f025b7219a20151e0e61a3d9d77 (atomic ledger/results publication)
-**Ledger generation:** 1727 (remote push/readback verified)
+**Previous ledger commit:** 21786558e62dc3b87818a7321dccb1765ff19b0e (atomic ledger/results publication)
+**Ledger generation:** 1728 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 627; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 609; valid market observations: 608; OHLC screened: 11.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | MON/USD | 0.00981 | 67.759 | 63.228 | +3.59% | -2.09% | 3.75x | 20.4 | 2026-11-25T14:02:34.461854+00:00 | Not calibrated | MODERATE 54/100 | VERY_HIGH 77/100 | Do nothing | WATCH |
-| 2 | VVV/USD | 24.696 | 51.798 | 54.636 | +0.64% | -0.81% | 1.12x | 9.7 | 2026-11-25T14:02:34.461854+00:00 | Not calibrated | WEAK 36/100 | HIGH 68/100 | Watch | WATCH |
-| 3 | DRV/USD | 0.32436 | 45.031 | 58.268 | +3.21% | -1.63% | 0.49x | 4.0 | 2026-11-25T14:02:34.461854+00:00 | Not calibrated | WEAK 28/100 | VERY_HIGH 80/100 | Do nothing | WATCH |
-| 4 | CT/USD | 0.1304 | 31.326 | 38.436 | +3.25% | -0.15% | 0.37x | 30.8 | 2026-11-25T14:02:34.461854+00:00 | Not calibrated | WEAK 11/100 | EXTREME 100/100 | Do nothing | WATCH |
-| 5 | ZEUS/USD | 0.00483 | 12.664 | 42.020 | +4.32% | -4.16% | 0.14x | 41.7 | 2026-11-25T14:02:34.461854+00:00 | Not calibrated | WEAK 0/100 | EXTREME 100/100 | Do nothing | WATCH |
+| 1 | MON/USD | 0.00988 | 77.137 | 67.042 | +4.33% | -0.60% | 2.31x | 20.3 | 2026-11-25T14:12:53.203287+00:00 | Not calibrated | MODERATE 59/100 | VERY_HIGH 73/100 | Watch | WATCH |
+| 2 | VVV/USD | 24.8 | 54.281 | 58.236 | +1.07% | -0.25% | 0.73x | 8.5 | 2026-11-25T14:12:53.203287+00:00 | Not calibrated | WEAK 32/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
+| 3 | DRV/USD | 0.32483 | 50.212 | 56.711 | +3.36% | -0.78% | 0.74x | 9.2 | 2026-11-25T14:12:53.203287+00:00 | Not calibrated | WEAK 30/100 | VERY_HIGH 76/100 | Do nothing | WATCH |
+| 4 | CT/USD | 0.1302 | 28.624 | 45.038 | +3.09% | -1.67% | 0.19x | 15.4 | 2026-11-25T14:12:53.203287+00:00 | Not calibrated | WEAK 14/100 | EXTREME 98/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | MON/USD | 63.228 | 0.00981 | -2.09% | 3.75x |
-| 2 | DRV/USD | 58.268 | 0.32436 | -1.63% | 0.49x |
-| 3 | VVV/USD | 54.636 | 24.696 | -0.81% | 1.12x |
-| 4 | ZEUS/USD | 42.020 | 0.00483 | -4.16% | 0.14x |
-| 5 | CT/USD | 38.436 | 0.1304 | -0.15% | 0.37x |
+| 1 | MON/USD | 67.042 | 0.00988 | -0.60% | 2.31x |
+| 2 | VVV/USD | 58.236 | 24.8 | -0.25% | 0.73x |
+| 3 | DRV/USD | 56.711 | 0.32483 | -0.78% | 0.74x |
+| 4 | CT/USD | 45.038 | 0.1302 | -1.67% | 0.19x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -46,15 +44,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1727; predictions: 14559; observations: 1046801.
-- Matured sampled outcomes across 1/6/24/48h: 32031; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1728; predictions: 14563; observations: 1047409.
+- Matured sampled outcomes across 1/6/24/48h: 32064; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 146 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 6; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 7; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -63,17 +61,16 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45629216497 · **Generation:** 1727 · **Legacy run:** 45629216497
-**Main quote time:** 2026-11-25T14:02:37.497278+00:00 · **Legacy report time:** 2026-11-25T14:03:51.747255+00:00
+**Writer:** 45631004586 · **Generation:** 1728 · **Legacy run:** 45631004586
+**Main quote time:** 2026-11-25T14:12:57.114262+00:00 · **Legacy report time:** 2026-11-25T14:13:52.723342+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | MON/USD | 0.00981 | 67.76 | -2.09% | 3.75x | MODERATE 54/100 | VERY_HIGH 77/100 | Do nothing |
-| 2 | VVV/USD | 24.696 | 51.80 | -0.81% | 1.12x | WEAK 36/100 | HIGH 68/100 | Watch |
-| 3 | DRV/USD | 0.32436 | 45.03 | -1.63% | 0.49x | WEAK 28/100 | VERY_HIGH 80/100 | Do nothing |
-| 4 | CT/USD | 0.1304 | 31.33 | -0.15% | 0.37x | WEAK 11/100 | EXTREME 100/100 | Do nothing |
-| 5 | ZEUS/USD | 0.00483 | 12.66 | -4.16% | 0.14x | WEAK 0/100 | EXTREME 100/100 | Do nothing |
+| 1 | MON/USD | 0.00988 | 77.14 | -0.60% | 2.31x | MODERATE 59/100 | VERY_HIGH 73/100 | Watch |
+| 2 | VVV/USD | 24.8 | 54.28 | -0.25% | 0.73x | WEAK 32/100 | VERY_HIGH 76/100 | Do nothing |
+| 3 | DRV/USD | 0.32483 | 50.21 | -0.78% | 0.74x | WEAK 30/100 | VERY_HIGH 76/100 | Do nothing |
+| 4 | CT/USD | 0.1302 | 28.62 | -1.67% | 0.19x | WEAK 14/100 | EXTREME 98/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
