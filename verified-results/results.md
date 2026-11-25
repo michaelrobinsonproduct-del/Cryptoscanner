@@ -2,31 +2,31 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-25T01:45:34.237106+00:00
+**UTC as-of:** 2026-11-25T01:57:14.324502+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45527354286
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45529149008
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** dad703a9fee23895cb504dc30baa57921c5e40ee (atomic ledger/results publication)
-**Ledger generation:** 1653 (remote push/readback verified)
+**Previous ledger commit:** 7af7f2762ce5803749dba9b09a7f7fc0a171410e (atomic ledger/results publication)
+**Ledger generation:** 1654 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 3s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 8.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 10.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | DRV/USD | 0.32063 | 43.426 | 43.637 | +2.02% | +0.19% | 0.88x | 10.0 | 2026-11-25T01:45:31.299718+00:00 | Not calibrated | WEAK 42/100 | HIGH 67/100 | Watch | WATCH |
-| 2 | SYRUP/USD | 0.07094 | 32.942 | 33.821 | +1.82% | +0.20% | 0.81x | 21.2 | 2026-11-25T01:45:31.299718+00:00 | Not calibrated | WEAK 26/100 | EXTREME 86/100 | Do nothing | WATCH |
-| 3 | GWEI/USD | 0.010484 | 32.649 | 32.863 | +1.74% | +0.78% | 0.59x | 20.1 | 2026-11-25T01:45:31.299718+00:00 | Not calibrated | WEAK 36/100 | EXTREME 94/100 | Do nothing | WATCH |
+| 1 | DRV/USD | 0.32088 | 36.113 | 40.458 | +2.10% | -0.10% | 0.62x | 17.5 | 2026-11-25T01:57:10.935498+00:00 | Not calibrated | WEAK 18/100 | EXTREME 87/100 | Do nothing | WATCH |
+| 2 | GWEI/USD | 0.010527 | 26.728 | 33.405 | +2.15% | -0.26% | 0.46x | 24.9 | 2026-11-25T01:57:10.935498+00:00 | Not calibrated | WEAK 8/100 | EXTREME 100/100 | Do nothing | WATCH |
+| 3 | SYRUP/USD | 0.07033 | 25.129 | 28.286 | +0.95% | -0.65% | 1.01x | 19.9 | 2026-11-25T01:57:10.935498+00:00 | Not calibrated | WEAK 18/100 | EXTREME 86/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | DRV/USD | 43.637 | 0.32063 | +0.19% | 0.88x |
-| 2 | SYRUP/USD | 33.821 | 0.07094 | +0.20% | 0.81x |
-| 3 | GWEI/USD | 32.863 | 0.010484 | +0.78% | 0.59x |
+| 1 | DRV/USD | 40.458 | 0.32088 | -0.10% | 0.62x |
+| 2 | GWEI/USD | 33.405 | 0.010527 | -0.26% | 0.46x |
+| 3 | SYRUP/USD | 28.286 | 0.07033 | -0.65% | 1.01x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,15 +42,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1653; predictions: 14113; observations: 1001768.
-- Matured sampled outcomes across 1/6/24/48h: 29490; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1654; predictions: 14116; observations: 1002377.
+- Matured sampled outcomes across 1/6/24/48h: 29538; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 143 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 5; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 7; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -59,15 +59,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45527354286 · **Generation:** 1653 · **Legacy run:** 45527354286
-**Main quote time:** 2026-11-25T01:45:34.237106+00:00 · **Legacy report time:** 2026-11-25T01:46:27.601223+00:00
+**Writer:** 45529149008 · **Generation:** 1654 · **Legacy run:** 45529149008
+**Main quote time:** 2026-11-25T01:57:14.324502+00:00 · **Legacy report time:** 2026-11-25T01:58:22.158861+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | DRV/USD | 0.32063 | 43.43 | +0.19% | 0.88x | WEAK 42/100 | HIGH 67/100 | Watch |
-| 2 | SYRUP/USD | 0.07094 | 32.94 | +0.20% | 0.81x | WEAK 26/100 | EXTREME 86/100 | Do nothing |
-| 3 | GWEI/USD | 0.010484 | 32.65 | +0.78% | 0.59x | WEAK 36/100 | EXTREME 94/100 | Do nothing |
+| 1 | DRV/USD | 0.32088 | 36.11 | -0.10% | 0.62x | WEAK 18/100 | EXTREME 87/100 | Do nothing |
+| 2 | GWEI/USD | 0.010527 | 26.73 | -0.26% | 0.46x | WEAK 8/100 | EXTREME 100/100 | Do nothing |
+| 3 | SYRUP/USD | 0.07033 | 25.13 | -0.65% | 1.01x | WEAK 18/100 | EXTREME 86/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
