@@ -2,33 +2,35 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-25T09:47:27.476926+00:00
+**UTC as-of:** 2026-11-25T09:57:23.792702+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45588282793
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45589871629
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** 9f1719fb6049a9d67e739ec4f0455ff7c711ecd9 (atomic ledger/results publication)
-**Ledger generation:** 1701 (remote push/readback verified)
+**Previous ledger commit:** 8b7eb42d5cd6ad04f7a0ef1baaebaa0b512dc052 (atomic ledger/results publication)
+**Ledger generation:** 1702 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 6s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 608; OHLC screened: 18.
+**Freshness:** Kraken public ticker client-observed, max quote age 10s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 20.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | MON/USD | 0.01023 | 71.712 | 85.123 | +8.03% | -2.01% | 0.66x | 19.6 | 2026-11-25T09:47:21.365435+00:00 | Not calibrated | WEAK 36/100 | EXTREME 86/100 | Do nothing | WATCH |
-| 2 | 2Z/USD | 0.01665 | 49.547 | 33.055 | +1.59% | +0.30% | 4.34x | 18.0 | 2026-11-25T09:47:21.365435+00:00 | Not calibrated | STRONG 75/100 | VERY_HIGH 73/100 | Watch | WATCH |
-| 3 | BABY/USD | 0.00863 | 45.944 | 57.084 | +4.48% | -1.03% | 0.40x | 11.7 | 2026-11-25T09:47:21.365435+00:00 | Not calibrated | WEAK 23/100 | EXTREME 98/100 | Do nothing | WATCH |
-| 4 | SYRUP/USD | 0.0701 | 34.607 | 25.860 | +0.62% | -0.84% | 2.29x | 20.0 | 2026-11-25T09:47:21.365435+00:00 | Not calibrated | WEAK 42/100 | VERY_HIGH 79/100 | Watch | WATCH |
+| 1 | MON/USD | 0.01019 | 78.662 | 85.054 | +7.60% | +0.00% | 0.36x | 19.6 | 2026-11-25T09:57:14.246983+00:00 | Not calibrated | MODERATE 54/100 | VERY_HIGH 76/100 | Watch | WATCH |
+| 2 | VVV/USD | 24.77 | 58.830 | 57.372 | +0.95% | +0.85% | 0.72x | 8.5 | 2026-11-25T09:57:14.246983+00:00 | Not calibrated | MODERATE 59/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 3 | 2Z/USD | 0.01671 | 37.885 | 38.673 | +1.95% | -1.89% | 1.87x | 12.0 | 2026-11-25T09:57:14.246983+00:00 | Not calibrated | WEAK 34/100 | VERY_HIGH 83/100 | Do nothing | WATCH |
+| 4 | BABY/USD | 0.00859 | 31.462 | 42.014 | +4.00% | -0.58% | 0.23x | 35.0 | 2026-11-25T09:57:14.246983+00:00 | Not calibrated | WEAK 6/100 | EXTREME 100/100 | Do nothing | WATCH |
+| 5 | SYRUP/USD | 0.06994 | 28.872 | 23.495 | +0.39% | -0.48% | 1.78x | 21.5 | 2026-11-25T09:57:14.246983+00:00 | Not calibrated | WEAK 24/100 | EXTREME 85/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | MON/USD | 85.123 | 0.01023 | -2.01% | 0.66x |
-| 2 | BABY/USD | 57.084 | 0.00863 | -1.03% | 0.40x |
-| 3 | 2Z/USD | 33.055 | 0.01665 | +0.30% | 4.34x |
-| 4 | SYRUP/USD | 25.860 | 0.0701 | -0.84% | 2.29x |
+| 1 | MON/USD | 85.054 | 0.01019 | +0.00% | 0.36x |
+| 2 | VVV/USD | 57.372 | 24.77 | +0.85% | 0.72x |
+| 3 | BABY/USD | 42.014 | 0.00859 | -0.58% | 0.23x |
+| 4 | 2Z/USD | 38.673 | 0.01671 | -1.89% | 1.87x |
+| 5 | SYRUP/USD | 23.495 | 0.06994 | -0.48% | 1.78x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -44,15 +46,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1701; predictions: 14430; observations: 1030991.
-- Matured sampled outcomes across 1/6/24/48h: 31146; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1702; predictions: 14435; observations: 1031600.
+- Matured sampled outcomes across 1/6/24/48h: 31177; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 146 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 14; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 15; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -61,23 +63,24 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45588282793 · **Generation:** 1701 · **Legacy run:** 45588282793
-**Main quote time:** 2026-11-25T09:47:27.476926+00:00 · **Legacy report time:** 2026-11-25T09:48:22.966779+00:00
+**Writer:** 45589871629 · **Generation:** 1702 · **Legacy run:** 45589871629
+**Main quote time:** 2026-11-25T09:57:23.792702+00:00 · **Legacy report time:** 2026-11-25T09:58:24.695795+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | MON/USD | 0.01023 | 71.71 | -2.01% | 0.66x | WEAK 36/100 | EXTREME 86/100 | Do nothing |
-| 2 | 2Z/USD ⭐ | 0.01665 | 49.55 | +0.30% | 4.34x | STRONG 85/100 | VERY_HIGH 73/100 | Watch |
-| 3 | BABY/USD | 0.00863 | 45.94 | -1.03% | 0.40x | WEAK 23/100 | EXTREME 98/100 | Do nothing |
-| 4 | SYRUP/USD | 0.0701 | 34.61 | -0.84% | 2.29x | WEAK 42/100 | VERY_HIGH 79/100 | Watch |
+| 1 | MON/USD | 0.01019 | 78.66 | +0.00% | 0.36x | MODERATE 54/100 | VERY_HIGH 76/100 | Watch |
+| 2 | VVV/USD | 24.77 | 58.83 | +0.85% | 0.72x | MODERATE 59/100 | VERY_HIGH 70/100 | Watch |
+| 3 | 2Z/USD | 0.01671 | 37.88 | -1.89% | 1.87x | WEAK 34/100 | VERY_HIGH 83/100 | Do nothing |
+| 4 | BABY/USD | 0.00859 | 31.46 | -0.58% | 0.23x | WEAK 6/100 | EXTREME 100/100 | Do nothing |
+| 5 | SYRUP/USD | 0.06994 | 28.87 | -0.48% | 1.78x | WEAK 24/100 | EXTREME 85/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | 2Z/USD ⭐ | 0.01666 | 46.14 | +0.30% | 4.34x | 1670 | STRONG 88/100 | HIGH 67/100 | Consider small entry |
+| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
 
-**Same-run overlap:** 2Z/USD
+**Same-run overlap:** None
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
