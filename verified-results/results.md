@@ -2,43 +2,47 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-25T05:57:32.876782+00:00
+**UTC as-of:** 2026-11-25T06:07:26.607763+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45556805870
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45557934671
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** cf6e32821d8301b706e0e310b4ca81777fb46fe5 (atomic ledger/results publication)
-**Ledger generation:** 1678 (remote push/readback verified)
+**Previous ledger commit:** 12d6cbdaaeaf43c3b925a44d0357dcf08cd4fc82 (atomic ledger/results publication)
+**Ledger generation:** 1679 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 8s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 23.
+**Freshness:** Kraken public ticker client-observed, max quote age 9s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 24.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | VVV/USD | 25.034 | 88.759 | 65.551 | +2.02% | +1.70% | 2.47x | 7.2 | 2026-11-25T05:57:24.920694+00:00 | Not calibrated | STRONG 99/100 | HIGH 55/100 | Consider small entry | WATCH |
-| 2 | MON/USD | 0.00995 | 76.438 | 78.757 | +5.07% | +0.40% | 0.57x | 10.1 | 2026-11-25T05:57:24.920694+00:00 | Not calibrated | MODERATE 63/100 | VERY_HIGH 76/100 | Watch | WATCH |
-| 3 | BABY/USD | 0.00887 | 75.785 | 71.745 | +7.38% | +1.96% | 0.42x | 11.3 | 2026-11-25T05:57:24.920694+00:00 | Not calibrated | MODERATE 63/100 | VERY_HIGH 81/100 | Watch | WATCH |
-| 4 | PEPE/USD | 3.487e-06 | 70.039 | 49.094 | +0.98% | +1.19% | 5.14x | 2.9 | 2026-11-25T05:57:24.920694+00:00 | Not calibrated | STRONG 90/100 | HIGH 55/100 | Consider small entry | WATCH |
-| 5 | DRV/USD | 0.33148 | 66.748 | 72.157 | +5.47% | +0.38% | 0.27x | 6.3 | 2026-11-25T05:57:24.920694+00:00 | Not calibrated | MODERATE 63/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 6 | XMR/USD | 512.04 | 60.016 | 53.894 | +0.48% | -0.07% | 1.65x | 6.5 | 2026-11-25T05:57:24.920694+00:00 | Not calibrated | MODERATE 50/100 | HIGH 61/100 | Watch | WATCH |
-| 7 | SYRUP/USD | 0.07138 | 49.247 | 39.124 | +2.45% | -0.11% | 2.07x | 19.6 | 2026-11-25T05:57:24.920694+00:00 | Not calibrated | MODERATE 50/100 | VERY_HIGH 72/100 | Watch | WATCH |
-| 8 | PENGU/USD | 0.004238 | 40.662 | 36.024 | +0.52% | +0.83% | 1.05x | 2.4 | 2026-11-25T05:57:24.920694+00:00 | Not calibrated | MODERATE 55/100 | HIGH 67/100 | Watch | WATCH |
-| 9 | SKY/USD | 0.04148 | 38.952 | 38.807 | +1.22% | +0.39% | 0.82x | 7.2 | 2026-11-25T05:57:24.920694+00:00 | Not calibrated | MODERATE 49/100 | HIGH 67/100 | Watch | WATCH |
+| 1 | MON/USD | 0.01004 | 90.191 | 85.662 | +6.02% | +0.30% | 1.30x | 10.0 | 2026-11-25T06:07:18.063699+00:00 | Not calibrated | STRONG 90/100 | HIGH 55/100 | Watch | WATCH |
+| 2 | VVV/USD | 25.04 | 82.710 | 65.326 | +2.05% | +0.48% | 4.87x | 8.0 | 2026-11-25T06:07:18.063699+00:00 | Not calibrated | STRONG 96/100 | HIGH 55/100 | Consider small entry | WATCH |
+| 3 | DRV/USD | 0.33034 | 62.030 | 70.690 | +5.11% | -0.59% | 0.43x | 4.2 | 2026-11-25T06:07:18.063699+00:00 | Not calibrated | WEAK 36/100 | VERY_HIGH 76/100 | Watch | WATCH |
+| 4 | BABY/USD | 0.00871 | 61.600 | 64.785 | +5.45% | -0.34% | 0.85x | 11.4 | 2026-11-25T06:07:18.063699+00:00 | Not calibrated | WEAK 31/100 | VERY_HIGH 79/100 | Do nothing | WATCH |
+| 5 | PEPE/USD | 3.5e-06 | 61.306 | 50.212 | +1.36% | +0.55% | 1.84x | 5.7 | 2026-11-25T06:07:18.063699+00:00 | Not calibrated | STRONG 76/100 | HIGH 55/100 | Watch | WATCH |
+| 6 | XMR/USD | 510.93 | 55.457 | 46.809 | +0.26% | +0.18% | 1.78x | 17.1 | 2026-11-25T06:07:18.063699+00:00 | Not calibrated | MODERATE 58/100 | HIGH 61/100 | Watch | WATCH |
+| 7 | SKY/USD | 0.04165 | 47.616 | 41.730 | +1.63% | +1.52% | 0.83x | 7.2 | 2026-11-25T06:07:18.063699+00:00 | Not calibrated | MODERATE 54/100 | HIGH 67/100 | Watch | WATCH |
+| 8 | PENGU/USD | 0.004235 | 41.693 | 34.350 | +0.45% | +0.09% | 1.69x | 4.7 | 2026-11-25T06:07:18.063699+00:00 | Not calibrated | MODERATE 56/100 | HIGH 60/100 | Watch | WATCH |
+| 9 | RE/USD | 0.20424 | 38.842 | 32.300 | +1.80% | +0.81% | 1.25x | 22.1 | 2026-11-25T06:07:18.063699+00:00 | Not calibrated | WEAK 44/100 | EXTREME 86/100 | Do nothing | WATCH |
+| 10 | SYRUP/USD | 0.07115 | 34.235 | 34.665 | +2.12% | -0.45% | 1.18x | 23.9 | 2026-11-25T06:07:18.063699+00:00 | Not calibrated | WEAK 17/100 | EXTREME 85/100 | Do nothing | WATCH |
+| 11 | CAP/USD | 0.092893 | 29.642 | 29.908 | +0.51% | +0.85% | 0.55x | 11.9 | 2026-11-25T06:07:18.063699+00:00 | Not calibrated | WEAK 40/100 | VERY_HIGH 81/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | MON/USD | 78.757 | 0.00995 | +0.40% | 0.57x |
-| 2 | DRV/USD | 72.157 | 0.33148 | +0.38% | 0.27x |
-| 3 | BABY/USD | 71.745 | 0.00887 | +1.96% | 0.42x |
-| 4 | VVV/USD | 65.551 | 25.034 | +1.70% | 2.47x |
-| 5 | XMR/USD | 53.894 | 512.04 | -0.07% | 1.65x |
-| 6 | PEPE/USD | 49.094 | 3.487e-06 | +1.19% | 5.14x |
-| 7 | SYRUP/USD | 39.124 | 0.07138 | -0.11% | 2.07x |
-| 8 | SKY/USD | 38.807 | 0.04148 | +0.39% | 0.82x |
-| 9 | PENGU/USD | 36.024 | 0.004238 | +0.83% | 1.05x |
+| 1 | MON/USD | 85.662 | 0.01004 | +0.30% | 1.30x |
+| 2 | DRV/USD | 70.690 | 0.33034 | -0.59% | 0.43x |
+| 3 | VVV/USD | 65.326 | 25.04 | +0.48% | 4.87x |
+| 4 | BABY/USD | 64.785 | 0.00871 | -0.34% | 0.85x |
+| 5 | PEPE/USD | 50.212 | 3.5e-06 | +0.55% | 1.84x |
+| 6 | XMR/USD | 46.809 | 510.93 | +0.18% | 1.78x |
+| 7 | SKY/USD | 41.730 | 0.04165 | +1.52% | 0.83x |
+| 8 | SYRUP/USD | 34.665 | 0.07115 | -0.45% | 1.18x |
+| 9 | PENGU/USD | 34.350 | 0.004235 | +0.09% | 1.69x |
+| 10 | RE/USD | 32.300 | 0.20424 | +0.81% | 1.25x |
+| 11 | CAP/USD | 29.908 | 0.092893 | +0.85% | 0.55x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -54,15 +58,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1678; predictions: 14242; observations: 1016993.
-- Matured sampled outcomes across 1/6/24/48h: 30301; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1679; predictions: 14253; observations: 1017602.
+- Matured sampled outcomes across 1/6/24/48h: 30340; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 146 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 14; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 13; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -71,30 +75,33 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45556805870 · **Generation:** 1678 · **Legacy run:** 45556805870
-**Main quote time:** 2026-11-25T05:57:32.876782+00:00 · **Legacy report time:** 2026-11-25T05:58:27.482792+00:00
+**Writer:** 45557934671 · **Generation:** 1679 · **Legacy run:** 45557934671
+**Main quote time:** 2026-11-25T06:07:26.607763+00:00 · **Legacy report time:** 2026-11-25T06:08:22.437300+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | VVV/USD ⭐ | 25.034 | 88.76 | +1.70% | 2.47x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
-| 2 | MON/USD | 0.00995 | 76.44 | +0.40% | 0.57x | MODERATE 63/100 | VERY_HIGH 76/100 | Watch |
-| 3 | BABY/USD | 0.00887 | 75.78 | +1.96% | 0.42x | MODERATE 63/100 | VERY_HIGH 81/100 | Watch |
-| 4 | PEPE/USD ⭐ | 3.487e-06 | 70.04 | +1.19% | 5.14x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
-| 5 | DRV/USD | 0.33148 | 66.75 | +0.38% | 0.27x | MODERATE 63/100 | VERY_HIGH 70/100 | Watch |
-| 6 | XMR/USD | 512.04 | 60.02 | -0.07% | 1.65x | MODERATE 50/100 | HIGH 61/100 | Watch |
-| 7 | SYRUP/USD | 0.07138 | 49.25 | -0.11% | 2.07x | MODERATE 50/100 | VERY_HIGH 72/100 | Watch |
-| 8 | PENGU/USD ⭐ | 0.004238 | 40.66 | +0.83% | 1.05x | MODERATE 65/100 | HIGH 67/100 | Watch |
-| 9 | SKY/USD | 0.04148 | 38.95 | +0.39% | 0.82x | MODERATE 49/100 | HIGH 67/100 | Watch |
+| 1 | MON/USD ⭐ | 0.01004 | 90.19 | +0.30% | 1.30x | STRONG 100/100 | HIGH 55/100 | Watch |
+| 2 | VVV/USD ⭐ | 25.04 | 82.71 | +0.48% | 4.87x | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 3 | DRV/USD | 0.33034 | 62.03 | -0.59% | 0.43x | WEAK 36/100 | VERY_HIGH 76/100 | Watch |
+| 4 | BABY/USD | 0.00871 | 61.60 | -0.34% | 0.85x | WEAK 31/100 | VERY_HIGH 79/100 | Do nothing |
+| 5 | PEPE/USD ⭐ | 3.5e-06 | 61.31 | +0.55% | 1.84x | STRONG 86/100 | HIGH 55/100 | Consider small entry |
+| 6 | XMR/USD | 510.93 | 55.46 | +0.18% | 1.78x | MODERATE 58/100 | HIGH 61/100 | Watch |
+| 7 | SKY/USD | 0.04165 | 47.62 | +1.52% | 0.83x | MODERATE 54/100 | HIGH 67/100 | Watch |
+| 8 | PENGU/USD | 0.004235 | 41.69 | +0.09% | 1.69x | MODERATE 56/100 | HIGH 60/100 | Watch |
+| 9 | RE/USD ⭐ | 0.20424 | 38.84 | +0.81% | 1.25x | MODERATE 54/100 | EXTREME 86/100 | Do nothing |
+| 10 | SYRUP/USD | 0.07115 | 34.23 | -0.45% | 1.18x | WEAK 17/100 | EXTREME 85/100 | Do nothing |
+| 11 | CAP/USD | 0.092893 | 29.64 | +0.85% | 0.55x | WEAK 40/100 | VERY_HIGH 81/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | VVV/USD ⭐ | 25.009 | 71.02 | +1.70% | 2.47x | 15288 | STRONG 100/100 | HIGH 55/100 | Consider small entry |
-| 2 | PEPE/USD ⭐ | 3.48e-06 | 60.37 | +1.19% | 5.14x | 5400 | STRONG 95/100 | HIGH 55/100 | Consider small entry |
-| 3 | PENGU/USD ⭐ | 0.004228 | 35.77 | +0.83% | 1.05x | 2922 | MODERATE 63/100 | HIGH 67/100 | Watch |
+| 1 | MON/USD ⭐ | 0.01004 | 83.22 | +0.30% | 1.30x | 18604 | STRONG 97/100 | HIGH 55/100 | Watch |
+| 2 | VVV/USD ⭐ | 25.016 | 69.81 | +0.48% | 4.87x | 15197 | STRONG 100/100 | HIGH 55/100 | Consider small entry |
+| 3 | PEPE/USD ⭐ | 3.5e-06 | 51.45 | +0.55% | 1.84x | 5356 | STRONG 81/100 | HIGH 55/100 | Consider small entry |
+| 4 | RE/USD ⭐ | 0.20407 | 36.83 | +0.81% | 1.25x | 1481 | MODERATE 58/100 | VERY_HIGH 80/100 | Watch |
 
-**Same-run overlap:** VVV/USD, PEPE/USD, PENGU/USD
+**Same-run overlap:** MON/USD, VVV/USD, PEPE/USD, RE/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
