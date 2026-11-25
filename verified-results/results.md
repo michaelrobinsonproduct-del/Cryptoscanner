@@ -2,33 +2,33 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-25T04:47:28.807099+00:00
+**UTC as-of:** 2026-11-25T04:57:30.393028+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45548837857
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45549940017
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** ca05d2e1752a99c3f158b55ea9566f2288763a83 (atomic ledger/results publication)
-**Ledger generation:** 1671 (remote push/readback verified)
+**Previous ledger commit:** 8ebaf4c354594d50fae2e8a6aa2d315e199df59d (atomic ledger/results publication)
+**Ledger generation:** 1672 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 22.
+**Freshness:** Kraken public ticker client-observed, max quote age 6s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 609; OHLC screened: 20.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | DRV/USD | 0.33365 | 83.265 | 71.574 | +6.16% | -0.66% | 3.46x | 16.5 | 2026-11-25T04:47:21.523732+00:00 | Not calibrated | MODERATE 67/100 | HIGH 67/100 | Watch | WATCH |
-| 2 | MON/USD | 0.00997 | 82.095 | 75.267 | +5.28% | +0.50% | 1.43x | 20.1 | 2026-11-25T04:47:21.523732+00:00 | Not calibrated | STRONG 76/100 | HIGH 67/100 | Watch | WATCH |
-| 3 | XMR/USD | 511.43 | 53.603 | 52.628 | +0.36% | +0.04% | 1.08x | 7.2 | 2026-11-25T04:47:21.523732+00:00 | Not calibrated | MODERATE 52/100 | HIGH 62/100 | Watch | WATCH |
-| 4 | BLESS/USD | 0.017749 | 23.130 | 24.898 | +0.90% | +0.98% | 0.33x | 37.2 | 2026-11-25T04:47:21.523732+00:00 | Not calibrated | WEAK 27/100 | VERY_HIGH 82/100 | Do nothing | WATCH |
+| 1 | DRV/USD | 0.33177 | 86.391 | 68.689 | +5.57% | +0.54% | 3.10x | 13.9 | 2026-11-25T04:57:24.332541+00:00 | Not calibrated | STRONG 93/100 | HIGH 61/100 | Consider small entry | WATCH |
+| 2 | MON/USD | 0.00985 | 69.253 | 71.146 | +4.01% | +0.10% | 0.76x | 10.2 | 2026-11-25T04:57:24.332541+00:00 | Not calibrated | MODERATE 50/100 | HIGH 68/100 | Watch | WATCH |
+| 3 | XMR/USD | 512.82 | 58.974 | 57.794 | +0.63% | -0.10% | 1.17x | 0.2 | 2026-11-25T04:57:24.332541+00:00 | Not calibrated | WEAK 39/100 | HIGH 68/100 | Watch | WATCH |
+| 4 | BLESS/USD | 0.01768 | 13.879 | 24.797 | +0.51% | -0.62% | 0.22x | 31.8 | 2026-11-25T04:57:24.332541+00:00 | Not calibrated | WEAK 2/100 | EXTREME 88/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | MON/USD | 75.267 | 0.00997 | +0.50% | 1.43x |
-| 2 | DRV/USD | 71.574 | 0.33365 | -0.66% | 3.46x |
-| 3 | XMR/USD | 52.628 | 511.43 | +0.04% | 1.08x |
-| 4 | BLESS/USD | 24.898 | 0.017749 | +0.98% | 0.33x |
+| 1 | MON/USD | 71.146 | 0.00985 | +0.10% | 0.76x |
+| 2 | DRV/USD | 68.689 | 0.33177 | +0.54% | 3.10x |
+| 3 | XMR/USD | 57.794 | 512.82 | -0.10% | 1.17x |
+| 4 | BLESS/USD | 24.797 | 0.01768 | -0.62% | 0.22x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -44,15 +44,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1671; predictions: 14199; observations: 1012730.
-- Matured sampled outcomes across 1/6/24/48h: 30030; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1672; predictions: 14203; observations: 1013339.
+- Matured sampled outcomes across 1/6/24/48h: 30057; gap abstentions: 22370. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 146 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 18; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 16; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -61,23 +61,23 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45548837857 · **Generation:** 1671 · **Legacy run:** 45548837857
-**Main quote time:** 2026-11-25T04:47:28.807099+00:00 · **Legacy report time:** 2026-11-25T04:48:37.686359+00:00
+**Writer:** 45549940017 · **Generation:** 1672 · **Legacy run:** 45549940017
+**Main quote time:** 2026-11-25T04:57:30.393028+00:00 · **Legacy report time:** 2026-11-25T04:58:45.799555+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | DRV/USD | 0.33365 | 83.26 | -0.66% | 3.46x | MODERATE 67/100 | HIGH 67/100 | Watch |
-| 2 | MON/USD ⭐ | 0.00997 | 82.09 | +0.50% | 1.43x | STRONG 86/100 | HIGH 67/100 | Watch |
-| 3 | XMR/USD | 511.43 | 53.60 | +0.04% | 1.08x | MODERATE 52/100 | HIGH 62/100 | Watch |
-| 4 | BLESS/USD | 0.017749 | 23.13 | +0.98% | 0.33x | WEAK 27/100 | VERY_HIGH 82/100 | Do nothing |
+| 1 | DRV/USD ⭐ | 0.33177 | 86.39 | +0.54% | 3.10x | STRONG 100/100 | HIGH 61/100 | Consider small entry |
+| 2 | MON/USD | 0.00985 | 69.25 | +0.10% | 0.76x | MODERATE 50/100 | HIGH 68/100 | Watch |
+| 3 | XMR/USD | 512.82 | 58.97 | -0.10% | 1.17x | WEAK 39/100 | HIGH 68/100 | Watch |
+| 4 | BLESS/USD | 0.01768 | 13.88 | -0.62% | 0.22x | WEAK 2/100 | EXTREME 88/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | MON/USD ⭐ | 0.00998 | 84.24 | +0.50% | 1.43x | 18498 | STRONG 87/100 | HIGH 67/100 | Watch |
+| 1 | DRV/USD ⭐ | 0.33206 | 83.63 | +0.54% | 3.10x | 8455 | STRONG 100/100 | HIGH 61/100 | Consider small entry |
 
-**Same-run overlap:** MON/USD
+**Same-run overlap:** DRV/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
