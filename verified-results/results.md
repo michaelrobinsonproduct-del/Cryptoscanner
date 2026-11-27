@@ -2,43 +2,31 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-26T23:51:17.080417+00:00
+**UTC as-of:** 2026-11-27T00:01:17.741490+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45913182232
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45914095899
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** 2cbe63df2460b84ba1ceffa761edf3df5c38d7a2 (atomic ledger/results publication)
-**Ledger generation:** 1930 (remote push/readback verified)
+**Previous ledger commit:** 3010cbd963d6c983e093d7d5ce9ab1cb06ce8917 (atomic ledger/results publication)
+**Ledger generation:** 1931 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Freshness:** Kraken public ticker client-observed, max quote age 6s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
 **Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 601; OHLC screened: 24.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | LTC/USD | 43.83 | 70.813 | 72.215 | +2.62% | +0.11% | 0.80x | 2.3 | 2026-11-26T23:51:10.222351+00:00 | Not calibrated | MODERATE 55/100 | HIGH 62/100 | Watch | WATCH |
-| 2 | LINK/USD | 9.26845 | 65.404 | 70.745 | +2.48% | +0.28% | 0.33x | 3.2 | 2026-11-26T23:51:10.222351+00:00 | Not calibrated | MODERATE 63/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 3 | SOL/USD | 70.91 | 56.344 | 59.466 | +0.74% | +0.08% | 0.65x | 1.4 | 2026-11-26T23:51:10.222351+00:00 | Not calibrated | MODERATE 48/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 4 | HYPE/USD | 62.12 | 55.862 | 59.875 | +0.81% | +0.21% | 0.49x | 1.6 | 2026-11-26T23:51:10.222351+00:00 | Not calibrated | MODERATE 58/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 5 | XRP/USD | 0.94237 | 54.947 | 59.289 | +0.62% | +0.11% | 0.51x | 0.1 | 2026-11-26T23:51:10.222351+00:00 | Not calibrated | MODERATE 47/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 6 | XDG/USD | 0.0563467 | 42.529 | 47.573 | +0.69% | +0.08% | 0.46x | 0.0 | 2026-11-26T23:51:10.222351+00:00 | Not calibrated | WEAK 41/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 7 | ONDO/USD | 0.28683 | 37.097 | 42.740 | +1.53% | +0.14% | 0.37x | 0.7 | 2026-11-26T23:51:10.222351+00:00 | Not calibrated | WEAK 39/100 | VERY_HIGH 75/100 | Watch | WATCH |
-| 8 | DOT/USD | 0.6708 | 36.948 | 45.047 | +1.90% | +0.24% | 0.07x | 1.5 | 2026-11-26T23:51:10.222351+00:00 | Not calibrated | MODERATE 48/100 | VERY_HIGH 75/100 | Watch | WATCH |
-| 9 | SPX/USD | 0.2735 | 26.200 | 27.029 | +0.48% | +0.55% | 0.64x | 14.6 | 2026-11-26T23:51:10.222351+00:00 | Not calibrated | WEAK 38/100 | EXTREME 88/100 | Do nothing | WATCH |
+| 1 | VVV/USD | 26.26 | 41.104 | 49.631 | +0.29% | +0.15% | 0.07x | 14.9 | 2026-11-27T00:01:11.458874+00:00 | Not calibrated | WEAK 36/100 | VERY_HIGH 76/100 | Watch | WATCH |
+| 2 | ONDO/USD | 0.28708 | 36.928 | 42.450 | +1.62% | +0.16% | 0.37x | 2.4 | 2026-11-27T00:01:11.458874+00:00 | Not calibrated | WEAK 38/100 | VERY_HIGH 75/100 | Watch | WATCH |
+| 3 | KAS/USD | 0.02675 | 19.391 | 26.212 | +0.75% | +0.22% | 0.21x | 22.4 | 2026-11-27T00:01:11.458874+00:00 | Not calibrated | WEAK 30/100 | EXTREME 87/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | LTC/USD | 72.215 | 43.83 | +0.11% | 0.80x |
-| 2 | LINK/USD | 70.745 | 9.26845 | +0.28% | 0.33x |
-| 3 | HYPE/USD | 59.875 | 62.12 | +0.21% | 0.49x |
-| 4 | SOL/USD | 59.466 | 70.91 | +0.08% | 0.65x |
-| 5 | XRP/USD | 59.289 | 0.94237 | +0.11% | 0.51x |
-| 6 | XDG/USD | 47.573 | 0.0563467 | +0.08% | 0.46x |
-| 7 | DOT/USD | 45.047 | 0.6708 | +0.24% | 0.07x |
-| 8 | ONDO/USD | 42.740 | 0.28683 | +0.14% | 0.37x |
-| 9 | SPX/USD | 27.029 | 0.2735 | +0.55% | 0.64x |
+| 1 | VVV/USD | 49.631 | 26.26 | +0.15% | 0.07x |
+| 2 | ONDO/USD | 42.450 | 0.28708 | +0.16% | 0.37x |
+| 3 | KAS/USD | 26.212 | 0.02675 | +0.22% | 0.21x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -54,15 +42,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1930; predictions: 16887; observations: 1169015.
-- Matured sampled outcomes across 1/6/24/48h: 36896; gap abstentions: 25370. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1931; predictions: 16890; observations: 1169616.
+- Matured sampled outcomes across 1/6/24/48h: 36932; gap abstentions: 25378. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 149 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 15; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 21; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -71,26 +59,20 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45913182232 · **Generation:** 1930 · **Legacy run:** 45913182232
-**Main quote time:** 2026-11-26T23:51:17.080417+00:00 · **Legacy report time:** 2026-11-26T23:52:08.411343+00:00
+**Writer:** 45914095899 · **Generation:** 1931 · **Legacy run:** 45914095899
+**Main quote time:** 2026-11-27T00:01:17.741490+00:00 · **Legacy report time:** 2026-11-27T00:02:08.481494+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | LTC/USD | 43.83 | 70.81 | +0.11% | 0.80x | MODERATE 55/100 | HIGH 62/100 | Watch |
-| 2 | LINK/USD | 9.26845 | 65.40 | +0.28% | 0.33x | MODERATE 63/100 | VERY_HIGH 70/100 | Watch |
-| 3 | SOL/USD | 70.91 | 56.34 | +0.08% | 0.65x | MODERATE 48/100 | VERY_HIGH 70/100 | Watch |
-| 4 | HYPE/USD | 62.12 | 55.86 | +0.21% | 0.49x | MODERATE 58/100 | VERY_HIGH 70/100 | Watch |
-| 5 | XRP/USD | 0.94237 | 54.95 | +0.11% | 0.51x | MODERATE 47/100 | VERY_HIGH 70/100 | Watch |
-| 6 | XDG/USD | 0.0563467 | 42.53 | +0.08% | 0.46x | WEAK 41/100 | VERY_HIGH 70/100 | Watch |
-| 7 | ONDO/USD | 0.28683 | 37.10 | +0.14% | 0.37x | WEAK 39/100 | VERY_HIGH 75/100 | Watch |
-| 8 | DOT/USD | 0.6708 | 36.95 | +0.24% | 0.07x | MODERATE 48/100 | VERY_HIGH 75/100 | Watch |
-| 9 | SPX/USD | 0.2735 | 26.20 | +0.55% | 0.64x | WEAK 38/100 | EXTREME 88/100 | Do nothing |
+| 1 | VVV/USD | 26.26 | 41.10 | +0.15% | 0.07x | WEAK 36/100 | VERY_HIGH 76/100 | Watch |
+| 2 | ONDO/USD | 0.28708 | 36.93 | +0.16% | 0.37x | WEAK 38/100 | VERY_HIGH 75/100 | Watch |
+| 3 | KAS/USD | 0.02675 | 19.39 | +0.22% | 0.21x | WEAK 30/100 | EXTREME 87/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | INJ/USD | 6.184 | 78.39 | +0.24% | 1.55x | 5199 | STRONG 84/100 | HIGH 55/100 | Consider small entry |
+| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
 
 **Same-run overlap:** None
 A ⭐ means both independently executed scanners identified the exact same /USD market.
