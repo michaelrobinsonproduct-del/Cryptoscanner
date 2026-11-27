@@ -2,31 +2,31 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-27T00:01:17.741490+00:00
+**UTC as-of:** 2026-11-27T00:10:57.734895+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45914095899
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/45915081168
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** 3010cbd963d6c983e093d7d5ce9ab1cb06ce8917 (atomic ledger/results publication)
-**Ledger generation:** 1931 (remote push/readback verified)
+**Previous ledger commit:** c710dfbc1afde6d6e37d3cbccaa6c617d49737e0 (atomic ledger/results publication)
+**Ledger generation:** 1932 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 6s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 601; OHLC screened: 24.
+**Freshness:** Kraken public ticker client-observed, max quote age 7s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 601; OHLC screened: 19.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | VVV/USD | 26.26 | 41.104 | 49.631 | +0.29% | +0.15% | 0.07x | 14.9 | 2026-11-27T00:01:11.458874+00:00 | Not calibrated | WEAK 36/100 | VERY_HIGH 76/100 | Watch | WATCH |
-| 2 | ONDO/USD | 0.28708 | 36.928 | 42.450 | +1.62% | +0.16% | 0.37x | 2.4 | 2026-11-27T00:01:11.458874+00:00 | Not calibrated | WEAK 38/100 | VERY_HIGH 75/100 | Watch | WATCH |
-| 3 | KAS/USD | 0.02675 | 19.391 | 26.212 | +0.75% | +0.22% | 0.21x | 22.4 | 2026-11-27T00:01:11.458874+00:00 | Not calibrated | WEAK 30/100 | EXTREME 87/100 | Do nothing | WATCH |
+| 1 | ZEC/USD | 686.13 | 59.217 | 57.549 | +0.66% | +0.41% | 0.96x | 4.1 | 2026-11-27T00:10:50.634702+00:00 | Not calibrated | MODERATE 60/100 | HIGH 62/100 | Watch | WATCH |
+| 2 | HYPE/USD | 62.45 | 50.992 | 56.788 | +0.37% | +0.21% | 0.32x | 1.6 | 2026-11-27T00:10:50.634702+00:00 | Not calibrated | MODERATE 55/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 3 | VVV/USD | 26.274 | 50.685 | 53.448 | +0.35% | +0.40% | 0.52x | 8.0 | 2026-11-27T00:10:50.634702+00:00 | Not calibrated | MODERATE 55/100 | VERY_HIGH 70/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | VVV/USD | 49.631 | 26.26 | +0.15% | 0.07x |
-| 2 | ONDO/USD | 42.450 | 0.28708 | +0.16% | 0.37x |
-| 3 | KAS/USD | 26.212 | 0.02675 | +0.22% | 0.21x |
+| 1 | ZEC/USD | 57.549 | 686.13 | +0.41% | 0.96x |
+| 2 | HYPE/USD | 56.788 | 62.45 | +0.21% | 0.32x |
+| 3 | VVV/USD | 53.448 | 26.274 | +0.40% | 0.52x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -42,15 +42,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 1931; predictions: 16890; observations: 1169616.
-- Matured sampled outcomes across 1/6/24/48h: 36932; gap abstentions: 25378. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 1932; predictions: 16893; observations: 1170217.
+- Matured sampled outcomes across 1/6/24/48h: 36968; gap abstentions: 25385. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 149 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 21; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 16; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -59,20 +59,20 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 45914095899 · **Generation:** 1931 · **Legacy run:** 45914095899
-**Main quote time:** 2026-11-27T00:01:17.741490+00:00 · **Legacy report time:** 2026-11-27T00:02:08.481494+00:00
+**Writer:** 45915081168 · **Generation:** 1932 · **Legacy run:** 45915081168
+**Main quote time:** 2026-11-27T00:10:57.734895+00:00 · **Legacy report time:** 2026-11-27T00:11:33.165366+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | VVV/USD | 26.26 | 41.10 | +0.15% | 0.07x | WEAK 36/100 | VERY_HIGH 76/100 | Watch |
-| 2 | ONDO/USD | 0.28708 | 36.93 | +0.16% | 0.37x | WEAK 38/100 | VERY_HIGH 75/100 | Watch |
-| 3 | KAS/USD | 0.02675 | 19.39 | +0.22% | 0.21x | WEAK 30/100 | EXTREME 87/100 | Do nothing |
+| 1 | ZEC/USD | 686.13 | 59.22 | +0.41% | 0.96x | MODERATE 60/100 | HIGH 62/100 | Watch |
+| 2 | HYPE/USD | 62.45 | 50.99 | +0.21% | 0.32x | MODERATE 55/100 | VERY_HIGH 70/100 | Watch |
+| 3 | VVV/USD | 26.274 | 50.69 | +0.40% | 0.52x | MODERATE 55/100 | VERY_HIGH 70/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
+| 1 | LINK/USD | 9.28008 | 54.40 | +0.13% | 5.32x | 7190 | STRONG 72/100 | HIGH 55/100 | Watch |
 
 **Same-run overlap:** None
 A ⭐ means both independently executed scanners identified the exact same /USD market.
