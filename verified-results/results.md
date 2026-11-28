@@ -2,35 +2,33 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-28T18:44:28.499872+00:00
+**UTC as-of:** 2026-11-28T18:52:47.048066+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/46177046000
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/46177933494
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** 885fd431a5137e75e60944504e63c21c82d9066a (atomic ledger/results publication)
-**Ledger generation:** 2192 (remote push/readback verified)
+**Previous ledger commit:** 2f032c7eb5c7ff293fc60e520b6b85eeae404432 (atomic ledger/results publication)
+**Ledger generation:** 2193 (remote push/readback verified)
 
-**Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 607; OHLC screened: 12.
+**Freshness:** Kraken public ticker client-observed, max quote age 5s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 607; OHLC screened: 13.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | XMR/USD | 428.8 | 92.615 | 88.157 | +5.29% | +1.29% | 0.80x | 7.7 | 2026-11-28T18:44:24.273618+00:00 | Not calibrated | STRONG 76/100 | HIGH 62/100 | Watch | WATCH |
-| 2 | NIGHT/USD | 0.05216 | 74.279 | 75.619 | +3.82% | +0.10% | 0.82x | 9.6 | 2026-11-28T18:44:24.273618+00:00 | Not calibrated | MODERATE 57/100 | HIGH 62/100 | Watch | WATCH |
-| 3 | TEL/USD | 0.00223 | 53.809 | 54.275 | +6.19% | +1.74% | 0.09x | 40.5 | 2026-11-28T18:44:24.273618+00:00 | Not calibrated | WEAK 42/100 | EXTREME 100/100 | Do nothing | WATCH |
-| 4 | VVV/USD | 26.285 | 50.820 | 52.502 | +2.08% | +0.24% | 0.71x | 7.6 | 2026-11-28T18:44:24.273618+00:00 | Not calibrated | MODERATE 55/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 5 | SENT/USD | 0.024154 | 45.177 | 41.211 | +1.86% | -0.18% | 1.49x | 6.2 | 2026-11-28T18:44:24.273618+00:00 | Not calibrated | WEAK 43/100 | VERY_HIGH 73/100 | Watch | WATCH |
+| 1 | NIGHT/USD | 0.05226 | 76.487 | 77.060 | +4.02% | -0.68% | 1.29x | 9.6 | 2026-11-28T18:52:42.279664+00:00 | Not calibrated | MODERATE 48/100 | HIGH 61/100 | Watch | WATCH |
+| 2 | SENT/USD | 0.024421 | 59.750 | 48.322 | +2.98% | +1.82% | 1.23x | 7.8 | 2026-11-28T18:52:42.279664+00:00 | Not calibrated | MODERATE 65/100 | VERY_HIGH 74/100 | Watch | WATCH |
+| 3 | BCH/USD | 209.24 | 56.996 | 38.230 | +1.08% | +0.75% | 66.11x | 4.8 | 2026-11-28T18:52:42.279664+00:00 | Not calibrated | STRONG 83/100 | HIGH 60/100 | Watch | WATCH |
+| 4 | VVV/USD | 26.375 | 53.553 | 54.435 | +2.43% | +0.05% | 0.89x | 8.7 | 2026-11-28T18:52:42.279664+00:00 | Not calibrated | MODERATE 47/100 | HIGH 62/100 | Watch | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | XMR/USD | 88.157 | 428.8 | +1.29% | 0.80x |
-| 2 | NIGHT/USD | 75.619 | 0.05216 | +0.10% | 0.82x |
-| 3 | TEL/USD | 54.275 | 0.00223 | +1.74% | 0.09x |
-| 4 | VVV/USD | 52.502 | 26.285 | +0.24% | 0.71x |
-| 5 | SENT/USD | 41.211 | 0.024154 | -0.18% | 1.49x |
+| 1 | NIGHT/USD | 77.060 | 0.05226 | -0.68% | 1.29x |
+| 2 | VVV/USD | 54.435 | 26.375 | +0.05% | 0.89x |
+| 3 | SENT/USD | 48.322 | 0.024421 | +1.82% | 1.23x |
+| 4 | BCH/USD | 38.230 | 209.24 | +0.75% | 66.11x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -46,15 +44,15 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 2192; predictions: 19367; observations: 1327405.
-- Matured sampled outcomes across 1/6/24/48h: 47165; gap abstentions: 25968. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 2193; predictions: 19371; observations: 1328012.
+- Matured sampled outcomes across 1/6/24/48h: 47198; gap abstentions: 25968. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 158 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
 - Online Kraken /USD stablecoin-base pairs excluded: 18 (counted from this scan's online AssetPairs metadata, not inferred from price).
 - Stablecoin base exclusions: BRL1, BUSD, DAI, EUR, EURC, EUROP, EURQ, EURR, EURT, FDUSD, FRAX, GUSD, PYUSD, QCAD, RLUSD, TGBP, TUSD, USD, USD1, USDC, USDD, USDE, USDG, USDQ, USDR, USDS, USDT, ZUSD.
 - DEX: NOT USED; no DEX freshness gate.
-- OHLC screening abstentions: 7; details in immutable scan JSON artifact.
+- OHLC screening abstentions: 9; details in immutable scan JSON artifact.
 - Storage: ledger and results published in one non-force Git commit and read back. Independent artifact recovery is NOT VERIFIED by this scan alone.
 - Errors: none in successful committed scan; a failed workflow must not publish a SUCCESS report.
 
@@ -63,24 +61,24 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 46177046000 · **Generation:** 2192 · **Legacy run:** 46177046000
-**Main quote time:** 2026-11-28T18:44:28.499872+00:00 · **Legacy report time:** 2026-11-28T18:45:16.054506+00:00
+**Writer:** 46177933494 · **Generation:** 2193 · **Legacy run:** 46177933494
+**Main quote time:** 2026-11-28T18:52:47.048066+00:00 · **Legacy report time:** 2026-11-28T18:53:36.453606+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | XMR/USD | 428.8 | 92.62 | +1.29% | 0.80x | STRONG 76/100 | HIGH 62/100 | Watch |
-| 2 | NIGHT/USD | 0.05216 | 74.28 | +0.10% | 0.82x | MODERATE 57/100 | HIGH 62/100 | Watch |
-| 3 | TEL/USD | 0.00223 | 53.81 | +1.74% | 0.09x | WEAK 42/100 | EXTREME 100/100 | Do nothing |
-| 4 | VVV/USD | 26.285 | 50.82 | +0.24% | 0.71x | MODERATE 55/100 | VERY_HIGH 70/100 | Watch |
-| 5 | SENT/USD ⭐ | 0.024154 | 45.18 | -0.18% | 1.49x | MODERATE 53/100 | VERY_HIGH 73/100 | Watch |
+| 1 | NIGHT/USD | 0.05226 | 76.49 | -0.68% | 1.29x | MODERATE 48/100 | HIGH 61/100 | Watch |
+| 2 | SENT/USD ⭐ | 0.024421 | 59.75 | +1.82% | 1.23x | STRONG 75/100 | VERY_HIGH 74/100 | Watch |
+| 3 | BCH/USD ⭐ | 209.24 | 57.00 | +0.75% | 66.11x | STRONG 93/100 | HIGH 60/100 | Consider small entry |
+| 4 | VVV/USD | 26.375 | 53.55 | +0.05% | 0.89x | MODERATE 47/100 | HIGH 62/100 | Watch |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | SENT/USD ⭐ | 0.02415 | 61.15 | +0.57% | 1.31x | 6430 | STRONG 86/100 | HIGH 67/100 | Watch |
+| 1 | SENT/USD ⭐ | 0.024344 | 61.08 | +1.82% | 1.23x | 6456 | STRONG 76/100 | VERY_HIGH 74/100 | Watch |
+| 2 | BCH/USD ⭐ | 208.75 | 44.73 | +0.75% | 66.11x | 1821 | STRONG 87/100 | HIGH 60/100 | Consider small entry |
 
-**Same-run overlap:** SENT/USD
+**Same-run overlap:** SENT/USD, BCH/USD
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
