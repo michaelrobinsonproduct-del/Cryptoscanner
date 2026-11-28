@@ -2,33 +2,37 @@
 
 **Scan:** SUCCESS — PAPER ONLY, no trades or approved BUY orders
 
-**UTC as-of:** 2026-11-28T00:22:32.553800+00:00
+**UTC as-of:** 2026-11-28T00:32:35.472571+00:00
 **GitHub trigger:** manual dispatch (verified event=workflow_dispatch; no scheduled slot; actual start punctuality NOT verified)
-**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/46087269319
+**GitHub run:** https://github.com/michaelrobinsonproduct-del/Cryptoscanner/actions/runs/46088154039
 **Source SHA:** 858c8bc8ec5d7641ddb39cacd8aca91719f855b1
-**Previous ledger commit:** 71fdc2bd7847a5af6ee6e2c2dae7531460f05b06 (atomic ledger/results publication)
-**Ledger generation:** 2080 (remote push/readback verified)
+**Previous ledger commit:** 5c1867fe2c776311c8f7f97a7e1a914eb693253c (atomic ledger/results publication)
+**Ledger generation:** 2081 (remote push/readback verified)
 
 **Freshness:** Kraken public ticker client-observed, max quote age 4s (limit 600s). Ticker exchange-event freshness is NOT independently proven.
-**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 606; OHLC screened: 13.
+**Kraken online /USD pairs:** 628; stablecoin-base exclusions: 18; other suffix exclusions: 0; eligible pairs: 610; valid market observations: 606; OHLC screened: 15.
 
 ## Challenger-ranked WATCH candidates — paper only
 
 | # | Symbol | Price USD | Challenger score | Baseline score | Since UTC open | 15m move | Volume accel | Spread bps | Quote UTC | 30% / 48h odds | Signal confidence | Risk | Guidance | Status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
-| 1 | SKY/USD | 0.05299 | 69.826 | 47.741 | +2.10% | +1.42% | 4.17x | 13.2 | 2026-11-28T00:22:28.939644+00:00 | Not calibrated | STRONG 85/100 | HIGH 61/100 | Watch | WATCH |
-| 2 | VVV/USD | 25.931 | 66.134 | 49.179 | +0.71% | +0.42% | 2.49x | 7.3 | 2026-11-28T00:22:28.939644+00:00 | Not calibrated | STRONG 88/100 | HIGH 55/100 | Watch | WATCH |
-| 3 | LTC/USD | 45.32 | 58.184 | 56.531 | +0.38% | +0.95% | 0.69x | 2.2 | 2026-11-28T00:22:28.939644+00:00 | Not calibrated | MODERATE 59/100 | VERY_HIGH 70/100 | Watch | WATCH |
-| 4 | SPX/USD | 0.2734 | 21.402 | 25.476 | +0.37% | +0.37% | 0.41x | 18.3 | 2026-11-28T00:22:28.939644+00:00 | Not calibrated | WEAK 36/100 | VERY_HIGH 81/100 | Watch | WATCH |
+| 1 | HYPE/USD | 63.67 | 70.650 | 56.199 | +0.28% | -0.11% | 5.66x | 1.6 | 2026-11-28T00:32:31.322662+00:00 | Not calibrated | MODERATE 65/100 | HIGH 61/100 | Watch | WATCH |
+| 2 | LTC/USD | 45.41 | 56.548 | 56.827 | +0.58% | +0.38% | 0.78x | 4.4 | 2026-11-28T00:32:31.322662+00:00 | Not calibrated | MODERATE 58/100 | HIGH 62/100 | Watch | WATCH |
+| 3 | SKY/USD | 0.05225 | 48.217 | 38.560 | +0.67% | -1.07% | 6.04x | 11.5 | 2026-11-28T00:32:31.322662+00:00 | Not calibrated | MODERATE 49/100 | VERY_HIGH 71/100 | Watch | WATCH |
+| 4 | VVV/USD | 25.9 | 47.372 | 48.328 | +0.59% | +0.66% | 0.57x | 7.3 | 2026-11-28T00:32:31.322662+00:00 | Not calibrated | MODERATE 54/100 | VERY_HIGH 70/100 | Watch | WATCH |
+| 5 | DRV/USD | 0.36419 | 40.752 | 31.720 | +0.37% | +0.30% | 1.75x | 11.5 | 2026-11-28T00:32:31.322662+00:00 | Not calibrated | MODERATE 60/100 | HIGH 66/100 | Watch | WATCH |
+| 6 | SPX/USD | 0.2733 | 23.340 | 28.881 | +0.33% | -0.04% | 0.46x | 11.0 | 2026-11-28T00:32:31.322662+00:00 | Not calibrated | WEAK 12/100 | EXTREME 87/100 | Do nothing | WATCH |
 
 ## Baseline ranking (same verified WATCH pool)
 
 | # | Symbol | Baseline score | Price USD | 15m move | Volume accel |
 |---:|---|---:|---:|---:|---:|
-| 1 | LTC/USD | 56.531 | 45.32 | +0.95% | 0.69x |
-| 2 | VVV/USD | 49.179 | 25.931 | +0.42% | 2.49x |
-| 3 | SKY/USD | 47.741 | 0.05299 | +1.42% | 4.17x |
-| 4 | SPX/USD | 25.476 | 0.2734 | +0.37% | 0.41x |
+| 1 | LTC/USD | 56.827 | 45.41 | +0.38% | 0.78x |
+| 2 | HYPE/USD | 56.199 | 63.67 | -0.11% | 5.66x |
+| 3 | VVV/USD | 48.328 | 25.9 | +0.66% | 0.57x |
+| 4 | SKY/USD | 38.560 | 0.05225 | -1.07% | 6.04x |
+| 5 | DRV/USD | 31.720 | 0.36419 | +0.30% | 1.75x |
+| 6 | SPX/USD | 28.881 | 0.2733 | -0.04% | 0.46x |
 
 The baseline ordering is over this same confirmed WATCH pool, not an independent full-market baseline scan.
 The separate legacy-inspired scanner publishes its own WATCH signals in a later, read-only GitHub artifact linked by this paper run ID.
@@ -44,8 +48,8 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 | 24h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 | 48h | PER HORIZON NOT INDEPENDENTLY VERIFIED | NOT VERIFIED |
 
-- Persisted scans: 2080; predictions: 18638; observations: 1259527.
-- Matured sampled outcomes across 1/6/24/48h: 42714; gap abstentions: 25968. Per-horizon counts require independent audit; do not infer held-out lift.
+- Persisted scans: 2081; predictions: 18644; observations: 1260133.
+- Matured sampled outcomes across 1/6/24/48h: 42762; gap abstentions: 25968. Per-horizon counts require independent audit; do not infer held-out lift.
 - Observed +30% hits: 154 (sampled only; not a success-rate estimate).
 - False positives / missed movers: NOT VERIFIED without eligible continuous outcome coverage.
 - Baseline vs challenger: recorded as-of; unbiased held-out lift NOT MEASURED.
@@ -61,27 +65,25 @@ The separate legacy-inspired scanner publishes its own WATCH signals in a later,
 Paper only · risk is high or higher · 30%+ in 48h probability NOT CALIBRATED
 Signal confidence 0–100 means setup strength only, NOT a win probability. Actions are research guidance; no trade authorization.
 
-**Writer:** 46087269319 · **Generation:** 2080 · **Legacy run:** 46087269319
-**Main quote time:** 2026-11-28T00:22:32.553800+00:00 · **Legacy report time:** 2026-11-28T00:23:29.438080+00:00
+**Writer:** 46088154039 · **Generation:** 2081 · **Legacy run:** 46088154039
+**Main quote time:** 2026-11-28T00:32:35.472571+00:00 · **Legacy report time:** 2026-11-28T00:33:30.901990+00:00
 
 ## Challenger-scored WATCH (original canonical scanner)
 | # | Symbol | USD | Challenger score | 15m move | Volume x | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | SKY/USD ⭐ | 0.05299 | 69.83 | +1.42% | 4.17x | STRONG 95/100 | HIGH 61/100 | Consider small entry |
-| 2 | VVV/USD ⭐ | 25.931 | 66.13 | +0.42% | 2.49x | STRONG 98/100 | HIGH 55/100 | Consider small entry |
-| 3 | LTC/USD | 45.32 | 58.18 | +0.95% | 0.69x | MODERATE 59/100 | VERY_HIGH 70/100 | Watch |
-| 4 | SPX/USD | 0.2734 | 21.40 | +0.37% | 0.41x | WEAK 36/100 | VERY_HIGH 81/100 | Watch |
+| 1 | HYPE/USD | 63.67 | 70.65 | -0.11% | 5.66x | MODERATE 65/100 | HIGH 61/100 | Watch |
+| 2 | LTC/USD | 45.41 | 56.55 | +0.38% | 0.78x | MODERATE 58/100 | HIGH 62/100 | Watch |
+| 3 | SKY/USD | 0.05225 | 48.22 | -1.07% | 6.04x | MODERATE 49/100 | VERY_HIGH 71/100 | Watch |
+| 4 | VVV/USD | 25.9 | 47.37 | +0.66% | 0.57x | MODERATE 54/100 | VERY_HIGH 70/100 | Watch |
+| 5 | DRV/USD | 0.36419 | 40.75 | +0.30% | 1.75x | MODERATE 60/100 | HIGH 66/100 | Watch |
+| 6 | SPX/USD | 0.2733 | 23.34 | -0.04% | 0.46x | WEAK 12/100 | EXTREME 87/100 | Do nothing |
 
 ## Independent legacy-inspired WATCH (separate Kraken sampling)
 | # | Symbol | USD | Legacy score | 15m move | Volume x | Trades 24h | Confidence | Risk | Action |
 |---:|---|---:|---:|---:|---:|---:|---|---|---|
-| 1 | SKY/USD ⭐ | 0.05295 | 64.32 | +1.42% | 4.17x | 9985 | STRONG 97/100 | HIGH 55/100 | Consider small entry |
-| 2 | XDG/USD | 0.0577433 | 60.01 | +0.11% | 2.67x | 13392 | STRONG 75/100 | HIGH 55/100 | Watch |
-| 3 | VVV/USD ⭐ | 25.981 | 52.67 | +0.42% | 2.49x | 9068 | STRONG 91/100 | HIGH 55/100 | Consider small entry |
-| 4 | XLM/USD | 0.126947 | 47.76 | +0.18% | 1.28x | 8673 | MODERATE 49/100 | HIGH 55/100 | Watch |
-| 5 | BNB/USD | 554.96 | 40.01 | +0.05% | 1.08x | 4219 | MODERATE 45/100 | HIGH 62/100 | Watch |
+| — | No confirmed WATCH signals | — | — | — | — | — | — | — | — |
 
-**Same-run overlap:** SKY/USD, VVV/USD
+**Same-run overlap:** None
 A ⭐ means both independently executed scanners identified the exact same /USD market.
 Legacy is rebuild-v2-inspired, not the original scanner. Rankings are uncalibrated.
 More substantial entry requires independently qualified, calibrated 48h held-out outcome evidence.
